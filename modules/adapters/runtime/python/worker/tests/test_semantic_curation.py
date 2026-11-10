@@ -49,6 +49,23 @@ def semantic_reference_rows(source_count=16, pairs_per_source=32):
 
 
 class SemanticCurationTests(unittest.TestCase):
+    def test_long_text_hashes_without_retaining_the_complete_token_list(self) -> None:
+        phrase = "Market risk analysis"
+        expected = hashed_token_embedding(phrase)
+        text = (phrase + " ") * 45_000
+        self.assertEqual(len(text), 945_000)
+        self.assertFalse(tracemalloc.is_tracing())
+        tracemalloc.start()
+        try:
+            actual = hashed_token_embedding(text)
+            _, peak_python_bytes = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        self.assertEqual(len(actual), len(expected))
+        for value, expected_value in zip(actual, expected, strict=True):
+            self.assertAlmostEqual(value, expected_value, places=15)
+        self.assertLessEqual(peak_python_bytes, 3 * 1024**2)
+
     def test_controlled_reference_cohorts_preserve_unique_rows_with_bounded_allocations(self) -> None:
         for source_count, pairs_per_source in ((4, 16), (16, 32)):
             with self.subTest(sources=source_count, pairs=pairs_per_source):

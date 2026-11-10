@@ -52,6 +52,14 @@ by twice the input row count times the configured comparison limit. Existing
 version `1` reports remain historical; disabled curation keeps its unchanged
 zero-comparison path and original rows.
 
+The text embedding helper hashes one token match at a time. It does not keep a
+list of all tokens, and the hash buckets and matching results stay the same.
+A focused test caps traced Python allocations at 3 MiB for a 945,000-character
+synthetic input. A local comparison measured about 8.43 MB before the change
+and 0.95 MB after it, with median helper time of 92 ms and 97 ms respectively.
+These measurements cover the helper only. They do not measure worker memory,
+model inference, or whole-application performance.
+
 This is an approximate bounded search, not a guarantee of a global nearest
 example. Candidate order can affect recommendations. Embedding storage still
 grows with accepted rows; a comparison bound does not prove native memory or

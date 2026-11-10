@@ -61,10 +61,10 @@ def _source_row_index(row: dict[str, object], fallback: int) -> int:
 
 def hashed_token_embedding(text: str) -> tuple[float, ...]:
     vector = [0.0] * _DIMENSIONS
-    tokens = re.findall(r"[\w'-]+", text.casefold(), re.UNICODE)
-    for token in tokens:
+    for match in re.finditer(r"[\w'-]+", text.casefold(), re.UNICODE):
+        token = match.group()
         digest = hashlib.sha256(token.encode("utf-8")).digest()
-        index = int.from_bytes(digest[:2], "big") % _DIMENSIONS
+        index = (digest[0] * 256 + digest[1]) % _DIMENSIONS
         direction = 1.0 if digest[2] & 1 else -1.0
         vector[index] += direction
     magnitude = math.sqrt(sum(value * value for value in vector))
