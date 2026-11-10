@@ -1,0 +1,67 @@
+{
+  "schema_version": "local-artifact-ui-feature-observation-v1",
+  "status": "technical-check-pending",
+  "title": "Local file test needs startup diagnosis",
+  "user_summary": {
+    "description": "App setup failed before the local file test began. No import, reload or deletion step ran. All test processes stopped and the temporary local identities were removed. The cause is not yet known.",
+    "action_owner": "agent",
+    "user_action": "No action needed. The agent will use the new startup diagnostics in a separately reviewed fresh test."
+  },
+  "work_id": "qualify-thin-local-artifact-lifecycle-and-workspace-retention",
+  "actual_source_head": "17f9a37497b2ebdd2dd02ae34a37c86c94783024",
+  "actual_source_digest": "e64cd8a9ec9f28cde1d4e2ae4a71354a51c09be2ec882c1667bb094cb5c64f88",
+  "host": "thin-chrome",
+  "scenario": "local-lifecycle",
+  "actual_case_executed": false,
+  "actual_case_duration_ms": null,
+  "completed_phases": [],
+  "required_phase_count": 11,
+  "runner_framework_errors": 1,
+  "underlying_setup_stage": "unavailable-in-this-historical-attempt",
+  "underlying_setup_error_type": "unavailable-in-this-historical-attempt",
+  "cause_established": false,
+  "evidence": {
+    "actual_observation_sha256": "27f83329376304c0f54c02cc7d855afa4048f4a061974c3b87dc3fb7da536108",
+    "native_result_sha256": "2c30aefc0b897df81a3455b2263acf644b3568c96a7adc0c11f56ebbf585063a",
+    "independent_failed_outcome_review_sha256": "1b05b2d6fb84eb9691120447cc19eddab86c1f13520beaffa819f8037d8055d1",
+    "execution_plan_sha256": "09600099a152e330766ad5a6eedb2189b561b2ccfa72045519d852196f48d9df",
+    "execution_review_sha256": "9a921ba29125eb5020160a02129ebcf560e00680a2526ef8e4260655c419ec2b",
+    "bound_operator_sha256": "8a17622aad87a213a22fe945cfebdb027ab4320416b4d63cc72a7961c2e40ea5",
+    "emitted_operator_binding_review_sha256": "015196b3f471a06374dfe99648bd901051643eb4bcd04eebe28b7addc1883854"
+  },
+  "retirement": {
+    "root_exit_code": 1,
+    "lifetime_owned_processes": 17,
+    "active_owned_processes": 0,
+    "terminated_owned_processes": 0,
+    "all_owned_handles_closed": true,
+    "stdout_stderr_eof_complete": true,
+    "pending_and_live_registries_clear": true,
+    "forced_native_job_termination": false,
+    "generated_local_pairing_and_artifact_read_identity_file_absent": true,
+    "source_and_installed_runtime_unchanged": true,
+    "canonical_setup_return_observed": false,
+    "canonical_awaited_teardown_return_observed": false,
+    "raw_output_or_error_logs_read": false,
+    "saved_or_provider_credential_used": false
+  },
+  "history_policy": {
+    "attempt_consumed": true,
+    "automatic_retry_allowed": false,
+    "original_work_released_unqualified": true,
+    "all_native_source_and_safe_evidence_preserved": true,
+    "historical_missing_details_not_backfilled": true
+  },
+  "scope_limits": {
+    "artifact_behavior_qualified": false,
+    "memory_or_cold_start_cause_proven": false,
+    "private_source_ui": "passed-separately-and-not-rerun",
+    "private_provider_website": "deferred-by-user",
+    "accepted_model_accuracy_and_ocr": "closed-not-rerun",
+    "restricted_assets_security_review_qualified": false,
+    "native_ownership_offload_or_restart_qualified": false,
+    "parent_qualification_granted": false,
+    "full_system_testing": "deferred-until-open-feature-work-is-implemented"
+  },
+  "diagnostic_source_work": "retain-fixed-functional-host-setup-failure-stages"
+}
