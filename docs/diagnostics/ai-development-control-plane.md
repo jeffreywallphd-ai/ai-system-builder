@@ -731,6 +731,13 @@ supplier and makes no provider call. It does not qualify real host delivery,
 physical memory, the separate native identity profile or a parent roadmap.
 Broader functionality and native checks remain separate and retain their results.
 
+The `dataset-preparation-core-unit` check selects the existing exact Python
+unit file for the Dataset Preparation worker driver. A scoped work item must
+explicitly request it. Normal driver edits still select the generic checks.
+An unrelated path or an explicit generic requirement keeps the generic checks
+even when the exact check is requested. This does not qualify a real model or
+native runtime.
+
 ## Portable OCR provider checks
 
 `ocr-provider-contract` is a fixed source-owned profile for the bounded request,

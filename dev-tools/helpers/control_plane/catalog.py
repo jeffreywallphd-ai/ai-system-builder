@@ -23,6 +23,15 @@ IMAGE_FORM_CHECKS = {
     ),
 }
 
+# Opt in only for scoped work with this existing Dataset Preparation suite.
+# Ordinary edits to the worker driver still receive generic test selection.
+OPT_IN_REGRESSION_CHECKS = {
+    "dataset-preparation-core-unit": (
+        "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
+        "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_task.py",
+    ),
+}
+
 QUALIFICATION_PROFILES = (
     "artifact-confirmation-ui",
     "shared-forced-colors",
@@ -292,6 +301,9 @@ def definitions(root: Path) -> list[dict]:
         *[{"id": name, "patterns": [form, test],
            "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--regression-test", test],
            "timeout": 120} for name, (form, test) in IMAGE_FORM_CHECKS.items()],
+        *[{"id": name, "patterns": [],
+           "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--regression-test", test],
+           "timeout": 120} for name, (_, test) in OPT_IN_REGRESSION_CHECKS.items()],
         {"id": "documentation", "patterns": ["docs/*", "*.md", "skills/*/*.md", "dev-tools/*/*.md"], "argv": [node, "dev-tools/scripts/docs/check-doc-drift.mjs"], "timeout": 120},
         {"id": "agent-support", "patterns": ["AGENTS.md", "skills/*", "docs/context/*", "dev-tools/agent-evals/*", "dev-tools/helpers/*", "dev-tools/review-site/*"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
         {"id": "control-plane", "patterns": ["dev-tools/helpers/control_plane/*", "dev-tools/helpers/development_control_plane.py", "dev-tools/helpers/run_focused_checks.py", "dev-tools/helpers/requirements-tests.txt", "dev-tools/config/pytest-focused.ini", "dev-tools/config/contributor-check-profiles.json", "dev-tools/helpers/tests/*", "dev-tools/review-site/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"], "timeout": 600},
@@ -322,7 +334,10 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     ids = {c["id"] for c in checks}
     if not required or set(required) - ids:
         refuse("verification.check-id", "Acceptance references an unavailable check identity.")
-    covered = {p: [c["id"] for c in checks if any(fnmatch.fnmatchcase(p, pat) for pat in c["patterns"])] for p in paths}
+    covered = {p: [c["id"] for c in checks
+                   if any(fnmatch.fnmatchcase(p, pat) for pat in c["patterns"])
+                   or (c["id"] in required and p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()))]
+               for p in paths}
     # The fixed controller config is exercised by controller routing/isolation
     # tests. Generic config ownership has no runnable test files for this INI.
     if "dev-tools/config/pytest-focused.ini" in covered:
@@ -332,6 +347,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     selected = [c for c in checks if c["id"] in required or any(c["id"] in matches for matches in covered.values())]
     selected_ids = {c["id"] for c in selected}
     declared_sources = {path for check, paths in IMAGE_FORM_CHECKS.items() if check in selected_ids for path in paths}
+    declared_sources.update(path for check in required for path in OPT_IN_REGRESSION_CHECKS.get(check, ()))
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))
