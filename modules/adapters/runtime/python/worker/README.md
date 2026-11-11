@@ -87,8 +87,11 @@ These known token permutations do not measure general natural-language recall.
 The larger contrast reference uses 2,040 made-up rows in two sources. It checks
 all 1,020 intended other-source recommendations, verifies that the other rows
 have none, and requires zero quarantined rows. The comparison window remains
-at eight candidates per pass. The test uses the same local duration and
-allocation assertions and confirms that reports omit input text.
+at eight candidates per pass. The test caps traced Python allocations at 6 MiB
+and confirms that reports omit input text. Accepted vectors use compact double
+precision storage. A local comparison preserved all rows and report values,
+with about 9.27 MB before the change and 2.98 MB after it. Median comparison
+time went from 147 ms to 158 ms. These are local component measurements.
 
 The real provided-row preparation test uses 1,024 rows over 16 source files,
 including 512 known reordered duplicates. It runs baseline, advanced and repeated

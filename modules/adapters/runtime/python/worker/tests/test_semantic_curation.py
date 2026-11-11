@@ -190,7 +190,7 @@ class SemanticCurationTests(unittest.TestCase):
             tracemalloc.stop()
 
         self.assertLessEqual(elapsed, 60)
-        self.assertLessEqual(peak_python_bytes, 64 * 1024**2)
+        self.assertLessEqual(peak_python_bytes, 6 * 1024**2)
         self.assertEqual(len(result.accepted_rows), 2040)
         self.assertEqual(result.quarantine_records, [])
         self.assertEqual(result.report["duplicateRowCount"], 0)

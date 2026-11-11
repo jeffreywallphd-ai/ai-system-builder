@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from array import array
 from collections import Counter, defaultdict, deque
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 import hashlib
 import math
@@ -74,7 +75,7 @@ def hashed_token_embedding(text: str) -> tuple[float, ...]:
     return tuple(value / magnitude for value in vector)
 
 
-def cosine_similarity(left: tuple[float, ...], right: tuple[float, ...]) -> float:
+def cosine_similarity(left: Sequence[float], right: Sequence[float]) -> float:
     return max(-1.0, min(1.0, sum(a * b for a, b in zip(left, right))))
 
 
@@ -133,7 +134,7 @@ def curate_semantic_rows(
     maximum_comparisons = int(config.maxComparisonsPerRow or 128)
     source_cap = int(config.maxRowsPerSource) if config.maxRowsPerSource is not None else None
     accepted: list[dict[str, object]] = []
-    embeddings: list[tuple[float, ...]] = []
+    embeddings: list[array] = []
     accepted_lineage: list[tuple[str, int]] = []
     quarantine: list[dict[str, object]] = []
     source_counts: Counter[str] = Counter()
@@ -186,7 +187,7 @@ def curate_semantic_rows(
                 })
             continue
         accepted.append(dict(row))
-        embeddings.append(embedding)
+        embeddings.append(array("d", embedding))
         accepted_lineage.append((source_id, source_index))
         source_counts[source_id] += 1
 
