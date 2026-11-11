@@ -17604,6 +17604,62 @@
           "The other software functions still need to be checked against the test list."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c92b321ee71f48af4f9cf8d96beb0448bbe11c9e7b00330fa6db4dee2add224c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The comparison helper used 0.95 MB of temporary Python memory instead of 8.43 MB on a long sample.",
+          "All five samples produced the same comparison values.",
+          "Median time for the long sample went from 92 to 97 milliseconds."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bf6d7d508ad8eab0a93957dd91d9db6a1f82c6aa99fca81c727cf79737bddf03",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test used made-up text and measures the comparison helper only.",
+          "The whole worker, real models and host qualification still need their own evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "171c2b67c0464bbd37a01dc625b2fb164ea5364c7d9ecc9107ae502d7065aeb8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Dataset Preparation stopped before the next row when the test requested cancellation during either similarity pass.",
+          "It wrote no dataset output."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f85de58284d27cf201149794e9ab2d84e0bdc3858354dc8be064af274d44328a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test used three made-up rows and did not run an app or model.",
+          "Host and final qualification still need their own evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1befb8e8e952bc2374a54c3456266e591ed3ed3fad41ec565aa98e46bda447ad",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The worker uses the existing task cancellation request.",
+          "It does not stop the shared worker or publish a partial dataset."
+        ]
+      }
     }
   ]
 }

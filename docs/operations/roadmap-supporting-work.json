@@ -12387,6 +12387,54 @@
         "Component tests use synthetic form data. Packaged Desktop behavior, actual image generation and final qualification remain pending.",
         "This does not complete the supported-functionality census."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "reduce-semantic-token-memory",
+      "work_criteria": [
+        "same-comparison-with-lower-memory",
+        "scoped-memory-evidence-and-review"
+      ],
+      "receipt_digest": "7f84418f3c1d19eb1b0f36515f50f437e824842cbc35046c1c495186735d4d4d",
+      "review_digest": "900a12cc37ce1421633467e21858e5ed78ce1c2bf98f3ecdd52996a912606b1b",
+      "scope": "The comparison helper used 0.95 MB of temporary Python memory instead of 8.43 MB on a long sample. All five samples produced the same comparison values. Median time for the long sample went from 92 to 97 milliseconds.",
+      "limitations": [
+        "The test used made-up text and measures the comparison helper only. The whole worker, real models and host qualification still need their own evidence."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "stop-semantic-curation-on-cancel",
+      "work_criteria": [
+        "cancel-during-both-similarity-passes",
+        "focused-result-reviewed-and-documented"
+      ],
+      "receipt_digest": "d312e3d1be662b567089a80a720d332db94a968733c6fe76b5eb099d02d4ea2f",
+      "review_digest": "7297df0f9a18f3749e5f98895897e4e2faf4c7779708f69bae9f30ab3af3f2bb",
+      "scope": "Dataset Preparation stopped before the next row when the test requested cancellation during either similarity pass. It wrote no dataset output.",
+      "limitations": [
+        "The test used three made-up rows and did not run an app or model. Host and final qualification still need their own evidence."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "security-model-assisted-boundaries-reviewed",
+      "work_id": "stop-semantic-curation-on-cancel",
+      "work_criteria": [
+        "cancel-during-both-similarity-passes",
+        "task-authority-and-normal-results-preserved"
+      ],
+      "receipt_digest": "d312e3d1be662b567089a80a720d332db94a968733c6fe76b5eb099d02d4ea2f",
+      "review_digest": "7297df0f9a18f3749e5f98895897e4e2faf4c7779708f69bae9f30ab3af3f2bb",
+      "scope": "The worker uses the existing task cancellation request. It does not stop the shared worker or publish a partial dataset.",
+      "limitations": [
+        "The test used three made-up rows and did not run an app or model. Host and final qualification still need their own evidence."
+      ]
     }
   ]
 }
