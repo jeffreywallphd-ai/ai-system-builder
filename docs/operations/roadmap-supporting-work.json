@@ -12435,6 +12435,38 @@
       "limitations": [
         "The test used three made-up rows and did not run an app or model. Host and final qualification still need their own evidence."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "qualify-larger-semantic-contrast-reference",
+      "work_criteria": [
+        "larger-reference-matches-exact-lineage",
+        "reference-compute-and-report-bounded"
+      ],
+      "receipt_digest": "28526ebb603942b43b23e4c84007ddbce45ecb2c2f5397a6526d7bfbaa54e6b5",
+      "review_digest": "51a689cc249370951904e6865d7a74ea788e3cfdd6fcb8074771b80d5b98767d",
+      "scope": "The fixed test used 2,040 made-up rows. It found all 1,020 intended recommendations from the other source, with no unexpected recommendations or rejected rows.",
+      "limitations": [
+        "This test checks a known reference set. It does not measure language quality on real data or qualify the host."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "work_id": "reduce-semantic-vector-storage-memory",
+      "work_criteria": [
+        "compact-storage-preserves-semantic-results",
+        "measured-storage-reduction-documented"
+      ],
+      "receipt_digest": "8cb588684bad7908408bc607045bc3c67cb3e2be67e94fcee85cf7e7ca7ce418",
+      "review_digest": "c6477b1d39474894d4e1d4b99fcac7bbb0448b362d022e8c0435c6c992c75509",
+      "scope": "The same test used 2.98 MB of temporary Python memory instead of 9.27 MB. All rows and report values stayed the same. Median time went from 147 to 158 milliseconds.",
+      "limitations": [
+        "This measures local comparison allocations. It does not measure whole-worker or model memory, or qualify the host."
+      ]
     }
   ]
 }

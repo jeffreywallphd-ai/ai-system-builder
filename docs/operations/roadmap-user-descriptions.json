@@ -17660,6 +17660,51 @@
           "It does not stop the shared worker or publish a partial dataset."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "48caab4431670e1060d92f86dc053b36cc710a1012b4205d0a6684f108a146c0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The fixed test used 2,040 made-up rows.",
+          "It found all 1,020 intended recommendations from the other source, with no unexpected recommendations or rejected rows."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0a48caf1ac240830262579e95d3b93a1ab62e76124b8cc108154b3128e1e8328",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This test checks a known reference set.",
+          "It does not measure language quality on real data or qualify the host."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3e4c92ed73c237f9ea3f9c16eaa1c6006ae4a0020fedb09bc65808d83c866c73",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The same test used 2.98 MB of temporary Python memory instead of 9.27 MB.",
+          "All rows and report values stayed the same.",
+          "Median time went from 147 to 158 milliseconds."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6111b273adc5ba416c7e46b3fdd4e45eeca1f5fde14291753a2458e846efc31a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This measures local comparison allocations.",
+          "It does not measure whole-worker or model memory, or qualify the host."
+        ]
+      }
     }
   ]
 }
