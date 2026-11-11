@@ -84,6 +84,12 @@ assertions. The allocation measurement starts after fixture creation and stops
 in `finally`; neither assertion enforces a native process or whole-app limit.
 These known token permutations do not measure general natural-language recall.
 
+The larger contrast reference uses 2,040 made-up rows in two sources. It checks
+all 1,020 intended other-source recommendations, verifies that the other rows
+have none, and requires zero quarantined rows. The comparison window remains
+at eight candidates per pass. The test uses the same local duration and
+allocation assertions and confirms that reports omit input text.
+
 The real provided-row preparation test uses 1,024 rows over 16 source files,
 including 512 known reordered duplicates. It runs baseline, advanced and repeated
 advanced preparation with the existing recommended mandatory quality checks.

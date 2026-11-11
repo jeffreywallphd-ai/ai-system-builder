@@ -150,6 +150,72 @@ class SemanticCurationTests(unittest.TestCase):
         self.assertEqual(json.dumps(rows, sort_keys=True), original)
         self.assertNotIn("synthetic-reference-only-marker", json.dumps(result.report))
 
+    def test_larger_contrast_reference_matches_each_intended_source_row(self) -> None:
+        # Use distinct hash buckets to keep neighboring topic groups unrelated.
+        # Each pair has eight shared tokens and one distinct token per source.
+        words = {}
+        for index in range(4096):
+            token = f"controlledpairtoken{index}"
+            digest = hashlib.sha256(token.encode("ascii")).digest()
+            words.setdefault(int.from_bytes(digest[:2], "big") % 128, token)
+            if len(words) == 128:
+                break
+        self.assertEqual(len(words), 128)
+
+        rows = []
+        for pair in range(1020):
+            start = 10 * (pair % 12)
+            common = [words[start + offset] for offset in range(8)]
+            for suffix, source in ((8, "source-a"), (9, "source-b")):
+                rows.append({
+                    "sourceArtifactId": source,
+                    "sourceRowIndex": pair,
+                    "anchorText": " ".join(common + [words[start + suffix]]),
+                    "positiveText": common[0],
+                })
+
+        # A source-a row sees its paired source-b row next. A source-b row sees
+        # only later, unrelated groups in its eight-candidate forward window.
+        self.assertFalse(tracemalloc.is_tracing())
+        tracemalloc.start()
+        started = time.perf_counter()
+        try:
+            result = curate_semantic_rows(
+                rows, "llm-embedding", {},
+                _config(similarityThreshold=0.99, maxComparisonsPerRow=8),
+            )
+            elapsed = time.perf_counter() - started
+            _, peak_python_bytes = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+
+        self.assertLessEqual(elapsed, 60)
+        self.assertLessEqual(peak_python_bytes, 64 * 1024**2)
+        self.assertEqual(len(result.accepted_rows), 2040)
+        self.assertEqual(result.quarantine_records, [])
+        self.assertEqual(result.report["duplicateRowCount"], 0)
+        self.assertEqual(result.report["hardNegativeRecommendationCount"], 1020)
+        self.assertLessEqual(result.report["comparedPairCount"], 2 * len(rows) * 8)
+        self.assertEqual(len(result.report["reviewExamples"]), 20)
+        self.assertNotIn("controlledpairtoken", json.dumps(result.report))
+        self.assertTrue(all("hardNegativeRecommendation" not in row for row in rows))
+        self.assertEqual(
+            Counter((row["sourceArtifactId"], row["sourceRowIndex"])
+                    for row in result.accepted_rows),
+            Counter((row["sourceArtifactId"], row["sourceRowIndex"]) for row in rows),
+        )
+        for row in result.accepted_rows:
+            if row["sourceArtifactId"] == "source-a":
+                self.assertEqual(row["hardNegativeRecommendation"], {
+                    "sourceArtifactId": "source-b",
+                    "sourceRowIndex": row["sourceRowIndex"],
+                    # Eight shared buckets, one doubled by the positive text.
+                    "similarity": round(11 / 12, 4),
+                    "algorithm": "hashed-token-v1",
+                })
+            else:
+                self.assertNotIn("hardNegativeRecommendation", row)
+
     def test_deterministically_quarantines_semantic_duplicates_before_splitting(self) -> None:
         rows = [
             {
