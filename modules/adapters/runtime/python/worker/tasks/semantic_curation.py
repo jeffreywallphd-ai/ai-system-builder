@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass
 import hashlib
 import math
@@ -109,6 +110,8 @@ def curate_semantic_rows(
     task_type: str,
     task_recipe: dict[str, Any],
     config: AdvancedSemanticCurationConfig,
+    *,
+    check_cancelled: Callable[[], None] | None = None,
 ) -> SemanticCurationResult:
     if not config.enabled:
         return SemanticCurationResult(rows, [], {
@@ -140,6 +143,8 @@ def curate_semantic_rows(
     review_examples: list[dict[str, object]] = []
 
     for fallback_index, row in enumerate(rows):
+        if check_cancelled is not None:
+            check_cancelled()
         source_id = _source_id(row)
         source_index = _source_row_index(row, fallback_index)
         if source_cap is not None and source_counts[source_id] >= source_cap:
@@ -189,6 +194,8 @@ def curate_semantic_rows(
     hard_negative_count = 0
     if embeddings:
         for index, embedding in enumerate(embeddings):
+            if check_cancelled is not None:
+                check_cancelled()
             best_index: int | None = None
             best_similarity = -1.0
             # Visit at most K indices, including skipped same-source rows.
@@ -230,6 +237,8 @@ def curate_semantic_rows(
                             "similarity": round(best_similarity, 4),
                         })
 
+    if check_cancelled is not None:
+        check_cancelled()
     balance_field = _balance_field(task_type, task_recipe, config.balanceField)
     distribution = Counter(
         str(row[balance_field])[:128]

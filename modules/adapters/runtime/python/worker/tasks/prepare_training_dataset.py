@@ -2452,6 +2452,7 @@ def prepare_training_dataset(
             task_type,
             task_recipe,
             payload.advanced.semantic,
+            check_cancelled=lambda: _check_preparation_cancelled(cancelled),
         )
         rows = semantic_result.accepted_rows
         mapping_quarantine.extend(semantic_result.quarantine_records)

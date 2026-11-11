@@ -12,6 +12,7 @@ from types import ModuleType
 from unittest.mock import patch
 
 from modules.adapters.runtime.python.worker.models import PrepareTrainingDatasetRequest
+from modules.adapters.runtime.python.worker.tasks import semantic_curation
 from modules.adapters.runtime.python.worker.tasks.constrained_json_decoder import (
     ConstrainedJsonDecoderError,
 )
@@ -27,6 +28,7 @@ from modules.adapters.runtime.python.worker.tasks.local_text_generation import (
     GenerationRuntimeDependencyError,
 )
 from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset import (
+    DatasetPreparationCancellationRequested,
     _parse_generated_text_value,
     _partition_rows,
     _read_structured_source_rows,
@@ -36,6 +38,7 @@ from modules.adapters.runtime.python.worker.tests.structured_output_test_fixture
     runtime_structured_output_fixture,
     runtime_structured_output_from_schema,
 )
+from modules.adapters.runtime.python.worker.tests.test_dataset_quality import _quality_config
 
 
 class PrepareTrainingDatasetTaskTests(unittest.TestCase):
@@ -1726,6 +1729,110 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertEqual(getattr(error, "stage", None), "generation")
         self.assertEqual(getattr(error, "error_code", None), "dataset_preparation_no_manifest_rows")
         self.assertEqual(getattr(error, "details", {}).get("taskType"), "vision-detection")
+
+
+def _semantic_cancellation_request(root: Path) -> PrepareTrainingDatasetRequest:
+    samples = (
+        ("source-a", "Review the account invoice for last month.", "billing"),
+        ("source-b", "Change the profile photograph on the account.", "profile"),
+        ("source-c", "Estimate the shipping time for the parcel.", "delivery"),
+    )
+    sources = []
+    for source_id, text, label in samples:
+        file = root / f"{source_id}.jsonl"
+        file.write_text(json.dumps({"text": text, "label": label}) + "\n", encoding="utf-8")
+        sources.append({
+            "artifactId": source_id,
+            "localPath": str(file),
+            "mediaType": "application/x-ndjson",
+            "originalName": file.name,
+            "metadata": {"language": "en"},
+        })
+    return PrepareTrainingDatasetRequest.model_validate({
+        "workspaceId": "workspace-a",
+        "sourceInputs": sources,
+        "recipe": {
+            "normalization": {"targetFormat": "markdown"},
+            "chunking": {"strategy": "character", "chunkSize": 1000, "chunkOverlap": 0},
+            "generation": {"mode": "qa", "model": {
+                "provider": "transformers",
+                "modelId": "unused-local-model",
+            }},
+            "task": {
+                "taskType": "llm-classification",
+                "textInputMode": "provided",
+                "textField": "text",
+                "labelField": "label",
+            },
+        },
+        "split": {"trainRatio": 0.5, "testRatio": 0.5, "seed": 7, "shuffle": True},
+        "output": {"format": "jsonl"},
+        "quality": _quality_config(fuzzyDuplicateSimilarity=1.0).model_dump(mode="json"),
+        "advanced": {
+            "preset": "better-document-understanding",
+            "semantic": {
+                "enabled": True,
+                "embeddingAlgorithm": "hashed-token-v1",
+                "similarityThreshold": 1.0,
+                "maxComparisonsPerRow": 2,
+                "hardNegativeMining": True,
+            },
+        },
+    })
+
+
+class PrepareSemanticCancellationTests(unittest.TestCase):
+    def test_cancel_interrupts_both_similarity_passes_without_output(self) -> None:
+        embed = semantic_curation.hashed_token_embedding
+        compare = semantic_curation.cosine_similarity
+        for phase in ("embedding", "coverage"):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                request = _semantic_cancellation_request(root)
+                output = root / "output"
+                output.mkdir()
+                requested = False
+                embeddings = comparisons = 0
+
+                def observe_embedding(text):
+                    nonlocal embeddings, requested
+                    result = embed(text)
+                    embeddings += 1
+                    if phase == "embedding" and embeddings == 1:
+                        requested = True
+                    return result
+
+                def observe_comparison(left, right):
+                    nonlocal comparisons, requested
+                    result = compare(left, right)
+                    comparisons += 1
+                    # The three distinct rows require 0 + 1 + 2 duplicate
+                    # comparisons. The next comparison is in the coverage pass.
+                    if phase == "coverage" and comparisons == 4:
+                        requested = True
+                    return result
+
+                with (
+                    patch.object(semantic_curation, "hashed_token_embedding", side_effect=observe_embedding),
+                    patch.object(semantic_curation, "cosine_similarity", side_effect=observe_comparison),
+                    patch(
+                        "modules.adapters.runtime.python.worker.tasks.prepare_training_dataset.ensure_generation_model_is_available",
+                        side_effect=AssertionError("Provided rows must not load a model."),
+                    ),
+                    self.assertRaises(DatasetPreparationCancellationRequested),
+                ):
+                    prepare_training_dataset(request, output_directory=output, cancelled=lambda: requested)
+
+                self.assertTrue(requested)
+                self.assertEqual(list(output.iterdir()), [])
+                if phase == "embedding":
+                    self.assertEqual((embeddings, comparisons), (1, 0))
+                else:
+                    self.assertEqual(embeddings, 3)
+                    # A request during one row may finish that row, but it
+                    # must not compare the next accepted row.
+                    self.assertLessEqual(comparisons, 5)
+                    self.assertGreaterEqual(comparisons, 4)
 
 
 if __name__ == "__main__":

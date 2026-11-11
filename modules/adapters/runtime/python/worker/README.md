@@ -47,6 +47,10 @@ version `2` retains the `hashed-token-v1` embedding and applies
 recommendations. The second pass visits at most that many subsequent accepted-row
 indices, wrapping once at the end; same-source skips consume candidate slots.
 It never scans the full collection to find more cross-source matches.
+The worker checks the current task's cancellation request between rows in both
+passes. It can finish the current bounded row, then stops before processing the
+next one. Cancellation during either pass produces no dataset output and does
+not stop the shared worker.
 `comparedPairCount` includes actual cosine comparisons from both passes, bounded
 by twice the input row count times the configured comparison limit. Existing
 version `1` reports remain historical; disabled curation keeps its unchanged
