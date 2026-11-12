@@ -23,6 +23,7 @@ export class ReleaseBoundSystemDataDefinitionService implements SystemDataReleas
     workspaceId: WorkspaceId,
     releaseId: SystemReleaseId,
     entityType: string,
+    options?: { readonly formInstanceId: string },
   ): Promise<SystemDataResolvedDefinition | undefined> {
     try {
       const release = await this.builds.readRelease(workspaceId, releaseId);
@@ -59,7 +60,11 @@ export class ReleaseBoundSystemDataDefinitionService implements SystemDataReleas
       if (!listOperation) return undefined;
       const configuredMaximum = Number(stringValue(configuration(listOperation).maximumPageSize) || 100);
       const maximumPageSize = Number.isInteger(configuredMaximum) && configuredMaximum > 0 && configuredMaximum <= 500 ? configuredMaximum : 100;
-      const form = findExactlyOne(instances, "builtin.form.form");
+      const form = options ? findExactlyOne(instances.filter((item) => {
+        if (item.instanceId !== options.formInstanceId) return false;
+        const reference = asRecord(item.definitionRef);
+        return reference.kind === "asset-definition-version" && reference.version === "3.0.0";
+      }), "builtin.form.form") : findExactlyOne(instances, "builtin.form.form");
       if (!form) return undefined;
       const title = stringValue(configuration(form).title) || "Record details";
 
