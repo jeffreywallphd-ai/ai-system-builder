@@ -74,6 +74,27 @@ test("form action admission needs the exact approved release and stamped trusted
   assert.equal(await service.resolve({ ...request, formId: "another-form" }), undefined);
 });
 
+test("listing returns each admitted form once and rejects duplicate or missing stamps", async () => {
+  const { service, request } = fixture();
+  assert.deepEqual((await service.list(request)).map((entry) => entry.form.id), ["form-a"]);
+  const duplicate = fixture({ lock: { ...exactLock, runtimeFormActions: [
+    ...exactLock.runtimeFormActions!, ...exactLock.runtimeFormActions!,
+  ] } });
+  assert.deepEqual(await duplicate.service.list(duplicate.request), []);
+  const unstamped = fixture({ lock: { ...exactLock, runtimeFormActions: undefined } });
+  assert.deepEqual(await unstamped.service.list(unstamped.request), []);
+});
+
+test("the discovery count does not deny a valid exact form in a larger stamped release", async () => {
+  const { service, request } = fixture({ lock: { ...exactLock, runtimeFormActions: [
+    ...exactLock.runtimeFormActions!, ...Array.from({ length: 64 }, (_, index) => ({
+      schemaVersion: SYSTEM_FORM_ACTION_SCHEMA as typeof SYSTEM_FORM_ACTION_SCHEMA, formId: `other-form-${index}`, operationId: "create-a",
+    })),
+  ] } });
+  assert.equal((await service.resolve(request))?.form.id, "form-a");
+  assert.deepEqual((await service.list(request)).map((entry) => entry.form.id), ["form-a"]);
+});
+
 test("old locks, altered revisions, untrusted implementations and current revocation cannot admit an action", async () => {
   const untrusted = exactLock.resolvedImplementations.map((item) => item.instanceId === "create-a"
     ? { ...item, trustLevel: "workspace-approved" as const } : item);

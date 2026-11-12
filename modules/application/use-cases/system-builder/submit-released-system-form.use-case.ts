@@ -1,14 +1,12 @@
 import { normalizeAssetId } from "../../../contracts/asset";
 import type { SystemDataPrincipal, SystemDataValues } from "../../../contracts/system-data";
-import type { SystemFormValue } from "../../../contracts/system-builder";
+import type { SystemFormSubmitResult, SystemFormValue } from "../../../contracts/system-builder";
 import type { SystemBuildHasherPort } from "../../ports/system-build";
 import type { ResolveSystemFormReleaseService, SystemFormReleaseContext } from "../../services/system-builder/resolve-system-form-release.service";
 import { evaluateSystemForm } from "../../services/system-builder/system-form-rules.service";
 import { canonicalizeSystemBuildValue } from "../../services/system-build/canonical-system-build-json";
 
-export type SystemFormSubmitResult =
-  | { readonly status: "completed" | "already-recorded" | "pending"; readonly receiptId: string }
-  | { readonly status: "unavailable" | "denied" | "invalid"; readonly fieldId?: string };
+export type { SystemFormSubmitResult } from "../../../contracts/system-builder";
 
 export interface SystemFormRecordOnceInput {
   readonly workspaceId: SystemFormReleaseContext["workspaceId"];

@@ -1,7 +1,7 @@
 import type { AssetBinding, AssetInstance, AssetJsonObject, AssetPlacement, AssetValidationIssue } from "../../../contracts/asset";
 import {
   readSystemFormRoute, SYSTEM_FORM_ROUTE_METADATA_KEY, type SystemFormRoute,
-  type SystemFormRouteCondition, type SystemFormValue,
+  type PublishedSystemForm, type SystemFormField, type SystemFormRouteCondition, type SystemFormStep, type SystemFormValue,
 } from "../../../contracts/system-builder";
 
 const FORM = "builtin.form.form";
@@ -20,31 +20,8 @@ const MAX_TEXT = 4000;
 const MAX_OPTIONS = 32;
 const hasKey = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 
-export interface SystemFormField {
-  readonly id: string;
-  readonly label: string;
-  readonly helpText: string;
-  readonly kind: typeof FIELD_KINDS[keyof typeof FIELD_KINDS];
-  readonly required: boolean;
-  readonly options: readonly { readonly label: string; readonly value: string }[];
-  readonly min: number | undefined;
-  readonly max: number | undefined;
-  readonly dateKind: "date" | "time" | "date-time";
-  readonly earliest: string | undefined;
-  readonly latest: string | undefined;
-}
-export interface SystemFormStep {
-  readonly id: string;
-  readonly label: string;
-  readonly fields: readonly SystemFormField[];
-  readonly conditions: readonly SystemFormRoute[];
-  readonly defaultDestinationId: string;
-}
-export interface CompiledSystemForm {
-  readonly id: string;
-  readonly title: string;
-  readonly steps: readonly SystemFormStep[];
-}
+export type { SystemFormField, SystemFormStep } from "../../../contracts/system-builder";
+export type CompiledSystemForm = PublishedSystemForm;
 export interface SystemFormSource {
   readonly instances: readonly AssetInstance[];
   readonly placements?: readonly AssetPlacement[];
