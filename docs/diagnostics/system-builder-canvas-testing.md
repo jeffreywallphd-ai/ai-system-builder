@@ -74,6 +74,11 @@ composer command-line entry point. The import regression runs without opening
 an app or database. Restart qualification still requires the named managed
 Assets case to observe its existing graceful shutdown and new process checks.
 
+The Canvas element picker uses a short visible heading and shows the selected
+container in the dialog body. Its accessible name still includes the
+container. Card metadata uses the stronger secondary text color so the type
+and version stay legible when a result is focused or hovered.
+
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown
 qualification retains a read-only Win32 process handle acquired while that main

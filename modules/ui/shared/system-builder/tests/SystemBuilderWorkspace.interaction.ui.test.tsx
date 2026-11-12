@@ -1446,6 +1446,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
       expect(current?.textContent).toContain("Preserved top bar");
       return current!;
     });
+    const title = document.getElementById(assetDialog.getAttribute("aria-labelledby")!);
+    expect(title?.textContent).toBe("Add an element to Standard shell");
+    expect(title?.firstChild?.textContent).toBe("Add an element");
+    expect(assetDialog.querySelector(".system-composer__asset-picker-destination")?.textContent).toBe("Destination: Standard shell");
     expect(assetDialog.textContent).toContain("Unassigned visual assets");
     await act(async () =>
       assetDialog

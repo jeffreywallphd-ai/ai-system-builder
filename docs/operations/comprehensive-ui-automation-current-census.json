@@ -12102,8 +12102,8 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "7c97f3111a178ee0179d7e973c8d6f4123fc4cf4c883184f54095752708b1b0f",
-    "bytes": 106602,
+    "sha256": "bd8517b151ba313cfee36660feea59a717290246368e433470e424bf67e94261",
+    "bytes": 106965,
     "cases": [
      {
       "name": "submits a published form only after valid answers and reuses the same request on retry",
@@ -12163,19 +12163,19 @@
      },
      {
       "name": "requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system",
-      "line": 1484
+      "line": 1488
      },
      {
       "name": "opens and closes a modal for the current safe frontend composition",
-      "line": 1687
+      "line": 1691
      },
      {
       "name": "previews a v2 Foundation upgrade before explicit confirmation",
-      "line": 1807
+      "line": 1811
      },
      {
       "name": "preserves canonical structure and placements when saving configuration",
-      "line": 1934
+      "line": 1938
      }
     ],
     "dynamicCases": 0,
@@ -12186,35 +12186,35 @@
      },
      {
       "name": "instance",
-      "line": 2304
+      "line": 2308
      },
      {
       "name": "composerDefinition",
-      "line": 2324
+      "line": 2328
      },
      {
       "name": "layoutDefinition",
-      "line": 2396
+      "line": 2400
      },
      {
       "name": "withoutComposerDetail",
-      "line": 2414
+      "line": 2418
      },
      {
       "name": "button",
-      "line": 2425
+      "line": 2429
      },
      {
       "name": "setInputValue",
-      "line": 2432
+      "line": 2436
      },
      {
       "name": "clientFor",
-      "line": 2439
+      "line": 2443
      }
     ],
-    "assertionCount": 256,
-    "assertionDigest": "cc6b79289ecb9298e1122bef6ece835df9d564b9e65f27c67b56a2b49ca40a21",
+    "assertionCount": 259,
+    "assertionDigest": "eebdf64c05bd368569872f9ec3e21ec353e3f2be2ace647f009ab24c7dbc2ee2",
     "assertionExamples": [
      {
       "line": 66,

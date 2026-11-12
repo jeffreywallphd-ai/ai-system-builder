@@ -488,6 +488,9 @@ const currentFormEditorAssertions = Object.freeze({
   path: "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
   before: "ab5102e343e21bee01236f0e599fbf43f8a5c98dc8ea8036243bf7f82f929025",
   after: "7c97f3111a178ee0179d7e973c8d6f4123fc4cf4c883184f54095752708b1b0f",
+  previousCheckpoint: "4b98c44d38be7e85d6c7d5925d57d178eccfc2cb",
+  picker: "bd8517b151ba313cfee36660feea59a717290246368e433470e424bf67e94261",
+  pickerFacts: "70c161f39790ede73dc765ef535bc82706c9b7afdcd20a69c489ff800d0371cd",
 });
 const publishedFormTabInventory = [
   {source: "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
@@ -509,6 +512,13 @@ const pendingFormHostSources = Object.freeze([
 ].map(Object.freeze));
 
 function formHostCensusLegacyView(map, result) {
+  const editor = map.sources.find(row => row.path === currentFormEditorAssertions.path);
+  if (editor?.facts.sha256 === currentFormEditorAssertions.picker) {
+    assert.equal(sha(JSON.stringify(editor.facts)), currentFormEditorAssertions.pickerFacts);
+    const previous = sourceFacts(editor.path, historicalSource(currentFormEditorAssertions.previousCheckpoint, editor.path));
+    assert.equal(previous.sha256, currentFormEditorAssertions.after);
+    map = {...map, sources: map.sources.map(row => row === editor ? {...row, facts: previous} : row)};
+  }
   const paths = new Set(pendingFormHostSources.map(row => row.path));
   if (!map.host_spec_files.some(path => paths.has(path)) && !map.sources.some(row => paths.has(row.path))) {
     return {map, result};
@@ -545,7 +555,7 @@ function currentPublishedFormCensusLegacyView(map, result) {
   assert.equal(sourceRows.length, 1);
   const [sourceRow] = sourceRows;
   assert.equal(sourceRow.facts.sha256, currentFormEditorAssertions.before);
-  const facts = sourceFacts(sourceRow.path, fs.readFileSync(sourceRow.path));
+  const facts = sourceFacts(sourceRow.path, historicalSource(currentFormEditorAssertions.previousCheckpoint, sourceRow.path));
   assert.equal(facts.sha256, currentFormEditorAssertions.after);
   assert.notEqual(sourceRow.committed_sha256, facts.sha256);
   sourceRow.facts = facts;

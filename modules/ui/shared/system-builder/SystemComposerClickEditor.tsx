@@ -360,6 +360,8 @@ export function SystemComposerStructureEditor({
     pickerParentNode?.instance,
     catalog,
   );
+  const pickerDestination = pickerParentNode?.instance.displayName ??
+    pickerParentDefinition?.displayName ?? "container";
   const pickerSlots = pickerParentNode
     ? canvasSlotsForNode(pickerParentNode, pickerParentDefinition).filter(
         ({ slot, editable }) => editable && hasRegionCapacity(pickerParentNode, slot),
@@ -1257,17 +1259,16 @@ export function SystemComposerStructureEditor({
 
       <ModalDialog
         open={Boolean(assetPicker && pickerParentNode)}
-        title={`Add an element to ${
-          pickerParentNode?.instance.displayName ??
-          pickerParentDefinition?.displayName ??
-          "container"
-        }`}
+        title={<>Add an element<span className="ui-visually-hidden"> to {pickerDestination}</span></>}
         onClose={closeAssetPicker}
         closeLabel="Close asset selection"
         descriptionId="system-composer-asset-picker-description"
         dialogClassName="system-composer__asset-picker-dialog"
         bodyClassName="system-composer__asset-picker"
       >
+        <p className="system-composer__asset-picker-destination" aria-hidden="true">
+          Destination: <strong>{pickerDestination}</strong>
+        </p>
         <p
           id="system-composer-asset-picker-description"
           className="ui-text-muted"
