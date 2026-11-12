@@ -73,6 +73,12 @@ export interface SystemBuildRuntimeInteractionBinding {
   readonly transcriptMode: "persisted-only";
 }
 
+export interface SystemBuildRuntimeFormAction {
+  readonly schemaVersion: "system-builder-form-action.v1";
+  readonly formId: string;
+  readonly operationId: string;
+}
+
 export interface SystemBuildLockManifest {
   readonly schemaVersion: "1.0";
   readonly systemId: SystemBuilderSystemId;
@@ -93,6 +99,8 @@ export interface SystemBuildLockManifest {
    */
   readonly runtimeResourceBindings?: readonly SystemBuildRuntimeResourceBinding[];
   readonly runtimeInteractionBindings?: readonly SystemBuildRuntimeInteractionBinding[];
+  /** Absent in legacy locks. Only a build can attest that a form action was validated. */
+  readonly runtimeFormActions?: readonly SystemBuildRuntimeFormAction[];
 }
 
 export interface SystemBuildRecord {

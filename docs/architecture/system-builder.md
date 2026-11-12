@@ -208,6 +208,10 @@ customization, and single-asset Studio workflows.
   form fields the action may receive and their destination record fields.
   Revision validation rejects duplicate actions, other operations, incompatible
   ports, and fields outside the form. A saved binding by itself has no effect.
+  A successful build pins each supported form action in its lock. Runtime
+  admission requires this stamp, an approved release with a verified
+  manifest, the exact saved revision, and non-revoked system implementations.
+  An older lock without a form action stamp grants no submission authority.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only

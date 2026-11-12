@@ -12,6 +12,8 @@ import {
   type ValidateSystemBuilderRevisionService,
 } from "../../services/system-builder";
 import { canonicalizeSystemBuildValue } from "../../services/system-build";
+import { hasTrustedFormImplementations } from "../../services/system-builder/resolve-system-form-release.service";
+import { compileSystemFormAction, type CompiledSystemFormAction } from "../../services/system-builder/system-form-action.service";
 import type {
   AssetImplementationFacetKind,
   AssetImplementationResolutionResult,
@@ -20,6 +22,8 @@ import type { AssetReference } from "../../../contracts/asset";
 import {
   readSystemBuilderConversationInteraction,
   readSystemBuilderModelBinding,
+  SYSTEM_FORM_ACTION_METADATA_KEY,
+  SYSTEM_FORM_ACTION_SCHEMA,
   SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
 } from "../../../contracts/system-builder";
 import {
@@ -39,6 +43,7 @@ import {
   type SystemBuildRecord,
   type SystemBuildRuntimeResourceBinding,
   type SystemBuildRuntimeInteractionBinding,
+  type SystemBuildRuntimeFormAction,
   type SystemBuildResolvedImplementation,
   type SystemBuildResult,
   type SystemRelease,
@@ -147,6 +152,19 @@ export class RequestSystemBuildUseCase {
         }));
       if (validation.status === "invalid")
         return await this.fail(running, validationDiagnostics);
+      const runtimeFormActions: SystemBuildRuntimeFormAction[] = [];
+      const compiledFormActions: CompiledSystemFormAction[] = [];
+      const formsWithActions = new Set(systemRevision.bindings.filter((binding) =>
+        Object.prototype.hasOwnProperty.call(binding.metadata ?? {}, SYSTEM_FORM_ACTION_METADATA_KEY))
+        .map((binding) => String(binding.sourceRef.id)));
+      for (const formId of formsWithActions) {
+        const action = compileSystemFormAction(systemRevision, formId);
+        if (!action) return await this.fail(running, [...validationDiagnostics, {
+          severity: "error", code: "system.build.form-action-invalid", message: "A form action is invalid.",
+        }]);
+        runtimeFormActions.push({ schemaVersion: SYSTEM_FORM_ACTION_SCHEMA, formId, operationId: action.operationId });
+        compiledFormActions.push(action);
+      }
 
       const runtimeResourceBindings: SystemBuildRuntimeResourceBinding[] = [];
       for (const instance of systemRevision.instances) {
@@ -308,6 +326,11 @@ export class RequestSystemBuildUseCase {
           ...validationDiagnostics,
           ...resolutionDiagnostics,
         ]);
+      if (compiledFormActions.some((action) => !hasTrustedFormImplementations(action, systemRevision.instances, resolved))) {
+        return await this.fail(running, [...validationDiagnostics, {
+          severity: "error", code: "system.build.form-action-untrusted", message: "Form actions require trusted built-in implementations.",
+        }]);
+      }
       if (await this.cancelled(command.workspaceId, command.buildId))
         return (await this.dependencies.repository.readBuild(
           command.workspaceId,
@@ -368,6 +391,7 @@ export class RequestSystemBuildUseCase {
           (left, right) =>
             left.composerInstanceId.localeCompare(right.composerInstanceId),
         ),
+        ...(runtimeFormActions.length ? { runtimeFormActions: runtimeFormActions.sort((left, right) => left.formId.localeCompare(right.formId)) } : {}),
       };
       const lockDigest = this.dependencies.hasher.digest(
         canonicalizeSystemBuildValue(lock),

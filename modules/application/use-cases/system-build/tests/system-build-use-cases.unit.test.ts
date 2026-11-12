@@ -1,9 +1,11 @@
 import { describe, expect, it } from "../../../../testing/node-test";
 import {
   normalizeAssetId,
+  normalizeAssetSlotId,
   type AssetBinding,
   type AssetDefinition,
   type AssetInstance,
+  type AssetPlacement,
   type AssetReference,
 } from "../../../../contracts/asset";
 import {
@@ -13,9 +15,11 @@ import {
 import {
   createSystemBuilderModelBinding,
   createSystemBuilderConversationInteractionMetadata,
+  createSystemFormActionBinding,
   normalizeSystemBuilderRevisionId,
   normalizeSystemBuilderSystemId,
   SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+  SYSTEM_FORM_ACTION_SCHEMA,
   type SystemBuilderRevision,
 } from "../../../../contracts/system-builder";
 import type { ModelInventoryRecord } from "../../../../contracts/model";
@@ -32,7 +36,9 @@ import { createSha256SystemBuildHasher } from "../../../../adapters/storage/syst
 import {
   SystemBuilderModelAuthorityService,
   ValidateSystemBuilderRevisionService,
+  createCanonicalSystemBuilderStructure,
 } from "../../../services/system-builder";
+import { SYSTEM_FOUNDATION_PACK_V3_MANIFEST } from "../../../services/asset-packs/system-packs";
 import { createDeterministicSystemBuildMaterializer } from "../../../services/system-build";
 import type { SystemBuilderRepositoryPort } from "../../../ports/system-builder";
 import type {
@@ -253,6 +259,69 @@ function command(buildId: string) {
 }
 
 describe("system build and release use cases", () => {
+  it("locks a validated form action in the approved release and refuses an out-of-form mapping", async () => {
+    const seed = createCanonicalSystemBuilderStructure({ systemId, compositionId, name: "Form test",
+      profile: "interactive", actorId: "user-1", timestamp: revision.createdAt });
+    const ref = (id: string) => ({ kind: "asset-instance" as const, id: normalizeAssetId(id) });
+    const instanceFor = (id: string, definitionId: string, configuration: AssetInstance["selectedConfiguration"] = {}): AssetInstance => ({
+      ...instance, instanceId: normalizeAssetId(id), displayName: id,
+      definitionRef: { kind: "asset-definition-version", id: normalizeAssetId(definitionId), version: "3.0.0" },
+      selectedConfiguration: configuration,
+    });
+    const page = seed.instances.find((asset) => asset.definitionRef.id === "builtin.layout.page.single")!;
+    const place = (parent: string, child: string, slotId: string): AssetPlacement => ({
+      schemaVersion: "asset-placement.v1", placementId: `place.${child}`, parentInstanceRef: ref(parent), childInstanceRef: ref(child),
+      slotId: normalizeAssetSlotId(slotId), order: 0,
+    });
+    const additions = [instanceFor("form.section", "builtin.ui.section"), instanceFor("form.request", "builtin.form.form", { title: "Request" }),
+      instanceFor("form.step", "builtin.form.field-group", { title: "Details" }), instanceFor("form.reason", "builtin.form.text-field", { label: "Reason" }),
+      instanceFor("form.create", "builtin.data.create-operation", { entity: "Request" }),
+      instanceFor("form.policy", "builtin.security.authorization-policy", { action: "create", allowedRoles: ["owner"] })];
+    const instances = [...seed.instances, ...additions];
+    const placements = [...seed.placements, place(String(page.instanceId), "form.section", "content"), place("form.section", "form.request", "content"),
+      place("form.request", "form.step", "fields"), place("form.step", "form.reason", "fields")];
+    const create = (fieldId: string): SystemBuilderRevision => {
+      const binding = createSystemFormActionBinding("form.action", { formId: "form.request", operationId: "form.create",
+        mappings: [{ fieldId, recordField: "reason" }] });
+      return { ...revision, instances, placements, structure: seed.structure, bindings: [binding],
+        composition: { ...revision.composition, rootInstanceRefs: seed.rootInstanceRefs, instanceRefs: instances.map((asset) => ref(asset.instanceId)),
+          placementRefs: placements.map((edge) => ({ kind: "asset-placement", id: normalizeAssetId(edge.placementId) })),
+          bindingRefs: [{ kind: "asset-binding", id: normalizeAssetId(binding.bindingId) }] } };
+    };
+    const repository = createStructuredSystemBuildRepository(createInMemoryStructuredDocumentStore());
+    const hasher = createSha256SystemBuildHasher();
+    const artifacts = artifactPort(hasher);
+    const knownDefinitions = new Map(SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.map((entry) => [String(entry.definition.definitionId), entry.definition]));
+    const standard = resolver();
+    const lockResolver = (trusted: boolean): SystemBuildImplementationResolverPort => ({ async resolve(request) {
+      const base = await standard.resolve({ ...request, requiredFacets: ["ui"] });
+      if (base.status !== "ready" || !base.selectedRelease) return base;
+      const kind = request.definitionRef.id === "builtin.security.authorization-policy" ? "policy" : "ui";
+      if (request.requiredFacets[0] !== kind) return { ...base, status: "incompatible", selectedRelease: undefined, selectedFacets: [] };
+      const trustLevel = !trusted && request.definitionRef.id === "builtin.data.create-operation" ? "workspace-approved" : "system-trusted";
+      return { ...base, selectedRelease: { ...base.selectedRelease, definitionRef: request.definitionRef, facetKinds: [kind], trustLevel },
+        selectedFacets: base.selectedFacets.map((facet) => ({ ...facet, kind, compatibility: { ...facet.compatibility, definitionVersion: "3.0.0" } })) };
+    } });
+    const build = (value: SystemBuilderRevision, trusted = true) => new RequestSystemBuildUseCase({ repository, systems: systemRepository(value),
+      validator: new ValidateSystemBuilderRevisionService({ readExactDefinition: async (reference) => knownDefinitions.get(reference.id) }),
+      resolver: lockResolver(trusted), artifacts: artifacts.port, hasher, materializer: createDeterministicSystemBuildMaterializer() });
+    const result = await build(create("form.reason")).execute(command("build.form.good"));
+    if (!result.ok || result.value.status !== "succeeded" || !result.value.lockDigest) {
+      throw new Error(JSON.stringify(result.ok ? result.value.diagnostics : result.error));
+    }
+    const expected = [{ schemaVersion: SYSTEM_FORM_ACTION_SCHEMA, formId: "form.request", operationId: "form.create" }];
+    expect(result.value.lock?.runtimeFormActions).toEqual(expected);
+    const release = await new ApproveSystemReleaseUseCase(repository, artifacts.port, hasher).execute({ workspaceId,
+      buildId: result.value.buildId, expectedLockDigest: result.value.lockDigest, actorId: "approver-1" });
+    expect(release.ok && release.value.lock.runtimeFormActions).toEqual(expected);
+    const denied = await build(create("form.foreign")).execute(command("build.form.denied"));
+    expect(denied.ok && denied.value.status).toBe("failed");
+    expect(denied.ok && denied.value.outputArtifacts).toEqual([]);
+    const untrusted = await build(create("form.reason"), false).execute(command("build.form.untrusted"));
+    expect(untrusted.ok && untrusted.value.status).toBe("failed");
+    expect(untrusted.ok && untrusted.value.diagnostics.some((item) => item.code === "system.build.form-action-untrusted")).toBe(true);
+  });
+
   it("produces repeatable content-addressed builds and an immutable approved release", async () => {
     const repository = createStructuredSystemBuildRepository(
       createInMemoryStructuredDocumentStore(),
@@ -278,6 +347,7 @@ describe("system build and release use cases", () => {
     if (!first.ok || !second.ok || !first.value.lockDigest)
       throw new Error("Expected successful builds.");
     expect(first.value.lockDigest).toBe(second.value.lockDigest);
+    expect(first.value.lock?.runtimeFormActions).toBeUndefined();
     expect(first.value.outputArtifacts.map((item) => item.digest)).toEqual(
       second.value.outputArtifacts.map((item) => item.digest),
     );
@@ -365,11 +435,11 @@ describe("system build and release use cases", () => {
       bindingKind: "control",
       sourceRef: {
         kind: "asset-instance",
-        id: composerInstance.instanceId,
+        id: normalizeAssetId(composerInstance.instanceId),
       },
       targetRef: {
         kind: "asset-instance",
-        id: historyInstance.instanceId,
+        id: normalizeAssetId(historyInstance.instanceId),
       },
       lifecycleStatus: "draft",
       provenance: { sourceKind: "human-authored" },
@@ -402,7 +472,7 @@ describe("system build and release use cases", () => {
         bindingRefs: [
           {
             kind: "asset-binding",
-            id: conversationBinding.bindingId,
+            id: normalizeAssetId(conversationBinding.bindingId),
           },
         ],
       },
