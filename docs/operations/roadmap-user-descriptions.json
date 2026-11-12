@@ -17774,6 +17774,28 @@
           "The packaged Desktop app and full Settings workflow still need their own checks."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f9c0b9fa8d33d4d8b6d80deaa9525dc794ed03376890acd5d2d04a2ede05877a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Add data stops reading the selected file when the app confirms cancellation.",
+          "The form sends no more chunks and keeps the file selected."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9715faeab25deb1182155c4d06cdbbe27fde08e90c8ae0ea03dca866dcaa923d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The component tests used made-up files and replies.",
+          "Browser interruption and cleanup still need their own checks."
+        ]
+      }
     }
   ]
 }

@@ -12515,6 +12515,22 @@
       "limitations": [
         "The tests used made-up settings in the Desktop components. The packaged Desktop app and full Settings workflow still need their own checks."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "large-supported-inputs-stream-within-bounds",
+      "work_id": "stop-file-upload-on-terminal-host-response",
+      "work_criteria": [
+        "no-more-file-operations-after-host-terminal-response",
+        "existing-file-and-authority-behavior-preserved"
+      ],
+      "receipt_digest": "c9462e3fb4aef02861121cabbbc948d62351f13186d00d53ef26fa3a0fad7eed",
+      "review_digest": "f74925e32da2bcec43e935e964fcfa5df1147d0b4ef78e38e9034b7ac176b409",
+      "scope": "Add data stops reading the selected file when the app confirms cancellation. The form sends no more chunks and keeps the file selected.",
+      "limitations": [
+        "The component tests used made-up files and replies. Browser interruption and cleanup still need their own checks."
+      ]
     }
   ]
 }
