@@ -40,7 +40,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <SettingField
             definition={definition}
             value={settings.valuesByKey.get(definition.key)}
-            disabled={settings.loading || settings.saving}
+            disabled={!settings.ready || settings.saving}
             compact={props.compact}
             onSave={async (value) => settings.updateSetting(definition.key, value)}
             onClear={async () => settings.clearSetting(definition.key)}

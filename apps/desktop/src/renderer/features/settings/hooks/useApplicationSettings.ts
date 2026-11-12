@@ -16,6 +16,7 @@ export interface UseApplicationSettingsResult {
   valuesByKey: Map<ApplicationSettingKey, ApplicationSettingValue>;
   loading: boolean;
   saving: boolean;
+  ready: boolean;
   status: "idle" | "success" | "error";
   errorMessage?: string;
   successMessage?: string;
@@ -40,12 +41,13 @@ interface SettingsView {
   valuesByKey: Map<ApplicationSettingKey, ApplicationSettingValue>;
   loading: boolean;
   saving: boolean;
+  ready: boolean;
   status: "idle" | "success" | "error";
   errorMessage?: string;
   successMessage?: string;
 }
 function initialView(scope: SettingsScope): SettingsView {
-  return { scope, definitions: [], valuesByKey: new Map(), loading: true, saving: false, status: "idle" };
+  return { scope, definitions: [], valuesByKey: new Map(), loading: true, saving: false, ready: false, status: "idle" };
 }
 export function useApplicationSettings(options: UseApplicationSettingsOptions = {}): UseApplicationSettingsResult {
   const client = useMemo(() => {
@@ -82,7 +84,7 @@ export function useApplicationSettings(options: UseApplicationSettingsOptions = 
     if (scope.lease !== lease) return false;
     scope.readOwner = owner;
     scope.ready = false;
-    setView(previous => ({ ...previous, loading: true, status: "idle", errorMessage: undefined, successMessage: undefined }));
+    setView(previous => ({ ...previous, loading: true, ready: false, status: "idle", errorMessage: undefined, successMessage: undefined }));
     try {
       if (!scope.client) throw new Error("unavailable");
       const query = () => ({ category: scope.query.category, keys: scope.query.keys && [...scope.query.keys] });
@@ -109,7 +111,7 @@ export function useApplicationSettings(options: UseApplicationSettingsOptions = 
       }));
       if (!current()) return false;
       scope.ready = true;
-      setView(previous => ({ ...previous, definitions: preparedDefinitions, valuesByKey: preparedValues, status: "idle" }));
+      setView(previous => ({ ...previous, definitions: preparedDefinitions, valuesByKey: preparedValues, ready: true, status: "idle" }));
       return true;
     } catch {
       if (current()) setView(previous => ({ ...previous, status: "error", errorMessage: !scope.client
@@ -137,7 +139,7 @@ export function useApplicationSettings(options: UseApplicationSettingsOptions = 
     scope.mutationOwner = owner;
     scope.ready = false;
     const current = () => scope.lease === lease && scope.mutationOwner === owner;
-    setView(previous => ({ ...previous, saving: true, status: "idle", errorMessage: undefined, successMessage: undefined }));
+    setView(previous => ({ ...previous, saving: true, ready: false, status: "idle", errorMessage: undefined, successMessage: undefined }));
     try {
       if (kind === "save") await client.updateSetting({ key, value: value! });
       else await client.clearSetting({ key });
@@ -148,7 +150,7 @@ export function useApplicationSettings(options: UseApplicationSettingsOptions = 
       if (current()) {
         // A refused write leaves the last read available for an explicit retry.
         scope.ready = true;
-        setView(previous => ({ ...previous, status: "error", errorMessage: kind === "save"
+        setView(previous => ({ ...previous, ready: true, status: "error", errorMessage: kind === "save"
           ? "Could not save setting. Try again." : "Could not clear setting. Try again." }));
       }
       return false;
@@ -193,7 +195,7 @@ export function useApplicationSettings(options: UseApplicationSettingsOptions = 
   const shown = view.scope === scope ? view : initialView(scope);
   return {
     definitions: shown.definitions, valuesByKey: shown.valuesByKey, loading: shown.loading, saving: shown.saving,
-    status: shown.status, errorMessage: shown.errorMessage, successMessage: shown.successMessage,
+    ready: shown.ready, status: shown.status, errorMessage: shown.errorMessage, successMessage: shown.successMessage,
     refresh, updateSetting, clearSetting, selectFolder, resolveModelDefault,
   };
 }

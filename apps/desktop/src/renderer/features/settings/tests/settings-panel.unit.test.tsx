@@ -260,21 +260,39 @@ describe("SettingsPanel", () => {
     await renderPanel({ category: "huggingface" });
     readSettings.mockRejectedValueOnce(new Error("private readback details"));
     const input = container!.querySelector('[data-testid="secret-input"]') as HTMLInputElement;
+    const save = container!.querySelector('[data-testid="secret-save"]') as HTMLButtonElement;
+    const clear = container!.querySelector('[data-testid="secret-clear"]') as HTMLButtonElement;
     await act(async () => {
       setNativeValue(input, "synthetic-readback-input");
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    await act(async () => (container!.querySelector('[data-testid="secret-save"]') as HTMLButtonElement).click());
+    await act(async () => save.click());
     expect(updateSetting).toHaveBeenCalledTimes(1);
     expect(input.value).toBe("synthetic-readback-input");
     expect(readNotificationMessages(container!)).not.toContain("Setting saved.");
     expect(readNotificationMessages(container!)).not.toContain("private readback details");
     expect(readNotificationMessages(container!)).toContain("Could not reload settings after the change. Refresh settings before trying again.");
+    expect(save.disabled).toBe(true);
+    expect(clear.disabled).toBe(true);
+    await act(async () => { save.click(); clear.click(); });
+    expect(updateSetting).toHaveBeenCalledTimes(1);
+    expect(clearSetting).not.toHaveBeenCalled();
     const refresh = Array.from(container!.querySelectorAll("button")).find(button => button.textContent === "Refresh settings");
-    expect(refresh).toBeDefined();
+    expect(refresh?.disabled).toBe(false);
+    readSettings.mockRejectedValueOnce(new Error("private refresh details"));
     await act(async () => refresh!.click());
     expect(readSettings).toHaveBeenCalledTimes(3);
+    expect(save.disabled).toBe(true);
+    expect(clear.disabled).toBe(true);
+    expect(readNotificationMessages(container!)).not.toContain("private refresh details");
+    await act(async () => refresh!.click());
+    expect(readSettings).toHaveBeenCalledTimes(4);
+    expect(save.disabled).toBe(false);
+    expect(clear.disabled).toBe(false);
     expect(input.value).toBe("synthetic-readback-input");
+    await act(async () => save.click());
+    expect(updateSetting).toHaveBeenCalledTimes(2);
+    expect(input.value).toBe("");
   });
 
   it("admits one secret write before a pending save disables controls", async () => {

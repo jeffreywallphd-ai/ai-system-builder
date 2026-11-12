@@ -16,8 +16,10 @@ Save and Clear return a local success flag. A secret draft clears only after the
 current write and settings read both succeed. A failed write keeps the draft for
 an explicit retry. A newer draft edit survives an older Save or Clear result.
 Malformed returned rows are checked before React receives the read result.
-If readback fails after a change, use **Refresh settings** before
-another write. Refresh also lets the user recover from an initial read failure.
+If readback fails after a change, the panel disables the settings fields until
+**Refresh settings** succeeds. Refresh remains available and the secret draft
+stays in the field. Refresh also lets the user recover from an initial read
+failure.
 Ordinary and model-default fields adopt the current returned values. A successful
 folder selection changes a draft; it does not save the setting.
 

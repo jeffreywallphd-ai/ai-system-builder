@@ -1807,8 +1807,8 @@
   {
    "path": "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx",
    "facts": {
-    "sha256": "8eb32dc162c2c286da4b446ef6babd2a094fc0f1230dc946cf6568b6372e7f78",
-    "bytes": 21982,
+    "sha256": "3a3a2323dee78338ab729cd33434adb7349ce0d397c2ba74388a19121c7f78bd",
+    "bytes": 22895,
     "cases": [
      {
       "name": "loads definitions and values by category",
@@ -1856,35 +1856,35 @@
      },
      {
       "name": "admits one secret write before a pending save disables controls",
-      "line": 280
+      "line": 298
      },
      {
       "name": "can refresh after an initial read failure without an inline error",
-      "line": 301
+      "line": 319
      },
      {
       "name": "retains a failed Clear draft and clears it only after successful retry",
-      "line": 313
+      "line": 331
      },
      {
       "name": "refreshes ordinary and model-default drafts from the current read",
-      "line": 330
+      "line": 348
      },
      {
       "name": "recovers safely from malformed initial readback %j",
-      "line": 342
+      "line": 360
      },
      {
       "name": "keeps the secret draft when a successful write returns malformed readback",
-      "line": 351
+      "line": 369
      },
      {
       "name": "rejects malformed definition rows before rendering fields",
-      "line": 368
+      "line": 386
      },
      {
       "name": "preserves a new draft edit queued in the same turn as %s",
-      "line": 375
+      "line": 393
      }
     ],
     "dynamicCases": 0,
@@ -1898,8 +1898,8 @@
       "line": 83
      }
     ],
-    "assertionCount": 74,
-    "assertionDigest": "89fdd9561586ccd696023a3b1df1bb2ca6201ec33611fb97384b728a5992a3b6",
+    "assertionCount": 86,
+    "assertionDigest": "9cb94f8aeee70f0b12663aec944cb6c413fb6eef2931eadf672d7c42322d36cb",
     "assertionExamples": [
      {
       "line": 100,
@@ -2933,8 +2933,8 @@
   {
    "path": "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx",
    "facts": {
-    "sha256": "af55be5079288d952c1c2b7df9702f8fd04bdd38d43cad9d81b434247ce66816",
-    "bytes": 45079,
+    "sha256": "bed6f294c0749cad9d6e17a491934803c1f95d99ca2e1cc9114bdf8360a90594",
+    "bytes": 45577,
     "cases": [
      {
       "name": "builds a provided-data %s preparation from its visible task controls",
@@ -2942,59 +2942,59 @@
      },
      {
       "name": "admits one preparation before React commits the busy state",
-      "line": 173
+      "line": 182
      },
      {
       "name": "does not observe a delayed start through a replaced preparation client",
-      "line": 184
+      "line": 193
      },
      {
       "name": "retains accepted task ownership when status is %s",
-      "line": 197
+      "line": 206
      },
      {
       "name": "keeps ownership for %s until matching %s evidence",
-      "line": 241
+      "line": 250
      },
      {
       "name": "admits one %s action before its busy render",
-      "line": 295
+      "line": 304
      },
      {
       "name": "does not publish an old approval after preparation client replacement",
-      "line": 314
+      "line": 323
      },
      {
       "name": "retains review after a foreign approval or private exception",
-      "line": 325
+      "line": 334
      },
      {
       "name": "rejects a review page for a different page number",
-      "line": 341
+      "line": 350
      },
      {
       "name": "retains the quality review when discard is not confirmed",
-      "line": 351
-     },
-     {
-      "name": "ignores an old review page after discard and a fresh preparation",
       "line": 360
      },
      {
+      "name": "ignores an old review page after discard and a fresh preparation",
+      "line": 369
+     },
+     {
       "name": "keeps observing when cancellation is %s",
-      "line": 374
+      "line": 383
      },
      {
       "name": "uses four ordered steps and creates a three-way dataset without advanced changes",
-      "line": 431
+      "line": 440
      },
      {
       "name": "infers source material, uses the topic-aware default, and locks controls while starting",
-      "line": 689
+      "line": 698
      },
      {
       "name": "shows only reviewed-annotation preparation for object detection and reports the pixel-inspection limit",
-      "line": 869
+      "line": 878
      }
     ],
     "dynamicCases": 0,
@@ -3033,19 +3033,19 @@
      },
      {
       "name": "reviewClients",
-      "line": 226
-     },
-     {
-      "name": "deferredDatasetValue",
       "line": 235
      },
      {
+      "name": "deferredDatasetValue",
+      "line": 244
+     },
+     {
       "name": "openPreparedReview",
-      "line": 289
+      "line": 298
      }
     ],
-    "assertionCount": 127,
-    "assertionDigest": "fc9581292bd426d11841c1264398771424a9854be27805ac3b10782579358963",
+    "assertionCount": 131,
+    "assertionDigest": "094b2f9e13e9d057e2ce9a88ffe6851b2ea7f2bba85183ab1e3f153c952e652f",
     "assertionExamples": [
      {
       "line": 30,
@@ -3058,14 +3058,14 @@
       "sha256": "244c3ac15304b51d2bdbef75c2ab9a9c5987604cfd6bdd4fa36ad5eaaa7928e4"
      },
      {
-      "line": 160,
+      "line": 151,
       "kind": "expect",
-      "sha256": "f17d04b523b28f0893743de714e77aec55679f0e5e1fe212fa172bb378fb0fbe"
+      "sha256": "e169163c9083ad7bd36c73112457d2b01c41f821134bffff8e581a8af6c82a65"
      },
      {
-      "line": 162,
+      "line": 153,
       "kind": "expect",
-      "sha256": "0b0b958008d3de63336194e01c1a68573b5cb950d6695d5d478f7beaa03e0a25"
+      "sha256": "407f38afb5547df1fc1bc09e2824aeccb31e27a17308ae368430a14bbe8eb500"
      }
     ],
     "modifiers": []
