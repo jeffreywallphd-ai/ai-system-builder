@@ -23,6 +23,7 @@ import {
   validateAssetInstance,
 } from "../asset";
 import { validateSystemBuilderStructure } from "./validate-system-builder-structure.service";
+import { validateSystemFormRoutes } from "./system-form-rules.service";
 import type { SystemBuilderModelAuthorityService } from "./system-builder-model-authority.service";
 
 const MAX_ISSUES = 200;
@@ -129,10 +130,14 @@ export class ValidateSystemBuilderRevisionService {
       issues,
     );
     validateConversationInteractions(revision, instancesById, issues);
+    const routeIssues = validateSystemFormRoutes(revision);
+    if (routeIssues.length) issues.unshift(...routeIssues);
     await this.validateModelBindings(revision, issues);
 
     const boundedIssues = issues.slice(0, MAX_ISSUES);
     if (issues.length > MAX_ISSUES) {
+      const firstError = issues.find((issue) => issue.severity === "error");
+      if (firstError && !boundedIssues.includes(firstError)) boundedIssues[MAX_ISSUES - 1] = firstError;
       boundedIssues.push({
         severity: "warning",
         category: "composition",
@@ -140,7 +145,7 @@ export class ValidateSystemBuilderRevisionService {
       });
     }
     return {
-      status: deriveAssetValidationStatus(boundedIssues),
+      status: deriveAssetValidationStatus(issues),
       issues: boundedIssues,
       validatedAt: this.now(),
     };

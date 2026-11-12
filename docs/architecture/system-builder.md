@@ -191,6 +191,13 @@ customization, and single-asset Studio workflows.
   exact, workspace-visible definitions, apply to the shared draft and use its
   undo, redo, and revision-save path. The existing Canvas consumes the same
   placements through its ordinary rendering path.
+  Form routes are versioned `control` bindings between exact Foundation step
+  instances. A route to the enclosing form ends the form. The evaluator tries
+  bounded scalar conditions in priority order, then uses an explicit fallback
+  or the next saved step. Revision and build validation reject invalid field
+  references, routes outside the form, cycles, and unreachable steps. The
+  evaluator returns only validated answers on the selected route. Existing
+  declarative forms with no route bindings keep their validation behavior.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only
