@@ -89,6 +89,16 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     classification: "contextual-only" as const,
     rationale: "Inline feedback is required to validate, unblock, retry, inspect, or follow active task progress in this surface.",
   })),
+  {
+    path: "modules/ui/shared/system-builder/SystemFormComposerView.tsx",
+    classification: "contextual-only",
+    rationale: "A preview readiness error belongs to the current form draft and disappears when that draft changes.",
+  },
+  {
+    path: "modules/ui/shared/system-builder/SystemFormPreview.tsx",
+    classification: "contextual-only",
+    rationale: "The preview announces validation next to the affected field and shows which fields are included without saving answers or reporting action outcomes.",
+  },
   ...[
     "apps/desktop/src/renderer/components/layout/DesktopPageLoadingFallback.tsx",
     "apps/desktop/src/renderer/components/ui/LoadingSpinner.tsx",

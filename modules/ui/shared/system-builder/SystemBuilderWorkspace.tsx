@@ -5,6 +5,7 @@ import {
   type AssetBinding,
   type AssetConfigurationValues,
   type AssetInstance,
+  type AssetJsonValue,
   type AssetPlacement,
   type AssetReference,
 } from "../../../contracts/asset";
@@ -31,6 +32,9 @@ import type {
 import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import {
   SYSTEM_BUILDER_FOUNDATION_UPGRADE_SOURCE_VERSIONS,
+  createSystemFormRouteBinding,
+  readSystemFormRoute,
+  type SystemFormRoute,
   systemBuilderFailure,
   systemBuilderSuccess,
 } from "../../../contracts/system-builder";
@@ -1023,21 +1027,71 @@ export function SystemBuilderWorkspace({
   function updateFormElement(instanceId: string, values: AssetConfigurationValues) {
     const role = formDraftMembership(instanceId);
     if (!role) return;
-    const patch = role === "step"
-      ? typeof values.title === "string" && values.title.trim() && values.title.length <= 200 ? { title: values.title.trim() } : {}
-      : {
-        ...(typeof values.label === "string" && values.label.trim() && values.label.length <= 200 ? { label: values.label.trim() } : {}),
-        ...(typeof values.helpText === "string" && values.helpText.length <= 1000 ? { helpText: values.helpText } : {}),
-        ...(typeof values.required === "boolean" ? { required: values.required } : {}),
-      };
-    if (!Object.keys(patch).length) return;
-    const displayName = "title" in patch ? patch.title : "label" in patch ? patch.label : undefined;
+    const field = instances.find((item) => item.instanceId === instanceId);
+    const patch: Record<string, AssetJsonValue> = {};
+    const clear: string[] = [];
+    const name = role === "step" ? values.title : values.label;
+    const displayName = typeof name === "string" && name.trim() && name.length <= 200 ? name.trim() : undefined;
+    if (displayName) patch[role === "step" ? "title" : "label"] = displayName;
+    if (role === "field" && field) {
+      if (typeof values.helpText === "string" && values.helpText.length <= 1000) patch.helpText = values.helpText;
+      if (typeof values.required === "boolean") patch.required = values.required;
+      const type = field.definitionRef.id;
+      const integers = type === "builtin.form.text-field" || type === "builtin.form.text-area";
+      const boundNames = integers ? ["minLength", "maxLength"] : type === "builtin.form.number-field" ? ["minimum", "maximum"] : [];
+      for (const key of boundNames) {
+        const value = values[key];
+        if (value === null) clear.push(key);
+        if (typeof value === "number" && Number.isFinite(value) &&
+            (!integers || Number.isInteger(value) && value >= (key === "maxLength" ? 1 : 0) && value <= 4000)) patch[key] = value;
+      }
+      if (type === "builtin.form.date-time-field" &&
+          (values.dateTimeKind === "date" || values.dateTimeKind === "time" || values.dateTimeKind === "date-time")) {
+        patch.dateTimeKind = values.dateTimeKind;
+      }
+      if (type === "builtin.form.select-field" && Array.isArray(values.staticOptions) && values.staticOptions.length <= 32) {
+        patch.staticOptions = values.staticOptions;
+        patch.optionsSource = "static";
+      }
+    }
+    if (!Object.keys(patch).length && !clear.length) return;
+    const configuration: Record<string, AssetJsonValue> = { ...field?.selectedConfiguration, ...patch };
+    for (const key of clear) delete configuration[key];
     commitDraft({
       ...draft,
       instances: draft.instances.map((item) => item.instanceId === instanceId
-        ? { ...item, ...(displayName ? { displayName } : {}), selectedConfiguration: { ...item.selectedConfiguration, ...patch } }
+        ? { ...item, ...(displayName ? { displayName } : {}), selectedConfiguration: configuration }
         : item),
     });
+  }
+
+  function setFormRoute(formId: string, route: SystemFormRoute) {
+    if (operation.current) return;
+    const form = readSystemForms(draft, composerCatalog).find((entry) => entry.form.instanceId === formId);
+    if (!form || !form.steps.some((step) => step.instanceId === route.fromStepId) ||
+        route.destinationId === route.fromStepId ||
+        (route.destinationId !== formId && !form.steps.some((step) => step.instanceId === route.destinationId)) ||
+        (route.when && !readFormStepFields(draft, route.fromStepId).some((field) => field.instanceId === route.when!.fieldId))) return;
+    const replacing = bindings.find((binding) => {
+      const saved = readSystemFormRoute(binding);
+      return saved?.fromStepId === route.fromStepId && (route.when ? saved.when && saved.priority === route.priority : !saved.when);
+    });
+    if (!replacing && bindings.length >= 1024) {
+      setError("This system has no space for another route.");
+      return;
+    }
+    const binding = createSystemFormRouteBinding(String(replacing?.bindingId ?? `binding.form.${uniqueId()}`), route);
+    if (!readSystemFormRoute(binding)) return;
+    commitDraft({ ...draft, bindings: replacing ? bindings.map((item) => item === replacing ? binding : item) : [...bindings, binding] });
+  }
+
+  function removeFormRoute(formId: string, bindingId: string) {
+    if (operation.current) return;
+    const form = readSystemForms(draft, composerCatalog).find((entry) => entry.form.instanceId === formId);
+    const binding = bindings.find((item) => item.bindingId === bindingId);
+    const route = binding && readSystemFormRoute(binding);
+    if (!route || !form?.steps.some((step) => step.instanceId === route.fromStepId)) return;
+    commitDraft({ ...draft, bindings: bindings.filter((item) => item !== binding) });
   }
 
   function moveFormElement(instanceId: string, direction: -1 | 1) {
@@ -1770,6 +1824,8 @@ export function SystemBuilderWorkspace({
                     onAddField={(id, definitionId) => void addFormElement(id, definitionId)}
                     onMove={moveFormElement}
                     onUpdate={updateFormElement}
+                    onSaveRoute={setFormRoute}
+                    onRemoveRoute={removeFormRoute}
                     onUndo={undoDraft}
                     onRedo={redoDraft}
                   />

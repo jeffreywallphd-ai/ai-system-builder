@@ -3,7 +3,9 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AssetInstance } from "../../../../contracts/asset";
+import { normalizeAssetId, normalizeAssetSlotId, type AssetInstance } from "../../../../contracts/asset";
+import { createWorkspaceId } from "../../../../contracts/workspace";
+import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
 import type {
   SystemBuilderRecord,
   SystemBuilderComposerAsset,
@@ -64,6 +66,21 @@ describe("SystemBuilderWorkspace UI preview", () => {
     };
     const catalog = [
       rootDefinition, shell, page, form, group, textField,
+      composerDefinition("builtin.form.checkbox-field", "Checkbox", [], false, "3.0.0"),
+      {
+        ...composerDefinition("builtin.form.select-field", "Choice", [], false, "3.0.0"),
+        configurationSchema: { fields: [
+          { fieldId: "staticOptions", valueKind: "array", label: "Options", required: false },
+          { fieldId: "optionsSource", valueKind: "string", label: "Options source", required: false },
+        ] } satisfies SystemBuilderComposerAsset["configurationSchema"],
+      },
+      {
+        ...composerDefinition("builtin.form.number-field", "Number Field", [], false, "3.0.0"),
+        configurationSchema: { fields: [
+          { fieldId: "minimum", valueKind: "number", label: "Minimum", required: false },
+          { fieldId: "maximum", valueKind: "number", label: "Maximum", required: false },
+        ] } satisfies SystemBuilderComposerAsset["configurationSchema"],
+      },
       composerDefinition("builtin.ui.section", "Section", ["content"], false, "3.0.0"),
     ];
     const fixture = [
@@ -71,28 +88,29 @@ describe("SystemBuilderWorkspace UI preview", () => {
       { ...instance("fixture.shell", shell.definitionId, "Standard", {}), definitionRef: shell.definitionRef },
       { ...instance("fixture.page", page.definitionId, "Main page", {}), definitionRef: page.definitionRef },
     ];
-    const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: item.instanceId });
-    const initial = {
-      revisionId: "fixture.r1", systemId: "fixture", targetWorkspaceId: "workspace-a", revisionNumber: 1,
-      composition: { compositionId: "fixture.composition", compositionType: "system",
+    const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: normalizeAssetId(item.instanceId) });
+    const initial: SystemBuilderRevision = {
+      revisionId: normalizeSystemBuilderRevisionId("fixture.r1"), systemId: normalizeSystemBuilderSystemId("fixture"),
+      targetWorkspaceId: createWorkspaceId("workspace-a"), revisionNumber: 1,
+      composition: { compositionId: normalizeAssetId("fixture.composition"), compositionType: "system",
         displayName: "Portal", version: "0.1.0", lifecycleStatus: "draft",
         rootInstanceRefs: [ref(fixture[0]!)], instanceRefs: fixture.map(ref), bindingRefs: [],
         provenance: { sourceKind: "human-authored" } },
       instances: fixture, bindings: [],
       structure: { schemaVersion: "system-builder-structure.v1", profile: "interactive", layoutPresetRef: shell.definitionRef },
       placements: [
-        { schemaVersion: "asset-placement.v1", placementId: "place.shell", slotId: "application-shell",
+        { schemaVersion: "asset-placement.v1", placementId: "place.shell", slotId: normalizeAssetSlotId("application-shell"),
           parentInstanceRef: ref(fixture[0]!), childInstanceRef: ref(fixture[1]!), order: 0 },
-        { schemaVersion: "asset-placement.v1", placementId: "place.page", slotId: "content",
+        { schemaVersion: "asset-placement.v1", placementId: "place.page", slotId: normalizeAssetSlotId("content"),
           parentInstanceRef: ref(fixture[1]!), childInstanceRef: ref(fixture[2]!), order: 0 },
       ],
       validationIssues: [], createdAt: "2026-07-19T00:00:00.000Z", createdBy: "person-1",
-    } as SystemBuilderRevision;
-    const record = {
+    };
+    const record: SystemBuilderRecord = {
       systemId: initial.systemId, targetWorkspaceId: initial.targetWorkspaceId, name: "Portal",
       status: "validated", revision: 1, currentRevisionId: initial.revisionId, composition: initial.composition,
       createdAt: initial.createdAt, updatedAt: initial.createdAt, createdBy: "person-1", updatedBy: "person-1",
-    } as SystemBuilderRecord;
+    };
     let latest = initial;
     const saveRevision = vi.fn(async (input: Parameters<SystemBuilderClient["saveRevision"]>[0]) => {
       latest = { ...initial, revisionNumber: 2, composition: input.composition, instances: input.instances,
@@ -162,8 +180,77 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(false);
     await click("Redo");
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
+    await choose("Form step", "First step");
+    await choose("Field type", "Checkbox");
+    await click("Add field");
+    await act(async () => {
+      const label = find<HTMLInputElement>("Field label", "input");
+      label.focus();
+      label.value = "Fast path";
+      label.blur();
+    });
+    await choose("Answer field", "Fast path");
+    await choose("Default route", "Details");
+    await choose("Compare with", "Selected");
+    await choose("Go to step", "Finish form");
+    await click("Add route rule");
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    const previewButton = button(container!, "Preview form");
+    await act(async () => { previewButton.focus(); previewButton.click(); });
+    const preview = document.querySelector('[role="dialog"]')!;
+    const press = (name: string) => act(async () => button(preview, name).click());
+    await press("Next step");
+    const answer = preview.querySelector<HTMLInputElement>('input[type="text"]')!;
+    await press("Finish preview");
+    expect(answer.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(answer);
+    await act(async () => setInputValue(answer, "Sample answer"));
+    await press("Back");
+    await act(async () => preview.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+    await press("Finish preview");
+    expect(preview.textContent).toContain("Answers included: Fast path.");
+    expect(preview.textContent).not.toContain("Request reason");
+    expect(saveRevision).not.toHaveBeenCalled();
+    await act(async () => preview.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
+    expect(document.activeElement).toBe(previewButton);
+    await choose("Form", "Questionnaire");
+    await choose("Field type", "Choice");
+    await click("Add field");
+    await fill("New option label", "Hardware");
+    await click("Add option");
+    await fill("New option label", "Software");
+    await click("Add option");
+    await choose("Field type", "Number");
+    await click("Add field");
+    await choose("Field", "Number Field");
+    const fillBound = (label: string, value: string) => act(async () => {
+      const bound = find<HTMLInputElement>(label, "input");
+      bound.focus(); bound.value = value; bound.blur();
+    });
+    await fillBound("Minimum value", "1");
+    await fillBound("Maximum value", "10");
+    await click("Preview form");
+    const questionnaire = document.querySelector('[role="dialog"]')!;
+    const numberAnswer = questionnaire.querySelector<HTMLInputElement>('input[type="number"]')!;
+    await act(async () => setInputValue(numberAnswer, "5"));
+    // A browser number control can expose empty value with an incomplete native edit.
+    Object.defineProperty(numberAnswer, "validity", { configurable: true, value: { badInput: true } });
+    await act(async () => setInputValue(numberAnswer, ""));
+    await act(async () => button(questionnaire, "Finish preview").click());
+    expect(numberAnswer.getAttribute("aria-invalid")).toBe("true");
+    expect(questionnaire.textContent).toContain("Enter a number.");
+    Object.defineProperty(numberAnswer, "validity", { configurable: true, value: { badInput: false } });
+    await act(async () => setInputValue(numberAnswer, ""));
+    await act(async () => button(questionnaire, "Finish preview").click());
+    expect(questionnaire.textContent).toContain("No answers included.");
+    await act(async () => questionnaire.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
     await click("Save and validate revision");
     await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(1));
+    expect(latest.bindings).toHaveLength(2);
+    expect(latest.instances.find((item) => item.displayName === "Number Field")?.selectedConfiguration)
+      .toEqual({ label: "Number Field", minimum: 1, maximum: 10 });
+    expect(latest.instances.find((item) => item.displayName === "Choice")?.selectedConfiguration?.staticOptions)
+      .toEqual([expect.objectContaining({ label: "Hardware" }), expect.objectContaining({ label: "Software" })]);
     expect(latest.instances.find((item) => item.displayName === "Request reason")?.selectedConfiguration)
       .toEqual({ label: "Request reason", required: true });
     // Simulate reopening a revision with a direct field placed from Canvas between the steps.
@@ -188,6 +275,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await click("Save and validate revision");
     await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(2));
     expect(latest.placements!.find((edge) => edge.childInstanceRef.id === canvasField.instanceId)?.order).toBe(1);
+    await choose("Form", "Questionnaire");
+    await choose("Field", "Number Field");
+    expect(find<HTMLInputElement>("Maximum value", "input").value).toBe("10");
   });
 
   it("defers the layout catalog until Create system is submitted and then shows the loading wheel", async () => {

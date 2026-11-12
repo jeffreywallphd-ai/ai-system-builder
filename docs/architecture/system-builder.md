@@ -198,6 +198,11 @@ customization, and single-asset Studio workflows.
   references, routes outside the form, cycles, and unreachable steps. The
   evaluator returns only validated answers on the selected route. Existing
   declarative forms with no route bindings keep their validation behavior.
+  Form Composer configures choice options, field limits, and routes in the
+  shared draft. Its preview keeps sample answers in the dialog, validates the
+  current step, and drops answers after a changed route. Preview has no save or
+  action transport. It reports which fields would be included without showing
+  their answer values in the result.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only
