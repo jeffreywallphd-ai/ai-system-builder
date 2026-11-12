@@ -14,6 +14,7 @@ import { TabbedPanel } from "../components/ui/TabbedPanel";
 import { createDesktopSystemBuilderClient } from "../features/system-builder/api/desktopSystemBuilderClient";
 import { createDesktopSystemBuildClient } from "../features/system-builder/api/desktopSystemBuildClient";
 import { createDesktopSystemPublishedLifecycleClient } from "../features/system-builder/api/desktopSystemPublishedLifecycleClient";
+import { createDesktopSystemPublishedFormClient } from "../features/system-builder/api/desktopSystemPublishedFormClient";
 import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
 export interface SystemBuilderPageProps {
   readonly workspaceId: string;
@@ -29,6 +30,7 @@ export function SystemBuilderPage({
     () => createDesktopSystemPublishedLifecycleClient(),
     [],
   );
+  const publishedFormsClient = useMemo(createDesktopSystemPublishedFormClient, []);
   const [activeTabId, setActiveTabId] = useState("compose");
   const [composeSystemId, setComposeSystemId] = useState<string>();
   const [activeSystemsRevision, setActiveSystemsRevision] = useState(0);
@@ -91,6 +93,7 @@ export function SystemBuilderPage({
                 workspaceId={workspaceId}
                 buildClient={buildClient}
                 lifecycleClient={lifecycleClient}
+                publishedFormsClient={publishedFormsClient}
                 visualStartNotice="The system opened in its own window."
               />
             ),

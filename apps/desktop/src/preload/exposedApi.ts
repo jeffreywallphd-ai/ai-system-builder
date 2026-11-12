@@ -543,6 +543,8 @@ import {
   DESKTOP_SYSTEM_BUILDER_OPERATIONS,
   DESKTOP_SYSTEM_BUILDER_CHANNELS,
   createDesktopSystemBuilderRequest,
+  createDesktopPublishedFormRequest,
+  DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS,
   type DesktopSystemBuilderRecordResponse,
   type DesktopSystemBuilderListResponse,
   type DesktopSystemBuilderManagementResponse,
@@ -612,6 +614,8 @@ import type {
   ReadSystemBuilderComposerAssetQuery,
   ListSystemBuilderModelOptionsQuery,
   ListSystemBuilderManagementQuery,
+  PublishedSystemFormsInput,
+  PublishedSystemFormSubmitInput,
   PreviewSystemBuilderLayoutChangeCommand,
   PreviewSystemBuilderFoundationUpgradeCommand,
   UpgradeSystemBuilderFoundationCommand,
@@ -701,6 +705,13 @@ export interface DesktopSystemBuildEnvelope {
   readonly error?: unknown;
 }
 export interface DesktopSystemDataEnvelope {
+  readonly operation: string;
+  readonly channel: string;
+  readonly ok?: boolean;
+  readonly value?: unknown;
+  readonly error?: unknown;
+}
+export interface DesktopSystemPublishedFormEnvelope {
   readonly operation: string;
   readonly channel: string;
   readonly ok?: boolean;
@@ -1346,6 +1357,8 @@ export interface DesktopPreloadApi {
     input: { workspaceId: string; includeArchived?: boolean },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuilderListResponse>;
+  listPublishedSystemForms: (input: PublishedSystemFormsInput) => Promise<DesktopSystemPublishedFormEnvelope>;
+  submitPublishedSystemForm: (input: PublishedSystemFormSubmitInput) => Promise<DesktopSystemPublishedFormEnvelope>;
   listSystemBuilderManagement: (
     input: ListSystemBuilderManagementQuery,
     context?: DesktopArtifactUploadBridgeContext,
@@ -5413,6 +5426,12 @@ export function createDesktopPreloadApi(
         context,
       );
     },
+    async listPublishedSystemForms({ workspaceId, releaseId }) {
+      return invokePublishedForm(dependencies, "listPublishedForms", { workspaceId, releaseId });
+    },
+    async submitPublishedSystemForm({ workspaceId, releaseId, formId, submissionId, answers }) {
+      return invokePublishedForm(dependencies, "submitPublishedForm", { workspaceId, releaseId, formId, submissionId, answers });
+    },
     async listSystemBuilderManagement(input, context = {}) {
       return invokeSystemBuilder<DesktopSystemBuilderManagementResponse>(
         dependencies,
@@ -5747,6 +5766,21 @@ async function invokeSystemBuilder<
     operation: DESKTOP_SYSTEM_BUILDER_OPERATIONS[operation],
     channel: channels.response.value,
     message: `Received invalid desktop System Builder ${operation} IPC response envelope.`,
+  });
+}
+
+async function invokePublishedForm(
+  dependencies: CreateDesktopPreloadApiDependencies,
+  operation: keyof typeof DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS,
+  input: PublishedSystemFormsInput | PublishedSystemFormSubmitInput,
+): Promise<DesktopSystemPublishedFormEnvelope> {
+  const request = createDesktopPublishedFormRequest(operation, input);
+  const channels = DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS[operation];
+  const response = await dependencies.ipcRenderer.invoke(channels.request.value, request);
+  return assertDesktopEnvelopeResponse<DesktopSystemPublishedFormEnvelope>(response, {
+    operation: channels.response.operation,
+    channel: channels.response.value,
+    message: "Received an invalid published form response.",
   });
 }
 

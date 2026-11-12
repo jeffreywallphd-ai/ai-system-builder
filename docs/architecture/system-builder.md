@@ -279,6 +279,9 @@ customization, and single-asset Studio workflows.
   approved release artifacts, revocation records, and release-bound record
   store. If a host lacks its authorization dependencies, it does not register
   the form operations.
+  Desktop Publish passes the selected release through the dedicated form
+  bridge. The preload selects the allowed request fields and checks the
+  response channel before returning a result to the renderer.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only

@@ -103,6 +103,8 @@ import type {
   ReadSystemBuilderComposerAssetQuery,
   ListSystemBuilderModelOptionsQuery,
   ListSystemBuilderManagementQuery,
+  PublishedSystemFormsInput,
+  PublishedSystemFormSubmitInput,
   PreviewSystemBuilderLayoutChangeCommand,
   PreviewSystemBuilderFoundationUpgradeCommand,
   UpgradeSystemBuilderFoundationCommand,
@@ -790,6 +792,8 @@ interface DesktopApiBridge {
     input: { workspaceId: string; includeArchived?: boolean },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  listPublishedSystemForms?: (input: PublishedSystemFormsInput) => Promise<unknown>;
+  submitPublishedSystemForm?: (input: PublishedSystemFormSubmitInput) => Promise<unknown>;
   listSystemBuilderManagement?: (
     input: ListSystemBuilderManagementQuery,
     context?: DesktopBridgeRequestContext,
