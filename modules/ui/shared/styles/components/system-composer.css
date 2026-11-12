@@ -871,6 +871,7 @@
 .system-composer__canvas-node-heading {
   display: flex;
   align-items: center;
+  gap: var(--space-xs);
 }
 
 .system-composer__canvas-node-select {

@@ -31,6 +31,7 @@ import { FoundationAssetPreview } from "../foundation-assets";
 import {
   buildSystemComposerTree,
   flattenSystemComposerTree,
+  systemComposerDescendantIds,
   type SystemComposerDraft,
   type SystemComposerTreeNode,
 } from "./systemComposerDraft";
@@ -177,7 +178,7 @@ export interface SystemComposerStructureEditorProps {
     instanceId: string,
     target: SystemComposerTargetSlot,
   ) => void;
-  readonly onRemove: () => void;
+  readonly onRemove: (instanceId: string) => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
 }
@@ -235,6 +236,13 @@ export function SystemComposerStructureEditor({
   const [assetNextCursor, setAssetNextCursor] = useState<string>();
   const [assetLoading, setAssetLoading] = useState(false);
   const [assetError, setAssetError] = useState<string>();
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    draft: SystemComposerDraft;
+    instanceId: string;
+    name: string;
+    descendants: number;
+  }>();
+  const removalDescriptionId = useId();
   const [moveTargetKey, setMoveTargetKey] = useState("");
   const [collapsedInstanceIds, setCollapsedInstanceIds] = useState<
     ReadonlySet<string>
@@ -246,6 +254,8 @@ export function SystemComposerStructureEditor({
   );
   const detailsTabRefs = useRef(new Map<SystemComposerSidebarTab, HTMLButtonElement>());
   const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasHeadingRef = useRef<HTMLHeadingElement>(null);
+  const removedInstanceId = useRef<string | undefined>(undefined);
   const pickerTrigger = useRef<HTMLButtonElement | undefined>(undefined);
   const insertedFrom = useRef<HTMLButtonElement | undefined>(undefined);
   const assetGeneration = useRef(0);
@@ -289,6 +299,29 @@ export function SystemComposerStructureEditor({
         (instance) =>
           ({ instance, depth: 1, children: [] }) as SystemComposerTreeNode,
       )[0];
+  const removal = pendingRemoval?.draft === draft ? pendingRemoval : undefined;
+  useEffect(() => {
+    if (!removedInstanceId.current) return;
+    const instanceId = removedInstanceId.current;
+    removedInstanceId.current = undefined;
+    if (draft.instances.some((instance) => String(instance.instanceId) === instanceId)) return;
+    const selected = canvasRef.current?.querySelector<HTMLButtonElement>(
+      '.system-composer__canvas-node[data-selected="true"] > .system-composer__canvas-node-heading > .system-composer__canvas-node-select',
+    );
+    (selected ?? canvasHeadingRef.current)?.focus();
+  }, [draft, removal]);
+
+  function requestAssetRemoval(instanceId: string) {
+    if (protectedInstanceIds.has(instanceId)) return;
+    const instance = draft.instances.find((item) => String(item.instanceId) === instanceId);
+    if (!instance) return;
+    setPendingRemoval({
+      draft,
+      instanceId,
+      name: instance.displayName ?? String(instance.definitionRef.id),
+      descendants: systemComposerDescendantIds(draft.placements, instanceId).size,
+    });
+  }
   const breadcrumb = selectedNode
     ? breadcrumbFor(selectedNode, draft.instances, draft.placements)
     : [];
@@ -834,7 +867,7 @@ export function SystemComposerStructureEditor({
         >
           <div className="system-composer__panel-heading">
             <div>
-              <h3 id="composer-canvas-title">Canvas</h3>
+              <h3 ref={canvasHeadingRef} id="composer-canvas-title" tabIndex={-1}>Canvas</h3>
               <p className="ui-text-muted">
                 {activeCanvasLayout?.layoutGeometry
                   ? `${activeCanvasLayout.displayName} exposes ${activeCanvasLayout.slots.length} fixed named ${activeCanvasLayout.slots.length === 1 ? "region" : "regions"}. `
@@ -854,6 +887,7 @@ export function SystemComposerStructureEditor({
                   protectedInstanceIds={protectedInstanceIds}
                   onSelect={onSelect}
                   onAddElement={openAssetPicker}
+                  onRequestRemove={requestAssetRemoval}
                 />
               ))}
             </div>
@@ -1149,13 +1183,14 @@ export function SystemComposerStructureEditor({
                     <button
                       type="button"
                       className="system-composer__flat-control system-composer__flat-control--danger"
-                      onClick={onRemove}
+                      aria-haspopup="dialog"
+                      onClick={() => requestAssetRemoval(String(selectedNode.instance.instanceId))}
                       disabled={protectedInstanceIds.has(
                         String(selectedNode.instance.instanceId),
                       )}
                     >
                       <ApplicationIcon name="delete" />
-                      <span>Remove selected subtree</span>
+                      <span>Remove asset</span>
                     </button>
                   </div>
                 ) : null}
@@ -1164,6 +1199,46 @@ export function SystemComposerStructureEditor({
           </section>
         </aside>
       </div>
+
+      <ModalDialog
+        open={Boolean(removal)}
+        title="Remove asset?"
+        descriptionId={removalDescriptionId}
+        onClose={() => setPendingRemoval(undefined)}
+      >
+        {removal ? (
+          <>
+            <div id={removalDescriptionId}>
+              <p>Remove <strong>{removal.name}</strong> from the Canvas draft?</p>
+              {removal.descendants > 0 ? (
+                <p>All child assets will also be removed, including nested children ({removal.descendants} total).</p>
+              ) : null}
+              <p>You can undo this change before saving.</p>
+            </div>
+            <div className="ui-workflow__actions">
+              <button
+                type="button"
+                className="ui-button ui-button--outline"
+                data-modal-initial-focus
+                onClick={() => setPendingRemoval(undefined)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ui-button ui-button--destructive"
+                onClick={() => {
+                  removedInstanceId.current = removal.instanceId;
+                  onRemove(removal.instanceId);
+                  setPendingRemoval(undefined);
+                }}
+              >
+                Remove asset
+              </button>
+            </div>
+          </>
+        ) : null}
+      </ModalDialog>
 
       <ModalDialog
         open={Boolean(assetPicker && pickerParentNode)}
@@ -1579,6 +1654,7 @@ function CanvasNode({
   protectedInstanceIds,
   onSelect,
   onAddElement,
+  onRequestRemove,
 }: {
   readonly node: SystemComposerTreeNode;
   readonly catalog: readonly SystemBuilderComposerAsset[];
@@ -1586,6 +1662,7 @@ function CanvasNode({
   readonly protectedInstanceIds: ReadonlySet<string>;
   readonly onSelect: (instanceId: string) => void;
   readonly onAddElement: OpenRegionPicker;
+  readonly onRequestRemove: (instanceId: string) => void;
 }) {
   const instanceId = String(node.instance.instanceId);
   const definition = definitionForInstance(node.instance, catalog);
@@ -1625,6 +1702,18 @@ function CanvasNode({
             <span className="ui-badge ui-badge--info">Required</span>
           ) : null}
         </button>
+        {!protectedInstance && instanceId === selectedInstanceId ? (
+          <button
+            type="button"
+            className="system-composer__flat-control system-composer__flat-control--danger"
+            aria-label={`Remove ${parentName}`}
+            aria-haspopup="dialog"
+            onClick={() => onRequestRemove(instanceId)}
+          >
+            <ApplicationIcon name="delete" />
+            <span>Remove</span>
+          </button>
+        ) : null}
       </div>
       {definition?.previewAvailability === "trusted-declarative" &&
       !definition.layoutRole &&
@@ -1662,6 +1751,7 @@ function CanvasNode({
               onSelect={onSelect}
               onAddToRegion={(trigger) => onAddElement(node, String(slot.slotId), trigger)}
               onAddElement={onAddElement}
+              onRequestRemove={onRequestRemove}
             />
           ))}
         </div>
@@ -1682,6 +1772,7 @@ function CanvasSlot({
   onSelect,
   onAddToRegion,
   onAddElement,
+  onRequestRemove,
 }: {
   readonly parentInstanceId: string;
   readonly parentName: string;
@@ -1694,6 +1785,7 @@ function CanvasSlot({
   readonly onSelect: (instanceId: string) => void;
   readonly onAddToRegion: (trigger: HTMLButtonElement) => void;
   readonly onAddElement: OpenRegionPicker;
+  readonly onRequestRemove: (instanceId: string) => void;
 }) {
   const collapsible = String(slot.slotId) === "states";
   const [collapsed, setCollapsed] = useState(true);
@@ -1766,6 +1858,7 @@ function CanvasSlot({
                 protectedInstanceIds={protectedInstanceIds}
                 onSelect={onSelect}
                 onAddElement={onAddElement}
+                onRequestRemove={onRequestRemove}
               />
             ))}
             {childrenNodes.length === 0 ? (

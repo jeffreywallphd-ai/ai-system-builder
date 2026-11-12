@@ -68,6 +68,7 @@ export async function completeBrowseAuthoringJourney(
   if (verifyPlacement) {
     const sibling = await insert("card", addToPageContent);
     await verifyKeyboardPlacement(page, parent, added.id, sibling.id);
+    await verifyConfirmedRemoval(page, parent, added.id, sibling.id);
     nestedCardId = sibling.id;
   }
   const preview = page.getByRole("button", {name: "Preview UI", exact: true});
@@ -126,7 +127,29 @@ export async function completeBrowseAuthoringJourney(
   const accessibility = verifyPlacement ? undefined : mode === "standard" ? await qualifyTechnicalAccessibility(page, info)
     : {mode: "native400", frame: nativeFrame, scope: "Frame fit only; the separate critical-surface reports contain the actual accessibility audits."};
   return {persistedInstanceId: added.id, exactReference: added.reference, viewportWidth: fitWidth, accessibility,
-    ...(verifyPlacement ? {keyboardPlacement: {reordered: true, reparented: true}} : {})};
+    ...(verifyPlacement ? {keyboardPlacement: {reordered: true, reparented: true, removalConfirmed: true}} : {})};
+}
+
+async function verifyConfirmedRemoval(page: Page, parent: Locator, cardId: string, childId: string) {
+  const card = page.locator(`[data-instance-id="${cardId}"]`);
+  const child = page.locator(`[data-instance-id="${childId}"]`);
+  await card.locator(":scope > .system-composer__canvas-node-heading > .system-composer__canvas-node-select").press("Enter");
+  const remove = card.locator(":scope > .system-composer__canvas-node-heading").getByRole("button", {name: /^Remove /});
+  const dialog = page.getByRole("dialog", {name: "Remove asset?", exact: true});
+  const cancel = dialog.getByRole("button", {name: "Cancel", exact: true});
+  await remove.press("Enter");
+  await expect(cancel).toBeFocused();
+  await expect(dialog.getByText(/All child assets will also be removed/)).toBeVisible();
+  await cancel.press("Enter");
+  await expect(remove).toBeFocused();
+  await expect(child).toBeVisible();
+  await remove.press("Enter");
+  await dialog.getByRole("button", {name: "Remove asset", exact: true}).press("Enter");
+  await expect(card).toHaveCount(0);
+  await expect(child).toHaveCount(0);
+  await expect(parent.locator(":scope > .system-composer__canvas-node-heading > .system-composer__canvas-node-select")).toBeFocused();
+  await page.getByRole("button", {name: "Undo", exact: true}).press("Enter");
+  await expect(card.locator(`[data-instance-id="${childId}"]`)).toBeVisible();
 }
 
 async function verifyKeyboardPlacement(page: Page, parent: Locator, firstId: string, secondId: string) {

@@ -7691,8 +7691,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
    "facts": {
-    "sha256": "72a217d1c7ec05014f693497c5a1051d1eb2def71a46488ab929b03c0ad352bc",
-    "bytes": 11072,
+    "sha256": "1874cff38edd953fa7319b34be53952dbdcdd2575c3726d7e43c3ed4c4b49dde",
+    "bytes": 12553,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -7705,12 +7705,16 @@
       "line": 21
      },
      {
+      "name": "verifyConfirmedRemoval",
+      "line": 133
+     },
+     {
       "name": "verifyKeyboardPlacement",
-      "line": 132
+      "line": 155
      }
     ],
-    "assertionCount": 46,
-    "assertionDigest": "a79ff0e803a1ff25888bfbcdba3d59923f8a1c3b0633fdc8763a91d8b9014815",
+    "assertionCount": 54,
+    "assertionDigest": "2286cb882b49e2b34776b2db313d5c1032108d7b30dad0e95c3b0489af3e910a",
     "assertionExamples": [
      {
       "line": 18,
@@ -8108,8 +8112,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts",
    "facts": {
-    "sha256": "6659b170e2102cf9ac3983557e922ee1bbf395e1ff591941557324debcf87fba",
-    "bytes": 33828,
+    "sha256": "d1b4c3b03620c8cb2188e020c17c856f8d51d4105ae293fd35575b096e15a254",
+    "bytes": 34378,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -8159,27 +8163,27 @@
      },
      {
       "name": "exerciseCheckedBuild",
-      "line": 388
+      "line": 396
      },
      {
       "name": "measurePaint",
-      "line": 413
-     },
-     {
-      "name": "startLongTasks",
       "line": 421
      },
      {
+      "name": "startLongTasks",
+      "line": 429
+     },
+     {
       "name": "finishLongTasks",
-      "line": 439
+      "line": 447
      },
      {
       "name": "revisitMeaningfulSystems",
-      "line": 452
+      "line": 460
      }
     ],
-    "assertionCount": 72,
-    "assertionDigest": "f765d7b9fa999e9a4e836fe2227878652f1f97b1e04edbda44fe6baab9f273cb",
+    "assertionCount": 75,
+    "assertionDigest": "06bc9fc36f99cac655b079b3df1a605be36475e4d357462ff8f192a69e64b44c",
     "assertionExamples": [
      {
       "line": 127,
@@ -12298,109 +12302,121 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "70e9f4b9ba44593db8da8ba896eb6333f4491807276f2963ddda3abb257d6e4d",
-    "bytes": 35577,
+    "sha256": "a614dbc34ceaee1574ae441288bf253306449a1212e341518c2a10365280e7e8",
+    "bytes": 39687,
     "cases": [
      {
       "name": "keeps the semantic canvas, keyboard tree, and native actions on one draft",
-      "line": 37
+      "line": 42
      },
      {
       "name": "renders every nested reference container and keeps all embedded assets visible",
-      "line": 318
+      "line": 323
      },
      {
       "name": "offers predefined layouts as a native single-choice gallery",
-      "line": 529
+      "line": 534
      },
      {
       "name": "loads layouts on demand and adds compatible elements through a container-scoped modal",
-      "line": 574
+      "line": 579
      },
      {
       "name": "opens a collapsed region for insertion and focuses the new element when the region fills",
-      "line": 740
+      "line": 745
+     },
+     {
+      "name": "removes an old placeholder and confirms all nested assets before removing a container",
+      "line": 808
      },
      {
       "name": "ignores a late Load more response after the destination changes",
-      "line": 803
+      "line": 891
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "Editor",
-      "line": 754
+      "line": 759
+     },
+     {
+      "name": "foundationAsset",
+      "line": 809
+     },
+     {
+      "name": "Editor",
+      "line": 837
      },
      {
       "name": "render",
-      "line": 829
+      "line": 917
      },
      {
       "name": "directEditablePreview",
-      "line": 836
+      "line": 924
      },
      {
       "name": "button",
-      "line": 844
+      "line": 932
      },
      {
       "name": "ariaButton",
-      "line": 852
+      "line": 940
      },
      {
       "name": "click",
-      "line": 860
+      "line": 948
      },
      {
       "name": "fire",
-      "line": 863
+      "line": 951
      },
      {
       "name": "flushFocus",
-      "line": 873
+      "line": 961
      },
      {
       "name": "flushAsync",
-      "line": 877
+      "line": 965
      },
      {
       "name": "instance",
-      "line": 884
+      "line": 972
      },
      {
       "name": "placement",
-      "line": 903
+      "line": 991
      },
      {
       "name": "composerAsset",
-      "line": 921
+      "line": 1009
      },
      {
       "name": "applicationLayout",
-      "line": 953
+      "line": 1041
      }
     ],
-    "assertionCount": 114,
-    "assertionDigest": "8b756f6b99bfc5a39963ab823eebea0b81aa9612b2556ffb9cb93eab4f86aba1",
+    "assertionCount": 129,
+    "assertionDigest": "e6bc2027d249906670a3ebf71c415429cb556ebde00634e6ffbf7a84be3ec313",
     "assertionExamples": [
      {
-      "line": 109,
+      "line": 114,
       "kind": "expect",
       "sha256": "5c14e30d026bf1d24f8d7e8244de2f92c9169a90329261cb48ff89995281183a"
      },
      {
-      "line": 112,
+      "line": 117,
       "kind": "expect",
       "sha256": "329e3fc510cd061dcb866ec60e89de70583d512e0a0824207ec92308cb546134"
      },
      {
-      "line": 113,
+      "line": 118,
       "kind": "expect",
       "sha256": "d9ba5f1522d42ddf2521f786338ac29f4c688f7e9086096ffeaa11ed9f4a0acf"
      },
      {
-      "line": 121,
+      "line": 126,
       "kind": "expect",
       "sha256": "2a5a282f77a3b35764ce0a74ebe6bf26dc83ab5bc9c56b15995df3d92261e6fd"
      }

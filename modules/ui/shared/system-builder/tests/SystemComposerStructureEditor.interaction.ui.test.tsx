@@ -17,6 +17,11 @@ import {
   SystemComposerStructureEditor,
   SystemLayoutGallery,
 } from "../SystemComposerStructureEditor";
+import {
+  deriveProtectedSystemInstanceIds,
+  removeSystemComposerSubtree,
+  type SystemComposerDraft,
+} from "../systemComposerDraft";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -311,7 +316,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(button("Undo").disabled).toBe(true);
     await click(button("Redo"));
     expect(onRedo).toHaveBeenCalledTimes(1);
-    expect(button("Remove selected subtree").disabled).toBe(true);
+    expect(button("Remove asset").disabled).toBe(true);
     expect(onRemove).not.toHaveBeenCalled();
   });
 
@@ -798,6 +803,89 @@ it("opens a collapsed region for insertion and focuses the new element when the 
   expect(document.activeElement).toBe(
     region.querySelector('[data-instance-id="child"] .system-composer__canvas-node-select'),
   );
+});
+
+it("removes an old placeholder and confirms all nested assets before removing a container", async () => {
+  function foundationAsset(id: string, slots: readonly string[]) {
+    const asset = composerAsset(id, slots);
+    return { ...asset, version: "3.0.0", definitionRef: { ...asset.definitionRef, version: "3.0.0" } };
+  }
+  const page = foundationAsset("builtin.layout.page.single", ["content"]);
+  const pageDefinition = {
+    ...page,
+    slots: page.slots.map((slot) => ({ ...slot, cardinality: { minItems: 1, maxItems: 8 } })),
+  };
+  const placeholder = foundationAsset("builtin.state.empty-state", []);
+  const card = foundationAsset("builtin.ui.card", ["content"]);
+  const roots = [{ kind: "asset-instance" as const, id: normalizeAssetId("page") }];
+  const catalog = [pageDefinition, placeholder, card];
+  const initial: SystemComposerDraft = {
+    instances: [
+      { ...instance("page", page.definitionId, "Main page"), definitionRef: page.definitionRef },
+      { ...instance("empty", placeholder.definitionId, "Empty content"), definitionRef: placeholder.definitionRef },
+      { ...instance("card", card.definitionId, "Details card"), definitionRef: card.definitionRef },
+      { ...instance("child", card.definitionId, "Child card"), definitionRef: card.definitionRef },
+    ],
+    placements: [
+      placement("page", "content", "empty"),
+      { ...placement("page", "content", "card"), order: 1 },
+      placement("card", "content", "child"),
+    ],
+    bindings: [],
+    structure: { schemaVersion: "system-builder-structure.v1", profile: "interactive" },
+  };
+  function Editor() {
+    const [draft, setDraft] = useState(initial);
+    const [selected, setSelected] = useState("page");
+    const protectedIds = deriveProtectedSystemInstanceIds(draft, roots, catalog);
+    return (
+      <SystemComposerStructureEditor draft={draft} rootInstanceRefs={roots} catalog={catalog}
+        selectedInstanceId={selected} protectedInstanceIds={protectedIds}
+        canUndo={false} canRedo={false} onSelect={setSelected} onAdd={vi.fn()} onPlace={vi.fn()}
+        onRemove={(id) => {
+          const result = removeSystemComposerSubtree(draft, id, protectedIds);
+          if (result.ok) {
+            setDraft(result.value);
+            setSelected("page");
+          }
+        }}
+        onUndo={vi.fn()} onRedo={vi.fn()} />
+    );
+  }
+
+  render(<Editor />);
+  const node = (id: string) => container!.querySelector(`[data-instance-id="${id}"]`);
+  const select = (id: string) => node(id)!.querySelector<HTMLButtonElement>(".system-composer__canvas-node-select")!;
+  const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]')!;
+  const dialogButton = (name: string) => Array.from(dialog().querySelectorAll("button"))
+    .find((candidate) => candidate.textContent?.trim() === name)!;
+  expect(node("page")!.querySelector('button[aria-label="Remove Main page"]')).toBeNull();
+
+  await click(select("empty"));
+  await click(ariaButton("Remove Empty content"));
+  expect(dialog().textContent).toContain("Empty content");
+  expect(dialog().textContent).not.toContain("All child assets");
+  expect(node("empty")).not.toBeNull();
+  await click(dialogButton("Remove asset"));
+  expect(node("empty")).toBeNull();
+  expect(document.activeElement).toBe(select("page"));
+
+  await click(select("card"));
+  const removeCard = ariaButton("Remove Details card");
+  removeCard.focus();
+  await click(removeCard);
+  expect(dialog().textContent).toContain("All child assets will also be removed");
+  expect(dialog().textContent).toContain("1 total");
+  expect(document.activeElement).toBe(dialogButton("Cancel"));
+  await click(dialogButton("Cancel"));
+  expect(node("card")).not.toBeNull();
+  expect(node("child")).not.toBeNull();
+  expect(document.activeElement).toBe(removeCard);
+  await click(removeCard);
+  await click(dialogButton("Remove asset"));
+  expect(node("card")).toBeNull();
+  expect(node("child")).toBeNull();
+  expect(node("page")).not.toBeNull();
 });
 
 it("ignores a late Load more response after the destination changes", async () => {

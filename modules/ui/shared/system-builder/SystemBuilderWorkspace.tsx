@@ -901,15 +901,14 @@ export function SystemBuilderWorkspace({
     setSelectedInstanceId(instanceId);
   }
 
-  function removeSelected() {
-    if (!selectedInstanceId) return;
+  function removeAsset(instanceId: string) {
+    if (operation.current) return;
     const parentId = placements.find(
-      (placement) =>
-        String(placement.childInstanceRef.id) === selectedInstanceId,
+      (placement) => String(placement.childInstanceRef.id) === instanceId,
     )?.parentInstanceRef.id;
     const result = removeSystemComposerSubtree(
       draft,
-      selectedInstanceId,
+      instanceId,
       protectedInstanceIds,
     );
     if (!result.ok) {
@@ -1598,7 +1597,7 @@ export function SystemBuilderWorkspace({
                     onSidebarTabChange={setActiveSidebarTab}
                     onAdd={addAsset}
                     onPlace={placeAsset}
-                    onRemove={removeSelected}
+                    onRemove={removeAsset}
                     onUndo={undoDraft}
                     onRedo={redoDraft}
                   />

@@ -177,7 +177,11 @@ customization, and single-asset Studio workflows.
   a new definition or compatible unassigned visual instance. The choice maps to
   the existing canonical add/place command, closes the modal, selects the
   result, and reveals it on the Canvas. Layers retain explicit native
-  destination and order controls for reparenting and reorder. There is no
+  destination and order controls for reparenting and reorder. The selected
+  removable Canvas asset and the Layers panel open the same confirmation.
+  Confirming removes that asset, its descendants, and their connections from
+  the draft as one undoable change. Required layout structure stays protected.
+  Saving creates a new revision. There is no
   persistent Asset Palette, pointer drag behavior, or renderer drag state.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,

@@ -379,7 +379,15 @@ async function exerciseEditing(page: Page, scenario: MeaningfulSystemCase, ids: 
   expect(await readCanvasStructure(page)).toEqual(before);
   // Removing a useful container must remove its descendants as one undoable edit.
   await canvasNode(page, ids.get("card")!).locator(":scope > .system-composer__canvas-node-heading button").first().click();
-  await measurePaint(page, samples, "remove", () => inspector.getByRole("button", { name: "Remove selected subtree", exact: true }).click());
+  const remove = inspector.getByRole("button", { name: "Remove asset", exact: true });
+  await remove.click();
+  const confirmation = page.getByRole("dialog", { name: "Remove asset?", exact: true });
+  await expect(confirmation.getByText(/All child assets will also be removed/)).toBeVisible();
+  await expect(confirmation.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await readCanvasStructure(page)).toEqual(before);
+  await remove.click();
+  await measurePaint(page, samples, "remove", () => confirmation.getByRole("button", { name: "Remove asset", exact: true }).click());
   for (const element of scenario.elements.filter(e => e.key !== "page")) await expect(canvasNode(page, ids.get(element.key)!)).toHaveCount(0);
   await measurePaint(page, samples, "undo", () => page.getByRole("button", { name: "Undo", exact: true }).click());
   expect(await readCanvasStructure(page)).toEqual(before);

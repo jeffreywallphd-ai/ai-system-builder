@@ -14,6 +14,7 @@ import type {
   SystemBuilderComposerAsset,
   SystemBuilderStructure,
 } from "../../../contracts/system-builder";
+import { minimumSystemBuilderSlotItems } from "../../../contracts/system-builder";
 
 export interface SystemComposerDraft {
   readonly instances: readonly AssetInstance[];
@@ -159,7 +160,7 @@ export function removeSystemComposerSubtree(
   if (!findInstance(draft, instanceId)) {
     return failure("The selected asset instance is unavailable.");
   }
-  const removedIds = descendantsOf(draft.placements, instanceId);
+  const removedIds = systemComposerDescendantIds(draft.placements, instanceId);
   removedIds.add(instanceId);
   for (const protectedId of protectedInstanceIds) {
     if (removedIds.has(protectedId)) {
@@ -243,7 +244,7 @@ export function reparentSystemComposerAsset(
   }
   if (
     input.instanceId === input.parentInstanceId ||
-    descendantsOf(draft.placements, input.instanceId).has(
+    systemComposerDescendantIds(draft.placements, input.instanceId).has(
       input.parentInstanceId,
     )
   ) {
@@ -305,7 +306,7 @@ export function attachUnassignedSystemComposerAsset(
   }
   if (
     input.instanceId === input.parentInstanceId ||
-    descendantsOf(draft.placements, input.instanceId).has(
+    systemComposerDescendantIds(draft.placements, input.instanceId).has(
       input.parentInstanceId,
     )
   ) {
@@ -490,12 +491,17 @@ export function deriveProtectedSystemInstanceIds(
     );
     if (!definition) continue;
     for (const slot of definition.slots) {
-      if (slot.cardinality.minItems < 1) continue;
+      const minimum = minimumSystemBuilderSlotItems(
+        draft.structure?.profile,
+        parent.definitionRef,
+        slot,
+      );
+      if (minimum < 1) continue;
       const requiredChildren = slotPlacements(
         draft.placements,
         parentId,
         slot.slotId,
-      ).slice(0, slot.cardinality.minItems);
+      ).slice(0, minimum);
       for (const placement of requiredChildren) {
         const childId = String(placement.childInstanceRef.id);
         if (protectedIds.has(childId)) continue;
@@ -577,7 +583,7 @@ function findInstance(
   );
 }
 
-function descendantsOf(
+export function systemComposerDescendantIds(
   placements: readonly AssetPlacement[],
   instanceId: string,
 ): Set<string> {
