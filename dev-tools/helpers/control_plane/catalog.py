@@ -100,11 +100,14 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "modules/hosts/shared/composition/composePublishedSystemForms.ts",
             "modules/hosts/shared/composition/tests/compose-published-system-forms.unit.test.ts",
+            "modules/hosts/shared/composition/tests/form-submission-recovery.unit.test.ts",
+            "modules/hosts/shared/composition/tests/fixtures/form-submission-recovery-child.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--test-concurrency=1", "--",
             "modules/hosts/shared/composition/tests/compose-published-system-forms.unit.test.ts",
             "modules/adapters/transport/api-express/system-builder/tests/published-form-transport.unit.test.ts",
+            "modules/hosts/shared/composition/tests/form-submission-recovery.unit.test.ts",
             "modules/application/use-cases/system-builder/tests/submit-released-system-form.use-case.unit.test.ts",
         ),
     },

@@ -254,6 +254,10 @@ customization, and single-asset Studio workflows.
   only, and the audit lists field names without their answer values. A private
   creation marker lets a retry report that the original submission was already
   recorded even after the record's values have changed.
+  The focused recovery test uses the production local SQLite adapter. A
+  test-owned writer exits after the record and audit commit, before returning
+  its receipt. A fresh process retries and must find the same receipt, one
+  record, and one audit entry. The receipt and audit contain no answer text.
   In the Form view, After submission lists the existing Create Record
   operation and compatible destination fields. Setting or removing an action
   changes only the shared draft. Preview describes the configured action
