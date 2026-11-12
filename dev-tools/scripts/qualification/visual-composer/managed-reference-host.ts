@@ -230,7 +230,19 @@ export async function startManagedReferenceHost(databaseReference: string) {
         checks.fixture = await seedReferenceBrowseFixture({documents: seedDatabase.documents.forOrganization(organizationId), definitionDocuments: seedDatabase.documents, rootDirectory: environment.SERVER_STORAGE_ROOT, workspaceId: createWorkspaceId(fixtureWorkspaceId!)});
       } finally {await seedDatabase.close();}
     }
-    const frontend = spawn(process.execPath, [path.join(root, "node_modules/vite/bin/vite.js"), "--host", "127.0.0.1", "--port", String(frontendPort), "--strictPort"], {cwd: path.join(root, "apps/thin-client"), env: {...base, NODE_ENV: "development", AI_SYSTEM_BUILDER_HTTPS_ENABLED: "false", AI_SYSTEM_BUILDER_THIN_CLIENT_HTTPS_ENABLED: "false", AI_SYSTEM_BUILDER_TLS_CERT_MODE: "manual", AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET: serverOrigin}, stdio: "ignore", windowsHide: true});
+    const frontendConfig = path.join(root, "dev-tools/scripts/qualification/visual-composer/qualification-thin-vite.config.mjs");
+    const frontend = spawn(process.execPath, [
+      "--preserve-symlinks", "--preserve-symlinks-main", path.join(root, "node_modules/vite/bin/vite.js"),
+      "--configLoader", "runner", "--config", frontendConfig,
+      "--host", "127.0.0.1", "--port", String(frontendPort), "--strictPort",
+    ], {
+      cwd: path.join(root, "apps/thin-client"),
+      env: {...base, NODE_ENV: "development",
+        VISUAL_COMPOSER_QUALIFICATION_RUN_ID: `managed-${id}`,
+        VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION: sourceRevision,
+        AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET: serverOrigin},
+      stdio: "ignore", windowsHide: true,
+    });
     children.push(frontend);
     const frontendOrigin = `http://127.0.0.1:${frontendPort}`;
     let ready = false;

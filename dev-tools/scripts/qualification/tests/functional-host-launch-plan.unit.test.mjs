@@ -7,6 +7,7 @@ import {createFunctionalHostEnvironment,createFunctionalHostLaunchPlan,functiona
 import {createSettingsHostLaunchPlan} from "../visual-composer/settings-host-launch-plan.mjs";
 import functionalHostSetup from "../visual-composer/functional-host-global-setup.mjs";
 import {prepareThinClientQualificationIdentity} from "../visual-composer/visual-composer-global-setup.mjs";
+import {resolveVisualComposerQualificationPaths} from "../visual-composer/visual-composer-qualification-core.mjs";
 const root=process.cwd(),run="functional-model-fixture-20261029",source="source."+"a".repeat(64);
 test("functional cases reuse closed environments but own an exact distinct case and every cache",()=>{
   const input={PATH:process.env.PATH,HF_TOKEN:"synthetic-private",HUGGING_FACE_TOKEN:"synthetic-private",AI_SYSTEM_BUILDER_PROVIDER_CREDENTIAL_MIGRATION_ORGANIZATION_ID:"foreign",NODE_OPTIONS:"foreign",HTTPS_PROXY:"foreign",DATABASE_URL:"foreign",VISUAL_COMPOSER_DESKTOP_DATA_ROOT:"foreign"};
@@ -92,6 +93,26 @@ test("the two thin test plans ignore operator dotenv and use a run-owned cache i
     assert.equal(functional.thinClient.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,source);
     process.env.AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET="http://example.invalid:43170";
     await assert.rejects(resolveConfig(options,"serve","development"),/fixed source and loopback API proxy/);
+
+    const managedRun = "managed-" + "b".repeat(32);
+    const managedOrigin = "https://127.0.0.1:43170";
+    process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID = managedRun;
+    process.env.AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET = managedOrigin;
+    const managed = await resolveConfig(options, "serve", "development");
+    assert.equal(managed.envDir, false);
+    assert.equal(managed.env.VITE_QUALIFICATION_DOTENV_PROBE, undefined);
+    assert.equal(managed.server.host, "127.0.0.1");
+    assert.equal(managed.server.proxy["/api"].target, managedOrigin);
+    assert.equal(managed.server.proxy["/api"].secure, true);
+    assert.equal(path.normalize(managed.cacheDir), path.join(resolveVisualComposerQualificationPaths(root, managedRun).thinRuntimeRoot, "vite-cache"));
+    for (const target of ["http://127.0.0.1:43170", "https://example.invalid:43170", managedOrigin + "/elsewhere"]) {
+      process.env.AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET = target;
+      await assert.rejects(resolveConfig(options, "serve", "development"), /fixed source and loopback API proxy/);
+    }
+    const launch = await readFile(path.join(root, "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts"), "utf8");
+    assert.match(launch, /"--configLoader", "runner", "--config", frontendConfig/);
+    assert.match(launch, /VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION: sourceRevision/);
+    assert.match(launch, /VISUAL_COMPOSER_QUALIFICATION_RUN_ID: `managed-\$\{id\}`/);
   }finally{
     keys.forEach((key,index)=>{if(previous[index]===undefined)delete process.env[key];else process.env[key]=previous[index];});
     const current=await lstat(fixture,{bigint:true});

@@ -1,5 +1,10 @@
 # Functional host setup failures
 
+Managed reference browser tests use the isolated Thin Client Vite configuration.
+The frontend skips local environment files, binds to loopback and uses a
+run-specific cache. Its API proxy still verifies the managed fixture's local
+HTTPS certificate. Ordinary local browser tests keep their HTTP loopback proxy.
+
 The Functional UI test setup can report where startup stopped without exposing
 an error message, stack, log, credential or user content. This is a test-harness
 diagnostic. It does not change app startup, permissions, cleanup or resource limits.
