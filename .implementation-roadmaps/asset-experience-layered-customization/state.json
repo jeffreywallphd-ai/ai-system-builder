@@ -707,6 +707,64 @@
         "Separate review accepted candidate 2d33186bd70d9592343fae9e1b901b6444f1e806 and receipt 994286b68ab12b9bc9c55776a82fa4f0fb91de4ec25503204a5a07506a0e8e32."
       ],
       "title": "Check answers and preview routes"
+    },
+    {
+      "areas": [
+        "Published Forms",
+        "Release-bound records",
+        "Managed membership"
+      ],
+      "chunkId": "form-submission-and-action",
+      "completedAt": "2026-11-12T23:13:53Z",
+      "criteriaIds": [
+        "form-preview-and-runtime-parity",
+        "form-submission-triggers",
+        "security-form-submission-and-action-authority"
+      ],
+      "documentation": [
+        "System Builder architecture",
+        "System Builder Canvas Testing"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-backed-form-composer-form-submission-and-action",
+      "incrementId": "asset-backed-form-composer",
+      "summary": "Both hosts published and submitted a form into its authorized records. An isolated SQLite process exit after commit preserved the original receipt and one effect.",
+      "tests": [
+        "Published form host feature journeys",
+        "Published form use case and durable SQLite process-exit replay"
+      ],
+      "title": "Accept submissions and run approved actions"
+    },
+    {
+      "areas": [
+        "Form Composer",
+        "Preview",
+        "Published Forms"
+      ],
+      "chunkId": "form-host-feature-journeys",
+      "completedAt": "2026-11-12T23:13:53Z",
+      "criteriaIds": [
+        "shared-form-and-canvas-draft",
+        "form-maps-to-a-canvas-page",
+        "form-validation-and-answer-routing",
+        "form-preview-and-runtime-parity",
+        "form-submission-triggers",
+        "security-form-submission-and-action-authority",
+        "form-composer-desktop-and-browser"
+      ],
+      "documentation": [
+        "System Builder architecture",
+        "System Builder Canvas Testing"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-backed-form-composer-form-host-feature-journeys",
+      "incrementId": "asset-backed-form-composer",
+      "summary": "All four named Form Composer cases passed on packaged Desktop and the managed browser. They verified draft reopening, real submission, narrow layout, and editor and Preview reflow at 400 percent zoom.",
+      "tests": [
+        "Packaged Desktop Form Composer: four cases",
+        "Managed browser Form Composer: four cases"
+      ],
+      "title": "Verify the Form feature on both hosts"
     }
   ],
   "completion": null,
@@ -1208,6 +1266,116 @@
       "outcome": "pending",
       "recordedAt": "2026-10-22T14:07:35Z",
       "summary": "Technical qualification pending: actual automated desktop/thin-client keyboard, accessibility-tree semantics, 400-percent zoom/reflow, measured contrast, focus/modal, reduced-motion and responsive checks on supported profiles. Independent controlled security qualification is retained as a separate unchanged criterion."
+    },
+    {
+      "artifact": ".local-codex/form-composer-host-qualification-20261112/host-feature-summary-final.json",
+      "command": null,
+      "criterionId": "shared-form-and-canvas-draft",
+      "id": "evidence-36",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-12T23:13:53Z",
+      "summary": "Both hosts saved and reopened an empty or populated form from Manage. Contextual Form editing used the shared draft, including field removal and Undo. The packaged Desktop journey restarted the app before reopening."
+    },
+    {
+      "artifact": ".local-codex/form-composer-host-qualification-20261112/host-feature-summary-final.json",
+      "command": null,
+      "criterionId": "form-maps-to-a-canvas-page",
+      "id": "evidence-37",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-12T23:13:53Z",
+      "summary": "An empty Form system saved its first page immediately. The tests added a new form to an existing Canvas container and opened its own editor. The reviewed placement and editor tests retain compatible form-only children and support separate forms in the same system."
+    },
+    {
+      "artifact": ".local-codex/form-composer-host-qualification-20261112/host-feature-summary-final.json",
+      "command": null,
+      "criterionId": "form-validation-and-answer-routing",
+      "id": "evidence-38",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-12T23:13:53Z",
+      "summary": "Focused rule tests and both host journeys checked required and invalid inputs, the default route and an answer route. Changing routes excluded the skipped notes from the persisted record. Rule tests also rejected invalid route graphs and configuration."
+    },
+    {
+      "artifact": ".local-codex/form-composer-host-qualification-20261112/host-feature-summary-final.json",
+      "command": null,
+      "criterionId": "form-preview-and-runtime-parity",
+      "id": "evidence-39",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-12T23:13:54Z",
+      "summary": "Preview used the shared rules without creating records. The released questionnaire tested the same answer change and route. Shared editor tests kept existing draft and Canvas behavior, and both host journeys confirmed save and reopen."
+    },
+    {
+      "artifact": ".local-codex/form-durable-submission-20261112/checkpoint.json",
+      "command": null,
+      "criterionId": "form-submission-triggers",
+      "id": "evidence-40",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-12T23:13:54Z",
+      "summary": "A canceled invalid submission wrote no record. Each valid case wrote exactly one mapped record. The focused tests verified stable retry identity and an uncertain response; a fresh process recovered the same receipt after a real local SQLite writer exit. No answers appeared in the receipt or audit."
+    },
+    {
+      "artifact": ".local-codex/form-managed-record-authority-20261112/checkpoint.json",
+      "command": null,
+      "criterionId": "security-form-submission-and-action-authority",
+      "id": "evidence-41",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-12T23:13:54Z",
+      "summary": "Independent review and focused denial checks verified the owning workspace and actor, stored membership, current release and action authority. Invalid mappings and oversized inputs were denied; the real host results retained only the authorized mapped fields. This review covers the Form feature only."
+    },
+    {
+      "artifact": ".local-codex/form-composer-host-qualification-20261112/host-feature-summary-final.json",
+      "command": null,
+      "criterionId": "form-composer-desktop-and-browser",
+      "id": "evidence-42",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-12T23:13:54Z",
+      "summary": "The intake and branching questionnaire passed on both local hosts. The editor and Preview with a validation error fit at actual 400 percent zoom. Each host also passed 320 CSS pixel layout and bounded timings on an eight-page, 32-field fixture."
+    },
+    {
+      "artifact": ".local-codex/form-composer-host-qualification-20261112/host-feature-summary-final.json",
+      "command": null,
+      "criterionId": "shared-form-and-canvas-draft",
+      "id": "evidence-43",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "review",
+      "outcome": "failed",
+      "recordedAt": "2026-11-12T23:18:05Z",
+      "summary": "Both hosts passed the shared draft and contextual Edit Form journey. This older criterion also requires a global switch above the editors. The accepted Form entry clarification replaced that switch, so the original criterion cannot be marked passed."
+    },
+    {
+      "artifact": ".local-codex/form-composer-host-qualification-20261112/host-feature-summary-final.json",
+      "command": null,
+      "criterionId": "form-maps-to-a-canvas-page",
+      "id": "evidence-44",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "review",
+      "outcome": "failed",
+      "recordedAt": "2026-11-12T23:18:06Z",
+      "summary": "A standalone Form system saves its first form and page. A form inside a larger system stays in its existing Canvas location. The accepted Form entry clarification permits several forms on one page, so this older separate-page requirement cannot be marked passed."
+    },
+    {
+      "artifact": ".local-codex/asset-experience-final-feature-qualification-20261112/increment6-local-feature-evidence.json",
+      "command": null,
+      "criterionId": "desktop-thin-accessibility",
+      "id": "evidence-45",
+      "incrementId": "production-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-11-12T23:34:41Z",
+      "summary": "Desktop Assets and managed browser Assets passed their actual 400 percent checks. The managed browser also passed keyboard move, reorder, and removal. The remaining Systems Canvas zoom checks did not pass. Desktop must use the compact navigation and verify its own app exit. The browser picker still has one unverified text contrast sample after its transient notification clears."
     }
   ],
   "feedback": [
@@ -1359,6 +1527,16 @@
       "nextAction": "Preserve existing forms in place, including multiple forms on one page. Verify the contextual navigation, matching asset placement, affected templates and supported form settings before host qualification.",
       "recordedAt": "2026-11-12T18:48:14Z",
       "summary": "The author opens a specific form asset with Edit Form. The system has no global Form tab. Create form system starts with the existing Minimal page and a section. Current form fields and controls stay inside their owning form.",
+      "targetIncrementId": "asset-backed-form-composer"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "reconcile-contextual-form-criteria",
+      "impact": "within-increment",
+      "nextAction": "Keep both original criteria out of the pass count until their canonical wording can be revised through a supported event. Keep the tested Form behavior and the historical evidence.",
+      "recordedAt": "2026-11-12T23:24:22Z",
+      "summary": "The original Form plan still describes a global switch and a separate Canvas page for every form. The approved contextual Edit Form design and completed feature tests use the existing form placement and allow multiple forms on a page.",
       "targetIncrementId": "asset-backed-form-composer"
     }
   ],
@@ -2094,6 +2272,84 @@
       "recordedAt": "2026-11-12T18:48:14Z",
       "sequence": 122,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "9865d802338218c0b4711e7d9afef9c61947fe609f95eb8af1790c96c87cfa1d",
+      "recordedAt": "2026-11-12T23:13:53Z",
+      "sequence": 123,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "40344f55b11a15e50f001d288852ec5f7108c02e5bae7e1db9f5fcdc51e875ef",
+      "recordedAt": "2026-11-12T23:13:53Z",
+      "sequence": 124,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "d1e6fc75e96c5a22cd55e0868457e9324943234701f0cb1ae2ba087bdcc1e023",
+      "recordedAt": "2026-11-12T23:13:53Z",
+      "sequence": 125,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "125a1f19be68c0183e0cc4a5733a19b8b6b67d4714b5d1ddbf681d958308ca0b",
+      "recordedAt": "2026-11-12T23:13:53Z",
+      "sequence": 126,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f8f5cc2d1e66f513997d525b40619530f8e25acc608bde4c673dd2e14dbcfeb8",
+      "recordedAt": "2026-11-12T23:13:53Z",
+      "sequence": 127,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1c58f13bb0728cdfc4daed93de5dc53a2c164764526c76145fc1cb2d88968a0e",
+      "recordedAt": "2026-11-12T23:13:54Z",
+      "sequence": 128,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "dcda6ff6627d85ec6d27968be3560b251a07c34a59f815452dd49ce478348d4c",
+      "recordedAt": "2026-11-12T23:13:54Z",
+      "sequence": 129,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "52a0a5565a713478eb9369dd062d5ac21068e1b3bea29bdea6039fa1166243af",
+      "recordedAt": "2026-11-12T23:13:54Z",
+      "sequence": 130,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "85d1dbc30df67b8c12e253332a1d0fa1fbb6714fbd8bf8249679d425a019dda3",
+      "recordedAt": "2026-11-12T23:13:54Z",
+      "sequence": 131,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a629f4c89b25c0e0176c532e0b6700658a439f86b65853ae99698d9e6e10924f",
+      "recordedAt": "2026-11-12T23:18:05Z",
+      "sequence": 132,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b1a70d640a4097eaebb07c20f79deb121ba0fe676297d7f5c2b3eda044691c44",
+      "recordedAt": "2026-11-12T23:18:06Z",
+      "sequence": 133,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ef1caefb87d6aa89ffd22890257ff2f58f2a9df6579fa0c8d26d4ca809f78c64",
+      "recordedAt": "2026-11-12T23:24:22Z",
+      "sequence": 134,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "cd64b15cbe795d6534573f8665a0c63a583064efe4dea5b0f6028a3696cf72de",
+      "recordedAt": "2026-11-12T23:34:41Z",
+      "sequence": 135,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -3385,7 +3641,9 @@
       "completedChunks": [
         "form-page-placements",
         "form-authoring-view",
-        "form-rules-and-preview"
+        "form-rules-and-preview",
+        "form-submission-and-action",
+        "form-host-feature-journeys"
       ],
       "deliverables": [
         "A Form view with a switch in Systems Compose above the editors. The Form view provides a page outline, field settings, validation, routing, actions, and preview.",
@@ -3537,7 +3795,7 @@
       ],
       "rollback": "Withdraw the Form entry point and stop dispatching form actions. Keep the Canvas pages and saved asset revisions readable, along with submission receipts and action history. Preserve the existing authorization and publication checks.",
       "startedAt": "2026-11-12T16:28:00Z",
-      "status": "implementing",
+      "status": "verifying",
       "title": "Asset-backed Form Composer",
       "verification": [
         "Use focused tests for asset placement, revision round trips, rule evaluation, publication, and submission recovery.",
@@ -3697,5 +3955,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-12T18:48:14Z"
+  "updatedAt": "2026-11-12T23:34:41Z"
 }

@@ -18437,6 +18437,69 @@
           "Both actual host journeys still need testing."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3cdbfcbdbddd6e6d0deff178a248394ddb7e753782f57526d0dabc4ece0fe43a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The managed server checks the user's current organization role before giving access to form records.",
+          "It denies access if it cannot confirm that role."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2861d5f2c1621197c900aed794616b41cf497edcce6adb51ea346c6c9e52c86b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This check covers the new Form record path. The earlier Assets security assessment is still open."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d36450d836d7eecf0d10d4dc5a1c83dfa82c0d5299d1cd46cdb384f03b7e7c02",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop and the managed browser each passed four Form Composer tests.",
+          "Both saved published records and showed the editor and Preview at 400 percent zoom without horizontal scrolling."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c2b4a3e5323ce417fdd0b2b13d3e211fd52e248569ad673f09b089d44f298b21",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used sample data. The timing results apply to this eight-page form with 32 fields."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9aa6a451807e2e9a90ada34577e51e6a37268bd6207ee443912adba10c33a8a2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test stopped the writer process after it saved a submitted record.",
+          "A fresh process retried the submission and found the same receipt, one record, and one audit entry."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d3bca0af8622ff2a1e10d93641637ee9bc79d0575e208f78265de9f5b3c852af",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test used a temporary local SQLite database. It does not cover remote databases or other actions."
+        ]
+      }
     }
   ]
 }

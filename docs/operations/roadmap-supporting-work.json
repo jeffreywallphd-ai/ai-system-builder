@@ -12941,6 +12941,53 @@
       "limitations": [
         "This is a focused interaction with mocked IPC and a Desktop compiler check. It does not qualify packaged Desktop or the managed browser."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "security-form-submission-and-action-authority",
+      "work_id": "bind-managed-system-records-to-current-membership",
+      "work_criteria": [
+        "managed-record-roles-come-from-stored-membership",
+        "missing-or-stale-membership-cannot-use-token-roles"
+      ],
+      "receipt_digest": "354a71c5ea6b6221ca8eb723f1f5b90348bbd79b4cbaae576e37d7298e7b1da8",
+      "review_digest": "6fb1ded8a4e180386f3b23bcb3430aa570956ec95816b703b4d7cbfe857a0ac8",
+      "scope": "Managed record routes use the current active organization role and deny unavailable or mismatched authority.",
+      "limitations": [
+        "Applies to the reviewed Form record path. It does not assess the earlier legacy Assets authorization controls."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-composer-desktop-and-browser",
+      "work_id": "verify-form-composer-hosts-preview-and-census",
+      "work_criteria": [
+        "form-host-definitions-are-isolated-and-executable",
+        "form-host-observations-preserve-measured-limits"
+      ],
+      "receipt_digest": "8a5021b1edadf82d66a61340f09c2e27d560c58e3a3e841d13a0ed419b94797d",
+      "review_digest": "1e98d28118d5989d7c2f460141ede157663c2a8a62cae5598ec93d782e4555bb",
+      "scope": "Packaged Desktop and the managed browser each passed four Form Composer cases on the same tested source, including published records and actual 400 percent editor and Preview reflow.",
+      "limitations": [
+        "Uses test-owned local applications and synthetic records. The timing evidence is limited to this eight-page, 32-field fixture."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-submission-triggers",
+      "work_id": "verify-durable-published-form-replay",
+      "work_criteria": [
+        "durable-form-write-replays-without-a-second-effect"
+      ],
+      "receipt_digest": "1a7df0f14646fe1da6cb239bbe8daafbf0626458a16fbeddc4c34625f4dc63da",
+      "review_digest": "1c05803f4e01937e8d0e43e9f6efbe9dadc6065ce2374670cb3c2929d967f4d2",
+      "scope": "A writer process stopped after SQLite committed. A new process recovered the same receipt and found one record and one linked audit entry, with no second committed action.",
+      "limitations": [
+        "Uses the production SQLite adapter with a disposable local fixture. It does not establish durability on a remote database or qualify other action types."
+      ]
     }
   ]
 }
