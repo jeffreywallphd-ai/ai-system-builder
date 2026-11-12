@@ -43,7 +43,24 @@ FORM_HOST_DEFINITIONS = (
     "dev-tools/scripts/qualification/tests/form-composer-host-definitions.unit.test.mjs",
 )
 
+MANAGED_ASSETS_RESTART_LOADER_FILES = (
+    "dev-tools/scripts/qualification/visual-composer/visual-composer-host-lifecycle.mjs",
+    "dev-tools/scripts/qualification/visual-composer/visual-composer-owned-process.mjs",
+    "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+    "dev-tools/scripts/qualification/tests/managed-assets-restart-loader.unit.test.mjs",
+)
+
 PUBLISHED_FORM_CHECKS = {
+    "managed-assets-restart-loader": {
+        "automatic_sources": MANAGED_ASSETS_RESTART_LOADER_FILES,
+        "sources": MANAGED_ASSETS_RESTART_LOADER_FILES,
+        "command": (
+            "--test", "--",
+            "dev-tools/scripts/qualification/tests/managed-assets-restart-loader.unit.test.mjs",
+            "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+            "dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs",
+        ),
+    },
     "published-form-host-definitions": {
         "automatic_sources": FORM_HOST_DEFINITIONS,
         "sources": FORM_HOST_DEFINITIONS,

@@ -68,6 +68,12 @@ The reports include source identity, host, counts, timings and fixed result
 facts. The fixed definition check only lists the four cases per host. It
 does not run them or qualify either host.
 
+The managed Assets restart case loads its fixture in the Playwright worker.
+It imports the shared process cleanup helper without loading the visual
+composer command-line entry point. The import regression runs without opening
+an app or database. Restart qualification still requires the named managed
+Assets case to observe its existing graceful shutdown and new process checks.
+
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown
 qualification retains a read-only Win32 process handle acquired while that main

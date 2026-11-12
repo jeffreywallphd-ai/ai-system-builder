@@ -14,7 +14,7 @@ import { provisionOrganizationMembership } from "../../../../modules/adapters/pe
 import { createInternalPrincipalId } from "../../../../modules/adapters/security/oidc/createOidcBearerTokenVerifierAdapter";
 import { createOrganizationId } from "../../../../modules/contracts/organization";
 import { readAssetSystemSourceIdentity, assertAssetSystemSourceIdentity } from "../asset-system-source-identity.mjs";
-import { stopVisualComposerOwnedProcess } from "./visual-composer-host-lifecycle.mjs";
+import { stopVisualComposerOwnedProcess } from "./visual-composer-owned-process.mjs";
 import { seedReferenceBrowseFixture } from "./reference-browse-fixture";
 import { createWorkspaceId } from "../../../../modules/contracts/workspace";
 import { createLocalWorkspaceRepository } from "../../../../modules/adapters/persistence/workspace";
