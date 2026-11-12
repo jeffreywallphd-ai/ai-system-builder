@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   normalizeAssetId,
+  MAX_ASSET_PLACEMENTS_PER_COMPOSITION,
   type AssetBinding,
   type AssetConfigurationValues,
   type AssetInstance,
@@ -46,6 +47,18 @@ import {
 } from "./SystemComposerStructureEditor";
 import { SystemComposerInspector } from "./SystemComposerInspector";
 import { SystemComposerStylingPanel } from "./SystemComposerStylingPanel";
+import {
+  FORM_COMPOSER_FIELDS,
+  readFormStepFields,
+  SystemFormComposerView,
+  type FormComposerFieldId,
+} from "./SystemFormComposerView";
+import {
+  createSystemFormDraft,
+  FORM_COMPOSER_FOUNDATION_ASSET_IDS,
+  FORM_COMPOSER_FOUNDATION_VERSION,
+  readSystemForms,
+} from "./systemFormComposerDraft";
 import {
   bindingKindForSystemComposerEndpoint,
   canRepairSystemComposerConversationInteraction,
@@ -223,9 +236,11 @@ export function SystemBuilderWorkspace({
     useState(false);
   const [stylingRootDetailError, setStylingRootDetailError] =
     useState<string>();
-  const [composerMode, setComposerMode] = useState<"design" | "connections">(
+  const [requestedComposerMode, setComposerMode] = useState<"design" | "connections" | "form">(
     "design",
   );
+  const composerMode = requestedComposerMode === "form" && structure?.profile !== "interactive"
+    ? "design" : requestedComposerMode;
   const [newSystemName, setNewSystemName] = useState("");
   const [referenceSystemName, setReferenceSystemName] = useState("");
   const [revisions, setRevisions] = useState<readonly SystemBuilderRevision[]>(
@@ -901,6 +916,148 @@ export function SystemBuilderWorkspace({
     setSelectedInstanceId(instanceId);
   }
 
+  function applyFormDraft(next: SystemComposerDraft, assets: readonly SystemBuilderComposerAsset[]) {
+    applyDraftHistory(commitSystemComposerDraft(
+      { past: undoDrafts, present: draft, future: redoDrafts }, next,
+    ));
+    setComposerCatalog((current) => [...current, ...assets.filter((asset) =>
+      !current.some((item) => item.definitionId === asset.definitionId && item.version === asset.version))]);
+  }
+
+  async function createForm(name: string) {
+    if (!revision || revision.composition.rootInstanceRefs.length !== 1) return;
+    const { page, section, form, step } = FORM_COMPOSER_FOUNDATION_ASSET_IDS;
+    const compositionId = String(revision.composition.compositionId);
+    const rootInstanceId = String(revision.composition.rootInstanceRefs[0]!.id);
+    await transact(async (isCurrent) => {
+      const read = (id: string) => definitionReader.readSummary(client, {
+        workspaceId,
+        definitionRef: { kind: "asset-definition-version", id: normalizeAssetId(id), version: FORM_COMPOSER_FOUNDATION_VERSION },
+      }, isCurrent);
+      const [pageAsset, sectionAsset, formAsset, stepAsset] = await Promise.all([
+        read(page), read(section), read(form), read(step),
+      ]);
+      if (!isCurrent()) return;
+      if (!pageAsset.ok || !sectionAsset.ok || !formAsset.ok || !stepAsset.ok) {
+        setError("The required form assets are unavailable. Retry creating the form.");
+        return;
+      }
+      const id = `instance.form.${uniqueId()}`;
+      const assets = { page: pageAsset.value, section: sectionAsset.value, form: formAsset.value, step: stepAsset.value };
+      const result = createSystemFormDraft(draft, {
+        name, compositionId, rootInstanceId, assets, catalog: composerCatalog,
+        instanceIds: { page: `${id}.page`, section: `${id}.section`, form: `${id}.form`, step: `${id}.step` },
+      });
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      applyFormDraft(result.value, Object.values(assets));
+      setNotice("Form and Canvas page added to the draft.");
+    });
+  }
+
+  function formDraftMembership(instanceId: string): "step" | "field" | undefined {
+    const steps = readSystemForms(draft, composerCatalog).flatMap((entry) => entry.steps);
+    if (steps.some((step) => step.instanceId === instanceId)) return "step";
+    const parent = placements.find((edge) => edge.childInstanceRef.id === instanceId && edge.slotId === "fields")?.parentInstanceRef.id;
+    const member = instances.find((instance) => instance.instanceId === instanceId);
+    if (steps.some((step) => step.instanceId === parent) && member?.definitionRef.kind === "asset-definition-version" &&
+        member.definitionRef.version === FORM_COMPOSER_FOUNDATION_VERSION &&
+        FORM_COMPOSER_FIELDS.some(([definitionId]) => definitionId === member.definitionRef.id)) return "field";
+    return undefined;
+  }
+
+  async function addFormElement(parentId: string, definitionId: FormComposerFieldId | typeof FORM_COMPOSER_FOUNDATION_ASSET_IDS.step, name?: string) {
+    if (!revision) return;
+    if (draft.placements.length >= MAX_ASSET_PLACEMENTS_PER_COMPOSITION ||
+        draft.instances.length > MAX_ASSET_PLACEMENTS_PER_COMPOSITION) {
+      setError("This system has no space for another form element.");
+      return;
+    }
+    const isStep = definitionId === FORM_COMPOSER_FOUNDATION_ASSET_IDS.step;
+    const parent = instances.find((instance) => instance.instanceId === parentId);
+    if (!parent || (isStep
+      ? !readSystemForms(draft, composerCatalog).some((entry) => entry.form.instanceId === parentId)
+      : formDraftMembership(parentId) !== "step")) return;
+    const label = name?.trim();
+    if (isStep && (!label || label.length > 200)) return;
+    const definition = composerCatalog.find((asset) => asset.definitionId === parent.definitionRef.id && asset.version === parent.definitionRef.version);
+    const slot = definition?.slots.find((item) => item.slotId === "fields");
+    const size = placements.filter((edge) => edge.parentInstanceRef.id === parentId && edge.slotId === "fields").length;
+    if (!slot || size >= slot.cardinality.maxItems) {
+      setError("This form region is full.");
+      return;
+    }
+    const compositionId = String(revision.composition.compositionId);
+    await transact(async (isCurrent) => {
+      const compatible = await loadCompatibleAssetsOnDemand(
+        { parentInstanceId: parentId, slotId: "fields" }, { searchText: definitionId, limit: 24 },
+      );
+      if (!isCurrent()) return;
+      const asset = compatible.ok && compatible.value.items.find((item) =>
+        item.builtIn && item.compatibility.status === "compatible" &&
+        item.definitionId === definitionId && item.version === FORM_COMPOSER_FOUNDATION_VERSION &&
+        item.definitionRef.kind === "asset-definition-version" && item.definitionRef.id === definitionId &&
+        item.definitionRef.version === item.version);
+      if (!asset) {
+        setError("The selected form asset is unavailable in this region.");
+        return;
+      }
+      const instanceId = `instance.form.${uniqueId()}`;
+      const result = addSystemComposerAsset(draft, { asset, compositionId, parentInstanceId: parentId, slotId: "fields", instanceId });
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      const displayName = label ?? asset.displayName;
+      applyFormDraft({
+        ...result.value,
+        instances: result.value.instances.map((item) => item.instanceId === instanceId
+          ? { ...item, displayName, selectedConfiguration: isStep ? { title: displayName } : { label: displayName } }
+          : item),
+      }, [asset]);
+    });
+  }
+
+  function updateFormElement(instanceId: string, values: AssetConfigurationValues) {
+    const role = formDraftMembership(instanceId);
+    if (!role) return;
+    const patch = role === "step"
+      ? typeof values.title === "string" && values.title.trim() && values.title.length <= 200 ? { title: values.title.trim() } : {}
+      : {
+        ...(typeof values.label === "string" && values.label.trim() && values.label.length <= 200 ? { label: values.label.trim() } : {}),
+        ...(typeof values.helpText === "string" && values.helpText.length <= 1000 ? { helpText: values.helpText } : {}),
+        ...(typeof values.required === "boolean" ? { required: values.required } : {}),
+      };
+    if (!Object.keys(patch).length) return;
+    const displayName = "title" in patch ? patch.title : "label" in patch ? patch.label : undefined;
+    commitDraft({
+      ...draft,
+      instances: draft.instances.map((item) => item.instanceId === instanceId
+        ? { ...item, ...(displayName ? { displayName } : {}), selectedConfiguration: { ...item.selectedConfiguration, ...patch } }
+        : item),
+    });
+  }
+
+  function moveFormElement(instanceId: string, direction: -1 | 1) {
+    if (operation.current) return;
+    const own = placements.find((edge) => edge.childInstanceRef.id === instanceId && edge.slotId === "fields");
+    if (!own) return;
+    const role = formDraftMembership(instanceId);
+    const siblings = role === "step"
+      ? readSystemForms(draft, composerCatalog).find((entry) => entry.form.instanceId === own.parentInstanceRef.id)?.steps
+      : role === "field" ? readFormStepFields(draft, String(own.parentInstanceRef.id)) : undefined;
+    const index = siblings?.findIndex((item) => item.instanceId === instanceId) ?? -1;
+    const target = index < 0 ? undefined : siblings?.[index + direction];
+    if (!target) return;
+    const other = placements.find((edge) => edge.childInstanceRef.id === target.instanceId &&
+      edge.parentInstanceRef.id === own.parentInstanceRef.id && edge.slotId === own.slotId);
+    if (!other) return;
+    commitDraft({ ...draft, placements: placements.map((edge) => edge === own
+      ? { ...edge, order: other.order } : edge === other ? { ...edge, order: own.order } : edge) });
+  }
+
   function removeAsset(instanceId: string) {
     if (operation.current) return;
     const parentId = placements.find(
@@ -1514,7 +1671,7 @@ export function SystemBuilderWorkspace({
                 role="tablist"
                 aria-label="Composer mode"
               >
-                {(["design", "connections"] as const).map((mode) => (
+                {(["design", "connections", ...(structure?.profile === "interactive" ? ["form"] as const : [])] as const).map((mode) => (
                   <button
                     key={mode}
                     type="button"
@@ -1523,7 +1680,7 @@ export function SystemBuilderWorkspace({
                     className="system-composer__flat-control"
                     onClick={() => setComposerMode(mode)}
                   >
-                    {mode === "design" ? "Design" : "Connections"}
+                    {mode === "design" ? "Design" : mode === "connections" ? "Connections" : "Form"}
                   </button>
                 ))}
               </div>
@@ -1598,6 +1755,21 @@ export function SystemBuilderWorkspace({
                     onAdd={addAsset}
                     onPlace={placeAsset}
                     onRemove={removeAsset}
+                    onUndo={undoDraft}
+                    onRedo={redoDraft}
+                  />
+                ) : composerMode === "form" && structure?.profile === "interactive" ? (
+                  <SystemFormComposerView
+                    key={String(revision.revisionId)}
+                    draft={draft}
+                    catalog={composerCatalog}
+                    canUndo={undoDrafts.length > 0}
+                    canRedo={redoDrafts.length > 0}
+                    onCreateForm={(name) => void createForm(name)}
+                    onAddStep={(id, name) => void addFormElement(id, FORM_COMPOSER_FOUNDATION_ASSET_IDS.step, name)}
+                    onAddField={(id, definitionId) => void addFormElement(id, definitionId)}
+                    onMove={moveFormElement}
+                    onUpdate={updateFormElement}
                     onUndo={undoDraft}
                     onRedo={redoDraft}
                   />

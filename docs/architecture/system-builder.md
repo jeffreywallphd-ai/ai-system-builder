@@ -186,7 +186,10 @@ customization, and single-asset Studio workflows.
   The Form Composer draft constructor uses the same placement records. It
   creates a dedicated Foundation page, a compatible section, a form, and a
   first field group in one draft edit. The Form view can read this structure
-  without creating duplicate assets. The existing Canvas consumes the same
+  without creating duplicate assets. Systems Compose offers the Form view
+  alongside Design and Connections for interactive systems. Form edits resolve
+  exact, workspace-visible definitions, apply to the shared draft and use its
+  undo, redo, and revision-save path. The existing Canvas consumes the same
   placements through its ordinary rendering path.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,

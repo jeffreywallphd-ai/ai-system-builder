@@ -35,6 +35,161 @@ afterEach(() => {
 });
 
 describe("SystemBuilderWorkspace UI preview", () => {
+  it("authors forms and fields in the shared draft and reopens their existing Canvas pages", async () => {
+    const page = {
+      ...composerDefinition("builtin.layout.page.single", "Single content", ["content"], false, "3.0.0"),
+      layoutRole: "page-layout" as const,
+      assetType: "page" as const,
+    };
+    const baseShell = layoutDefinition("builtin.layout.application.standard", "Standard", ["content"], "3.0.0");
+    const shell = {
+      ...baseShell,
+      slots: baseShell.slots.map((slot) => ({ ...slot, cardinality: { minItems: 1, maxItems: 8 }, acceptedDefinitionRefs: [page.definitionRef] })),
+    };
+    const rootDefinition = composerDefinition("builtin.system.system", "System root", ["application-shell"], false, "3.0.0");
+    const formContainer = (id: string, name: string) => {
+      const definition = composerDefinition(id, name, ["fields"], true, "3.0.0");
+      return { ...definition, slots: definition.slots.map((slot) => ({
+        ...slot, cardinality: { minItems: 0, maxItems: 24 },
+      })) };
+    };
+    const form = formContainer("builtin.form.form", "Form");
+    const group = formContainer("builtin.form.field-group", "Field Group");
+    const textField = {
+      ...composerDefinition("builtin.form.text-field", "Text Field", [], false, "3.0.0"),
+      configurationSchema: { fields: [
+        { fieldId: "label", valueKind: "string", label: "Label", required: false },
+        { fieldId: "required", valueKind: "boolean", label: "Required", required: false },
+      ] } as SystemBuilderComposerAsset["configurationSchema"],
+    };
+    const catalog = [
+      rootDefinition, shell, page, form, group, textField,
+      composerDefinition("builtin.ui.section", "Section", ["content"], false, "3.0.0"),
+    ];
+    const fixture = [
+      { ...instance("fixture.root", rootDefinition.definitionId, "Portal", {}), definitionRef: rootDefinition.definitionRef },
+      { ...instance("fixture.shell", shell.definitionId, "Standard", {}), definitionRef: shell.definitionRef },
+      { ...instance("fixture.page", page.definitionId, "Main page", {}), definitionRef: page.definitionRef },
+    ];
+    const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: item.instanceId });
+    const initial = {
+      revisionId: "fixture.r1", systemId: "fixture", targetWorkspaceId: "workspace-a", revisionNumber: 1,
+      composition: { compositionId: "fixture.composition", compositionType: "system",
+        displayName: "Portal", version: "0.1.0", lifecycleStatus: "draft",
+        rootInstanceRefs: [ref(fixture[0]!)], instanceRefs: fixture.map(ref), bindingRefs: [],
+        provenance: { sourceKind: "human-authored" } },
+      instances: fixture, bindings: [],
+      structure: { schemaVersion: "system-builder-structure.v1", profile: "interactive", layoutPresetRef: shell.definitionRef },
+      placements: [
+        { schemaVersion: "asset-placement.v1", placementId: "place.shell", slotId: "application-shell",
+          parentInstanceRef: ref(fixture[0]!), childInstanceRef: ref(fixture[1]!), order: 0 },
+        { schemaVersion: "asset-placement.v1", placementId: "place.page", slotId: "content",
+          parentInstanceRef: ref(fixture[1]!), childInstanceRef: ref(fixture[2]!), order: 0 },
+      ],
+      validationIssues: [], createdAt: "2026-07-19T00:00:00.000Z", createdBy: "person-1",
+    } as SystemBuilderRevision;
+    const record = {
+      systemId: initial.systemId, targetWorkspaceId: initial.targetWorkspaceId, name: "Portal",
+      status: "validated", revision: 1, currentRevisionId: initial.revisionId, composition: initial.composition,
+      createdAt: initial.createdAt, updatedAt: initial.createdAt, createdBy: "person-1", updatedBy: "person-1",
+    } as SystemBuilderRecord;
+    let latest = initial;
+    const saveRevision = vi.fn(async (input: Parameters<SystemBuilderClient["saveRevision"]>[0]) => {
+      latest = { ...initial, revisionNumber: 2, composition: input.composition, instances: input.instances,
+        placements: input.placements, bindings: input.bindings };
+      return { ok: true as const, value: latest };
+    });
+    const listComposerAssets = vi.fn(async (input: ListSystemBuilderComposerAssetsQuery) => ({
+      ok: true as const,
+      value: { items: input.searchText ? catalog.filter((asset) => asset.definitionId === input.searchText) : catalog },
+    }));
+    const client = { ...clientFor(record, initial), saveRevision, listComposerAssets,
+      readRevision: async () => ({ ok: true as const, value: latest }) };
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const mount = () => root!.render(<SystemBuilderWorkspace workspaceId="workspace-a" client={client} initialSystemId={String(record.systemId)} />);
+    await act(async () => mount());
+    const find = <T extends HTMLElement>(label: string, selector: string) => {
+      const group = [...container!.querySelectorAll("label")].find((element) =>
+        [...element.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent ?? "").join("").trim() === label);
+      const control = group?.querySelector<T>(selector);
+      if (!control) throw new Error(`Missing ${label}`);
+      return control;
+    };
+    const click = (name: string) => act(async () => button(container!, name).click());
+    const fill = (label: string, value: string) => act(async () => setInputValue(find<HTMLInputElement>(label, "input"), value));
+    const choose = (label: string, name: string) => act(async () => {
+      const select = find<HTMLSelectElement>(label, "select");
+      select.value = [...select.options].find((item) => item.text === name)!.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await vi.waitFor(() => expect(button(container!, "Form")).toBeDefined());
+    await click("Form");
+    await fill("New form name", "Intake");
+    await click("Create form");
+    await vi.waitFor(() => expect(container!.textContent).toContain("Canvas page Intake"));
+    await fill("New form name", "Questionnaire");
+    await click("Create form");
+    await vi.waitFor(() => expect(find<HTMLSelectElement>("Form", "select").options.length).toBe(2));
+    await fill("New step name", "Details");
+    await click("Add step");
+    await choose("Form step", "Details");
+    await click("Add field");
+    await act(async () => {
+      const label = find<HTMLInputElement>("Field label", "input");
+      label.focus();
+      label.value = "Request reason";
+      label.blur();
+    });
+    await act(async () => find<HTMLInputElement>("Required answer", "input").click());
+    expect(listComposerAssets).toHaveBeenCalledWith(expect.objectContaining({
+      workspaceId: "workspace-a", slotId: "fields", compatibleOnly: true, searchText: "builtin.form.text-field",
+    }));
+    await click("Design");
+    const canvas = container!.querySelector(".system-composer__canvas")!;
+    const pages = [...canvas.querySelectorAll('.system-composer__canvas-node[data-layout-container="true"]')]
+      .filter((item) => item.querySelector(":scope > .system-composer__canvas-node-heading small")?.textContent?.includes("builtin.layout.page.single@"));
+    expect(pages.map((item) => item.querySelector(":scope > .system-composer__canvas-node-heading strong")?.textContent))
+      .toEqual(["Main page", "Intake", "Questionnaire"]);
+    expect(pages[1]?.textContent).toContain("Request reason");
+    expect(pages[2]?.textContent).not.toContain("Request reason");
+    await click("Form");
+    await choose("Form step", "Details");
+    expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
+    await click("Undo");
+    expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(false);
+    await click("Redo");
+    expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
+    await click("Save and validate revision");
+    await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(1));
+    expect(latest.instances.find((item) => item.displayName === "Request reason")?.selectedConfiguration)
+      .toEqual({ label: "Request reason", required: true });
+    // Simulate reopening a revision with a direct field placed from Canvas between the steps.
+    const details = latest.instances.find((item) => item.displayName === "Details")!;
+    const detailsPlacement = latest.placements!.find((edge) => edge.childInstanceRef.id === details.instanceId)!;
+    const canvasField = { ...instance("fixture.direct-field", textField.definitionId, "Canvas field", {}),
+      definitionRef: textField.definitionRef };
+    latest = { ...latest, composition: { ...latest.composition, instanceRefs: [...latest.composition.instanceRefs, ref(canvasField)] },
+      instances: [...latest.instances, canvasField], placements: [
+        ...latest.placements!.map((edge) => edge === detailsPlacement ? { ...edge, order: 2 } : edge),
+        { ...detailsPlacement, placementId: "place.direct-field", order: 1, childInstanceRef: ref(canvasField) },
+      ] };
+    act(() => root!.unmount());
+    root = createRoot(container);
+    await act(async () => mount());
+    await click("Form");
+    expect([...find<HTMLSelectElement>("Form", "select").options].map((item) => item.text)).toEqual(["Intake", "Questionnaire"]);
+    await choose("Form step", "Details");
+    expect(find<HTMLInputElement>("Field label", "input").value).toBe("Request reason");
+    await click("Move step up");
+    expect([...find<HTMLSelectElement>("Form step", "select").options].map((item) => item.text)).toEqual(["Details", "First step"]);
+    await click("Save and validate revision");
+    await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(2));
+    expect(latest.placements!.find((edge) => edge.childInstanceRef.id === canvasField.instanceId)?.order).toBe(1);
+  });
+
   it("defers the layout catalog until Create system is submitted and then shows the loading wheel", async () => {
     const pendingCatalog = new Promise<never>(() => undefined);
     const listComposerAssets = vi.fn(() => pendingCatalog);
