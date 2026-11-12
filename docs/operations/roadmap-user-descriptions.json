@@ -7651,19 +7651,37 @@
       "roadmap_id": "asset-experience-layered-customization",
       "increment_id": "asset-backed-form-composer",
       "criterion_id": "shared-form-and-canvas-draft",
-      "source_description_sha256": "3c670efa5c404977fd85fd283b5144075df6ccfaa4243ef8525ce7736e1eeb5b",
+      "source_description_sha256": "c9695e96317a3b47daa991dd760fab533248382095c3f7a5d7d12d5cf236aeda",
       "qualification": "local",
       "user_description": {
-        "purpose": "Switch between Canvas and Form with unsaved edits.",
+        "purpose": "Use the switch above the editors to open Canvas and Form with unsaved edits.",
         "owner": "agent",
         "next_action": "The agent will connect both editor views to the same draft and history.",
         "completion_proof": "A saved test form opens with the same pages, fields, and settings in both views.",
         "requirements": [
-          "Add, rename, and reorder pages.",
-          "Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.",
-          "Confirm both editors show the same supported changes, including undo and redo.",
-          "Save and reopen the draft with the same asset IDs, versions, field settings, and order."
+          "Add, rename, and reorder form steps. Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.",
+          "Confirm both views read the same draft and that undo and redo use the shared draft history.",
+          "Save and reopen with the same asset IDs, versions, settings, and order."
         ]
+      }
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-maps-to-a-canvas-page",
+      "source_description_sha256": "2b158a95aa38a1f5108745efcb6369ce125266763ae2654ebbaff20a8d012ed8",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Open a form in the existing Canvas editor.",
+        "owner": "agent",
+        "requirements": [
+          "Create two forms in one system. Verify that each has a distinct page and uses compatible containers where required.",
+          "Switch between views repeatedly. Confirm each form appears in its page with the correct fields and order and that switching creates no duplicate assets.",
+          "Make a supported change in Canvas and switch back. Confirm the Form view reads the same placements and preserves validation, routing, and action bindings.",
+          "Verify that the increment makes no changes to Canvas editor controls, rendering, or behavior."
+        ],
+        "next_action": "The agent will map each form to an existing Canvas page and check repeated switches.",
+        "completion_proof": "Two forms appear on separate Canvas pages and retain their field order and rules when switching views."
       }
     },
     {
@@ -9027,13 +9045,14 @@
       "record_type": "increment",
       "roadmap_id": "asset-experience-layered-customization",
       "increment_id": "asset-backed-form-composer",
-      "source_title_objective_digest": "574f53c0650f7cd12d427ac66cdd8f8d4949917435f6e1cdf16887a70017c443",
+      "source_title_objective_digest": "4425a3beca380292b78dff3856412798444c9ec7780bee7f6a4600d228debce7",
       "user_description": {
         "title": "Asset-backed Form Composer",
-        "purpose": "Build forms in Systems Compose with pages, fields, rules, and actions. Switch between Canvas and Form while keeping your edits.",
+        "purpose": "Build forms in Systems Compose. Open each form on its own page in the existing Canvas editor.",
         "scope": [
           "Author, preview, and publish a multipage form.",
-          "Choose the next page based on an answer and run an approved action after submission.",
+          "Use the switch above the editors. Each form appears on its own Canvas page.",
+          "Choose the next form step based on an answer and run an approved action after submission.",
           "Verify the experience on Desktop and in the managed browser."
         ]
       }

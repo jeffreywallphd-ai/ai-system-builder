@@ -636,7 +636,7 @@
   ],
   "completion": null,
   "createdAt": "2026-07-18T10:28:03Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "asset-backed-form-composer",
   "decisions": [
     {
       "approvalNote": "The user explicitly approved Option 1, Layered derived customization.",
@@ -1265,6 +1265,16 @@
       "recordedAt": "2026-11-12T15:50:52Z",
       "summary": "Add a Form Composer that people can switch to from Canvas in Systems Compose. They can build forms with pages and fields, check answers, send respondents to different pages based on their answers, and start configured actions after submission. Each part of the form uses assets.",
       "targetIncrementId": null
+    },
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "form-composer-canvas-boundary-and-page-wrapping",
+      "impact": "scope-change",
+      "nextAction": "Revise the Form proposal, verify the new Canvas boundary and page mapping on the review site, then record the user's conditional approval.",
+      "recordedAt": "2026-11-12T16:27:30Z",
+      "summary": "Approve Increment 7 on the condition that it leaves the Canvas editor unchanged. Represent each form as its own Canvas page and use compatible containers where needed.",
+      "targetIncrementId": "asset-backed-form-composer"
     }
   ],
   "history": [
@@ -1939,6 +1949,42 @@
       "recordedAt": "2026-11-12T15:55:06Z",
       "sequence": 112,
       "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "92f4b1b9cfa470177782c561f83ed4ccf08f38f2ed0a749109ae3d6f2f6118ed",
+      "recordedAt": "2026-11-12T16:27:30Z",
+      "sequence": 113,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "2ded1f5e9ad45acfd37105c8a6c62348ecb6eb269ef9de13fcdb117500074f5e",
+      "recordedAt": "2026-11-12T16:27:31Z",
+      "sequence": 114,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "74f3d1a67d6d905d5a3794c92619c84c0cc2b20e6fdeb5402dc5ed893c806649",
+      "recordedAt": "2026-11-12T16:27:59Z",
+      "sequence": 115,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "03877f30a3950e432c977488fd6ca5fa38740a5539c9f27b0f0b91a8e42923d8",
+      "recordedAt": "2026-11-12T16:28:00Z",
+      "sequence": 116,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "ca4315c3b0edcd13271f642210427059d0a388e505e053de87f5b777855a166a",
+      "recordedAt": "2026-11-12T16:28:00Z",
+      "sequence": 117,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "c8896312e4397e95301038a62914475c7e7175ff7d4ec93fb7da4fdda52b6823",
+      "recordedAt": "2026-11-12T16:28:00Z",
+      "sequence": 118,
+      "type": "increment-plan-recorded"
     }
   ],
   "increments": [
@@ -3190,8 +3236,13 @@
     {
       "acceptanceCriteria": [
         {
-          "description": "Switch between Canvas and Form with unsaved edits.\n- Add, rename, and reorder pages.\n- Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.\n- Confirm both editors show the same supported changes, including undo and redo.\n- Save and reopen the draft with the same asset IDs, versions, field settings, and order.",
+          "description": "Use the switch above the editors to open Canvas and Form with unsaved edits.\n- Add, rename, and reorder form steps. Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.\n- Confirm both views read the same draft and that undo and redo use the shared draft history.\n- Save and reopen with the same asset IDs, versions, settings, and order.",
           "id": "shared-form-and-canvas-draft",
+          "qualification": "local"
+        },
+        {
+          "description": "Open a form in the existing Canvas editor.\n- Create two forms in one system. Verify that each has a distinct page and uses compatible containers where required.\n- Switch between views repeatedly. Confirm each form appears in its page with the correct fields and order and that switching creates no duplicate assets.\n- Make a supported change in Canvas and switch back. Confirm the Form view reads the same placements and preserves validation, routing, and action bindings.\n- Verify that the increment makes no changes to Canvas editor controls, rendering, or behavior.",
+          "id": "form-maps-to-a-canvas-page",
           "qualification": "local"
         },
         {
@@ -3224,8 +3275,8 @@
       "completedAt": null,
       "completedChunks": [],
       "deliverables": [
-        "A shared Canvas and Form switch in Systems Compose, with a page outline, field editor, validation and routing controls, action bindings, and preview.",
-        "Versioned asset placements, configuration, and typed bindings for pages, fields, validation, routes, and submission actions.",
+        "A Form view with a switch in Systems Compose above the editors. The Form view provides a page outline, field settings, validation, routing, actions, and preview.",
+        "One existing Canvas page structure per form, with compatible containers where needed, plus versioned asset placements, field configuration, and typed route and submission bindings.",
         "A respondent view that checks answers, moves between pages, and sends a validated submission through the owning host.",
         "Automated host journeys, focused contract and runtime checks, and a guide with two sample forms."
       ],
@@ -3235,26 +3286,156 @@
       ],
       "excluded": [
         "Public anonymous form links, external delivery or provider integration, file uploads, and arbitrary scripts or webhooks.",
-        "General survey distribution and analytics, third-party form import, and a general-purpose workflow designer."
+        "General survey distribution and analytics, third-party form import, and a general-purpose workflow designer.",
+        "Changes to the Canvas editor, its rendering, or its behavior. The editor switch belongs to the surrounding Systems Compose interface."
       ],
       "id": "asset-backed-form-composer",
       "number": 7,
-      "objective": "Let a system author build, preview, and publish a multipage form in Systems Compose. People can switch between Canvas and Form and keep their changes. The published form checks answers, follows the configured route, and starts approved actions after a successful submission.",
-      "plan": null,
-      "research": [],
-      "rollback": "Withdraw the Form entry point and stop dispatching form actions. Keep saved asset revisions, submission receipts, and action history readable. Preserve Canvas behavior and the existing authorization and publication checks.",
-      "startedAt": null,
-      "status": "pending",
+      "objective": "Let a system author build, preview, and publish a multipage form in the new Form view. Use the switch above the editors to open the same draft in Canvas. Each form occupies a dedicated Canvas page with compatible containers where needed. A published form checks answers, follows the selected route, and starts approved actions.",
+      "plan": {
+        "assumptions": [
+          "Canvas editor source, controls and rendering stay unchanged within Increment 7.",
+          "Persisted form behavior uses exact versioned assets and typed bindings.",
+          "The first working submission action is local and capability-checked."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "shared-form-and-canvas-draft",
+              "form-maps-to-a-canvas-page"
+            ],
+            "id": "form-page-placements",
+            "outcome": "Create exact compatible page, container, form and step placements in one edit. Recognize the same forms on reopen without changing the Canvas editor.",
+            "title": "Represent forms on separate Canvas pages"
+          },
+          {
+            "criteriaIds": [
+              "shared-form-and-canvas-draft",
+              "form-maps-to-a-canvas-page",
+              "form-composer-desktop-and-browser"
+            ],
+            "id": "form-authoring-view",
+            "outcome": "Open Form through the existing Systems Compose shell. Add, reorder and configure step and field assets. Test both view directions and shared undo, redo, save and reopen.",
+            "title": "Add the Form authoring view"
+          },
+          {
+            "criteriaIds": [
+              "form-validation-and-answer-routing",
+              "form-preview-and-runtime-parity",
+              "security-form-submission-and-action-authority"
+            ],
+            "id": "form-rules-and-preview",
+            "outcome": "Configure and evaluate typed validation and routing assets. Preview the same rules with no effects. Deny invalid graph or configuration before publication.",
+            "title": "Check answers and preview routes"
+          },
+          {
+            "criteriaIds": [
+              "form-preview-and-runtime-parity",
+              "form-submission-triggers",
+              "security-form-submission-and-action-authority"
+            ],
+            "id": "form-submission-and-action",
+            "outcome": "Use the owning host to validate, authorize, persist and dispatch accepted form submissions. Prove clear outcomes, denial, retry identity and safe recovery from an uncertain action.",
+            "title": "Accept submissions and run approved actions"
+          },
+          {
+            "criteriaIds": [
+              "shared-form-and-canvas-draft",
+              "form-maps-to-a-canvas-page",
+              "form-validation-and-answer-routing",
+              "form-preview-and-runtime-parity",
+              "form-submission-triggers",
+              "security-form-submission-and-action-authority",
+              "form-composer-desktop-and-browser"
+            ],
+            "id": "form-host-feature-journeys",
+            "outcome": "Build and run the intake and questionnaire forms from scratch. Confirm accessibility, scope, performance, authorized actions and safe failure behavior.",
+            "title": "Verify the Form feature on both hosts"
+          }
+        ],
+        "completionTests": [
+          "Execute the two Form feature journeys on the packaged Desktop and managed browser using synthetic data.",
+          "Run the feature-specific security and architecture checks. Reserve whole-system checks for the combined campaign after roadmap features are implemented."
+        ],
+        "documentation": [
+          "System Builder architecture",
+          "Form authoring and runtime guide",
+          "Relevant security threat-model changes and host contracts"
+        ],
+        "fingerprint": "66515cdd032a345d9c6f4e1b8585b8977cfa6996b3c76b89465b24661edefef1",
+        "focusedTests": [
+          "Exact page, form, container and step placement tests, including full slots, mixed workspace identity, and preserved existing placements.",
+          "Shared draft and history interaction tests for the surrounding editor switch and Form view.",
+          "Bounded validation/routing tests, no preview side effects, dispatch authorization and recovery tests.",
+          "Run only feature-level tests during the increment."
+        ],
+        "recordedAt": "2026-11-12T16:28:00Z",
+        "rollback": "Remove the Form entry from the surrounding Compose shell and retire its dispatch path. Keep existing canonical Canvas pages and revisions readable.",
+        "steps": [
+          "Create and round-trip the asset-backed form page, compatible container, form and step placements.",
+          "Add the Form view and the editor switch outside Canvas, using the shared draft and history.",
+          "Implement typed field validation, answer-based page routing and an inert preview.",
+          "Wire accepted submissions to an authorized local action with durable receipts and recovery.",
+          "Run and fix the two focused Desktop and managed-browser journeys."
+        ],
+        "summary": "Build Form as a separate editor over the existing Systems Compose draft. Use one compatible Canvas page per form, implement declarative form behavior, then verify the released feature on both hosts."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-12T16:28:00Z",
+          "risks": [
+            "Form placement must use compatible parent slots and exact asset versions. Reject unavailable definitions or a full page-host region before changing the draft.",
+            "Form and Canvas share one draft, so stale view actions must never write into a different workspace, system, or revision.",
+            "Rules must be bounded, typed data. Preview must never write a response or trigger an action.",
+            "Recheck release, workspace, actor and allowed action at submission and dispatch. Durable action identity and safe handling of uncertain outcomes prevent repeating effects."
+          ],
+          "sources": [
+            {
+              "title": "Canonical System Builder architecture",
+              "url": "docs/architecture/system-builder.md"
+            },
+            {
+              "title": "System Builder draft owner and Compose shell",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "title": "Foundation form primitives",
+              "url": "modules/application/services/asset-packs/system-packs/form-primitives/form-primitives.ts"
+            },
+            {
+              "title": "Foundation containment slots",
+              "url": "modules/application/services/asset-packs/system-packs/system-foundation-composable-slots.ts"
+            },
+            {
+              "title": "Asset execution authority and diagnostics",
+              "url": "docs/architecture/asset-authoring-and-execution-security.md"
+            },
+            {
+              "title": "Branch Logic",
+              "url": "https://www.qualtrics.com/support/survey-platform/survey-module/survey-flow/standard-elements/branch-logic/"
+            },
+            {
+              "title": "Kuali Build submission-to-workflow guide",
+              "url": "https://developers.kualibuild.com/start-workflow"
+            }
+          ],
+          "summary": "Systems Compose owns a shared immutable-draft history above the current Canvas editor. Use a separate Form view with the same draft and existing page, compatible container, form, field group and field assets. The current Foundation form renderer displays semantic controls but does not execute form validation, routing, or submission. Add those behaviors through explicit versioned asset contracts and an owning host, with no change to Canvas rendering or controls."
+        }
+      ],
+      "rollback": "Withdraw the Form entry point and stop dispatching form actions. Keep the Canvas pages and saved asset revisions readable, along with submission receipts and action history. Preserve the existing authorization and publication checks.",
+      "startedAt": "2026-11-12T16:28:00Z",
+      "status": "implementing",
       "title": "Asset-backed Form Composer",
       "verification": [
         "Use focused tests for asset placement, revision round trips, rule evaluation, publication, and submission recovery.",
         "Use synthetic data for the two real-host feature journeys. Keep full system testing for the combined campaign after roadmap feature work.",
-        "Review the existing form primitives, accepted Asset Kernel and security decisions, and the exact supported runtime bindings before adding assets. Use Qualtrics Survey Flow and Kuali Build submission-to-workflow documentation as interaction references."
+        "Review the existing form primitives, accepted Asset Kernel and security decisions, and the exact supported runtime bindings before adding assets. Use Qualtrics Survey Flow and Kuali Build submission-to-workflow documentation as interaction references.",
+        "Check that the Form increment leaves Canvas editor code and behavior unchanged. Verify its page and container structure using the existing Canvas view and automated round-trip tests."
       ],
       "workPackages": [
         {
           "id": "form-pages-and-field-assets",
-          "outcome": "Use the same revision, placements, and undo history in Canvas and Form. Add, rename, and reorder pages. Add compatible field assets inside the selected page. Edit labels, help text, required fields, and options. Reuse existing form and field assets. Define versioned page, rule, or trigger assets only where the current contracts lack the behavior.",
+          "outcome": "Add the Form entry and view switch outside the Canvas editor. Use the existing revision and placement model. Give each form a dedicated Canvas page and add compatible container assets where the form or its steps need them. Add, rename, and reorder form steps and their fields in the Form view. Reuse existing assets and add versioned form, rule, or trigger assets only for missing behavior.",
           "title": "Build pages and add fields"
         },
         {
@@ -3395,9 +3576,13 @@
       "recordedAt": "2026-10-22T22:18:47Z"
     }
   ],
-  "roadmapApproval": null,
+  "roadmapApproval": {
+    "approvedAt": "2026-11-12T16:27:59Z",
+    "fingerprint": "0122fa1c8255f79f2cf0a0629058330b69666625dac0a468899ebf4bace34ee8",
+    "note": "User approved Increment 7 provided it does not update the Canvas editor. The revision places the switch outside Canvas and represents each form on its own page with compatible containers. The separate Canvas removal fixes precede this increment."
+  },
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
-  "status": "roadmap-review",
-  "updatedAt": "2026-11-12T15:55:06Z"
+  "status": "executing",
+  "updatedAt": "2026-11-12T16:28:00Z"
 }
