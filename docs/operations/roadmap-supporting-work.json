@@ -12499,6 +12499,22 @@
       "limitations": [
         "This test covers local application storage. Browser uploads, larger input limits, and uploads from a website still need separate checks."
       ]
+    },
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "increment_id": "operational-ui-and-coverage-qualification",
+      "criterion_id": "operational-and-task-ui",
+      "work_id": "reflect-desktop-settings-readback-readiness",
+      "work_criteria": [
+        "rendered-settings-writes-follow-current-readiness",
+        "settings-retry-and-boundaries-preserved"
+      ],
+      "receipt_digest": "3853e6b2e35a9e3617cc0af7722dfb629ca4aa53059da087f5e989899b45c816",
+      "review_digest": "0a4f31c9b9dd3d12d02a5c1ffe4e876c240722b82f53a079bf2bf5a200fb3502",
+      "scope": "Desktop Settings disables changes if it cannot confirm the saved value. Use Refresh settings to try the read again. After a successful refresh, you can use the controls again and your secret draft is still in the field.",
+      "limitations": [
+        "The tests used made-up settings in the Desktop components. The packaged Desktop app and full Settings workflow still need their own checks."
+      ]
     }
   ]
 }

@@ -17751,6 +17751,29 @@
           "Browser uploads, larger input limits, and uploads from a website still need separate checks."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "08a7bcc1dd545c0d0bd0e9db9981ab3d1c3663eb5b43c0177b9bae2a88bed7fb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop Settings disables changes if it cannot confirm the saved value.",
+          "Use Refresh settings to try the read again.",
+          "After a successful refresh, you can use the controls again and your secret draft is still in the field."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6ea30eb4ad15d2a20efa8d2ebfd1d7b346d0c949e598894edb3b80d91b3c463a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used made-up settings in the Desktop components.",
+          "The packaged Desktop app and full Settings workflow still need their own checks."
+        ]
+      }
     }
   ]
 }
