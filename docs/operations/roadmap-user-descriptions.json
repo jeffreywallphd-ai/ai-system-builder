@@ -17705,6 +17705,29 @@
           "It does not measure whole-worker or model memory, or qualify the host."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0e41713e6237b2be720038cd59bb87e7039f9983278ea52e7a6794fb4f0f7a69",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both forms give the Allowed labels field its own name.",
+          "The help stays available separately.",
+          "The Thin client still sends the labels that the user enters."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f1947cc297df7443816cd83ad491ed7b5f6babdc0204de37227f8d0cb5d44ac4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Component tests used made-up data.",
+          "The packaged Desktop app and full browser workflows still need their own checks."
+        ]
+      }
     }
   ]
 }

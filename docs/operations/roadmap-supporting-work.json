@@ -12467,6 +12467,22 @@
       "limitations": [
         "This measures local comparison allocations. It does not measure whole-worker or model memory, or qualify the host."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-options-do-not-complicate-the-default-path",
+      "work_id": "separate-allowed-labels-from-help",
+      "work_criteria": [
+        "native-allowed-labels-name-on-both-hosts",
+        "dataset-label-values-and-presentation-preserved"
+      ],
+      "receipt_digest": "3dba925d898b0ffeaeccadaf7505ad3b3aeb5b48aef507f4066e4384861c3868",
+      "review_digest": "7af43681540a91d7f88c44a197fc1f0c59a0af54a4e7ee3251764e802092ac75",
+      "scope": "Both forms give the Allowed labels field its own name. The help stays available separately. The Thin client still sends the labels that the user enters.",
+      "limitations": [
+        "Component tests used made-up data. The packaged Desktop app and full browser workflows still need their own checks."
+      ]
     }
   ]
 }
