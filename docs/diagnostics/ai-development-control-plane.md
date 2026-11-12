@@ -258,6 +258,14 @@ It covers only its declared source paths. Unknown impact and an explicitly
 required focused gate retain generic coverage. This component check grants no
 controlled-provider, scale, native-race, offload or parent-roadmap qualification.
 
+The dedicated Thin Client browser case writes one 64 MiB synthetic CSV using a
+reusable 1 MiB buffer. It selects the temporary file through Add data, checks
+bounded reads and progress, and verifies the source after a renderer reload.
+Its report has a separate name from the original browser and Desktop cases.
+The test closes its page and removes its temporary input. Collection checks
+the definition only. An executed case must pass its UI and cleanup checks.
+Slice sizes and counts do not measure process memory.
+
 The `native-host-policy` profile runs only the fixed native-launcher, serial
 provided-data coordinator and single-host Node fixture test files. It checks exact private package, combined UI, web-only and desktop-only
 commands, unchanged limit selection, source/environment witnesses and injected

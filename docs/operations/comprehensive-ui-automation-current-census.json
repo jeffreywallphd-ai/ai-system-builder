@@ -9201,41 +9201,49 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts",
    "facts": {
-    "sha256": "5d4de333f286bbaf272428367df9ed3220f195f18b9117665fac7860f349c2ce",
-    "bytes": 3752,
+    "sha256": "a9cd598d068ae01a9c660a0fe48888518a4afb7c357ae1632f6dc3b0615e89f7",
+    "bytes": 4154,
     "cases": [
      {
       "name": "browser imports distinct multi-chunk files through Add data and retains their source records",
-      "line": 22
+      "line": 26
+     },
+     {
+      "name": "browser uploads a 64 MiB local file in bounded chunks and reopens its source",
+      "line": 31
      },
      {
       "name": "browser imports files and reviews source records at native 400 percent zoom",
-      "line": 27
+      "line": 37
      },
      {
       "name": "browser acquires an authorized website page and reopens isolated raw and readable artifacts",
-      "line": 39
+      "line": 49
      }
     ],
     "dynamicCases": 1,
     "functions": [
      {
-      "name": "runBrowserImport",
+      "name": "openBrowserImport",
       "line": 10
+     },
+     {
+      "name": "runBrowserImport",
+      "line": 20
      }
     ],
     "assertionCount": 1,
-    "assertionDigest": "f8eafc8bca57c8a4a7c9d680dc0098ef84afdda20830cebc98782dd1ad6b18c0",
+    "assertionDigest": "559201d55418f45f90dfd3fcaa2e7af779106c308ed8d034be950caa82743670",
     "assertionExamples": [
      {
-      "line": 17,
+      "line": 16,
       "kind": "expect",
       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
      }
     ],
     "modifiers": [
      {
-      "line": 42,
+      "line": 52,
       "kind": "skip"
      }
     ]

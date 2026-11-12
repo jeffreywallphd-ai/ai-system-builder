@@ -1,10 +1,14 @@
 import {finalizeQualificationEvidence} from "../qualification-reporting";
 import { expect, type Page, type TestInfo } from "@playwright/test";
-import { mkdir, realpath, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, open, realpath, rmdir, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { INGESTION_TASK_RECOMMENDED_CHUNK_BYTES } from "../../../../../modules/contracts/ingestion";
+
+const THIN_SCALE_UPLOAD_BYTES = 64 * 1024 ** 2;
+const THIN_SCALE_UPLOAD_FILE = "browser-ingestion-scale.csv";
 
 /** Fixed result identity keeps standard and native cohorts separate. */
 export function ingestionSourceEvidenceName(host: "desktop" | "thin", mode: CriticalAccessibilityMode = "standard"): string {
@@ -15,10 +19,19 @@ export function ingestionSourceEvidenceName(host: "desktop" | "thin", mode: Crit
 
 // Exercise mounted controls and real host publication. No upload/API success mock,
 // model, provider credential or synthetic worker result can satisfy this journey.
-export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, host: "desktop" | "thin", mode: CriticalAccessibilityMode = "standard") {
+export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, host: "desktop" | "thin", mode: CriticalAccessibilityMode = "standard", scaleFile?: string) {
   readCriticalAccessibilityMode(mode);
   if (mode === "native400" && !((host === "desktop" && info?.project?.name === "packaged-desktop") || (host === "thin" && info?.project?.name === "thin-chrome"))) throw new Error("Unsupported native Data and Context host.");
-  const evidenceName = ingestionSourceEvidenceName(host, mode);
+  if (scaleFile !== undefined) {
+    if (host !== "thin" || info.project.name !== "thin-chrome" || mode !== "standard"
+      || !path.isAbsolute(scaleFile) || path.basename(scaleFile) !== THIN_SCALE_UPLOAD_FILE) {
+      throw new Error("Unsupported scale upload fixture.");
+    }
+    const file = await lstat(scaleFile);
+    if (!file.isFile() || file.isSymbolicLink() || file.nlink !== 1 || file.size !== THIN_SCALE_UPLOAD_BYTES
+      || await realpath(scaleFile) !== scaleFile) throw new Error("Invalid scale upload file.");
+  }
+  const evidenceName = scaleFile ? "thin-scale64.json" : ingestionSourceEvidenceName(host, mode);
   await page.getByRole("tab", { name: "Artifact Ingestion", exact: true }).click();
   const workflow = page.getByRole("list", { name: "Add data workflow", exact: true });
   const input = workflow.getByLabel("Choose one or more files", { exact: true });
@@ -57,21 +70,25 @@ export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, 
     (window as any).__ingestionReadFacts = facts;
     (window as any).__ingestionObserver = observer;
   });
-  const files = [
+  const files = scaleFile ? [] : [
     { name: "ui-ingestion-large.csv", mimeType: "text/csv", buffer: Buffer.from("instruction,answer\n" + `Summarize the synthetic reference,${"x".repeat(480)}\n`.repeat(16_384)) },
     { name: "ui-ingestion-records.jsonl", mimeType: "application/jsonl", buffer: Buffer.from('{"instruction":"What is two plus two?","answer":"Four."}\n{"instruction":"Name a primary colour.","answer":"Blue."}\n') },
     { name: " ui-ingestion-records.json", mimeType: "application/json", buffer: Buffer.from('[{"instruction":"Name the synthetic sample.","answer":"Example."}]\n') },
   ];
-  const totalBytes = files.reduce((sum, file) => sum + file.buffer.byteLength, 0);
+  const fileNames = scaleFile ? [THIN_SCALE_UPLOAD_FILE] : files.map(file => file.name);
+  const totalBytes = scaleFile ? THIN_SCALE_UPLOAD_BYTES : files.reduce((sum, file) => sum + file.buffer.byteLength, 0);
   // Desktop labels include a type badge before the exact file name. Locate
   // its label by the exact file-name span, then require its actual checkbox.
   const sourceCheckbox = (name: string) => host === "desktop"
     ? page.locator("label").filter({ has: page.getByText(name.trim(), { exact: true }) }).getByRole("checkbox")
     : page.getByRole("checkbox", { name: name.trim(), exact: true });
-  expect(files[0]!.buffer.byteLength).toBeGreaterThan(8 * 1024**2);
-  expect(totalBytes).toBeLessThan(9 * 1024**2);
-  await input.setInputFiles(files);
-  await expect(workflow.getByRole("region", { name: "Selected files", exact: true }).getByText("3 files selected", { exact: true })).toBeVisible();
+  if (!scaleFile) {
+    expect(files[0]!.buffer.byteLength).toBeGreaterThan(8 * 1024**2);
+    expect(totalBytes).toBeLessThan(9 * 1024**2);
+  }
+  await input.setInputFiles(scaleFile ?? files);
+  await expect(workflow.getByRole("region", { name: "Selected files", exact: true })
+    .getByText(scaleFile ? "1 file selected" : "3 files selected", { exact: true })).toBeVisible();
   await qualifyCriticalSurfaceAccessibility(page, info, "data-ingestion", mode);
   const started = performance.now();
   await add.click();
@@ -100,24 +117,25 @@ export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, 
   expect(facts.largestSliceBytes).toBeLessThanOrEqual(INGESTION_TASK_RECOMMENDED_CHUNK_BYTES);
   expect(facts.totalSliceBytes).toBe(totalBytes);
   expect(facts.blobReads).toBeGreaterThan(8);
+  if (scaleFile) expect(facts.blobReads).toBe(THIN_SCALE_UPLOAD_BYTES / INGESTION_TASK_RECOMMENDED_CHUNK_BYTES);
   expect(facts.progress.some(value => value > 0 && value < 100)).toBe(true);
   expect(facts.progress.every((value, index) => value >= 0 && value <= 100 && (!index || value >= facts.progress[index - 1]!))).toBe(true);
   await page.getByRole("tab", { name: "Artifact Browser", exact: true }).click();
-  for (const file of files) {
-    await expect(page.getByRole(host === "desktop" ? "heading" : "button", { name: file.name.trim(), exact: true })).toHaveCount(1, { timeout: 20_000 });
+  for (const name of fileNames) {
+    await expect(page.getByRole(host === "desktop" ? "heading" : "button", { name: name.trim(), exact: true })).toHaveCount(1, { timeout: 20_000 });
   }
   await expect(page.getByRole(host === "desktop" ? "heading" : "button", { name: "ambiguous.csv", exact: true })).toHaveCount(0);
   await page.getByRole("tab", { name: "Dataset Preparation", exact: true }).click();
-  for (const file of files) await expect(sourceCheckbox(file.name)).toHaveCount(1, { timeout: 20_000 });
+  for (const name of fileNames) await expect(sourceCheckbox(name)).toHaveCount(1, { timeout: 20_000 });
   const workspace = await page.getByLabel("Select current workspace").inputValue();
   await page.reload();
   await expect(page.getByLabel("Select current workspace")).toHaveValue(workspace, { timeout: 60_000 });
   await page.getByRole("button", { name: host === "desktop" ? "Data" : "Artifacts", exact: true }).click();
   await page.getByRole("tab", { name: "Dataset Preparation", exact: true }).click();
-  for (const file of files) await expect(sourceCheckbox(file.name)).toHaveCount(1, { timeout: 20_000 });
+  for (const name of fileNames) await expect(sourceCheckbox(name)).toHaveCount(1, { timeout: 20_000 });
   const report = { schemaVersion: "real-ingestion-source-host-journey-v1", host, status: "passed",
     sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION,
-    files: files.length, totalBytes, ...facts, elapsedMilliseconds: performance.now() - started,
+    files: fileNames.length, totalBytes, ...facts, elapsedMilliseconds: performance.now() - started,
     ambiguousSelectionDenied: true, sourceDiscoveryAfterRendererReload: true,
     scope: "Real file controls, host publication, completion and source discovery. Slice sizes do not qualify whole-process RSS, native crash protection, provider/website/scale matrices or parent completion." };
   const run = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID!;
@@ -135,4 +153,32 @@ export async function qualifyIngestionSourceJourney(page: Page, info: TestInfo, 
     const body = serialize();
     await writeFile(path.join(folder, evidenceName), body, { flag: "wx" });
   }, () => info.attach("real-ingestion-source-host-journey", { body: serialize(), contentType: "application/json" }));
+}
+
+export async function qualifyThinScaleUpload(page: Page, info: TestInfo) {
+  if (info.project.name !== "thin-chrome") throw new Error("Unsupported scale upload host.");
+  const directory = await mkdtemp(path.join(await realpath(tmpdir()), "aisb-upload-"));
+  const file = path.join(directory, THIN_SCALE_UPLOAD_FILE);
+  let created = false;
+  try {
+    const handle = await open(file, "wx");
+    created = true;
+    try {
+      const row = Buffer.from(`sample,${"x".repeat(1016)}\n`, "ascii");
+      const chunk = Buffer.alloc(INGESTION_TASK_RECOMMENDED_CHUNK_BYTES, row);
+      for (let written = 0; written < THIN_SCALE_UPLOAD_BYTES; written += chunk.length) {
+        await handle.writeFile(chunk);
+      }
+    } finally {
+      await handle.close();
+    }
+    await qualifyIngestionSourceJourney(page, info, "thin", "standard", file);
+  } finally {
+    try {
+      await page.close();
+    } finally {
+      if (created) await unlink(file);
+      await rmdir(directory);
+    }
+  }
 }
