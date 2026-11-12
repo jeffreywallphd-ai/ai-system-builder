@@ -4,7 +4,7 @@ import type {
   AssetDefinition,
   AssetReference,
 } from "../../../../contracts/asset";
-import { normalizeAssetId } from "../../../../contracts/asset";
+import { normalizeAssetId, normalizeAssetSlotId } from "../../../../contracts/asset";
 import type {
   SystemBuilderComposition,
   SystemBuilderRevision,
@@ -13,6 +13,7 @@ import {
   normalizeSystemBuilderRevisionId,
   normalizeSystemBuilderSystemId,
   minimumSystemBuilderSlotItems,
+  SYSTEM_FORM_PLACEMENT_MESSAGE,
 } from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import {
@@ -132,7 +133,9 @@ describe("canonical System Builder slot structure", () => {
 
     expect(systemBuilderSlotAcceptsDefinition(content, table)).toBe(true);
     expect(systemBuilderSlotAcceptsDefinition(content, form)).toBe(true);
-    expect(systemBuilderSlotAcceptsDefinition(actions, action)).toBe(true);
+    expect(systemBuilderSlotAcceptsDefinition(actions, action, card)).toBe(false);
+    const formActions = form.slots!.find((slot) => slot.slotId === "actions")!;
+    expect(systemBuilderSlotAcceptsDefinition(formActions, action, form)).toBe(true);
     expect(systemBuilderSlotAcceptsDefinition(content, entity)).toBe(false);
     expect(
       systemBuilderSlotAcceptsDefinition(pageContent, assistant, page),
@@ -143,6 +146,50 @@ describe("canonical System Builder slot structure", () => {
     expect(systemBuilderSlotAcceptsDefinition(content, assistant, card)).toBe(
       false,
     );
+  });
+
+  it("rejects standalone form elements and a field group outside a form", async () => {
+    const revision = createRevision();
+    const page = revision.instances.find((item) => item.definitionRef.id === "builtin.layout.page.single")!;
+    const group = instanceReference("instance.group");
+    const field = instanceReference("instance.field");
+    const orphan = instanceReference("instance.orphan");
+    const instances = [
+      ...revision.instances,
+      ...([
+        [group, "builtin.form.field-group"],
+        [field, "builtin.form.text-field"],
+        [orphan, "builtin.form.checkbox-field"],
+      ] as const).map(([ref, id]) => ({
+        ...page, instanceId: ref.id,
+        definitionRef: exactReference(definition(id)),
+      })),
+    ];
+    const groupPlacement = {
+      schemaVersion: "asset-placement.v1" as const, placementId: "placement.group",
+      parentInstanceRef: instanceReference(String(page.instanceId)), childInstanceRef: group,
+      slotId: normalizeAssetSlotId("content"), order: 0,
+    };
+    const fieldPlacement = {
+      ...groupPlacement, placementId: "placement.field", parentInstanceRef: group,
+      childInstanceRef: field, slotId: normalizeAssetSlotId("fields"),
+    };
+    const result = await validator().execute({
+      ...revision,
+      instances,
+      placements: [...revision.placements!, groupPlacement, fieldPlacement],
+      composition: {
+        ...revision.composition,
+        instanceRefs: [...revision.composition.instanceRefs, group, field, orphan],
+        placementRefs: [...revision.composition.placementRefs!,
+          { kind: "asset-placement", id: normalizeAssetId(groupPlacement.placementId) },
+          { kind: "asset-placement", id: normalizeAssetId(fieldPlacement.placementId) }],
+      },
+    });
+    expect(result.status).toBe("invalid");
+    expect(result.issues.filter((issue) => issue.message === SYSTEM_FORM_PLACEMENT_MESSAGE).map((issue) => issue.path)).toEqual([
+      ["instances", "instance.group"], ["instances", "instance.field"], ["instances", "instance.orphan"],
+    ]);
   });
 
   it("accepts an explicitly derived protected root", async () => {

@@ -382,6 +382,17 @@ describe("System Builder composer catalog", () => {
         (item) => item.definitionId === "conversation.basic-assistant-system",
       ),
     ).toBe(true);
+    expect(compatible.value.items.some((item) => item.definitionId === "builtin.form.form")).toBe(true);
+    expect(compatible.value.items.some((item) => item.definitionId === "builtin.form.text-field")).toBe(false);
+    const form = result.value.items.find((item) => item.definitionId === "builtin.form.form")!;
+    const formFields = await useCase.execute({
+      workspaceId, parentDefinitionRef: form.definitionRef, slotId: "fields", compatibleOnly: true, limit: 200,
+    });
+    expect(formFields.ok).toBe(true);
+    if (formFields.ok) {
+      expect(formFields.value.items.some((item) => item.definitionId === "builtin.form.text-field")).toBe(true);
+      expect(formFields.value.items.some((item) => item.definitionId === "builtin.form.form")).toBe(false);
+    }
   });
 
   it("evaluates legacy workspace assets against an exact trusted current layout parent", async () => {

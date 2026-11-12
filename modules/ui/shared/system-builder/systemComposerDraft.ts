@@ -7,6 +7,7 @@ import type {
 } from "../../../contracts/asset";
 import {
   ASSET_PLACEMENT_SCHEMA_VERSION,
+  MAX_ASSET_PLACEMENT_DEPTH,
   normalizeAssetId,
   normalizeAssetSlotId,
 } from "../../../contracts/asset";
@@ -14,13 +15,65 @@ import type {
   SystemBuilderComposerAsset,
   SystemBuilderStructure,
 } from "../../../contracts/system-builder";
-import { minimumSystemBuilderSlotItems } from "../../../contracts/system-builder";
+import {
+  minimumSystemBuilderSlotItems,
+  isCurrentSystemForm,
+  isCurrentSystemFormElement,
+  SYSTEM_FORM_PLACEMENT_MESSAGE,
+  systemFormPlacementAllowed,
+} from "../../../contracts/system-builder";
 
 export interface SystemComposerDraft {
   readonly instances: readonly AssetInstance[];
   readonly placements: readonly AssetPlacement[];
   readonly bindings: readonly AssetBinding[];
   readonly structure?: SystemBuilderStructure;
+}
+
+export function createSystemComposerFormPlacementPolicy(draft: SystemComposerDraft) {
+  const byId = new Map(draft.instances.map((item) => [String(item.instanceId), item.definitionRef]));
+  const parentByChild = new Map(draft.placements.map((edge) =>
+    [String(edge.childInstanceRef.id), String(edge.parentInstanceRef.id)]));
+  const inForm = new Map<string, boolean>();
+  const containsForm = new Map<string, boolean>();
+
+  function withinForm(parentId: string): boolean {
+    const cached = inForm.get(parentId);
+    if (cached !== undefined) return cached;
+    let cursor: string | undefined = parentId;
+    for (let depth = 0; cursor && depth <= MAX_ASSET_PLACEMENT_DEPTH; depth += 1) {
+      const definition = byId.get(cursor);
+      if (definition && isCurrentSystemForm(definition)) {
+        inForm.set(parentId, true);
+        return true;
+      }
+      cursor = parentByChild.get(cursor);
+    }
+    inForm.set(parentId, false);
+    return false;
+  }
+
+  function subtreeHasForm(id: string): boolean {
+    const cached = containsForm.get(id);
+    if (cached !== undefined) return cached;
+    const contains = [...systemComposerDescendantIds(draft.placements, id)].some((member) => {
+      const definition = byId.get(member);
+      return definition !== undefined && isCurrentSystemForm(definition);
+    });
+    containsForm.set(id, contains);
+    return contains;
+  }
+
+  return {
+    subtreeHasForm,
+    permits(child: AssetReference, parentId: string, slotId: string, movingId?: string): boolean {
+      if (!systemFormPlacementAllowed(child, byId.get(parentId), slotId)) return false;
+      const owned = withinForm(parentId);
+      if (owned && (isCurrentSystemForm(child) || (movingId && subtreeHasForm(movingId)))) return false;
+      if (isCurrentSystemFormElement(child)) return owned;
+      return true;
+    },
+  };
 }
 
 export interface SystemComposerDraftHistory {
@@ -100,8 +153,12 @@ export function addSystemComposerAsset(
     readonly order?: number;
   },
 ): SystemComposerDraftResult {
-  if (!findInstance(draft, input.parentInstanceId)) {
+  const parent = findInstance(draft, input.parentInstanceId);
+  if (!parent) {
     return failure("Select an available parent asset before adding content.");
+  }
+  if (!createSystemComposerFormPlacementPolicy(draft).permits(input.asset.definitionRef, input.parentInstanceId, input.slotId)) {
+    return failure(SYSTEM_FORM_PLACEMENT_MESSAGE);
   }
   if (findInstance(draft, input.instanceId)) {
     return failure("A unique asset instance id could not be created.");
@@ -239,8 +296,13 @@ export function reparentSystemComposerAsset(
 ): SystemComposerDraftResult {
   const placement = placementForChild(draft.placements, input.instanceId);
   if (!placement) return failure("Root assets cannot be reparented.");
-  if (!findInstance(draft, input.parentInstanceId)) {
+  const child = findInstance(draft, input.instanceId);
+  const parent = findInstance(draft, input.parentInstanceId);
+  if (!child || !parent) {
     return failure("The selected parent asset is unavailable.");
+  }
+  if (!createSystemComposerFormPlacementPolicy(draft).permits(child.definitionRef, input.parentInstanceId, input.slotId, input.instanceId)) {
+    return failure(SYSTEM_FORM_PLACEMENT_MESSAGE);
   }
   if (
     input.instanceId === input.parentInstanceId ||
@@ -290,7 +352,8 @@ export function attachUnassignedSystemComposerAsset(
     readonly order?: number;
   },
 ): SystemComposerDraftResult {
-  if (!findInstance(draft, input.instanceId)) {
+  const child = findInstance(draft, input.instanceId);
+  if (!child) {
     return failure("The selected asset instance is unavailable.");
   }
   if (input.rootInstanceIds.has(input.instanceId)) {
@@ -301,8 +364,12 @@ export function attachUnassignedSystemComposerAsset(
   if (placementForChild(draft.placements, input.instanceId)) {
     return reparentSystemComposerAsset(draft, input);
   }
-  if (!findInstance(draft, input.parentInstanceId)) {
+  const parent = findInstance(draft, input.parentInstanceId);
+  if (!parent) {
     return failure("The selected parent asset is unavailable.");
+  }
+  if (!createSystemComposerFormPlacementPolicy(draft).permits(child.definitionRef, input.parentInstanceId, input.slotId, input.instanceId)) {
+    return failure(SYSTEM_FORM_PLACEMENT_MESSAGE);
   }
   if (
     input.instanceId === input.parentInstanceId ||
@@ -352,6 +419,15 @@ export function wrapSystemComposerAsset(
 ): SystemComposerDraftResult {
   const placement = placementForChild(draft.placements, input.instanceId);
   if (!placement) return failure("Root assets cannot be wrapped.");
+  const child = findInstance(draft, input.instanceId);
+  const parent = findInstance(draft, String(placement.parentInstanceRef.id));
+  if (!child || !parent) return failure("The selected assets are unavailable.");
+  const formPlacement = createSystemComposerFormPlacementPolicy(draft);
+  if (!formPlacement.permits(input.wrapper.definitionRef, String(parent.instanceId), String(placement.slotId), input.instanceId) ||
+      !systemFormPlacementAllowed(child.definitionRef, input.wrapper.definitionRef, input.wrapperSlotId) ||
+      (isCurrentSystemForm(input.wrapper.definitionRef) && formPlacement.subtreeHasForm(input.instanceId))) {
+    return failure(SYSTEM_FORM_PLACEMENT_MESSAGE);
+  }
   if (findInstance(draft, input.wrapperInstanceId)) {
     return failure("A unique wrapper instance id could not be created.");
   }

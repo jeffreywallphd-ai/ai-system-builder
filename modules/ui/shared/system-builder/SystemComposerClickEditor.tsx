@@ -30,6 +30,7 @@ import { ModalDialog } from "../components/ModalDialog";
 import { FoundationAssetPreview } from "../foundation-assets";
 import {
   buildSystemComposerTree,
+  createSystemComposerFormPlacementPolicy,
   flattenSystemComposerTree,
   systemComposerDescendantIds,
   type SystemComposerDraft,
@@ -276,6 +277,7 @@ export function SystemComposerStructureEditor({
     () => buildSystemComposerTree(draft, rootInstanceRefs),
     [draft, rootInstanceRefs],
   );
+  const formPlacement = useMemo(() => createSystemComposerFormPlacementPolicy(draft), [draft]);
   const flatTree = useMemo(() => flattenSystemComposerTree(tree), [tree]);
   const {
     unplacedInstances,
@@ -373,21 +375,25 @@ export function SystemComposerStructureEditor({
           slotId: String(activePickerSlot.slotId),
         }
       : undefined;
+  const pickerAssets = useMemo(() => activePickerTarget ? assetResults.filter((asset) =>
+    formPlacement.permits(asset.definitionRef, activePickerTarget.parentInstanceId, activePickerTarget.slotId)) : [],
+  [activePickerTarget?.parentInstanceId, activePickerTarget?.slotId, assetResults, formPlacement]);
   const compatibleDefinitionKeys = useMemo(
     () =>
       new Set(
-        assetResults.map((asset) => `${asset.definitionId}@${asset.version}`),
+        pickerAssets.map((asset) => `${asset.definitionId}@${asset.version}`),
       ),
-    [assetResults],
+    [pickerAssets],
   );
   const compatibleUnassigned = unassignedVisualInstances.filter((instance) =>
     compatibleDefinitionKeys.has(
       `${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`,
-    ),
+    ) && activePickerTarget && formPlacement.permits(instance.definitionRef, activePickerTarget.parentInstanceId,
+      activePickerTarget.slotId, String(instance.instanceId)),
   );
   const assetResultGroups = useMemo(
-    () => groupComposerAssetsForBrowse(assetResults),
-    [assetResults],
+    () => groupComposerAssetsForBrowse(pickerAssets),
+    [pickerAssets],
   );
   const visibleAssetResultGroups =
     assetCategoryId === "all"
@@ -412,9 +418,9 @@ export function SystemComposerStructureEditor({
   const moveTargets = useMemo(
     () =>
       selectedNode
-        ? buildMoveTargets(selectedNode, flatTree, catalog, draft.placements)
+        ? buildMoveTargets(selectedNode, flatTree, catalog, draft.placements, formPlacement)
         : [],
-    [catalog, draft.placements, flatTree, selectedNode],
+    [catalog, draft.placements, flatTree, formPlacement, selectedNode],
   );
   const selectedMoveTarget =
     moveTargets.find((entry) => entry.key === moveTargetKey) ?? moveTargets[0];
@@ -1985,6 +1991,7 @@ function buildMoveTargets(
   nodes: readonly SystemComposerTreeNode[],
   catalog: readonly SystemBuilderComposerAsset[],
   placements: readonly AssetPlacement[],
+  formPlacement: ReturnType<typeof createSystemComposerFormPlacementPolicy>,
 ): readonly MoveTarget[] {
   const selectedId = String(selectedNode.instance.instanceId);
   const excluded = new Set(
@@ -2003,6 +2010,7 @@ function buildMoveTargets(
     if (excluded.has(parentId)) return [];
     const definition = definitions.get(`${String(node.instance.definitionRef.id)}@${node.instance.definitionRef.version ?? ""}`);
     return (definition?.slots ?? []).flatMap((slot) => {
+      if (!formPlacement.permits(selectedNode.instance.definitionRef, parentId, String(slot.slotId), selectedId)) return [];
       const key = `${parentId}|${String(slot.slotId)}`;
       const currentCount = childCounts.get(key) ?? 0;
       const selectedAlreadyHere = selectedNode.placement?.parentInstanceRef.id === parentId && String(selectedNode.placement.slotId) === String(slot.slotId);

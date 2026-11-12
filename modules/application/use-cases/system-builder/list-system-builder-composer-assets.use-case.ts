@@ -6,6 +6,7 @@ import type {
 import {
   SYSTEM_BUILDER_COMPOSER_DEFAULT_LIMIT,
   SYSTEM_BUILDER_COMPOSER_MAX_LIMIT,
+  SYSTEM_FORM_PLACEMENT_MESSAGE,
   type ListSystemBuilderComposerAssetsQuery,
   type SystemBuilderComposerAsset,
   type SystemBuilderComposerCatalog,
@@ -13,6 +14,7 @@ import {
   type SystemBuilderResult,
   systemBuilderFailure,
   systemBuilderSuccess,
+  systemFormPlacementAllowed,
 } from "../../../contracts/system-builder";
 import type { AssetRegistryDefinitionReadPort } from "../../ports/asset";
 import {
@@ -280,7 +282,10 @@ function describeCompatibility(
       }
     : {
         status: "incompatible",
-        reason: "This asset type is not accepted by the selected slot.",
+        reason: systemFormPlacementAllowed(
+          { kind: "asset-definition-version", id: child.definitionId, version: child.version },
+          parentDefinitionRef, String(slot.slotId),
+        ) ? "This asset type is not accepted by the selected slot." : SYSTEM_FORM_PLACEMENT_MESSAGE,
         parentDefinitionRef,
         slotId: slot.slotId,
       };

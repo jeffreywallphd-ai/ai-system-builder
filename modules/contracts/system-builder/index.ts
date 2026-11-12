@@ -16,4 +16,5 @@ export * from "./system-builder-model-binding";
 export * from "./system-builder-conversation-interaction";
 export * from "./system-builder-form-route";
 export * from "./system-builder-form-action";
+export * from "./system-builder-form-placement";
 export * from "./published-system-form-runtime";

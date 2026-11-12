@@ -28,6 +28,52 @@ import {
 } from "../systemComposerDraft";
 
 describe("System composer draft operations", () => {
+  it("adds and moves current form fields only to matching form regions", () => {
+    const draft = baseDraft();
+    const formAsset = (id: string) => ({
+      ...asset(id),
+      version: "3.0.0",
+      definitionRef: { kind: "asset-definition-version" as const, id: normalizeAssetId(id), version: "3.0.0" },
+    });
+    const form = addSystemComposerAsset(draft, {
+      asset: formAsset("builtin.form.form"), compositionId: "composition.demo",
+      instanceId: "instance.form", parentInstanceId: "instance.shell", slotId: "content",
+    });
+    expect(form.ok).toBe(true);
+    if (!form.ok) return;
+    const text = { asset: formAsset("builtin.form.text-field"), compositionId: "composition.demo", instanceId: "instance.field" };
+    expect(addSystemComposerAsset(form.value, { ...text, parentInstanceId: "instance.shell", slotId: "content" }).ok).toBe(false);
+    expect(addSystemComposerAsset(form.value, { ...text, parentInstanceId: "instance.form", slotId: "messages" }).ok).toBe(false);
+    const field = addSystemComposerAsset(form.value, { ...text, parentInstanceId: "instance.form", slotId: "fields" });
+    expect(field.ok).toBe(true);
+    if (!field.ok) return;
+    expect(reparentSystemComposerAsset(field.value, {
+      instanceId: text.instanceId, parentInstanceId: "instance.shell", slotId: "content",
+    }).ok).toBe(false);
+    expect(field.value.placements.find((edge) => edge.childInstanceRef.id === text.instanceId)?.parentInstanceRef.id).toBe("instance.form");
+    const put = (current: SystemComposerDraft, id: string, definition: string, parentInstanceId: string, slotId: string) =>
+      addSystemComposerAsset(current, { asset: formAsset(definition), compositionId: "composition.demo",
+        instanceId: id, parentInstanceId, slotId });
+    const inside = put(field.value, "instance.inside", "builtin.ui.section", "instance.form", "fields");
+    expect(inside.ok).toBe(true);
+    if (!inside.ok) return;
+    expect(put(inside.value, "instance.nested", "builtin.form.form", "instance.inside", "content").ok).toBe(false);
+    const outside = put(inside.value, "instance.outside", "builtin.ui.section", "instance.shell", "content");
+    expect(outside.ok).toBe(true);
+    if (!outside.ok) return;
+    const independent = put(outside.value, "instance.independent", "builtin.form.form", "instance.outside", "content");
+    expect(independent.ok).toBe(true);
+    if (!independent.ok) return;
+    expect(reparentSystemComposerAsset(independent.value, {
+      instanceId: "instance.outside", parentInstanceId: "instance.inside", slotId: "content",
+    }).ok).toBe(false);
+    const legacyGroup = { ...independent.value, instances: independent.value.instances.map((item) =>
+      item.instanceId === "instance.outside" ? { ...item, definitionRef: formAsset("builtin.form.field-group").definitionRef } : item) };
+    expect(reparentSystemComposerAsset(legacyGroup, {
+      instanceId: "instance.outside", parentInstanceId: "instance.form", slotId: "fields",
+    }).ok).toBe(false);
+  });
+
   it("owns immutable snapshots while sharing only unchanged owned data", () => {
     const caller = baseDraft();
     const input = { ...caller, instances: caller.instances.map(instance => ({ ...instance, selectedConfiguration: { nested: { values: [false, 0, "", null] } } })) };

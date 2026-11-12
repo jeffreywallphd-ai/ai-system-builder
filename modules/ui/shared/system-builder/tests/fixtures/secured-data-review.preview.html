@@ -22,20 +22,32 @@
                     <p>Browse authorized workspace artifacts.</p>
                   </header>
                   <div data-slot="filters">
-                    <label>
-                      <span>Name</span>
-                      <input type="text" />
-                    </label>
-                    <label>
-                      <span>Media type</span>
-                      <select>
-                        <option value="" selected>Select</option>
-                        <option value="all">All supported types</option>
-                        <option value="text">Text and tables</option>
-                        <option value="image">Raster images</option>
-                        <option value="pdf">PDF documents</option>
-                      </select>
-                    </label>
+                    <form aria-label="Artifact filters">
+                      <fieldset>
+                        <legend>Artifact filters</legend>
+                        <div data-slot="fields">
+                          <fieldset>
+                            <legend>Filter criteria</legend>
+                            <div data-slot="fields">
+                              <label>
+                                <span>Name</span>
+                                <input type="text" />
+                              </label>
+                              <label>
+                                <span>Media type</span>
+                                <select>
+                                  <option value="" selected>Select</option>
+                                  <option value="all">All supported types</option>
+                                  <option value="text">Text and tables</option>
+                                  <option value="image">Raster images</option>
+                                  <option value="pdf">PDF documents</option>
+                                </select>
+                              </label>
+                            </div>
+                          </fieldset>
+                        </div>
+                      </fieldset>
+                    </form>
                   </div>
                   <div data-slot="results">
                     <section aria-label="Authorized artifacts">

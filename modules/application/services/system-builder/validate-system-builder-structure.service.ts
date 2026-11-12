@@ -16,8 +16,13 @@ import type {
 } from "../../../contracts/system-builder";
 import {
   classifySystemBuilderStructure,
+  isCurrentSystemForm,
+  isCurrentSystemFormElement,
+  isSystemFormDefinition,
   minimumSystemBuilderSlotItems,
   normalizeSystemBuilderStructure,
+  systemFormPlacementAllowed,
+  SYSTEM_FORM_PLACEMENT_MESSAGE,
 } from "../../../contracts/system-builder";
 import {
   SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS,
@@ -84,6 +89,7 @@ export function validateSystemBuilderStructure(
   validatePlacementGraph(placements, instancesById, issues);
 
   if (structure.profile === "interactive") {
+    validateFormElementOwnership(revision, placements, instancesById, issues);
     validateInteractiveRoot(
       revision,
       structure.layoutPresetRef,
@@ -92,6 +98,42 @@ export function validateSystemBuilderStructure(
       definitionsById,
       issues,
     );
+  }
+}
+
+function validateFormElementOwnership(
+  revision: StructureRevision,
+  placements: readonly AssetPlacement[],
+  instancesById: ReadonlyMap<string, AssetInstance>,
+  issues: AssetValidationIssue[],
+): void {
+  const roots = new Set(revision.composition.rootInstanceRefs.map((ref) => String(ref.id)));
+  const byChild = new Map(placements.map((edge) => [String(edge.childInstanceRef.id), edge]));
+  for (const item of instancesById.values()) {
+    const form = isCurrentSystemForm(item.definitionRef);
+    const element = isCurrentSystemFormElement(item.definitionRef);
+    if (revision.structure?.layoutPresetRef?.version === SYSTEM_FOUNDATION_CURRENT_PACK_VERSION &&
+        !form && !element && isSystemFormDefinition(item.definitionRef)) {
+      addIssue(issues, "Use a current Foundation Form asset or form element.", ["instances", String(item.instanceId)]);
+      continue;
+    }
+    if (!form && !element) continue;
+    let cursor = String(item.instanceId);
+    let formAncestors = 0;
+    for (let depth = 0; depth < MAX_ASSET_PLACEMENT_DEPTH; depth += 1) {
+      const edge = byChild.get(cursor);
+      if (!edge) break;
+      cursor = String(edge.parentInstanceRef.id);
+      const parent = instancesById.get(cursor);
+      if (!parent) break;
+      if (isCurrentSystemForm(parent.definitionRef)) formAncestors += 1;
+    }
+    const path = ["instances", String(item.instanceId)];
+    if (form && formAncestors > 0) {
+      addIssue(issues, "A Form asset cannot be placed inside another form.", path);
+    } else if (element && (formAncestors !== 1 || !roots.has(cursor))) {
+      addIssue(issues, SYSTEM_FORM_PLACEMENT_MESSAGE, path);
+    }
   }
 }
 
@@ -388,6 +430,10 @@ export function systemBuilderSlotAcceptsDefinition(
   child: AssetDefinition,
   parent?: AssetDefinition,
 ): boolean {
+  const reference = (definition: AssetDefinition) => ({
+    kind: "asset-definition-version" as const, id: definition.definitionId, version: definition.version,
+  });
+  if (!systemFormPlacementAllowed(reference(child), parent && reference(parent), String(slot.slotId))) return false;
   return (
     slot.acceptedAssetTypes?.includes(child.assetType) === true ||
     slot.acceptedAssetFamilies?.includes(child.assetFamily) === true ||

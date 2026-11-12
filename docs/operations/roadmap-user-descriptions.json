@@ -7661,6 +7661,8 @@
         "requirements": [
           "Use Edit Form on a form asset to open that form. Use Back to Canvas to return to the same asset.",
           "Confirm that a system without a form stays in Canvas and offers no Form tab.",
+          "Add or move fields, steps, messages, and form controls only inside a form. Check the built-in templates for the same rule.",
+          "When an older system has loose form fields, move the fields into a form before saving a new revision.",
           "Add, rename, and reorder form steps. Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.",
           "Confirm both views read the same draft and that undo and redo use the shared draft history.",
           "Save and reopen with the same asset IDs, versions, settings, and order."

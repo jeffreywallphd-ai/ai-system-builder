@@ -509,7 +509,9 @@ export function FoundationAssetSurface({
         }
       >
         <div data-slot="input">{region("input")}</div>
-        <div data-slot="actions">{region("actions")}</div>
+        <div data-slot="actions">
+          {hasRegion("actions") ? region("actions") : <button type="submit">Send</button>}
+        </div>
       </form>
     );
   }

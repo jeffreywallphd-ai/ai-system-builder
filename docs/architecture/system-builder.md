@@ -191,6 +191,17 @@ customization, and single-asset Studio workflows.
   form preserves its placement and neighboring assets. The two editors use
   the same workspace-visible asset definitions, draft, undo and redo history,
   and revision save path. Canvas renders the same placements in either case.
+  Current Foundation form fields, steps, messages, and actions can only be
+  placed in their matching regions inside a form. Canvas filters add and move
+  choices, and revision validation checks the same placement rule and verifies
+  that each form element belongs to a form reachable from the system root.
+  New reference systems group the request fields and artifact filters under
+  form assets. The conversation composer renders its own Send control in
+  preview; the published chat runtime keeps its existing message operation.
+  The rule does not rewrite earlier saved revisions. To save an earlier system
+  with loose fields, add a Form asset and move the fields into its Fields
+  region or a step. In an older chatbot template, remove the separate Send
+  asset to use the message composer's Send control.
   Form routes are versioned `control` bindings between exact Foundation step
   instances. A route to the enclosing form ends the form. The evaluator tries
   bounded scalar conditions in priority order, then uses an explicit fallback

@@ -272,10 +272,11 @@ describe("System Builder layout change preview", () => {
       result.value.placements.some(
         (placement) =>
           String(placement.parentInstanceRef.id).endsWith(".composer") &&
-          String(placement.slotId) === "actions" &&
-          String(placement.childInstanceRef.id).endsWith(".visual-send"),
+          String(placement.slotId) === "input" &&
+          String(placement.childInstanceRef.id).endsWith(".user-input"),
       ),
     ).toBe(true);
+    expect(result.value.instances.some((instance) => instance.definitionRef.id === "builtin.form.submit-action")).toBe(false);
     expect(
       result.value.validationIssues
         .filter((issue) =>
