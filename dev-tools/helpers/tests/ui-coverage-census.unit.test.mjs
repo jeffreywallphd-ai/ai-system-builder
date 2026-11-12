@@ -478,7 +478,29 @@ const pendingNotificationDefinition=Object.freeze({priorCommit:"6c785c91f117d816
   Object.freeze({path:"dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",committed:"ef3494be87437ea5ea96f84271330bf04887c2ac717cb2be7d6816571f99491c",candidate:"42e2be25e1614f2d0a300995cd422e0bb49323811ed5a1a03b4896bdf2ec6b36",facts:"e9b01755971643bfeacc6e3e51fc5cfb23fdb00fdacbf8acec784f783f873423"}),
 ])});
 let notificationPriorCensus;
+const currentPublishedFormCensus = Object.freeze({
+  commit: "26acff85368f0d636ef7d376672af089e1bc6633",
+  digest: "0f195fdd6da6f23f9c202431f50b9488feac929563fd539c077022200b1fba08",
+  previousCommit: "6b0b7b47748c0792dbacbef5c06cbf3b3e5d3ab2",
+});
+const censusDocument = "docs/operations/comprehensive-ui-automation-current-census.json";
+const sourceDrift = map => map.sources.filter(row => row.facts.sha256 !== row.committed_sha256)
+  .map(row => ({kind: "unreviewed-source-drift", source: row.path}));
+function currentPublishedFormCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) !== currentPublishedFormCensus.digest) return {map, result};
+  const actual = JSON.parse(historicalSource(currentPublishedFormCensus.commit, censusDocument));
+  assert.deepEqual(map, actual);
+  assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(actual));
+  const previous = JSON.parse(historicalSource(currentPublishedFormCensus.previousCommit, censusDocument));
+  assert.equal(sha(JSON.stringify(previous)), pendingNotificationDefinition.map);
+  // Only tests of earlier witnesses receive that immutable view. The actual
+  // inventory and all its pending checks are left unchanged.
+  return {map: previous, result: {...result, gaps: [
+    ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+  ]}};
+}
 function notificationCensusLegacyView(map,result){
+  ({map,result}=currentPublishedFormCensusLegacyView(map,result));
   const digest=sha(JSON.stringify(map));
   if(map.source_baseline!==committedCensusDefinition.baseline||digest===committedCensusDefinition.currentMap||digest===pendingNavigationDefinition.map)return{map,result};
   assert.equal(digest,pendingNotificationDefinition.map);
@@ -773,7 +795,11 @@ test("checks the current repository map against original scope and actual source
   for(const name of [training,website,"dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts"]) {
     const source=map.sources.find(s=>s.path===name);
     if(source.facts.sha256!==source.committed_sha256){
-      assert.notEqual(name,website,"Unchanged website definitions still bind to their actual committed source.");
+      if(name===website) {
+        // The later ingestion journey changed this definition. Bind it to the
+        // exact archived source and retain the still-open inventory gap below.
+        assert.deepEqual(sourceFacts(name,historicalSource(currentPublishedFormCensus.commit,name)),source.facts);
+      }
       assert(result.gaps.some(g=>g.kind==="unreviewed-source-drift"&&g.source===name),"Changed OP definitions retain their real older Git binding and an explicit drift gap until reviewed source is committed.");
     }
     if(name!==website){
@@ -1415,7 +1441,7 @@ test("pending navigation definitions retain exact working gaps and cannot weaken
 });
 
 test("pending notification definitions preserve raw gaps and every earlier source guard",()=>{
-  const map=JSON.parse(fs.readFileSync("docs/operations/comprehensive-ui-automation-current-census.json","utf8"));
+  const map=JSON.parse(historicalSource(currentPublishedFormCensus.previousCommit,censusDocument));
   const result={gaps:map.sources.filter(row=>row.facts.sha256!==row.committed_sha256).map(row=>({kind:"unreviewed-source-drift",source:row.path}))};
   const before=JSON.stringify({map,result});assert.equal(result.gaps.length,3);assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(map,result));assert.equal(JSON.stringify({map,result}),before);
   const old=notificationCensusLegacyView(map,result);assert.equal(sha(JSON.stringify(old.map)),pendingNavigationDefinition.map);assert.deepEqual(old.result.gaps,result.gaps);assert.notEqual(old.map,map);
@@ -1430,4 +1456,20 @@ test("pending notification definitions preserve raw gaps and every earlier sourc
       (m,r)=>{m.scenarios[0].execution_status="passed";},(m,r)=>{m.source_baseline="0".repeat(40);},
     ]){const m=structuredClone(map),r=structuredClone(result);mutate(m,r);assert.throws(()=>assertCompleteCurrentSourceDrift(m,r));}
   }
+});
+
+test("current published form checkpoint preserves its complete source gaps and original notification witness",()=>{
+  const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
+  const result={gaps:sourceDrift(map)};
+  const before=JSON.stringify({map,result});
+  assert.equal(result.gaps.length,16);
+  assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(map,result));
+  assert.equal(JSON.stringify({map,result}),before);
+  const old=currentPublishedFormCensusLegacyView(map,result);
+  assert.equal(sha(JSON.stringify(old.map)),pendingNotificationDefinition.map);
+  assert.deepEqual(old.result.gaps,sourceDrift(old.map));
+  assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.slice(1)}));
+  const forged=structuredClone(map);
+  forged.scenarios[0].execution_status="passed";
+  assert.throws(()=>assertCompleteCurrentSourceDrift(forged,result));
 });

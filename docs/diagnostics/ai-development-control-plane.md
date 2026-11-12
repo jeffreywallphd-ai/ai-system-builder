@@ -334,6 +334,15 @@ to use an unverified package; real serial/native/app evidence remains pending.
 The broader `functionality-outcomes` profile remains intact; a narrow profile
 cannot cover unrelated changed paths or grant a parent qualification.
 
+Published form work can opt into the exact Desktop bridge and build,
+Form editor interactions, browser client, shared gateway, or host registration checks.
+Each check names fixed repository tests and the source paths it covers.
+The generic focused check still applies to any other changed path or when
+the work explicitly requires it. The shared gateway check does not cover the
+Desktop or server registration files. The separate registration check exercises
+both composition roots with an isolated test fixture. These checks do not replace the
+packaged host journeys or combined completion suites.
+
 Claims last at most four hours. Use `renew` while working, `release` to hand off,
 and `recover-claim` explicitly after expiry/release. Recovery issues a new claim
 identity and retains contributor history. One source-writing claim is admitted

@@ -32,6 +32,72 @@ OPT_IN_REGRESSION_CHECKS = {
     ),
 }
 
+# Only a work specification that asks for a Form check gets it. Keep the
+# admitted paths exact so unrelated Desktop and host work still needs evidence.
+PUBLISHED_FORM_CHECKS = {
+    "published-form-desktop-bridge": {
+        "sources": (
+            "apps/desktop/src/preload/exposedApi.ts",
+            "apps/desktop/src/preload/tests/publishedSystemFormBridge.unit.test.ts",
+            "apps/desktop/src/renderer/features/system-builder/api/desktopSystemPublishedFormClient.ts",
+            "apps/desktop/src/renderer/lib/desktopApi.ts",
+            "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+            "modules/ui/shared/system-builder/SystemPublishedFormClient.ts",
+            "modules/ui/shared/system-builder/index.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "apps/desktop/src/preload/tests/publishedSystemFormBridge.unit.test.ts",
+            "apps/desktop/tests/desktop-webpack-tsconfig.unit.test.ts",
+        ),
+    },
+    "published-form-editor-interactions": {
+        "sources": (
+            "modules/ui/shared/system-builder/SystemFormComposerView.tsx",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+        ),
+    },
+    "published-form-browser-client": {
+        "sources": (
+            "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedFormClient.ts",
+            "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedFormClient.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedFormClient.unit.test.ts",
+        ),
+    },
+    "published-form-host-composition": {
+        "sources": (
+            "modules/hosts/shared/composition/composePublishedSystemForms.ts",
+            "modules/hosts/shared/composition/tests/compose-published-system-forms.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/hosts/shared/composition/tests/compose-published-system-forms.unit.test.ts",
+            "modules/adapters/transport/api-express/system-builder/tests/published-form-transport.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/submit-released-system-form.use-case.unit.test.ts",
+        ),
+    },
+    "published-form-host-registration": {
+        "sources": (
+            "modules/hosts/desktop/composition/composeDesktopHost.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/desktop/composition/tests/published-form-host-registration.unit.test.ts",
+            "modules/hosts/server/composition/tests/published-form-host-registration.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/hosts/desktop/composition/tests/published-form-host-registration.unit.test.ts",
+            "modules/hosts/server/composition/tests/published-form-host-registration.unit.test.ts",
+        ),
+    },
+}
+
 QUALIFICATION_PROFILES = (
     "artifact-confirmation-ui",
     "shared-forced-colors",
@@ -304,6 +370,8 @@ def definitions(root: Path) -> list[dict]:
         *[{"id": name, "patterns": [],
            "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--regression-test", test],
            "timeout": 120} for name, (_, test) in OPT_IN_REGRESSION_CHECKS.items()],
+        *[{"id": name, "patterns": [], "argv": [node, *check["command"]], "timeout": 120}
+          for name, check in PUBLISHED_FORM_CHECKS.items()],
         {"id": "documentation", "patterns": ["docs/*", "*.md", "skills/*/*.md", "dev-tools/*/*.md"], "argv": [node, "dev-tools/scripts/docs/check-doc-drift.mjs"], "timeout": 120},
         {"id": "agent-support", "patterns": ["AGENTS.md", "skills/*", "docs/context/*", "dev-tools/agent-evals/*", "dev-tools/helpers/*", "dev-tools/review-site/*"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
         {"id": "control-plane", "patterns": ["dev-tools/helpers/control_plane/*", "dev-tools/helpers/development_control_plane.py", "dev-tools/helpers/run_focused_checks.py", "dev-tools/helpers/requirements-tests.txt", "dev-tools/config/pytest-focused.ini", "dev-tools/config/contributor-check-profiles.json", "dev-tools/helpers/tests/*", "dev-tools/review-site/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"], "timeout": 600},
@@ -336,7 +404,10 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
         refuse("verification.check-id", "Acceptance references an unavailable check identity.")
     covered = {p: [c["id"] for c in checks
                    if any(fnmatch.fnmatchcase(p, pat) for pat in c["patterns"])
-                   or (c["id"] in required and p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()))]
+                   or (c["id"] in required and (
+                       p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()) or
+                       p in PUBLISHED_FORM_CHECKS.get(c["id"], {}).get("sources", ())
+                   ))]
                for p in paths}
     # The fixed controller config is exercised by controller routing/isolation
     # tests. Generic config ownership has no runnable test files for this INI.
@@ -348,6 +419,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     selected_ids = {c["id"] for c in selected}
     declared_sources = {path for check, paths in IMAGE_FORM_CHECKS.items() if check in selected_ids for path in paths}
     declared_sources.update(path for check in required for path in OPT_IN_REGRESSION_CHECKS.get(check, ()))
+    declared_sources.update(path for check in required for path in PUBLISHED_FORM_CHECKS.get(check, {}).get("sources", ()))
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))

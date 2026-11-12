@@ -12863,6 +12863,37 @@
       "limitations": [
         "Shared interface evidence only. The dialog still needs to be connected and tested on packaged Desktop and managed browser."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-preview-and-runtime-parity",
+      "work_id": "open-respondent-dialog-for-exact-published-build",
+      "work_criteria": [
+        "only-published-build-can-open-its-form-dialog"
+      ],
+      "receipt_digest": "679b4855b5521fc3e745b870ca751831034af2da501d045e7d7b66866e12316e",
+      "review_digest": "7d77e273e01ff3a16eec155f7e3988e6c3b13096d7f2f27b14ae00afd110252c",
+      "scope": "The shared Publish view opens forms for the exact published build. It does not send answers or start the build. Changing workspace or form client closes the dialog without resetting the build controls.",
+      "limitations": [
+        "This checks the shared entry point. Desktop and managed browser connections and journeys still need testing."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "shared-form-and-canvas-draft",
+      "work_id": "add-form-page-tabs-and-properties-sidebar",
+      "work_criteria": [
+        "form-page-tabs-use-the-shared-draft",
+        "sidebar-edits-the-exact-form-element"
+      ],
+      "receipt_digest": "a47c1b517082f521b1714a72d1cc1d6e61690bd94fc2bacc4617bb5d12179c0f",
+      "review_digest": "94cdb8f6569a614cbdcc8d0c4fdf6d5e4f9f61bbf6ae33009bd53ce794d3eab2",
+      "scope": "Every form page has a tab. New Form Page + opens the new page. The right sidebar edits the selected element and moves below the editor on narrow screens. Page changes use the shared draft.",
+      "limitations": [
+        "Focused UI, compiler and responsive layout checks passed. The packaged Desktop and managed browser journeys remain pending."
+      ]
     }
   ]
 }

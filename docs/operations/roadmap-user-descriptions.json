@@ -18035,6 +18035,340 @@
           "The Assets security review and final system tests are still open."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ea28fe1ed934b9e5bf4a3ee60dd005d061f16d17dfcd145c233fbd1f9af867a7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The placement tests put forms on Foundation pages and kept the saved page order."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "16c1812cc59446c3f25ef7f80c634069145800f539c71499711b6af157c62aa1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only the placement checks ran.",
+          "Published forms and both host journeys still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "91c8158e35d51a6f3b40b908ed49ccdb9d92d79b1cdd667951406ea8ffdb0df3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The shared interface tests created two forms and reopened the same draft.",
+          "They also checked Canvas, Undo, and Redo."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b967ac89b8e915ecbedb996eb8dfa63086f6b805940528a2ac8be483005851f5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only local interface checks ran.",
+          "The Desktop and managed browser journeys still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "791c08d363ff3f1f0b15c58cfe4b1ca3a51bc7b50fe41bd384cf65947bce9713",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The checks tested both routes and rejected invalid routes and answers.",
+          "Answers from skipped pages were left out."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "81f23360869d9eea92c6ea287a8c34d343a6f4abaab7a92ff68ea113f2902bf4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only the application's answer and revision checks ran.",
+          "Published forms on both hosts still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a7573e91f18c0f2cb5870b973b6e13640fa2b2208571387a80e3efeffdf7c13b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Preview uses the same answer checks and routes without saving answers or running actions.",
+          "Tests covered route changes, invalid answers, and keyboard focus."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "edd9417dde2159fb0944439bf47e743144c9e32a5c05bc28297b36f5514f11e0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only Preview was tested.",
+          "Compare the result with a published form after connecting both hosts."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "22baabd0fd53687add65e58daaeee2496e03906671b1c00393cb90a6403ae392",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The form connects to the existing Create Record action.",
+          "Only the chosen fields can go to that action."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8fe458c0253a46715f90b333179aaa7a11225060bac4eb0df327a78dbcca3512",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This only tests the connection between the form and action.",
+          "The published action, retry behavior, and host journeys still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "10539aaea952d487f680922c7e33e7462dcbff3bbd57710a297b8afe9ab5c488",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A build records the exact approved form action.",
+          "The resolver rejects missing approval, older or untrusted versions, archived releases, and revoked releases."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "74caab5398c496d767510add13f998e4634e0609ce8e2cd45d03b865cc923ddd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only the approved release check ran.",
+          "User permissions, running the action, and host journeys still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4c8aa68fb4a56668d0570139b539bc462f392abbf0b74c5111b1a178e8cab438",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Canvas opens the selected form and returns focus to its button.",
+          "A new form system uses its original Minimal page."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c45ec790ab89f32306956b08e259e9bfbf42d754de214ba6d441e6f5d6848549",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These checks cover only this feature.",
+          "The packaged Desktop and managed browser journeys still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "aad3213bf83f023be2a8a23ae6dc8add864095503c96e6837ddb0607a0dc9c36",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Canvas and revision checks keep form elements inside their form.",
+          "The reference templates keep their field IDs, connections, and expected controls."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bc0cd40cca2700e4ce212f8abede17e67160097f3b615c18bd51114c8f6b5159",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The editor updates the selected form, including radio choices and existing buttons and messages.",
+          "Reference forms can open in Preview."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "132b2e32a371edb9caf74ebcccbc3d5457d37e7cf7bdb25bd56f8fd5bb22068c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Authors can select Create Record and choose which answers go to each record field.",
+          "Preview makes no changes."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7a1827be7e2523f72a070fb75d65b5f4bb669a2eccfab549018c7cf1ef8a8646",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The application checks permission again and sends only valid answers for the chosen fields.",
+          "A retry reuses the same receipt and does not create another record."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6d6ca6398d6fbea3a38493e2f08a1100741dedddea44347231f398c2df5241d8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The application returns only the published forms the respondent can access.",
+          "It uses the same answer and route checks as Preview."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d2d161bb953379f02085c4b13c475fedc0b834bbd27375795b4ee2a149633712",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop and the server use separate protected requests to list and submit published forms.",
+          "Requests accept only the expected form data within set limits."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "21b9e93ff358386f0b4f93661982af796b56f67284bf0462d1ec053a41dc15e2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Create form system saves the first empty form page.",
+          "Open in Compose in Manage opens that page without a manual save.",
+          "Systems with embedded forms still open in Canvas."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "89d071a16f2d7b46bbf2371cd84fbc787c8df1846e8bbeff3cf668d3bee5fa69",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The application and shared interface checks passed.",
+          "The packaged Desktop and managed browser journeys still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0a33ce969451896595d359c7242abba2ab7572d5c61487941c3993928a72680b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Form editor builds with the current Desktop compiler settings.",
+          "The limits for moving pages and fields stay the same."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5f83cb0ad5ccaa58fde79309c1d1357754fa88ec2aba427ff6ff7638818a1746",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The packaged Desktop app journey still needs testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "46885ee928f473424ec9c825887ea28e66e7a68b5ec9f1f80c70a28014c55033",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The shared dialog checks answers and rejects invalid form data.",
+          "If the first reply is lost, select Retry submission to check the same request.",
+          "Respondents can shorten long answers or close while a request is in progress."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "44fcb8411d14da242aa12310db43afca86cd2a19c1f9cb4e3d11498592637ec9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only the shared dialog was tested.",
+          "The dialog still needs to be connected and tested on the packaged Desktop app and managed browser."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f6f00e62692399cd17133f01a2b55c43888305c5a9f1dc53c3339398943b576f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Open forms in Publish shows the forms for the selected published build.",
+          "It does not send answers or start the build.",
+          "Changing workspace or form connection closes the dialog and leaves the build controls active."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "55ebb8449118a5bffea0ee755bdf7aca3475037b9ddd9bb2741be21094979015",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Only the shared Publish screen was tested.",
+          "The Desktop and managed browser connections and journeys still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f99662455cb72eba650bc57c53a7d4e4ba12c705cbcefe0813af5bfead7303fc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Each form page has a tab.",
+          "Select New Form Page + to add and open a page.",
+          "Select an element to edit it in the Properties sidebar.",
+          "On narrow screens, Properties moves below the editor.",
+          "Page changes use the same draft."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "975b629f9dff9aaa8a48b33efd642ed643fd75bf1fcd007b175597dbff4bf2b2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The interface, compiler, and layout checks passed.",
+          "The packaged Desktop and managed browser journeys still need testing."
+        ]
+      }
     }
   ]
 }
