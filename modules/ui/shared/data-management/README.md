@@ -274,6 +274,9 @@ refused. A later old run response cannot replace a confirmed terminal outcome.
 Matching workspace/task identities are checked before progress or notifications.
 File transfer still slices at the existing 1 MiB bound and uses authoritative
 chunk offsets, digests and finalization; whole-file reads are unnecessary.
+If the current host response confirms that a file task has ended, the form stops
+reading file slices and sending transfer or finalization requests. The host
+still owns checkpoint cleanup.
 
 The focused interaction tests drive this real shared renderer with bounded client
 and file fixtures. They cover both host consumers' shared behavior, not actual

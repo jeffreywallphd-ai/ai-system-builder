@@ -16,6 +16,7 @@ import {
 } from "../../../../testing/node-test";
 
 import {
+  INGESTION_TASK_RECOMMENDED_CHUNK_BYTES,
   normalizeIngestionTaskTransportCommand,
   type IngestionTaskRecord,
   type IngestionTaskTransportCommand,
@@ -360,6 +361,57 @@ describe("GuidedIngestionTaskPanel", () => {
     }
     const panel = <GuidedIngestionTaskPanel workspaceId={workspaceId} client={client} onComplete={onComplete} />;
     await act(async () => root!.render(withNotifications ? <NotificationProvider><ActiveNotificationWorkspace /><NotificationViewport />{panel}</NotificationProvider> : panel));
+  }
+
+  for (const [description, size] of [
+    ["the last chunk", 3],
+    ["a chunk with bytes still remaining", INGESTION_TASK_RECOMMENDED_CHUNK_BYTES + 1],
+  ] as const) {
+    it(`stops the file transfer when the host confirms cancellation during ${description}`, { timeout: 5_000 }, async () => {
+      const appended = deferredResponse();
+      let enteredAppend!: () => void;
+      const appendStarted = new Promise<void>(resolve => { enteredAppend = resolve; });
+      const commands: string[] = [];
+      const onComplete = testDouble.fn();
+      const queued = task("queued", 0, "pending");
+      const cancelled = task("cancelled", 0, "cancelled");
+      const client = {
+        execute: async ({ command }: { command: IngestionTaskTransportCommand }): Promise<IngestionTaskTransportValue> => {
+          commands.push(command.action);
+          if (command.action === "create-files") return {
+            kind: "task",
+            task: { ...queued, files: [{ ...queued.files[0]!, totalBytes: size }], progress: { ...queued.progress, totalBytes: size } },
+          };
+          if (command.action === "append-chunk" && commands.length === 2) {
+            enteredAppend();
+            return appended.promise;
+          }
+          throw new Error("The host has already ended the test task.");
+        },
+      };
+      await mountAcquisition(client, onComplete);
+      const file = new File([new Uint8Array(size)], "train.csv", { type: "text/csv" });
+      const slice = testDouble.fn(file.slice.bind(file));
+      Object.defineProperty(file, "slice", { value: slice });
+      const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+      Object.defineProperty(input, "files", { configurable: true, value: [file] });
+      await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+      await act(async () => { button("Add data").click(); await appendStarted; });
+      await act(async () => appended.resolve({
+        kind: "task",
+        task: {
+          ...cancelled, completedAt: cancelled.updatedAt,
+          files: [{ ...cancelled.files[0]!, totalBytes: size }],
+          progress: { ...cancelled.progress, totalBytes: size, message: "The task was cancelled." },
+        },
+      }));
+      expect(commands).toEqual(["create-files", "append-chunk"]);
+      expect(slice).toHaveBeenCalledTimes(1);
+      expect(container!.textContent).toContain("The task was cancelled.");
+      expect(container!.querySelector('[role="alert"]')).toBe(null);
+      expect(input.files?.length).toBe(1);
+      expect(onComplete).not.toHaveBeenCalled();
+    });
   }
 
   it("acquisition race: admits only one start before React commits the busy state", async () => {

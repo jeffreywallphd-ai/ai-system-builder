@@ -11020,177 +11020,177 @@
   {
    "path": "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "0670da79cd8639f74b3d2db3d418ce09664f3c374aabea60883a360234b0f9a5",
-    "bytes": 65746,
+    "sha256": "77f66d4014e8f50732b79bf5183f60a6994b0d89d90306028225c80f89c622e8",
+    "bytes": 68403,
     "cases": [
      {
       "name": "coverage census: preserves all approved scenario families and matches the current literal route declarations",
-      "line": 294
+      "line": 295
      },
      {
       "name": "acquisition race: admits only one start before React commits the busy state",
-      "line": 365
+      "line": 417
      },
      {
       "name": "acquisition race: retires a removed session before deferred passive cleanup",
-      "line": 401
+      "line": 453
      },
      {
       "name": "acquisition race: rejects a foreign task before progress, notification or completion",
-      "line": 436
+      "line": 488
      },
      {
       "name": "acquisition race: stops before append when unmounted during a file slice",
-      "line": 448
-     },
-     {
-      "name": "acquisition race: failed cancellation keeps admission closed until an explicit status check",
-      "line": 464
-     },
-     {
-      "name": "acquisition race: nonterminal cancellation is not accepted as confirmation",
-      "line": 486
-     },
-     {
-      "name": "acquisition race: confirmed cancellation cannot be replaced by late older progress",
       "line": 500
      },
      {
+      "name": "acquisition race: failed cancellation keeps admission closed until an explicit status check",
+      "line": 516
+     },
+     {
+      "name": "acquisition race: nonterminal cancellation is not accepted as confirmation",
+      "line": 538
+     },
+     {
+      "name": "acquisition race: confirmed cancellation cannot be replaced by late older progress",
+      "line": 552
+     },
+     {
       "name": "acquisition race: changing the source browser also retires a pending acquisition session",
-      "line": 513
+      "line": 565
      },
      {
       "name": "acquisition race: unmount stops polling without pretending the accepted host task was cancelled",
-      "line": 526
+      "line": 578
      },
      {
       "name": "acquisition race: a foreign task identity cannot finish or release the current task",
-      "line": 540
+      "line": 592
      },
      {
       "name": "acquisition race: an old run cannot reset a newly admitted task after confirmed cancellation",
-      "line": 555
+      "line": 607
      },
      {
       "name": "acquisition race: cancellation requested before task creation is sent once identity arrives",
-      "line": 575
+      "line": 627
      },
      {
       "name": "acquisition race: duplicate cancel clicks issue one request and failed status checks stay locked",
-      "line": 590
+      "line": 642
      },
      {
       "name": "acquisition race: a retry admits only one resume before the busy render",
-      "line": 615
+      "line": 667
      },
      {
       "name": "acquisition workflow: transfers two distinct files across chunk boundaries without whole-file reads",
-      "line": 633
+      "line": 685
      },
      {
       "name": "offers PDFs and transfers a PDF with missing browser MIME through the bounded file workflow",
-      "line": 690
+      "line": 742
      },
      {
       "name": "renders the plain-language ordered source workflow with technical limits under Advanced settings",
-      "line": 723
+      "line": 775
      },
      {
       "name": "refuses a newly ambiguous normalized selection before resuming a failed file task",
-      "line": 846
+      "line": 898
      },
      {
       "name": "refuses an ambiguous saved task before transferring any selected bytes",
-      "line": 879
+      "line": 931
      },
      {
       "name": "streams a selected file in a bounded chunk and finalizes with server-computed integrity",
-      "line": 899
+      "line": 951
      },
      {
       "name": "creates and runs a bounded website task from the simple source workflow",
-      "line": 988
-     },
-     {
-      "name": "keeps source inputs stable while working and confirms cancellation",
       "line": 1040
      },
      {
+      "name": "keeps source inputs stable while working and confirms cancellation",
+      "line": 1092
+     },
+     {
       "name": "offers a plain retry action for a retryable website failure",
-      "line": 1106
+      "line": 1158
      },
      {
       "name": "browses Hugging Face datasets and imports only checked files at the returned immutable revision",
-      "line": 1168
+      "line": 1220
      },
      {
       "name": "does not expose provider credentials or local paths when dataset browsing fails",
-      "line": 1298
+      "line": 1350
      },
      {
       "name": "saves a token-only Hugging Face Step 2 card through the shared settings client",
-      "line": 1352
+      "line": 1404
      }
     ],
-    "dynamicCases": 3,
+    "dynamicCases": 4,
     "functions": [
      {
       "name": "ActiveNotificationWorkspace",
-      "line": 57
+      "line": 58
      },
      {
       "name": "task",
-      "line": 78
+      "line": 79
      },
      {
       "name": "websiteTask",
-      "line": 140
+      "line": 141
      },
      {
       "name": "huggingFaceTask",
-      "line": 217
+      "line": 218
      },
      {
       "name": "chooseWebsiteAndEnterPage",
-      "line": 274
+      "line": 275
      },
      {
       "name": "deferredResponse",
-      "line": 347
+      "line": 348
      },
      {
       "name": "button",
-      "line": 352
+      "line": 353
      },
      {
       "name": "mountAcquisition",
-      "line": 357
+      "line": 358
      },
      {
       "name": "RetirementProbe",
-      "line": 405
+      "line": 457
      }
     ],
-    "assertionCount": 145,
-    "assertionDigest": "0944901897142b6a860da13dc4e38e18fb8ad152e95d1ec10e531bccc20b21a4",
+    "assertionCount": 151,
+    "assertionDigest": "2f3efcdec8fbcd17e2b19c31bcface5b350ec0ce9737e0f28c5efe3d88325196",
     "assertionExamples": [
      {
-      "line": 298,
+      "line": 299,
       "kind": "expect",
       "sha256": "ad83c54bafa3de9a3fec028ddb37272c53be789aa29412483d3b3be299406f43"
      },
      {
-      "line": 303,
+      "line": 304,
       "kind": "expect",
       "sha256": "3ac1fa161978630ecb5ffe2d9bd707b78f56460e87b5dec645dbf0f79e4dd2f0"
      },
      {
-      "line": 304,
+      "line": 305,
       "kind": "expect",
       "sha256": "23438fe394ca124211e6ecca54f74384e6e1471b628ff0311686a5f4db17d739"
      },
      {
-      "line": 305,
+      "line": 306,
       "kind": "expect",
       "sha256": "134f7bdaebed2ca7d9e2316fb0f5033e3cdcd52674d712b9cd4cd85ad7e0e825"
      }

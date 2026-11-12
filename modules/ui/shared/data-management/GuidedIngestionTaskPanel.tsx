@@ -146,7 +146,6 @@ function ScopedIngestionTaskPanel({
   }, []);
 
   const ownsOperation = (token: number) => mountedRef.current && activeOperationRef.current === token;
-  const terminal = (value: IngestionTaskRecord) => ["succeeded", "failed", "cancelled"].includes(value.status);
   function beginOperation() {
     const token = ++operationSequenceRef.current;
     activeOperationRef.current = token;
@@ -173,7 +172,7 @@ function ScopedIngestionTaskPanel({
   function finishOperation(token: number) {
     if (!ownsOperation(token)) return;
     const latest = latestTaskRef.current;
-    if (latest && !terminal(latest)) {
+    if (latest && !isTerminalTask(latest)) {
       setStatusNeedsConfirmation(true);
       setWorking(true);
     } else {
@@ -474,7 +473,7 @@ function ScopedIngestionTaskPanel({
     setTask(value.task);
     currentTaskIdRef.current = value.task.taskId;
     upsertTaskActivity(value.task);
-    if (cancelledRef.current && !terminal(value.task) && !statusRequestRef.current) {
+    if (cancelledRef.current && !isTerminalTask(value.task) && !statusRequestRef.current) {
       queueMicrotask(() => { if (mountedRef.current) void cancel(); });
     }
     return value.task;
@@ -566,7 +565,7 @@ function ScopedIngestionTaskPanel({
       const response = await client.execute({ workspaceId, command: { action, taskId } });
       if (!mountedRef.current || activeOperationRef.current !== token || currentTaskIdRef.current !== taskId) return;
       const confirmed = acceptTask(response);
-      if (terminal(confirmed)) {
+      if (isTerminalTask(confirmed)) {
         activeOperationRef.current = undefined;
         cancelledRef.current = true;
         setWorking(false);
@@ -1192,6 +1191,7 @@ async function transferFilesToTask(
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
   cancelled: { current: boolean },
 ): Promise<IngestionTaskRecord> {
+  if (isTerminalTask(startingTask)) return startingTask;
   const { byIdentity } = normalizedSelectedFiles(files);
   let task = startingTask;
   if (new Set(task.files.map(file => fileIdentity(file.fileName, file.totalBytes))).size !== task.files.length) {
@@ -1228,6 +1228,7 @@ async function transferFilesToTask(
           },
         }),
       );
+      if (isTerminalTask(task)) return task;
       offset = end;
       chunkIndex += 1;
     }
@@ -1241,7 +1242,7 @@ async function transferFilesToTask(
         },
       }),
     );
-    if (task.status === "failed" || task.status === "cancelled") return task;
+    if (isTerminalTask(task)) return task;
   }
   return task;
 }
@@ -1389,6 +1390,10 @@ function safeUiError(
     ? value
     : fallback;
 }
+function isTerminalTask(task: IngestionTaskRecord): boolean {
+  return task.status === "succeeded" || task.status === "failed" || task.status === "cancelled";
+}
+
 function taskMessage(task: IngestionTaskRecord): string {
   return task.status === "succeeded"
     ? "Data is ready."
