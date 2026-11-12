@@ -632,6 +632,54 @@
         "git diff --check"
       ],
       "title": "Release evidence, canonical docs, and complete gates"
+    },
+    {
+      "areas": [
+        "Shared System Builder draft placements"
+      ],
+      "chunkId": "form-page-placements",
+      "completedAt": "2026-11-12T16:35:49Z",
+      "criteriaIds": [
+        "shared-form-and-canvas-draft",
+        "form-maps-to-a-canvas-page"
+      ],
+      "documentation": [
+        "System Builder architecture"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-backed-form-composer-form-page-placements",
+      "incrementId": "asset-backed-form-composer",
+      "summary": "Each Form draft can be created on a dedicated existing Canvas page using a compatible section, form, and first field group. The reader follows saved placement order. A full or incompatible region leaves the original draft intact.",
+      "tests": [
+        "Three focused placement and recovery tests passed, with architecture and documentation checks.",
+        "Separate review accepted control plane receipt 1a2d86352e00ff85524b8074327848d9ad05b020036009a8210a20f414b0b61f and source commit 80ffeb66891614ef7f55ee1462e90498d422da7a."
+      ],
+      "title": "Represent forms on separate Canvas pages"
+    },
+    {
+      "areas": [
+        "Systems Compose shell",
+        "Form Composer authoring"
+      ],
+      "chunkId": "form-authoring-view",
+      "completedAt": "2026-11-12T16:49:22Z",
+      "criteriaIds": [
+        "shared-form-and-canvas-draft",
+        "form-maps-to-a-canvas-page",
+        "form-composer-desktop-and-browser"
+      ],
+      "documentation": [
+        "System Builder architecture"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-backed-form-composer-form-authoring-view",
+      "incrementId": "asset-backed-form-composer",
+      "summary": "Systems Compose offers Form next to Design and Connections for interactive systems. Form authors can add steps and fields, change labels and requirements, reorder visible items, and save the same Canvas draft. Undo and redo share one history.",
+      "tests": [
+        "Twelve focused Workspace interactions passed, including a two-form round trip and a reorder across a Canvas-only field.",
+        "Four registered checks passed, and independent review accepted receipt d0247e705e6c06034296d721c07b87d1ab5c3021598e04503d9f34ab7d8b9a61 for commit f966e729288753e971cdacf269743e0b28b3edbe."
+      ],
+      "title": "Add the Form authoring view"
     }
   ],
   "completion": null,
@@ -1985,6 +2033,18 @@
       "recordedAt": "2026-11-12T16:28:00Z",
       "sequence": 118,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "c20f6fa2581747f4c7c2c152baeee13d88dcd9c26778daa691d782f323e98e1c",
+      "recordedAt": "2026-11-12T16:35:49Z",
+      "sequence": 119,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "de9a12be3a1e721feb26ee7c19dbafd42b07200b8d9aeffe60053df872e7cf42",
+      "recordedAt": "2026-11-12T16:49:22Z",
+      "sequence": 120,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -3273,7 +3333,10 @@
       ],
       "allowPendingQualification": true,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "form-page-placements",
+        "form-authoring-view"
+      ],
       "deliverables": [
         "A Form view with a switch in Systems Compose above the editors. The Form view provides a page outline, field settings, validation, routing, actions, and preview.",
         "One existing Canvas page structure per form, with compatible containers where needed, plus versioned asset placements, field configuration, and typed route and submission bindings.",
@@ -3584,5 +3647,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-12T16:28:00Z"
+  "updatedAt": "2026-11-12T16:49:22Z"
 }
