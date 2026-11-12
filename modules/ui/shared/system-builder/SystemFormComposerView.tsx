@@ -160,7 +160,7 @@ export function SystemFormComposerView({
                   <button className="ui-button ui-button--outline" type="button"
                     disabled={form.steps[0] === step} onClick={() => onMove(String(step.instanceId), -1)}>Move form page up</button>
                   <button className="ui-button ui-button--outline" type="button"
-                    disabled={form.steps.at(-1) === step} onClick={() => onMove(String(step.instanceId), 1)}>Move form page down</button>
+                    disabled={form.steps[form.steps.length - 1] === step} onClick={() => onMove(String(step.instanceId), 1)}>Move form page down</button>
                 </div>
               </>
             ) : null}
@@ -186,7 +186,7 @@ export function SystemFormComposerView({
                     <button className="ui-button ui-button--outline" type="button"
                       disabled={fields[0] === field} onClick={() => onMove(String(field.instanceId), -1)}>Move field up</button>
                     <button className="ui-button ui-button--outline" type="button"
-                      disabled={fields.at(-1) === field} onClick={() => onMove(String(field.instanceId), 1)}>Move field down</button>
+                      disabled={fields[fields.length - 1] === field} onClick={() => onMove(String(field.instanceId), 1)}>Move field down</button>
                   </div>
                 </>
               ) : <p className="ui-text-muted">No fields yet.</p>}
