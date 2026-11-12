@@ -179,6 +179,10 @@ glossary help separate. Focused component tests check the default fields, the
 extra FaceID fields and the separate checkbox and help actions. These tests do
 not qualify the packaged Desktop app.
 
+The Dataset Preparation tests check that both hosts give the Allowed labels
+field its own label and describe optional guidance separately. The Thin client
+tests also check that the edited labels still reach the preparation request.
+
 Native zoom admission stays unchanged. Standard-width proofs do not qualify
 native400 or another host. A new actual host result, source-bound checks and
 independent review are required. Preserve all earlier failures and defer combined

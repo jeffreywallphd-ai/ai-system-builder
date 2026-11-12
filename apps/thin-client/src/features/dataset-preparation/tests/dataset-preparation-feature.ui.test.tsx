@@ -146,7 +146,16 @@ describe("thin DatasetPreparationFeature", () => {
     await act(async () => change(field("Training goal", "select"), goal));
     await selectStructuredSource();
     await act(async () => {
-      if ("labelSet" in task) change(field("Allowed labels", "input"), task.labelSet.join(", "));
+      if ("labelSet" in task) {
+        const input = container!.querySelector<HTMLInputElement>('input[placeholder="billing, account help, bug report"]')!;
+        expect(input.labels).toHaveLength(1);
+        const label = input.labels![0];
+        expect(label.textContent?.trim()).toBe("Allowed labels");
+        expect(label.control).toBe(input);
+        const description = document.getElementById(input.getAttribute("aria-describedby") ?? "");
+        expect(description?.textContent).toContain("Optional comma-separated labels.");
+        change(input, task.labelSet.join(", "));
+      }
       if (goal === "llm-classification") field("Allow more than one label", "input").click();
       if (goal === "llm-extraction") field("Require every extracted result", "input").click();
       if (goal === "diffusion-lora") {

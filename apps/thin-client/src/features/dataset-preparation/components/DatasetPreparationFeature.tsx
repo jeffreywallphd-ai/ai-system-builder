@@ -521,6 +521,8 @@ function WorkspaceDatasetPreparationFeature({
 }: DatasetPreparationFeatureProps) {
   const preparationMethodCaptionId = useId();
   const preparationMethodHelpId = useId();
+  const allowedLabelsId = useId();
+  const allowedLabelsHelpId = useId();
   const browser = useMemo(
     () => artifactClient ?? createApiArtifactBrowserClient(),
     [artifactClient],
@@ -1767,20 +1769,22 @@ function WorkspaceDatasetPreparationFeature({
             taskType === "vision-classification" ||
             taskType === "vision-detection" ||
             taskType === "vision-segmentation" ? (
-              <label className="ui-stack ui-stack--sm">
-                <span>Allowed labels</span>
+              <div className="ui-stack ui-stack--sm">
+                <label className="ui-label" htmlFor={allowedLabelsId}>Allowed labels</label>
                 <input
+                  id={allowedLabelsId}
+                  aria-describedby={allowedLabelsHelpId}
                   className="ui-input"
                   value={labelSet}
                   disabled={status.kind === "loading"}
                   placeholder="billing, account help, bug report"
                   onChange={(event) => setLabelSet(event.target.value)}
                 />
-                <small className="ui-text-muted">
+                <small id={allowedLabelsHelpId} className="ui-text-muted">
                   Optional comma-separated labels. When supplied, other labels
                   are set aside for review.
                 </small>
-              </label>
+              </div>
             ) : null}
             {taskType === "llm-classification" ? (
               <label>

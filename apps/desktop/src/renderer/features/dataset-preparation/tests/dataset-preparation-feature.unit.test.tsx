@@ -760,6 +760,16 @@ describe("DatasetPreparationFeature", () => {
       taskSettingsToggle?.click();
     });
     expect(container.textContent).toContain("Allowed labels");
+    const input = container.querySelector<HTMLInputElement>('input[placeholder="support, billing, bug report"]')!;
+    expect(input.labels).toHaveLength(1);
+    const label = input.labels![0];
+    expect(label.textContent?.trim()).toBe("Allowed labels");
+    expect(label.control).toBe(input);
+    const description = document.getElementById(input.getAttribute("aria-describedby") ?? "");
+    expect(description?.textContent).toBe("(optional)");
+    const help = input.parentElement?.querySelector<HTMLButtonElement>("button.ui-glossary-hint__button");
+    expect(help?.type).toBe("button");
+    expect(help?.closest("label")).toBeNull();
   });
 
   it("opens the notification card when a model download is started", async () => {

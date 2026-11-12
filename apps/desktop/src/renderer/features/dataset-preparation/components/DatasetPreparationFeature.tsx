@@ -303,6 +303,8 @@ function WorkspaceDatasetPreparationFeature({
   const trainingTaskCaptionId = useId();
   const preparationMethodCaptionId = useId();
   const preparationMethodHelpId = useId();
+  const allowedLabelsId = useId();
+  const allowedLabelsHelpId = useId();
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
     {},
   );
@@ -617,14 +619,16 @@ function WorkspaceDatasetPreparationFeature({
                         </p>
                         {supportsAllowedLabels ? (
                           <div className="ui-grid ui-grid--two">
-                            <label className="ui-stack ui-stack--sm">
-                              <span>
+                            <div className="ui-stack ui-stack--sm">
+                              <span className="ui-label">
                                 <TermWithHint termId="labelSet">
-                                  Allowed labels
+                                  <label htmlFor={allowedLabelsId}>Allowed labels</label>
                                 </TermWithHint>{" "}
-                                (optional)
+                                <span id={allowedLabelsHelpId}>(optional)</span>
                               </span>
                               <input
+                                id={allowedLabelsId}
+                                aria-describedby={allowedLabelsHelpId}
                                 className="ui-input"
                                 value={labelSet}
                                 onChange={(event) =>
@@ -632,7 +636,7 @@ function WorkspaceDatasetPreparationFeature({
                                 }
                                 placeholder="support, billing, bug report"
                               />
-                            </label>
+                            </div>
                             {taskType === "llm-classification" ? (
                               <label className="dataset-preparation__checkbox-row">
                                 <input
