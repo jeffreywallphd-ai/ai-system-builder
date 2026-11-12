@@ -18,7 +18,7 @@ import { stopVisualComposerOwnedProcess } from "./visual-composer-host-lifecycle
 import { seedReferenceBrowseFixture } from "./reference-browse-fixture";
 import { createWorkspaceId } from "../../../../modules/contracts/workspace";
 import { createLocalWorkspaceRepository } from "../../../../modules/adapters/persistence/workspace";
-import { assertIsolatedPostgresInspection, assertOwnedWorkerObservation } from "./managed-reference-lifecycle.mjs";
+import { assertIsolatedPostgresInspection, assertOwnedWorkerObservation, closeOwnedManagedServer } from "./managed-reference-lifecycle.mjs";
 
 const IMAGE = "postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15";
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -71,6 +71,9 @@ export async function startManagedReferenceHost(databaseReference: string) {
   let issuer: https.Server | undefined;
   let stopped = false;
   let admitted = false;
+  let restartOperation: Promise<void> | undefined;
+  let restartFailed = false;
+  let assetsRestarts = 0;
   const workerScenario = process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO ?? "immediate";
   const checks: Record<string, unknown> = {};
   const report = {schema_version: "managed-reference-host-v1", run_id: id, source_revision: sourceRevision, profile: "windows-i5-14600kf-16g-rtx4060-reference", deployment: "controlled-campus-server-oidc-postgres", tls_verification: true, database_image: IMAGE, database_container_digest: digest(fixture.container), checks, status: "starting"};
@@ -79,20 +82,12 @@ export async function startManagedReferenceHost(databaseReference: string) {
     if (stopped) return; stopped = true;
     const cleanupStarted = performance.now();
     const errors: unknown[] = [];
+    await restartOperation?.catch(error => {errors.push(error);});
     try {
       const server = children[0];
-      if (admitted && (!server?.connected || server.exitCode !== null)) throw new Error("Ready managed host exited before graceful shutdown.");
-      if (server?.connected && server.exitCode === null && admitted) {
-        await new Promise<void>((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error("Managed host graceful shutdown timed out.")), 15000);
-          server.on("message", message => {if ((message as {type?: string})?.type === "closed") {clearTimeout(timer); checks.graceful_shutdown = true; resolve();}});
-          server.send({type: "shutdown"});
-        });
-        await new Promise<void>((resolve, reject) => {
-          if (server.exitCode !== null) return server.exitCode === 0 ? resolve() : reject(new Error("Managed shutdown exit failed."));
-          const timer = setTimeout(() => reject(new Error("Managed shutdown did not exit.")), 5000);
-          server.once("exit", code => {clearTimeout(timer); code === 0 ? resolve() : reject(new Error("Managed shutdown exit failed."));});
-        });
+      if (admitted) {
+        await closeOwnedManagedServer(server);
+        checks.graceful_shutdown = true;
         checks.graceful_exit = true;
       }
     } catch(error) {errors.push(error); checks.graceful_shutdown_failed = true;
@@ -119,7 +114,7 @@ export async function startManagedReferenceHost(databaseReference: string) {
       try {await admin.end();} catch(error) {errors.push(error);}
       try {await assertAssetSystemSourceIdentity(root, sourceRevision);} catch(error) {errors.push(error);}
       checks.cleanup_error_count = errors.length;
-      report.status = errors.length ? "failed" : admitted ? "completed" : report.status;
+      report.status = errors.length || restartFailed ? "failed" : admitted ? "completed" : report.status;
       try {await persist();} catch(error) {errors.push(error);}
     }
     if(errors.length) throw new Error("Managed qualification cleanup or source integrity failed.");
@@ -181,23 +176,27 @@ export async function startManagedReferenceHost(databaseReference: string) {
     const environment = {...base, NODE_ENV: "test", DEPLOYMENT_SHAPE: "campus-server", DATABASE_URL: runtimeUrl, POSTGRES_SSL_MODE: "disable", PORT: String(serverPort), SERVER_STORAGE_ROOT: path.join(runRoot, "storage"), SERVER_RUNTIME_ROOT: runtimeRoot,
       AI_SYSTEM_BUILDER_SECURITY_MODE: "oidc-bearer", AI_SYSTEM_BUILDER_HTTPS_ENABLED: "true", AI_SYSTEM_BUILDER_TLS_CERT_MODE: "manual", AI_SYSTEM_BUILDER_TLS_CERT_PATH: material.certificatePath!, AI_SYSTEM_BUILDER_TLS_KEY_PATH: material.keyPath!, AI_SYSTEM_BUILDER_OIDC_ISSUER: issuerOrigin, AI_SYSTEM_BUILDER_OIDC_AUDIENCE: "aisb-controlled-qualification", AI_SYSTEM_BUILDER_OIDC_JWKS_URI: `${issuerOrigin}/jwks`, AI_SYSTEM_BUILDER_OIDC_ALGORITHMS: "RS256", AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE: "dedicated", AI_SYSTEM_BUILDER_DEDICATED_ORGANIZATION_ID: organizationId,
       PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: String(workerPort), PYTHON_RUNTIME_BASE_URL: `http://127.0.0.1:${workerPort}`, PYTHON_RUNTIME_COMMAND: process.execPath, PYTHON_RUNTIME_ARGS: "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs", PYTHON_RUNTIME_WORKER_DIR: root, PYTHON_RUNTIME_STARTUP_TIMEOUT_MS: "15000", HF_HUB_CACHE: path.join(runtimeRoot, "controlled-model-cache")};
-    const child = fork(path.join(root, "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts"), [], {execArgv: ["--import", "tsx"], env: environment, silent: true, windowsHide: true});
-    children.push(child);
-    let log = "";
-    for (const output of [child.stdout, child.stderr]) output?.on("data", bytes => {if (log.length < 64000) log += String(bytes).slice(0, 64000-log.length);});
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("Managed reference startup timed out.")), 60000);
-      child.once("exit", () => {clearTimeout(timer); reject(new Error("Managed reference exited before readiness."));});
-      child.on("message", message => {
-        if ((message as {type?: string})?.type === "ready") {clearTimeout(timer); resolve();}
-        if ((message as {type?: string})?.type === "failed") {clearTimeout(timer); reject(new Error("Managed reference rejected startup."));}
-      });
-    }).catch(async error => {await writeFile(path.join(runRoot, "private-server-diagnostic.log"), log); throw error;});
-    admitted = true;
+    async function launchServer() {
+      const child = fork(path.join(root, "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts"), [], {execArgv: ["--import", "tsx"], env: environment, silent: true, windowsHide: true});
+      children[0] = child;
+      let log = "";
+      for (const output of [child.stdout, child.stderr]) output?.on("data", bytes => {if (log.length < 64000) log += String(bytes).slice(0, 64000-log.length);});
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("Managed reference startup timed out.")), 60000);
+        child.once("exit", () => {clearTimeout(timer); reject(new Error("Managed reference exited before readiness."));});
+        child.on("message", message => {
+          if ((message as {type?: string})?.type === "ready") {clearTimeout(timer); resolve();}
+          if ((message as {type?: string})?.type === "failed") {clearTimeout(timer); reject(new Error("Managed reference rejected startup."));}
+        });
+      }).catch(async error => {await writeFile(path.join(runRoot, "private-server-diagnostic.log"), log); throw error;});
+      admitted = true;
+      return child;
+    }
+    await launchServer();
     const serverOrigin = `https://127.0.0.1:${serverPort}`;
     const caPem = await readFile(ca);
     async function request(relative: string, options: {token?: string; method?: string; body?: unknown; organizationId?: string} = {}) {
-      assert.ok(relative.startsWith("/api/") || relative === "/health");
+      assert.ok(relative.startsWith("/api/") || relative === "/health" || relative === "/health/ready");
       return new Promise<{status: number; body: any}>((resolve, reject) => {
         const req = https.request(new URL(relative, serverOrigin), {ca: caPem, method: options.method ?? "GET", headers: {"content-type": "application/json", ...(options.token ? {authorization: `Bearer ${options.token}`} : {}), ...(options.organizationId ? {"x-organization-id": options.organizationId} : {})}, timeout: 10000}, response => {
           let text = ""; response.on("data", bytes => {text += String(bytes); if (text.length > 2*1024*1024) req.destroy(new Error("Managed response exceeds bound."));});
@@ -206,6 +205,33 @@ export async function startManagedReferenceHost(databaseReference: string) {
         req.on("error", reject); req.on("timeout", () => req.destroy(new Error("Managed request timed out.")));
         req.end(options.body === undefined ? undefined : JSON.stringify(options.body));
       });
+    }
+    function restartAssetsServer() {
+      assert.ok(process.env.VISUAL_COMPOSER_MANAGED_ASSETS_RESTART === "1" &&
+        workerScenario === "immediate" && admitted && !stopped && !restartOperation && !restartFailed && assetsRestarts < 4,
+        "Managed Assets restart requires a ready, owned persistence fixture.");
+      restartOperation = (async () => {
+        const prior = children[0]!;
+        await closeOwnedManagedServer(prior);
+        admitted = false;
+        const cache = await readdir(environment.HF_HUB_CACHE).catch(error => {
+          if (error.code === "ENOENT") return [];
+          throw error;
+        });
+        assert.ok(!cache.some(name => /^qualification-worker-identity-[0-9]+\.json$/.test(name)),
+          "Managed Assets restart must not leave a model worker to retire.");
+        assert.ok(!stopped, "Managed Assets restart cannot continue during cleanup.");
+        const successor = await launchServer();
+        assert.ok(successor.pid && successor.pid !== prior.pid, "Managed Assets restart requires a new process.");
+        assert.equal((await request("/health/ready")).status, 200);
+        checks.assets_graceful_restarts = ++assetsRestarts;
+      })().catch(error => {
+        restartFailed = true;
+        throw error;
+      }).finally(() => {
+        restartOperation = undefined;
+      });
+      return restartOperation;
     }
     for (const [name, credentials, expected] of [["missing_token", {}, 401], ["invalid_token", {token: "invalid"}, 401], ["nonmember", {token: nonmemberToken}, 403], ["foreign_organization", {token, organizationId: "qualification.foreign"}, 403]] as const) {
       const response = await request("/api/workspaces", credentials); assert.equal(response.status, expected); checks[name] = response.status;
@@ -249,6 +275,6 @@ export async function startManagedReferenceHost(databaseReference: string) {
     for (let attempt=0; attempt<120; attempt++) {try {if ((await fetch(frontendOrigin)).ok) {ready=true;break;}} catch {} await new Promise(resolve=>setTimeout(resolve,250));}
     assert.ok(ready, "Managed frontend must become ready.");
     report.status = "ready"; await persist();
-    return {runRoot, sourceRevision, token, serverOrigin, frontendOrigin, request, organizationId, fixtureWorkspaceId, workerCacheRoot: environment.HF_HUB_CACHE!, ownedHostPid: children[0]!.pid!, stop, report};
+    return {runRoot, sourceRevision, token, serverOrigin, frontendOrigin, request, organizationId, fixtureWorkspaceId, workerCacheRoot: environment.HF_HUB_CACHE!, ownedHostPid: children[0]!.pid!, restartAssetsServer, stop, report};
   } catch (error) {report.status = "failed"; await stop().catch(()=>{}); throw error;}
 }
