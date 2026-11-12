@@ -245,12 +245,15 @@ It checks memory notifications, stable initial recommendations and explicit
 choices during readiness loss. It does not run models, accuracy, physical-resource
 or native/offload qualification. Execute and retain the actual packaged-desktop
 and thin-client Playwright journeys separately before claiming host delivery.
-The `ingestion-publication` profile runs sixteen fixed ordinary file-ingestion test files.
-publication and task repositories, bounded byte storage, desktop and server
+The `ingestion-publication` profile runs fixed feature tests for publication
+and task repositories, bounded byte storage, desktop and server
 composition, dataset source staging, website compatibility and HTTP boundaries.
 Its declared source paths include the private final file-stream adapter and its
 existing test file. Selecting this profile covers those exact source changes.
 Its host fixtures use owned synthetic files with no model or provider calls.
+The local 256 MiB case closes SQLite halfway through the upload, reopens it,
+retries the last accepted chunk, and verifies the saved file digest and
+checkpoint cleanup. It records elapsed time and peak test-process memory.
 It covers only its declared source paths. Unknown impact and an explicitly
 required focused gate retain generic coverage. This component check grants no
 controlled-provider, scale, native-race, offload or parent-roadmap qualification.

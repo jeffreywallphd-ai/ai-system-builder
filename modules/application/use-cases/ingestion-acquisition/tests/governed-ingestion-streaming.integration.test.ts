@@ -12,7 +12,7 @@ import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy, type OpenedL
 import { createFilesystemIngestionCheckpointStorage } from "../../../../adapters/storage/ingestion-checkpoint";
 import { createFilesystemArtifactObjectStorageAdapter } from "../../../../adapters/storage/filesystem/artifact-store";
 import { createFilesystemIngestionFileByteStorageAdapter, createLocalArtifactCatalogPersistenceAdapter, createLocalArtifactStorageBindingAdapter } from "../../../../adapters/storage/filesystem";
-import { normalizeIngestionTaskRecord, type IngestionTaskRecord } from "../../../../contracts/ingestion";
+import { INGESTION_TASK_MAXIMUM_CHUNK_BYTES, normalizeIngestionTaskRecord, type IngestionTaskRecord } from "../../../../contracts/ingestion";
 import { GovernedIngestionTaskUseCases } from "../governed-ingestion-tasks.use-case";
 import { IngestionFilePublicationService } from "../ingestion-file-publication.service";
 
@@ -138,6 +138,69 @@ for (const count of [8, 64]) {
       scope: "Observed local application/SQLite/files only. No renderer, hard memory enforcement, provider, website, native race or parent qualification." }));
   });
 }
+
+test("256 MiB upload continues from persisted progress after reopening SQLite", { timeout: 120_000 }, async t => {
+  const started = performance.now();
+  const owned = await fixture(t);
+  let state = await owned.compose();
+  const sizeBytes = 256 * MIB;
+  const chunkBytes = INGESTION_TASK_MAXIMUM_CHUNK_BYTES;
+  const chunks = sizeBytes / chunkBytes;
+  assert.equal(chunks, 64);
+  const data = Buffer.alloc(chunkBytes);
+  for (let offset = 0; offset < data.length; offset += row.length) row.copy(data, offset);
+
+  let task = value(await state.useCases.createTask({
+    files: [{ fileName: "synthetic-restart.jsonl", mediaType: "application/jsonl", sizeBytes }],
+  }, context));
+  const { taskId } = task;
+  const { fileId, checkpointId } = task.files[0]!;
+  const digest = createHash("sha256");
+  for (let index = 0; index < chunks; index++) {
+    // Distinguish every chunk in the output digest without storing the entire file.
+    data.write(String(index).padStart(4, "0"), Buffer.byteLength('{"text":"'), "ascii");
+    const request = { taskId, fileId, chunkIndex: index, expectedOffset: index * chunkBytes, bytes: data, sha256: sha(data) };
+    task = value(await state.useCases.appendChunk(request, context));
+    digest.update(data);
+    assert.equal(task.progress.acceptedBytes, (index + 1) * chunkBytes);
+    assert.equal(task.progress.percent, Math.floor((index + 1) * 100 / chunks));
+    if (index + 1 === chunks / 2) {
+      const beforeRestart = task;
+      owned.close();
+      state = await owned.compose();
+      task = value(await state.useCases.readTask(taskId, context));
+      assert.deepEqual(task, beforeRestart);
+      assert.equal(task.status, "transferring");
+      assert.equal(task.progress.percent, 50);
+      assert.equal(task.files[0]!.nextChunkIndex, chunks / 2);
+      assert.deepEqual(value(await state.useCases.appendChunk(request, context)), task);
+    }
+  }
+  const command = { taskId, fileId, sha256: `sha256:${digest.digest("hex")}` };
+  const completed = value(await state.useCases.finalizeFile(command, context));
+  assert.equal(completed.status, "succeeded");
+  assert.equal(completed.progress.percent, 100);
+  assert.equal(completed.progress.acceptedBytes, sizeBytes);
+  assert.equal(completed.cleanupPending, false);
+  await verifySavedBytes(owned.root, completed, command.sha256);
+  assert.deepEqual(await state.checkpoints.inspectCheckpoint({
+    workspaceId: context.workspaceId, checkpointId,
+  }), { chunkCount: 0, sizeBytes: 0 });
+
+  const peakRssBytes = process.resourceUsage().maxRSS * 1024;
+  assert.ok(peakRssBytes <= 1024 * MIB, "Observed test-process RSS must stay within 1 GiB.");
+  t.diagnostic(JSON.stringify({
+    schemaVersion: "local-ingestion-restart-measurement-v1",
+    inputBytes: sizeBytes,
+    producerChunkBytes: chunkBytes,
+    checkpointReopenPercent: 50,
+    retransmittedChunks: 1,
+    outputDigestMatched: true,
+    checkpointRemoved: true,
+    peakRssBytes,
+    elapsedMilliseconds: Math.round(performance.now() - started),
+  }));
+});
 
 test("wrong digest survives database reopen and resumes; partial cancellation removes checkpoints", { timeout: 120_000 }, async t => {
   const owned = await fixture(t);
