@@ -12561,6 +12561,21 @@
       "limitations": [
         "This check used one local managed browser. The Assets security review and final system tests are still open."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "qualify-current-packaged-desktop-assets",
+      "work_criteria": [
+        "desktop-assets-standard-and-native400"
+      ],
+      "receipt_digest": "60b108e6f428e6bdb02894d36278de6111618e53c4b2257bce8c7c0ad33ca73f",
+      "review_digest": "08f926405cc3f5545c1f132579fbb9059b5d57b01864efb6d3a63319413fb123",
+      "scope": "The packaged Windows app passed both Assets feature tests. The tests reopened the sample assets after an app restart and checked all five tabs at standard widths and 400 percent zoom.",
+      "limitations": [
+        "These results cover one Windows test computer. The managed server restart, Assets security review and final system tests are still open."
+      ]
     }
   ]
 }

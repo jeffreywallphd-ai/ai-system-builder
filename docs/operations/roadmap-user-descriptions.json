@@ -17840,6 +17840,28 @@
           "The Assets security review and final system tests are still open."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0b85a7f22371d15f73d4d6daf1a5865f1dbd31a46b823244be856af935afe246",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The packaged Windows app passed both Assets feature tests.",
+          "The tests reopened the sample assets after an app restart and checked all five tabs at standard widths and 400 percent zoom."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "cbf4e5e8621c34a4c413f4bc7923073cb46fff1bc57b7d52697f9a7f182add1b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover one Windows test computer.",
+          "The managed server restart, Assets security review and final system tests are still open."
+        ]
+      }
     }
   ]
 }
