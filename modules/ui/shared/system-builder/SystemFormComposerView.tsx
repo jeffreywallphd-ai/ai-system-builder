@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import type { AssetConfigurationValues, AssetInstance } from "../../../contracts/asset";
+import type { AssetConfigurationField, AssetConfigurationValues, AssetInstance } from "../../../contracts/asset";
 import { readSystemFormAction, systemFormPlacementAllowed, type SystemBuilderComposerAsset,
   type SystemBuilderResult, type SystemFormAction, type SystemFormRoute } from "../../../contracts/system-builder";
 import { compileSystemForm, type CompiledSystemForm } from "../../../application/services/system-builder/system-form-rules.service";
@@ -9,7 +9,7 @@ import { isFormChoiceAsset, readFormChoiceOptions, SystemFormRoutingEditor } fro
 import { TabbedPanel } from "../components/TabbedPanel";
 import { ModalDialog } from "../components/ModalDialog";
 import { SystemComposerConfigurationField } from "./SystemComposerInspector";
-import { materializeSystemComposerConfiguration, validateSystemComposerConfiguration } from "./systemComposerInspectorModel";
+import { isSystemComposerSemanticStyleField, materializeSystemComposerConfiguration, validateSystemComposerConfiguration } from "./systemComposerInspectorModel";
 import { systemComposerDescendantIds, type SystemComposerDraft } from "./systemComposerDraft";
 import { FORM_COMPOSER_FOUNDATION_ASSET_IDS, FORM_COMPOSER_FOUNDATION_VERSION, type SystemFormDraftEntry } from "./systemFormComposerDraft";
 
@@ -317,14 +317,16 @@ export function SystemFormComposerView({
         </div>
         <aside className="system-form-composer__properties ui-panel ui-stack ui-stack--sm" aria-label="Properties">
           <h5>Properties</h5>
-          <p className="ui-text-muted">Validation and behavior for {selected.displayName ?? "the selected element"}.</p>
-          {selectedField ? <FieldBehavior key={selectedField.instanceId} field={selectedField} onUpdate={onUpdate} />
-            : propertySource.definition ? <FormAssetControls key={selected.instanceId} part="behavior" element={selected}
+          <p className="ui-text-muted">Styling, validation, and behavior for {selected.displayName ?? "the selected element"}.</p>
+          {propertySource.definition ? <FormAssetControls key={`styling:${selected.instanceId}`} part="styling" element={selected}
+            definition={propertySource.definition} onUpdate={onUpdatePresentation} /> : null}
+          {selectedField ? <FieldBehavior key={`behavior:${selectedField.instanceId}`} field={selectedField} onUpdate={onUpdate} />
+            : propertySource.definition ? <FormAssetControls key={`behavior:${selected.instanceId}`} part="behavior" element={selected}
               definition={propertySource.definition} onUpdate={onUpdatePresentation} /> : null}
-          {page ? <SystemFormRoutingEditor key={page.instanceId} form={form.form} steps={form.steps} step={page}
+          {page ? <SystemFormRoutingEditor key={`routes:${page.instanceId}`} form={form.form} steps={form.steps} step={page}
             fields={fields} bindings={draft.bindings} onSave={(route) => onSaveRoute(formId, route)}
             onRemove={(id) => onRemoveRoute(formId, id)} /> : null}
-          <SystemFormActionEditor key={formId} formId={formId} fields={actionFields} instances={draft.instances} action={action}
+          <SystemFormActionEditor key={`action:${formId}`} formId={formId} fields={actionFields} instances={draft.instances} action={action}
             onSave={(next) => onUpdateAction(formId, next)} onRemove={() => onUpdateAction(formId)} />
         </aside>
       </div>
@@ -374,18 +376,25 @@ function useFormAssetDefinition(
 const FORM_BEHAVIOR_FIELDS: ReadonlySet<string> = new Set([
   "submitBehavior", "validationMode", "collapsible", "defaultExpanded", "visibilityCondition",
   "showWhen", "fieldRef", "summaryMode", "confirmationRequired", "disabledWhenInvalid", "resetBehavior",
+  "showGroupValidation", "severity", "accessibilityRole",
 ]);
 
+type FormPropertyPart = "appearance" | "styling" | "behavior";
+
+function formPropertyPart(field: AssetConfigurationField): FormPropertyPart {
+  if (isSystemComposerSemanticStyleField(field) || field.fieldId === "layout" || field.fieldId === "showRequiredIndicator") return "styling";
+  return FORM_BEHAVIOR_FIELDS.has(field.fieldId) ? "behavior" : "appearance";
+}
+
 function FormAssetControls({ part, element, definition, onUpdate }: {
-  readonly part: "appearance" | "behavior";
+  readonly part: FormPropertyPart;
   readonly element: AssetInstance;
   readonly definition: SystemBuilderComposerAsset;
   readonly onUpdate: SystemFormComposerViewProps["onUpdatePresentation"];
 }) {
   const values = materializeSystemComposerConfiguration(definition, element.selectedConfiguration);
   const errors = validateSystemComposerConfiguration(definition.configurationSchema, values);
-  const scope = definition.configurationSchema?.fields.filter((field) =>
-    (part === "behavior" ? FORM_BEHAVIOR_FIELDS.has(field.fieldId) : !FORM_BEHAVIOR_FIELDS.has(field.fieldId))) ?? [];
+  const scope = definition.configurationSchema?.fields.filter((field) => formPropertyPart(field) === part) ?? [];
   const fields = scope.filter((field) =>
     !(element.definitionRef.id === FORM_COMPOSER_FOUNDATION_ASSET_IDS.step && field.fieldId === "title"));
   function resetDefaults() {
@@ -398,7 +407,8 @@ function FormAssetControls({ part, element, definition, onUpdate }: {
     }
     onUpdate(String(element.instanceId), definition, next);
   }
-  return scope.length ? (
+  if (!scope.length) return null;
+  const controls = (
     <div className="ui-stack ui-stack--sm">
       {fields.map((field) => <SystemComposerConfigurationField key={field.fieldId} field={field}
         value={values[field.fieldId]} errors={errors[field.fieldId] ?? []} catalog={[definition]}
@@ -407,7 +417,13 @@ function FormAssetControls({ part, element, definition, onUpdate }: {
         Reset {part} defaults
       </button></div>
     </div>
-  ) : null;
+  );
+  return part === "styling" ? (
+    <section className="ui-stack ui-stack--sm" aria-label="Styling">
+      <h6>Styling</h6>
+      {controls}
+    </section>
+  ) : controls;
 }
 
 interface FieldControlsProps {

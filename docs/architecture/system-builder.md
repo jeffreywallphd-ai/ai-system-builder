@@ -196,8 +196,9 @@ customization, and single-asset Studio workflows.
   and revision save path. Canvas renders the same placements in either case.
   Each form page has its own tab. **New Form Page +** adds a numbered page
   and opens its tab. Select a field or use **Element** to edit labels, help
-  text, and other visible settings in the page. Use the **Properties**
-  sidebar for answer rules, routes, and submission behavior. The sidebar
+  text, and other respondent text in the page. Use the **Properties** sidebar
+  for styling, layout, answer rules, routes, and submission behavior. Resetting
+  styling preserves text and behavior. The sidebar
   moves below the editor when space is limited. The first page cannot be
   removed in Form Composer. Removing another page or a field requires
   confirmation and removes its children and affected route or action

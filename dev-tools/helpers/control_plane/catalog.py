@@ -54,10 +54,12 @@ PUBLISHED_FORM_CHECKS = {
     "published-form-editor-interactions": {
         "sources": (
             "modules/ui/shared/system-builder/SystemFormComposerView.tsx",
+            "modules/ui/shared/system-builder/tests/SystemFormComposerStyling.interaction.ui.test.tsx",
             "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
         ),
         "command": (
             "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "modules/ui/shared/system-builder/tests/SystemFormComposerStyling.interaction.ui.test.tsx",
             "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
         ),
     },
