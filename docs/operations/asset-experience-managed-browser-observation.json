@@ -1,0 +1,64 @@
+{
+  "schema_version": "asset-experience-managed-browser-observation-v1",
+  "roadmap_id": "asset-experience-layered-customization",
+  "increment_id": "production-qualification",
+  "criterion_id": "desktop-thin-accessibility",
+  "status": "technical-check-pending",
+  "owner": "agent",
+  "observed_source": {
+    "commit": "d29aebde934b09163b78d057aeb9a00950ed8a8f",
+    "candidate_digest": "e73594aebcf3928dd6bc259842436c5d315463734b9c620149dfcc2b54c5b1c6",
+    "product_source": "source.376cfc6924cb4b8941cde35dfa6f7641aef70e4757b1b961b7b1836baa531638"
+  },
+  "run_id": "managed-ffccb8804c65422a8230389ddd06d52f",
+  "observation": {
+    "host": "managed-thin-chrome",
+    "case_status": "passed",
+    "cases": 1,
+    "retries": 0,
+    "synthetic_asset_journey_passed": true,
+    "elapsed_ms": 101048,
+    "viewports": [
+      {
+        "width": 1440,
+        "surfaces": [
+          "Browse",
+          "Import Assets",
+          "Studio",
+          "Saved",
+          "Customizations"
+        ]
+      },
+      {
+        "width": 320,
+        "surfaces": [
+          "Browse",
+          "Import Assets",
+          "Studio",
+          "Saved",
+          "Customizations"
+        ]
+      }
+    ],
+    "verified_tls": true,
+    "graceful_host_exit": true,
+    "database_stopped": true,
+    "source_unchanged": true
+  },
+  "evidence_digests": {
+    "browser_result": "55af2303e545b65ff1df75acdaf6aa93b3c817c4e0c1e84ad75dd12af8295ce3",
+    "execution_result": "a5e762fd661e6f5b204fd6b85946f83c8af4322df6273acb35b15caedceda2d3",
+    "source_and_shutdown": "ee05914a3a539651745ade8a17c778c46eb6b488c67c10343f723b9442b82acf",
+    "host": "b33df5c51f04f8b99500f3c86d7e858d88a8eb53e8b001bed347ab0634afd26b",
+    "accessibility": "1d83f9ef0fea66aa2c5298ee392d9d8af338df8fcced2153035623dcb4eb95b5"
+  },
+  "scope": [
+    "The managed Thin Client passed the standard Assets workflow. The test covered the five Assets tabs at 1440 and 320 pixels.",
+    "This is a result for the recorded working-tree snapshot, which includes pre-existing changes outside this work."
+  ],
+  "remaining": [
+    "Run actual 400 percent zoom on the managed Thin Client and current packaged Desktop accessibility checks.",
+    "Keep the separately pending legacy Assets authorization assessment and the final system checks open."
+  ],
+  "parent_qualification_granted": false
+}
