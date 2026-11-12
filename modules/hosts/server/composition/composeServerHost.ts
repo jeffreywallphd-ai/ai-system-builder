@@ -249,7 +249,7 @@ import { composeAssetStudioWorkflow } from "../../shared/composition/composeAsse
 import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
-import { composeSystemData } from "../../shared/composition/composeSystemData";
+import { composeSystemData, createManagedSystemDataPrincipal } from "../../shared/composition/composeSystemData";
 import { composePublishedSystemForms } from "../../shared/composition/composePublishedSystemForms";
 import { createStructuredOrganizationRepositories } from "../../../adapters/persistence/organization";
 import { composeSystemReview } from "../../shared/composition/composeSystemReview";
@@ -1682,11 +1682,15 @@ export function composeServerHost(
           : undefined;
       const formDocuments = options.persistence?.documents;
       const formOrganizations = options.organizationContextProvider;
-      const publishedForms = systemBuilder && systemBuild && systemData && assetImplementation && workspaceAuthorization && formDocuments && formOrganizations
+      const formMemberships = formDocuments && formOrganizations
+        ? createStructuredOrganizationRepositories(formDocuments).memberships : undefined;
+      const systemDataPrincipal = formOrganizations
+        ? createManagedSystemDataPrincipal(formOrganizations, formMemberships) : undefined;
+      const publishedForms = systemBuilder && systemBuild && systemData && assetImplementation && workspaceAuthorization && formMemberships && formOrganizations
         ? composePublishedSystemForms({
             systems: systemBuilder.repository, builds: systemBuild.repository, artifacts: systemBuildArtifacts,
             hasher: createSha256SystemBuildHasher(), systemData, workspaceAccess: assetWorkspaceAccess,
-            organizations: formOrganizations, memberships: createStructuredOrganizationRepositories(formDocuments).memberships,
+            organizations: formOrganizations, memberships: formMemberships,
             revocations: { async listRevokedImplementationReleaseIds(_workspaceId, releaseIds) {
               return (await assetImplementation.repository.listRevocations(releaseIds)).map((entry) => entry.releaseId);
             } },
@@ -2725,7 +2729,8 @@ export function composeServerHost(
           ? { systemBuilderServices: { ...systemBuilder.useCases, ...(publishedForms ? { publishedForms } : {}) } }
           : {}),
         ...(systemData
-          ? { systemDataServices: { runtime: systemData.runtime } }
+          ? { systemDataServices: { runtime: systemData.runtime,
+              ...(systemDataPrincipal ? { readManagedPrincipal: systemDataPrincipal } : {}) } }
           : {}),
         ...(systemReview
           ? { systemReviewServices: { runtime: systemReview.runtime } }

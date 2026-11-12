@@ -15,63 +15,56 @@ export interface SystemDataExpressPort {
 export interface RegisterSystemDataApiRoutesDependencies {
   readonly app: SystemDataExpressPort;
   readonly runtime: Pick<ReleaseBoundSystemDataUseCases, "describe" | "create" | "read" | "update" | "list" | "listAudit">;
+  /** Managed hosts resolve the current stored role. Never fall back to token roles. */
+  readonly readManagedPrincipal?: (actorId: string) => Promise<SystemDataPrincipal | undefined>;
 }
 
 export function registerSystemDataApiRoutes(dependencies: RegisterSystemDataApiRoutesDependencies): void {
   dependencies.app.get("/api/systems/data/form", async (request, response) =>
-    execute(response, "describe", () => dependencies.runtime.describe(contextFromQuery(request))));
+    execute(response, "describe", async () => dependencies.runtime.describe(await contextFrom(dependencies, request, request.query))));
   dependencies.app.post("/api/systems/data/records/create", async (request, response) =>
-    execute(response, "create", () => {
+    execute(response, "create", async () => {
       const body = record(request.body);
       return dependencies.runtime.create({
-        ...contextFromBody(request, body),
+        ...await contextFrom(dependencies, request, body),
         recordId: required(body.recordId),
         values: values(body.values),
       });
     }));
   dependencies.app.get("/api/systems/data/record", async (request, response) =>
-    execute(response, "read", () => dependencies.runtime.read({
-      ...contextFromQuery(request),
+    execute(response, "read", async () => dependencies.runtime.read({
+      ...await contextFrom(dependencies, request, request.query),
       recordId: required(request.query?.recordId),
     })));
   dependencies.app.post("/api/systems/data/records/update", async (request, response) =>
-    execute(response, "update", () => {
+    execute(response, "update", async () => {
       const body = record(request.body);
       return dependencies.runtime.update({
-        ...contextFromBody(request, body),
+        ...await contextFrom(dependencies, request, body),
         recordId: required(body.recordId),
         expectedRevision: positiveInteger(body.expectedRevision),
         values: values(body.values),
       });
     }));
   dependencies.app.get("/api/systems/data/records", async (request, response) =>
-    execute(response, "list", () => dependencies.runtime.list({
-      ...contextFromQuery(request),
+    execute(response, "list", async () => dependencies.runtime.list({
+      ...await contextFrom(dependencies, request, request.query),
       ...(request.query?.limit !== undefined ? { limit: integer(request.query.limit) } : {}),
       ...(request.query?.offset !== undefined ? { offset: integer(request.query.offset) } : {}),
     })));
   dependencies.app.get("/api/systems/data/audit", async (request, response) =>
-    execute(response, "listAudit", () => dependencies.runtime.listAudit({
-      ...contextFromQuery(request),
+    execute(response, "listAudit", async () => dependencies.runtime.listAudit({
+      ...await contextFrom(dependencies, request, request.query),
       ...(request.query?.limit !== undefined ? { limit: integer(request.query.limit) } : {}),
     })));
 }
 
-function contextFromQuery(request: RequestLike) {
+async function contextFrom(dependencies: RegisterSystemDataApiRoutesDependencies, request: RequestLike, input: Record<string, unknown> | undefined) {
   return {
-    workspaceId: createWorkspaceId(required(request.query?.workspaceId)),
-    releaseId: normalizeSystemReleaseId(required(request.query?.releaseId)),
-    entityType: safeEntity(required(request.query?.entityType)),
-    principal: principal(request),
-  };
-}
-
-function contextFromBody(request: RequestLike, body: Record<string, unknown>) {
-  return {
-    workspaceId: createWorkspaceId(required(body.workspaceId)),
-    releaseId: normalizeSystemReleaseId(required(body.releaseId)),
-    entityType: safeEntity(required(body.entityType)),
-    principal: principal(request),
+    workspaceId: createWorkspaceId(required(input?.workspaceId)),
+    releaseId: normalizeSystemReleaseId(required(input?.releaseId)),
+    entityType: safeEntity(required(input?.entityType)),
+    principal: await principal(dependencies, request),
   };
 }
 
@@ -93,7 +86,12 @@ async function execute(
       result.error.message,
       result.error.field ? { details: { field: result.error.field } } : undefined,
     )));
-  } catch {
+  } catch (error) {
+    if (error instanceof ManagedSystemDataDenied) {
+      response.status(403).json(createApiFailureResponse(createApiError(API_SYSTEM_DATA_OPERATIONS[operation],
+        "forbidden", "You do not have permission to access these records.")));
+      return;
+    }
     response.status(400).json(createApiFailureResponse(createApiError(
       API_SYSTEM_DATA_OPERATIONS[operation],
       "validation",
@@ -102,8 +100,22 @@ async function execute(
   }
 }
 
-function principal(request: RequestLike): SystemDataPrincipal {
+class ManagedSystemDataDenied extends Error {}
+
+async function principal(dependencies: RegisterSystemDataApiRoutesDependencies, request: RequestLike): Promise<SystemDataPrincipal> {
   const auth = getExpressAuthContext(request as Request);
+  if (dependencies.readManagedPrincipal) {
+    const actorId = auth?.principal.principalId;
+    if (!auth?.authenticated || !actorId) throw new ManagedSystemDataDenied();
+    let current: SystemDataPrincipal | undefined;
+    try {
+      current = await dependencies.readManagedPrincipal(actorId);
+    } catch {
+      throw new ManagedSystemDataDenied();
+    }
+    if (!current?.authenticated || current.actorId !== actorId) throw new ManagedSystemDataDenied();
+    return current;
+  }
   return {
     actorId: auth?.principal.principalId ?? "anonymous",
     roles: auth?.principal.roles ?? [],

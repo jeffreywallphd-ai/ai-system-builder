@@ -282,6 +282,10 @@ customization, and single-asset Studio workflows.
   approved release artifacts, revocation records, and release-bound record
   store. If a host lacks its authorization dependencies, it does not register
   the form operations.
+  Managed record routes also use the current stored organization role when
+  applying release policies. If the authenticated request cannot be matched to
+  an active membership, the routes deny access. Desktop record access continues
+  to use the local host identity.
   Desktop Publish passes the selected release through the dedicated form
   bridge. The preload selects the allowed request fields and checks the
   response channel before returning a result to the renderer.

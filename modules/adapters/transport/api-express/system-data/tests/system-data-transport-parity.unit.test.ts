@@ -17,6 +17,43 @@ function services() {
 }
 
 describe("system data transport parity", () => {
+  it("uses only the managed membership role and denies unavailable authority before accessing records", async () => {
+    const runtime = services();
+    const routes = new Map<string, any>();
+    const stored = { actorId: "person-a", roles: ["operator"], authenticated: true };
+    const readManagedPrincipal = testDouble.fn(async (_actorId: string) => stored as typeof stored | undefined);
+    registerSystemDataApiRoutes({
+      app: { get: (path, handler) => routes.set(path, handler), post: (path, handler) => routes.set(path, handler) },
+      runtime, readManagedPrincipal,
+    });
+    const query = { workspaceId: "workspace-a", releaseId: "release-a", entityType: "service-request" };
+    const request: any = { query, body: { ...query, recordId: "record-a", values: { title: "Synthetic" } } };
+    setExpressAuthContext(request, {
+      authenticated: true, authMethod: "oidc-bearer",
+      principal: { principalId: "person-a", kind: "user", roles: ["unused-token-role"], scopes: [] },
+    });
+    const response: any = { status: testDouble.fn(() => response), json: testDouble.fn() };
+    const list = routes.get("/api/systems/data/records");
+    await list(request, response);
+    await routes.get("/api/systems/data/records/create")(request, response);
+    expect(readManagedPrincipal.mock.calls).toEqual([["person-a"], ["person-a"]]);
+    expect(runtime.list.mock.calls[0][0]).toMatchObject({ ...query, principal: stored });
+    expect(runtime.create.mock.calls[0][0]).toMatchObject({ ...query, principal: stored });
+    expect(response.status.mock.calls).toEqual([[200], [200]]);
+
+    readManagedPrincipal.mockImplementationOnce(async () => undefined);
+    readManagedPrincipal.mockImplementationOnce(async () => ({ ...stored, actorId: "person-b" }));
+    readManagedPrincipal.mockImplementationOnce(async () => { throw new Error("internal storage detail"); });
+    for (const denied of [request, request, request, { query }]) {
+      await list(denied, response);
+      expect(response.status.mock.calls.at(-1)).toEqual([403]);
+      expect(JSON.stringify(response.json.mock.calls.at(-1))).toContain("You do not have permission to access these records.");
+      expect(JSON.stringify(response.json.mock.calls.at(-1))).not.toContain("internal storage detail");
+    }
+    expect(readManagedPrincipal.mock.calls.length).toBe(5);
+    expect(runtime.list.mock.calls.length).toBe(1);
+  });
+
   it("registers the same complete operation family through API and IPC", () => {
     const routes = { get: new Map<string, any>(), post: new Map<string, any>() };
     registerSystemDataApiRoutes({
