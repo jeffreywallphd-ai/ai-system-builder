@@ -135,8 +135,11 @@ customization, and single-asset Studio workflows.
   revisions, declared slot membership, compatible children, complete placement
   coverage, bounded depth, and acyclic containment.
 - New interactive systems start with the Foundation v3 system root, one required
-  selected application layout, its required page hosts, a page layout, and
-  bounded empty content. When a caller does not choose an application layout,
+  selected application layout, and its required page layouts. The page content
+  regions start empty. For interactive systems, the System Builder accepts zero
+  visual children in the content or equal-split panel slots of exact Foundation
+  v3 page layouts. This leaves published asset definitions and required
+  structural placements intact. When a caller does not choose an application layout,
   the canonical default is `builtin.layout.application.minimal@3.0.0`. Service
   and workflow profiles remain explicit and are not assigned an interactive
   hierarchy.

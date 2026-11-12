@@ -46,7 +46,7 @@
 - API/IPC transports and clients are present for both hosts; Systems uses the
   shared `modules/ui/shared/system-builder/` editor in desktop and thin client.
 - New interactive records begin with one Foundation v3 system root, a required
-  exact application layout, and a canonical application/page containment tree.
+  exact application layout, and a canonical containment tree with empty page regions.
   The default is `builtin.layout.application.minimal@3.0.0` when no layout is
   requested. Save, clone, persistence, API, IPC, preload, and shared UI paths
   preserve exact structure and placements; legacy-flat revisions remain readable

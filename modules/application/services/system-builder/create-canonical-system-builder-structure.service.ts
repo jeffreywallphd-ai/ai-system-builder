@@ -44,7 +44,6 @@ export interface CanonicalSystemBuilderStructureSeed {
 const DEFAULT_APPLICATION_LAYOUT_ID =
   "builtin.layout.application.minimal" as const;
 const DEFAULT_PAGE_LAYOUT_ID = "builtin.layout.page.single" as const;
-const EMPTY_STATE_ID = "builtin.state.empty-state" as const;
 
 export function createCanonicalSystemBuilderStructure(
   input: CreateCanonicalSystemBuilderStructureInput,
@@ -117,7 +116,6 @@ export function createCanonicalSystemBuilderStructure(
         pageIndex === 1 ? "Main page" : `Page ${pageIndex}`,
       );
       addPlacement(placements, input.systemId, shell, slot.slotId, page, order);
-      addRequiredPageContent(instances, placements, input, page, pageIndex);
     }
   }
 
@@ -134,41 +132,6 @@ export function createCanonicalSystemBuilderStructure(
     instanceRefs: instances.map(instanceReference),
     placementRefs: placements.map(placementReference),
   };
-}
-
-function addRequiredPageContent(
-  instances: AssetInstance[],
-  placements: AssetPlacement[],
-  input: CreateCanonicalSystemBuilderStructureInput,
-  page: AssetInstance,
-  pageIndex: number,
-): void {
-  const pagePreset = readSystemFoundationLayoutPreset(
-    DEFAULT_PAGE_LAYOUT_ID,
-    SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
-  );
-  if (!pagePreset) throw safeError("The default page layout is unavailable.");
-  let contentIndex = 0;
-  for (const slot of pagePreset.slots) {
-    for (let order = 0; order < slot.cardinality.minItems; order += 1) {
-      contentIndex += 1;
-      const content = addInstance(
-        instances,
-        input,
-        `page-${pageIndex}-content-${contentIndex}`,
-        exactSystemFoundationDefinitionReference(EMPTY_STATE_ID),
-        "Empty content",
-      );
-      addPlacement(
-        placements,
-        input.systemId,
-        page,
-        slot.slotId,
-        content,
-        order,
-      );
-    }
-  }
 }
 
 function applicationLayoutReference(

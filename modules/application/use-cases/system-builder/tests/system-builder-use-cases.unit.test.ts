@@ -58,8 +58,8 @@ describe("System Builder use cases", () => {
     );
     expect(revisions.map((item) => item.revisionNumber)).toEqual([1]);
     expect(revisions[0]?.structure?.profile).toBe("interactive");
-    expect(revisions[0]?.instances.length).toBe(4);
-    expect(revisions[0]?.placements?.length).toBe(3);
+    expect(revisions[0]?.instances.length).toBe(3);
+    expect(revisions[0]?.placements?.length).toBe(2);
   });
 
   it("saves canonical revisions atomically and rejects stale updates", async () => {

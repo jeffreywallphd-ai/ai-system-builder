@@ -10,9 +10,13 @@ import {
   MAX_ASSET_PLACEMENT_DEPTH,
   normalizeAssetPlacements,
 } from "../../../contracts/asset";
-import type { SystemBuilderRevision } from "../../../contracts/system-builder";
+import type {
+  SystemBuilderProfile,
+  SystemBuilderRevision,
+} from "../../../contracts/system-builder";
 import {
   classifySystemBuilderStructure,
+  minimumSystemBuilderSlotItems,
   normalizeSystemBuilderStructure,
 } from "../../../contracts/system-builder";
 import {
@@ -71,6 +75,7 @@ export function validateSystemBuilderStructure(
     issues,
   );
   validateSlotsAndCompatibility(
+    structure.profile,
     placements,
     instancesById,
     definitionsById,
@@ -239,6 +244,7 @@ function validatePlacementCoverage(
 }
 
 function validateSlotsAndCompatibility(
+  profile: SystemBuilderProfile,
   placements: readonly AssetPlacement[],
   instancesById: ReadonlyMap<string, AssetInstance>,
   definitionsById: ReadonlyMap<string, AssetDefinition>,
@@ -261,7 +267,8 @@ function validateSlotsAndCompatibility(
     for (const slot of slots.values()) {
       const group =
         grouped.get(`${parent.instanceId}:${String(slot.slotId)}`) ?? [];
-      validateSlotCardinality(parent, slot, group.length, issues);
+      const minimum = minimumSystemBuilderSlotItems(profile, parent.definitionRef, slot);
+      validateSlotCardinality(parent, slot, minimum, group.length, issues);
       validateContiguousOrder(parent, slot, group, issues);
     }
     for (const placement of placements.filter(
@@ -298,13 +305,14 @@ function validateSlotsAndCompatibility(
 function validateSlotCardinality(
   parent: AssetInstance,
   slot: AssetSlotDefinition,
+  minimum: number,
   count: number,
   issues: AssetValidationIssue[],
 ): void {
-  if (count < slot.cardinality.minItems || count > slot.cardinality.maxItems) {
+  if (count < minimum || count > slot.cardinality.maxItems) {
     addIssue(
       issues,
-      `Slot "${slot.slotId}" requires ${slot.cardinality.minItems} to ${slot.cardinality.maxItems} children; found ${count}.`,
+      `Slot "${slot.slotId}" requires ${minimum} to ${slot.cardinality.maxItems} children; found ${count}.`,
       ["instances", String(parent.instanceId), "slots", String(slot.slotId)],
     );
   }
