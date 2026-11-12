@@ -14,7 +14,6 @@ import {
   type SystemComposerDraft,
 } from "../systemComposerDraft";
 import {
-  createSystemFormDraft,
   FORM_COMPOSER_FOUNDATION_ASSET_IDS as ids,
   FORM_COMPOSER_FOUNDATION_VERSION as version,
   readSystemForms,
@@ -56,10 +55,10 @@ function asset(
   };
 }
 const shellId = "builtin.layout.application.standard";
-function fixture(pageCapacity = 8) {
+function fixture() {
   const shell = asset(shellId, [
     { ...slot("top-bar", ids.page, 1), acceptedDefinitionRefs: undefined, acceptedAssetTypes: ["page", "ui-component"] },
-    slot("content", ids.page, pageCapacity),
+    slot("content", ids.page),
   ], "application-shell");
   const assets = {
     page: asset(ids.page, [slot("content", ids.section)], "page-layout"),
@@ -86,27 +85,32 @@ function fixture(pageCapacity = 8) {
   };
   return { draft, assets, catalog: [shell, ...Object.values(assets)] };
 }
-function input(f: ReturnType<typeof fixture>, suffix: string) {
+function addPlacedForm(draft: SystemComposerDraft, suffix: string, order: number): SystemComposerDraft {
+  const path = [
+    [`form.${suffix}.page`, ids.page, "system.shell", "content", order],
+    [`form.${suffix}.section`, ids.section, `form.${suffix}.page`, "content", 0],
+    [`form.${suffix}.form`, ids.form, `form.${suffix}.section`, "content", 0],
+    [`form.${suffix}.step`, ids.step, `form.${suffix}.form`, "fields", 0],
+  ] as const;
   return {
-    name: `Form ${suffix}`, rootInstanceId: "system.root", compositionId: "system.composition",
-    instanceIds: {
-      page: `form.${suffix}.page`, section: `form.${suffix}.section`,
-      form: `form.${suffix}.form`, step: `form.${suffix}.step`,
-    },
-    assets: f.assets, catalog: f.catalog,
+    ...draft,
+    instances: [...draft.instances, ...path.map(([id, definitionId]) => assetInstance(id, definitionId))],
+    placements: [...draft.placements, ...path.map(([id, , parent, slotId, order]) => ({
+      schemaVersion: ASSET_PLACEMENT_SCHEMA_VERSION,
+      placementId: normalizeAssetId(`place.${id}`),
+      parentInstanceRef: instanceRef(parent),
+      childInstanceRef: instanceRef(id),
+      slotId: normalizeAssetSlotId(slotId),
+      order,
+    }))],
   };
 }
 
 describe("Form Composer draft placements", () => {
-  it("creates two forms on separate Canvas pages and reads them repeatedly without new placements", () => {
+  it("reads two forms on separate Canvas pages in placement order without changing the draft", () => {
     const f = fixture();
-    const first = createSystemFormDraft(f.draft, input(f, "intake"));
-    expect(first.ok).toBe(true);
-    if (!first.ok) return;
-    const second = createSystemFormDraft(first.value, input(f, "survey"));
-    expect(second.ok).toBe(true);
-    if (!second.ok) return;
-    const draft = structuredClone(second.value);
+    const first = addPlacedForm(f.draft, "intake", 1);
+    const draft = addPlacedForm(first, "survey", 2);
     const forms = readSystemForms(draft, f.catalog);
     expect(forms.map(({page, form, steps}) => [
       page?.instanceId, form.instanceId, steps.map((step) => step.instanceId),
@@ -130,7 +134,7 @@ describe("Form Composer draft placements", () => {
     expect(readSystemForms(reordered, f.catalog).map(({page}) => page?.instanceId)).toEqual([
       "form.survey.page", "form.intake.page",
     ]);
-    const history = commitSystemComposerDraft(createSystemComposerDraftHistory(first.value), draft);
+    const history = commitSystemComposerDraft(createSystemComposerDraftHistory(first), draft);
     expect(readSystemForms(undoSystemComposerDraft(history).present, f.catalog).length).toBe(1);
   });
 
@@ -151,46 +155,4 @@ describe("Form Composer draft placements", () => {
     expect(readSystemForms(draft, f.catalog, [])).toEqual([]);
   });
 
-  it("preserves the original draft if the page region is full or an exact form asset is unavailable", () => {
-    const full = fixture(1);
-    const before = JSON.stringify(full.draft);
-    expect(createSystemFormDraft(full.draft, input(full, "new"))).toEqual({
-      ok: false, message: "The selected application layout has no available page region.",
-    });
-    expect(JSON.stringify(full.draft)).toBe(before);
-    const f = fixture();
-    expect(createSystemFormDraft(f.draft, {
-      ...input(f, "new"), assets: { ...f.assets, form: { ...f.assets.form, builtIn: false } },
-    }).ok).toBe(false);
-    const requested = input(f, "new");
-    expect(createSystemFormDraft(f.draft, {
-      ...requested, instanceIds: { ...requested.instanceIds, form: " form.new.form " },
-    }).ok).toBe(false);
-    expect(readSystemForms(f.draft, f.catalog)).toEqual([]);
-  });
-
-  it("does not put a form in the top bar when both Split workspace page hosts are full", () => {
-    const f = fixture();
-    const split = "builtin.layout.application.split-workspace";
-    const shell = asset(split, [f.catalog[0]!.slots[0]!, slot("start-panel", ids.page, 1), slot("end-panel", ids.page, 1)], "application-shell");
-    const draft: SystemComposerDraft = {
-      ...f.draft,
-      instances: [
-        ...f.draft.instances.map((item) => item.instanceId === "system.shell"
-          ? { ...item, definitionRef: ref(split) } : item),
-        assetInstance("system.second-page", ids.page),
-      ],
-      placements: [
-        f.draft.placements[0]!,
-        { ...f.draft.placements[1]!, slotId: normalizeAssetSlotId("start-panel") },
-        { ...f.draft.placements[1]!, placementId: normalizeAssetId("place.second-page"),
-          slotId: normalizeAssetSlotId("end-panel"), childInstanceRef: instanceRef("system.second-page") },
-      ],
-      structure: { ...f.draft.structure!, layoutPresetRef: ref(split) },
-    };
-    expect(createSystemFormDraft(draft, { ...input(f, "new"), catalog: [shell, ...Object.values(f.assets)] })).toEqual({
-      ok: false, message: "The selected application layout has no available page region.",
-    });
-    expect(draft.instances.length).toBe(4);
-  });
 });

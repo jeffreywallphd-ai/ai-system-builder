@@ -10,6 +10,7 @@ import {
   type AssetReference,
 } from "../../../contracts/asset";
 import type {
+  CreateSystemBuilderSystemCommand,
   SystemBuilderRecord,
   SystemBuilderResult,
   SystemBuilderRevision,
@@ -31,6 +32,7 @@ import type {
 } from "../../../contracts/system-builder";
 import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import {
+  SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY,
   SYSTEM_BUILDER_FOUNDATION_UPGRADE_SOURCE_VERSIONS,
   createSystemFormRouteBinding,
   createSystemFormActionBinding,
@@ -65,7 +67,6 @@ import {
 } from "./SystemFormComposerView";
 import { isFormChoiceAsset } from "./SystemFormRoutingEditor";
 import {
-  createSystemFormDraft,
   FORM_COMPOSER_FOUNDATION_ASSET_IDS,
   FORM_COMPOSER_FOUNDATION_VERSION,
   readSystemForms,
@@ -113,6 +114,7 @@ export interface SystemBuilderClient {
     description?: string;
     profile?: "interactive" | "service" | "workflow";
     layoutPresetRef?: AssetReference;
+    starter?: CreateSystemBuilderSystemCommand["starter"];
   }): Promise<SystemBuilderResult<SystemBuilderRecord>>;
   readRevision(input: {
     workspaceId: string;
@@ -262,14 +264,6 @@ export function SystemBuilderWorkspace({
   const appliedInitialSystem = useRef<string | undefined>(undefined);
   const scope = useMemo(() => ({ client, workspaceId }), [client, workspaceId]);
   const [formTarget, setFormTarget] = useState<{ scope: typeof scope; systemId: string; formId: string }>();
-  const pendingFormSeed = useRef<{
-    scope: typeof scope;
-    systemId: string;
-    revisionId: string;
-    name: string;
-    layout: SystemBuilderComposerAsset;
-    assets: Parameters<typeof createSystemFormDraft>[1]["assets"];
-  } | undefined>(undefined);
   const [restoreFormFocus, setRestoreFormFocus] = useState<string>();
   const editorRegion = useRef<HTMLFieldSetElement>(null);
   const currentScope = useRef(scope);
@@ -397,7 +391,6 @@ export function SystemBuilderWorkspace({
     operation.current = undefined;
     appliedInitialSystem.current = undefined;
     savedDraft.current = undefined;
-    pendingFormSeed.current = undefined;
     setBusy(false);
     setRevisionError(undefined);
     setHistoryError(undefined);
@@ -542,39 +535,13 @@ export function SystemBuilderWorkspace({
       setRedoDrafts([]);
       setFoundationUpgradeOpen(false);
       setFoundationUpgradePreview(undefined);
-      setSelectedInstanceId(String(value.instances[0]?.instanceId ?? "") || undefined);
+      const defaultFormId = value.composition.metadata?.[SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY];
+      const hasDefaultForm = typeof defaultFormId === "string" && value.structure?.profile === "interactive" &&
+        readSystemForms(checkpoint, [], value.composition.rootInstanceRefs)
+          .some(({ form }) => form.instanceId === defaultFormId);
+      setSelectedInstanceId(hasDefaultForm ? defaultFormId : String(value.instances[0]?.instanceId ?? "") || undefined);
+      setFormTarget(hasDefaultForm ? { scope, systemId: selectedSystemId, formId: defaultFormId } : undefined);
       setDirty(false);
-      const seed = pendingFormSeed.current;
-      if (seed?.scope === scope && seed.systemId === selectedSystemId) {
-        pendingFormSeed.current = undefined;
-        const page = checkpoint.instances.filter((item) => item.definitionRef.kind === "asset-definition-version" &&
-          item.definitionRef.id === seed.assets.page.definitionId && item.definitionRef.version === seed.assets.page.version);
-        if (String(value.revisionId) !== seed.revisionId || value.composition.rootInstanceRefs.length !== 1 ||
-            page.length !== 1 || checkpoint.instances.length !== 3) {
-          setError("The system was created, but its first form could not be added. Use Add element on Canvas to add a form.");
-          return;
-        }
-        const id = `instance.form.${uniqueId()}`;
-        const instanceIds = { page: `${id}.page`, section: `${id}.section`, form: `${id}.form`, step: `${id}.step` };
-        const result = createSystemFormDraft(checkpoint, {
-          name: seed.name,
-          compositionId: String(value.composition.compositionId),
-          rootInstanceId: String(value.composition.rootInstanceRefs[0]!.id),
-          assets: seed.assets,
-          catalog: [seed.layout],
-          existingPageInstanceId: String(page[0]!.instanceId),
-          instanceIds,
-        });
-        if (!result.ok) {
-          setError("The system was created, but its first form could not be added. Use Add element on Canvas to add a form.");
-          return;
-        }
-        applyDraftHistory(commitSystemComposerDraft(createSystemComposerDraftHistory(checkpoint), result.value));
-        includeFormAssets(Object.values(seed.assets));
-        setComposerMode("design");
-        setSelectedInstanceId(instanceIds.form);
-        setFormTarget({ scope, systemId: selectedSystemId, formId: instanceIds.form });
-      }
     };
     // Optional history never gates the usable current Canvas.
     void Promise.resolve().then(() => client.readRevision({ workspaceId, systemId: selectedSystemId }))
@@ -812,7 +779,6 @@ export function SystemBuilderWorkspace({
       return;
     }
     setError(undefined);
-    if (pendingFormSeed.current?.systemId !== existingSystemId) pendingFormSeed.current = undefined;
     setSelectedSystemId(existingSystemId);
     requestComposerCatalog();
   }
@@ -828,57 +794,44 @@ export function SystemBuilderWorkspace({
       setError("Enter a system name.");
       return;
     }
+    if (startWithForm && name.length > 200) {
+      setError("Enter a form system name of 1 to 200 characters.");
+      return;
+    }
     return transact(async (isCurrent) => {
-      setError(undefined);
-      setNotice(undefined);
-      const canUseLayout = (asset: SystemBuilderComposerAsset) =>
-        asset.definitionId === DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID &&
-        asset.layoutRole === "application-shell" && (!startWithForm || (
-          asset.builtIn && asset.version === FORM_COMPOSER_FOUNDATION_VERSION &&
-          asset.definitionRef.kind === "asset-definition-version" && asset.definitionRef.id === asset.definitionId &&
-          asset.definitionRef.version === asset.version && asset.compatibility.status !== "incompatible"
-        ));
-      let catalogItems = composerCatalog;
-      if (!catalogItems.some(canUseLayout)) {
-        catalogRequestInFlight.current = true;
-        setCatalogLoading(true);
-        setCatalogError(undefined);
-        const catalogResult = await listAllComposerAssets(client, { workspaceId, searchText: DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID }, items => items.some(canUseLayout));
-        if (!isCurrent()) return;
-        catalogRequestInFlight.current = false;
-        setCatalogLoading(false);
-        if (!catalogResult.ok) {
-          setCatalogError(catalogResult.error.message);
-          setError(catalogResult.error.message);
+      let layout: SystemBuilderComposerAsset | undefined;
+      if (!startWithForm) {
+        const canUseLayout = (asset: SystemBuilderComposerAsset) =>
+          asset.definitionId === DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID && asset.layoutRole === "application-shell";
+        let catalogItems = composerCatalog;
+        if (!catalogItems.some(canUseLayout)) {
+          catalogRequestInFlight.current = true;
+          setCatalogLoading(true);
+          setCatalogError(undefined);
+          const catalogResult = await listAllComposerAssets(client, { workspaceId, searchText: DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID }, items => items.some(canUseLayout));
+          if (!isCurrent()) return;
+          catalogRequestInFlight.current = false;
+          setCatalogLoading(false);
+          if (!catalogResult.ok) {
+            setCatalogError(catalogResult.error.message);
+            setError(catalogResult.error.message);
+            return;
+          }
+          catalogItems = catalogResult.value.items;
+          setComposerCatalog(catalogItems);
+        }
+        layout = catalogItems.find(canUseLayout);
+        if (!layout) {
+          setError("The required Minimal application layout is unavailable.");
           return;
         }
-        catalogItems = catalogResult.value.items;
-        setComposerCatalog(catalogItems);
+        setSelectedLayoutDefinitionId(layout.definitionId);
       }
-      const layout = catalogItems.find(canUseLayout);
-      if (!layout) {
-        setError("The required Minimal application layout is unavailable.");
-        return;
-      }
-      let formAssets: Parameters<typeof createSystemFormDraft>[1]["assets"] | undefined;
-      if (startWithForm) {
-        if (name.length > 200) {
-          setError("Enter a form system name of 1 to 200 characters.");
-          return;
-        }
-        formAssets = await readFormSeedAssets(isCurrent);
-        if (!isCurrent()) return;
-        if (!formAssets) {
-          setError("The required form assets are unavailable. Try creating the form system again.");
-          return;
-        }
-      }
-      setSelectedLayoutDefinitionId(layout.definitionId);
       const result = await client.create({
         workspaceId,
         name,
         profile: "interactive",
-        layoutPresetRef: layout.definitionRef,
+        ...(layout ? { layoutPresetRef: layout.definitionRef } : { starter: "form" }),
       });
       if (!isCurrent()) return;
       if (result.ok && String(result.value.targetWorkspaceId) !== workspaceId) {
@@ -887,16 +840,13 @@ export function SystemBuilderWorkspace({
       }
       if (result.ok) {
         const systemId = String(result.value.systemId);
-        pendingFormSeed.current = formAssets ? {
-          scope, systemId, revisionId: String(result.value.currentRevisionId), name, layout, assets: formAssets,
-        } : undefined;
         setSystems((current) => [result.value, ...current]);
         setExistingSystemId(systemId);
         setSelectedSystemId(systemId);
         requestComposerCatalog();
         setNewSystemName("");
         setDirty(false);
-        if (!formAssets) setNotice(
+        if (layout) setNotice(
           `${layout.displayName} system created. Use Add element in a canvas container to compose its contents.`,
         );
       } else setError(result.error.message);
@@ -1031,21 +981,6 @@ export function SystemBuilderWorkspace({
   function includeFormAssets(assets: readonly SystemBuilderComposerAsset[]) {
     setComposerCatalog((current) => [...current, ...assets.filter((asset) =>
       !current.some((item) => item.definitionId === asset.definitionId && item.version === asset.version))]);
-  }
-
-  async function readFormSeedAssets(isCurrent: () => boolean) {
-    const { page, section, form, step } = FORM_COMPOSER_FOUNDATION_ASSET_IDS;
-    const read = (id: string) => definitionReader.readSummary(client, {
-      workspaceId,
-      definitionRef: { kind: "asset-definition-version", id: normalizeAssetId(id), version: FORM_COMPOSER_FOUNDATION_VERSION },
-    }, isCurrent);
-    const [pageAsset, sectionAsset, formAsset, stepAsset] = await Promise.all([
-      read(page), read(section), read(form), read(step),
-    ]);
-    if (!pageAsset.ok || !sectionAsset.ok || !formAsset.ok || !stepAsset.ok) return undefined;
-    const assets = { page: pageAsset.value, section: sectionAsset.value, form: formAsset.value, step: stepAsset.value };
-    return Object.values(assets).every((asset) => asset.builtIn && asset.compatibility.status !== "incompatible")
-      ? assets : undefined;
   }
 
   function editForm(instanceId: string) {

@@ -18,6 +18,7 @@ import type {
 import {
   normalizeSystemBuilderRevisionId,
   normalizeSystemBuilderSystemId,
+  SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY,
   systemBuilderFailure,
   systemBuilderSuccess,
 } from "../../../contracts/system-builder";
@@ -62,6 +63,18 @@ export class CreateSystemBuilderSystemUseCase {
         "System descriptions must be 1,000 characters or fewer.",
         "description",
       );
+    if (command.starter !== undefined && command.starter !== "form")
+      return systemBuilderFailure(
+        "system-builder.starter-unsupported", "Select a supported system starter.", "starter",
+      );
+    const profile = command.profile ?? "interactive";
+    if (command.starter === "form" && (profile !== "interactive" ||
+        (command.compositionType !== undefined && command.compositionType !== "system") ||
+        (command.layoutPresetRef && command.layoutPresetRef.id !== "builtin.layout.application.minimal")))
+      return systemBuilderFailure(
+        "system-builder.form-starter-layout-unsupported",
+        "A form system must start with the Minimal application layout.", "starter",
+      );
     let systemId;
     try {
       systemId = normalizeSystemBuilderSystemId(
@@ -82,7 +95,6 @@ export class CreateSystemBuilderSystemUseCase {
       command.compositionType ?? "system",
       description,
     );
-    const profile = command.profile ?? "interactive";
     let seed;
     try {
       seed = createCanonicalSystemBuilderStructure({
@@ -93,6 +105,7 @@ export class CreateSystemBuilderSystemUseCase {
         timestamp,
         profile,
         layoutPresetRef: command.layoutPresetRef,
+        starter: command.starter,
       });
     } catch {
       return systemBuilderFailure(
@@ -106,6 +119,9 @@ export class CreateSystemBuilderSystemUseCase {
       rootInstanceRefs: seed.rootInstanceRefs,
       instanceRefs: seed.instanceRefs,
       placementRefs: seed.placementRefs,
+      ...(seed.defaultFormInstanceId ? {
+        metadata: { [SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY]: seed.defaultFormInstanceId },
+      } : {}),
     };
     const revisionId = normalizeSystemBuilderRevisionId(`${systemId}.r1`);
     const candidate = {
@@ -123,6 +139,12 @@ export class CreateSystemBuilderSystemUseCase {
       createdBy: safeActor(command.actorId),
     } satisfies SystemBuilderRevision;
     const validation = await this.dependencies.validator.execute(candidate);
+    if (command.starter === "form" && (!seed.defaultFormInstanceId || validation.status === "invalid")) {
+      return systemBuilderFailure(
+        "system-builder.form-starter-unavailable",
+        "The first form could not be saved. Try creating the form system again.", "starter",
+      );
+    }
     const revision: SystemBuilderRevision = {
       ...candidate,
       validationIssues: validation.issues,
@@ -448,7 +470,7 @@ export class SaveSystemBuilderRevisionUseCase {
     const reconciledInteractions =
       reconcileSystemBuilderConversationInteractions({
         systemId: String(command.systemId),
-        composition: clone(command.composition),
+        composition: preserveDefaultFormPreference(clone(command.composition), current.composition),
         instances: command.instances,
         bindings: clone(command.bindings),
         actorId: safeActor(command.actorId),
@@ -710,6 +732,17 @@ function createEmptyComposition(
       createdBy: safeActor(actorId),
     },
   };
+}
+
+function preserveDefaultFormPreference(
+  incoming: SystemBuilderComposition,
+  saved: SystemBuilderComposition,
+): SystemBuilderComposition {
+  const key = SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY;
+  const { [key]: requested, ...metadata } = incoming.metadata ?? {};
+  const current = saved.metadata?.[key];
+  if (current === requested) return incoming;
+  return { ...incoming, metadata: { ...metadata, ...(typeof current === "string" ? { [key]: current } : {}) } };
 }
 
 async function changeArchiveState(

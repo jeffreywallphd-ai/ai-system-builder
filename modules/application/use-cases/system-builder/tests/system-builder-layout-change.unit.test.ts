@@ -12,6 +12,7 @@ import {
   normalizeAssetSlotId,
 } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY, type CreateSystemBuilderSystemCommand } from "../../../../contracts/system-builder";
 import {
   exactSystemFoundationDefinitionReference,
   SYSTEM_FOUNDATION_PACK_MANIFEST,
@@ -22,11 +23,80 @@ import {
   CreateSystemBuilderSystemUseCase,
   CreateSystemBuilderFromTemplateUseCase,
   PreviewSystemBuilderLayoutChangeUseCase,
+  SaveSystemBuilderRevisionUseCase,
 } from "../index";
 import { SystemBuilderReferenceTemplateRegistry } from "../../../services/system-builder";
 
 const workspaceId = createWorkspaceId("workspace-layout-change");
 const timestamp = "2026-07-19T00:00:00.000Z";
+
+describe("Saved form system starter", () => {
+  it("persists one validated revision containing a named, empty first form page", async () => {
+    const repository = createStructuredSystemBuilderRepository(createInMemoryStructuredDocumentStore());
+    const dependencies = {
+      repository,
+      validator: new ValidateSystemBuilderRevisionService(definitionReader(), () => timestamp),
+      generateSystemId: () => "system-new-form",
+      now: () => timestamp,
+    };
+    const created = await new CreateSystemBuilderSystemUseCase(dependencies).execute({
+      workspaceId, name: "Survey", actorId: "user-1", starter: "form",
+    });
+    if (!created.ok) throw new Error(created.error.message);
+    const record = created.value;
+    expect(record.status).toBe("validated");
+    const revisions = await repository.listRevisions(workspaceId, record.systemId);
+    expect(revisions.map(({ revisionId }) => revisionId)).toEqual([record.currentRevisionId]);
+    const initial = revisions[0]!;
+    expect(initial.composition.metadata).toEqual({ [SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY]: "system-new-form.first-form" });
+    expect(record.composition.metadata).toEqual(initial.composition.metadata);
+    expect(initial.instances.map(({ definitionRef }) => [definitionRef.id, definitionRef.version])).toEqual([
+      ["builtin.system.system", "3.0.0"], ["builtin.layout.application.minimal", "3.0.0"],
+      ["builtin.layout.page.single", "3.0.0"], ["builtin.ui.section", "3.0.0"],
+      ["builtin.form.form", "3.0.0"], ["builtin.form.field-group", "3.0.0"],
+    ]);
+    expect(initial.instances.slice(-2).map(({ displayName, selectedConfiguration }) => [displayName, selectedConfiguration?.title]))
+      .toEqual([["Survey", "Survey"], ["Page 1", "Page 1"]]);
+    expect(initial.placements?.map(({ parentInstanceRef, slotId, childInstanceRef }) =>
+      [parentInstanceRef.id, slotId, childInstanceRef.id])).toEqual([
+      ["system-new-form.root", "application-shell", "system-new-form.shell"],
+      ["system-new-form.shell", "content", "system-new-form.page-1"],
+      ["system-new-form.page-1", "content", "system-new-form.form-content"],
+      ["system-new-form.form-content", "content", "system-new-form.first-form"],
+      ["system-new-form.first-form", "fields", "system-new-form.form-page-1"],
+    ]);
+    expect(await repository.readRevision(createWorkspaceId("other-workspace"), record.systemId, initial.revisionId)).toBeUndefined();
+
+    const saved = await new SaveSystemBuilderRevisionUseCase(dependencies).execute({
+      workspaceId, systemId: record.systemId, expectedRecordRevision: 1, actorId: "user-1",
+      composition: { ...initial.composition, metadata: { [SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY]: "different-form", note: "kept" } },
+      instances: initial.instances, placements: initial.placements, structure: initial.structure, bindings: initial.bindings,
+    });
+    if (!saved.ok) throw new Error(saved.error.message);
+    expect(saved.value.composition.metadata).toEqual({ ...initial.composition.metadata, note: "kept" });
+  });
+
+  it("does not save a partial system when the starter request or validation is rejected", async () => {
+    const repository = createStructuredSystemBuilderRepository(createInMemoryStructuredDocumentStore());
+    const candidate = { workspaceId, name: "Invalid survey", actorId: "user-1", starter: "form" } as const;
+    const create = new CreateSystemBuilderSystemUseCase({
+      repository,
+      validator: { execute: async () => ({ status: "invalid", issues: [], validatedAt: timestamp }) },
+      generateSystemId: () => "system-denied-form",
+    });
+    for (const [input, code] of [
+      [{ ...candidate, starter: "unknown" } as unknown as CreateSystemBuilderSystemCommand, "system-builder.starter-unsupported"],
+      [{ ...candidate, profile: "service" } as const, "system-builder.form-starter-layout-unsupported"],
+      [{ ...candidate, layoutPresetRef: exactSystemFoundationDefinitionReference("builtin.layout.application.navigation") }, "system-builder.form-starter-layout-unsupported"],
+      [candidate, "system-builder.form-starter-unavailable"],
+    ] as const) {
+      const result = await create.execute(input);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe(code);
+    }
+    expect(await repository.listRecords(workspaceId)).toEqual([]);
+  });
+});
 
 describe("System Builder layout change preview", () => {
   it("deterministically preserves compatible content and exposes unmatched content without persistence", async () => {

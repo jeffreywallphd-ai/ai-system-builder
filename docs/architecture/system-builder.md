@@ -183,11 +183,14 @@ customization, and single-asset Studio workflows.
   the draft as one undoable change. Required layout structure stays protected.
   Saving creates a new revision. There is no
   persistent Asset Palette, pointer drag behavior, or renderer drag state.
-  In Systems Compose, **Create form system** starts a Minimal system and adds
-  a section, form, and first form page to its existing Canvas page in one undoable draft
-  edit. In Canvas, **Edit Form** opens the specific form on which it appears.
-  **Back to Canvas** selects that form again. Systems without forms still
-  open in Canvas. More than one form can share a page, and opening an embedded
+  In Systems Compose, **Create form system** saves a Minimal system with a
+  section, a form, and its empty first form page in the initial revision. You
+  can leave without adding fields or saving. **Open in Compose** in Manage
+  opens that saved form in the Form editor. If the original form is removed,
+  the system opens in Canvas. Other systems open in Canvas, including systems
+  with embedded forms. **Edit Form** opens the specific form on which it appears.
+  **Back to Canvas** selects that form again. More than one form can share a
+  page, and opening an embedded
   form preserves its placement and neighboring assets. The two editors use
   the same workspace-visible asset definitions, draft, undo and redo history,
   and revision save path. Canvas renders the same placements in either case.

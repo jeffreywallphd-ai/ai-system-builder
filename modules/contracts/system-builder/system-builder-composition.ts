@@ -1,6 +1,8 @@
 import type { AssetComposition } from "../asset";
 
 export const SYSTEM_BUILDER_COMPOSITION_TYPES = ["system", "system-of-subsystems"] as const;
+// A saved Compose navigation preference, never an execution or access grant.
+export const SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY = "systemBuilderDefaultFormInstanceId";
 
 export type SystemBuilderCompositionType = (typeof SYSTEM_BUILDER_COMPOSITION_TYPES)[number];
 

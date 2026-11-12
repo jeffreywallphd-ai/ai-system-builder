@@ -12098,121 +12098,125 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "217ae6c84c5b6071ef5951e3157c3a2c48705c4bc112d35a04111786789c95a7",
-    "bytes": 90826,
+    "sha256": "b6f582e814f5caef23478979b488250cf84450627bccb61ad6e0e8dfcbb6a40f",
+    "bytes": 91906,
     "cases": [
      {
       "name": "keeps radio labels and required-error focus distinct from similar field IDs",
-      "line": 43
+      "line": 44
      },
      {
       "name": "does not offer submission mapping for an ambiguous Create Record setup",
-      "line": 70
+      "line": 71
      },
      {
       "name": "edits the exact selected form when two forms share a Canvas page",
-      "line": 97
+      "line": 98
      },
      {
-      "name": "starts a form system on the existing blank Minimal page and uses the same draft in Canvas",
-      "line": 448
+      "name": "reopens the saved empty first form from Manage without adding a field or saving",
+      "line": 449
      },
      {
       "name": "defers the layout catalog until Create system is submitted and then shows the loading wheel",
-      "line": 531
+      "line": 547
      },
      {
       "name": "requests active systems and defensively omits archived records from Compose",
-      "line": 574
+      "line": 590
      },
      {
       "name": "refreshes the active picker after a Manage lifecycle change",
-      "line": 670
+      "line": 686
      },
      {
       "name": "creates a named system with the implicit Minimal layout",
-      "line": 731
+      "line": 747
      },
      {
       "name": "requires a name and uses the primary action when creating from a template",
-      "line": 783
+      "line": 799
      },
      {
       "name": "prefers the nested page content region over an already-full application content region",
-      "line": 839
+      "line": 855
      },
      {
       "name": "loads layouts on demand, applies one to the Canvas, exposes unassigned assets in the scoped modal, and undoes",
-      "line": 928
+      "line": 944
      },
      {
       "name": "requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system",
-      "line": 1251
+      "line": 1267
      },
      {
       "name": "opens and closes a modal for the current safe frontend composition",
-      "line": 1454
+      "line": 1470
      },
      {
       "name": "previews a v2 Foundation upgrade before explicit confirmation",
-      "line": 1574
+      "line": 1590
      },
      {
       "name": "preserves canonical structure and placements when saving configuration",
-      "line": 1701
+      "line": 1717
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
+      "name": "Systems",
+      "line": 505
+     },
+     {
       "name": "instance",
-      "line": 2071
+      "line": 2087
      },
      {
       "name": "composerDefinition",
-      "line": 2091
+      "line": 2107
      },
      {
       "name": "layoutDefinition",
-      "line": 2163
+      "line": 2179
      },
      {
       "name": "withoutComposerDetail",
-      "line": 2181
+      "line": 2197
      },
      {
       "name": "button",
-      "line": 2192
+      "line": 2208
      },
      {
       "name": "setInputValue",
-      "line": 2199
+      "line": 2215
      },
      {
       "name": "clientFor",
-      "line": 2206
+      "line": 2222
      }
     ],
-    "assertionCount": 181,
-    "assertionDigest": "96ee9019aaac1601e5dd61a66d20a707fff210d131663e57f7660a02ad4866b9",
+    "assertionCount": 177,
+    "assertionDigest": "887054d4b9024f33713667510a0acdaa948165fe59277d1a33fa4c20c7e9e668",
     "assertionExamples": [
      {
-      "line": 56,
+      "line": 57,
       "kind": "expect",
       "sha256": "b35211cbff76f0b21dddf71e969b9a4d2487006e0a1611b8174e1138eb7b233d"
      },
      {
-      "line": 60,
+      "line": 61,
       "kind": "expect",
       "sha256": "225d69d707d19fccd5de73a795b6fd7f430bdcaeba7e92b57db899ea1f090cac"
      },
      {
-      "line": 63,
+      "line": 64,
       "kind": "expect",
       "sha256": "b4b8cf1a07cc5ee71afb828e260280a7ff4dae18494f564c3d284e7f9a29016e"
      },
      {
-      "line": 66,
+      "line": 67,
       "kind": "expect",
       "sha256": "c907a1d6d8e9cb83968760cb4b6cfdbc46e3685b83c201fe0b76ec5acd910c2a"
      }

@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { normalizeAssetId, normalizeAssetSlotId, type AssetInstance } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
-import { readSystemFormAction } from "../../../../contracts/system-builder";
+import { readSystemFormAction, SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY } from "../../../../contracts/system-builder";
 import type {
   SystemBuilderRecord,
   SystemBuilderComposerAsset,
@@ -23,6 +23,7 @@ import {
 import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
 import { readFormActionOptions, SystemFormActionEditor } from "../SystemFormActionEditor";
 import { SystemFormJourney } from "../SystemFormPreview";
+import { SystemManagementWorkspace } from "../SystemManagementWorkspace";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -445,18 +446,19 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(button(container!, "Design").getAttribute("aria-selected")).toBe("true");
   });
 
-  it("starts a form system on the existing blank Minimal page and uses the same draft in Canvas", async () => {
+  it("reopens the saved empty first form from Manage without adding a field or saving", async () => {
     const rootDefinition = composerDefinition("builtin.system.system", "System root", ["application-shell"], false, "3.0.0");
     const page = { ...composerDefinition("builtin.layout.page.single", "Page", ["content"], false, "3.0.0"),
       layoutRole: "page-layout" as const, assetType: "page" as const };
     const baseShell = layoutDefinition("builtin.layout.application.minimal", "Minimal", ["content"], "3.0.0");
     const shell = { ...baseShell, slots: baseShell.slots.map((slot) => ({ ...slot, acceptedDefinitionRefs: [page.definitionRef] })) };
     const form = composerDefinition("builtin.form.form", "Form", ["fields"], true, "3.0.0");
-    const step = composerDefinition("builtin.form.field-group", "Step", ["fields"], true, "3.0.0");
+    const formPage = composerDefinition("builtin.form.field-group", "Field Group", ["fields"], true, "3.0.0");
     const section = composerDefinition("builtin.ui.section", "Section", ["content"], false, "3.0.0");
-    const catalog = [rootDefinition, page, shell, form, step, section];
-    const initialAssets = [rootDefinition, shell, page].map((item, index) => ({
-      ...instance(`new.instance.${index}`, item.definitionId, item.displayName, {}), definitionRef: item.definitionRef,
+    const catalog = [rootDefinition, page, shell, form, formPage, section];
+    const initialAssets = [rootDefinition, shell, page, section, form, formPage].map((item, index) => ({
+      ...instance(`new.instance.${index}`, item.definitionId, index === 4 ? "Survey" : index === 5 ? "Page 1" : item.displayName,
+        index === 4 ? { title: "Survey" } : index === 5 ? { title: "Page 1" } : {}), definitionRef: item.definitionRef,
     }));
     const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: normalizeAssetId(item.instanceId) });
     const refs = initialAssets.map(ref);
@@ -465,10 +467,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
       targetWorkspaceId: createWorkspaceId("workspace-a"), revisionNumber: 1,
       composition: { compositionId: normalizeAssetId("new.composition"), compositionType: "system", displayName: "Survey",
         version: "0.1.0", lifecycleStatus: "draft", rootInstanceRefs: [refs[0]!], instanceRefs: refs, bindingRefs: [],
-        provenance: { sourceKind: "human-authored" } },
+        provenance: { sourceKind: "human-authored" }, metadata: { [SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY]: refs[4]!.id } },
       instances: initialAssets, bindings: [],
       structure: { schemaVersion: "system-builder-structure.v1", profile: "interactive", layoutPresetRef: shell.definitionRef },
-      placements: ["application-shell", "content"].map((slot, index) => ({
+      placements: ["application-shell", "content", "content", "content", "fields"].map((slot, index) => ({
         schemaVersion: "asset-placement.v1", placementId: `place.${index}`, slotId: normalizeAssetSlotId(slot),
         parentInstanceRef: refs[index]!, childInstanceRef: refs[index + 1]!, order: 0,
       })),
@@ -479,53 +481,67 @@ describe("SystemBuilderWorkspace UI preview", () => {
       revision: 1, currentRevisionId: initial.revisionId, composition: initial.composition,
       createdAt: initial.createdAt, updatedAt: initial.createdAt, createdBy: "person-1", updatedBy: "person-1",
     };
-    const create = vi.fn(async () => ({ ok: true as const, value: record }));
-    const saveRevision = vi.fn(async (input: Parameters<SystemBuilderClient["saveRevision"]>[0]) => ({
-      ok: true as const, value: { ...initial, revisionNumber: 2, composition: input.composition, instances: input.instances,
-        placements: input.placements, bindings: input.bindings },
-    }));
-    let hasStep = false;
+    let created = false;
+    let savedRevision = initial;
+    const create = vi.fn(async (_input: Parameters<SystemBuilderClient["create"]>[0]) => {
+      created = true;
+      return { ok: true as const, value: record };
+    });
+    const saveRevision = vi.fn(async () => { throw new Error("The empty first form should already be saved."); });
     const client: SystemBuilderClient = { ...clientFor(record, initial), create, saveRevision,
-      list: async () => ({ ok: true, value: [] }),
+      list: async () => ({ ok: true, value: created ? [record] : [] }),
+      readRevision: async () => ({ ok: true, value: savedRevision }),
+      listManagement: async () => ({ ok: true, value: {
+        items: created ? [{ systemId: record.systemId, name: record.name, designStatus: record.status,
+          archived: false, publicationStatus: "unpublished", recordRevision: 1, currentRevisionId: initial.revisionId,
+          assetCount: initialAssets.length, releaseCount: 0, createdAt: record.createdAt, updatedAt: record.updatedAt,
+          actions: { canPreview: true, canOpenInCompose: true, canDelete: true, canRestore: false, deleteStrategy: "archive" } }] : [],
+        totalCount: created ? 1 : 0, query: { view: "active", sort: "updated-desc", limit: 20 },
+      } }),
       listComposerAssets: async (query) => ({ ok: true, value: { items: catalog.filter((item) =>
-        (hasStep || item !== step) && (!query.searchText || item.definitionId === query.searchText))
+        !query.searchText || item.definitionId === query.searchText)
         .map((item) => ({ ...item, compatibility: { status: "not-evaluated" as const } })) } }),
     };
+    function Systems() {
+      const [manage, setManage] = useState(false);
+      const [systemId, setSystemId] = useState<string>();
+      return <NotificationTestHarness>
+        <button onClick={() => setManage(true)}>Manage</button>
+        {manage ? <SystemManagementWorkspace workspaceId="workspace-a" client={client}
+          onOpenInCompose={(id) => { setSystemId(id); setManage(false); }} /> :
+          <SystemBuilderWorkspace workspaceId="workspace-a" client={client} initialSystemId={systemId} />}
+      </NotificationTestHarness>;
+    }
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
-    await act(async () => root!.render(
-      <NotificationTestHarness><SystemBuilderWorkspace workspaceId="workspace-a" client={client} /></NotificationTestHarness>,
-    ));
+    await act(async () => root!.render(<Systems />));
     const click = (name: string) => act(async () => button(container!, name).click());
-    expect(container.querySelector("[data-edit-form-id]")).toBeNull();
     await act(async () => setInputValue(container!.querySelector<HTMLInputElement>('input[placeholder="Customer portal"]')!, "Survey"));
     await click("Create form system");
-    expect(readNotificationMessages(container).join(" ")).toContain("The required form assets are unavailable.");
-    expect(create).not.toHaveBeenCalled();
-    hasStep = true;
-    await click("Create form system");
     expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledWith({ workspaceId: "workspace-a", name: "Survey", profile: "interactive", starter: "form" });
     expect(container.querySelector("h4")?.textContent).toBe("Survey");
-    expect(container.textContent).toContain("Canvas page Page");
+    await click("Manage");
+    await click("Open in Compose");
+    expect(container.querySelector("h4")?.textContent).toBe("Survey");
     expect(container.querySelector('[aria-label="Form pages"] select option:checked')?.textContent).toBe("Page 1");
+    expect(container.textContent).toContain("Canvas page Page");
+    expect(saveRevision).not.toHaveBeenCalled();
     await click("Back to Canvas");
-    expect(container.querySelectorAll("button[data-edit-form-id]")).toHaveLength(1);
+    expect(container.querySelector<HTMLButtonElement>("button[data-edit-form-id]")?.dataset.editFormId).toBe(refs[4]!.id);
     expect(container.querySelectorAll('[data-instance-id="new.instance.2"]')).toHaveLength(1);
-    await click("Undo");
-    expect(container.querySelector("button[data-edit-form-id]")).toBeNull();
     expect([...container.querySelectorAll('[aria-label="Composer mode"] [role="tab"]')].map((item) => item.textContent)).toEqual(["Design", "Connections"]);
-    await click("Redo");
-    expect(container.querySelectorAll("button[data-edit-form-id]")).toHaveLength(1);
-    await click("Save and validate revision");
-    const saved = saveRevision.mock.calls[0]![0];
-    const forms = saved.instances.filter((item) => item.definitionRef.id === form.definitionId);
-    const sections = saved.instances.filter((item) => item.definitionRef.id === section.definitionId);
-    expect(saved.instances.filter((item) => item.definitionRef.id === page.definitionId).map((item) => item.instanceId)).toEqual([refs[2]!.id]);
-    expect(forms).toHaveLength(1);
-    expect(sections).toHaveLength(1);
-    expect(saved.placements?.find((edge) => edge.childInstanceRef.id === sections[0]!.instanceId)?.parentInstanceRef).toEqual(refs[2]);
-    expect(saved.placements?.find((edge) => edge.childInstanceRef.id === forms[0]!.instanceId)?.parentInstanceRef).toEqual(ref(sections[0]!));
+
+    // With no starter preference (or a stale one), embedded forms stay on Canvas.
+    for (const metadata of [undefined, { [SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY]: "removed-form" }]) {
+      savedRevision = { ...initial, composition: { ...initial.composition, metadata } };
+      await click("Manage");
+      await click("Open in Compose");
+      expect(container.querySelector('[aria-label="Form pages"]')).toBeNull();
+      expect(container.querySelector("button[data-edit-form-id]")).not.toBeNull();
+    }
+    expect(saveRevision).not.toHaveBeenCalled();
   });
 
   it("defers the layout catalog until Create system is submitted and then shows the loading wheel", async () => {
