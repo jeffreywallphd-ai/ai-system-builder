@@ -12847,6 +12847,22 @@
       "limitations": [
         "This compiler and feature check does not replace the packaged Desktop journey."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-preview-and-runtime-parity",
+      "work_id": "deliver-published-form-respondent-dialog",
+      "work_criteria": [
+        "complete-and-retry-one-published-form-submission",
+        "reject-invalid-and-stale-form-responses"
+      ],
+      "receipt_digest": "1721082b8f0e3d2d5da08ec9f51c935fcef0749683f3e75ea8d90f2a7bf52de7",
+      "review_digest": "b9a5067edb54b4534663c15c1ff10e4c62b722f2c9e09233401acf62182644a2",
+      "scope": "The shared dialog validates answers, rejects invalid form data and retries the same submission after a lost reply. Respondents can shorten oversized answers or close while a request is in progress.",
+      "limitations": [
+        "Shared interface evidence only. The dialog still needs to be connected and tested on packaged Desktop and managed browser."
+      ]
     }
   ]
 }
