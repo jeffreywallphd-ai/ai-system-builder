@@ -3,6 +3,23 @@
   flex-direction: column;
 }
 
+.ui-tabbed-panel__tab-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2xs);
+  min-inline-size: 0;
+  border-block-end: 1px solid var(--color-border);
+}
+
+.ui-tabbed-panel__tab-row > .ui-tabbed-panel__tablist {
+  min-inline-size: 0;
+  border-block-end: 0;
+}
+
+.ui-tabbed-panel__tab-row > button {
+  flex: 0 0 auto;
+}
+
 .ui-tabbed-panel__tablist,
 .asset-library-tabs {
   display: flex;

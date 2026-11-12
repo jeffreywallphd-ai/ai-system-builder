@@ -1033,6 +1033,7 @@ export function SystemBuilderWorkspace({
       return;
     }
     const compositionId = String(revision.composition.compositionId);
+    let createdInstanceId: string | undefined;
     await transact(async (isCurrent) => {
       const compatible = await loadCompatibleAssetsOnDemand(
         { parentInstanceId: parentId, slotId: "fields" }, { searchText: definitionId, limit: 24 },
@@ -1060,7 +1061,9 @@ export function SystemBuilderWorkspace({
           ? { ...item, displayName, selectedConfiguration: isStep ? { title: displayName } : { label: displayName } }
           : item),
       }, [asset]);
+      createdInstanceId = instanceId;
     });
+    return createdInstanceId;
   }
 
   function updateFormElement(instanceId: string, values: AssetConfigurationValues) {
@@ -1916,8 +1919,8 @@ export function SystemBuilderWorkspace({
                     canUndo={undoDrafts.length > 0}
                     canRedo={redoDrafts.length > 0}
                     onBackToCanvas={backToCanvas}
-                    onAddStep={(id, name) => void addFormElement(id, FORM_COMPOSER_FOUNDATION_ASSET_IDS.step, name)}
-                    onAddField={(id, definitionId) => void addFormElement(id, definitionId)}
+                    onAddStep={(id, name) => addFormElement(id, FORM_COMPOSER_FOUNDATION_ASSET_IDS.step, name)}
+                    onAddField={addFormElement}
                     onMove={moveFormElement}
                     onUpdate={updateFormElement}
                     onSaveRoute={setFormRoute}

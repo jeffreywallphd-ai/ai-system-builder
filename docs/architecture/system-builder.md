@@ -194,6 +194,12 @@ customization, and single-asset Studio workflows.
   form preserves its placement and neighboring assets. The two editors use
   the same workspace-visible asset definitions, draft, undo and redo history,
   and revision save path. Canvas renders the same placements in either case.
+  Each form page has its own tab. **New Form Page +** adds a numbered page
+  and opens its tab. Select a field on the page, or choose a form, page,
+  button, or message from **Element** in the **Properties** sidebar. The
+  sidebar moves below the editor when space is limited. Tab navigation and
+  properties changes use the same draft, undo, and save paths.
+  Existing fields outside a form page stay editable in a separate section.
   A form page is the group of fields respondents see together. Internally it
   remains a Foundation field group; its asset ID and route bindings are unchanged.
   Current Foundation form fields, steps, messages, and actions can only be

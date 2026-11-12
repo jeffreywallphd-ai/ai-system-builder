@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { AssetConfigurationValues, AssetInstance } from "../../../contracts/asset";
 import { readSystemFormAction, systemFormPlacementAllowed, type SystemBuilderComposerAsset,
   type SystemBuilderResult, type SystemFormAction, type SystemFormRoute } from "../../../contracts/system-builder";
@@ -6,6 +6,7 @@ import { compileSystemForm, type CompiledSystemForm } from "../../../application
 import { SystemFormPreview } from "./SystemFormPreview";
 import { SystemFormActionEditor } from "./SystemFormActionEditor";
 import { isFormChoiceAsset, readFormChoiceOptions, SystemFormRoutingEditor } from "./SystemFormRoutingEditor";
+import { TabbedPanel } from "../components/TabbedPanel";
 import { SystemComposerInspector } from "./SystemComposerInspector";
 import type { SystemComposerDraft } from "./systemComposerDraft";
 import { FORM_COMPOSER_FOUNDATION_VERSION, type SystemFormDraftEntry } from "./systemFormComposerDraft";
@@ -57,8 +58,8 @@ interface SystemFormComposerViewProps {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly onBackToCanvas: () => void;
-  readonly onAddStep: (formId: string, name: string) => void;
-  readonly onAddField: (stepId: string, definitionId: FormComposerFieldId) => void;
+  readonly onAddStep: (formId: string, name: string) => Promise<string | undefined>;
+  readonly onAddField: (stepId: string, definitionId: FormComposerFieldId) => Promise<string | undefined>;
   readonly onMove: (instanceId: string, direction: -1 | 1) => void;
   readonly onUpdate: (instanceId: string, values: AssetConfigurationValues) => void;
   readonly onSaveRoute: (formId: string, route: SystemFormRoute) => void;
@@ -72,193 +73,255 @@ export function SystemFormComposerView({
   draft, form, ready, readDefinition, onUpdatePresentation, canUndo, canRedo, onBackToCanvas, onAddStep, onAddField, onMove,
   onUpdate, onSaveRoute, onRemoveRoute, onUpdateAction, onUndo, onRedo,
 }: SystemFormComposerViewProps) {
-  const [stepName, setStepName] = useState("");
   const backButton = useRef<HTMLButtonElement>(null);
+  const pageEditor = useRef<HTMLDivElement>(null);
   const entered = useRef(false);
+  const adding = useRef(false);
+  const [selectedPageId, setSelectedPageId] = useState("");
+  const [selectedElementId, setSelectedElementId] = useState("");
+  const [focusPageId, setFocusPageId] = useState<string>();
+  const [fieldType, setFieldType] = useState<FormComposerFieldId>(FORM_COMPOSER_FIELDS[0][0]);
+  const [preview, setPreview] = useState<CompiledSystemForm>();
+  const [previewError, setPreviewError] = useState<{ readonly draft: SystemComposerDraft; readonly formId: string; readonly message: string }>();
+  const formId = String(form.form.instanceId);
+  const directFields = useMemo(() => readFormStepFields(draft, formId), [draft, formId]);
+  const page = form.steps.find((entry) => entry.instanceId === selectedPageId) ?? form.steps[0];
+  const currentPageId = page ? String(page.instanceId) : undefined;
+  const fields = useMemo(() => page ? readFormStepFields(draft, String(page.instanceId)) : [], [draft, page]);
+  const presentation = useMemo(() => readFormPresentationElements(draft, form), [draft, form]);
+  const controls = useMemo(() => {
+    const currentControlIds = new Set<string>(draft.placements.filter((edge) =>
+      (edge.slotId === "actions" || edge.slotId === "messages") &&
+      (edge.parentInstanceRef.id === formId || edge.parentInstanceRef.id === page?.instanceId))
+      .map((edge) => edge.childInstanceRef.id));
+    return presentation.filter((item) => currentControlIds.has(item.instanceId));
+  }, [draft.placements, formId, page?.instanceId, presentation]);
+  const elements = [form.form, ...(page ? [page] : []), ...fields, ...directFields, ...controls];
+  const selected = elements.find((item) => item.instanceId === selectedElementId) ?? page ?? directFields[0] ?? form.form;
+  const fieldGroup = fields.some((item) => item.instanceId === selected.instanceId) ? fields : directFields;
+  const selectedField = fieldGroup.find((item) => item.instanceId === selected.instanceId);
+  const action = draft.bindings.map(readSystemFormAction).find((entry) => entry?.formId === formId);
+  const actionFields = useMemo(() => form.steps.flatMap((item) => readFormStepFields(draft, String(item.instanceId))), [draft, form.steps]);
+
   useEffect(() => {
     if (ready && !entered.current && backButton.current) {
       entered.current = true;
       backButton.current.focus();
     }
   }, [ready]);
-  const [selectedStepId, setSelectedStepId] = useState("");
-  const [selectedFieldId, setSelectedFieldId] = useState("");
-  const [fieldType, setFieldType] = useState<FormComposerFieldId>(FORM_COMPOSER_FIELDS[0][0]);
-  const [preview, setPreview] = useState<CompiledSystemForm>();
-  const [previewError, setPreviewError] = useState<{ readonly draft: SystemComposerDraft; readonly formId: string; readonly message: string }>();
-  const directFields = useMemo(() => readFormStepFields(draft, String(form.form.instanceId)), [draft, form.form.instanceId]);
-  const step = directFields.length && selectedStepId === form.form.instanceId
-    ? undefined : form.steps.find((entry) => entry.instanceId === selectedStepId) ?? form.steps[0];
-  const fields = useMemo(() => step ? readFormStepFields(draft, String(step.instanceId)) : directFields, [directFields, draft, step]);
-  const field = fields.find((item) => item.instanceId === selectedFieldId) ?? fields[0];
-  const action = form ? draft.bindings.map(readSystemFormAction).find((entry) => entry?.formId === form.form.instanceId) : undefined;
-  const actionFields = useMemo(() => form?.steps.flatMap((item) => readFormStepFields(draft, String(item.instanceId))) ?? [], [draft, form]);
 
-  function submitStep(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (form && stepName.trim()) onAddStep(String(form.form.instanceId), stepName);
+  useLayoutEffect(() => {
+    if (currentPageId && focusPageId === currentPageId) {
+      pageEditor.current?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')?.focus();
+      setFocusPageId(undefined);
+    }
+  }, [currentPageId, focusPageId]);
+
+  function selectPage(id: string) {
+    setSelectedPageId(id);
+    setSelectedElementId("");
   }
+
+  async function addPage() {
+    if (adding.current || form.steps.length >= 32) return;
+    adding.current = true;
+    try {
+      const titles = new Set(form.steps.map((item) => item.displayName));
+      let number = form.steps.length + 1;
+      while (titles.has(`Page ${number}`)) number += 1;
+      const id = await onAddStep(formId, `Page ${number}`);
+      if (id) {
+        selectPage(id);
+        setFocusPageId(id);
+      }
+    } finally {
+      adding.current = false;
+    }
+  }
+
+  async function addField() {
+    if (!page || adding.current) return;
+    adding.current = true;
+    try {
+      const id = await onAddField(String(page.instanceId), fieldType);
+      if (id) setSelectedElementId(id);
+    } finally {
+      adding.current = false;
+    }
+  }
+
   function openPreview() {
-    if (!form) return;
-    const formId = String(form.form.instanceId);
     const result = compileSystemForm(draft, formId);
     if (result.ok) { setPreview(result.value); setPreviewError(undefined); }
     else setPreviewError({ draft, formId, message: result.message });
   }
 
+  const addPageAction = <button className="ui-tabbed-panel__tab system-form-composer__new-page" type="button"
+    disabled={form.steps.length >= 32} title={form.steps.length >= 32 ? "This form has the maximum of 32 pages." : undefined}
+    onClick={() => void addPage()}>New Form Page +</button>;
+
+  const fieldList = (items: readonly AssetInstance[], label: string) => (
+    <ul className="system-form-composer__fields" aria-label={label}>
+      {items.map((item) => (
+        <li key={item.instanceId}>
+          <button className="ui-button ui-button--outline" type="button"
+            aria-pressed={selected.instanceId === item.instanceId} onClick={() => setSelectedElementId(String(item.instanceId))}>
+            {item.displayName ?? "Untitled field"}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const pageContent = (
+    <div className="ui-stack ui-stack--md">
+      <section className="ui-stack ui-stack--sm" aria-label="Fields on this page">
+        <div className="ui-workflow__actions">
+          <label>Field type <select value={fieldType} onChange={(event) => setFieldType(event.currentTarget.value as FormComposerFieldId)}>
+            {FORM_COMPOSER_FIELDS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+          </select></label>
+          <button className="ui-button ui-button--outline" type="button" onClick={() => void addField()}>Add field</button>
+        </div>
+        {fields.length ? fieldList(fields, "Form fields") : <p className="ui-text-muted">No fields yet.</p>}
+      </section>
+      {page ? <SystemFormRoutingEditor key={page.instanceId} form={form.form} steps={form.steps} step={page}
+        fields={fields} bindings={draft.bindings} onSave={(route) => onSaveRoute(formId, route)}
+        onRemove={(id) => onRemoveRoute(formId, id)} /> : null}
+    </div>
+  );
+  const pages = form.steps.map((item) => ({ id: String(item.instanceId), label: item.displayName ?? "Untitled page",
+    keepMounted: true, content: item.instanceId === currentPageId ? pageContent : null }));
+
   return (
-    <section className="ui-stack ui-stack--md" aria-labelledby="system-form-composer-heading">
+    <section className="system-form-composer ui-stack ui-stack--md" aria-labelledby="system-form-composer-heading">
       <div className="ui-workflow__actions">
         <h3 id="system-form-composer-heading">Form Composer</h3>
         <button ref={backButton} className="ui-button ui-button--outline" type="button" onClick={onBackToCanvas}>Back to Canvas</button>
         <button className="ui-button ui-button--outline" type="button" onClick={onUndo} disabled={!canUndo}>Undo</button>
         <button className="ui-button ui-button--outline" type="button" onClick={onRedo} disabled={!canRedo}>Redo</button>
-        {form ? <button className="ui-button ui-button--outline" type="button" onClick={openPreview}>Preview form</button> : null}
+        <button className="ui-button ui-button--outline" type="button" onClick={openPreview}>Preview form</button>
       </div>
-      {previewError?.draft === draft && previewError.formId === form?.form.instanceId ? <p role="alert">{previewError.message}</p> : null}
+      <div className="ui-stack ui-stack--xs">
+        <h4>{form.form.displayName ?? "Form"}</h4>
+        {form.page ? <p>Canvas page <strong>{form.page.displayName}</strong></p>
+          : <p>Canvas container <strong>{form.region?.displayName ?? "System layout"}</strong></p>}
+      </div>
+      {previewError?.draft === draft && previewError.formId === formId ? <p role="alert">{previewError.message}</p> : null}
       {preview ? <SystemFormPreview form={preview} hasConfiguredAction={action?.formId === preview.id}
         onClose={() => setPreview(undefined)} /> : null}
-        <div className="ui-stack ui-stack--md">
-          <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form pages">
-            <h4>{form.form.displayName ?? "Form"}</h4>
-            {form.page ? <p>Canvas page <strong>{form.page.displayName}</strong></p>
-              : <p>Canvas container <strong>{form.region?.displayName ?? "System layout"}</strong></p>}
-            <p>A form page groups fields that respondents answer together.</p>
-            <form className="ui-stack ui-stack--sm" onSubmit={submitStep}>
+      <div className="system-form-composer__workspace">
+        <div className="system-form-composer__page-editor ui-stack ui-stack--md" ref={pageEditor}>
+          {pages.length ? <TabbedPanel tabs={pages} activeTabId={currentPageId} tabListAriaLabel="Form pages"
+            tabListAction={addPageAction} onTabChange={selectPage} /> : (
+            <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form pages">
+              <div className="ui-workflow__actions">{addPageAction}</div>
+              <p>Add a form page to start adding fields.</p>
+            </section>
+          )}
+          {directFields.length ? <section className="ui-panel ui-stack ui-stack--sm" aria-label="Fields outside form pages">
+            <h5>Fields outside form pages</h5>
+            <p>In Canvas, move these fields to a form page before you preview the form or set a submission action.</p>
+            {fieldList(directFields, "Fields to move")}
+          </section> : null}
+          <SystemFormActionEditor key={formId} formId={formId} fields={actionFields} instances={draft.instances} action={action}
+            onSave={(next) => onUpdateAction(formId, next)} onRemove={() => onUpdateAction(formId)} />
+        </div>
+        <aside className="system-form-composer__properties ui-panel ui-stack ui-stack--sm" aria-label="Properties">
+          <h5>Properties</h5>
+          <label className="ui-stack ui-stack--sm">
+            Element
+            <select value={selected.instanceId} onChange={(event) => setSelectedElementId(event.currentTarget.value)}>
+              <optgroup label="Form"><option value={formId}>{form.form.displayName ?? "Form"}</option></optgroup>
+              {page ? <optgroup label="Page"><option value={page.instanceId}>{page.displayName ?? "Untitled page"}</option></optgroup> : null}
+              {fields.length ? <optgroup label="Fields">{fields.map((item) => <option key={item.instanceId} value={item.instanceId}>
+                {item.displayName ?? "Untitled field"}
+              </option>)}</optgroup> : null}
+              {directFields.length ? <optgroup label="Fields outside form pages">{directFields.map((item) => <option key={item.instanceId} value={item.instanceId}>
+                {item.displayName ?? "Untitled field"}
+              </option>)}</optgroup> : null}
+              {controls.length ? <optgroup label="Buttons and messages">{controls.map((item) => <option key={item.instanceId} value={item.instanceId}>
+                {item.displayName ?? item.definitionRef.id}
+              </option>)}</optgroup> : null}
+            </select>
+          </label>
+          {selectedField ? (
+            <>
+              <FieldSettings key={selectedField.instanceId} field={selectedField} onUpdate={onUpdate} />
+              <div className="ui-workflow__actions">
+                <button className="ui-button ui-button--outline" type="button"
+                  disabled={fieldGroup[0] === selectedField} onClick={() => onMove(String(selectedField.instanceId), -1)}>Move field up</button>
+                <button className="ui-button ui-button--outline" type="button"
+                  disabled={fieldGroup[fieldGroup.length - 1] === selectedField} onClick={() => onMove(String(selectedField.instanceId), 1)}>Move field down</button>
+              </div>
+            </>
+          ) : page?.instanceId === selected.instanceId ? (
+            <div className="ui-stack ui-stack--sm" key={page.instanceId}>
               <label className="ui-stack ui-stack--sm">
-                New form page name
-                <input maxLength={200} required value={stepName} onChange={(event) => setStepName(event.currentTarget.value)} />
+                Form page name
+                <input key={page.displayName} maxLength={200} defaultValue={page.displayName}
+                  onBlur={(event) => {
+                    const title = event.currentTarget.value.trim();
+                    if (title && title !== page.displayName) onUpdate(String(page.instanceId), { title });
+                    else event.currentTarget.value = page.displayName ?? "";
+                  }} />
               </label>
               <div className="ui-workflow__actions">
-                <button className="ui-button ui-button--outline" type="submit" disabled={!stepName.trim()}>Add form page</button>
+                <button className="ui-button ui-button--outline" type="button"
+                  disabled={form.steps[0] === page} onClick={() => onMove(String(page.instanceId), -1)}>Move form page up</button>
+                <button className="ui-button ui-button--outline" type="button"
+                  disabled={form.steps[form.steps.length - 1] === page} onClick={() => onMove(String(page.instanceId), 1)}>Move form page down</button>
               </div>
-            </form>
-            {form.steps.length || directFields.length ? (
-                <label className="ui-stack ui-stack--sm">
-                  Form page
-                  <select value={step?.instanceId ?? form.form.instanceId} onChange={(event) => {
-                    setSelectedStepId(event.currentTarget.value);
-                    setSelectedFieldId("");
-                  }}>
-                    {form.steps.map((entry) => <option key={entry.instanceId} value={entry.instanceId}>{entry.displayName}</option>)}
-                    {directFields.length ? <option value={form.form.instanceId}>Fields outside form pages</option> : null}
-                  </select>
-                </label>
-            ) : <p>Add a form page to start adding fields.</p>}
-            {step ? (
-              <>
-                <label className="ui-stack ui-stack--sm" key={step.instanceId}>
-                  Form page name
-                  <input key={step.displayName} maxLength={200} defaultValue={step.displayName}
-                    onBlur={(event) => {
-                      const title = event.currentTarget.value.trim();
-                      if (title && title !== step.displayName) onUpdate(String(step.instanceId), { title });
-                      else event.currentTarget.value = step.displayName ?? "";
-                    }} />
-                </label>
-                <div className="ui-workflow__actions">
-                  <button className="ui-button ui-button--outline" type="button"
-                    disabled={form.steps[0] === step} onClick={() => onMove(String(step.instanceId), -1)}>Move form page up</button>
-                  <button className="ui-button ui-button--outline" type="button"
-                    disabled={form.steps[form.steps.length - 1] === step} onClick={() => onMove(String(step.instanceId), 1)}>Move form page down</button>
-                </div>
-              </>
-            ) : null}
-          </section>
-          {step || directFields.length ? (
-            <section className="ui-panel ui-stack ui-stack--sm" aria-label={step ? "Fields on this page" : "Fields outside form pages"}>
-              {step ? <div className="ui-workflow__actions">
-                <label>Field type <select value={fieldType} onChange={(event) => setFieldType(event.currentTarget.value as FormComposerFieldId)}>
-                  {FORM_COMPOSER_FIELDS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-                </select></label>
-                <button className="ui-button ui-button--outline" type="button" onClick={() => onAddField(String(step.instanceId), fieldType)}>Add field</button>
-              </div> : <p>In Canvas, move these fields to a form page before you preview the form or set a submission action.</p>}
-              {field ? (
-                <>
-                  <label className="ui-stack ui-stack--sm">
-                    Field
-                    <select value={field.instanceId} onChange={(event) => setSelectedFieldId(event.currentTarget.value)}>
-                      {fields.map((entry) => <option key={entry.instanceId} value={entry.instanceId}>{entry.displayName}</option>)}
-                    </select>
-                  </label>
-                  <FieldSettings key={field.instanceId} field={field} onUpdate={onUpdate} />
-                  <div className="ui-workflow__actions">
-                    <button className="ui-button ui-button--outline" type="button"
-                      disabled={fields[0] === field} onClick={() => onMove(String(field.instanceId), -1)}>Move field up</button>
-                    <button className="ui-button ui-button--outline" type="button"
-                      disabled={fields[fields.length - 1] === field} onClick={() => onMove(String(field.instanceId), 1)}>Move field down</button>
-                  </div>
-                </>
-              ) : <p className="ui-text-muted">No fields yet.</p>}
-            </section>
-          ) : null}
-          {step ? <SystemFormRoutingEditor key={step.instanceId} form={form.form} steps={form.steps} step={step}
-            fields={fields} bindings={draft.bindings} onSave={(route) => onSaveRoute(String(form.form.instanceId), route)}
-            onRemove={(id) => onRemoveRoute(String(form.form.instanceId), id)} /> : null}
-          <FormPresentationSettings draft={draft} form={form} readDefinition={readDefinition} onUpdate={onUpdatePresentation} />
-          <SystemFormActionEditor key={form.form.instanceId} formId={String(form.form.instanceId)}
-            fields={actionFields} instances={draft.instances} action={action}
-            onSave={(next) => onUpdateAction(String(form.form.instanceId), next)}
-            onRemove={() => onUpdateAction(String(form.form.instanceId))} />
-        </div>
+              <MorePageProperties element={selected} members={presentation}
+                readDefinition={readDefinition} onUpdate={onUpdatePresentation} />
+            </div>
+          ) : <FormAssetProperties key={selected.instanceId} element={selected} members={presentation}
+            readDefinition={readDefinition} onUpdate={onUpdatePresentation} />}
+        </aside>
+      </div>
     </section>
   );
 }
 
-function FormPresentationSettings({ draft, form, readDefinition, onUpdate }: {
-  readonly draft: SystemComposerDraft;
-  readonly form: SystemFormDraftEntry;
+interface FormAssetPropertiesProps {
+  readonly element: AssetInstance;
+  readonly members: readonly AssetInstance[];
   readonly readDefinition: SystemFormComposerViewProps["readDefinition"];
   readonly onUpdate: SystemFormComposerViewProps["onUpdatePresentation"];
-}) {
+}
+
+function MorePageProperties(props: FormAssetPropertiesProps) {
   const [open, setOpen] = useState(false);
-  const [elementId, setElementId] = useState("");
+  return <details onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <summary>More page properties</summary>
+    {open ? <FormAssetProperties {...props} /> : null}
+  </details>;
+}
+
+function FormAssetProperties({ element, members, readDefinition, onUpdate }: FormAssetPropertiesProps) {
   const [attempt, setAttempt] = useState(0);
-  const [resolved, setResolved] = useState<{ id: string; definition?: SystemBuilderComposerAsset }>();
-  const panel = useId();
-  const members = useMemo(() => readFormPresentationElements(draft, form), [draft, form]);
-  const element = members.find((item) => item.instanceId === elementId) ?? form.form;
+  const [resolved, setResolved] = useState<{ definition?: SystemBuilderComposerAsset }>();
   const id = String(element.instanceId);
   const definitionRef = element.definitionRef;
   useEffect(() => {
-    if (!open) return;
     let active = true;
     setResolved(undefined);
     void readDefinition(element, () => active).then((result) => {
       if (!active) return;
-      const definition = result.ok && result.value.builtIn && result.value.configurationSchema ? result.value : undefined;
-      setResolved({ id, definition });
-    });
+      const definition = result.ok && result.value?.builtIn && result.value.configurationSchema ? result.value : undefined;
+      setResolved({ definition });
+    }).catch(() => { if (active) setResolved({}); });
     return () => { active = false; };
-  }, [attempt, definitionRef.id, definitionRef.kind, definitionRef.version, id, open, readDefinition]);
-  const definition = resolved?.id === id ? resolved.definition : undefined;
-  return (
-    <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form presentation">
-      <div className="ui-workflow__actions">
-        <button type="button" className="ui-button ui-button--outline" aria-expanded={open} aria-controls={panel}
-          onClick={() => { setResolved(undefined); setOpen(!open); }}>Form and control settings</button>
-      </div>
-      <div id={panel} hidden={!open} className="ui-stack ui-stack--sm">
-        {open ? <>
-          <p>Set titles, button labels, and messages for the form assets. Set what happens after submission in Submission action.</p>
-          <label className="ui-stack ui-stack--sm">
-            Form asset
-            <select value={id} onChange={(event) => setElementId(event.currentTarget.value)}>
-              {members.map((item) => <option key={item.instanceId} value={item.instanceId}>{item.displayName ?? item.definitionRef.id}</option>)}
-            </select>
-          </label>
-          {definition ? <SystemComposerInspector mode="configuration" embedded key={id}
-            selectedInstance={element} selectedDefinition={definition} instances={members} catalog={[definition]} bindings={[]}
-            onConfigurationChange={(values) => onUpdate(id, definition, values)} onAddConnection={() => {}} onRemoveConnection={() => {}} />
-            : resolved?.id === id ? <div>
-              <p role="status">Properties are unavailable for this form asset.</p>
-              <button type="button" className="ui-button ui-button--outline" onClick={() => setAttempt(attempt + 1)}>Retry properties</button>
-            </div> : <p role="status">Loading form properties…</p>}
-        </> : null}
-      </div>
-    </section>
-  );
+  }, [attempt, definitionRef.id, definitionRef.kind, definitionRef.version, id, readDefinition]);
+  const definition = resolved?.definition;
+  return definition ? <SystemComposerInspector mode="configuration" embedded
+    selectedInstance={element} selectedDefinition={definition} instances={members} catalog={[definition]} bindings={[]}
+    onConfigurationChange={(values) => onUpdate(id, definition, values)} onAddConnection={() => {}} onRemoveConnection={() => {}} />
+    : resolved ? <div className="ui-stack ui-stack--xs">
+      <p role="status">Properties are unavailable for this form asset.</p>
+      <button type="button" className="ui-button ui-button--outline" onClick={() => setAttempt((current) => current + 1)}>Retry properties</button>
+    </div> : <p role="status">Loading form properties…</p>;
 }
+
 
 function FieldSettings({field, onUpdate}: {
   readonly field: AssetInstance;

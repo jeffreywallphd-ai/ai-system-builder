@@ -1274,6 +1274,62 @@
   font-size: var(--font-size-xs);
 }
 
+.system-form-composer {
+  container: form-composer / inline-size;
+}
+
+.system-form-composer__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  align-items: start;
+  gap: var(--space-md);
+}
+
+.system-form-composer__page-editor,
+.system-form-composer__properties {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.system-form-composer__properties :is(input, select, textarea) {
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.system-form-composer__new-page {
+  color: var(--color-accent);
+}
+
+.system-form-composer__new-page:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.system-form-composer__fields {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.system-form-composer__fields button {
+  inline-size: 100%;
+  justify-content: flex-start;
+  white-space: normal;
+  text-align: start;
+}
+
+.system-form-composer__fields button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+}
+
+@container form-composer (max-width: 48rem) {
+  .system-form-composer__workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 70rem) {
   .system-composer__workspace--without-library,
   .system-composer__workspace--without-library[data-details-collapsed="true"] {
