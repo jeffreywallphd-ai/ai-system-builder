@@ -144,18 +144,18 @@ export function compileSystemForm(source: SystemFormSource, formId: string): Sys
     .sort((left, right) => left.order - right.order).map((edge) => byId.get(String(edge.childInstanceRef.id)));
   const groups = children(formId);
   if (groups.length === 0 || groups.length > MAX_STEPS || groups.some((step) => !identity(step, STEP) || step.selectedConfiguration?.visibilityCondition)) {
-    return fail("Use 1 to 32 supported form steps and put each field inside a step.");
+    return fail("Put each field on a form page. A form needs 1 to 32 supported pages.");
   }
   const ids = new Set(groups.map((step) => String(step!.instanceId)));
-  if (ids.size !== groups.length) return fail("Each step must appear once in the form.");
+  if (ids.size !== groups.length) return fail("Each page must appear once in the form.");
   const routes = new Map<string, SystemFormRoute[]>();
   for (const binding of source.bindings) {
     if (!hasKey(binding.metadata ?? {}, SYSTEM_FORM_ROUTE_METADATA_KEY) || !ids.has(String(binding.sourceRef.id))) continue;
     const route = readSystemFormRoute(binding);
-    if (!route || (route.destinationId !== formId && !ids.has(route.destinationId))) return fail("A route must end this form or go to one of its steps.");
+    if (!route || (route.destinationId !== formId && !ids.has(route.destinationId))) return fail("A route must finish this form or go to one of its pages.");
     const current = routes.get(route.fromStepId) ?? [];
     if (current.length >= 9 || current.some((other) => other.when === null ? route.when === null : route.when !== null && other.priority === route.priority)) {
-      return fail("Use distinct rule positions and one default route per step.");
+      return fail("Give each rule a different position and use one default route per form page.");
     }
     current.push(route);
     routes.set(route.fromStepId, current);
@@ -176,10 +176,10 @@ export function compileSystemForm(source: SystemFormSource, formId: string): Sys
     const entries = routes.get(id) ?? [];
     const conditions = entries.filter((route) => route.when !== null).sort((a, b) => a.priority - b.priority);
     if (conditions.some(({ when }) => !validCondition(fields.find((field) => field.id === when!.fieldId), when!))) {
-      return fail("Each route rule needs a field on this step, a compatible comparison, and a valid value.");
+      return fail("Each route rule needs a field on this page, a compatible comparison, and a valid value.");
     }
     if (new Set(conditions.map(({ when }) => JSON.stringify([when!.fieldId, when!.operator, when!.value]))).size !== conditions.length) {
-      return fail("Use each rule condition only once on a step.");
+      return fail("Use each rule condition only once on a form page.");
     }
     const defaultDestinationId = entries.find((route) => route.when === null)?.destinationId ??
       (groups[index + 1] ? String(groups[index + 1]!.instanceId) : formId);
@@ -200,7 +200,7 @@ export function compileSystemForm(source: SystemFormSource, formId: string): Sys
     return true;
   }
   if (!visit(steps[0]!.id)) return fail("Remove cycles so every route can reach the end of the form.");
-  if (visited.size !== steps.length) return fail("Add a route to every step or remove the steps that cannot be reached.");
+  if (visited.size !== steps.length) return fail("Add a route to each form page or remove pages that cannot be reached.");
   return { ok: true, value: { id: formId, title: label(form), steps } };
 }
 
@@ -217,7 +217,7 @@ export function validateSystemFormRoutes(source: SystemFormSource): readonly Ass
     const formId = route && parentByStep.get(route.fromStepId);
     if (!route || !formId || !identity(byId.get(formId), FORM) || !identity(byId.get(route.fromStepId), STEP)) {
       issues.push({ severity: "error", category: "binding", path: ["bindings", String(index)],
-        message: "Each form route needs a valid rule and a step inside an exact Foundation form." });
+        message: "Each form route needs a valid rule and a page in a supported Foundation form." });
     } else if (!forms.has(formId)) forms.set(formId, index);
   }
   for (const [formId, index] of forms) {

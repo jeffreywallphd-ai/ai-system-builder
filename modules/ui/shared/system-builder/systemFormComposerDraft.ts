@@ -191,7 +191,7 @@ export function createSystemFormDraft(draft: SystemComposerDraft, input: CreateF
     { role: "page", asset: page, parentId: String(shell.instanceId), slotId: slot.slotId, label: name },
     { role: "section", asset: section, parentId: existingPage ?? input.instanceIds.page, slotId: "content", label: "Form content", parent: page },
     { role: "form", asset: form, parentId: input.instanceIds.section, slotId: "content", label: name, parent: section },
-    { role: "step", asset: step, parentId: input.instanceIds.form, slotId: "fields", label: "First step", parent: form },
+    { role: "step", asset: step, parentId: input.instanceIds.form, slotId: "fields", label: "Page 1", parent: form },
   ] as const;
   let current = draft;
   const labels = new Map<string, { name: string; title?: string }>();

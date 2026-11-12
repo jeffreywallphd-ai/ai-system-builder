@@ -105,7 +105,7 @@ test("revision validation keeps a route error visible after more than 200 config
   assert.equal(result.status, "invalid");
   assert.ok(result.issues.some((issue) => issue.message.includes("limited to 200")));
   assert.ok(result.issues.some((issue) => issue.category === "binding" &&
-    issue.message === "Add a route to every step or remove the steps that cannot be reached."));
+    issue.message === "Add a route to each form page or remove pages that cannot be reached."));
 });
 
 test("malformed field bounds fail closed and evaluation stops if an invalid graph crosses the type boundary", () => {

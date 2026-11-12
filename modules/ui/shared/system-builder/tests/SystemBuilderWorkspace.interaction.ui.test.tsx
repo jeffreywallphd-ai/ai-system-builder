@@ -263,9 +263,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(messageInput.value).toBe("Check your answers");
     await act(async () => setInputValue(messageInput, "Check the request details"));
     await click("Form and control settings");
-    await fill("New step name", "Details");
-    await click("Add step");
-    await choose("Form step", "Details");
+    await fill("New form page name", "Details");
+    await click("Add form page");
+    await choose("Form page", "Details");
     await click("Add field");
     await act(async () => {
       const label = find<HTMLInputElement>("Field label", "input");
@@ -288,13 +288,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await expandStates();
     expect(editButton("Questionnaire").closest("article")?.textContent).not.toContain("Request reason");
     await editForm("Intake");
-    await choose("Form step", "Details");
+    await choose("Form page", "Details");
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
     await click("Undo");
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(false);
     await click("Redo");
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
-    await choose("Form step", "First step");
+    await choose("Form page", "First step");
     await choose("Field type", "Checkbox");
     await click("Add field");
     await act(async () => {
@@ -306,7 +306,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await choose("Answer field", "Fast path");
     await choose("Default route", "Details");
     await choose("Compare with", "Selected");
-    await choose("Go to step", "Finish form");
+    await choose("Go to form page", "Finish form");
     await click("Add route rule");
     expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
     await act(async () => [...container!.querySelectorAll("summary")].find((item) => item.textContent === "After submission")!.click());
@@ -323,7 +323,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await act(async () => { previewButton.focus(); previewButton.click(); });
     const preview = document.querySelector('[role="dialog"]')!;
     const press = (name: string) => act(async () => button(preview, name).click());
-    await press("Next step");
+    await press("Next page");
     const answer = preview.querySelector<HTMLInputElement>('input[type="text"]')!;
     await press("Finish preview");
     expect(answer.getAttribute("aria-invalid")).toBe("true");
@@ -420,13 +420,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
     root = createRoot(container);
     await act(async () => mount());
     await editForm("Intake");
-    await choose("Form step", "Fields outside steps");
+    await choose("Form page", "Fields outside form pages");
     expect(find<HTMLInputElement>("Field label", "input").value).toBe("Canvas field");
-    await choose("Form step", "Details");
+    await choose("Form page", "Details");
     expect(find<HTMLInputElement>("Field label", "input").value).toBe("Request reason");
     expect(container!.textContent).toContain("Request reason → Reason");
-    await click("Move step up");
-    expect([...find<HTMLSelectElement>("Form step", "select").options].map((item) => item.text)).toEqual(["Details", "First step", "Fields outside steps"]);
+    await click("Move form page up");
+    expect([...find<HTMLSelectElement>("Form page", "select").options].map((item) => item.text)).toEqual(["Details", "First step", "Fields outside form pages"]);
     await click("Save and validate revision");
     await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(2));
     expect(latest.placements!.find((edge) => edge.childInstanceRef.id === canvasField.instanceId)?.order).toBe(1);
@@ -508,6 +508,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(create).toHaveBeenCalledTimes(1);
     expect(container.querySelector("h4")?.textContent).toBe("Survey");
     expect(container.textContent).toContain("Canvas page Page");
+    expect(container.querySelector('[aria-label="Form pages"] select option:checked')?.textContent).toBe("Page 1");
     await click("Back to Canvas");
     expect(container.querySelectorAll("button[data-edit-form-id]")).toHaveLength(1);
     expect(container.querySelectorAll('[data-instance-id="new.instance.2"]')).toHaveLength(1);

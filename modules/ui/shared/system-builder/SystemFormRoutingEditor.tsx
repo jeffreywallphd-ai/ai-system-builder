@@ -60,9 +60,9 @@ export function SystemFormRoutingEditor({ form, steps, step, fields, bindings, o
   }
 
   return (
-    <section className="ui-panel ui-stack ui-stack--sm" aria-label="Routes after this step">
-      <h4>Routes after this step</h4>
-      <p>The first matching rule sets the next step. If no rule matches, the form uses the default route.</p>
+    <section className="ui-panel ui-stack ui-stack--sm" aria-label="Routes after this page">
+      <h4>Routes after this page</h4>
+      <p>The first matching rule chooses the next form page. If no rule matches, the form uses the default route.</p>
       <label className="ui-stack ui-stack--sm">
         Default route
         <select value={fallback?.route.destinationId ?? ""} onChange={(event) => {
@@ -70,7 +70,7 @@ export function SystemFormRoutingEditor({ form, steps, step, fields, bindings, o
           if (destinationId) onSave({ fromStepId: String(step.instanceId), destinationId, priority: 0, when: null });
           else if (fallback) onRemove(fallback.id);
         }}>
-          <option value="">Next step in the saved order, or finish</option>
+          <option value="">Next page in order, or finish</option>
           {destinationOptions()}
         </select>
       </label>
@@ -81,7 +81,7 @@ export function SystemFormRoutingEditor({ form, steps, step, fields, bindings, o
         const option = question && readFormChoiceOptions(question).find((item) => item.value === rule.value);
         const value = typeof rule.value === "boolean" ? rule.value ? "selected" : "cleared" : option?.label ?? String(rule.value);
         return <li key={id}>
-          <span>When {question?.displayName ?? "an unavailable field"} {OPERATORS[rule.operator]} {value}, go to {target?.displayName ?? (route.destinationId === form.instanceId ? "Finish form" : "an unavailable step")}.</span>{" "}
+          <span>When {question?.displayName ?? "an unavailable field"} {OPERATORS[rule.operator]} {value}, go to {target?.displayName ?? (route.destinationId === form.instanceId ? "Finish form" : "an unavailable page")}.</span>{" "}
           <button className="ui-button ui-button--outline" type="button" aria-label={`Remove route rule ${index + 1}`} onClick={() => onRemove(id)}>Remove</button>
         </li>;
       })}</ol> : <p className="ui-text-muted">No answer rules yet.</p>}
@@ -110,7 +110,7 @@ export function SystemFormRoutingEditor({ form, steps, step, fields, bindings, o
                 type={numeric ? "number" : date ? dateKind === "time" ? "time" : dateKind === "date-time" ? "datetime-local" : "date" : "text"}
                 onChange={(event) => setRawValue(event.currentTarget.value)} />}
             </label>
-            <label className="ui-stack ui-stack--sm">Go to step
+            <label className="ui-stack ui-stack--sm">Go to form page
               <select value={destination} required onChange={(event) => setDestination(event.currentTarget.value)}>
                 <option value="">Select a destination</option>
                 {destinationOptions()}

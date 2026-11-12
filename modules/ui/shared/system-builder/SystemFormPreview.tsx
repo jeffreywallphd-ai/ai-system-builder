@@ -122,7 +122,7 @@ export function SystemFormJourney({ form, focusOnMount = false, finalLabel, onFi
           setErrors(new Map());
           setPosition(position - 1);
         }}>Back</button> : null}
-        <button className="ui-button" type="submit">{destination === form.id ? finalLabel : "Next step"}</button>
+        <button className="ui-button" type="submit">{destination === form.id ? finalLabel : "Next page"}</button>
       </div>
     </form>
   );

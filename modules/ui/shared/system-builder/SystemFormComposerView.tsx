@@ -119,35 +119,36 @@ export function SystemFormComposerView({
       {preview ? <SystemFormPreview form={preview} hasConfiguredAction={action?.formId === preview.id}
         onClose={() => setPreview(undefined)} /> : null}
         <div className="ui-stack ui-stack--md">
-          <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form and steps">
+          <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form pages">
             <h4>{form.form.displayName ?? "Form"}</h4>
             {form.page ? <p>Canvas page <strong>{form.page.displayName}</strong></p>
               : <p>Canvas container <strong>{form.region?.displayName ?? "System layout"}</strong></p>}
+            <p>A form page groups fields that respondents answer together.</p>
             <form className="ui-stack ui-stack--sm" onSubmit={submitStep}>
               <label className="ui-stack ui-stack--sm">
-                New step name
+                New form page name
                 <input maxLength={200} required value={stepName} onChange={(event) => setStepName(event.currentTarget.value)} />
               </label>
               <div className="ui-workflow__actions">
-                <button className="ui-button ui-button--outline" type="submit" disabled={!stepName.trim()}>Add step</button>
+                <button className="ui-button ui-button--outline" type="submit" disabled={!stepName.trim()}>Add form page</button>
               </div>
             </form>
             {form.steps.length || directFields.length ? (
                 <label className="ui-stack ui-stack--sm">
-                  Form step
+                  Form page
                   <select value={step?.instanceId ?? form.form.instanceId} onChange={(event) => {
                     setSelectedStepId(event.currentTarget.value);
                     setSelectedFieldId("");
                   }}>
                     {form.steps.map((entry) => <option key={entry.instanceId} value={entry.instanceId}>{entry.displayName}</option>)}
-                    {directFields.length ? <option value={form.form.instanceId}>Fields outside steps</option> : null}
+                    {directFields.length ? <option value={form.form.instanceId}>Fields outside form pages</option> : null}
                   </select>
                 </label>
-            ) : <p>Add a step to start adding fields.</p>}
+            ) : <p>Add a form page to start adding fields.</p>}
             {step ? (
               <>
                 <label className="ui-stack ui-stack--sm" key={step.instanceId}>
-                  Step name
+                  Form page name
                   <input key={step.displayName} maxLength={200} defaultValue={step.displayName}
                     onBlur={(event) => {
                       const title = event.currentTarget.value.trim();
@@ -157,21 +158,21 @@ export function SystemFormComposerView({
                 </label>
                 <div className="ui-workflow__actions">
                   <button className="ui-button ui-button--outline" type="button"
-                    disabled={form.steps[0] === step} onClick={() => onMove(String(step.instanceId), -1)}>Move step up</button>
+                    disabled={form.steps[0] === step} onClick={() => onMove(String(step.instanceId), -1)}>Move form page up</button>
                   <button className="ui-button ui-button--outline" type="button"
-                    disabled={form.steps.at(-1) === step} onClick={() => onMove(String(step.instanceId), 1)}>Move step down</button>
+                    disabled={form.steps.at(-1) === step} onClick={() => onMove(String(step.instanceId), 1)}>Move form page down</button>
                 </div>
               </>
             ) : null}
           </section>
           {step || directFields.length ? (
-            <section className="ui-panel ui-stack ui-stack--sm" aria-label={step ? "Fields in this step" : "Fields outside steps"}>
+            <section className="ui-panel ui-stack ui-stack--sm" aria-label={step ? "Fields on this page" : "Fields outside form pages"}>
               {step ? <div className="ui-workflow__actions">
                 <label>Field type <select value={fieldType} onChange={(event) => setFieldType(event.currentTarget.value as FormComposerFieldId)}>
                   {FORM_COMPOSER_FIELDS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
                 </select></label>
                 <button className="ui-button ui-button--outline" type="button" onClick={() => onAddField(String(step.instanceId), fieldType)}>Add field</button>
-              </div> : <p>Move these fields into a step in Canvas before previewing this form or using a submission action.</p>}
+              </div> : <p>In Canvas, move these fields to a form page before you preview the form or set a submission action.</p>}
               {field ? (
                 <>
                   <label className="ui-stack ui-stack--sm">

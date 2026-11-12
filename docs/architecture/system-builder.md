@@ -184,13 +184,15 @@ customization, and single-asset Studio workflows.
   Saving creates a new revision. There is no
   persistent Asset Palette, pointer drag behavior, or renderer drag state.
   In Systems Compose, **Create form system** starts a Minimal system and adds
-  a section, form, and first step to its existing page in one undoable draft
+  a section, form, and first form page to its existing Canvas page in one undoable draft
   edit. In Canvas, **Edit Form** opens the specific form on which it appears.
   **Back to Canvas** selects that form again. Systems without forms still
   open in Canvas. More than one form can share a page, and opening an embedded
   form preserves its placement and neighboring assets. The two editors use
   the same workspace-visible asset definitions, draft, undo and redo history,
   and revision save path. Canvas renders the same placements in either case.
+  A form page is the group of fields respondents see together. Internally it
+  remains a Foundation field group; its asset ID and route bindings are unchanged.
   Current Foundation form fields, steps, messages, and actions can only be
   placed in their matching regions inside a form. Canvas filters add and move
   choices, and revision validation checks the same placement rule and verifies
