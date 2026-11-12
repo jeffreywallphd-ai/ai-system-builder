@@ -183,6 +183,11 @@ customization, and single-asset Studio workflows.
   the draft as one undoable change. Required layout structure stays protected.
   Saving creates a new revision. There is no
   persistent Asset Palette, pointer drag behavior, or renderer drag state.
+  The Form Composer draft constructor uses the same placement records. It
+  creates a dedicated Foundation page, a compatible section, a form, and a
+  first field group in one draft edit. The Form view can read this structure
+  without creating duplicate assets. The existing Canvas consumes the same
+  placements through its ordinary rendering path.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only
