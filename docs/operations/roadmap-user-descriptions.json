@@ -17862,6 +17862,28 @@
           "The managed server restart, Assets security review and final system tests are still open."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ab4e542cc2ecfbb4877a84a3e96242e59fae76118165e618757c8225315a8337",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The managed browser reopened saved drafts and published assets after four server restarts.",
+          "The test used a fresh local database and verified TLS."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "446deda5a22c089cf01a107e496bb54efb7ed552100db736de88179dbd5dc048",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This check used sample Assets data on one computer.",
+          "The Assets security review and final system tests are still open."
+        ]
+      }
     }
   ]
 }

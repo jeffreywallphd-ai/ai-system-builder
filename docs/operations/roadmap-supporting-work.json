@@ -12576,6 +12576,38 @@
       "limitations": [
         "These results cover one Windows test computer. The managed server restart, Assets security review and final system tests are still open."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "e2e-default-imported",
+      "work_id": "implement-managed-assets-persistence-restart-check",
+      "work_criteria": [
+        "owned-server-graceful-restart-is-bounded",
+        "managed-assets-journey-keeps-existing-mode"
+      ],
+      "receipt_digest": "ea1438c564d120af025b20a6b9bf71544496b059cd65fbb4baabaa89b1a607d6",
+      "review_digest": "99c9b936fbca9f54649d325d204c732716bb483e049220db6686b7b6afbb155e",
+      "scope": "The managed browser reopened saved drafts and published assets after four server restarts. The test used a fresh local database and verified TLS.",
+      "limitations": [
+        "This check used sample Assets data on one computer. The Assets security review and final system tests are still open."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "e2e-studio-saved",
+      "work_id": "implement-managed-assets-persistence-restart-check",
+      "work_criteria": [
+        "owned-server-graceful-restart-is-bounded",
+        "managed-assets-journey-keeps-existing-mode"
+      ],
+      "receipt_digest": "ea1438c564d120af025b20a6b9bf71544496b059cd65fbb4baabaa89b1a607d6",
+      "review_digest": "99c9b936fbca9f54649d325d204c732716bb483e049220db6686b7b6afbb155e",
+      "scope": "The managed browser reopened saved drafts and published assets after four server restarts. The test used a fresh local database and verified TLS.",
+      "limitations": [
+        "This check used sample Assets data on one computer. The Assets security review and final system tests are still open."
+      ]
     }
   ]
 }

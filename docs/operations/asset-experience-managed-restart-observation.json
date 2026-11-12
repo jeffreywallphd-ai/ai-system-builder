@@ -1,0 +1,46 @@
+{
+  "schema_version": "asset-experience-managed-restart-observation-v1",
+  "roadmap_id": "asset-experience-layered-customization",
+  "increment_id": "production-qualification",
+  "criterion_ids": [
+    "e2e-default-imported",
+    "e2e-studio-saved"
+  ],
+  "status": "technical-check-pending",
+  "owner": "agent",
+  "observed_source": {
+    "commit": "4c013604a7f3b8c169166110fb3516a998c068e3",
+    "candidate_digest": "1ce4601a92ea8cd47711e4a9764533983ab3e3ac2088399bc14ec37436651490",
+    "product_source": "source.8319935e2673f61486a9bb78ff633e6e3eb2653c4aa2c6236c6361f4d3c0ac97"
+  },
+  "run_id": "managed-b034ed224d3446d3becb6f108ac12aa9",
+  "observation": {
+    "case_status": "passed",
+    "cases": 1,
+    "retries": 0,
+    "graceful_server_restarts": 4,
+    "elapsed_ms": 123890,
+    "reopened_foundation_and_imported_customizations": true,
+    "reopened_studio_draft_and_published_asset": true,
+    "same_test_database_and_storage": true,
+    "verified_tls": true,
+    "database_stopped": true,
+    "temporary_bytes_removed": 23146560.0
+  },
+  "evidence_digests": {
+    "browser-report.json": "bf2e06418873894b3f2db39d42df71fa53b086daff74b94cf80bcfb134b81e7a",
+    "execution-result.json": "27c7e76cc5d70c8be5390e427f194d874f618d412625f2273865a68cb02cc143",
+    "after-execution.json": "ee05914a3a539651745ade8a17c778c46eb6b488c67c10343f723b9442b82acf",
+    "fixture-cleanup-result.json": "59738413360aa5ce38dd8d0100745f491a692de51ce30f0b2d35fd722a7881c3",
+    "host": "8ff1b37ff1d9c4b1db5a857dba37f41811634ca714e994e364ceb5bca2ede9a7",
+    "accessibility": "69036f42991cdda31beefa1ae13a9787910e473b8f17a9e7ca8b127a153c77d3"
+  },
+  "scope": [
+    "The managed browser reopened sample Assets data after four server process restarts.",
+    "This working-tree snapshot includes pre-existing changes outside this work."
+  ],
+  "remaining": [
+    "Keep the earlier legacy Assets authorization assessment and final system checks pending."
+  ],
+  "parent_qualification_granted": false
+}
