@@ -12531,6 +12531,36 @@
       "limitations": [
         "The component tests used made-up files and replies. Browser interruption and cleanup still need their own checks."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "qualify-assets-managed-browser-standard",
+      "work_criteria": [
+        "managed-assets-standard-and-narrow-browser"
+      ],
+      "receipt_digest": "cc82ea229edfbfb49c99123467bf6236dea807777eccf872c2a369a8e37a258a",
+      "review_digest": "46c7b411150a6e157d86406bc53bee9000ce67a6554c4011ff38384ad422a05e",
+      "scope": "The managed Thin Client passed the Assets workflow at 1440 and 320 pixels. The test created, customized, published, and reopened sample assets.",
+      "limitations": [
+        "This check used one local managed browser. Packaged Desktop and managed server restart still need their own checks."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "qualify-assets-managed-browser-native400",
+      "work_criteria": [
+        "managed-assets-native400-browser"
+      ],
+      "receipt_digest": "1e0464b0d75313c91376e63c1323debb2a6c9bbbc6a2a3f40cfe9a8d1b163944",
+      "review_digest": "a87988154ea926f7b0adbbb3248102759d3f2d46b25bb4c93c24acfb9599d651",
+      "scope": "All five Assets tabs passed at 400 percent browser zoom. The test measured the layout and found no horizontal page overflow.",
+      "limitations": [
+        "This check used one local managed browser. The Assets security review and final system tests are still open."
+      ]
     }
   ]
 }

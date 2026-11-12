@@ -17796,6 +17796,50 @@
           "Browser interruption and cleanup still need their own checks."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e7a21cf680684e17494634c5c691fb8e0a21fdfe9bc0d9b5fc6459464750901b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The managed Thin Client passed the Assets workflow at 1440 and 320 pixels.",
+          "The test created, customized, published, and reopened sample assets."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "63be50b2af2c8061e2de008db63d01c3b8d50fae26a36a57bd9f6de95f0b0ccc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This check used one local managed browser.",
+          "Packaged Desktop and managed server restart still need their own checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a7f43c40bb88214e52d83b8746fb2fb1e56844a6d98e862286516e1836a3a702",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All five Assets tabs passed at 400 percent browser zoom.",
+          "The test measured the layout and found no horizontal page overflow."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8199d6cf27663bd0db7286beff80b7d71a9df8b91b7fff64380a6bf81506c25f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This check used one local managed browser.",
+          "The Assets security review and final system tests are still open."
+        ]
+      }
     }
   ]
 }
