@@ -10,6 +10,7 @@ const FIELD_KINDS = {
   "builtin.form.text-field": "text",
   "builtin.form.text-area": "multiline",
   "builtin.form.select-field": "choice",
+  "builtin.form.radio-group": "choice",
   "builtin.form.number-field": "number",
   "builtin.form.date-time-field": "date-time",
   "builtin.form.checkbox-field": "checkbox",
@@ -96,7 +97,8 @@ function compileField(instance: AssetInstance): SystemFormField | undefined {
   return { id: String(instance.instanceId), kind, required: values.required === true,
     label: typeof values.label === "string" && values.label.trim() ? values.label.slice(0, 200) : label(instance),
     helpText: typeof values.helpText === "string" ? values.helpText.slice(0, 1000) : "",
-    options, min, max, dateKind, earliest, latest };
+    options, min, max, dateKind, earliest, latest,
+    ...(definitionId === "builtin.form.radio-group" ? { choicePresentation: "radio" as const } : {}) };
 }
 
 export function validateSystemFormValue(field: SystemFormField, value: unknown): string | undefined {

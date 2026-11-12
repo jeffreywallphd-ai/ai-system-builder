@@ -198,10 +198,10 @@ customization, and single-asset Studio workflows.
   New reference systems group the request fields and artifact filters under
   form assets. The conversation composer renders its own Send control in
   preview; the published chat runtime keeps its existing message operation.
-  The rule does not rewrite earlier saved revisions. To save an earlier system
-  with loose fields, add a Form asset and move the fields into its Fields
-  region or a step. In an older chatbot template, remove the separate Send
-  asset to use the message composer's Send control.
+  The rule does not rewrite earlier saved revisions. To validate an earlier
+  system with loose fields, add a Form asset and move the fields into its
+  Fields region or a step. In an older chatbot template, remove the separate
+  Send asset to use the message composer's Send control.
   Form routes are versioned `control` bindings between exact Foundation step
   instances. A route to the enclosing form ends the form. The evaluator tries
   bounded scalar conditions in priority order, then uses an explicit fallback
@@ -214,6 +214,12 @@ customization, and single-asset Studio workflows.
   current step, and drops answers after a changed route. Preview has no save or
   action transport. It reports which fields would be included without showing
   their answer values in the result.
+  Radio groups use the same bounded choice values and show native radio
+  buttons in the form journey. **Form and control settings** opens the existing
+  asset property editor for the form, its steps, and the buttons or messages
+  placed inside it. These settings do not grant execution; the separate
+  submission action selects the approved effect. An embedded form can open
+  from a compatible application region even when it has no page ancestor.
   A form submission binding connects the exact Foundation `submitted-values`
   port to the existing Create Record operation's `input` port. It lists the
   form fields the action may receive and their destination record fields.

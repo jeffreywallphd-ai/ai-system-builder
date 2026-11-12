@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { SystemFormValue } from "../../../contracts/system-builder";
 import {
   evaluateSystemForm, resolveSystemFormDestination, validateSystemFormValue,
@@ -48,10 +48,12 @@ export function SystemFormJourney({ form, focusOnMount = false, finalLabel, onFi
   const badInput = useRef(new Set<string>());
   const heading = useRef<HTMLHeadingElement>(null);
   const prefix = useId();
+  const fieldIds = useMemo(() => new Map(form.steps.flatMap((entry) => entry.fields)
+    .map((field, index) => [field.id, `${prefix}-field-${index}`])), [form, prefix]);
   const step = form.steps.find((entry) => entry.id === path[position])!;
   const focusedStep = useRef(focusOnMount ? undefined : step.id);
   const destination = resolveSystemFormDestination(step, answers);
-  const fieldId = (id: string) => `${prefix}-${id}`;
+  const fieldId = (id: string) => fieldIds.get(id)!;
   useLayoutEffect(() => {
     if (focusedStep.current !== step.id) heading.current?.focus();
     focusedStep.current = step.id;
@@ -139,6 +141,31 @@ function AnswerControl({ field, id, value, error, onChange }: {
   function reportInput(control: HTMLInputElement) {
     const value = field.kind === "number" ? control.value ? control.valueAsNumber : undefined : control.value;
     onChange(value, control.validity.badInput);
+  }
+  if (field.kind === "choice" && field.choicePresentation === "radio") {
+    return (
+      <fieldset className="ui-stack ui-stack--sm" aria-describedby={props["aria-describedby"]}>
+        <legend>{field.label}{field.required ? " (required)" : ""}</legend>
+        {field.options.map((option, index) => (
+          <label key={option.value}>
+            <input {...props} id={index ? `${id}-option-${index}` : id} name={id} type="radio"
+              value={option.value} checked={text === option.value} onChange={() => onChange(option.value)} />
+            {" "}{option.label}
+          </label>
+        ))}
+        {!field.required ? (
+          <button className="ui-button ui-button--outline" type="button" disabled={!text}
+            aria-label={`Clear selection for ${field.label}`} onClick={(event) => {
+              onChange(undefined);
+              event.currentTarget.ownerDocument.getElementById(id)?.focus();
+            }}>
+            Clear selection
+          </button>
+        ) : null}
+        {field.helpText ? <span id={`${id}-help`}>{field.helpText}</span> : null}
+        {error ? <span id={`${id}-error`} role="alert">{error}</span> : null}
+      </fieldset>
+    );
   }
   return (
     <div className="ui-stack ui-stack--sm">

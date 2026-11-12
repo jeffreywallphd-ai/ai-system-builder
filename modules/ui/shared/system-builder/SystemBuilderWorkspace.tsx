@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   normalizeAssetId,
   MAX_ASSET_PLACEMENTS_PER_COMPOSITION,
@@ -58,10 +58,12 @@ import { compileSystemFormAction } from "../../../application/services/system-bu
 import { isFormActionFieldCompatible, readFormActionOptions } from "./SystemFormActionEditor";
 import {
   FORM_COMPOSER_FIELDS,
+  readFormPresentationElements,
   readFormStepFields,
   SystemFormComposerView,
   type FormComposerFieldId,
 } from "./SystemFormComposerView";
+import { isFormChoiceAsset } from "./SystemFormRoutingEditor";
 import {
   createSystemFormDraft,
   FORM_COMPOSER_FOUNDATION_ASSET_IDS,
@@ -323,11 +325,16 @@ export function SystemBuilderWorkspace({
     [bindings, instances, placements, structure],
   );
   const draftForms = useMemo(() => structure?.profile === "interactive"
-    ? readSystemForms(draft, composerCatalog) : [], [draft, composerCatalog, structure?.profile]);
+    ? readSystemForms(draft, composerCatalog, revision?.composition.rootInstanceRefs ?? []) : [],
+  [draft, composerCatalog, structure?.profile, revision?.composition.rootInstanceRefs]);
   const editableFormIds = useMemo(() => new Set(draftForms.map(({form}) => String(form.instanceId))), [draftForms]);
   const activeForm = formTarget && formTarget.scope === scope && formTarget.systemId === selectedSystemId
     ? draftForms.find(({form}) => form.instanceId === formTarget.formId) : undefined;
   const composerMode = activeForm ? "form" : requestedComposerMode;
+  const readFormDefinition = useCallback((instance: AssetInstance, isOpen: () => boolean) =>
+    definitionReader.read(client, { workspaceId, definitionRef: instance.definitionRef },
+      () => isOpen() && currentScope.current === scope && currentSystem.current === selectedSystemId),
+  [client, definitionReader, scope, selectedSystemId, workspaceId]);
   const canRepairConversationInteraction = useMemo(
     () => canRepairSystemComposerConversationInteraction(instances, bindings),
     [bindings, instances],
@@ -1042,7 +1049,8 @@ export function SystemBuilderWorkspace({
   }
 
   function editForm(instanceId: string) {
-    if (!selectedSystemId || busy || !editableFormIds.has(instanceId)) return;
+    if (!selectedSystemId || !revision || String(revision.systemId) !== selectedSystemId ||
+        String(revision.targetWorkspaceId) !== workspaceId || busy || !editableFormIds.has(instanceId)) return;
     setSelectedInstanceId(instanceId);
     setFormTarget({ scope, systemId: selectedSystemId, formId: instanceId });
   }
@@ -1058,11 +1066,12 @@ export function SystemBuilderWorkspace({
   }
 
   function formDraftMembership(instanceId: string): "step" | "field" | undefined {
-    const steps = draftForms.flatMap((entry) => entry.steps);
+    if (!activeForm) return undefined;
+    const steps = activeForm.steps;
     if (steps.some((step) => step.instanceId === instanceId)) return "step";
     const parent = placements.find((edge) => edge.childInstanceRef.id === instanceId && edge.slotId === "fields")?.parentInstanceRef.id;
     const member = instances.find((instance) => instance.instanceId === instanceId);
-    if ((steps.some((step) => step.instanceId === parent) || draftForms.some(({form}) => form.instanceId === parent)) &&
+    if ((steps.some((step) => step.instanceId === parent) || activeForm.form.instanceId === parent) &&
         member?.definitionRef.kind === "asset-definition-version" &&
         member.definitionRef.version === FORM_COMPOSER_FOUNDATION_VERSION &&
         FORM_COMPOSER_FIELDS.some(([definitionId]) => definitionId === member.definitionRef.id)) return "field";
@@ -1078,7 +1087,7 @@ export function SystemBuilderWorkspace({
     }
     const isStep = definitionId === FORM_COMPOSER_FOUNDATION_ASSET_IDS.step;
     const parent = instances.find((instance) => instance.instanceId === parentId);
-    if (!parent || (isStep ? !editableFormIds.has(parentId) : formDraftMembership(parentId) !== "step")) return;
+    if (!parent || (isStep ? activeForm?.form.instanceId !== parentId : formDraftMembership(parentId) !== "step")) return;
     const label = name?.trim();
     if (isStep && (!label || label.length > 200)) return;
     const definition = composerCatalog.find((asset) => asset.definitionId === parent.definitionRef.id && asset.version === parent.definitionRef.version);
@@ -1144,7 +1153,7 @@ export function SystemBuilderWorkspace({
           (values.dateTimeKind === "date" || values.dateTimeKind === "time" || values.dateTimeKind === "date-time")) {
         patch.dateTimeKind = values.dateTimeKind;
       }
-      if (type === "builtin.form.select-field" && Array.isArray(values.staticOptions) && values.staticOptions.length <= 32) {
+      if (isFormChoiceAsset(type) && Array.isArray(values.staticOptions) && values.staticOptions.length <= 32) {
         patch.staticOptions = values.staticOptions;
         patch.optionsSource = "static";
       }
@@ -1160,9 +1169,25 @@ export function SystemBuilderWorkspace({
     });
   }
 
+  function updateFormPresentation(instanceId: string, definition: SystemBuilderComposerAsset, values: AssetConfigurationValues) {
+    if (!activeForm || operation.current || !definition.builtIn || !definition.configurationSchema) return;
+    const instance = readFormPresentationElements(draft, activeForm).find((item) => item.instanceId === instanceId);
+    if (!instance || definition.definitionRef.kind !== "asset-definition-version" ||
+        definition.definitionRef.id !== instance.definitionRef.id ||
+        definition.definitionRef.version !== instance.definitionRef.version) return;
+    const configured = sanitizeSystemComposerInstanceConfigurations([
+      { ...instance, selectedConfiguration: values },
+    ], [definition])[0]!;
+    const title = instance.definitionRef.id === FORM_COMPOSER_FOUNDATION_ASSET_IDS.form ||
+      instance.definitionRef.id === FORM_COMPOSER_FOUNDATION_ASSET_IDS.step ? configured.selectedConfiguration?.title : undefined;
+    commitDraft({ ...draft, instances: instances.map((item) => item === instance
+      ? { ...configured, ...(typeof title === "string" && title.trim() && title.length <= 200 ? { displayName: title.trim() } : {}) }
+      : item) });
+  }
+
   function setFormRoute(formId: string, route: SystemFormRoute) {
     if (operation.current) return;
-    const form = readSystemForms(draft, composerCatalog).find((entry) => entry.form.instanceId === formId);
+    const form = draftForms.find((entry) => entry.form.instanceId === formId);
     if (!form || !form.steps.some((step) => step.instanceId === route.fromStepId) ||
         route.destinationId === route.fromStepId ||
         (route.destinationId !== formId && !form.steps.some((step) => step.instanceId === route.destinationId)) ||
@@ -1182,7 +1207,7 @@ export function SystemBuilderWorkspace({
 
   function removeFormRoute(formId: string, bindingId: string) {
     if (operation.current) return;
-    const form = readSystemForms(draft, composerCatalog).find((entry) => entry.form.instanceId === formId);
+    const form = draftForms.find((entry) => entry.form.instanceId === formId);
     const binding = bindings.find((item) => item.bindingId === bindingId);
     const route = binding && readSystemFormRoute(binding);
     if (!route || !form?.steps.some((step) => step.instanceId === route.fromStepId)) return;
@@ -1191,7 +1216,7 @@ export function SystemBuilderWorkspace({
 
   function updateFormAction(formId: string, action?: SystemFormAction) {
     if (operation.current) return;
-    const form = readSystemForms(draft, composerCatalog).find((entry) => entry.form.instanceId === formId);
+    const form = draftForms.find((entry) => entry.form.instanceId === formId);
     if (!form || (action && action.formId !== formId)) return;
     const existing = bindings.filter((binding) => binding.sourceRef.id === formId &&
       Object.prototype.hasOwnProperty.call(binding.metadata ?? {}, SYSTEM_FORM_ACTION_METADATA_KEY));
@@ -1223,7 +1248,7 @@ export function SystemBuilderWorkspace({
     if (!own) return;
     const role = formDraftMembership(instanceId);
     const siblings = role === "step"
-      ? readSystemForms(draft, composerCatalog).find((entry) => entry.form.instanceId === own.parentInstanceRef.id)?.steps
+      ? draftForms.find((entry) => entry.form.instanceId === own.parentInstanceRef.id)?.steps
       : role === "field" ? readFormStepFields(draft, String(own.parentInstanceRef.id)) : undefined;
     const index = siblings?.findIndex((item) => item.instanceId === instanceId) ?? -1;
     const target = index < 0 ? undefined : siblings?.[index + direction];
@@ -1951,6 +1976,8 @@ export function SystemBuilderWorkspace({
                     draft={draft}
                     form={activeForm}
                     ready={componentsReady}
+                    readDefinition={readFormDefinition}
+                    onUpdatePresentation={updateFormPresentation}
                     canUndo={undoDrafts.length > 0}
                     canRedo={redoDrafts.length > 0}
                     onBackToCanvas={backToCanvas}

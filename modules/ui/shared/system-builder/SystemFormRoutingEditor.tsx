@@ -6,6 +6,10 @@ const OPERATORS: Readonly<Record<SystemFormRouteOperator, string>> = {
   equals: "is", "not-equals": "is not", "less-than": "is less than", "greater-than": "is greater than",
 };
 
+export function isFormChoiceAsset(id: string): boolean {
+  return id === "builtin.form.select-field" || id === "builtin.form.radio-group";
+}
+
 export function readFormChoiceOptions(field: AssetInstance) {
   const values = field.selectedConfiguration?.staticOptions;
   if (!Array.isArray(values)) return [];
@@ -37,7 +41,7 @@ export function SystemFormRoutingEditor({ form, steps, step, fields, bindings, o
   const field = fields.find((item) => item.instanceId === fieldId);
   const numeric = field?.definitionRef.id === "builtin.form.number-field";
   const checkbox = field?.definitionRef.id === "builtin.form.checkbox-field";
-  const choice = field?.definitionRef.id === "builtin.form.select-field";
+  const choice = field ? isFormChoiceAsset(field.definitionRef.id) : false;
   const date = field?.definitionRef.id === "builtin.form.date-time-field";
   const dateKind = field?.selectedConfiguration?.dateTimeKind;
   const priority = Array.from({ length: 8 }, (_, index) => index).find((index) => !rules.some((entry) => entry.route.priority === index));

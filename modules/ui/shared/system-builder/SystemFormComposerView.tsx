@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import type { AssetConfigurationValues, AssetInstance } from "../../../contracts/asset";
-import { readSystemFormAction, type SystemFormAction, type SystemFormRoute } from "../../../contracts/system-builder";
+import { readSystemFormAction, systemFormPlacementAllowed, type SystemBuilderComposerAsset,
+  type SystemBuilderResult, type SystemFormAction, type SystemFormRoute } from "../../../contracts/system-builder";
 import { compileSystemForm, type CompiledSystemForm } from "../../../application/services/system-builder/system-form-rules.service";
 import { SystemFormPreview } from "./SystemFormPreview";
 import { SystemFormActionEditor } from "./SystemFormActionEditor";
-import { readFormChoiceOptions, SystemFormRoutingEditor } from "./SystemFormRoutingEditor";
+import { isFormChoiceAsset, readFormChoiceOptions, SystemFormRoutingEditor } from "./SystemFormRoutingEditor";
+import { SystemComposerInspector } from "./SystemComposerInspector";
 import type { SystemComposerDraft } from "./systemComposerDraft";
 import { FORM_COMPOSER_FOUNDATION_VERSION, type SystemFormDraftEntry } from "./systemFormComposerDraft";
 
@@ -12,6 +14,7 @@ export const FORM_COMPOSER_FIELDS = [
   ["builtin.form.text-field", "Short text"],
   ["builtin.form.text-area", "Long text"],
   ["builtin.form.select-field", "Choice"],
+  ["builtin.form.radio-group", "Radio buttons"],
   ["builtin.form.number-field", "Number"],
   ["builtin.form.date-time-field", "Date and time"],
   ["builtin.form.checkbox-field", "Checkbox"],
@@ -28,10 +31,29 @@ export function readFormStepFields(draft: SystemComposerDraft, stepId: string): 
       FORM_COMPOSER_FIELDS.some(([id]) => id === item.definitionRef.id)));
 }
 
+export function readFormPresentationElements(draft: SystemComposerDraft, entry: SystemFormDraftEntry): readonly AssetInstance[] {
+  const members = [entry.form, ...entry.steps];
+  const byOwner = new Map(members.map((item) => [item.instanceId, item]));
+  const byId = new Map(draft.instances.map((item) => [item.instanceId, item]));
+  const controls = draft.placements.flatMap((edge) => {
+    if (edge.slotId !== "actions" && edge.slotId !== "messages") return [];
+    const owner = byOwner.get(edge.parentInstanceRef.id);
+    const element = byId.get(edge.childInstanceRef.id);
+    if (!owner || element?.definitionRef.kind !== "asset-definition-version" ||
+        element.definitionRef.version !== FORM_COMPOSER_FOUNDATION_VERSION ||
+        !["builtin.form.submit-action", "builtin.form.cancel-action", "builtin.form.validation-message"].includes(element.definitionRef.id) ||
+        !systemFormPlacementAllowed(element.definitionRef, owner.definitionRef, edge.slotId)) return [];
+    return [element];
+  });
+  return [...members, ...controls];
+}
+
 interface SystemFormComposerViewProps {
   readonly draft: SystemComposerDraft;
   readonly form: SystemFormDraftEntry;
   readonly ready: boolean;
+  readonly readDefinition: (instance: AssetInstance, isOpen: () => boolean) => Promise<SystemBuilderResult<SystemBuilderComposerAsset>>;
+  readonly onUpdatePresentation: (instanceId: string, definition: SystemBuilderComposerAsset, values: AssetConfigurationValues) => void;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly onBackToCanvas: () => void;
@@ -47,7 +69,7 @@ interface SystemFormComposerViewProps {
 }
 
 export function SystemFormComposerView({
-  draft, form, ready, canUndo, canRedo, onBackToCanvas, onAddStep, onAddField, onMove,
+  draft, form, ready, readDefinition, onUpdatePresentation, canUndo, canRedo, onBackToCanvas, onAddStep, onAddField, onMove,
   onUpdate, onSaveRoute, onRemoveRoute, onUpdateAction, onUndo, onRedo,
 }: SystemFormComposerViewProps) {
   const [stepName, setStepName] = useState("");
@@ -99,7 +121,8 @@ export function SystemFormComposerView({
         <div className="ui-stack ui-stack--md">
           <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form and steps">
             <h4>{form.form.displayName ?? "Form"}</h4>
-            <p>Canvas page <strong>{form.page.displayName}</strong></p>
+            {form.page ? <p>Canvas page <strong>{form.page.displayName}</strong></p>
+              : <p>Canvas container <strong>{form.region?.displayName ?? "System layout"}</strong></p>}
             <form className="ui-stack ui-stack--sm" onSubmit={submitStep}>
               <label className="ui-stack ui-stack--sm">
                 New step name
@@ -171,11 +194,67 @@ export function SystemFormComposerView({
           {step ? <SystemFormRoutingEditor key={step.instanceId} form={form.form} steps={form.steps} step={step}
             fields={fields} bindings={draft.bindings} onSave={(route) => onSaveRoute(String(form.form.instanceId), route)}
             onRemove={(id) => onRemoveRoute(String(form.form.instanceId), id)} /> : null}
+          <FormPresentationSettings draft={draft} form={form} readDefinition={readDefinition} onUpdate={onUpdatePresentation} />
           <SystemFormActionEditor key={form.form.instanceId} formId={String(form.form.instanceId)}
             fields={actionFields} instances={draft.instances} action={action}
             onSave={(next) => onUpdateAction(String(form.form.instanceId), next)}
             onRemove={() => onUpdateAction(String(form.form.instanceId))} />
         </div>
+    </section>
+  );
+}
+
+function FormPresentationSettings({ draft, form, readDefinition, onUpdate }: {
+  readonly draft: SystemComposerDraft;
+  readonly form: SystemFormDraftEntry;
+  readonly readDefinition: SystemFormComposerViewProps["readDefinition"];
+  readonly onUpdate: SystemFormComposerViewProps["onUpdatePresentation"];
+}) {
+  const [open, setOpen] = useState(false);
+  const [elementId, setElementId] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const [resolved, setResolved] = useState<{ id: string; definition?: SystemBuilderComposerAsset }>();
+  const panel = useId();
+  const members = useMemo(() => readFormPresentationElements(draft, form), [draft, form]);
+  const element = members.find((item) => item.instanceId === elementId) ?? form.form;
+  const id = String(element.instanceId);
+  const definitionRef = element.definitionRef;
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setResolved(undefined);
+    void readDefinition(element, () => active).then((result) => {
+      if (!active) return;
+      const definition = result.ok && result.value.builtIn && result.value.configurationSchema ? result.value : undefined;
+      setResolved({ id, definition });
+    });
+    return () => { active = false; };
+  }, [attempt, definitionRef.id, definitionRef.kind, definitionRef.version, id, open, readDefinition]);
+  const definition = resolved?.id === id ? resolved.definition : undefined;
+  return (
+    <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form presentation">
+      <div className="ui-workflow__actions">
+        <button type="button" className="ui-button ui-button--outline" aria-expanded={open} aria-controls={panel}
+          onClick={() => { setResolved(undefined); setOpen(!open); }}>Form and control settings</button>
+      </div>
+      <div id={panel} hidden={!open} className="ui-stack ui-stack--sm">
+        {open ? <>
+          <p>Set titles, button labels, and messages for the form assets. Set what happens after submission in Submission action.</p>
+          <label className="ui-stack ui-stack--sm">
+            Form asset
+            <select value={id} onChange={(event) => setElementId(event.currentTarget.value)}>
+              {members.map((item) => <option key={item.instanceId} value={item.instanceId}>{item.displayName ?? item.definitionRef.id}</option>)}
+            </select>
+          </label>
+          {definition ? <SystemComposerInspector mode="configuration" embedded key={id}
+            selectedInstance={element} selectedDefinition={definition} instances={members} catalog={[definition]} bindings={[]}
+            onConfigurationChange={(values) => onUpdate(id, definition, values)} onAddConnection={() => {}} onRemoveConnection={() => {}} />
+            : resolved?.id === id ? <div>
+              <p role="status">Properties are unavailable for this form asset.</p>
+              <button type="button" className="ui-button ui-button--outline" onClick={() => setAttempt(attempt + 1)}>Retry properties</button>
+            </div> : <p role="status">Loading form properties…</p>}
+        </> : null}
+      </div>
     </section>
   );
 }
@@ -190,7 +269,7 @@ function FieldSettings({field, onUpdate}: {
   const definition = field.definitionRef.id;
   const numeric = definition === "builtin.form.number-field";
   const text = definition === "builtin.form.text-field" || definition === "builtin.form.text-area";
-  const choice = definition === "builtin.form.select-field";
+  const choice = isFormChoiceAsset(definition);
   const options = choice ? readFormChoiceOptions(field) : [];
   const [newOption, setNewOption] = useState("");
   const [newOptionValue, setNewOptionValue] = useState("");

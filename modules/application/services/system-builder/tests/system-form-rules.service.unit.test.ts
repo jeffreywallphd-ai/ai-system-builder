@@ -54,6 +54,19 @@ test("both answer routes check visited values and exclude answers from steps rem
   assert.equal(required.ok ? undefined : required.fieldId, "category");
 });
 
+test("radio choices use the bounded option set when deciding the route", () => {
+  const source = { ...fixture, instances: fixture.instances.map((instance) =>
+    instance.instanceId === "category" ? member("category", "radio-group", instance.selectedConfiguration) : instance) };
+  const compiled = compileSystemForm(source, formId);
+  assert.ok(compiled.ok);
+  assert.equal(compiled.value.steps[0]?.fields[0]?.choicePresentation, "radio");
+  const invalid = evaluateSystemForm(compiled.value, new Map([["category", "unexpected"]]));
+  assert.equal(invalid.ok, false);
+  const valid = evaluateSystemForm(compiled.value, new Map([["category", "software"]]));
+  assert.ok(valid.ok);
+  assert.deepEqual(valid.path, ["intro", "finish"]);
+});
+
 test("revision checks reject unknown and cross-form destinations, unsupported expressions, skipped steps and cycles", () => {
   assert.deepEqual(validateSystemFormRoutes(fixture), []);
   assert.deepEqual(validateSystemFormRoutes({ ...fixture, bindings: [] }), []);

@@ -109,7 +109,7 @@ describe("Form Composer draft placements", () => {
     const draft = structuredClone(second.value);
     const forms = readSystemForms(draft, f.catalog);
     expect(forms.map(({page, form, steps}) => [
-      page.instanceId, form.instanceId, steps.map((step) => step.instanceId),
+      page?.instanceId, form.instanceId, steps.map((step) => step.instanceId),
     ])).toEqual([
       ["form.intake.page", "form.intake.form", ["form.intake.step"]],
       ["form.survey.page", "form.survey.form", ["form.survey.step"]],
@@ -127,11 +127,28 @@ describe("Form Composer draft placements", () => {
         ? { ...edge, order: 2 }
         : edge.childInstanceRef.id === "form.survey.page" ? { ...edge, order: 1 } : edge),
     };
-    expect(readSystemForms(reordered, f.catalog).map(({page}) => page.instanceId)).toEqual([
+    expect(readSystemForms(reordered, f.catalog).map(({page}) => page?.instanceId)).toEqual([
       "form.survey.page", "form.intake.page",
     ]);
     const history = commitSystemComposerDraft(createSystemComposerDraftHistory(first.value), draft);
     expect(readSystemForms(undoSystemComposerDraft(history).present, f.catalog).length).toBe(1);
+  });
+
+  it("opens a form in the application top bar without opening an unplaced form", () => {
+    const f = fixture();
+    const draft: SystemComposerDraft = {
+      ...f.draft,
+      instances: [...f.draft.instances, assetInstance("system.header-form", ids.form), assetInstance("system.unplaced-form", ids.form)],
+      placements: [...f.draft.placements, {
+        schemaVersion: ASSET_PLACEMENT_SCHEMA_VERSION, placementId: normalizeAssetId("place.header-form"),
+        parentInstanceRef: instanceRef("system.shell"), slotId: normalizeAssetSlotId("top-bar"),
+        childInstanceRef: instanceRef("system.header-form"), order: 0,
+      }],
+    };
+    expect(readSystemForms(draft, f.catalog, [instanceRef("system.root")]).map(({form, page, region}) => ({
+      form: form.instanceId, page: page?.instanceId, region: region?.instanceId,
+    }))).toEqual([{ form: "system.header-form", page: undefined, region: "system.shell" }]);
+    expect(readSystemForms(draft, f.catalog, [])).toEqual([]);
   });
 
   it("preserves the original draft if the page region is full or an exact form asset is unavailable", () => {

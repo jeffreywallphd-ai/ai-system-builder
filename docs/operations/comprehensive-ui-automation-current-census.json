@@ -12098,119 +12098,123 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "e95c6649bc7fb480dbe370c33c157c42c769eeb06901e8825775b7e56b624ee9",
-    "bytes": 85805,
+    "sha256": "44428706f4ab81bc24dd0b161d046b14455859a339ba5d632a2d976f82848cb5",
+    "bytes": 90680,
     "cases": [
      {
+      "name": "keeps radio labels and required-error focus distinct from similar field IDs",
+      "line": 43
+     },
+     {
       "name": "does not offer submission mapping for an ambiguous Create Record setup",
-      "line": 42
+      "line": 70
      },
      {
       "name": "edits the exact selected form when two forms share a Canvas page",
-      "line": 69
+      "line": 97
      },
      {
       "name": "starts a form system on the existing blank Minimal page and uses the same draft in Canvas",
-      "line": 379
+      "line": 448
      },
      {
       "name": "defers the layout catalog until Create system is submitted and then shows the loading wheel",
-      "line": 461
+      "line": 530
      },
      {
       "name": "requests active systems and defensively omits archived records from Compose",
-      "line": 504
+      "line": 573
      },
      {
       "name": "refreshes the active picker after a Manage lifecycle change",
-      "line": 600
+      "line": 669
      },
      {
       "name": "creates a named system with the implicit Minimal layout",
-      "line": 661
+      "line": 730
      },
      {
       "name": "requires a name and uses the primary action when creating from a template",
-      "line": 713
+      "line": 782
      },
      {
       "name": "prefers the nested page content region over an already-full application content region",
-      "line": 769
+      "line": 838
      },
      {
       "name": "loads layouts on demand, applies one to the Canvas, exposes unassigned assets in the scoped modal, and undoes",
-      "line": 858
+      "line": 927
      },
      {
       "name": "requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system",
-      "line": 1181
+      "line": 1250
      },
      {
       "name": "opens and closes a modal for the current safe frontend composition",
-      "line": 1384
+      "line": 1453
      },
      {
       "name": "previews a v2 Foundation upgrade before explicit confirmation",
-      "line": 1504
+      "line": 1573
      },
      {
       "name": "preserves canonical structure and placements when saving configuration",
-      "line": 1631
+      "line": 1700
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "instance",
-      "line": 2001
+      "line": 2070
      },
      {
       "name": "composerDefinition",
-      "line": 2021
+      "line": 2090
      },
      {
       "name": "layoutDefinition",
-      "line": 2093
+      "line": 2162
      },
      {
       "name": "withoutComposerDetail",
-      "line": 2111
+      "line": 2180
      },
      {
       "name": "button",
-      "line": 2122
+      "line": 2191
      },
      {
       "name": "setInputValue",
-      "line": 2129
+      "line": 2198
      },
      {
       "name": "clientFor",
-      "line": 2136
+      "line": 2205
      }
     ],
-    "assertionCount": 171,
-    "assertionDigest": "19b13e34298bc14efeb4b73faeaf035d1d69b678a443ace986c4e2804a8c438c",
+    "assertionCount": 180,
+    "assertionDigest": "71c91301aec0835a9b682e93f24aa95605b23026569db56d5f7aaafe8abf3c5a",
     "assertionExamples": [
      {
-      "line": 61,
+      "line": 56,
       "kind": "expect",
-      "sha256": "2c62027818494a311bac52dfbcaae5d0de13d59ead94d5ae9f48a820e58ecb65"
+      "sha256": "b35211cbff76f0b21dddf71e969b9a4d2487006e0a1611b8174e1138eb7b233d"
      },
      {
-      "line": 62,
+      "line": 60,
       "kind": "expect",
-      "sha256": "50f0dd194036a974b59b3aaa6cc54d0e7fb51ca51bcabceb42955f84b279c47f"
+      "sha256": "225d69d707d19fccd5de73a795b6fd7f430bdcaeba7e92b57db899ea1f090cac"
      },
      {
-      "line": 64,
+      "line": 63,
       "kind": "expect",
-      "sha256": "e92ef3f62e44ed0a8e07d1c348b9335a94af13a2b245a7003c65f31d7b1f7b9e"
+      "sha256": "b4b8cf1a07cc5ee71afb828e260280a7ff4dae18494f564c3d284e7f9a29016e"
      },
      {
-      "line": 65,
+      "line": 66,
       "kind": "expect",
-      "sha256": "50f0dd194036a974b59b3aaa6cc54d0e7fb51ca51bcabceb42955f84b279c47f"
+      "sha256": "c907a1d6d8e9cb83968760cb4b6cfdbc46e3685b83c201fe0b76ec5acd910c2a"
      }
     ],
     "modifiers": []
@@ -12788,111 +12792,115 @@
   {
    "path": "modules/ui/shared/system-builder/tests/systemComposerDraft.unit.test.ts",
    "facts": {
-    "sha256": "760b890a02c727013816e98b4f121201ea960c2d7984e6c645082fe482b5b3de",
-    "bytes": 19466,
+    "sha256": "ec4414638677f75f7eaaf6d1932b883da5c6eef21ff88358caa131235663ae18",
+    "bytes": 22474,
     "cases": [
      {
-      "name": "owns immutable snapshots while sharing only unchanged owned data",
+      "name": "adds and moves current form fields only to matching form regions",
       "line": 31
      },
      {
+      "name": "owns immutable snapshots while sharing only unchanged owned data",
+      "line": 77
+     },
+     {
       "name": "does not trust shallow caller freezes or invoke executable snapshot fields",
-      "line": 54
+      "line": 100
      },
      {
       "name": "owns externally supplied past and future entries before retaining them",
-      "line": 71
+      "line": 117
      },
      {
       "name": "moves down and up within a slot using the final requested sibling order",
-      "line": 83
+      "line": 129
      },
      {
       "name": "adds nested assets and builds the canonical placement hierarchy",
-      "line": 101
+      "line": 147
      },
      {
       "name": "reorders and reparents placements without changing instance identity",
-      "line": 123
+      "line": 169
      },
      {
       "name": "inserts and reparents at an absolute bounded slot order",
-      "line": 162
+      "line": 208
      },
      {
       "name": "wraps assets, removes bounded subtrees, and protects required nodes",
-      "line": 201
+      "line": 247
      },
      {
       "name": "keeps local undo and redo bounded to the unsaved canonical draft",
-      "line": 242
+      "line": 288
      },
      {
       "name": "derives protected required-slot descendants from catalog cardinality",
-      "line": 286
+      "line": 332
      },
      {
       "name": "stops tree construction at explicit node and depth budgets",
-      "line": 299
+      "line": 345
      },
      {
       "name": "reattaches preserved unassigned assets without changing identity",
-      "line": 324
+      "line": 370
      },
      {
       "name": "preserves layout structure through subtree removal and undo/redo serialization",
-      "line": 486
+      "line": 532
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "baseDraft",
-      "line": 359
+      "line": 405
      },
      {
       "name": "add",
-      "line": 380
+      "line": 426
      },
      {
       "name": "instance",
-      "line": 397
+      "line": 443
      },
      {
       "name": "placement",
-      "line": 412
+      "line": 458
      },
      {
       "name": "slotChildren",
-      "line": 435
+      "line": 481
      },
      {
       "name": "asset",
-      "line": 450
+      "line": 496
      }
     ],
-    "assertionCount": 62,
-    "assertionDigest": "6c14f563a732bdc6a42f642daf04bcb958e32033163647cb17f0bfc242077f4a",
+    "assertionCount": 74,
+    "assertionDigest": "3a5d2c406b58084de2ef53733f198996cd0ce8928cc38856e885864e94512c82",
     "assertionExamples": [
-     {
-      "line": 36,
-      "kind": "expect",
-      "sha256": "a43f78452334c7e9a6084879e18884cfa0727aa9f7d6b05a0c6445ffe9e43e20"
-     },
-     {
-      "line": 40,
-      "kind": "expect",
-      "sha256": "a58bc303d6ec745a7902018811e61a74e5a2940a062cf20269b937f9b15b1153"
-     },
-     {
-      "line": 41,
-      "kind": "expect",
-      "sha256": "d94b03a8aeff1d181c32fc5b33c73c0d91eb4e49b8774f9e64607cd68f21a14c"
-     },
      {
       "line": 42,
       "kind": "expect",
-      "sha256": "d7da5ab251b0d47b24b222934b8dee097e082876e03e98750e5025969c911830"
+      "sha256": "db71407de29e030c0d3ae0a42bc2554f3579b18564d18cbdf89fa352ab819b9d"
+     },
+     {
+      "line": 45,
+      "kind": "expect",
+      "sha256": "04fc36798464fee7db22a761b00a9d8b8c57fe7a5091f7b77ad5c94c3ca45af6"
+     },
+     {
+      "line": 46,
+      "kind": "expect",
+      "sha256": "f32914771c94f45efb6af43bd64b30701d74363bcac58500ce50bd5abb4bc2f0"
+     },
+     {
+      "line": 48,
+      "kind": "expect",
+      "sha256": "fb9e7870fa6072339fd49a63d61e2950a275914be00dc47da6f625b3011819e3"
      }
     ],
     "modifiers": []

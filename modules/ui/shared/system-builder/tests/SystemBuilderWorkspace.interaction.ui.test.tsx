@@ -22,6 +22,7 @@ import {
 } from "../SystemBuilderWorkspace";
 import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
 import { readFormActionOptions, SystemFormActionEditor } from "../SystemFormActionEditor";
+import { SystemFormJourney } from "../SystemFormPreview";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -39,6 +40,33 @@ afterEach(() => {
 });
 
 describe("SystemBuilderWorkspace UI preview", () => {
+  it("keeps radio labels and required-error focus distinct from similar field IDs", async () => {
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const finish = vi.fn();
+    await act(async () => root!.render(<SystemFormJourney finalLabel="Submit answers" onFinish={finish}
+      form={{ id: "survey", title: "Survey", steps: [{ id: "step", label: "Choices", conditions: [], defaultDestinationId: "survey", fields: [
+        { id: "priority", label: "Priority", helpText: "", kind: "choice", choicePresentation: "radio", required: true,
+          dateKind: "date", options: [{ label: "Low", value: "low" }, { label: "High", value: "high" }] },
+        { id: "priority-option-1", label: "Explain priority", helpText: "A short reason", kind: "text", required: true,
+          dateKind: "date", options: [] },
+      ] }] }} />));
+    const controls = [...container.querySelectorAll<HTMLInputElement>("input")];
+    expect(new Set(controls.map((item) => item.id)).size).toBe(3);
+    const first = controls[0]!;
+    const second = controls[1]!;
+    const explanation = controls[2]!;
+    expect(explanation.labels?.[0]?.textContent).toBe("Explain priority (required)");
+    const submit = () => act(async () => button(container!, "Submit answers").click());
+    await submit();
+    expect(document.activeElement).toBe(first);
+    await act(async () => second.click());
+    await submit();
+    expect(document.activeElement).toBe(explanation);
+    expect(finish).not.toHaveBeenCalled();
+  });
+
   it("does not offer submission mapping for an ambiguous Create Record setup", async () => {
     const operation = (id: string, entity: string) => ({
       ...instance(id, "builtin.data.create-operation", id, { entity }),
@@ -78,13 +106,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
       slots: baseShell.slots.map((slot) => ({ ...slot, cardinality: { minItems: 1, maxItems: 8 }, acceptedDefinitionRefs: [page.definitionRef] })),
     };
     const rootDefinition = composerDefinition("builtin.system.system", "System root", ["application-shell"], false, "3.0.0");
-    const formContainer = (id: string, name: string) => {
-      const definition = composerDefinition(id, name, ["fields"], true, "3.0.0");
+    const formContainer = (id: string, name: string, slots = ["fields"]) => {
+      const definition = composerDefinition(id, name, slots, true, "3.0.0");
       return { ...definition, slots: definition.slots.map((slot) => ({
         ...slot, cardinality: { minItems: 0, maxItems: 24 },
       })) };
     };
-    const form = formContainer("builtin.form.form", "Form");
+    const form = formContainer("builtin.form.form", "Form", ["fields", "actions", "messages"]);
     const group = formContainer("builtin.form.field-group", "Field Group");
     const resourceBrowser = composerDefinition("builtin.shell.resource-browser", "Resource browser", ["states"], false, "3.0.0");
     const textField = {
@@ -96,6 +124,11 @@ describe("SystemBuilderWorkspace UI preview", () => {
     };
     const catalog = [
       rootDefinition, shell, page, form, group, textField, resourceBrowser,
+      { ...composerDefinition("builtin.form.submit-action", "Submit button", [], false, "3.0.0"),
+        configurationSchema: { fields: [{ fieldId: "label", valueKind: "string", label: "Button label", required: false }] } as SystemBuilderComposerAsset["configurationSchema"] },
+      { ...composerDefinition("builtin.form.validation-message", "Validation message", [], false, "3.0.0"),
+        configurationSchema: { fields: [{ fieldId: "message", valueKind: "string", label: "Message", required: false }] } as SystemBuilderComposerAsset["configurationSchema"] },
+      composerDefinition("builtin.form.radio-group", "Radio buttons", [], false, "3.0.0"),
       composerDefinition("builtin.form.checkbox-field", "Checkbox", [], false, "3.0.0"),
       {
         ...composerDefinition("builtin.form.select-field", "Choice", [], false, "3.0.0"),
@@ -120,6 +153,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
     const questionnaire = { ...instance("fixture.questionnaire", form.definitionId, "Questionnaire", { title: "Questionnaire" }), definitionRef: form.definitionRef };
     const intakeStep = { ...instance("fixture.intake-step", group.definitionId, "First step", { title: "First step" }), definitionRef: group.definitionRef };
     const questionnaireStep = { ...instance("fixture.questionnaire-step", group.definitionId, "First step", { title: "First step" }), definitionRef: group.definitionRef };
+    const submit = { ...instance("fixture.submit", "builtin.form.submit-action", "Submit button", { label: "Send" }), definitionRef: byDefinition("builtin.form.submit-action") };
+    const message = { ...instance("fixture.message", "builtin.form.validation-message", "Validation message", { message: "Check your answers" }),
+      definitionRef: byDefinition("builtin.form.validation-message") };
     const browser = { ...instance("fixture.browser", resourceBrowser.definitionId, "Resource browser", {}), definitionRef: resourceBrowser.definitionRef };
     const section = { ...instance("fixture.state-section", "builtin.ui.section", "State content", {}), definitionRef: byDefinition("builtin.ui.section") };
     const fixture = [
@@ -132,7 +168,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
         definitionRef: byDefinition("builtin.data.field") },
       { ...instance("fixture.number-record", "builtin.data.field", "Count", { name: "count", label: "Count", type: "number" }),
         definitionRef: byDefinition("builtin.data.field") },
-      intake, questionnaire, intakeStep, questionnaireStep, browser, section,
+      intake, questionnaire, intakeStep, questionnaireStep, browser, section, submit, message,
     ];
     const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: normalizeAssetId(item.instanceId) });
     const place = (parent: AssetInstance, child: AssetInstance, slot: string, order: number) => ({
@@ -159,6 +195,8 @@ describe("SystemBuilderWorkspace UI preview", () => {
         place(section, questionnaire, "content", 0),
         place(intake, intakeStep, "fields", 0),
         place(questionnaire, questionnaireStep, "fields", 0),
+        place(questionnaire, submit, "actions", 0),
+        place(intake, message, "messages", 0),
       ],
       validationIssues: [], createdAt: "2026-07-19T00:00:00.000Z", createdBy: "person-1",
     };
@@ -180,6 +218,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
     }));
     const client: SystemBuilderClient = { ...clientFor(record, initial), saveRevision, listComposerAssets,
       list: async () => ({ ok: true, value: [record, other] }),
+      readComposerAsset: async ({definitionRef}) => ({
+        ok: true, value: catalog.find((item) => item.definitionRef.id === definitionRef.id && item.version === definitionRef.version)!,
+      }),
       readRevision: async ({systemId}) => ({ ok: true, value: systemId === other.systemId ? { ...initial, systemId: other.systemId } : latest }) };
     container = document.createElement("div");
     document.body.append(container);
@@ -216,6 +257,12 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(document.activeElement).toBe(button(container!, "Back to Canvas"));
     expect(container!.querySelector("h4")?.textContent).toBe("Intake");
     expect(container!.textContent).toContain("Canvas page Main page");
+    await click("Form and control settings");
+    await choose("Form asset", "Validation message");
+    const messageInput = container!.querySelector<HTMLInputElement>('[aria-label="Form presentation"] input[id="message"]')!;
+    expect(messageInput.value).toBe("Check your answers");
+    await act(async () => setInputValue(messageInput, "Check the request details"));
+    await click("Form and control settings");
     await fill("New step name", "Details");
     await click("Add step");
     await choose("Form step", "Details");
@@ -294,6 +341,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await click("Back to Canvas");
     await editForm("Questionnaire");
     expect(container!.querySelector("h4")?.textContent).toBe("Questionnaire");
+    await click("Form and control settings");
+    expect([...find<HTMLSelectElement>("Form asset", "select").options].map((option) => option.textContent))
+      .toEqual(["Questionnaire", "First step", "Submit button"]);
+    await choose("Form asset", "Submit button");
+    const controlLabel = container!.querySelector<HTMLInputElement>('[aria-label="Form presentation"] input[id="label"]')!;
+    expect(controlLabel.value).toBe("Send");
+    await act(async () => setInputValue(controlLabel, "Send questionnaire"));
     await choose("Field type", "Choice");
     await click("Add field");
     await fill("New option label", "Hardware");
@@ -310,6 +364,11 @@ describe("SystemBuilderWorkspace UI preview", () => {
     });
     await fillBound("Minimum value", "1");
     await fillBound("Maximum value", "10");
+    await choose("Field type", "Radio buttons");
+    await click("Add field");
+    await choose("Field", "Radio buttons");
+    await fill("New option label", "By email");
+    await click("Add option");
     await click("Preview form");
     const questionnairePreview = document.querySelector('[role="dialog"]')!;
     const numberAnswer = questionnairePreview.querySelector<HTMLInputElement>('input[type="number"]')!;
@@ -322,8 +381,14 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(questionnairePreview.textContent).toContain("Enter a number.");
     Object.defineProperty(numberAnswer, "validity", { configurable: true, value: { badInput: false } });
     await act(async () => setInputValue(numberAnswer, ""));
+    const radio = questionnairePreview.querySelector<HTMLInputElement>('input[type="radio"][value="By email"]')!;
+    await act(async () => radio.click());
+    await act(async () => button(questionnairePreview, "Clear selection").click());
+    expect(radio.checked).toBe(false);
+    expect(document.activeElement).toBe(radio);
+    await act(async () => radio.click());
     await act(async () => button(questionnairePreview, "Finish preview").click());
-    expect(questionnairePreview.textContent).toContain("No answers included.");
+    expect(questionnairePreview.textContent).toContain("Answers included: Radio buttons.");
     await act(async () => questionnairePreview.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
     await click("Save and validate revision");
     await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(1));
@@ -333,6 +398,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(action?.mappings).toEqual([{ fieldId: latest.instances.find((item) => item.displayName === "Request reason")?.instanceId, recordField: "reason" }]);
     expect(latest.instances.find((item) => item.displayName === "Number Field")?.selectedConfiguration)
       .toEqual({ label: "Number Field", minimum: 1, maximum: 10 });
+    expect(latest.instances.find((item) => item.instanceId === submit.instanceId)?.selectedConfiguration)
+      .toEqual({ label: "Send questionnaire" });
+    expect(latest.instances.find((item) => item.instanceId === message.instanceId)?.selectedConfiguration)
+      .toEqual({ message: "Check the request details" });
     expect(latest.instances.find((item) => item.displayName === "Choice")?.selectedConfiguration?.staticOptions)
       .toEqual([expect.objectContaining({ label: "Hardware", value: "hardware" }), expect.objectContaining({ label: "Software", value: "Software" })]);
     expect(latest.instances.find((item) => item.displayName === "Request reason")?.selectedConfiguration)

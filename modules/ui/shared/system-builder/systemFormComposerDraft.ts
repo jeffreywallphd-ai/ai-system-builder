@@ -3,6 +3,7 @@ import {
   MAX_ASSET_PLACEMENTS_PER_COMPOSITION,
   normalizeAssetId,
   type AssetInstance,
+  type AssetReference,
   type AssetSlotDefinition,
 } from "../../../contracts/asset";
 import type { SystemBuilderComposerAsset } from "../../../contracts/system-builder";
@@ -35,7 +36,8 @@ interface CreateFormInput {
 
 export interface SystemFormDraftEntry {
   readonly form: AssetInstance;
-  readonly page: AssetInstance;
+  readonly page?: AssetInstance;
+  readonly region?: AssetInstance;
   readonly steps: readonly AssetInstance[];
 }
 
@@ -48,6 +50,7 @@ function hasFoundationIdentity(instance: AssetInstance, role: FormAssetRole): bo
 export function readSystemForms(
   draft: SystemComposerDraft,
   catalog: readonly SystemBuilderComposerAsset[],
+  roots?: readonly AssetReference[],
 ): readonly SystemFormDraftEntry[] {
   const instances = new Map(draft.instances.map((item) => [String(item.instanceId), item]));
   const parents = new Map(draft.placements.map((edge) => [String(edge.childInstanceRef.id), edge]));
@@ -55,22 +58,37 @@ export function readSystemForms(
   const pageDefinitions = new Set(catalog.filter((asset) => asset.builtIn &&
     asset.layoutRole === "page-layout" && asset.version === FORM_COMPOSER_FOUNDATION_VERSION)
     .map((asset) => asset.definitionId));
+  const rootIds = new Set(roots?.filter((root) => root.kind === "asset-instance").map((root) => String(root.id)) ??
+    draft.instances.filter((item) => item.definitionRef.kind === "asset-definition-version" &&
+      item.definitionRef.id === "builtin.system.system" && item.definitionRef.version === FORM_COMPOSER_FOUNDATION_VERSION)
+      .map((item) => String(item.instanceId)));
+  const stepsByForm = new Map<string, { readonly order: number; readonly step: AssetInstance }[]>();
+  for (const edge of draft.placements) {
+    if (edge.slotId !== "fields") continue;
+    const step = instances.get(String(edge.childInstanceRef.id));
+    if (!step || !hasFoundationIdentity(step, "step")) continue;
+    const parentId = String(edge.parentInstanceRef.id);
+    const steps = stepsByForm.get(parentId) ?? [];
+    steps.push({ order: edge.order, step });
+    stepsByForm.set(parentId, steps);
+  }
   const entries: SystemFormDraftEntry[] = [];
   for (const form of draft.instances) {
     if (!hasFoundationIdentity(form, "form")) continue;
     let parentId = parents.get(String(form.instanceId))?.parentInstanceRef.id;
+    const region = parentId ? instances.get(parentId) : undefined;
+    let page: AssetInstance | undefined;
     for (let depth = 0; parentId && depth < MAX_ASSET_PLACEMENT_DEPTH; depth++) {
       const parent = instances.get(parentId);
       if (!parent) break;
-      if (parent.definitionRef.kind === "asset-definition-version" &&
+      if (!page && parent.definitionRef.kind === "asset-definition-version" &&
           parent.definitionRef.version === FORM_COMPOSER_FOUNDATION_VERSION &&
           pageDefinitions.has(String(parent.definitionRef.id))) {
-        const steps = draft.placements
-          .filter((edge) => edge.parentInstanceRef.id === form.instanceId && edge.slotId === "fields")
-          .sort((left, right) => left.order - right.order)
-          .map((edge) => instances.get(String(edge.childInstanceRef.id)))
-          .filter((step): step is AssetInstance => Boolean(step && hasFoundationIdentity(step, "step")));
-        entries.push({ form, page: parent, steps });
+        page = parent;
+      }
+      if (rootIds.has(parentId)) {
+        const steps = (stepsByForm.get(String(form.instanceId)) ?? []).sort((left, right) => left.order - right.order).map(({step}) => step);
+        entries.push({ form, page, region, steps });
         break;
       }
       parentId = parents.get(parentId)?.parentInstanceRef.id;

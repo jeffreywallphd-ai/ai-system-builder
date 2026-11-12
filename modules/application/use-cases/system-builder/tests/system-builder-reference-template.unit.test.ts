@@ -12,6 +12,7 @@ import {
   ValidateSystemBuilderRevisionService,
 } from "../../../services/system-builder";
 import { CreateSystemBuilderFromTemplateUseCase } from "../system-builder-use-cases";
+import { compileSystemForm } from "../../../services/system-builder/system-form-rules.service";
 
 const workspaceId = createWorkspaceId("workspace-reference");
 const definitions = SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.map(
@@ -100,6 +101,10 @@ describe("secured data-entry system template", () => {
       .toMatchObject({ parentInstanceRef: { id: "secured-system.request-fields" }, slotId: "fields" });
     expect(revisions[0].placements?.find((edge) => edge.childInstanceRef.id === "secured-system.request-fields"))
       .toMatchObject({ parentInstanceRef: { id: "secured-system.form" }, slotId: "fields" });
+    const preview = compileSystemForm(revisions[0]!, "secured-system.form");
+    expect(preview.ok).toBe(true);
+    if (preview.ok) expect(preview.value.steps[0]?.fields.find((field) => field.label === "Status")?.options.map(({value}) => value))
+      .toEqual(["draft", "submitted", "approved"]);
   });
 });
 
@@ -321,6 +326,10 @@ describe("secured data-review system template", () => {
       .toMatchObject({ parentInstanceRef: { id: "review-system.browser" }, slotId: "filters" });
     expect(revisions[0].placements?.filter((edge) => edge.parentInstanceRef.id === "review-system.filter-fields")
       .map((edge) => edge.childInstanceRef.id)).toEqual(["review-system.name-filter", "review-system.media-filter"]);
+    const preview = compileSystemForm(revisions[0]!, "review-system.filter-form");
+    expect(preview.ok).toBe(true);
+    if (preview.ok) expect(preview.value.steps[0]?.fields.find((field) => field.label === "Media type")?.options.map(({value}) => value))
+      .toEqual(["all", "text", "image", "pdf"]);
   });
 });
 

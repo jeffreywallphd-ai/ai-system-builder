@@ -7,6 +7,7 @@ export interface SystemFormField {
   readonly kind: "text" | "multiline" | "choice" | "number" | "date-time" | "checkbox";
   readonly required: boolean;
   readonly options: readonly { readonly label: string; readonly value: string }[];
+  readonly choicePresentation?: "radio";
   readonly min?: number;
   readonly max?: number;
   readonly dateKind: "date" | "time" | "date-time";

@@ -4,7 +4,7 @@ import {
   SYSTEM_FORM_ACTION_DEFINITION_ID, SYSTEM_FORM_ACTION_DEFINITION_VERSION,
   type SystemFormAction, type SystemFormActionMapping,
 } from "../../../contracts/system-builder";
-import { readFormChoiceOptions } from "./SystemFormRoutingEditor";
+import { isFormChoiceAsset, readFormChoiceOptions } from "./SystemFormRoutingEditor";
 
 export const SYSTEM_FORM_RECORD_FIELD_ID = "builtin.data.field";
 
@@ -44,8 +44,8 @@ export function isFormActionFieldCompatible(source: AssetInstance, target: Retur
   if (target.type === "number") return type === "builtin.form.number-field";
   if (target.type === "date") return type === "builtin.form.date-time-field" &&
     (!source.selectedConfiguration?.dateTimeKind || source.selectedConfiguration.dateTimeKind === "date");
-  if (target.type === "text") return type === "builtin.form.text-field" || type === "builtin.form.text-area" || type === "builtin.form.select-field";
-  if (target.type === "enum" && type === "builtin.form.select-field" && Array.isArray(target.enumValues)) {
+  if (target.type === "text") return type === "builtin.form.text-field" || type === "builtin.form.text-area" || isFormChoiceAsset(type);
+  if (target.type === "enum" && isFormChoiceAsset(type) && Array.isArray(target.enumValues)) {
     const allowed = new Set(target.enumValues);
     const choices = readFormChoiceOptions(source).filter((choice) => !choice.disabled);
     return choices.length > 0 && choices.every((choice) => allowed.has(choice.value));
