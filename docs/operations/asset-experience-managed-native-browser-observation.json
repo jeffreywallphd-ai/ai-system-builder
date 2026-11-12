@@ -1,0 +1,97 @@
+{
+  "schema_version": "asset-experience-managed-native-browser-observation-v1",
+  "roadmap_id": "asset-experience-layered-customization",
+  "increment_id": "production-qualification",
+  "criterion_id": "desktop-thin-accessibility",
+  "status": "technical-check-pending",
+  "owner": "agent",
+  "observed_source": {
+    "commit": "4383798599cecbbec0fe6d2115a4f4873588e3c4",
+    "candidate_digest": "0b48b7cf70b8b7b597f7e8119091fec6ab4cb854f299dc90afe6d8f810bcf472",
+    "product_source": "source.376cfc6924cb4b8941cde35dfa6f7641aef70e4757b1b961b7b1836baa531638"
+  },
+  "run_id": "managed-c8bab49a4a404c3da0d72c1d04e0cda2",
+  "observation": {
+    "host": "managed-thin-chrome",
+    "case_status": "passed",
+    "cases": 1,
+    "retries": 0,
+    "synthetic_asset_journey_passed": true,
+    "elapsed_ms": 89251,
+    "viewports": [
+      {
+        "width": "native",
+        "surfaces": [
+          "Browse",
+          "Import Assets",
+          "Studio",
+          "Saved",
+          "Customizations"
+        ]
+      }
+    ],
+    "native_zoom_percent": 400,
+    "surface_measurements": {
+      "Browse": {
+        "innerWidth": 356,
+        "outerWidth": 1440,
+        "dpr": 4,
+        "cssZoom": "1",
+        "visualScale": 1,
+        "overflow": 0
+      },
+      "Import Assets": {
+        "innerWidth": 356,
+        "outerWidth": 1440,
+        "dpr": 4,
+        "cssZoom": "1",
+        "visualScale": 1,
+        "overflow": 0
+      },
+      "Studio": {
+        "innerWidth": 356,
+        "outerWidth": 1440,
+        "dpr": 4,
+        "cssZoom": "1",
+        "visualScale": 1,
+        "overflow": 0
+      },
+      "Saved": {
+        "innerWidth": 356,
+        "outerWidth": 1440,
+        "dpr": 4,
+        "cssZoom": "1",
+        "visualScale": 1,
+        "overflow": 0
+      },
+      "Customizations": {
+        "innerWidth": 356,
+        "outerWidth": 1440,
+        "dpr": 4,
+        "cssZoom": "1",
+        "visualScale": 1,
+        "overflow": 0
+      }
+    },
+    "verified_tls": true,
+    "graceful_host_exit": true,
+    "database_stopped": true,
+    "source_unchanged": true
+  },
+  "evidence_digests": {
+    "browser_result": "55eef17ff28d57fe5fdcf870046540dcf3d3222f9236906baa54019df9f58b9b",
+    "execution_result": "abb9d816dc7456354568464d73e4108e1c3626accb0c90315fbe2cf9f11b6d6a",
+    "source_and_shutdown": "ee05914a3a539651745ade8a17c778c46eb6b488c67c10343f723b9442b82acf",
+    "host": "369673b4914cf77656279ccacbb59b4937ca8bf7ff09c65fc1d3f0c133e611b5",
+    "accessibility": "22ce58929b6f1f499160328b1543e82157a1059bad86eb449c76cb7e9001164a"
+  },
+  "scope": [
+    "The managed Thin Client passed the Assets workflow at native 400 percent browser zoom. All five Assets tabs reflowed without page overflow.",
+    "This is a result for the recorded working-tree snapshot, which includes pre-existing changes outside this work."
+  ],
+  "remaining": [
+    "Run the current packaged Desktop accessibility checks and verify persistence across a managed server restart.",
+    "Keep the separately pending legacy Assets authorization assessment and the final system checks open."
+  ],
+  "parent_qualification_granted": false
+}
