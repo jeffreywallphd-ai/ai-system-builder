@@ -18,6 +18,7 @@ import { SystemPublishWorkspace } from "../SystemPublishWorkspace";
 import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
 import type { SystemBuildClient } from "../SystemBuildReleaseWorkflow";
 import type { SystemPublishedLifecycleClient } from "../SystemPublishedLifecycleClient";
+import type { SystemPublishedFormClient } from "../SystemPublishedFormClient";
 
 const passivePhase = vi.hoisted(() => ({paused: false, setups: [] as Array<() => void>, cleanups: [] as Array<() => void>}));
 vi.mock("react", async (importOriginal) => {
@@ -170,6 +171,57 @@ describe("guided System build and publication interactions", () => {
     expect(document.body.textContent).toContain("Install");
     expect(document.body.textContent).not.toContain("Deployment identifier");
     expect(document.body.textContent).not.toContain("Open System");
+  });
+
+  it("opens forms only for the exact published build and retires the dialog on workspace change", async () => {
+    const publicationWorkspace = vi.fn<SystemBuildClient["publicationWorkspace"]>()
+      .mockResolvedValueOnce(success(publicationFixture()))
+      .mockResolvedValue(success(publishedFixture()));
+    const buildClient = { publicationWorkspace } as unknown as SystemBuildClient;
+    const lifecycleClient = { read: vi.fn(async () => success({
+      schemaVersion: "1.0", releaseId: "release-2", state: "not-installed", revision: "lifecycle-1",
+      eligibleActions: ["install"], health: "unknown", diagnostics: [],
+    })), invoke: vi.fn() } as unknown as SystemPublishedLifecycleClient;
+    const list = vi.fn<SystemPublishedFormClient["list"]>().mockResolvedValue({ ok: true, value: [{
+      id: "intake", title: "Published intake", steps: [{ id: "first", label: "Page 1", fields: [],
+        conditions: [], defaultDestinationId: "intake" }],
+    }] });
+    const submit = vi.fn<SystemPublishedFormClient["submit"]>();
+    const publishedFormsClient = { list, submit };
+    const view = (workspaceId: string, formClient: SystemPublishedFormClient = publishedFormsClient) => (
+      <SystemPublishWorkspace workspaceId={workspaceId} buildClient={buildClient}
+        lifecycleClient={lifecycleClient} publishedFormsClient={formClient} />
+    );
+    await mount(view("workspace-a"));
+    expect(document.body.textContent).toContain("Ready to publish");
+    expect(document.querySelector('[aria-label="Open forms for build 2"]')).toBeNull();
+    expect(list).not.toHaveBeenCalled();
+
+    await act(async () => root!.render(<NotificationTestHarness>{view("workspace-b")}</NotificationTestHarness>));
+    const open = button(document.body, "Open forms");
+    expect(open.getAttribute("aria-label")).toBe("Open forms for build 2");
+    expect(document.querySelectorAll('[aria-label^="Open forms for build"]')).toHaveLength(1);
+    expect(list).not.toHaveBeenCalled();
+    await act(async () => open.click());
+    expect(list).toHaveBeenCalledWith({ workspaceId: "workspace-b", releaseId: "release-2" });
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain("Published intake");
+
+    const lifecycleReads = vi.mocked(lifecycleClient.read).mock.calls.length;
+    const nextList = vi.fn<SystemPublishedFormClient["list"]>().mockResolvedValue({ ok: true, value: [] });
+    const replacement = { list: nextList, submit };
+    await act(async () => root!.render(<NotificationTestHarness>{view("workspace-b", replacement)}</NotificationTestHarness>));
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(nextList).not.toHaveBeenCalled();
+    expect(lifecycleClient.read).toHaveBeenCalledTimes(lifecycleReads);
+    await act(async () => button(document.body, "Open forms").click());
+    expect(nextList).toHaveBeenCalledWith({ workspaceId: "workspace-b", releaseId: "release-2" });
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+
+    await act(async () => root!.render(<NotificationTestHarness>{view("workspace-c")}</NotificationTestHarness>));
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(list).toHaveBeenCalledOnce();
+    expect(submit).not.toHaveBeenCalled();
+    expect(lifecycleClient.invoke).not.toHaveBeenCalled();
   });
 });
 

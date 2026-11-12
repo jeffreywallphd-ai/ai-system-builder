@@ -11762,201 +11762,205 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "60c48d13d168e224bce58e49318d2b0c4bc037dc55e38ae363b0479d0b47f099",
-    "bytes": 38288,
+    "sha256": "e253d053ca32e68af422f37fa6017e475afb1b9aad9ce860a5a46f4fe1dfbde5",
+    "bytes": 41704,
     "cases": [
      {
       "name": "prepares the exact saved version and requests one host-guided build",
-      "line": 59
+      "line": 60
      },
      {
       "name": "defaults to the newest ready build and publishes only after explicit confirmation",
-      "line": 115
+      "line": 116
+     },
+     {
+      "name": "opens forms only for the exact published build and retires the dialog on workspace change",
+      "line": 176
      },
      {
       "name": "recovers a rejected preparation without exposing raw errors",
-      "line": 177
+      "line": 229
      },
      {
       "name": "admits one build request before the busy render",
-      "line": 188
+      "line": 240
      },
      {
       "name": "does not show a former workspace build in the replacement view",
-      "line": 200
+      "line": 252
      },
      {
       "name": "offers publication Refresh after the initial list rejects",
-      "line": 215
+      "line": 267
      },
      {
       "name": "releases a rejected approval and permits explicit retry",
-      "line": 225
+      "line": 277
      },
      {
       "name": "admits one approval before the busy render",
-      "line": 238
-     },
-     {
-      "name": "keeps the confirmed build and lock when selection events are queued",
-      "line": 251
-     },
-     {
-      "name": "keeps saved publication success when its list refresh rejects",
-      "line": 264
-     },
-     {
-      "name": "retries a rejected build request and keeps the exact saved target",
-      "line": 279
-     },
-     {
-      "name": "rejects another build ID for the same target and can deliberately retry",
       "line": 290
      },
      {
-      "name": "contains cancellation rejection, admits one retry and cancels the exact build",
-      "line": 297
+      "name": "keeps the confirmed build and lock when selection events are queued",
+      "line": 303
      },
      {
-      "name": "retains the original build after a mismatched cancellation reply",
-      "line": 314
+      "name": "keeps saved publication success when its list refresh rejects",
+      "line": 316
      },
      {
-      "name": "keeps denied readiness and typed stale revision approval denied",
-      "line": 322
-     },
-     {
-      "name": "refuses preparation for another saved revision and retries only checks",
+      "name": "retries a rejected build request and keeps the exact saved target",
       "line": 331
      },
      {
-      "name": "ignores a former workspace list and retains the new system selection",
-      "line": 348
+      "name": "rejects another build ID for the same target and can deliberately retry",
+      "line": 342
      },
      {
-      "name": "retires an old approval at layout commit before passive setup",
-      "line": 358
+      "name": "contains cancellation rejection, admits one retry and cancels the exact build",
+      "line": 349
      },
      {
-      "name": "keeps an accepted confirmation locked through same-turn Cancel and selection",
+      "name": "retains the original build after a mismatched cancellation reply",
       "line": 366
      },
      {
-      "name": "does not approve from a cancelled stale confirmation handler",
+      "name": "keeps denied readiness and typed stale revision approval denied",
       "line": 374
      },
      {
-      "name": "preserves a committed pending build after an abandoned client replacement",
-      "line": 398
+      "name": "refuses preparation for another saved revision and retries only checks",
+      "line": 383
      },
      {
-      "name": "preserves a committed publication confirmation after an abandoned client replacement",
-      "line": 407
+      "name": "ignores a former workspace list and retains the new system selection",
+      "line": 400
      },
      {
-      "name": "releases build admission if the browser ID provider throws, then retries",
+      "name": "retires an old approval at layout commit before passive setup",
+      "line": 410
+     },
+     {
+      "name": "keeps an accepted confirmation locked through same-turn Cancel and selection",
+      "line": 418
+     },
+     {
+      "name": "does not approve from a cancelled stale confirmation handler",
       "line": 426
      },
      {
+      "name": "preserves a committed pending build after an abandoned client replacement",
+      "line": 450
+     },
+     {
+      "name": "preserves a committed publication confirmation after an abandoned client replacement",
+      "line": 459
+     },
+     {
+      "name": "releases build admission if the browser ID provider throws, then retries",
+      "line": 478
+     },
+     {
       "name": "admits one Retry checks request before the loading render",
-      "line": 438
+      "line": 490
      },
      {
       "name": "admits one publication Refresh before the loading render",
-      "line": 447
+      "line": 499
      },
      {
       "name": "retires a build acknowledgement at layout commit before passive setup",
-      "line": 455
+      "line": 507
      }
     ],
     "dynamicCases": 4,
     "functions": [
      {
       "name": "readyBuild",
-      "line": 417
+      "line": 469
      },
      {
       "name": "SuspendBuildReplacement",
-      "line": 418
+      "line": 470
      },
      {
       "name": "releaseFixture",
-      "line": 419
+      "line": 471
      },
      {
       "name": "guidedClient",
-      "line": 465
+      "line": 517
      },
      {
       "name": "buildView",
-      "line": 472
+      "line": 524
      },
      {
       "name": "publishView",
-      "line": 475
+      "line": 527
      },
      {
       "name": "replaceView",
-      "line": 478
+      "line": 530
      },
      {
       "name": "openPublication",
-      "line": 479
+      "line": 531
      },
      {
       "name": "heldResult",
-      "line": 484
+      "line": 536
      },
      {
       "name": "mount",
-      "line": 486
+      "line": 538
      },
      {
       "name": "button",
-      "line": 493
+      "line": 545
      },
      {
       "name": "success",
-      "line": 500
+      "line": 552
      },
      {
       "name": "digest",
-      "line": 504
+      "line": 556
      },
      {
       "name": "buildRecord",
-      "line": 508
+      "line": 560
      },
      {
       "name": "publicationFixture",
-      "line": 528
+      "line": 580
      },
      {
       "name": "publishedFixture",
-      "line": 564
+      "line": 616
      }
     ],
-    "assertionCount": 123,
-    "assertionDigest": "e56baac89c917efbf91c67990372891cd843d6a5bce223693c1a19dc862d1d87",
+    "assertionCount": 140,
+    "assertionDigest": "1d561074e6b600ce29869ca63f0df4c325cb0893064a58c2f5e50b4bd89bf445",
     "assertionExamples": [
      {
-      "line": 94,
+      "line": 95,
       "kind": "expect",
       "sha256": "25d196ca33e2cbe1e470c9b455867a048e6b9d9259f14bc9ca9bf955bc00c722"
      },
      {
-      "line": 99,
+      "line": 100,
       "kind": "expect",
       "sha256": "34074bea1e0c70e5e8774cb927c729c8655875212dd5bf69329a7ea8546c7c9b"
      },
      {
-      "line": 101,
+      "line": 102,
       "kind": "expect",
       "sha256": "f39615bd7d51cc42bc45c1540dc3b88459f403b5863ace06cc1c4382718c004e"
      },
      {
-      "line": 103,
+      "line": 104,
       "kind": "expect",
       "sha256": "feaef0cd84fefdc601029224fed53c4b6593beae9735b61dbb26c89b1c40a296"
      }

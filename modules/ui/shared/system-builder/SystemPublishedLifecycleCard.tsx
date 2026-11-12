@@ -8,6 +8,8 @@ import { ApplicationIcon } from "../components/ApplicationIcon";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import type { SystemPublishedLifecycleClient } from "./SystemPublishedLifecycleClient";
+import type { SystemPublishedFormClient } from "./SystemPublishedFormClient";
+import { SystemPublishedFormDialog } from "./SystemPublishedFormDialog";
 
 const RUNNING_STATUS_REFRESH_INTERVAL_MS = 1_000;
 
@@ -15,6 +17,7 @@ interface PublishedLifecycleCardProps {
   readonly workspaceId: string;
   readonly build: SystemPublicationBuildSummary;
   readonly client: SystemPublishedLifecycleClient;
+  readonly publishedFormsClient?: SystemPublishedFormClient;
   readonly visualStartNotice?: string;
 }
 
@@ -46,9 +49,11 @@ function PublishedLifecycleSession({
   workspaceId,
   build,
   client,
+  publishedFormsClient,
   visualStartNotice = "The visual system started on its host.",
 }: PublishedLifecycleCardProps) {
   const releaseId = String(build.releaseId ?? "");
+  const formClient = build.publicationStatus === "published" && releaseId ? publishedFormsClient : undefined;
   const [projection, setProjection] = useState<SystemPublishedLifecycleProjection>();
   const [loading, setLoading] = useState(true);
   const [reading, setReading] = useState(false);
@@ -269,6 +274,9 @@ function PublishedLifecycleSession({
         </div>
       ) : null}
 
+      {formClient ? <PublishedFormsEntry workspaceId={workspaceId} releaseId={releaseId}
+        buildNumber={build.versionNumber} client={formClient} /> : null}
+
       <details>
         <summary>Release details</summary>
         <dl className="system-published-lifecycle-card__details">
@@ -300,6 +308,27 @@ function PublishedLifecycleSession({
       </details>
     </article>
   );
+}
+
+function PublishedFormsEntry({ workspaceId, releaseId, buildNumber, client }: {
+  readonly workspaceId: string;
+  readonly releaseId: string;
+  readonly buildNumber: number;
+  readonly client: SystemPublishedFormClient;
+}) {
+  const [state, setState] = useState({ client, open: false });
+  if (state.client !== client) {
+    setState({ client, open: false });
+    return null;
+  }
+  return <div className="system-published-lifecycle-card__actions">
+    <button type="button" className="ui-button ui-button--outline" onClick={() => setState({ client, open: true })}
+      aria-label={`Open forms for build ${buildNumber}`}>
+      Open forms
+    </button>
+    {state.open ? <SystemPublishedFormDialog workspaceId={workspaceId} releaseId={releaseId} client={client}
+      onClose={() => setState({ client, open: false })} /> : null}
+  </div>;
 }
 
 function actionLabel(action: SystemPublishedLifecycleAction): string {

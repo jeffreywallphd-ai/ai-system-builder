@@ -250,7 +250,9 @@ customization, and single-asset Studio workflows.
   current record-create policy. It returns form steps and field descriptions
   for the admitted respondent. Action mappings and stored answers stay on the
   host. The projection does not create a form submission.
-  The shared respondent dialog reads forms for one selected release. It uses
+  When the host supplies a form client, **Open forms** on a published build
+  opens the shared respondent dialog for that exact release. Unpublished
+  builds have no form entry point. The dialog uses
   the same answer and route checks as Preview. If the host does not confirm
   submission, Retry submission sends the same answers and submission ID.
   If the answers exceed the host's total text limit, the dialog keeps them

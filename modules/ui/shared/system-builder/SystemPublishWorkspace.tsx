@@ -10,11 +10,13 @@ import { TransientNotificationPublisher } from "../notifications/TransientNotifi
 import type { SystemBuildClient } from "./SystemBuildReleaseWorkflow";
 import { SystemPublishedLifecycleCard } from "./SystemPublishedLifecycleCard";
 import type { SystemPublishedLifecycleClient } from "./SystemPublishedLifecycleClient";
+import type { SystemPublishedFormClient } from "./SystemPublishedFormClient";
 
 interface SystemPublishWorkspaceProps {
   readonly workspaceId: string;
   readonly buildClient: SystemBuildClient;
   readonly lifecycleClient: SystemPublishedLifecycleClient;
+  readonly publishedFormsClient?: SystemPublishedFormClient;
   readonly visualStartNotice?: string;
 }
 interface PublicationSelection { readonly systemId: string; readonly buildId: string; }
@@ -38,6 +40,7 @@ function SystemPublishSession({
   workspaceId,
   buildClient,
   lifecycleClient,
+  publishedFormsClient,
   visualStartNotice,
 }: SystemPublishWorkspaceProps) {
   const [workspace, setWorkspace] = useState<SystemPublicationWorkspace>();
@@ -289,6 +292,7 @@ function SystemPublishSession({
                         workspaceId={workspaceId}
                         build={build}
                         client={lifecycleClient}
+                        publishedFormsClient={publishedFormsClient}
                         visualStartNotice={visualStartNotice}
                       />
                     ))}
