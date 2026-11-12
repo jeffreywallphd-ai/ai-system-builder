@@ -7654,11 +7654,13 @@
       "source_description_sha256": "c9695e96317a3b47daa991dd760fab533248382095c3f7a5d7d12d5cf236aeda",
       "qualification": "local",
       "user_description": {
-        "purpose": "Use the switch above the editors to open Canvas and Form with unsaved edits.",
+        "purpose": "Open the form you want to edit from Canvas and keep your unsaved edits when you return.",
         "owner": "agent",
         "next_action": "The agent will connect both editor views to the same draft and history.",
         "completion_proof": "A saved test form opens with the same pages, fields, and settings in both views.",
         "requirements": [
+          "Use Edit Form on a form asset to open that form. Use Back to Canvas to return to the same asset.",
+          "Confirm that a system without a form stays in Canvas and offers no Form tab.",
           "Add, rename, and reorder form steps. Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.",
           "Confirm both views read the same draft and that undo and redo use the shared draft history.",
           "Save and reopen with the same asset IDs, versions, settings, and order."
@@ -7672,16 +7674,16 @@
       "source_description_sha256": "2b158a95aa38a1f5108745efcb6369ce125266763ae2654ebbaff20a8d012ed8",
       "qualification": "local",
       "user_description": {
-        "purpose": "Open a form in the existing Canvas editor.",
+        "purpose": "Build a form as its own system or edit a form within a larger system.",
         "owner": "agent",
         "requirements": [
-          "Create two forms in one system. Verify that each has a distinct page and uses compatible containers where required.",
-          "Switch between views repeatedly. Confirm each form appears in its page with the correct fields and order and that switching creates no duplicate assets.",
-          "Make a supported change in Canvas and switch back. Confirm the Form view reads the same placements and preserves validation, routing, and action bindings.",
-          "Verify that the increment makes no changes to Canvas editor controls, rendering, or behavior."
+          "Create a form system. Confirm it has one page with a section, a form, and a first step.",
+          "Open two forms that share a page. Confirm each Edit Form button opens the correct form and preserves the other form.",
+          "Make a supported change in Canvas and reopen the form. Confirm that placements, validation, routes, and actions are preserved.",
+          "Confirm that Edit Form and Back to Canvas do not move or duplicate assets."
         ],
-        "next_action": "The agent will map each form to an existing Canvas page and check repeated switches.",
-        "completion_proof": "Two forms appear on separate Canvas pages and retain their field order and rules when switching views."
+        "next_action": "The agent will check both the new system path and forms already placed on Canvas.",
+        "completion_proof": "A new form system uses one page. Two existing forms can share a page and keep their fields, order, and rules."
       }
     },
     {
@@ -9048,10 +9050,10 @@
       "source_title_objective_digest": "4425a3beca380292b78dff3856412798444c9ec7780bee7f6a4600d228debce7",
       "user_description": {
         "title": "Asset-backed Form Composer",
-        "purpose": "Build forms in Systems Compose. Open each form on its own page in the existing Canvas editor.",
+        "purpose": "Build a form system or edit a form inside a larger system in Systems Compose.",
         "scope": [
           "Author, preview, and publish a multipage form.",
-          "Use the switch above the editors. Each form appears on its own Canvas page.",
+          "Open a specific form with Edit Form. Return to that form on Canvas with Back to Canvas.",
           "Choose the next form step based on an answer and run an approved action after submission.",
           "Verify the experience on Desktop and in the managed browser."
         ]

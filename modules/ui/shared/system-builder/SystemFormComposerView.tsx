@@ -1,13 +1,12 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { AssetConfigurationValues, AssetInstance } from "../../../contracts/asset";
-import type { SystemBuilderComposerAsset } from "../../../contracts/system-builder";
 import { readSystemFormAction, type SystemFormAction, type SystemFormRoute } from "../../../contracts/system-builder";
 import { compileSystemForm, type CompiledSystemForm } from "../../../application/services/system-builder/system-form-rules.service";
 import { SystemFormPreview } from "./SystemFormPreview";
 import { SystemFormActionEditor } from "./SystemFormActionEditor";
 import { readFormChoiceOptions, SystemFormRoutingEditor } from "./SystemFormRoutingEditor";
 import type { SystemComposerDraft } from "./systemComposerDraft";
-import { FORM_COMPOSER_FOUNDATION_VERSION, readSystemForms } from "./systemFormComposerDraft";
+import { FORM_COMPOSER_FOUNDATION_VERSION, type SystemFormDraftEntry } from "./systemFormComposerDraft";
 
 export const FORM_COMPOSER_FIELDS = [
   ["builtin.form.text-field", "Short text"],
@@ -31,10 +30,11 @@ export function readFormStepFields(draft: SystemComposerDraft, stepId: string): 
 
 interface SystemFormComposerViewProps {
   readonly draft: SystemComposerDraft;
-  readonly catalog: readonly SystemBuilderComposerAsset[];
+  readonly form: SystemFormDraftEntry;
+  readonly ready: boolean;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
-  readonly onCreateForm: (name: string) => void;
+  readonly onBackToCanvas: () => void;
   readonly onAddStep: (formId: string, name: string) => void;
   readonly onAddField: (stepId: string, definitionId: FormComposerFieldId) => void;
   readonly onMove: (instanceId: string, direction: -1 | 1) => void;
@@ -47,29 +47,31 @@ interface SystemFormComposerViewProps {
 }
 
 export function SystemFormComposerView({
-  draft, catalog, canUndo, canRedo, onCreateForm, onAddStep, onAddField, onMove,
+  draft, form, ready, canUndo, canRedo, onBackToCanvas, onAddStep, onAddField, onMove,
   onUpdate, onSaveRoute, onRemoveRoute, onUpdateAction, onUndo, onRedo,
 }: SystemFormComposerViewProps) {
-  const [formName, setFormName] = useState("");
   const [stepName, setStepName] = useState("");
-  const [selectedFormId, setSelectedFormId] = useState("");
+  const backButton = useRef<HTMLButtonElement>(null);
+  const entered = useRef(false);
+  useEffect(() => {
+    if (ready && !entered.current && backButton.current) {
+      entered.current = true;
+      backButton.current.focus();
+    }
+  }, [ready]);
   const [selectedStepId, setSelectedStepId] = useState("");
   const [selectedFieldId, setSelectedFieldId] = useState("");
   const [fieldType, setFieldType] = useState<FormComposerFieldId>(FORM_COMPOSER_FIELDS[0][0]);
   const [preview, setPreview] = useState<CompiledSystemForm>();
   const [previewError, setPreviewError] = useState<{ readonly draft: SystemComposerDraft; readonly formId: string; readonly message: string }>();
-  const forms = useMemo(() => readSystemForms(draft, catalog), [draft, catalog]);
-  const form = forms.find((entry) => entry.form.instanceId === selectedFormId) ?? forms[0];
-  const step = form?.steps.find((entry) => entry.instanceId === selectedStepId) ?? form?.steps[0];
-  const fields = useMemo(() => step ? readFormStepFields(draft, String(step.instanceId)) : [], [draft, step]);
+  const directFields = useMemo(() => readFormStepFields(draft, String(form.form.instanceId)), [draft, form.form.instanceId]);
+  const step = directFields.length && selectedStepId === form.form.instanceId
+    ? undefined : form.steps.find((entry) => entry.instanceId === selectedStepId) ?? form.steps[0];
+  const fields = useMemo(() => step ? readFormStepFields(draft, String(step.instanceId)) : directFields, [directFields, draft, step]);
   const field = fields.find((item) => item.instanceId === selectedFieldId) ?? fields[0];
   const action = form ? draft.bindings.map(readSystemFormAction).find((entry) => entry?.formId === form.form.instanceId) : undefined;
   const actionFields = useMemo(() => form?.steps.flatMap((item) => readFormStepFields(draft, String(item.instanceId))) ?? [], [draft, form]);
 
-  function submitForm(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (formName.trim()) onCreateForm(formName);
-  }
   function submitStep(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (form && stepName.trim()) onAddStep(String(form.form.instanceId), stepName);
@@ -86,6 +88,7 @@ export function SystemFormComposerView({
     <section className="ui-stack ui-stack--md" aria-labelledby="system-form-composer-heading">
       <div className="ui-workflow__actions">
         <h3 id="system-form-composer-heading">Form Composer</h3>
+        <button ref={backButton} className="ui-button ui-button--outline" type="button" onClick={onBackToCanvas}>Back to Canvas</button>
         <button className="ui-button ui-button--outline" type="button" onClick={onUndo} disabled={!canUndo}>Undo</button>
         <button className="ui-button ui-button--outline" type="button" onClick={onRedo} disabled={!canRedo}>Redo</button>
         {form ? <button className="ui-button ui-button--outline" type="button" onClick={openPreview}>Preview form</button> : null}
@@ -93,28 +96,9 @@ export function SystemFormComposerView({
       {previewError?.draft === draft && previewError.formId === form?.form.instanceId ? <p role="alert">{previewError.message}</p> : null}
       {preview ? <SystemFormPreview form={preview} hasConfiguredAction={action?.formId === preview.id}
         onClose={() => setPreview(undefined)} /> : null}
-      <form className="ui-panel ui-stack ui-stack--sm" onSubmit={submitForm}>
-        <label className="ui-stack ui-stack--sm">
-          New form name
-          <input maxLength={200} required value={formName} onChange={(event) => setFormName(event.currentTarget.value)} />
-        </label>
-        <div className="ui-workflow__actions">
-          <button className="ui-button" type="submit" disabled={!formName.trim()}>Create form</button>
-        </div>
-      </form>
-      {form ? (
         <div className="ui-stack ui-stack--md">
           <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form and steps">
-            <label className="ui-stack ui-stack--sm">
-              Form
-              <select value={form.form.instanceId} onChange={(event) => {
-                setSelectedFormId(event.currentTarget.value);
-                setSelectedStepId("");
-                setSelectedFieldId("");
-              }}>
-                {forms.map((entry) => <option key={entry.form.instanceId} value={entry.form.instanceId}>{entry.form.displayName}</option>)}
-              </select>
-            </label>
+            <h4>{form.form.displayName ?? "Form"}</h4>
             <p>Canvas page <strong>{form.page.displayName}</strong></p>
             <form className="ui-stack ui-stack--sm" onSubmit={submitStep}>
               <label className="ui-stack ui-stack--sm">
@@ -125,17 +109,20 @@ export function SystemFormComposerView({
                 <button className="ui-button ui-button--outline" type="submit" disabled={!stepName.trim()}>Add step</button>
               </div>
             </form>
-            {step ? (
-              <>
+            {form.steps.length || directFields.length ? (
                 <label className="ui-stack ui-stack--sm">
                   Form step
-                  <select value={step.instanceId} onChange={(event) => {
+                  <select value={step?.instanceId ?? form.form.instanceId} onChange={(event) => {
                     setSelectedStepId(event.currentTarget.value);
                     setSelectedFieldId("");
                   }}>
                     {form.steps.map((entry) => <option key={entry.instanceId} value={entry.instanceId}>{entry.displayName}</option>)}
+                    {directFields.length ? <option value={form.form.instanceId}>Fields outside steps</option> : null}
                   </select>
                 </label>
+            ) : <p>Add a step to start adding fields.</p>}
+            {step ? (
+              <>
                 <label className="ui-stack ui-stack--sm" key={step.instanceId}>
                   Step name
                   <input key={step.displayName} maxLength={200} defaultValue={step.displayName}
@@ -154,14 +141,14 @@ export function SystemFormComposerView({
               </>
             ) : null}
           </section>
-          {step ? (
-            <section className="ui-panel ui-stack ui-stack--sm" aria-label="Fields in this step">
-              <div className="ui-workflow__actions">
+          {step || directFields.length ? (
+            <section className="ui-panel ui-stack ui-stack--sm" aria-label={step ? "Fields in this step" : "Fields outside steps"}>
+              {step ? <div className="ui-workflow__actions">
                 <label>Field type <select value={fieldType} onChange={(event) => setFieldType(event.currentTarget.value as FormComposerFieldId)}>
                   {FORM_COMPOSER_FIELDS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
                 </select></label>
                 <button className="ui-button ui-button--outline" type="button" onClick={() => onAddField(String(step.instanceId), fieldType)}>Add field</button>
-              </div>
+              </div> : <p>Move these fields into a step in Canvas before previewing this form or using a submission action.</p>}
               {field ? (
                 <>
                   <label className="ui-stack ui-stack--sm">
@@ -189,7 +176,6 @@ export function SystemFormComposerView({
             onSave={(next) => onUpdateAction(String(form.form.instanceId), next)}
             onRemove={() => onUpdateAction(String(form.form.instanceId))} />
         </div>
-      ) : <p className="ui-text-muted">Create a form to add its page to the system.</p>}
     </section>
   );
 }

@@ -179,6 +179,9 @@ export interface SystemComposerStructureEditorProps {
     target: SystemComposerTargetSlot,
   ) => void;
   readonly onRemove: (instanceId: string) => void;
+  readonly editableFormIds?: ReadonlySet<string>;
+  readonly onEditForm?: (instanceId: string) => void;
+  readonly revealInstanceId?: string;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
 }
@@ -209,6 +212,9 @@ export function SystemComposerStructureEditor({
   onAdd,
   onPlace,
   onRemove,
+  editableFormIds,
+  onEditForm,
+  revealInstanceId,
   onUndo,
   onRedo,
 }: SystemComposerStructureEditorProps) {
@@ -888,6 +894,9 @@ export function SystemComposerStructureEditor({
                   onSelect={onSelect}
                   onAddElement={openAssetPicker}
                   onRequestRemove={requestAssetRemoval}
+                  editableFormIds={editableFormIds}
+                  onEditForm={onEditForm}
+                  revealInstanceId={revealInstanceId}
                 />
               ))}
             </div>
@@ -1655,6 +1664,9 @@ function CanvasNode({
   onSelect,
   onAddElement,
   onRequestRemove,
+  editableFormIds,
+  onEditForm,
+  revealInstanceId,
 }: {
   readonly node: SystemComposerTreeNode;
   readonly catalog: readonly SystemBuilderComposerAsset[];
@@ -1663,6 +1675,9 @@ function CanvasNode({
   readonly onSelect: (instanceId: string) => void;
   readonly onAddElement: OpenRegionPicker;
   readonly onRequestRemove: (instanceId: string) => void;
+  readonly editableFormIds?: ReadonlySet<string>;
+  readonly onEditForm?: (instanceId: string) => void;
+  readonly revealInstanceId?: string;
 }) {
   const instanceId = String(node.instance.instanceId);
   const definition = definitionForInstance(node.instance, catalog);
@@ -1702,6 +1717,17 @@ function CanvasNode({
             <span className="ui-badge ui-badge--info">Required</span>
           ) : null}
         </button>
+        {editableFormIds?.has(instanceId) && onEditForm ? (
+          <button
+            type="button"
+            className="system-composer__flat-control"
+            aria-label={`Edit Form: ${parentName}`}
+            data-edit-form-id={instanceId}
+            onClick={() => onEditForm(instanceId)}
+          >
+            Edit Form
+          </button>
+        ) : null}
         {!protectedInstance && instanceId === selectedInstanceId ? (
           <button
             type="button"
@@ -1752,6 +1778,9 @@ function CanvasNode({
               onAddToRegion={(trigger) => onAddElement(node, String(slot.slotId), trigger)}
               onAddElement={onAddElement}
               onRequestRemove={onRequestRemove}
+              editableFormIds={editableFormIds}
+              onEditForm={onEditForm}
+              revealInstanceId={revealInstanceId}
             />
           ))}
         </div>
@@ -1773,6 +1802,9 @@ function CanvasSlot({
   onAddToRegion,
   onAddElement,
   onRequestRemove,
+  editableFormIds,
+  onEditForm,
+  revealInstanceId,
 }: {
   readonly parentInstanceId: string;
   readonly parentName: string;
@@ -1786,9 +1818,13 @@ function CanvasSlot({
   readonly onAddToRegion: (trigger: HTMLButtonElement) => void;
   readonly onAddElement: OpenRegionPicker;
   readonly onRequestRemove: (instanceId: string) => void;
+  readonly editableFormIds?: ReadonlySet<string>;
+  readonly onEditForm?: (instanceId: string) => void;
+  readonly revealInstanceId?: string;
 }) {
   const collapsible = String(slot.slotId) === "states";
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(() => !collapsible || !revealInstanceId ||
+    !flattenSystemComposerTree(childrenNodes).some(({instance}) => instance.instanceId === revealInstanceId));
   const contentId = `system-composer-slot-${parentInstanceId}-${String(slot.slotId)}-content`;
   return (
     <section
@@ -1859,6 +1895,9 @@ function CanvasSlot({
                 onSelect={onSelect}
                 onAddElement={onAddElement}
                 onRequestRemove={onRequestRemove}
+                editableFormIds={editableFormIds}
+                onEditForm={onEditForm}
+                revealInstanceId={revealInstanceId}
               />
             ))}
             {childrenNodes.length === 0 ? (

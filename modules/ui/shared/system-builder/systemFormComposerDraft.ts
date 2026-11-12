@@ -28,6 +28,7 @@ interface CreateFormInput {
   readonly compositionId: string;
   readonly rootInstanceId: string;
   readonly instanceIds: Readonly<Record<FormAssetRole, string>>;
+  readonly existingPageInstanceId?: string;
   readonly assets: FormAssets;
   readonly catalog: readonly SystemBuilderComposerAsset[];
 }
@@ -88,10 +89,10 @@ export function readSystemForms(
     }
     return positions;
   }
-  const paths = new Map(entries.map(({page}) => [page.instanceId, placementPath(String(page.instanceId))]));
+  const paths = new Map(entries.map(({form}) => [form.instanceId, placementPath(String(form.instanceId))]));
   return entries.sort((left, right) => {
-    const a = paths.get(left.page.instanceId)!;
-    const b = paths.get(right.page.instanceId)!;
+    const a = paths.get(left.form.instanceId)!;
+    const b = paths.get(right.form.instanceId)!;
     for (let index = 0; index < Math.min(a.length, b.length); index++) {
       const offset = a[index]! - b[index]!;
       if (offset) return offset;
@@ -119,8 +120,9 @@ export function createSystemFormDraft(draft: SystemComposerDraft, input: CreateF
       preset.version !== FORM_COMPOSER_FOUNDATION_VERSION) {
     return { ok: false, message: "Choose an interactive system with a current Foundation layout." };
   }
-  if (draft.placements.length + 4 > MAX_ASSET_PLACEMENTS_PER_COMPOSITION ||
-      draft.instances.length + 4 > MAX_ASSET_PLACEMENTS_PER_COMPOSITION + 1) {
+  const addedCount = input.existingPageInstanceId ? 3 : 4;
+  if (draft.placements.length + addedCount > MAX_ASSET_PLACEMENTS_PER_COMPOSITION ||
+      draft.instances.length + addedCount > MAX_ASSET_PLACEMENTS_PER_COMPOSITION + 1) {
     return { ok: false, message: "This system has no space for a new form." };
   }
   const roles = Object.keys(FORM_COMPOSER_FOUNDATION_ASSET_IDS) as FormAssetRole[];
@@ -134,7 +136,9 @@ export function createSystemFormDraft(draft: SystemComposerDraft, input: CreateF
   }
   if (roles.some((role) => {
     const asset = input.assets[role];
-    return !asset.builtIn || asset.compatibility.status !== "compatible" ||
+    // Unscoped catalog reads have not evaluated a target slot. The exact
+    // shell, page, and parent slots are checked below for the proposed placements.
+    return !asset.builtIn || asset.compatibility.status === "incompatible" ||
       asset.definitionId !== FORM_COMPOSER_FOUNDATION_ASSET_IDS[role] ||
       asset.definitionRef.kind !== "asset-definition-version" ||
       asset.definitionRef.id !== asset.definitionId ||
@@ -152,20 +156,29 @@ export function createSystemFormDraft(draft: SystemComposerDraft, input: CreateF
     return { ok: false, message: "The current application shell is unavailable." };
   }
   const { page, section, form, step } = input.assets;
+  const existingPage = input.existingPageInstanceId;
+  const existingPlacement = existingPage ? draft.placements.find((edge) =>
+    edge.parentInstanceRef.id === shell.instanceId && edge.childInstanceRef.id === existingPage) : undefined;
   const slot = shellDefinition.slots.find((candidate) => acceptsExactDefinition(candidate, page) &&
-    draft.placements.filter((edge) => edge.parentInstanceRef.id === shell.instanceId &&
-      edge.slotId === candidate.slotId).length < candidate.cardinality.maxItems);
+    (existingPage ? existingPlacement?.slotId === candidate.slotId :
+      draft.placements.filter((edge) => edge.parentInstanceRef.id === shell.instanceId &&
+        edge.slotId === candidate.slotId).length < candidate.cardinality.maxItems));
   if (!slot) return { ok: false, message: "The selected application layout has no available page region." };
+  if (existingPage && (!draft.instances.some((item) => item.instanceId === existingPage && hasFoundationIdentity(item, "page")) ||
+      draft.placements.some((edge) => edge.parentInstanceRef.id === existingPage))) {
+    return { ok: false, message: "The new system does not have an empty Foundation page." };
+  }
 
   const items = [
     { role: "page", asset: page, parentId: String(shell.instanceId), slotId: slot.slotId, label: name },
-    { role: "section", asset: section, parentId: input.instanceIds.page, slotId: "content", label: "Form content", parent: page },
+    { role: "section", asset: section, parentId: existingPage ?? input.instanceIds.page, slotId: "content", label: "Form content", parent: page },
     { role: "form", asset: form, parentId: input.instanceIds.section, slotId: "content", label: name, parent: section },
     { role: "step", asset: step, parentId: input.instanceIds.form, slotId: "fields", label: "First step", parent: form },
   ] as const;
   let current = draft;
   const labels = new Map<string, { name: string; title?: string }>();
   for (const item of items) {
+    if (item.role === "page" && existingPage) continue;
     if ("parent" in item && !item.parent.slots.some((candidate) => candidate.slotId === item.slotId &&
         candidate.cardinality.maxItems > 0 && accepts(candidate, item.asset))) {
       return { ok: false, message: "The required form assets cannot be placed together." };

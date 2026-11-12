@@ -66,7 +66,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("authors forms and fields in the shared draft and reopens their existing Canvas pages", async () => {
+  it("edits the exact selected form when two forms share a Canvas page", async () => {
     const page = {
       ...composerDefinition("builtin.layout.page.single", "Single content", ["content"], false, "3.0.0"),
       layoutRole: "page-layout" as const,
@@ -86,6 +86,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     };
     const form = formContainer("builtin.form.form", "Form");
     const group = formContainer("builtin.form.field-group", "Field Group");
+    const resourceBrowser = composerDefinition("builtin.shell.resource-browser", "Resource browser", ["states"], false, "3.0.0");
     const textField = {
       ...composerDefinition("builtin.form.text-field", "Text Field", [], false, "3.0.0"),
       configurationSchema: { fields: [
@@ -94,7 +95,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
       ] } as SystemBuilderComposerAsset["configurationSchema"],
     };
     const catalog = [
-      rootDefinition, shell, page, form, group, textField,
+      rootDefinition, shell, page, form, group, textField, resourceBrowser,
       composerDefinition("builtin.form.checkbox-field", "Checkbox", [], false, "3.0.0"),
       {
         ...composerDefinition("builtin.form.select-field", "Choice", [], false, "3.0.0"),
@@ -115,6 +116,12 @@ describe("SystemBuilderWorkspace UI preview", () => {
       { ...composerDefinition("builtin.data.field", "Data Field", [], false, "3.0.0"), assetType: "schema" as const },
     ];
     const byDefinition = (id: string) => catalog.find((asset) => asset.definitionId === id)!.definitionRef;
+    const intake = { ...instance("fixture.intake", form.definitionId, "Intake", { title: "Intake" }), definitionRef: form.definitionRef };
+    const questionnaire = { ...instance("fixture.questionnaire", form.definitionId, "Questionnaire", { title: "Questionnaire" }), definitionRef: form.definitionRef };
+    const intakeStep = { ...instance("fixture.intake-step", group.definitionId, "First step", { title: "First step" }), definitionRef: group.definitionRef };
+    const questionnaireStep = { ...instance("fixture.questionnaire-step", group.definitionId, "First step", { title: "First step" }), definitionRef: group.definitionRef };
+    const browser = { ...instance("fixture.browser", resourceBrowser.definitionId, "Resource browser", {}), definitionRef: resourceBrowser.definitionRef };
+    const section = { ...instance("fixture.state-section", "builtin.ui.section", "State content", {}), definitionRef: byDefinition("builtin.ui.section") };
     const fixture = [
       { ...instance("fixture.root", rootDefinition.definitionId, "Portal", {}), definitionRef: rootDefinition.definitionRef },
       { ...instance("fixture.shell", shell.definitionId, "Standard", {}), definitionRef: shell.definitionRef },
@@ -125,8 +132,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
         definitionRef: byDefinition("builtin.data.field") },
       { ...instance("fixture.number-record", "builtin.data.field", "Count", { name: "count", label: "Count", type: "number" }),
         definitionRef: byDefinition("builtin.data.field") },
+      intake, questionnaire, intakeStep, questionnaireStep, browser, section,
     ];
     const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: normalizeAssetId(item.instanceId) });
+    const place = (parent: AssetInstance, child: AssetInstance, slot: string, order: number) => ({
+      schemaVersion: "asset-placement.v1" as const, placementId: `place.${child.instanceId}`, slotId: normalizeAssetSlotId(slot),
+      parentInstanceRef: ref(parent), childInstanceRef: ref(child), order,
+    });
     const initial: SystemBuilderRevision = {
       revisionId: normalizeSystemBuilderRevisionId("fixture.r1"), systemId: normalizeSystemBuilderSystemId("fixture"),
       targetWorkspaceId: createWorkspaceId("workspace-a"), revisionNumber: 1,
@@ -141,6 +153,12 @@ describe("SystemBuilderWorkspace UI preview", () => {
           parentInstanceRef: ref(fixture[0]!), childInstanceRef: ref(fixture[1]!), order: 0 },
         { schemaVersion: "asset-placement.v1", placementId: "place.page", slotId: normalizeAssetSlotId("content"),
           parentInstanceRef: ref(fixture[1]!), childInstanceRef: ref(fixture[2]!), order: 0 },
+        place(fixture[2]!, intake, "content", 0),
+        place(fixture[2]!, browser, "content", 1),
+        place(browser, section, "states", 0),
+        place(section, questionnaire, "content", 0),
+        place(intake, intakeStep, "fields", 0),
+        place(questionnaire, questionnaireStep, "fields", 0),
       ],
       validationIssues: [], createdAt: "2026-07-19T00:00:00.000Z", createdBy: "person-1",
     };
@@ -149,6 +167,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
       status: "validated", revision: 1, currentRevisionId: initial.revisionId, composition: initial.composition,
       createdAt: initial.createdAt, updatedAt: initial.createdAt, createdBy: "person-1", updatedBy: "person-1",
     };
+    const other = { ...record, systemId: normalizeSystemBuilderSystemId("alternate"), name: "Other portal" };
     let latest = initial;
     const saveRevision = vi.fn(async (input: Parameters<SystemBuilderClient["saveRevision"]>[0]) => {
       latest = { ...initial, revisionNumber: 2, composition: input.composition, instances: input.instances,
@@ -159,8 +178,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
       ok: true as const,
       value: { items: input.searchText ? catalog.filter((asset) => asset.definitionId === input.searchText) : catalog },
     }));
-    const client = { ...clientFor(record, initial), saveRevision, listComposerAssets,
-      readRevision: async () => ({ ok: true as const, value: latest }) };
+    const client: SystemBuilderClient = { ...clientFor(record, initial), saveRevision, listComposerAssets,
+      list: async () => ({ ok: true, value: [record, other] }),
+      readRevision: async ({systemId}) => ({ ok: true, value: systemId === other.systemId ? { ...initial, systemId: other.systemId } : latest }) };
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -181,14 +201,21 @@ describe("SystemBuilderWorkspace UI preview", () => {
       select.value = [...select.options].find((item) => item.text === name)!.value;
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    await vi.waitFor(() => expect(button(container!, "Form")).toBeDefined());
-    await click("Form");
-    await fill("New form name", "Intake");
-    await click("Create form");
-    await vi.waitFor(() => expect(container!.textContent).toContain("Canvas page Intake"));
-    await fill("New form name", "Questionnaire");
-    await click("Create form");
-    await vi.waitFor(() => expect(find<HTMLSelectElement>("Form", "select").options.length).toBe(2));
+    const editButton = (name: string) => container!.querySelector<HTMLButtonElement>(`[aria-label="Edit Form: ${name}"]`)!;
+    const expandStates = () => act(async () => container!.querySelector<HTMLButtonElement>('button[aria-expanded="false"][aria-controls$="-states-content"]')?.click());
+    const editForm = async (name: string) => {
+      if (name === "Questionnaire" && !editButton(name)) await expandStates();
+      await act(async () => editButton(name).click());
+    };
+    await vi.waitFor(() => expect(editButton("Intake")).toBeTruthy());
+    expect([...container!.querySelectorAll('[role="tab"]')].some((tab) => tab.textContent === "Form")).toBe(false);
+    expect(container!.querySelectorAll("button[data-edit-form-id]")).toHaveLength(1);
+    await expandStates();
+    expect(container!.querySelectorAll("button[data-edit-form-id]")).toHaveLength(2);
+    await editForm("Intake");
+    expect(document.activeElement).toBe(button(container!, "Back to Canvas"));
+    expect(container!.querySelector("h4")?.textContent).toBe("Intake");
+    expect(container!.textContent).toContain("Canvas page Main page");
     await fill("New step name", "Details");
     await click("Add step");
     await choose("Form step", "Details");
@@ -203,15 +230,17 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(listComposerAssets).toHaveBeenCalledWith(expect.objectContaining({
       workspaceId: "workspace-a", slotId: "fields", compatibleOnly: true, searchText: "builtin.form.text-field",
     }));
-    await click("Design");
+    await click("Back to Canvas");
+    expect(document.activeElement).toBe(editButton("Intake"));
     const canvas = container!.querySelector(".system-composer__canvas")!;
     const pages = [...canvas.querySelectorAll('.system-composer__canvas-node[data-layout-container="true"]')]
       .filter((item) => item.querySelector(":scope > .system-composer__canvas-node-heading small")?.textContent?.includes("builtin.layout.page.single@"));
     expect(pages.map((item) => item.querySelector(":scope > .system-composer__canvas-node-heading strong")?.textContent))
-      .toEqual(["Main page", "Intake", "Questionnaire"]);
-    expect(pages[1]?.textContent).toContain("Request reason");
-    expect(pages[2]?.textContent).not.toContain("Request reason");
-    await click("Form");
+      .toEqual(["Main page"]);
+    expect(editButton("Intake").closest("article")?.textContent).toContain("Request reason");
+    await expandStates();
+    expect(editButton("Questionnaire").closest("article")?.textContent).not.toContain("Request reason");
+    await editForm("Intake");
     await choose("Form step", "Details");
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
     await click("Undo");
@@ -262,7 +291,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(saveRevision).not.toHaveBeenCalled();
     await act(async () => preview.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
     expect(document.activeElement).toBe(previewButton);
-    await choose("Form", "Questionnaire");
+    await click("Back to Canvas");
+    await editForm("Questionnaire");
+    expect(container!.querySelector("h4")?.textContent).toBe("Questionnaire");
     await choose("Field type", "Choice");
     await click("Add field");
     await fill("New option label", "Hardware");
@@ -280,20 +311,20 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await fillBound("Minimum value", "1");
     await fillBound("Maximum value", "10");
     await click("Preview form");
-    const questionnaire = document.querySelector('[role="dialog"]')!;
-    const numberAnswer = questionnaire.querySelector<HTMLInputElement>('input[type="number"]')!;
+    const questionnairePreview = document.querySelector('[role="dialog"]')!;
+    const numberAnswer = questionnairePreview.querySelector<HTMLInputElement>('input[type="number"]')!;
     await act(async () => setInputValue(numberAnswer, "5"));
     // A browser number control can expose empty value with an incomplete native edit.
     Object.defineProperty(numberAnswer, "validity", { configurable: true, value: { badInput: true } });
     await act(async () => setInputValue(numberAnswer, ""));
-    await act(async () => button(questionnaire, "Finish preview").click());
+    await act(async () => button(questionnairePreview, "Finish preview").click());
     expect(numberAnswer.getAttribute("aria-invalid")).toBe("true");
-    expect(questionnaire.textContent).toContain("Enter a number.");
+    expect(questionnairePreview.textContent).toContain("Enter a number.");
     Object.defineProperty(numberAnswer, "validity", { configurable: true, value: { badInput: false } });
     await act(async () => setInputValue(numberAnswer, ""));
-    await act(async () => button(questionnaire, "Finish preview").click());
-    expect(questionnaire.textContent).toContain("No answers included.");
-    await act(async () => questionnaire.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
+    await act(async () => button(questionnairePreview, "Finish preview").click());
+    expect(questionnairePreview.textContent).toContain("No answers included.");
+    await act(async () => questionnairePreview.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
     await click("Save and validate revision");
     await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(1));
     expect(latest.bindings).toHaveLength(3);
@@ -319,19 +350,112 @@ describe("SystemBuilderWorkspace UI preview", () => {
     act(() => root!.unmount());
     root = createRoot(container);
     await act(async () => mount());
-    await click("Form");
-    expect([...find<HTMLSelectElement>("Form", "select").options].map((item) => item.text)).toEqual(["Intake", "Questionnaire"]);
+    await editForm("Intake");
+    await choose("Form step", "Fields outside steps");
+    expect(find<HTMLInputElement>("Field label", "input").value).toBe("Canvas field");
     await choose("Form step", "Details");
     expect(find<HTMLInputElement>("Field label", "input").value).toBe("Request reason");
     expect(container!.textContent).toContain("Request reason → Reason");
     await click("Move step up");
-    expect([...find<HTMLSelectElement>("Form step", "select").options].map((item) => item.text)).toEqual(["Details", "First step"]);
+    expect([...find<HTMLSelectElement>("Form step", "select").options].map((item) => item.text)).toEqual(["Details", "First step", "Fields outside steps"]);
     await click("Save and validate revision");
     await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(2));
     expect(latest.placements!.find((edge) => edge.childInstanceRef.id === canvasField.instanceId)?.order).toBe(1);
-    await choose("Form", "Questionnaire");
+    expect(latest.placements!.find((edge) => edge.childInstanceRef.id === intake.instanceId)?.parentInstanceRef.id).toBe("fixture.page");
+    expect(latest.placements!.find((edge) => edge.childInstanceRef.id === questionnaire.instanceId)?.parentInstanceRef.id).toBe(section.instanceId);
+    await click("Back to Canvas");
+    await editForm("Questionnaire");
     await choose("Field", "Number Field");
     expect(find<HTMLInputElement>("Maximum value", "input").value).toBe("10");
+    await click("Back to Canvas");
+    expect(document.activeElement).toBe(editButton("Questionnaire"));
+    expect(editButton("Questionnaire").closest('[data-slot-id="states"]')?.getAttribute("data-collapsed")).toBe("false");
+    await click("Connections");
+    await choose("System", "Other portal");
+    await click("Edit system");
+    expect(button(container!, "Design").getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("starts a form system on the existing blank Minimal page and uses the same draft in Canvas", async () => {
+    const rootDefinition = composerDefinition("builtin.system.system", "System root", ["application-shell"], false, "3.0.0");
+    const page = { ...composerDefinition("builtin.layout.page.single", "Page", ["content"], false, "3.0.0"),
+      layoutRole: "page-layout" as const, assetType: "page" as const };
+    const baseShell = layoutDefinition("builtin.layout.application.minimal", "Minimal", ["content"], "3.0.0");
+    const shell = { ...baseShell, slots: baseShell.slots.map((slot) => ({ ...slot, acceptedDefinitionRefs: [page.definitionRef] })) };
+    const form = composerDefinition("builtin.form.form", "Form", ["fields"], true, "3.0.0");
+    const step = composerDefinition("builtin.form.field-group", "Step", ["fields"], true, "3.0.0");
+    const section = composerDefinition("builtin.ui.section", "Section", ["content"], false, "3.0.0");
+    const catalog = [rootDefinition, page, shell, form, step, section];
+    const initialAssets = [rootDefinition, shell, page].map((item, index) => ({
+      ...instance(`new.instance.${index}`, item.definitionId, item.displayName, {}), definitionRef: item.definitionRef,
+    }));
+    const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: normalizeAssetId(item.instanceId) });
+    const refs = initialAssets.map(ref);
+    const initial: SystemBuilderRevision = {
+      revisionId: normalizeSystemBuilderRevisionId("new.r1"), systemId: normalizeSystemBuilderSystemId("new"),
+      targetWorkspaceId: createWorkspaceId("workspace-a"), revisionNumber: 1,
+      composition: { compositionId: normalizeAssetId("new.composition"), compositionType: "system", displayName: "Survey",
+        version: "0.1.0", lifecycleStatus: "draft", rootInstanceRefs: [refs[0]!], instanceRefs: refs, bindingRefs: [],
+        provenance: { sourceKind: "human-authored" } },
+      instances: initialAssets, bindings: [],
+      structure: { schemaVersion: "system-builder-structure.v1", profile: "interactive", layoutPresetRef: shell.definitionRef },
+      placements: ["application-shell", "content"].map((slot, index) => ({
+        schemaVersion: "asset-placement.v1", placementId: `place.${index}`, slotId: normalizeAssetSlotId(slot),
+        parentInstanceRef: refs[index]!, childInstanceRef: refs[index + 1]!, order: 0,
+      })),
+      validationIssues: [], createdAt: "2026-07-19T00:00:00.000Z", createdBy: "person-1",
+    };
+    const record: SystemBuilderRecord = {
+      systemId: initial.systemId, targetWorkspaceId: initial.targetWorkspaceId, name: "Survey", status: "validated",
+      revision: 1, currentRevisionId: initial.revisionId, composition: initial.composition,
+      createdAt: initial.createdAt, updatedAt: initial.createdAt, createdBy: "person-1", updatedBy: "person-1",
+    };
+    const create = vi.fn(async () => ({ ok: true as const, value: record }));
+    const saveRevision = vi.fn(async (input: Parameters<SystemBuilderClient["saveRevision"]>[0]) => ({
+      ok: true as const, value: { ...initial, revisionNumber: 2, composition: input.composition, instances: input.instances,
+        placements: input.placements, bindings: input.bindings },
+    }));
+    let hasStep = false;
+    const client: SystemBuilderClient = { ...clientFor(record, initial), create, saveRevision,
+      list: async () => ({ ok: true, value: [] }),
+      listComposerAssets: async (query) => ({ ok: true, value: { items: catalog.filter((item) =>
+        (hasStep || item !== step) && (!query.searchText || item.definitionId === query.searchText))
+        .map((item) => ({ ...item, compatibility: { status: "not-evaluated" as const } })) } }),
+    };
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(
+      <NotificationTestHarness><SystemBuilderWorkspace workspaceId="workspace-a" client={client} /></NotificationTestHarness>,
+    ));
+    const click = (name: string) => act(async () => button(container!, name).click());
+    expect(container.querySelector("[data-edit-form-id]")).toBeNull();
+    await act(async () => setInputValue(container!.querySelector<HTMLInputElement>('input[placeholder="Customer portal"]')!, "Survey"));
+    await click("Create form system");
+    expect(readNotificationMessages(container).join(" ")).toContain("The required form assets are unavailable.");
+    expect(create).not.toHaveBeenCalled();
+    hasStep = true;
+    await click("Create form system");
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(container.querySelector("h4")?.textContent).toBe("Survey");
+    expect(container.textContent).toContain("Canvas page Page");
+    await click("Back to Canvas");
+    expect(container.querySelectorAll("button[data-edit-form-id]")).toHaveLength(1);
+    expect(container.querySelectorAll('[data-instance-id="new.instance.2"]')).toHaveLength(1);
+    await click("Undo");
+    expect(container.querySelector("button[data-edit-form-id]")).toBeNull();
+    expect([...container.querySelectorAll('[aria-label="Composer mode"] [role="tab"]')].map((item) => item.textContent)).toEqual(["Design", "Connections"]);
+    await click("Redo");
+    expect(container.querySelectorAll("button[data-edit-form-id]")).toHaveLength(1);
+    await click("Save and validate revision");
+    const saved = saveRevision.mock.calls[0]![0];
+    const forms = saved.instances.filter((item) => item.definitionRef.id === form.definitionId);
+    const sections = saved.instances.filter((item) => item.definitionRef.id === section.definitionId);
+    expect(saved.instances.filter((item) => item.definitionRef.id === page.definitionId).map((item) => item.instanceId)).toEqual([refs[2]!.id]);
+    expect(forms).toHaveLength(1);
+    expect(sections).toHaveLength(1);
+    expect(saved.placements?.find((edge) => edge.childInstanceRef.id === sections[0]!.instanceId)?.parentInstanceRef).toEqual(refs[2]);
+    expect(saved.placements?.find((edge) => edge.childInstanceRef.id === forms[0]!.instanceId)?.parentInstanceRef).toEqual(ref(sections[0]!));
   });
 
   it("defers the layout catalog until Create system is submitted and then shows the loading wheel", async () => {

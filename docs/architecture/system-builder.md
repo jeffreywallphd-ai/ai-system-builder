@@ -183,14 +183,14 @@ customization, and single-asset Studio workflows.
   the draft as one undoable change. Required layout structure stays protected.
   Saving creates a new revision. There is no
   persistent Asset Palette, pointer drag behavior, or renderer drag state.
-  The Form Composer draft constructor uses the same placement records. It
-  creates a dedicated Foundation page, a compatible section, a form, and a
-  first field group in one draft edit. The Form view can read this structure
-  without creating duplicate assets. Systems Compose offers the Form view
-  alongside Design and Connections for interactive systems. Form edits resolve
-  exact, workspace-visible definitions, apply to the shared draft and use its
-  undo, redo, and revision-save path. The existing Canvas consumes the same
-  placements through its ordinary rendering path.
+  In Systems Compose, **Create form system** starts a Minimal system and adds
+  a section, form, and first step to its existing page in one undoable draft
+  edit. In Canvas, **Edit Form** opens the specific form on which it appears.
+  **Back to Canvas** selects that form again. Systems without forms still
+  open in Canvas. More than one form can share a page, and opening an embedded
+  form preserves its placement and neighboring assets. The two editors use
+  the same workspace-visible asset definitions, draft, undo and redo history,
+  and revision save path. Canvas renders the same placements in either case.
   Form routes are versioned `control` bindings between exact Foundation step
   instances. A route to the enclosing form ends the form. The evaluator tries
   bounded scalar conditions in priority order, then uses an explicit fallback
