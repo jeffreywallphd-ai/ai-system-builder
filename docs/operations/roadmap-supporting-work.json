@@ -12816,6 +12816,37 @@
       "limitations": [
         "Feature-level evidence only. The packaged Desktop and managed browser journeys remain pending."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "shared-form-and-canvas-draft",
+      "work_id": "save-first-form-and-reopen-in-form-editor",
+      "work_criteria": [
+        "first-form-is-in-the-saved-revision",
+        "manage-opens-the-saved-first-form"
+      ],
+      "receipt_digest": "bab1522f42a0d4dc5a769483f4ebe7e9040254f7421a66ae896ea56a23789976",
+      "review_digest": "ec55f630aa0f4eeb6e6e89597561dbe3754f8e0cbd1ebf157ee30386cb80f0b5",
+      "scope": "Create form system saves an empty first form page. Open in Compose in Manage reopens that page without a manual save. Systems with embedded forms still open in Canvas.",
+      "limitations": [
+        "Application and shared interface tests passed. The packaged Desktop and managed browser journeys remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "shared-form-and-canvas-draft",
+      "work_id": "preserve-desktop-target-for-form-editor",
+      "work_criteria": [
+        "desktop-form-editor-keeps-existing-move-limits"
+      ],
+      "receipt_digest": "419e9b48c713d0af02e705f0726f0a247f06e5db8f4797dd23709c01f7841549",
+      "review_digest": "3baf695f86a76e02b917a7802a05604782ccc6632bf904ab6054501e5bcb796c",
+      "scope": "The Form editor builds with the existing Desktop compiler settings and keeps the same page and field move limits.",
+      "limitations": [
+        "This compiler and feature check does not replace the packaged Desktop journey."
+      ]
     }
   ]
 }
