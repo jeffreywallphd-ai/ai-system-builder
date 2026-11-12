@@ -2,6 +2,7 @@ import {finalizeQualificationEvidence,type QualificationEvidenceReport} from "..
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { composerRegionAdd } from "./technical-accessibility";
 import { canonicalMeaningfulSystem, assertMeaningfulSystemPreserved, assertMeaningfulSystemSet,
   type CanvasPropertyObservation, type MeaningfulSystemObservation } from "../meaningful-system-oracles";
 
@@ -145,14 +146,14 @@ async function property(page: Page, field: string, value: string | boolean, samp
 }
 async function insert(page: Page, parentId: string, element: ElementSpec, samples: PaintSample[]) {
   const parent = canvasNode(page, parentId);
-  const trigger = parent.locator(":scope > .system-composer__canvas-node-heading").getByRole("button", { name: /^Add an element inside / });
+  const trigger = composerRegionAdd(parent, element.slot);
   await trigger.click();
   const dialog = page.getByRole("dialog", { name: /^Add an element to / });
   await expect(dialog).toBeVisible();
   const search = dialog.getByLabel("Search compatible elements");
   await expect(search).toBeFocused();
   const destination = dialog.getByLabel("Destination region");
-  if (await destination.count()) await destination.selectOption(element.slot);
+  if (await destination.count()) await expect(destination).toHaveValue(element.slot);
   await search.fill(element.definition);
   const result = dialog.locator(".system-composer__asset-picker-card");
   // The user-facing cards display a label/type/version, not internal ids.

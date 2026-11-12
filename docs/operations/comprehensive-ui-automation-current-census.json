@@ -7691,8 +7691,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
    "facts": {
-    "sha256": "50042d9ba1f18f0dda0a0ea452f8b8278663211e601be0f0d6bcab2c81320d23",
-    "bytes": 7516,
+    "sha256": "72a217d1c7ec05014f693497c5a1051d1eb2def71a46488ab929b03c0ad352bc",
+    "bytes": 11072,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -7702,31 +7702,35 @@
      },
      {
       "name": "insert",
-      "line": 16
+      "line": 21
+     },
+     {
+      "name": "verifyKeyboardPlacement",
+      "line": 132
      }
     ],
-    "assertionCount": 38,
-    "assertionDigest": "26a607e6abac9548d8528ed434da612a4422e94f6d955b4a05f5f882eff76ce4",
+    "assertionCount": 46,
+    "assertionDigest": "a79ff0e803a1ff25888bfbcdba3d59923f8a1c3b0633fdc8763a91d8b9014815",
     "assertionExamples": [
      {
-      "line": 13,
+      "line": 18,
       "kind": "expect",
       "sha256": "acf6689eb0a06f6e324225bd435f6b87d5e73ff3961e264794c3d12758a8c4d3"
      },
      {
-      "line": 18,
+      "line": 25,
       "kind": "expect",
       "sha256": "55f51550fa8a426be2da4c9409aaddcf079495dbc3047a7d7067392e531f6b34"
      },
      {
-      "line": 22,
+      "line": 29,
       "kind": "expect",
-      "sha256": "efdfb37bf8573ff0356e401c6ae1fb6a96ab9cc3a6329460ca1aec32868e3447"
+      "sha256": "8ccdd8e0c54cf8070830bbe856ad0ff3831fa66837e632a9dfc4cb14998b9b6b"
      },
      {
-      "line": 25,
+      "line": 31,
       "kind": "expect",
-      "sha256": "a6b109a09a0a548c773e6e3c3471260b8acea154163defa46036ca0cb4fe416a"
+      "sha256": "efdfb37bf8573ff0356e401c6ae1fb6a96ab9cc3a6329460ca1aec32868e3447"
      }
     ],
     "modifiers": []
@@ -7891,16 +7895,16 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-asset-experience.e2e.spec.ts",
    "facts": {
-    "sha256": "d677d894a01d7634bf1109fb561386aa07aba4d255eef669ec88e95f55246dff",
-    "bytes": 3978,
+    "sha256": "7891669e74c5f88a2555f5e1267788086f2234116003bb906f43b7aab909b5c6",
+    "bytes": 4963,
     "cases": [
      {
       "name": "managed thin client builds, customizes, reviews, publishes and reopens real assets",
-      "line": 27
+      "line": 30
      },
      {
       "name": "managed thin client Assets reflows at actual native 400 percent browser zoom",
-      "line": 39
+      "line": 59
      }
     ],
     "dynamicCases": 0,
@@ -7910,11 +7914,61 @@
       "line": 8
      }
     ],
-    "assertionCount": 11,
-    "assertionDigest": "e949bb3e072867cec75dc1711119ec2bb3ef84f5ccb15fc16415c411f280b594",
+    "assertionCount": 12,
+    "assertionDigest": "722cf00162fcf629f2362101144a169c64c95b92014faa1cebcb9c6c2fe5e465",
     "assertionExamples": [
      {
-      "line": 12,
+      "line": 15,
+      "kind": "expect",
+      "sha256": "264d599200715eaf02e31d9a5ed4af9f755849db48ba12703b7565d6900949f3"
+     },
+     {
+      "line": 21,
+      "kind": "expect",
+      "sha256": "37f336940234459d6961c2745a710d52e8fa760fdcfc7767e5cb6e8e754d63b7"
+     },
+     {
+      "line": 22,
+      "kind": "expect",
+      "sha256": "60063317db610dc07686d4d21927cdd8b4c405e4c9651d7f888383f459899fc8"
+     },
+     {
+      "line": 22,
+      "kind": "expect",
+      "sha256": "7db75f312924136b2bdf6a42c2164688971b9a1975afd3805dd309c6812b4901"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "d677d894a01d7634bf1109fb561386aa07aba4d255eef669ec88e95f55246dff"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-browse.e2e.spec.ts",
+   "facts": {
+    "sha256": "59c11cc55d27823eb8a7bf1f49340a7775212f4adbb1be5aedddf681ae3e1399",
+    "bytes": 2895,
+    "cases": [
+     {
+      "name": "managed PostgreSQL/OIDC thin client preserves complete browse authoring",
+      "line": 34
+     },
+     {
+      "name": "managed thin client preserves keyboard placement from Canvas regions",
+      "line": 40
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "openManagedBrowseWorkspace",
+      "line": 4
+     }
+    ],
+    "assertionCount": 10,
+    "assertionDigest": "a93c31765edb149f3a9d3e8bed00004479332dafd0353ba8331928227c170915",
+    "assertionExamples": [
+     {
+      "line": 13,
       "kind": "expect",
       "sha256": "264d599200715eaf02e31d9a5ed4af9f755849db48ba12703b7565d6900949f3"
      },
@@ -7929,50 +7983,9 @@
       "sha256": "60063317db610dc07686d4d21927cdd8b4c405e4c9651d7f888383f459899fc8"
      },
      {
-      "line": 19,
-      "kind": "expect",
-      "sha256": "7db75f312924136b2bdf6a42c2164688971b9a1975afd3805dd309c6812b4901"
-     }
-    ],
-    "modifiers": []
-   },
-   "committed_sha256": "d677d894a01d7634bf1109fb561386aa07aba4d255eef669ec88e95f55246dff"
-  },
-  {
-   "path": "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-browse.e2e.spec.ts",
-   "facts": {
-    "sha256": "e7f0625fca8355d1162190b1cfe72c6707f9107a6e53eb37dbbbed92134f016a",
-    "bytes": 1869,
-    "cases": [
-     {
-      "name": "managed PostgreSQL/OIDC thin client preserves complete browse authoring",
-      "line": 4
-     }
-    ],
-    "dynamicCases": 0,
-    "functions": [],
-    "assertionCount": 4,
-    "assertionDigest": "95dbcca5b16e5731cfd7e2165f2be584e3c6f5b8b28578a662d4c6e980de1d24",
-    "assertionExamples": [
-     {
-      "line": 15,
-      "kind": "expect",
-      "sha256": "2f52068f0757f8deeca243993c81eebf94b15d8bbf9e745a9cec359f861627d3"
-     },
-     {
-      "line": 17,
-      "kind": "expect",
-      "sha256": "045d73ebb9861b137694ab3509642cee376d4a063e6b455c5faf6102266afb78"
-     },
-     {
-      "line": 18,
-      "kind": "expect",
-      "sha256": "ff3d05de0dc91b4db841ee5bd59d971c3cdf405d8d50b8a649caca85ec84a488"
-     },
-     {
       "line": 20,
       "kind": "expect",
-      "sha256": "045d73ebb9861b137694ab3509642cee376d4a063e6b455c5faf6102266afb78"
+      "sha256": "7db75f312924136b2bdf6a42c2164688971b9a1975afd3805dd309c6812b4901"
      }
     ],
     "modifiers": []
@@ -8095,96 +8108,96 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts",
    "facts": {
-    "sha256": "eb79be127b1ba11d970f8d597cf38ceb639e96521d3688282d9773f52c6572e3",
-    "bytes": 33840,
+    "sha256": "6659b170e2102cf9ac3983557e922ee1bbf395e1ff591941557324debcf87fba",
+    "bytes": 33828,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "recordMeaningfulJourney",
-      "line": 46
+      "line": 47
      },
      {
       "name": "canvasNode",
-      "line": 58
+      "line": 59
      },
      {
       "name": "observeComposerProtocol",
-      "line": 61
+      "line": 62
      },
      {
       "name": "waitForDraftReady",
-      "line": 122
+      "line": 123
      },
      {
       "name": "property",
-      "line": 130
+      "line": 131
      },
      {
       "name": "insert",
-      "line": 146
+      "line": 147
      },
      {
       "name": "exercisePurpose",
-      "line": 172
+      "line": 173
      },
      {
       "name": "buildMeaningfulSystem",
-      "line": 213
+      "line": 214
      },
      {
       "name": "observeMeaningfulSystem",
-      "line": 325
+      "line": 326
      },
      {
       "name": "readCanvasStructure",
-      "line": 349
+      "line": 350
      },
      {
       "name": "exerciseEditing",
-      "line": 361
+      "line": 362
      },
      {
       "name": "exerciseCheckedBuild",
-      "line": 387
+      "line": 388
      },
      {
       "name": "measurePaint",
-      "line": 412
+      "line": 413
      },
      {
       "name": "startLongTasks",
-      "line": 420
+      "line": 421
      },
      {
       "name": "finishLongTasks",
-      "line": 438
+      "line": 439
      },
      {
       "name": "revisitMeaningfulSystems",
-      "line": 451
+      "line": 452
      }
     ],
-    "assertionCount": 71,
-    "assertionDigest": "fc2dee9f577ff4df901f50b5a8ab43ff9c2be5e8b8f106b314da01426796f651",
+    "assertionCount": 72,
+    "assertionDigest": "f765d7b9fa999e9a4e836fe2227878652f1f97b1e04edbda44fe6baab9f273cb",
     "assertionExamples": [
      {
-      "line": 126,
+      "line": 127,
       "kind": "expect",
       "sha256": "a18914c717eb55722082ea8a53df6400cdb234e9d2d9200fe76b12005e516fc6"
      },
      {
-      "line": 127,
+      "line": 128,
       "kind": "expect",
       "sha256": "a20b8ee8026adf836fb79ec6223314d9692db7f4c43e150669109bc921077438"
      },
      {
-      "line": 151,
+      "line": 152,
       "kind": "expect",
       "sha256": "503826a2018dc807717e939e1ac449de012a3f07e79519957b561495bef07519"
      },
      {
-      "line": 153,
+      "line": 154,
       "kind": "expect",
       "sha256": "3c174d7530295d416646fb2dbee9d3d97a3dc4ba83451dee46227f5da591d868"
      }
@@ -8946,36 +8959,36 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/reference-browse-performance.ts",
    "facts": {
-    "sha256": "3b3e20fc8a7fcc25da41e1ef6d0cfdccb6aa3a8ac28b6b97685035e9cf20e60e",
-    "bytes": 7971,
+    "sha256": "66dde8058e5f7b57afb1065420a2af221e25e4f625893f736191d32883e9a517",
+    "bytes": 8080,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "qualifyReferenceBrowsePerformance",
-      "line": 9
+      "line": 10
      }
     ],
     "assertionCount": 30,
-    "assertionDigest": "bee4920ef254b34adacefa32f37e6715d4b43c91f0f5f20243835e3a7bfa6c47",
+    "assertionDigest": "d11dc5ea925664cd47c2aaf197b107f9d29a2928f70a804c22e33a8fcfea131e",
     "assertionExamples": [
      {
-      "line": 12,
+      "line": 13,
       "kind": "expect",
       "sha256": "fab96228763265f912c8c7f27eff2c4373afab6259ceb8b844553ed50a3fd315"
      },
      {
-      "line": 12,
+      "line": 13,
       "kind": "expect",
       "sha256": "aba30559460a6fcbed0e8944e809592dab5e3c6f6c04164da8daa254841dc755"
      },
      {
-      "line": 13,
+      "line": 14,
       "kind": "expect",
       "sha256": "6fc8b0204a015eb1a213d1de142c16ebad6f2fd47b969fa6389e01fb2fed3a5c"
      },
      {
-      "line": 14,
+      "line": 15,
       "kind": "expect",
       "sha256": "1633f32c3e76a697e7686b35c6ad9cefbf0273e39efac00a7dc517a3597ac3af"
      }
@@ -8987,8 +9000,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
    "facts": {
-    "sha256": "42e2be25e1614f2d0a300995cd422e0bb49323811ed5a1a03b4896bdf2ec6b36",
-    "bytes": 34134,
+    "sha256": "93beafc657a1e2262d8cbdcde5d834dc51909050cc38d47a6d4bc479117a0715",
+    "bytes": 34459,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -8997,114 +9010,118 @@
       "line": 13
      },
      {
+      "name": "composerRegionAdd",
+      "line": 17
+     },
+     {
       "name": "collectNative400Frame",
-      "line": 18
+      "line": 24
      },
      {
       "name": "collectAccessibilityObservation",
-      "line": 55
+      "line": 61
      },
      {
       "name": "groups",
-      "line": 70
+      "line": 76
      },
      {
       "name": "requireNavigationScope",
-      "line": 92
+      "line": 98
      },
      {
       "name": "requireNotificationScope",
-      "line": 112
+      "line": 118
      },
      {
       "name": "diagnose",
-      "line": 178
+      "line": 184
      },
      {
       "name": "collectNotificationPopupAccessibilityObservation",
-      "line": 264
+      "line": 270
      },
      {
       "name": "collectStandardAudit",
-      "line": 268
-     },
-     {
-      "name": "collectSystemBuilderAccessibilityAudit",
-      "line": 272
-     },
-     {
-      "name": "collectDocumentAccessibilityAudit",
-      "line": 273
-     },
-     {
-      "name": "collectRuntimeAccessibilityAudit",
       "line": 274
      },
      {
-      "name": "collectNativeDocumentAccessibilityAudit",
-      "line": 275
-     },
-     {
-      "name": "collectNativeRuntimeAccessibilityAudit",
-      "line": 276
-     },
-     {
-      "name": "collectDocumentAccessibilityObservation",
+      "name": "collectSystemBuilderAccessibilityAudit",
       "line": 278
      },
      {
+      "name": "collectDocumentAccessibilityAudit",
+      "line": 279
+     },
+     {
+      "name": "collectRuntimeAccessibilityAudit",
+      "line": 280
+     },
+     {
+      "name": "collectNativeDocumentAccessibilityAudit",
+      "line": 281
+     },
+     {
+      "name": "collectNativeRuntimeAccessibilityAudit",
+      "line": 282
+     },
+     {
+      "name": "collectDocumentAccessibilityObservation",
+      "line": 284
+     },
+     {
       "name": "collectExpandedNavigationAccessibilityObservation",
-      "line": 283
+      "line": 289
      },
      {
       "name": "collectRuntimeAccessibilityObservation",
-      "line": 287
+      "line": 293
      },
      {
       "name": "collectNativeDocumentAccessibilityObservation",
-      "line": 291
+      "line": 297
      },
      {
       "name": "collectNativeRuntimeAccessibilityObservation",
-      "line": 295
-     },
-     {
-      "name": "loadTechnicalAccessibilityReference",
       "line": 301
      },
      {
+      "name": "loadTechnicalAccessibilityReference",
+      "line": 307
+     },
+     {
       "name": "finalizeTechnicalAccessibilityEvidence",
-      "line": 317
+      "line": 323
      },
      {
       "name": "qualifyTechnicalAccessibility",
-      "line": 333
+      "line": 339
      },
      {
       "name": "save",
-      "line": 353
+      "line": 359
      }
     ],
-    "assertionCount": 18,
-    "assertionDigest": "56bc72f86a0a80a86f56fe9f4badb0729eee25529d61debc152b695798e85d3e",
+    "assertionCount": 19,
+    "assertionDigest": "c3476f5d3c0c4f62015a06f2fc91adab194bdb28d8430ee409250bb6e786f47f",
     "assertionExamples": [
      {
-      "line": 307,
+      "line": 313,
       "kind": "expect",
       "sha256": "6452cef7dcfbdf8d4e7209eeba712f326e610568ab670147bca737f4d057207d"
      },
      {
-      "line": 307,
+      "line": 313,
       "kind": "expect",
       "sha256": "cffe78dc9431c5ddcd7c456f95a6471ca94c6f731aedca9fbcd3aadad0cf0eed"
      },
      {
-      "line": 309,
+      "line": 315,
       "kind": "expect",
       "sha256": "fa15139d2f47e28f2b857519090635c6e6061291c6b049e4ac8737a6dd245d49"
      },
      {
-      "line": 310,
+      "line": 316,
       "kind": "expect",
       "sha256": "e40427724aa405be98139f78c28869f949cfa2c3dcac85cc999034a99d7a48dd"
      }
@@ -12077,8 +12094,8 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "107b00e68d55f0d6347a5bafec9ec60e098dffa0b4f1ce8d68f9bc6d50a02e82",
-    "bytes": 56465,
+    "sha256": "e872a3bec999b24ec51c9d5995f7b5be9a4e1541e37fb0d3425a3fa1ddd2616d",
+    "bytes": 56496,
     "cases": [
      {
       "name": "defers the layout catalog until Create system is submitted and then shows the loading wheel",
@@ -12281,8 +12298,8 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "ed92b92dec3289791ff4f891231d21be895e871a9e737234a4e1ebcae8fff8b8",
-    "bytes": 31226,
+    "sha256": "70e9f4b9ba44593db8da8ba896eb6333f4491807276f2963ddda3abb257d6e4d",
+    "bytes": 35577,
     "cases": [
      {
       "name": "keeps the semantic canvas, keyboard tree, and native actions on one draft",
@@ -12290,74 +12307,82 @@
      },
      {
       "name": "renders every nested reference container and keeps all embedded assets visible",
-      "line": 302
+      "line": 318
      },
      {
       "name": "offers predefined layouts as a native single-choice gallery",
-      "line": 513
+      "line": 529
      },
      {
       "name": "loads layouts on demand and adds compatible elements through a container-scoped modal",
-      "line": 558
+      "line": 574
+     },
+     {
+      "name": "opens a collapsed region for insertion and focuses the new element when the region fills",
+      "line": 740
      },
      {
       "name": "ignores a late Load more response after the destination changes",
-      "line": 707
+      "line": 803
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
+      "name": "Editor",
+      "line": 754
+     },
+     {
       "name": "render",
-      "line": 733
+      "line": 829
      },
      {
       "name": "directEditablePreview",
-      "line": 740
+      "line": 836
      },
      {
       "name": "button",
-      "line": 748
+      "line": 844
      },
      {
       "name": "ariaButton",
-      "line": 756
+      "line": 852
      },
      {
       "name": "click",
-      "line": 764
+      "line": 860
      },
      {
       "name": "fire",
-      "line": 767
+      "line": 863
      },
      {
       "name": "flushFocus",
-      "line": 777
+      "line": 873
      },
      {
       "name": "flushAsync",
-      "line": 781
+      "line": 877
      },
      {
       "name": "instance",
-      "line": 788
+      "line": 884
      },
      {
       "name": "placement",
-      "line": 807
+      "line": 903
      },
      {
       "name": "composerAsset",
-      "line": 825
+      "line": 921
      },
      {
       "name": "applicationLayout",
-      "line": 857
+      "line": 953
      }
     ],
-    "assertionCount": 95,
-    "assertionDigest": "dd95e4e5d55d3cfa357b7127783f1608512be807069b03cc809fa1051fe909e4",
+    "assertionCount": 114,
+    "assertionDigest": "8b756f6b99bfc5a39963ab823eebea0b81aa9612b2556ffb9cb93eab4f86aba1",
     "assertionExamples": [
      {
       "line": 109,

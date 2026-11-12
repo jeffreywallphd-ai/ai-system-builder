@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -653,11 +653,13 @@ describe("SystemComposerStructureEditor interactions", () => {
       ),
     ).toHaveLength(1);
 
-    const addElement = ariaButton("Add an element inside Application shell");
+    const addElement = ariaButton("Add element to content in Application shell");
+    expect(addElement.closest("[data-slot-id]")?.getAttribute("data-slot-id")).toBe("content");
+    expect(container!.querySelector(".system-composer__canvas-node-heading .system-composer__add-element")).toBeNull();
     await click(addElement);
     await flushAsync();
     expect(loadCompatibleAssets).toHaveBeenCalledWith(
-      { parentInstanceId: "instance.shell", slotId: "top-bar" },
+      { parentInstanceId: "instance.shell", slotId: "content" },
       { limit: 48 },
     );
     const modal = document.querySelector<HTMLElement>('[role="dialog"]');
@@ -681,18 +683,19 @@ describe("SystemComposerStructureEditor interactions", () => {
     const destination = Array.from(
       modal!.querySelectorAll<HTMLSelectElement>("select"),
     ).find((candidate) => candidate !== typeFilter)!;
+    expect(destination.value).toBe("content");
     await act(async () => {
-      destination.value = "content";
+      destination.value = "top-bar";
       destination.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await flushAsync();
     expect(loadCompatibleAssets).toHaveBeenLastCalledWith(
-      { parentInstanceId: "instance.shell", slotId: "content" },
+      { parentInstanceId: "instance.shell", slotId: "top-bar" },
       { limit: 48 },
     );
     expect(onTargetSlotChange).toHaveBeenLastCalledWith({
       parentInstanceId: "instance.shell",
-      slotId: "content",
+      slotId: "top-bar",
     });
     const newCard = Array.from(
       modal!.querySelectorAll<HTMLButtonElement>(
@@ -705,7 +708,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     await click(newCard!);
     expect(onAdd).toHaveBeenCalledWith(card, {
       parentInstanceId: "instance.shell",
-      slotId: "content",
+      slotId: "top-bar",
     });
     expect(document.querySelector('[role="dialog"]')).toBeNull();
 
@@ -722,10 +725,79 @@ describe("SystemComposerStructureEditor interactions", () => {
     await click(existingCard!);
     expect(onPlace).toHaveBeenCalledWith("instance.card", {
       parentInstanceId: "instance.shell",
-      slotId: "top-bar",
+      slotId: "content",
     });
+    addElement.focus();
+    await click(addElement);
+    const reopened = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    await fire(reopened, "keydown", { key: "Escape" });
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(addElement);
     expect(container!.querySelector('[aria-label^="Drag "]')).toBeNull();
   });
+});
+
+it("opens a collapsed region for insertion and focuses the new element when the region fills", async () => {
+  const containerAsset = composerAsset("builtin.container.root", ["states"]);
+  const system = {
+    ...containerAsset,
+    slots: containerAsset.slots.map((slot) => ({
+      ...slot,
+      cardinality: { minItems: 0, maxItems: 1 },
+    })),
+  };
+  const card = composerAsset("builtin.container.card", []);
+  const parent = instance("root", system.definitionId, "Root");
+  const child = instance("child", card.definitionId, "New card");
+  const onAdd = vi.fn();
+
+  function Editor() {
+    const [filled, setFilled] = useState(false);
+    return (
+      <SystemComposerStructureEditor
+        draft={{
+          instances: filled ? [parent, child] : [parent],
+          placements: filled ? [placement("root", "states", "child")] : [],
+          bindings: [],
+        }}
+        rootInstanceRefs={[{ kind: "asset-instance", id: parent.instanceId }]}
+        catalog={[system, card]}
+        compatibleAssets={[card]}
+        selectedInstanceId={filled ? "child" : "root"}
+        protectedInstanceIds={new Set()}
+        canUndo={false}
+        canRedo={false}
+        onSelect={vi.fn()}
+        onAdd={(asset, target) => {
+          onAdd(asset, target);
+          setFilled(true);
+        }}
+        onPlace={vi.fn()}
+        onRemove={vi.fn()}
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+      />
+    );
+  }
+
+  render(<Editor />);
+  const addElement = ariaButton("Add element to states in Root");
+  const region = addElement.closest("section")!;
+  expect(region.dataset.collapsed).toBe("true");
+  addElement.focus();
+  await click(addElement);
+  expect(region.dataset.collapsed).toBe("false");
+
+  const choice = document.querySelector<HTMLButtonElement>(
+    '[role="dialog"] .system-composer__asset-picker-card',
+  )!;
+  await click(choice);
+  expect(onAdd).toHaveBeenCalledWith(card, { parentInstanceId: "root", slotId: "states" });
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(addElement.disabled).toBe(true);
+  expect(document.activeElement).toBe(
+    region.querySelector('[data-instance-id="child"] .system-composer__canvas-node-select'),
+  );
 });
 
 it("ignores a late Load more response after the destination changes", async () => {
@@ -740,7 +812,7 @@ it("ignores a late Load more response after the destination changes", async () =
     rootInstanceRefs={[{kind: "asset-instance", id: normalizeAssetId("root")}]} catalog={[system, first, stale]} selectedInstanceId="root"
     protectedInstanceIds={new Set()} canUndo={false} canRedo={false} onSelect={vi.fn()} onAdd={vi.fn()} onPlace={vi.fn()}
     onRemove={vi.fn()} onUndo={vi.fn()} onRedo={vi.fn()} loadCompatibleAssets={loader as any} />);
-  await click(ariaButton("Add an element inside Root")); await flushAsync();
+  await click(ariaButton("Add element to one in Root")); await flushAsync();
   const more = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(button => button.textContent?.trim() === "Load more")!;
   await click(more);
   const modal = document.querySelector<HTMLElement>('[role="dialog"]')!;

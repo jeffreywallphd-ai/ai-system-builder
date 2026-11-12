@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, type Page, type TestInfo } from "@playwright/test";
+import { composerRegionAdd } from "./technical-accessibility";
 
 const p95 = (values: number[]) => [...values].sort((a,b)=>a-b)[Math.ceil(values.length*.95)-1]!;
 export async function qualifyReferenceBrowsePerformance(page: Page, info: TestInfo) {
@@ -50,14 +51,15 @@ export async function qualifyReferenceBrowsePerformance(page: Page, info: TestIn
     const editor=page.getByRole("group",{name:"System draft editor",exact:true});
     await expect(editor).toHaveAttribute("aria-busy","false");
     await expect(editor).not.toHaveAttribute("disabled");
-    const mainAdd=page.getByRole("button",{name:"Add an element inside Main page",exact:true});
+    const mainAdd=page.getByRole("button",{name:/^Add element to Content in Main page$/i});
     await expect(mainAdd).toBeEnabled();await mainAdd.click({timeout:10000});
     let dialog=page.getByRole("dialog",{name:/^Add an element to /});
     await dialog.getByLabel("Search compatible elements").fill("page shell");
     const shell=dialog.locator(".system-composer__asset-picker-card").filter({has:page.getByText("Page Shell",{exact:true})}).first();
     await expect(shell).toBeVisible();await shell.click({timeout:10000});
     await expect(dialog).toBeHidden();
-    const add=()=>page.getByRole("button",{name:"Add an element inside Page Shell",exact:true});
+    const pageShell=page.locator('.system-composer__canvas-node[data-selected="true"]');
+    const add=()=>composerRegionAdd(pageShell,"content");
     await expect(add()).toBeEnabled();
     for (let i=0; i<report.warmups+report.samples; i++) {
       const started=performance.now();

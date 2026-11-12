@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { expect, type Page, type TestInfo } from "@playwright/test";
+import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { readTechnicalAccessibilityAudit, readTechnicalAccessibilityObservation, readNativeAccessibilityObservation, readNative400Frame, readNativeAccessibilityAudit, TECHNICAL_ACCESSIBILITY_RULE_IDS,
   readNotificationPopupAccessibilityObservation,
   CONTRAST_RETRY_V2_REASON_IDS, CONTRAST_RETRY_HINT_IDS, CONTRAST_RETRY_V4_REGION_MARKERS,
@@ -12,6 +12,12 @@ import { readTechnicalAccessibilityAudit, readTechnicalAccessibilityObservation,
 const ACCESSIBILITY_SOURCE_ROOT = path.resolve(__dirname, "../../../../..");
 export async function readTechnicalAccessibilityEngine(): Promise<string> {
   return readFile(path.join(ACCESSIBILITY_SOURCE_ROOT, "node_modules/axe-core/axe.min.js"), "utf8");
+}
+
+export function composerRegionAdd(parent: Locator, slotId: string): Locator {
+  return parent.locator(
+    `:scope > .system-composer__slots > [data-slot-id=${JSON.stringify(slotId)}] > button.system-composer__add-element`,
+  );
 }
 
 /** Read-only frame/fit facts from a fixed native host case, never caller selectors. */
@@ -399,7 +405,8 @@ export async function qualifyTechnicalAccessibility(page: Page, info: TestInfo) 
     }
     // Exercise native keyboard activation, modal containment and focus return.
     stage = "keyboard-modal-focus";
-    const add = page.getByRole("button", { name: /^Add an element inside / }).last();
+    const add = page.locator("button.system-composer__add-element:enabled:visible").last();
+    await expect(add).toHaveAccessibleName(/^Add element to .+ in .+$/);
     await add.scrollIntoViewIfNeeded(); await add.focus(); await add.press("Enter");
     const dialog = page.getByRole("dialog", { name: /^Add an element to / });
     await expect(dialog.getByLabel("Search compatible elements")).toBeFocused();

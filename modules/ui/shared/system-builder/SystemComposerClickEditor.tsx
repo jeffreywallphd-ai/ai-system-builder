@@ -60,6 +60,12 @@ interface SystemComposerCanvasSlot {
   readonly editable: boolean;
 }
 
+type OpenRegionPicker = (
+  node: SystemComposerTreeNode,
+  slotId: string,
+  trigger: HTMLButtonElement,
+) => void;
+
 interface AssetPickerState {
   readonly parentInstanceId: string;
   readonly slotId: string;
@@ -240,6 +246,8 @@ export function SystemComposerStructureEditor({
   );
   const detailsTabRefs = useRef(new Map<SystemComposerSidebarTab, HTMLButtonElement>());
   const canvasRef = useRef<HTMLDivElement>(null);
+  const pickerTrigger = useRef<HTMLButtonElement | undefined>(undefined);
+  const insertedFrom = useRef<HTMLButtonElement | undefined>(undefined);
   const assetGeneration = useRef(0);
   const assetCursors = useRef(new Set<string>());
   const layoutRequest = useRef<object | undefined>(undefined);
@@ -313,7 +321,7 @@ export function SystemComposerStructureEditor({
   );
   const pickerSlots = pickerParentNode
     ? canvasSlotsForNode(pickerParentNode, pickerParentDefinition).filter(
-        ({ editable }) => editable,
+        ({ slot, editable }) => editable && hasRegionCapacity(pickerParentNode, slot),
       )
     : [];
   const activePickerSlot = pickerSlots.find(
@@ -411,6 +419,16 @@ export function SystemComposerStructureEditor({
   useEffect(() => () => {
     layoutRequest.current = undefined;
   }, []);
+
+  useEffect(() => {
+    if (assetPicker) return;
+    const trigger = insertedFrom.current;
+    insertedFrom.current = undefined;
+    if (!trigger || (trigger.isConnected && !trigger.disabled)) return;
+    canvasRef.current?.querySelector<HTMLButtonElement>(
+      '.system-composer__canvas-node[data-selected="true"] > .system-composer__canvas-node-heading > .system-composer__canvas-node-select',
+    )?.focus();
+  }, [assetPicker]);
 
   useEffect(() => {
     const generation = ++assetGeneration.current;
@@ -513,16 +531,14 @@ export function SystemComposerStructureEditor({
     setAssetLoading(false);
   };
 
-  const openAssetPicker = (node: SystemComposerTreeNode) => {
+  const openAssetPicker: OpenRegionPicker = (node, slotId, trigger) => {
     const definition = definitionForInstance(node.instance, catalog);
-    const firstAvailable = canvasSlotsForNode(node, definition).find(
+    const available = canvasSlotsForNode(node, definition).some(
       ({ slot, editable }) =>
-        editable &&
-        node.children.filter(
-          (child) => String(child.placement?.slotId) === String(slot.slotId),
-        ).length < slot.cardinality.maxItems,
+        editable && String(slot.slotId) === slotId && hasRegionCapacity(node, slot),
     );
-    if (!firstAvailable) return;
+    if (!available) return;
+    pickerTrigger.current = trigger;
     setAssetSearch("");
     setAssetCategoryId("all");
     setAssetResults([]);
@@ -530,12 +546,13 @@ export function SystemComposerStructureEditor({
     setAssetError(undefined);
     setAssetPicker({
       parentInstanceId: String(node.instance.instanceId),
-      slotId: String(firstAvailable.slot.slotId),
+      slotId,
     });
   };
 
   const closeAssetPicker = () => {
     assetGeneration.current++;
+    pickerTrigger.current = undefined;
     setAssetPicker(undefined);
     setAssetSearch("");
     setAssetCategoryId("all");
@@ -543,6 +560,11 @@ export function SystemComposerStructureEditor({
     setAssetNextCursor(undefined);
     setAssetError(undefined);
   };
+
+  function finishAssetSelection() {
+    insertedFrom.current = pickerTrigger.current;
+    closeAssetPicker();
+  }
 
   const moveTreeFocus = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -817,8 +839,7 @@ export function SystemComposerStructureEditor({
                 {activeCanvasLayout?.layoutGeometry
                   ? `${activeCanvasLayout.displayName} exposes ${activeCanvasLayout.slots.length} fixed named ${activeCanvasLayout.slots.length === 1 ? "region" : "regions"}. `
                   : ""}
-                Select a container and use Add element. Canonical semantic order
-                is preserved.
+                Use Add element in the region where the new element belongs.
               </p>
             </div>
           </div>
@@ -1161,8 +1182,8 @@ export function SystemComposerStructureEditor({
           id="system-composer-asset-picker-description"
           className="ui-text-muted"
         >
-          Choose a destination region, then select a compatible element. The
-          element will be inserted, selected, and revealed on the Canvas.
+          Select a compatible element to add it to the chosen region. The
+          Canvas selects and reveals the new element.
         </p>
         {pickerSlots.length > 1 ? (
           <label>
@@ -1242,7 +1263,7 @@ export function SystemComposerStructureEditor({
                     onClick={() => {
                       if (!activePickerTarget) return;
                       onPlace(String(instance.instanceId), activePickerTarget);
-                      closeAssetPicker();
+                      finishAssetSelection();
                     }}
                   >
                     <ApplicationIcon name="assets" />
@@ -1294,8 +1315,11 @@ export function SystemComposerStructureEditor({
                   <h4 id={`system-composer-category-${category.id}`}>
                     {category.label}
                   </h4>
-                  <span aria-label={`${items.length} compatible elements`}>
+                  <span>
                     {items.length}
+                    <span className="ui-visually-hidden">
+                      {items.length === 1 ? " compatible element" : " compatible elements"}
+                    </span>
                   </span>
                 </div>
                 <p className="ui-text-muted">{category.description}</p>
@@ -1308,7 +1332,7 @@ export function SystemComposerStructureEditor({
                         onClick={() => {
                           if (!activePickerTarget) return;
                           onAdd(asset, activePickerTarget);
-                          closeAssetPicker();
+                          finishAssetSelection();
                         }}
                       >
                         <ApplicationIcon name={iconForComposerAsset(asset)} />
@@ -1539,6 +1563,15 @@ function TreeNode({
   );
 }
 
+function hasRegionCapacity(
+  node: SystemComposerTreeNode,
+  slot: SystemComposerCanvasSlot["slot"],
+) {
+  return node.children.filter(
+    (child) => String(child.placement?.slotId) === String(slot.slotId),
+  ).length < slot.cardinality.maxItems;
+}
+
 function CanvasNode({
   node,
   catalog,
@@ -1552,23 +1585,17 @@ function CanvasNode({
   readonly selectedInstanceId?: string;
   readonly protectedInstanceIds: ReadonlySet<string>;
   readonly onSelect: (instanceId: string) => void;
-  readonly onAddElement: (node: SystemComposerTreeNode) => void;
+  readonly onAddElement: OpenRegionPicker;
 }) {
   const instanceId = String(node.instance.instanceId);
   const definition = definitionForInstance(node.instance, catalog);
+  const parentName = node.instance.displayName ?? definition?.displayName ?? String(node.instance.definitionRef.id);
   const protectedInstance = protectedInstanceIds.has(instanceId);
   const fixedLayout = Boolean(definition?.layoutRole);
   const layoutStyle = definition?.layoutGeometry
     ? layoutGridStyle(definition.layoutGeometry, fixedLayout)
     : undefined;
   const canvasSlots = canvasSlotsForNode(node, definition);
-  const hasAvailableSlot = canvasSlots.some(
-    ({ slot, editable }) =>
-      editable &&
-      node.children.filter(
-        (child) => String(child.placement?.slotId) === String(slot.slotId),
-      ).length < slot.cardinality.maxItems,
-  );
   return (
     <article
       className="system-composer__canvas-node"
@@ -1598,26 +1625,6 @@ function CanvasNode({
             <span className="ui-badge ui-badge--info">Required</span>
           ) : null}
         </button>
-        {definition?.slots.length ? (
-          <button
-            type="button"
-            className="system-composer__flat-control system-composer__add-element"
-            aria-label={`Add an element inside ${
-              node.instance.displayName ?? definition.displayName
-            }`}
-            aria-haspopup="dialog"
-            disabled={!hasAvailableSlot}
-            title={
-              hasAvailableSlot
-                ? "Add an internal element"
-                : "All declared regions are full"
-            }
-            onClick={() => onAddElement(node)}
-          >
-            <ApplicationIcon name="add" />
-            <span>Add element</span>
-          </button>
-        ) : null}
       </div>
       {definition?.previewAvailability === "trusted-declarative" &&
       !definition.layoutRole &&
@@ -1642,6 +1649,7 @@ function CanvasNode({
             <CanvasSlot
               key={String(slot.slotId)}
               parentInstanceId={instanceId}
+              parentName={parentName}
               slot={slot}
               childrenNodes={node.children.filter(
                 (child) =>
@@ -1652,6 +1660,7 @@ function CanvasNode({
               selectedInstanceId={selectedInstanceId}
               protectedInstanceIds={protectedInstanceIds}
               onSelect={onSelect}
+              onAddToRegion={(trigger) => onAddElement(node, String(slot.slotId), trigger)}
               onAddElement={onAddElement}
             />
           ))}
@@ -1663,6 +1672,7 @@ function CanvasNode({
 
 function CanvasSlot({
   parentInstanceId,
+  parentName,
   slot,
   childrenNodes,
   editable,
@@ -1670,9 +1680,11 @@ function CanvasSlot({
   selectedInstanceId,
   protectedInstanceIds,
   onSelect,
+  onAddToRegion,
   onAddElement,
 }: {
   readonly parentInstanceId: string;
+  readonly parentName: string;
   readonly slot: SystemBuilderComposerAsset["slots"][number];
   readonly childrenNodes: readonly SystemComposerTreeNode[];
   readonly editable: boolean;
@@ -1680,7 +1692,8 @@ function CanvasSlot({
   readonly selectedInstanceId?: string;
   readonly protectedInstanceIds: ReadonlySet<string>;
   readonly onSelect: (instanceId: string) => void;
-  readonly onAddElement: (node: SystemComposerTreeNode) => void;
+  readonly onAddToRegion: (trigger: HTMLButtonElement) => void;
+  readonly onAddElement: OpenRegionPicker;
 }) {
   const collapsible = String(slot.slotId) === "states";
   const [collapsed, setCollapsed] = useState(true);
@@ -1716,6 +1729,23 @@ function CanvasSlot({
           ) : null}
         </span>
       </header>
+      {editable ? (
+        <button
+          type="button"
+          className="system-composer__flat-control system-composer__add-element"
+          aria-label={`Add element to ${slot.displayName} in ${parentName}`}
+          aria-haspopup="dialog"
+          disabled={childrenNodes.length >= slot.cardinality.maxItems}
+          title={childrenNodes.length >= slot.cardinality.maxItems ? "This region is full" : undefined}
+          onClick={(event) => {
+            if (collapsible) setCollapsed(false);
+            onAddToRegion(event.currentTarget);
+          }}
+        >
+          <ApplicationIcon name="add" />
+          <span>Add element</span>
+        </button>
+      ) : null}
       <div
         id={contentId}
         className="system-composer__slot-content"

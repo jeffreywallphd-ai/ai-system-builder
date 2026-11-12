@@ -710,7 +710,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await act(async () =>
       container
         .querySelector<HTMLButtonElement>(
-          'button[aria-label="Add an element inside Standard shell"]',
+          '[data-slot-id="content"] button[aria-label="Add element to Content in Standard shell" i]',
         )!
         .click(),
     );

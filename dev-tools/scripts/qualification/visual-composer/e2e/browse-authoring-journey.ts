@@ -1,11 +1,16 @@
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
-import { expect, type Page, type TestInfo } from "@playwright/test";
-import { collectNative400Frame, qualifyTechnicalAccessibility } from "./technical-accessibility";
+import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { collectNative400Frame, composerRegionAdd, qualifyTechnicalAccessibility } from "./technical-accessibility";
 import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 
 /** Shared real-host journey: no model registration, worker calls or provider traffic. */
-export async function completeBrowseAuthoringJourney(page: Page, name: string, reopen: () => Promise<void>, info: TestInfo, mode: CriticalAccessibilityMode = "standard") {
+export async function completeBrowseAuthoringJourney(
+  page: Page, name: string, reopen: () => Promise<void>, info: TestInfo,
+  mode: CriticalAccessibilityMode = "standard", scope: "accessibility" | "keyboard-placement" = "accessibility",
+) {
   readCriticalAccessibilityMode(mode);
+  const verifyPlacement = scope === "keyboard-placement";
+  if (verifyPlacement && mode !== "standard") throw new Error("Keyboard placement uses the standard viewport case.");
   if (mode === "native400" && (!info?.project || (info.project.name !== "thin-chrome" && info.project.name !== "packaged-desktop"))) throw new Error("Unsupported native Assets and System host.");
   if (mode === "standard") await page.setViewportSize({width: 1440, height: 1000});
   await page.getByLabel("New system name").fill(name);
@@ -13,11 +18,15 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   await expect(page.getByRole("heading", {name: "Canvas", exact: true})).toBeVisible({timeout: 30_000});
 
   let pickerAudited = false;
-  async function insert(search: string) {
-    const trigger = page.getByRole("button", {name: /^Add an element inside /}).last();
+  async function insert(
+    search: "page" | "card",
+    trigger: Locator,
+  ) {
     await expect(trigger).toBeEnabled({ timeout: 30_000 });
     await trigger.focus(); await trigger.press("Enter");
     const dialog = page.getByRole("dialog", {name: /^Add an element to /});
+    const destination = dialog.getByLabel("Destination region");
+    if (await destination.count()) await expect(destination).toHaveValue("content");
     const query = dialog.getByLabel("Search compatible elements");
     await expect(query).toBeFocused(); await query.fill(search);
     const expectedLabel = search === "page" ? "Page Shell" : "Card";
@@ -26,7 +35,7 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
     const label = await card.locator("strong").innerText();
     const version = (await card.innerText()).match(/\/ v([0-9.]+)/)?.[1];
     expect(version).toBeTruthy();
-    if (!pickerAudited) {
+    if (!verifyPlacement && !pickerAudited) {
       await qualifyCriticalSurfaceAccessibility(page, info, "system-element-picker", mode);
       pickerAudited = true;
     }
@@ -41,23 +50,32 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
     return {id: id!, label, reference};
   }
 
-  await insert("page");
-  const added = await insert("card");
+  const mainContentAdd = page.getByRole("button", {name: /^Add element to Content in Main page$/i});
+  const pageShell = await insert("page", mainContentAdd);
+  const parent = page.locator(`[data-instance-id="${pageShell.id}"]`);
+  const addToPageContent = composerRegionAdd(parent, "content");
+  const added = await insert("card", addToPageContent);
   const details = page.getByRole("complementary", {name: "Composer details"});
   const properties = details.getByRole("tab", {name: "Properties", exact: true});
   await properties.click(); await expect(properties).toHaveAttribute("aria-selected", "true");
-  await qualifyCriticalSurfaceAccessibility(page, info, "system-properties", mode);
+  if (!verifyPlacement) await qualifyCriticalSurfaceAccessibility(page, info, "system-properties", mode);
   const node = page.locator(`[data-instance-id="${added.id}"]`);
   await page.getByRole("button", {name: "Undo", exact: true}).press("Enter");
   await expect(node).toHaveCount(0);
   await page.getByRole("button", {name: "Redo", exact: true}).press("Enter");
   await expect(node).toHaveCount(1);
+  let nestedCardId: string | undefined;
+  if (verifyPlacement) {
+    const sibling = await insert("card", addToPageContent);
+    await verifyKeyboardPlacement(page, parent, added.id, sibling.id);
+    nestedCardId = sibling.id;
+  }
   const preview = page.getByRole("button", {name: "Preview UI", exact: true});
   await preview.click();
   const previewDialog = page.getByRole("dialog", {name: `${name} UI preview`});
   await expect(previewDialog).toBeVisible();
   await expect(previewDialog.locator(`[data-preview-instance="${added.id}"]`)).toBeVisible();
-  await qualifyCriticalSurfaceAccessibility(page, info, "system-preview", mode);
+  if (!verifyPlacement) await qualifyCriticalSurfaceAccessibility(page, info, "system-preview", mode);
   await previewDialog.press("Escape"); await expect(previewDialog).toBeHidden(); await expect(preview).toBeFocused();
   await page.getByRole("button", {name: "Save and validate revision"}).click();
   await expect(page.getByText("Revision saved and validated.", {exact: true})).toBeVisible({timeout: 30_000});
@@ -68,6 +86,9 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   await page.getByRole("button", {name: "Edit system", exact: true}).click();
   await expect(node).toHaveCount(1, {timeout: 30_000});
   await expect(node).toContainText(added.reference);
+  if (nestedCardId) {
+    await expect(node.locator(`[data-slot-id="content"] [data-instance-id="${nestedCardId}"]`)).toHaveCount(1);
+  }
   await node.locator(":scope > .system-composer__canvas-node-heading button").first().click();
   await page.getByRole("tab", {name: "Layers", exact: true}).click();
   const tree = page.getByRole("tree", {name: "System asset hierarchy"});
@@ -84,7 +105,7 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   await expect(firstItem).toHaveAccessibleName(ownLabel);
   await firstItem.press("ArrowDown");
   await expect(tree.getByRole("treeitem").nth(1)).toBeFocused();
-  await qualifyCriticalSurfaceAccessibility(page, info, "system-layers", mode);
+  if (!verifyPlacement) await qualifyCriticalSurfaceAccessibility(page, info, "system-layers", mode);
 
   if (mode === "standard") await page.setViewportSize({width: 320, height: 1000});
   const nativeFrame = mode === "native400" ? await collectNative400Frame(page) : undefined;
@@ -96,13 +117,50 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
     await control.scrollIntoViewIfNeeded(); await expect(control).toBeVisible();
     const box = await control.boundingBox(); expect(box).toBeTruthy(); expect(box!.x).toBeGreaterThanOrEqual(-1); expect(box!.x + box!.width).toBeLessThanOrEqual(fitWidth + 1);
   }
-  const add = page.getByRole("button", {name: /^Add an element inside /}).last();
+  const add = addToPageContent;
   await add.scrollIntoViewIfNeeded(); await add.focus(); await add.press("Enter");
   const dialog = page.getByRole("dialog", {name: /^Add an element to /});
   await expect(dialog.getByLabel("Search compatible elements")).toBeFocused();
   const bounds = await dialog.boundingBox(); expect(bounds).toBeTruthy(); expect(bounds!.width).toBeLessThanOrEqual(fitWidth);
   await dialog.press("Escape"); await expect(add).toBeFocused();
-  const accessibility = mode === "standard" ? await qualifyTechnicalAccessibility(page, info)
+  const accessibility = verifyPlacement ? undefined : mode === "standard" ? await qualifyTechnicalAccessibility(page, info)
     : {mode: "native400", frame: nativeFrame, scope: "Frame fit only; the separate critical-surface reports contain the actual accessibility audits."};
-  return {persistedInstanceId: added.id, exactReference: added.reference, viewportWidth: fitWidth, accessibility};
+  return {persistedInstanceId: added.id, exactReference: added.reference, viewportWidth: fitWidth, accessibility,
+    ...(verifyPlacement ? {keyboardPlacement: {reordered: true, reparented: true}} : {})};
+}
+
+async function verifyKeyboardPlacement(page: Page, parent: Locator, firstId: string, secondId: string) {
+  const details = page.getByRole("complementary", {name: "Composer details"});
+  const properties = details.getByRole("tab", {name: "Properties", exact: true});
+  const layers = details.getByRole("tab", {name: "Layers", exact: true});
+  await properties.press("End");
+  await expect(layers).toBeFocused();
+  await expect(layers).toHaveAttribute("aria-selected", "true");
+  const second = page.locator(`[data-instance-id="${secondId}"]`);
+  const source = parent.locator(":scope > .system-composer__slots > [data-slot-id]").filter({has: second});
+  const children = source.locator(":scope > .system-composer__slot-content > .system-composer__canvas-node");
+  const order = () => children.evaluateAll(nodes => nodes.map(node => node.getAttribute("data-instance-id")));
+  await expect.poll(order).toEqual([firstId, secondId]);
+  await details.getByRole("button", {name: "Move up", exact: true}).press("Enter");
+  await expect.poll(order).toEqual([secondId, firstId]);
+  await details.getByRole("button", {name: "Move down", exact: true}).press("Enter");
+  await expect.poll(order).toEqual([firstId, secondId]);
+
+  const destination = details.getByRole("combobox", {name: "Move to region", exact: true});
+  const cardContent = `${firstId}|content`;
+  const options = await destination.getByRole("option").evaluateAll(items =>
+    items.map(item => (item as HTMLOptionElement).value));
+  const destinationIndex = options.indexOf(cardContent);
+  expect(destinationIndex).toBeGreaterThanOrEqual(0);
+  expect(options.length).toBeLessThanOrEqual(64);
+  await destination.press("Home");
+  for (let index = 0; index < destinationIndex; index++) await destination.press("ArrowDown");
+  await expect(destination).toHaveValue(cardContent);
+  await details.getByRole("button", {name: "Move selected asset", exact: true}).press("Enter");
+  const nestedContent = page.locator(`[data-instance-id="${firstId}"]`)
+    .locator(':scope > .system-composer__slots > [data-slot-id="content"]');
+  const expand = nestedContent.getByRole("button", {name: /^Expand .* region$/});
+  if (await expand.isVisible()) await expand.press("Enter");
+  await expect(nestedContent.locator(`[data-instance-id="${secondId}"]`)).toHaveCount(1);
+  await expect.poll(order).toEqual([firstId]);
 }

@@ -1145,8 +1145,11 @@
 }
 
 .system-composer__add-element {
-  flex: 0 0 auto;
-  white-space: nowrap;
+  justify-self: start;
+  max-inline-size: 100%;
+  flex-wrap: wrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .ui-modal-dialog.system-composer__asset-picker-dialog {
