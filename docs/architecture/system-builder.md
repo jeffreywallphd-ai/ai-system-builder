@@ -250,6 +250,13 @@ customization, and single-asset Studio workflows.
   current record-create policy. It returns form steps and field descriptions
   for the admitted respondent. Action mappings and stored answers stay on the
   host. The projection does not create a form submission.
+  The shared respondent dialog reads forms for one selected release. It uses
+  the same answer and route checks as Preview. If the host does not confirm
+  submission, Retry submission sends the same answers and submission ID.
+  If the answers exceed the host's total text limit, the dialog keeps them
+  available for editing. Closing the dialog does not cancel a request already sent.
+  Closing the dialog or changing release clears the local form session.
+  The host retains responsibility for permission checks and duplicate detection.
   The API and Desktop IPC expose dedicated list and submit operations only
   when the host composes the form runtime. The API uses the existing asset
   read and write scopes and its authenticated actor. Desktop takes identity

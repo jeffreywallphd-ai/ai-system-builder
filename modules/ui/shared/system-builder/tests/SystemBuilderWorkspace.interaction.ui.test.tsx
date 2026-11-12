@@ -6,8 +6,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeAssetId, normalizeAssetSlotId, type AssetInstance } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
-import { readSystemFormAction, SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY } from "../../../../contracts/system-builder";
+import { readSystemFormAction, SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY, systemBuilderSuccess } from "../../../../contracts/system-builder";
 import type {
+  PublishedSystemForm,
   SystemBuilderRecord,
   SystemBuilderComposerAsset,
   SystemBuilderRevision,
@@ -24,6 +25,8 @@ import { NotificationTestHarness, readNotificationMessages } from "../../notific
 import { readFormActionOptions, SystemFormActionEditor } from "../SystemFormActionEditor";
 import { SystemFormJourney } from "../SystemFormPreview";
 import { SystemManagementWorkspace } from "../SystemManagementWorkspace";
+import { SystemPublishedFormDialog } from "../SystemPublishedFormDialog";
+import type { SystemPublishedFormClient } from "../SystemPublishedFormClient";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -41,6 +44,117 @@ afterEach(() => {
 });
 
 describe("SystemBuilderWorkspace UI preview", () => {
+  it("submits a published form only after valid answers and reuses the same request on retry", async () => {
+    const form: PublishedSystemForm = {
+      id: "survey", title: "Intake survey",
+      steps: [{ id: "contact", label: "Contact details", conditions: [], defaultDestinationId: "survey",
+        fields: [{ id: "email", label: "Contact", helpText: "", kind: "text", dateKind: "date", required: true, options: [] }] }],
+    };
+    const close = vi.fn();
+    const list = vi.fn(async () => systemBuilderSuccess([form]));
+    const submit = vi.fn<SystemPublishedFormClient["submit"]>()
+      .mockRejectedValueOnce(new Error("Connection lost"))
+      .mockResolvedValueOnce(systemBuilderSuccess({ status: "pending", receiptId: "safe-receipt" }))
+      .mockResolvedValueOnce(systemBuilderSuccess({ status: "already-recorded", receiptId: "safe-receipt" }));
+    const client = { list, submit };
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<SystemPublishedFormDialog workspaceId="workspace-a" releaseId="release-a" client={client} onClose={close} />));
+    const dialog = () => document.querySelector('[role="dialog"]')!;
+    const click = (name: string) => act(async () => button(dialog(), name).click());
+    expect(list).toHaveBeenCalledWith({ workspaceId: "workspace-a", releaseId: "release-a" });
+    await click("Submit form");
+    expect(dialog().textContent).toContain("Enter an answer.");
+    expect(submit).not.toHaveBeenCalled();
+    const input = dialog().querySelector<HTMLInputElement>("input")!;
+    expect(document.activeElement).toBe(input);
+    await act(async () => setInputValue(input, "Synthetic contact"));
+    await click("Submit form");
+    expect(dialog().textContent).toContain("The host did not confirm your submission.");
+    const first = submit.mock.calls[0]![0];
+    expect(first).toEqual({ workspaceId: "workspace-a", releaseId: "release-a", formId: "survey",
+      submissionId: expect.any(String), answers: { email: "Synthetic contact" } });
+    await click("Retry submission");
+    expect(dialog().textContent).toContain("Your submission is still pending.");
+    await click("Retry submission");
+    expect(submit.mock.calls.map(([request]) => request)).toEqual([first, first, first]);
+    expect(dialog().textContent).toContain("Your form was submitted.");
+    expect(document.activeElement?.textContent).toBe("Your form was submitted.");
+    expect(dialog().textContent).not.toContain("Synthetic contact");
+  });
+
+  it("clears a previous release and rejects malformed form data before rendering controls", async () => {
+    const older: PublishedSystemForm = {
+      id: "old", title: "Previous form",
+      steps: [{ id: "start", label: "Page 1", fields: [], conditions: [], defaultDestinationId: "old" }],
+    };
+    const current: PublishedSystemForm = { ...older, id: "current", title: "Current form",
+      steps: [{ id: "start", label: "Page 1", fields: [], conditions: [], defaultDestinationId: "current" }] };
+    const close = vi.fn();
+    const submit = vi.fn<SystemPublishedFormClient["submit"]>();
+    const list = vi.fn<SystemPublishedFormClient["list"]>()
+      .mockResolvedValueOnce(systemBuilderSuccess([older]))
+      .mockResolvedValueOnce(systemBuilderSuccess([{ ...current, steps: [{ ...current.steps[0]!, fields: [null] }] } as unknown as PublishedSystemForm]))
+      .mockResolvedValueOnce(systemBuilderSuccess([{ ...current, steps: [{ ...current.steps[0]!, defaultDestinationId: "start" }] }]))
+      .mockResolvedValueOnce(systemBuilderSuccess([{ ...current, steps: [{ ...current.steps[0]!, fields: [
+        { id: "score", label: "Score", helpText: "", kind: "number", dateKind: "date", required: true, options: [], min: 10, max: 1 },
+      ] }] }]))
+      .mockResolvedValueOnce(systemBuilderSuccess([current]));
+    const client = { list, submit };
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const open = (workspaceId: string, releaseId: string) => act(async () => root!.render(
+      <SystemPublishedFormDialog workspaceId={workspaceId} releaseId={releaseId} client={client} onClose={close} />,
+    ));
+    const dialog = () => document.querySelector('[role="dialog"]')!;
+    await open("workspace-a", "release-a");
+    expect(dialog().textContent).toContain("Previous form");
+    await open("workspace-b", "release-b");
+    expect(dialog().textContent).not.toContain("Previous form");
+    expect(dialog().textContent).toContain("Could not open forms for this published build.");
+    expect(dialog().querySelector("form")).toBeNull();
+    await act(async () => button(dialog(), "Try again").click());
+    expect(dialog().querySelector("form")).toBeNull();
+    await act(async () => button(dialog(), "Try again").click());
+    expect(dialog().querySelector("form")).toBeNull();
+    await act(async () => button(dialog(), "Try again").click());
+    expect(dialog().textContent).toContain("Current form");
+    await act(async () => dialog().querySelector<HTMLButtonElement>('button[aria-label="Close published forms"]')!.click());
+    expect(close).toHaveBeenCalledOnce();
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("keeps oversized answers editable and allows closing after sending", async () => {
+    const form: PublishedSystemForm = { id: "large", title: "Long answers", steps: [{ id: "start", label: "Page 1",
+      conditions: [], defaultDestinationId: "large", fields: Array.from({ length: 9 }, (_, index) => ({
+        id: `response-${index}`, label: `Answer ${index}`, helpText: "", kind: "text", dateKind: "date",
+        required: true, options: [], min: 0, max: 4000,
+      })) }] };
+    const list = vi.fn(async () => systemBuilderSuccess([form]));
+    const submit = vi.fn<SystemPublishedFormClient["submit"]>().mockReturnValue(new Promise(() => {}));
+    const close = vi.fn();
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<SystemPublishedFormDialog workspaceId="workspace-a" releaseId="release-a"
+      client={{ list, submit }} onClose={close} />));
+    const dialog = () => document.querySelector('[role="dialog"]')!;
+    const fields = [...dialog().querySelectorAll<HTMLInputElement>("input")];
+    await act(async () => fields.forEach((field) => setInputValue(field, "a".repeat(3700))));
+    await act(async () => button(dialog(), "Submit form").click());
+    expect(dialog().textContent).toContain("Shorten your answers to 32,768 characters total");
+    expect(submit).not.toHaveBeenCalled();
+    expect(fields[0]?.value.length).toBe(3700);
+    await act(async () => setInputValue(fields[0]!, "a".repeat(3168)));
+    await act(async () => button(dialog(), "Submit form").click());
+    expect(submit).toHaveBeenCalledOnce();
+    expect(dialog().textContent).toContain("Closing it does not stop a submission already sent.");
+    await act(async () => dialog().querySelector<HTMLButtonElement>('button[aria-label="Close published forms"]')!.click());
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("keeps radio labels and required-error focus distinct from similar field IDs", async () => {
     container = document.createElement("div");
     document.body.append(container);

@@ -12098,127 +12098,139 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "b6f582e814f5caef23478979b488250cf84450627bccb61ad6e0e8dfcbb6a40f",
-    "bytes": 91906,
+    "sha256": "ca1b6b449bbdc4cd529494d5a1acec0963d0f51c8856763490f61ad3dd486894",
+    "bytes": 99306,
     "cases": [
      {
+      "name": "submits a published form only after valid answers and reuses the same request on retry",
+      "line": 47
+     },
+     {
+      "name": "clears a previous release and rejects malformed form data before rendering controls",
+      "line": 87
+     },
+     {
+      "name": "keeps oversized answers editable and allows closing after sending",
+      "line": 129
+     },
+     {
       "name": "keeps radio labels and required-error focus distinct from similar field IDs",
-      "line": 44
+      "line": 158
      },
      {
       "name": "does not offer submission mapping for an ambiguous Create Record setup",
-      "line": 71
+      "line": 185
      },
      {
       "name": "edits the exact selected form when two forms share a Canvas page",
-      "line": 98
+      "line": 212
      },
      {
       "name": "reopens the saved empty first form from Manage without adding a field or saving",
-      "line": 449
+      "line": 563
      },
      {
       "name": "defers the layout catalog until Create system is submitted and then shows the loading wheel",
-      "line": 547
+      "line": 661
      },
      {
       "name": "requests active systems and defensively omits archived records from Compose",
-      "line": 590
+      "line": 704
      },
      {
       "name": "refreshes the active picker after a Manage lifecycle change",
-      "line": 686
+      "line": 800
      },
      {
       "name": "creates a named system with the implicit Minimal layout",
-      "line": 747
+      "line": 861
      },
      {
       "name": "requires a name and uses the primary action when creating from a template",
-      "line": 799
+      "line": 913
      },
      {
       "name": "prefers the nested page content region over an already-full application content region",
-      "line": 855
+      "line": 969
      },
      {
       "name": "loads layouts on demand, applies one to the Canvas, exposes unassigned assets in the scoped modal, and undoes",
-      "line": 944
+      "line": 1058
      },
      {
       "name": "requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system",
-      "line": 1267
+      "line": 1381
      },
      {
       "name": "opens and closes a modal for the current safe frontend composition",
-      "line": 1470
+      "line": 1584
      },
      {
       "name": "previews a v2 Foundation upgrade before explicit confirmation",
-      "line": 1590
+      "line": 1704
      },
      {
       "name": "preserves canonical structure and placements when saving configuration",
-      "line": 1717
+      "line": 1831
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "Systems",
-      "line": 505
+      "line": 619
      },
      {
       "name": "instance",
-      "line": 2087
+      "line": 2201
      },
      {
       "name": "composerDefinition",
-      "line": 2107
+      "line": 2221
      },
      {
       "name": "layoutDefinition",
-      "line": 2179
+      "line": 2293
      },
      {
       "name": "withoutComposerDetail",
-      "line": 2197
+      "line": 2311
      },
      {
       "name": "button",
-      "line": 2208
+      "line": 2322
      },
      {
       "name": "setInputValue",
-      "line": 2215
+      "line": 2329
      },
      {
       "name": "clientFor",
-      "line": 2222
+      "line": 2336
      }
     ],
-    "assertionCount": 177,
-    "assertionDigest": "887054d4b9024f33713667510a0acdaa948165fe59277d1a33fa4c20c7e9e668",
+    "assertionCount": 203,
+    "assertionDigest": "24a5e0d8ccb36d4d6fe04f250e174bf26916fbc2d206fa89fc9a72e071ffa441",
     "assertionExamples": [
      {
-      "line": 57,
+      "line": 66,
       "kind": "expect",
-      "sha256": "b35211cbff76f0b21dddf71e969b9a4d2487006e0a1611b8174e1138eb7b233d"
+      "sha256": "8ebc59f30d97d5099fb07687a63fa2063bd319aaf9aa59813944f8d7ac459b67"
      },
      {
-      "line": 61,
+      "line": 68,
       "kind": "expect",
-      "sha256": "225d69d707d19fccd5de73a795b6fd7f430bdcaeba7e92b57db899ea1f090cac"
+      "sha256": "b8516f67d7716b8f35d1f5e631cf0b36f9e9b0ce0797bc82ef2421e46b3a6867"
      },
      {
-      "line": 64,
+      "line": 69,
       "kind": "expect",
-      "sha256": "b4b8cf1a07cc5ee71afb828e260280a7ff4dae18494f564c3d284e7f9a29016e"
+      "sha256": "a570fc51e01e9dd237fc13d5987d0431fa8b071fd0e9246421b626feddcdf981"
      },
      {
-      "line": 67,
+      "line": 71,
       "kind": "expect",
-      "sha256": "c907a1d6d8e9cb83968760cb4b6cfdbc46e3685b83c201fe0b76ec5acd910c2a"
+      "sha256": "7209b01251cf906c324cb4589aa6176cac8c8a32efd97228cc62c42bc5bcb2a8"
      }
     ],
     "modifiers": []

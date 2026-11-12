@@ -10,5 +10,7 @@ export * from "./SystemBuildReleaseWorkflow";
 export * from "./SystemBuildTestModal";
 export * from "./SystemPublishWorkspace";
 export * from "./SystemPublishedLifecycleClient";
+export * from "./SystemPublishedFormClient";
+export * from "./SystemPublishedFormDialog";
 export * from "./SystemPublishedLifecycleCard";
 export * from "./SystemRunWorkflow";

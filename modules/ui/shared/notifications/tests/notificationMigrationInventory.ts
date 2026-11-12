@@ -99,6 +99,11 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     classification: "contextual-only",
     rationale: "The preview announces validation next to the affected field and shows which fields are included without saving answers or reporting action outcomes.",
   },
+  {
+    path: "modules/ui/shared/system-builder/SystemPublishedFormDialog.tsx",
+    classification: "contextual-only",
+    rationale: "Respondents must be able to correct answers, check the result of the current submission, or retry it without leaving the form. No answer or receipt data is announced.",
+  },
   ...[
     "apps/desktop/src/renderer/components/layout/DesktopPageLoadingFallback.tsx",
     "apps/desktop/src/renderer/components/ui/LoadingSpinner.tsx",
