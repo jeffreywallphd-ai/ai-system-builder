@@ -419,6 +419,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await click("Add field");
     await act(async () => {
       const label = find<HTMLInputElement>("Field label", "input");
+      const expanded = container!.querySelector<HTMLButtonElement>('.system-form-composer__element-heading button[aria-expanded="true"]')!;
+      expect(document.activeElement).toBe(expanded);
+      expect(document.getElementById(expanded.getAttribute("aria-controls")!)?.contains(label)).toBe(true);
       label.focus();
       label.value = "Request reason";
       label.blur();
@@ -440,11 +443,18 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await editForm("Intake");
     await choosePage("Details");
     await click("Request reason");
-    expect(button(container!, "Request reason").getAttribute("aria-pressed")).toBe("true");
+    expect(button(container!, "Request reason").getAttribute("aria-expanded")).toBe("true");
     expect(visibleElement().contains(find<HTMLInputElement>("Field label", "input"))).toBe(true);
     expect(properties().contains(find<HTMLInputElement>("Required answer", "input"))).toBe(true);
     expect(visibleElement().querySelector('input[type="checkbox"]')).toBeNull();
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
+    await click("Request reason");
+    const collapsed = button(container!, "Request reason");
+    expect(collapsed.getAttribute("aria-expanded")).toBe("false");
+    expect(document.getElementById(collapsed.getAttribute("aria-controls")!)?.hidden).toBe(true);
+    expect(visibleElement()).toBeNull();
+    await click("Request reason");
+    expect(find<HTMLInputElement>("Field label", "input").value).toBe("Request reason");
     await click("Undo");
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(false);
     await click("Redo");

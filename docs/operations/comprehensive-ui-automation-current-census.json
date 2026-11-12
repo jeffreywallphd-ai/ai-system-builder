@@ -12102,8 +12102,8 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "ab5102e343e21bee01236f0e599fbf43f8a5c98dc8ea8036243bf7f82f929025",
-    "bytes": 105875,
+    "sha256": "7c97f3111a178ee0179d7e973c8d6f4123fc4cf4c883184f54095752708b1b0f",
+    "bytes": 106602,
     "cases": [
      {
       "name": "submits a published form only after valid answers and reuses the same request on retry",
@@ -12131,90 +12131,90 @@
      },
      {
       "name": "reopens the saved empty first form from Manage without adding a field or saving",
-      "line": 656
+      "line": 666
      },
      {
       "name": "defers the layout catalog until Create system is submitted and then shows the loading wheel",
-      "line": 754
+      "line": 764
      },
      {
       "name": "requests active systems and defensively omits archived records from Compose",
-      "line": 797
+      "line": 807
      },
      {
       "name": "refreshes the active picker after a Manage lifecycle change",
-      "line": 893
+      "line": 903
      },
      {
       "name": "creates a named system with the implicit Minimal layout",
-      "line": 954
+      "line": 964
      },
      {
       "name": "requires a name and uses the primary action when creating from a template",
-      "line": 1006
+      "line": 1016
      },
      {
       "name": "prefers the nested page content region over an already-full application content region",
-      "line": 1062
+      "line": 1072
      },
      {
       "name": "loads layouts on demand, applies one to the Canvas, exposes unassigned assets in the scoped modal, and undoes",
-      "line": 1151
+      "line": 1161
      },
      {
       "name": "requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system",
-      "line": 1474
+      "line": 1484
      },
      {
       "name": "opens and closes a modal for the current safe frontend composition",
-      "line": 1677
+      "line": 1687
      },
      {
       "name": "previews a v2 Foundation upgrade before explicit confirmation",
-      "line": 1797
+      "line": 1807
      },
      {
       "name": "preserves canonical structure and placements when saving configuration",
-      "line": 1924
+      "line": 1934
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "Systems",
-      "line": 712
+      "line": 722
      },
      {
       "name": "instance",
-      "line": 2294
+      "line": 2304
      },
      {
       "name": "composerDefinition",
-      "line": 2314
+      "line": 2324
      },
      {
       "name": "layoutDefinition",
-      "line": 2386
+      "line": 2396
      },
      {
       "name": "withoutComposerDetail",
-      "line": 2404
+      "line": 2414
      },
      {
       "name": "button",
-      "line": 2415
+      "line": 2425
      },
      {
       "name": "setInputValue",
-      "line": 2422
+      "line": 2432
      },
      {
       "name": "clientFor",
-      "line": 2429
+      "line": 2439
      }
     ],
-    "assertionCount": 250,
-    "assertionDigest": "433f63aeeb9c299e9786ddf6a387af1d45f713ee5305510298be04c68a58f6b9",
+    "assertionCount": 256,
+    "assertionDigest": "cc6b79289ecb9298e1122bef6ece835df9d564b9e65f27c67b56a2b49ca40a21",
     "assertionExamples": [
      {
       "line": 66,

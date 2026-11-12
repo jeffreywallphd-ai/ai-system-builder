@@ -195,8 +195,10 @@ customization, and single-asset Studio workflows.
   the same workspace-visible asset definitions, draft, undo and redo history,
   and revision save path. Canvas renders the same placements in either case.
   Each form page has its own tab. **New Form Page +** adds a numbered page
-  and opens its tab. Select a field or use **Element** to edit labels, help
-  text, and other respondent text in the page. Use the **Properties** sidebar
+  and opens its tab. Expand an element to edit its label, help text, or other
+  respondent text beside that element. Only one content editor opens at a
+  time. Adding a field opens its editor and brings it into view. The **Element**
+  list can also open an editor. Use the **Properties** sidebar
   for styling, layout, answer rules, routes, and submission behavior. Resetting
   styling preserves text and behavior. The sidebar
   moves below the editor when space is limited. The first page cannot be

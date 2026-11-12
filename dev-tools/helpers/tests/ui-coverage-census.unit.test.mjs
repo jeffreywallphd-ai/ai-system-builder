@@ -479,11 +479,16 @@ const pendingNotificationDefinition=Object.freeze({priorCommit:"6c785c91f117d816
 ])});
 let notificationPriorCensus;
 const currentPublishedFormCensus = Object.freeze({
-  commit: "13633aef65ea1150189fd867f4703d927026f5df",
-  digest: "ca853614067ddcf5ed133836cd5d2d0854c90e9cf86323f345abed51c014d3f7",
+  commit: "32af5968602acee6c6557ec1223b36577b161ac4",
+  digest: "95ec37315234ea99f817ab81fe390f423eab7e8106167bbbf4130064f02b2128",
   previousCommit: "6b0b7b47748c0792dbacbef5c06cbf3b3e5d3ab2",
 });
 const censusDocument = "docs/operations/comprehensive-ui-automation-current-census.json";
+const currentFormEditorAssertions = Object.freeze({
+  path: "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+  before: "ab5102e343e21bee01236f0e599fbf43f8a5c98dc8ea8036243bf7f82f929025",
+  after: "7c97f3111a178ee0179d7e973c8d6f4123fc4cf4c883184f54095752708b1b0f",
+});
 const publishedFormTabInventory = [
   {source: "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
     before: "9ee37f4843cc9bc324842a60a20861b3404109ef5ea346f86f977540aec60c2b",
@@ -497,14 +502,21 @@ const sourceDrift = map => map.sources.filter(row => row.facts.sha256 !== row.co
 function currentPublishedFormCensusLegacyView(map, result) {
   if (sha(JSON.stringify(map)) !== currentPublishedFormCensus.digest) return {map, result};
   const actual = JSON.parse(historicalSource(currentPublishedFormCensus.commit, censusDocument));
-  // The census validator independently checks the current source and exact
-  // literal tab labels. Bind only the two updated source digests here.
-  for (const {source,before,after} of publishedFormTabInventory) {
+  // The tab inventories remain as previously reviewed. Only the editor
+  // assertions changed, and their original committed drift must remain.
+  for (const {source,after} of publishedFormTabInventory) {
     const rows = actual.inventories.filter(row => row.source === source && row.property === "label");
     assert.equal(rows.length, 1);
-    assert.equal(rows[0].sha256, before);
-    rows[0].sha256 = after;
+    assert.equal(rows[0].sha256, after);
   }
+  const sourceRows = actual.sources.filter(row => row.path === currentFormEditorAssertions.path);
+  assert.equal(sourceRows.length, 1);
+  const [sourceRow] = sourceRows;
+  assert.equal(sourceRow.facts.sha256, currentFormEditorAssertions.before);
+  const facts = sourceFacts(sourceRow.path, fs.readFileSync(sourceRow.path));
+  assert.equal(facts.sha256, currentFormEditorAssertions.after);
+  assert.notEqual(sourceRow.committed_sha256, facts.sha256);
+  sourceRow.facts = facts;
   assert.deepEqual(map, actual);
   assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(actual));
   const previous = JSON.parse(historicalSource(currentPublishedFormCensus.previousCommit, censusDocument));

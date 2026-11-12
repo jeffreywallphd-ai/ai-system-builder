@@ -63,6 +63,11 @@ PUBLISHED_FORM_CHECKS = {
             "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
         ),
     },
+    "published-form-editor-styles": {
+        "companion_to": "published-form-editor-interactions",
+        "sources": ("modules/ui/shared/styles/components/system-composer.css",),
+        "command": ("--import", "tsx", "--test", "--", "modules/ui/shared/styles/tests/system-builder-style-tokens.unit.test.ts"),
+    },
     "published-form-browser-client": {
         "sources": (
             "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedFormClient.ts",
@@ -405,6 +410,11 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     ids = {c["id"] for c in checks}
     if not required or set(required) - ids:
         refuse("verification.check-id", "Acceptance references an unavailable check identity.")
+    # A form-only UI check never claims coverage of the shared Canvas CSS.
+    # Include its existing stylesheet contracts only for the explicit Form slice.
+    required = set(required)
+    required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
+                    if check.get("companion_to") in required and set(paths).intersection(check["sources"]))
     covered = {p: [c["id"] for c in checks
                    if any(fnmatch.fnmatchcase(p, pat) for pat in c["patterns"])
                    or (c["id"] in required and (

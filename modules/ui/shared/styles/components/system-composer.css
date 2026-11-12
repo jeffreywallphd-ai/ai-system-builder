@@ -1313,22 +1313,43 @@
   list-style: none;
 }
 
-.system-form-composer__fields li {
+.system-form-composer__element {
+  min-inline-size: 0;
+}
+
+.system-form-composer__element-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-xs);
 }
 
-.system-form-composer__fields button[aria-pressed] {
+.system-form-composer__element-heading > button[aria-expanded] {
   inline-size: 100%;
+  min-inline-size: 0;
   justify-content: flex-start;
   white-space: normal;
+  overflow-wrap: anywhere;
   text-align: start;
 }
 
-.system-form-composer__fields button[aria-pressed="true"] {
+.system-form-composer__element-heading > button[aria-expanded="true"] {
   border-color: var(--color-accent);
+}
+
+.system-form-composer__disclosure {
+  flex: none;
+  border-block: 0.25rem solid transparent;
+  border-inline-start: 0.375rem solid currentColor;
+}
+
+.system-form-composer__element-heading > button[aria-expanded="true"] > .system-form-composer__disclosure {
+  transform: rotate(90deg);
+}
+
+.system-form-composer__element-editor {
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-sm);
 }
 
 @container form-composer (max-width: 48rem) {

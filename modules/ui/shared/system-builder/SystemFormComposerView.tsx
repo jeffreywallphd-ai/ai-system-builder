@@ -82,6 +82,10 @@ export function SystemFormComposerView({
   const adding = useRef(false);
   const [selectedPageId, setSelectedPageId] = useState("");
   const [selectedElementId, setSelectedElementId] = useState("");
+  const [expandedElementId, setExpandedElementId] = useState("");
+  const [focusElementId, setFocusElementId] = useState<string>();
+  const elementTriggers = useRef(new Map<string, HTMLButtonElement>());
+  const elementPanelPrefix = useId();
   const [focusPageId, setFocusPageId] = useState<string>();
   const [removalId, setRemovalId] = useState<string>();
   const removalDescriptionId = useId();
@@ -129,9 +133,20 @@ export function SystemFormComposerView({
     setFocusPageId(undefined);
   }, [currentPageId, focusPageId, formId]);
 
+  useLayoutEffect(() => {
+    if (!ready || !focusElementId) return;
+    const trigger = elementTriggers.current.get(focusElementId);
+    if (!trigger || trigger.matches(":disabled")) return;
+    trigger.focus({ preventScroll: true });
+    trigger.scrollIntoView?.({ block: "nearest" });
+    setFocusElementId(undefined);
+  }, [ready, focusElementId]);
+
   function selectPage(id: string) {
     setSelectedPageId(id);
     setSelectedElementId("");
+    setExpandedElementId("");
+    setFocusElementId(undefined);
     setRemovalId(undefined);
   }
 
@@ -157,7 +172,11 @@ export function SystemFormComposerView({
     adding.current = true;
     try {
       const id = await onAddField(String(page.instanceId), fieldType);
-      if (id) setSelectedElementId(id);
+      if (id) {
+        setSelectedElementId(id);
+        setExpandedElementId(id);
+        setFocusElementId(id);
+      }
     } finally {
       adding.current = false;
     }
@@ -175,6 +194,8 @@ export function SystemFormComposerView({
       }
     } else {
       if (selectedElementId === removal.instanceId) setSelectedElementId("");
+      if (expandedElementId === removal.instanceId) setExpandedElementId("");
+      if (focusElementId === removal.instanceId) setFocusElementId(undefined);
       setFocusPageId(currentPageId ?? formId);
     }
   }
@@ -189,28 +210,13 @@ export function SystemFormComposerView({
     disabled={form.steps.length >= 32} title={form.steps.length >= 32 ? "This form has the maximum of 32 pages." : undefined}
     onClick={() => void addPage()}>New Form Page +</button>;
 
-  const fieldList = (items: readonly AssetInstance[], label: string) => (
-    <ul className="system-form-composer__fields" aria-label={label}>
-      {items.map((item) => (
-        <li key={item.instanceId}>
-          <button className="ui-button ui-button--outline" type="button"
-            aria-pressed={selected.instanceId === item.instanceId} onClick={() => setSelectedElementId(String(item.instanceId))}>
-            {item.displayName ?? "Untitled field"}
-          </button>
-          <button className="ui-button ui-button--outline system-form-composer__remove-field" type="button"
-            aria-label={`Remove field: ${item.displayName ?? "Untitled field"}`}
-            onClick={() => setRemovalId(String(item.instanceId))}>Remove</button>
-        </li>
-      ))}
-    </ul>
-  );
-
-  const appearance = (
-    <section className="ui-stack ui-stack--sm" aria-label="Element appearance">
-      <h5>Element appearance</h5>
+  const elementNavigator = (
       <label className="ui-stack ui-stack--sm">
         Element
-        <select value={selected.instanceId} onChange={(event) => setSelectedElementId(event.currentTarget.value)}>
+        <select value={selected.instanceId} onChange={(event) => {
+          setSelectedElementId(event.currentTarget.value);
+          setExpandedElementId(event.currentTarget.value);
+        }}>
           <optgroup label="Form"><option value={formId}>{form.form.displayName ?? "Form"}</option></optgroup>
           {page ? <optgroup label="Page"><option value={page.instanceId}>{page.displayName ?? "Untitled page"}</option></optgroup> : null}
           {fields.length ? <optgroup label="Fields">{fields.map((item) => <option key={item.instanceId} value={item.instanceId}>
@@ -224,30 +230,58 @@ export function SystemFormComposerView({
           </option>)}</optgroup> : null}
         </select>
       </label>
-      {selectedField ? (
-        <>
-          <FieldAppearance key={selectedField.instanceId} field={selectedField} onUpdate={onUpdate} />
-          <div className="ui-workflow__actions">
-            <button className="ui-button ui-button--outline" type="button"
-              disabled={fieldGroup[0] === selectedField} onClick={() => onMove(String(selectedField.instanceId), -1)}>Move field up</button>
-            <button className="ui-button ui-button--outline" type="button"
-              disabled={fieldGroup[fieldGroup.length - 1] === selectedField} onClick={() => onMove(String(selectedField.instanceId), 1)}>Move field down</button>
+  );
+
+  const assetContent = (item: AssetInstance) => propertySource.definition ? (
+    <FormAssetControls key={item.instanceId} part="appearance" element={item}
+      definition={propertySource.definition} onUpdate={onUpdatePresentation} />
+  ) : propertySource.failed ? (
+    <div className="ui-stack ui-stack--xs">
+      <p role="status">Properties are unavailable for this form asset.</p>
+      <button type="button" className="ui-button ui-button--outline" onClick={propertySource.retry}>Retry properties</button>
+    </div>
+  ) : <p role="status">Loading form properties…</p>;
+
+  const editorList = (items: readonly AssetInstance[], label: string, fieldEditors = false) => (
+    <ul className="system-form-composer__fields" aria-label={label}>
+      {items.map((item, index) => {
+        const id = String(item.instanceId);
+        const name = item.displayName ?? (fieldEditors ? "Untitled field" : "Untitled element");
+        const expanded = expandedElementId === id && selected.instanceId === item.instanceId;
+        const panelId = `${elementPanelPrefix}-${id}`;
+        return <li key={id} className="system-form-composer__element">
+          <div className="system-form-composer__element-heading">
+            <button className="ui-button ui-button--outline" type="button" aria-expanded={expanded} aria-controls={panelId}
+              ref={(node) => { if (node) elementTriggers.current.set(id, node); else elementTriggers.current.delete(id); }}
+              onClick={() => { setSelectedElementId(id); setExpandedElementId(expanded ? "" : id); }}>
+              <span className="system-form-composer__disclosure" aria-hidden="true" />{name}
+            </button>
+            {fieldEditors ? <button className="ui-button ui-button--outline system-form-composer__remove-field" type="button"
+              aria-label={`Remove field: ${name}`} onClick={() => setRemovalId(id)}>Remove</button> : null}
           </div>
-        </>
-      ) : propertySource.definition ? (
-        <FormAssetControls key={selected.instanceId} part="appearance" element={selected}
-          definition={propertySource.definition} onUpdate={onUpdatePresentation} />
-      ) : propertySource.failed ? (
-        <div className="ui-stack ui-stack--xs">
-          <p role="status">Properties are unavailable for this form asset.</p>
-          <button type="button" className="ui-button ui-button--outline" onClick={propertySource.retry}>Retry properties</button>
-        </div>
-      ) : <p role="status">Loading form properties…</p>}
-    </section>
+          <div id={panelId} hidden={!expanded}>
+            {expanded ? <section className="system-form-composer__element-editor ui-stack ui-stack--sm" aria-label="Element appearance">
+              {fieldEditors ? (
+                <>
+                  <FieldAppearance key={item.instanceId} field={item} onUpdate={onUpdate} />
+                  <div className="ui-workflow__actions">
+                    <button className="ui-button ui-button--outline" type="button"
+                      disabled={index === 0} onClick={() => onMove(id, -1)}>Move field up</button>
+                    <button className="ui-button ui-button--outline" type="button"
+                      disabled={index === items.length - 1} onClick={() => onMove(id, 1)}>Move field down</button>
+                  </div>
+                </>
+              ) : assetContent(item)}
+            </section> : null}
+          </div>
+        </li>;
+      })}
+    </ul>
   );
 
   const pageContent = page ? (
     <div className="ui-stack ui-stack--md">
+      {elementNavigator}
       <section className="ui-stack ui-stack--sm" aria-label="Form page setup">
         <label className="ui-stack ui-stack--sm" key={page.instanceId}>
           Form page name
@@ -266,6 +300,7 @@ export function SystemFormComposerView({
           {canRemovePage ? <button className="ui-button ui-button--outline" type="button"
             onClick={() => setRemovalId(String(page.instanceId))}>Remove form page</button> : null}
         </div>
+        {editorList([form.form, page], "Form and page settings")}
       </section>
       <section className="ui-stack ui-stack--sm" aria-label="Fields on this page">
         <div className="ui-workflow__actions">
@@ -274,9 +309,9 @@ export function SystemFormComposerView({
           </select></label>
           <button className="ui-button ui-button--outline" type="button" onClick={() => void addField()}>Add field</button>
         </div>
-        {fields.length ? fieldList(fields, "Form fields") : <p className="ui-text-muted">No fields yet.</p>}
+        {fields.length ? editorList(fields, "Form fields", true) : <p className="ui-text-muted">No fields yet.</p>}
       </section>
-      {appearance}
+      {controls.length ? editorList(controls, "Buttons and messages") : null}
     </div>
   ) : null;
   const pages = form.steps.map((item) => ({ id: String(item.instanceId), label: item.displayName ?? "Untitled page",
@@ -306,13 +341,15 @@ export function SystemFormComposerView({
             <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form pages">
               <div className="ui-workflow__actions">{addPageAction}</div>
               <p>Add a form page to start adding fields.</p>
-              {appearance}
+              {elementNavigator}
+              {editorList([form.form], "Form settings")}
+              {controls.length ? editorList(controls, "Buttons and messages") : null}
             </section>
           )}
           {directFields.length ? <section className="ui-panel ui-stack ui-stack--sm" aria-label="Fields outside form pages">
             <h5>Fields outside form pages</h5>
             <p>In Canvas, move these fields to a form page before you preview the form or set a submission action.</p>
-            {fieldList(directFields, "Fields to move")}
+            {editorList(directFields, "Fields to move", true)}
           </section> : null}
         </div>
         <aside className="system-form-composer__properties ui-panel ui-stack ui-stack--sm" aria-label="Properties">
