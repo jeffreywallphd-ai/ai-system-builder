@@ -32,9 +32,26 @@ OPT_IN_REGRESSION_CHECKS = {
     ),
 }
 
-# Only a work specification that asks for a Form check gets it. Keep the
-# admitted paths exact so unrelated Desktop and host work still needs evidence.
+# Keep Form-specific paths exact so unrelated Desktop and host work still needs evidence.
+FORM_HOST_DEFINITIONS = (
+    "dev-tools/scripts/qualification/visual-composer/e2e/form-composer-authoring-journey.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/form-composer-desktop-profile.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/form-composer-publication-journey.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/form-composer-native-observation.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-form-composer.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-form-composer.e2e.spec.ts",
+    "dev-tools/scripts/qualification/tests/form-composer-host-definitions.unit.test.mjs",
+)
+
 PUBLISHED_FORM_CHECKS = {
+    "published-form-host-definitions": {
+        "automatic_sources": FORM_HOST_DEFINITIONS,
+        "sources": FORM_HOST_DEFINITIONS,
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "dev-tools/scripts/qualification/tests/form-composer-host-definitions.unit.test.mjs",
+        ),
+    },
     "published-form-desktop-bridge": {
         "sources": (
             "apps/desktop/src/preload/exposedApi.ts",
@@ -426,6 +443,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     # A form-only UI check never claims coverage of the shared Canvas CSS.
     # Include its existing stylesheet contracts only for the explicit Form slice.
     required = set(required)
+    required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
+                    if set(paths).intersection(check.get("automatic_sources", ())))
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
                     if check.get("companion_to") in required and set(paths).intersection(check["sources"]))
     covered = {p: [c["id"] for c in checks

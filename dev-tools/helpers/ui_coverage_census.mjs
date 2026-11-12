@@ -6,7 +6,8 @@ import {fileURLToPath} from "node:url";
 import {createHash} from "node:crypto";
 import ts from "typescript";
 
-export const CENSUS_LIMITS = Object.freeze({documentBytes: 512 * 1024, sourceBytes: 512 * 1024, files: 192, totalBytes: 32 * 1024 * 1024});
+// The two Form Composer host specifications are included in the file count.
+export const CENSUS_LIMITS = Object.freeze({documentBytes: 512 * 1024, sourceBytes: 512 * 1024, files: 194, totalBytes: 32 * 1024 * 1024});
 export const REQUIRED_CENSUS_INVENTORIES = Object.freeze([
   ["apps/desktop/src/renderer/routes/desktopPages.ts", "DesktopPageKey", null, "desktopRouteKeys"],
   ["apps/thin-client/src/routes/thinClientPages.ts", "ThinClientPageKey", null, "thinClientRouteKeys"],

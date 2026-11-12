@@ -499,7 +499,39 @@ const publishedFormTabInventory = [
 ];
 const sourceDrift = map => map.sources.filter(row => row.facts.sha256 !== row.committed_sha256)
   .map(row => ({kind: "unreviewed-source-drift", source: row.path}));
+const pendingFormHostSources = Object.freeze([
+  {path: "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-form-composer.e2e.spec.ts",
+    source: "bbcc77ce568358bc14963920d8dfb67a7aead41aaf119b2b4d7b51583f1ebc82",
+    facts: "4a522939ce09d1ef57d0cb0f00107911ac221c02e3e6373fa7dae08b1fe35969"},
+  {path: "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-form-composer.e2e.spec.ts",
+    source: "1653f05fe5047e6a8d8c49d1249e01e898ed3e5f1944a77e7a2ebb60d4a3643e",
+    facts: "ee9e798d64978e92112ceeedf422ddeb522b9e0e0d740f562d8dd1f1f00bd9be"},
+].map(Object.freeze));
+
+function formHostCensusLegacyView(map, result) {
+  const paths = new Set(pendingFormHostSources.map(row => row.path));
+  if (!map.host_spec_files.some(path => paths.has(path)) && !map.sources.some(row => paths.has(row.path))) {
+    return {map, result};
+  }
+  for (const pending of pendingFormHostSources) {
+    assert.equal(map.host_spec_files.filter(path => path === pending.path).length, 1);
+    const rows = map.sources.filter(row => row.path === pending.path);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].committed_sha256, "0".repeat(64), "These definitions did not exist at the retained baseline.");
+    assert.equal(rows[0].facts.sha256, pending.source);
+    assert.equal(sha(JSON.stringify(rows[0].facts)), pending.facts);
+    assert.equal(result.gaps.filter(row => row.kind === "unreviewed-source-drift" && row.source === pending.path).length, 1);
+  }
+  // Older assertions receive only the exact original census. New definitions
+  // remain explicit gaps and do not change any scenario or execution status.
+  const previous = {...map, sources: map.sources.filter(row => !paths.has(row.path)),
+    host_spec_files: map.host_spec_files.filter(path => !paths.has(path))};
+  assert.equal(sha(JSON.stringify(previous)), currentPublishedFormCensus.digest);
+  return {map: previous, result: {...result,
+    gaps: result.gaps.filter(row => !(row.kind === "unreviewed-source-drift" && paths.has(row.source)))}};
+}
 function currentPublishedFormCensusLegacyView(map, result) {
+  ({map,result}=formHostCensusLegacyView(map,result));
   if (sha(JSON.stringify(map)) !== currentPublishedFormCensus.digest) return {map, result};
   const actual = JSON.parse(historicalSource(currentPublishedFormCensus.commit, censusDocument));
   // The tab inventories remain as previously reviewed. Only the editor
@@ -772,7 +804,7 @@ test("checks the current repository map against original scope and actual source
   const result=validateCensus({mapText:read("docs/operations/comprehensive-ui-automation-current-census.json").toString(),
     ledgerText:read("docs/operations/comprehensive-ui-automation-coverage.json").toString(),
     discoveryText:read("docs/operations/comprehensive-ui-automation-discovery.json").toString(),readSource:read,hostSpecPaths});
-  assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,29);
+  assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,31);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
   const committedHistory=committedCensusLegacyView(map,result);
@@ -1013,7 +1045,7 @@ test("preserves exact historical versions without inheriting their current cover
   const ledger=JSON.parse(read("docs/operations/comprehensive-ui-automation-coverage.json"));
   assert.equal(ledger.current_definition_census.historical_source_archive,"docs/operations/comprehensive-ui-automation-census-source-history.json");
   assert.equal(ledger.full_testing_status,"deferred-by-user");assert(ledger.scenarios.every(s=>s.actual_host_qualification==="pending"));
-  assert.equal(CENSUS_LIMITS.files,192);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
+  assert.equal(CENSUS_LIMITS.files,194);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
 });
 
 test("reintroduced oracle coverage refuses old, missing, duplicate, future or unrelated versions",()=>{
@@ -1490,7 +1522,8 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,16);
+  assert.equal(result.gaps.length,18);
+  assert.equal(formHostCensusLegacyView(map,result).result.gaps.length,16);
   assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(map,result));
   assert.equal(JSON.stringify({map,result}),before);
   const old=currentPublishedFormCensusLegacyView(map,result);

@@ -14,6 +14,10 @@ BROWSER = "published-form-browser-client"
 BROWSER_PAGE = "apps/thin-client/src/pages/SystemBuilderPage.tsx"
 HOST = "published-form-host-composition"
 HOST_REGISTRATION = "published-form-host-registration"
+HOST_DEFINITIONS = "published-form-host-definitions"
+FORM_PUBLICATION_JOURNEY = "dev-tools/scripts/qualification/visual-composer/e2e/form-composer-publication-journey.ts"
+FORM_DESKTOP_PROFILE = "dev-tools/scripts/qualification/visual-composer/e2e/form-composer-desktop-profile.ts"
+SHARED_DESKTOP_CASE = "dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts"
 PRELOAD = "apps/desktop/src/preload/exposedApi.ts"
 FORM_VIEW = "modules/ui/shared/system-builder/SystemFormComposerView.tsx"
 DESKTOP_HOST = "modules/hosts/desktop/composition/composeDesktopHost.ts"
@@ -70,6 +74,16 @@ class PublishedFormFeatureChecksTest(unittest.TestCase):
         self.assertNotIn(HOST, selected)
         self.assertNotIn(HOST_REGISTRATION, chosen([DESKTOP_HOST], ["architecture"]))
         self.assertIn("focused-tests", chosen([DESKTOP_HOST, UNRELATED], [HOST_REGISTRATION]))
+
+    def test_form_host_definition_changes_automatically_select_bounded_discovery(self):
+        paths = [FORM_PUBLICATION_JOURNEY, FORM_DESKTOP_PROFILE]
+        selected = chosen(paths, ["documentation"])
+        self.assertNotIn("focused-tests", selected)
+        self.assertTrue(selected[HOST_DEFINITIONS]["argv"][-1].endswith("form-composer-host-definitions.unit.test.mjs"))
+        self.assertNotIn(HOST_DEFINITIONS, chosen([SHARED_DESKTOP_CASE], ["documentation"]))
+        self.assertIn("focused-tests", chosen([*paths, SHARED_DESKTOP_CASE], ["documentation"]))
+        self.assertIn("focused-tests", chosen([*paths, UNRELATED], ["documentation"]))
+        self.assertIn("focused-tests", chosen(paths, ["documentation", "focused-tests"]))
 
 
 if __name__ == "__main__":

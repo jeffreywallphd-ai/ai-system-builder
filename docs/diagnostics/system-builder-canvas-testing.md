@@ -36,6 +36,38 @@ change the original Canvas interval, its 15,542.8 ms budget, five warmups or thi
 samples. Edit/input-to-two-frame, revisit and inference timing remain separate.
 Local oracle tests qualify only the recording rules. Actual startup, host and
 performance results stay pending until the named packaged test runs.
+
+The Form Composer cases build an equipment intake and a branching questionnaire
+from empty forms, then save and reopen them. Separate cases author both forms
+on the secured record template, publish them, check that a canceled invalid
+form writes no record, and submit each form by keyboard. A valid submission
+must write exactly one record with the four mapped values. Changing the
+questionnaire route must keep the answer from the skipped page out of that
+record. Each host also checks labels, validation announcements, and focus at
+normal width, reflow at 320 CSS pixels, and reflow at actual 400 percent zoom
+with the editor alone and with a Preview validation error visible.
+
+Run the exact definitions separately so that only one host is active:
+
+```powershell
+npm run test:visual-composer -- --project=packaged-desktop packaged-desktop-form-composer.e2e.spec.ts
+npm exec -- playwright test --config dev-tools/config/playwright.managed-reference.config.ts --project=managed-thin-chrome managed-reference-form-composer.e2e.spec.ts
+```
+
+Use the [owned managed qualification database](../operations/managed-reference-qualification.md)
+for the browser case. The cases use separate test profiles or workspaces and
+synthetic answers. They keep screenshots, video and traces off.
+
+The scale fixture uses eight pages and 32 fields. Each host records five
+samples each for a keyboard page change, committed text edit, and validation
+through two rendered frames. Each sample must be at most 1.5 seconds. The
+published intake has the same page and field counts; its single observed
+submission must show confirmation within 15 seconds. The measures include
+automation overhead and exclude startup, publication and model work.
+The reports include source identity, host, counts, timings and fixed result
+facts. The fixed definition check only lists the four cases per host. It
+does not run them or qualify either host.
+
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown
 qualification retains a read-only Win32 process handle acquired while that main

@@ -14999,6 +14999,101 @@
     "modifiers": []
    },
    "committed_sha256": "55681ac62036d60b180316aa424871ab39775c1c358b39e9e2a35e08b12b4538"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-form-composer.e2e.spec.ts",
+   "facts": {
+    "sha256": "bbcc77ce568358bc14963920d8dfb67a7aead41aaf119b2b4d7b51583f1ebc82",
+    "bytes": 6185,
+    "cases": [
+     {
+      "name": "managed browser authors and reopens an intake and a branching form",
+      "line": 26
+     },
+     {
+      "name": "managed browser Form Composer and preview reflow at actual 400 percent zoom",
+      "line": 79
+     }
+    ],
+    "dynamicCases": 1,
+    "functions": [
+     {
+      "name": "openManagedFormWorkspace",
+      "line": 10
+     }
+    ],
+    "assertionCount": 10,
+    "assertionDigest": "f523ae41e605211ce1ac4ec24120591d03604d60880ff661956bbd6957ac2b89",
+    "assertionExamples": [
+     {
+      "line": 19,
+      "kind": "expect",
+      "sha256": "93b374894119fb45670d7b310de96ac51f1435518247724fdfa273383af0af22"
+     },
+     {
+      "line": 22,
+      "kind": "expect",
+      "sha256": "6b3756ba58dea08504762dda4e01be114d001b219546be8912180980b86d6094"
+     },
+     {
+      "line": 34,
+      "kind": "expect",
+      "sha256": "9011aca0caf828c2305df10bb30374e7f4753fcdf29aa1cf84b3dd3a6553377d"
+     },
+     {
+      "line": 36,
+      "kind": "expect",
+      "sha256": "6b3756ba58dea08504762dda4e01be114d001b219546be8912180980b86d6094"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-form-composer.e2e.spec.ts",
+   "facts": {
+    "sha256": "1653f05fe5047e6a8d8c49d1249e01e898ed3e5f1944a77e7a2ebb60d4a3643e",
+    "bytes": 6875,
+    "cases": [
+     {
+      "name": "packaged Desktop authors and reopens an intake and a branching form",
+      "line": 13
+     },
+     {
+      "name": "packaged Desktop Form Composer and preview reflow at actual 400 percent zoom",
+      "line": 84
+     }
+    ],
+    "dynamicCases": 1,
+    "functions": [],
+    "assertionCount": 13,
+    "assertionDigest": "519c2668ae883672fdce926b86c2387fc5896db34d81f6198013aa13a3b97a93",
+    "assertionExamples": [
+     {
+      "line": 22,
+      "kind": "expect",
+      "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+     },
+     {
+      "line": 29,
+      "kind": "expect",
+      "sha256": "9011aca0caf828c2305df10bb30374e7f4753fcdf29aa1cf84b3dd3a6553377d"
+     },
+     {
+      "line": 33,
+      "kind": "expect",
+      "sha256": "b414a8ec75c71fd71b7d955b741332ac2c64904654913534f94160c2cb81876d"
+     },
+     {
+      "line": 34,
+      "kind": "expect",
+      "sha256": "aa034201bfd4639d3243f5faf772c906e16c8a0dadcd22f7003f16afc46b6c99"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
   }
  ],
  "scenarios": [
@@ -17370,6 +17465,7 @@
  "host_spec_files": [
   "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-asset-experience.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-browse.e2e.spec.ts",
+  "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-form-composer.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-owned-failure.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-performance.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-tasks.e2e.spec.ts",
@@ -17377,6 +17473,7 @@
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-cold-canvas.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
+  "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-form-composer.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
