@@ -12608,6 +12608,102 @@
       "limitations": [
         "This check used sample Assets data on one computer. The Assets security review and final system tests are still open."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-maps-to-a-canvas-page",
+      "work_id": "create-form-composer-page-placements",
+      "work_criteria": [
+        "form-page-placement-and-roundtrip",
+        "form-creation-keeps-draft-on-failure"
+      ],
+      "receipt_digest": "1a2d86352e00ff85524b8074327848d9ad05b020036009a8210a20f414b0b61f",
+      "review_digest": "7644f05376a8b6a8d82a827758ef45d6bd0d1a65d76720dba7ca0b78b50cb993",
+      "scope": "The draft places each new form on its own Foundation page and reads pages in saved placement order.",
+      "limitations": [
+        "Focused placement tests only. Published forms and physical host journeys remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "shared-form-and-canvas-draft",
+      "work_id": "add-shared-draft-form-authoring-view",
+      "work_criteria": [
+        "form-view-uses-shared-draft",
+        "form-view-preserves-asset-identity"
+      ],
+      "receipt_digest": "d0247e705e6c06034296d721c07b87d1ab5c3021598e04503d9f34ab7d8b9a61",
+      "review_digest": "0a1a6abfc8458f82ab952a4f07bbd1ee9c16f203106b4152de7b560695c0b0cc",
+      "scope": "The shared Workspace interactions created two forms, used the existing Canvas, and reopened the same draft with undo and redo.",
+      "limitations": [
+        "These were local component interactions. The Desktop and managed browser journeys remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-validation-and-answer-routing",
+      "work_id": "validate-asset-backed-form-routes",
+      "work_criteria": [
+        "bounded-form-answer-evaluation",
+        "form-route-build-validation"
+      ],
+      "receipt_digest": "1805f1ec577ea2bd863693b7d011bcb41d8bc52300b1489543fb53b01a0792ee",
+      "review_digest": "cff4c90019dcc52a1635336948803d1ded564b10d3bcd9892d8e1f5c6e250bd6",
+      "scope": "The rule evaluator checked both routes, rejected invalid topology and inputs, and excluded skipped answers.",
+      "limitations": [
+        "This proves the application evaluator and revision checks. It does not prove published execution on either host."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-preview-and-runtime-parity",
+      "work_id": "author-and-preview-form-routes-with-feedback",
+      "work_criteria": [
+        "author-configures-typed-routes-and-validation",
+        "form-preview-validates-without-effects"
+      ],
+      "receipt_digest": "994286b68ab12b9bc9c55776a82fa4f0fb91de4ec25503204a5a07506a0e8e32",
+      "review_digest": "38c6020cff43c56fe5f87d5359762c8feb75a1b45f89c26f240ad38ea7e83aec",
+      "scope": "Preview uses the shared evaluator and makes no save or action calls. Its focused UI tests covered changed routes, invalid answers and keyboard focus.",
+      "limitations": [
+        "This proves preview behavior. Compare it to published execution after the host wiring is ready."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-submission-triggers",
+      "work_id": "bind-form-submissions-to-approved-record-actions",
+      "work_criteria": [
+        "exact-form-create-record-binding",
+        "form-action-rejects-invalid-field-mappings"
+      ],
+      "receipt_digest": "896cb9d35f99f726e7f0f96fb84008711804210f7375958051af5210c0ad20bc",
+      "review_digest": "b68ff9b5b31808637a4e3ee97a83b9a036ec2e5d1e407480dcf9ab3fd1aa6b47",
+      "scope": "A typed binding connects the form to the existing Create Record action and limits the action to mapped fields.",
+      "limitations": [
+        "The binding alone cannot execute. The published action, retry behavior and host tests remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "security-form-submission-and-action-authority",
+      "work_id": "verify-published-form-action-authority",
+      "work_criteria": [
+        "form-action-stamped-by-build",
+        "form-action-release-denies-stale-or-untrusted"
+      ],
+      "receipt_digest": "a963c5824827b9597cea2af7c1787ac1b82fa79dda9dfdc9679b71bdee00c00d",
+      "review_digest": "556568ffec735165f6f7686efb53db2d290b1069227652ea5fc6a18ee2a86369",
+      "scope": "The build pins the trusted form action. The resolver rejects unstamped, stale, untrusted, archived, or revoked releases.",
+      "limitations": [
+        "This proves the approved release check only. Live actor authorization, action dispatch and host tests remain pending."
+      ]
     }
   ]
 }

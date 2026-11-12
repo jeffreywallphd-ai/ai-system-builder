@@ -680,6 +680,33 @@
         "Four registered checks passed, and independent review accepted receipt d0247e705e6c06034296d721c07b87d1ab5c3021598e04503d9f34ab7d8b9a61 for commit f966e729288753e971cdacf269743e0b28b3edbe."
       ],
       "title": "Add the Form authoring view"
+    },
+    {
+      "areas": [
+        "Form Composer rule editing",
+        "Shared form evaluator and revision validation",
+        "Inert Form preview"
+      ],
+      "chunkId": "form-rules-and-preview",
+      "completedAt": "2026-11-12T17:18:23Z",
+      "criteriaIds": [
+        "form-validation-and-answer-routing",
+        "form-preview-and-runtime-parity",
+        "security-form-submission-and-action-authority"
+      ],
+      "documentation": [
+        "System Builder architecture"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-backed-form-composer-form-rules-and-preview",
+      "incrementId": "asset-backed-form-composer",
+      "summary": "Authors can configure field limits, choice options, and answer routes. The preview checks required and invalid answers and keeps only the fields on the final route. It neither saves answers nor runs actions.",
+      "tests": [
+        "Eight focused rule and revision checks covered branches, bounds, denied routes, and warning caps.",
+        "Twelve Workspace interactions covered shared history, two forms, choice and numeric settings, and accessible preview recovery.",
+        "Separate review accepted candidate 2d33186bd70d9592343fae9e1b901b6444f1e806 and receipt 994286b68ab12b9bc9c55776a82fa4f0fb91de4ec25503204a5a07506a0e8e32."
+      ],
+      "title": "Check answers and preview routes"
     }
   ],
   "completion": null,
@@ -2045,6 +2072,12 @@
       "recordedAt": "2026-11-12T16:49:22Z",
       "sequence": 120,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "edd8101b60f52bde194ec8334a0bbe35806568d9730d6b917482c875a6624755",
+      "recordedAt": "2026-11-12T17:18:23Z",
+      "sequence": 121,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -3335,7 +3368,8 @@
       "completedAt": null,
       "completedChunks": [
         "form-page-placements",
-        "form-authoring-view"
+        "form-authoring-view",
+        "form-rules-and-preview"
       ],
       "deliverables": [
         "A Form view with a switch in Systems Compose above the editors. The Form view provides a page outline, field settings, validation, routing, actions, and preview.",
@@ -3647,5 +3681,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-12T16:49:22Z"
+  "updatedAt": "2026-11-12T17:18:23Z"
 }
