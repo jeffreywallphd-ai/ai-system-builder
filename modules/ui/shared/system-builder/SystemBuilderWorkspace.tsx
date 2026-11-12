@@ -37,6 +37,7 @@ import {
   createSystemFormRouteBinding,
   createSystemFormActionBinding,
   SYSTEM_FORM_ACTION_METADATA_KEY,
+  readSystemFormAction,
   readSystemFormRoute,
   type SystemFormAction,
   type SystemFormRoute,
@@ -87,6 +88,7 @@ import {
   redoSystemComposerDraft,
   removeSystemComposerSubtree,
   reparentSystemComposerAsset,
+  systemComposerDescendantIds,
   undoSystemComposerDraft,
   type SystemComposerDraft,
 } from "./systemComposerDraft";
@@ -1216,6 +1218,36 @@ export function SystemBuilderWorkspace({
     setSelectedInstanceId(parentId ? String(parentId) : undefined);
   }
 
+  function removeFormElement(instanceId: string): boolean {
+    if (!activeForm || operation.current) return false;
+    const role = formDraftMembership(instanceId);
+    if (!role || (role === "step" && activeForm.steps[0]?.instanceId === instanceId)) return false;
+    const result = removeSystemComposerSubtree(draft, instanceId, protectedInstanceIds);
+    if (!result.ok) {
+      setError(result.message);
+      return false;
+    }
+    const removed = systemComposerDescendantIds(draft.placements, instanceId);
+    removed.add(instanceId);
+    const formId = activeForm.form.instanceId;
+    const stepIds = new Set<string>(activeForm.steps.map((step) => String(step.instanceId)));
+    const bindings = result.value.bindings.flatMap((binding) => {
+      const route = readSystemFormRoute(binding);
+      if (route?.when && stepIds.has(route.fromStepId) && removed.has(route.when.fieldId)) return [];
+      const action = readSystemFormAction(binding);
+      if (!action || action.formId !== formId) return [binding];
+      const mappings = action.mappings.filter(({ fieldId }) => !removed.has(fieldId));
+      if (mappings.length === action.mappings.length) return [binding];
+      if (!mappings.length) return [];
+      const updated = createSystemFormActionBinding(String(binding.bindingId), { ...action, mappings });
+      return [{ ...binding, metadata: { ...binding.metadata, ...updated.metadata } }];
+    });
+    commitDraft({ ...result.value, bindings });
+    const parent = draft.placements.find((edge) => edge.childInstanceRef.id === instanceId)?.parentInstanceRef.id;
+    setSelectedInstanceId(parent ? String(parent) : String(formId));
+    return true;
+  }
+
   function placeAsset(instanceId: string, target: SystemComposerTargetSlot) {
     const hasPlacement = draft.placements.some(
       (placement) => String(placement.childInstanceRef.id) === instanceId,
@@ -1922,6 +1954,7 @@ export function SystemBuilderWorkspace({
                     onAddStep={(id, name) => addFormElement(id, FORM_COMPOSER_FOUNDATION_ASSET_IDS.step, name)}
                     onAddField={addFormElement}
                     onMove={moveFormElement}
+                    onRemoveElement={removeFormElement}
                     onUpdate={updateFormElement}
                     onSaveRoute={setFormRoute}
                     onRemoveRoute={removeFormRoute}

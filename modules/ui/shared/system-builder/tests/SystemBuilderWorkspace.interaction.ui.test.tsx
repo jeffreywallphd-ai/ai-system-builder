@@ -240,7 +240,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
     const catalog = [
       rootDefinition, shell, page, form, group, textField, resourceBrowser,
       { ...composerDefinition("builtin.form.submit-action", "Submit button", [], false, "3.0.0"),
-        configurationSchema: { fields: [{ fieldId: "label", valueKind: "string", label: "Button label", required: false }] } as SystemBuilderComposerAsset["configurationSchema"] },
+        configurationSchema: { fields: [
+          { fieldId: "label", valueKind: "string", label: "Button label", required: false, defaultValue: "Submit" },
+          { fieldId: "confirmationRequired", valueKind: "boolean", label: "Confirmation required", required: false, defaultValue: false },
+        ] } as SystemBuilderComposerAsset["configurationSchema"] },
       { ...composerDefinition("builtin.form.validation-message", "Validation message", [], false, "3.0.0"),
         configurationSchema: { fields: [{ fieldId: "message", valueKind: "string", label: "Message", required: false }] } as SystemBuilderComposerAsset["configurationSchema"] },
       composerDefinition("builtin.form.radio-group", "Radio buttons", [], false, "3.0.0"),
@@ -361,6 +364,14 @@ describe("SystemBuilderWorkspace UI preview", () => {
       .find((item) => item.textContent === name);
     const choosePage = (name: string) => act(async () => tab(name)!.click());
     const chooseElement = (name: string) => choose("Element", name);
+    const properties = () => container!.querySelector('aside[aria-label="Properties"]')!;
+    const visibleElement = () => container!.querySelector('section[aria-label="Element appearance"]')!;
+    const removalDialog = () => document.querySelector('[role="dialog"]')!;
+    const removeField = (name: string) => act(async () => {
+      const trigger = [...container!.querySelectorAll<HTMLButtonElement>('button[aria-label^="Remove field:"]')]
+        .find((item) => item.getAttribute("aria-label") === `Remove field: ${name}`)!;
+      trigger.focus(); trigger.click();
+    });
     const editButton = (name: string) => container!.querySelector<HTMLButtonElement>(`[aria-label="Edit Form: ${name}"]`)!;
     const expandStates = () => act(async () => container!.querySelector<HTMLButtonElement>('button[aria-expanded="false"][aria-controls$="-states-content"]')?.click());
     const editForm = async (name: string) => {
@@ -376,9 +387,11 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(document.activeElement).toBe(button(container!, "Back to Canvas"));
     expect(container!.querySelector("h4")?.textContent).toBe("Intake");
     expect(container!.textContent).toContain("Canvas page Main page");
+    expect([...container!.querySelectorAll("button")].some((item) => item.textContent === "Remove form page")).toBe(false);
     await chooseElement("Validation message");
-    const messageInput = container!.querySelector<HTMLInputElement>('aside[aria-label="Properties"] input[id="message"]')!;
+    const messageInput = visibleElement().querySelector<HTMLInputElement>('input[id="message"]')!;
     expect(messageInput.value).toBe("Check your answers");
+    expect(properties().querySelector('input[id="message"]')).toBeNull();
     await act(async () => setInputValue(messageInput, "Check the request details"));
     await click("New Form Page +");
     const addedTab = tab("Page 2")!;
@@ -398,7 +411,8 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(tab("Page 2")?.getAttribute("aria-selected")).toBe("true");
     await act(async () => {
       const title = find<HTMLInputElement>("Form page name", "input");
-      expect(title.closest('aside[aria-label="Properties"]')).not.toBeNull();
+      expect(title.closest('[role="tabpanel"]')).not.toBeNull();
+      expect(properties().contains(title)).toBe(false);
       title.focus(); title.value = "Details"; title.blur();
     });
     expect(tab("Details")?.getAttribute("aria-selected")).toBe("true");
@@ -427,7 +441,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await choosePage("Details");
     await click("Request reason");
     expect(button(container!, "Request reason").getAttribute("aria-pressed")).toBe("true");
-    expect(find<HTMLInputElement>("Field label", "input").closest('aside[aria-label="Properties"]')).not.toBeNull();
+    expect(visibleElement().contains(find<HTMLInputElement>("Field label", "input"))).toBe(true);
+    expect(properties().contains(find<HTMLInputElement>("Required answer", "input"))).toBe(true);
+    expect(visibleElement().querySelector('input[type="checkbox"]')).toBeNull();
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
     await click("Undo");
     expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(false);
@@ -449,6 +465,20 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await choose("Go to form page", "Finish form");
     await click("Add route rule");
     expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    expect(properties().querySelector('[aria-label="Routes after this page"]')).not.toBeNull();
+    await removeField("Fast path");
+    expect(removalDialog().textContent).toContain("Remove Fast path from the form?");
+    expect(document.activeElement).toBe(button(removalDialog(), "Cancel"));
+    await act(async () => button(removalDialog(), "Cancel").click());
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    await removeField("Fast path");
+    await act(async () => button(removalDialog(), "Remove field").click());
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).toBeNull();
+    expect(document.activeElement).toBe(tab("First step"));
+    expect(container!.textContent).not.toContain("When Fast path is selected");
+    await click("Undo");
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
     await act(async () => [...container!.querySelectorAll("summary")].find((item) => item.textContent === "After submission")!.click());
     expect([...find<HTMLSelectElement>("Record action", "select").options].map((item) => item.text))
       .toEqual(["Choose an action", "Create Request (Request)"]);
@@ -459,6 +489,20 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await choose("Destination record field", "Reason");
     await click("Add mapping");
     await click("Set submission action");
+    expect(properties().textContent).toContain("Request reason → Reason");
+    await choosePage("Details");
+    await act(async () => {
+      const trigger = button(container!, "Remove form page"); trigger.focus(); trigger.click();
+    });
+    expect(removalDialog().textContent).toContain("All child fields and controls will also be removed (1 total).");
+    await act(async () => button(removalDialog(), "Remove form page").click());
+    expect(tab("Details")).toBeUndefined();
+    expect(tab("First step")?.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(tab("First step"));
+    expect(container!.textContent).not.toContain("Request reason → Reason");
+    await click("Undo");
+    expect(tab("Details")).not.toBeUndefined();
+    expect(properties().textContent).toContain("Request reason → Reason");
     const previewButton = button(container!, "Preview form");
     await act(async () => { previewButton.focus(); previewButton.click(); });
     const preview = document.querySelector('[role="dialog"]')!;
@@ -484,14 +528,33 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect([...find<HTMLSelectElement>("Element", "select").options].map((option) => option.text.trim()))
       .toEqual(["Questionnaire", "First step", "Submit button"]);
     await chooseElement("Submit button");
-    const controlLabel = container!.querySelector<HTMLInputElement>('aside[aria-label="Properties"] input[id="label"]')!;
+    const controlLabel = visibleElement().querySelector<HTMLInputElement>('input[id="label"]')!;
     expect(controlLabel.value).toBe("Send");
     await act(async () => setInputValue(controlLabel, "Send questionnaire"));
+    const confirmation = () => properties().querySelector<HTMLInputElement>('input[id="confirmationRequired"]')!;
+    expect(visibleElement().querySelector('input[id="confirmationRequired"]')).toBeNull();
+    await act(async () => confirmation().click());
+    await click("Reset appearance defaults");
+    expect(visibleElement().querySelector<HTMLInputElement>('input[id="label"]')?.value).toBe("Submit");
+    expect(confirmation().checked).toBe(true);
+    await act(async () => setInputValue(visibleElement().querySelector<HTMLInputElement>('input[id="label"]')!, "Send questionnaire"));
+    await click("Reset behavior defaults");
+    expect(visibleElement().querySelector<HTMLInputElement>('input[id="label"]')?.value).toBe("Send questionnaire");
+    expect(confirmation().checked).toBe(false);
     await choose("Field type", "Choice");
     await click("Add field");
     await fill("New option label", "Hardware");
-    await fill("Submitted value (optional)", "hardware");
     await click("Add option");
+    await act(async () => {
+      const value = find<HTMLInputElement>("Submitted value for Hardware", "input");
+      expect(properties().contains(value)).toBe(true);
+      expect(visibleElement().contains(find<HTMLInputElement>("Choice label 1", "input"))).toBe(true);
+      value.focus(); value.value = "hardware"; value.blur();
+    });
+    await fill("New option label", "hardware");
+    await click("Add option");
+    expect(find<HTMLInputElement>("Submitted value for hardware", "input").value).toBe("hardware-2");
+    await act(async () => visibleElement().querySelector<HTMLButtonElement>('[aria-label="Remove choice 2"]')!.click());
     await fill("New option label", "Software");
     await click("Add option");
     await choose("Field type", "Number");
@@ -538,7 +601,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(latest.instances.find((item) => item.displayName === "Number Field")?.selectedConfiguration)
       .toEqual({ label: "Number Field", minimum: 1, maximum: 10 });
     expect(latest.instances.find((item) => item.instanceId === submit.instanceId)?.selectedConfiguration)
-      .toEqual({ label: "Send questionnaire" });
+      .toEqual({ label: "Send questionnaire", confirmationRequired: false });
     expect(latest.instances.find((item) => item.instanceId === message.instanceId)?.selectedConfiguration)
       .toEqual({ message: "Check the request details" });
     expect(latest.instances.find((item) => item.displayName === "Choice")?.selectedConfiguration?.staticOptions)
@@ -571,6 +634,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await click("Move form page up");
     expect([...container.querySelectorAll('[role="tablist"][aria-label="Form pages"] [role="tab"]')].map((item) => item.textContent))
       .toEqual(["Details", "First step"]);
+    expect([...container.querySelectorAll("button")].some((item) => item.textContent === "Remove form page")).toBe(false);
     await click("Save and validate revision");
     await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(2));
     expect(latest.placements!.find((edge) => edge.childInstanceRef.id === canvasField.instanceId)?.order).toBe(1);

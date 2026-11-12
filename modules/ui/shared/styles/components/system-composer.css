@@ -1313,7 +1313,14 @@
   list-style: none;
 }
 
-.system-form-composer__fields button {
+.system-form-composer__fields li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.system-form-composer__fields button[aria-pressed] {
   inline-size: 100%;
   justify-content: flex-start;
   white-space: normal;

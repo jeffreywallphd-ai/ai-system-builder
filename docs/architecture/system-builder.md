@@ -195,10 +195,13 @@ customization, and single-asset Studio workflows.
   the same workspace-visible asset definitions, draft, undo and redo history,
   and revision save path. Canvas renders the same placements in either case.
   Each form page has its own tab. **New Form Page +** adds a numbered page
-  and opens its tab. Select a field on the page, or choose a form, page,
-  button, or message from **Element** in the **Properties** sidebar. The
-  sidebar moves below the editor when space is limited. Tab navigation and
-  properties changes use the same draft, undo, and save paths.
+  and opens its tab. Select a field or use **Element** to edit labels, help
+  text, and other visible settings in the page. Use the **Properties**
+  sidebar for answer rules, routes, and submission behavior. The sidebar
+  moves below the editor when space is limited. The first page cannot be
+  removed in Form Composer. Removing another page or a field requires
+  confirmation and removes its children and affected route or action
+  references in one undoable draft edit.
   Existing fields outside a form page stay editable in a separate section.
   A form page is the group of fields respondents see together. Internally it
   remains a Foundation field group; its asset ID and route bindings are unchanged.

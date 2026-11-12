@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { AssetConfigurationValues, AssetInstance } from "../../../contracts/asset";
 import { readSystemFormAction, systemFormPlacementAllowed, type SystemBuilderComposerAsset,
   type SystemBuilderResult, type SystemFormAction, type SystemFormRoute } from "../../../contracts/system-builder";
@@ -7,9 +7,11 @@ import { SystemFormPreview } from "./SystemFormPreview";
 import { SystemFormActionEditor } from "./SystemFormActionEditor";
 import { isFormChoiceAsset, readFormChoiceOptions, SystemFormRoutingEditor } from "./SystemFormRoutingEditor";
 import { TabbedPanel } from "../components/TabbedPanel";
-import { SystemComposerInspector } from "./SystemComposerInspector";
-import type { SystemComposerDraft } from "./systemComposerDraft";
-import { FORM_COMPOSER_FOUNDATION_VERSION, type SystemFormDraftEntry } from "./systemFormComposerDraft";
+import { ModalDialog } from "../components/ModalDialog";
+import { SystemComposerConfigurationField } from "./SystemComposerInspector";
+import { materializeSystemComposerConfiguration, validateSystemComposerConfiguration } from "./systemComposerInspectorModel";
+import { systemComposerDescendantIds, type SystemComposerDraft } from "./systemComposerDraft";
+import { FORM_COMPOSER_FOUNDATION_ASSET_IDS, FORM_COMPOSER_FOUNDATION_VERSION, type SystemFormDraftEntry } from "./systemFormComposerDraft";
 
 export const FORM_COMPOSER_FIELDS = [
   ["builtin.form.text-field", "Short text"],
@@ -61,6 +63,7 @@ interface SystemFormComposerViewProps {
   readonly onAddStep: (formId: string, name: string) => Promise<string | undefined>;
   readonly onAddField: (stepId: string, definitionId: FormComposerFieldId) => Promise<string | undefined>;
   readonly onMove: (instanceId: string, direction: -1 | 1) => void;
+  readonly onRemoveElement: (instanceId: string) => boolean;
   readonly onUpdate: (instanceId: string, values: AssetConfigurationValues) => void;
   readonly onSaveRoute: (formId: string, route: SystemFormRoute) => void;
   readonly onRemoveRoute: (formId: string, bindingId: string) => void;
@@ -71,7 +74,7 @@ interface SystemFormComposerViewProps {
 
 export function SystemFormComposerView({
   draft, form, ready, readDefinition, onUpdatePresentation, canUndo, canRedo, onBackToCanvas, onAddStep, onAddField, onMove,
-  onUpdate, onSaveRoute, onRemoveRoute, onUpdateAction, onUndo, onRedo,
+  onRemoveElement, onUpdate, onSaveRoute, onRemoveRoute, onUpdateAction, onUndo, onRedo,
 }: SystemFormComposerViewProps) {
   const backButton = useRef<HTMLButtonElement>(null);
   const pageEditor = useRef<HTMLDivElement>(null);
@@ -80,6 +83,8 @@ export function SystemFormComposerView({
   const [selectedPageId, setSelectedPageId] = useState("");
   const [selectedElementId, setSelectedElementId] = useState("");
   const [focusPageId, setFocusPageId] = useState<string>();
+  const [removalId, setRemovalId] = useState<string>();
+  const removalDescriptionId = useId();
   const [fieldType, setFieldType] = useState<FormComposerFieldId>(FORM_COMPOSER_FIELDS[0][0]);
   const [preview, setPreview] = useState<CompiledSystemForm>();
   const [previewError, setPreviewError] = useState<{ readonly draft: SystemComposerDraft; readonly formId: string; readonly message: string }>();
@@ -90,18 +95,25 @@ export function SystemFormComposerView({
   const fields = useMemo(() => page ? readFormStepFields(draft, String(page.instanceId)) : [], [draft, page]);
   const presentation = useMemo(() => readFormPresentationElements(draft, form), [draft, form]);
   const controls = useMemo(() => {
-    const currentControlIds = new Set<string>(draft.placements.filter((edge) =>
+    const ids = new Set<string>(draft.placements.filter((edge) =>
       (edge.slotId === "actions" || edge.slotId === "messages") &&
       (edge.parentInstanceRef.id === formId || edge.parentInstanceRef.id === page?.instanceId))
       .map((edge) => edge.childInstanceRef.id));
-    return presentation.filter((item) => currentControlIds.has(item.instanceId));
+    return presentation.filter((item) => ids.has(item.instanceId));
   }, [draft.placements, formId, page?.instanceId, presentation]);
   const elements = [form.form, ...(page ? [page] : []), ...fields, ...directFields, ...controls];
   const selected = elements.find((item) => item.instanceId === selectedElementId) ?? page ?? directFields[0] ?? form.form;
   const fieldGroup = fields.some((item) => item.instanceId === selected.instanceId) ? fields : directFields;
   const selectedField = fieldGroup.find((item) => item.instanceId === selected.instanceId);
+  const propertySource = useFormAssetDefinition(selectedField ? undefined : selected, readDefinition);
   const action = draft.bindings.map(readSystemFormAction).find((entry) => entry?.formId === formId);
   const actionFields = useMemo(() => form.steps.flatMap((item) => readFormStepFields(draft, String(item.instanceId))), [draft, form.steps]);
+  const canRemovePage = Boolean(page && page !== form.steps[0]);
+  const removalPage = canRemovePage && page?.instanceId === removalId ? page : undefined;
+  const removalField = removalId ? [...fields, ...directFields].find((item) => item.instanceId === removalId) : undefined;
+  const removal = removalPage ?? removalField;
+  const removalKind = removalPage ? "form page" : "field";
+  const removedChildren = removal ? systemComposerDescendantIds(draft.placements, String(removal.instanceId)).size : 0;
 
   useEffect(() => {
     if (ready && !entered.current && backButton.current) {
@@ -111,15 +123,16 @@ export function SystemFormComposerView({
   }, [ready]);
 
   useLayoutEffect(() => {
-    if (currentPageId && focusPageId === currentPageId) {
-      pageEditor.current?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')?.focus();
-      setFocusPageId(undefined);
-    }
-  }, [currentPageId, focusPageId]);
+    if (!focusPageId || focusPageId !== (currentPageId ?? formId)) return;
+    pageEditor.current?.querySelector<HTMLButtonElement>(currentPageId
+      ? '[role="tab"][aria-selected="true"]' : 'button.system-form-composer__new-page')?.focus();
+    setFocusPageId(undefined);
+  }, [currentPageId, focusPageId, formId]);
 
   function selectPage(id: string) {
     setSelectedPageId(id);
     setSelectedElementId("");
+    setRemovalId(undefined);
   }
 
   async function addPage() {
@@ -150,6 +163,22 @@ export function SystemFormComposerView({
     }
   }
 
+  function confirmRemoval() {
+    if (!removal || !onRemoveElement(String(removal.instanceId))) return;
+    setRemovalId(undefined);
+    if (removalPage) {
+      const index = form.steps.indexOf(removalPage);
+      const next = form.steps[index + 1] ?? form.steps[index - 1];
+      if (next) {
+        selectPage(String(next.instanceId));
+        setFocusPageId(String(next.instanceId));
+      }
+    } else {
+      if (selectedElementId === removal.instanceId) setSelectedElementId("");
+      setFocusPageId(currentPageId ?? formId);
+    }
+  }
+
   function openPreview() {
     const result = compileSystemForm(draft, formId);
     if (result.ok) { setPreview(result.value); setPreviewError(undefined); }
@@ -168,13 +197,76 @@ export function SystemFormComposerView({
             aria-pressed={selected.instanceId === item.instanceId} onClick={() => setSelectedElementId(String(item.instanceId))}>
             {item.displayName ?? "Untitled field"}
           </button>
+          <button className="ui-button ui-button--outline system-form-composer__remove-field" type="button"
+            aria-label={`Remove field: ${item.displayName ?? "Untitled field"}`}
+            onClick={() => setRemovalId(String(item.instanceId))}>Remove</button>
         </li>
       ))}
     </ul>
   );
 
-  const pageContent = (
+  const appearance = (
+    <section className="ui-stack ui-stack--sm" aria-label="Element appearance">
+      <h5>Element appearance</h5>
+      <label className="ui-stack ui-stack--sm">
+        Element
+        <select value={selected.instanceId} onChange={(event) => setSelectedElementId(event.currentTarget.value)}>
+          <optgroup label="Form"><option value={formId}>{form.form.displayName ?? "Form"}</option></optgroup>
+          {page ? <optgroup label="Page"><option value={page.instanceId}>{page.displayName ?? "Untitled page"}</option></optgroup> : null}
+          {fields.length ? <optgroup label="Fields">{fields.map((item) => <option key={item.instanceId} value={item.instanceId}>
+            {item.displayName ?? "Untitled field"}
+          </option>)}</optgroup> : null}
+          {directFields.length ? <optgroup label="Fields outside form pages">{directFields.map((item) => <option key={item.instanceId} value={item.instanceId}>
+            {item.displayName ?? "Untitled field"}
+          </option>)}</optgroup> : null}
+          {controls.length ? <optgroup label="Buttons and messages">{controls.map((item) => <option key={item.instanceId} value={item.instanceId}>
+            {item.displayName ?? item.definitionRef.id}
+          </option>)}</optgroup> : null}
+        </select>
+      </label>
+      {selectedField ? (
+        <>
+          <FieldAppearance key={selectedField.instanceId} field={selectedField} onUpdate={onUpdate} />
+          <div className="ui-workflow__actions">
+            <button className="ui-button ui-button--outline" type="button"
+              disabled={fieldGroup[0] === selectedField} onClick={() => onMove(String(selectedField.instanceId), -1)}>Move field up</button>
+            <button className="ui-button ui-button--outline" type="button"
+              disabled={fieldGroup[fieldGroup.length - 1] === selectedField} onClick={() => onMove(String(selectedField.instanceId), 1)}>Move field down</button>
+          </div>
+        </>
+      ) : propertySource.definition ? (
+        <FormAssetControls key={selected.instanceId} part="appearance" element={selected}
+          definition={propertySource.definition} onUpdate={onUpdatePresentation} />
+      ) : propertySource.failed ? (
+        <div className="ui-stack ui-stack--xs">
+          <p role="status">Properties are unavailable for this form asset.</p>
+          <button type="button" className="ui-button ui-button--outline" onClick={propertySource.retry}>Retry properties</button>
+        </div>
+      ) : <p role="status">Loading form properties…</p>}
+    </section>
+  );
+
+  const pageContent = page ? (
     <div className="ui-stack ui-stack--md">
+      <section className="ui-stack ui-stack--sm" aria-label="Form page setup">
+        <label className="ui-stack ui-stack--sm" key={page.instanceId}>
+          Form page name
+          <input key={page.displayName} maxLength={200} defaultValue={page.displayName}
+            onBlur={(event) => {
+              const title = event.currentTarget.value.trim();
+              if (title && title !== page.displayName) onUpdate(String(page.instanceId), { title });
+              else event.currentTarget.value = page.displayName ?? "";
+            }} />
+        </label>
+        <div className="ui-workflow__actions">
+          <button className="ui-button ui-button--outline" type="button"
+            disabled={form.steps[0] === page} onClick={() => onMove(String(page.instanceId), -1)}>Move form page up</button>
+          <button className="ui-button ui-button--outline" type="button"
+            disabled={form.steps[form.steps.length - 1] === page} onClick={() => onMove(String(page.instanceId), 1)}>Move form page down</button>
+          {canRemovePage ? <button className="ui-button ui-button--outline" type="button"
+            onClick={() => setRemovalId(String(page.instanceId))}>Remove form page</button> : null}
+        </div>
+      </section>
       <section className="ui-stack ui-stack--sm" aria-label="Fields on this page">
         <div className="ui-workflow__actions">
           <label>Field type <select value={fieldType} onChange={(event) => setFieldType(event.currentTarget.value as FormComposerFieldId)}>
@@ -184,11 +276,9 @@ export function SystemFormComposerView({
         </div>
         {fields.length ? fieldList(fields, "Form fields") : <p className="ui-text-muted">No fields yet.</p>}
       </section>
-      {page ? <SystemFormRoutingEditor key={page.instanceId} form={form.form} steps={form.steps} step={page}
-        fields={fields} bindings={draft.bindings} onSave={(route) => onSaveRoute(formId, route)}
-        onRemove={(id) => onRemoveRoute(formId, id)} /> : null}
+      {appearance}
     </div>
-  );
+  ) : null;
   const pages = form.steps.map((item) => ({ id: String(item.instanceId), label: item.displayName ?? "Untitled page",
     keepMounted: true, content: item.instanceId === currentPageId ? pageContent : null }));
 
@@ -216,6 +306,7 @@ export function SystemFormComposerView({
             <section className="ui-panel ui-stack ui-stack--sm" aria-label="Form pages">
               <div className="ui-workflow__actions">{addPageAction}</div>
               <p>Add a form page to start adding fields.</p>
+              {appearance}
             </section>
           )}
           {directFields.length ? <section className="ui-panel ui-stack ui-stack--sm" aria-label="Fields outside form pages">
@@ -223,196 +314,220 @@ export function SystemFormComposerView({
             <p>In Canvas, move these fields to a form page before you preview the form or set a submission action.</p>
             {fieldList(directFields, "Fields to move")}
           </section> : null}
-          <SystemFormActionEditor key={formId} formId={formId} fields={actionFields} instances={draft.instances} action={action}
-            onSave={(next) => onUpdateAction(formId, next)} onRemove={() => onUpdateAction(formId)} />
         </div>
         <aside className="system-form-composer__properties ui-panel ui-stack ui-stack--sm" aria-label="Properties">
           <h5>Properties</h5>
-          <label className="ui-stack ui-stack--sm">
-            Element
-            <select value={selected.instanceId} onChange={(event) => setSelectedElementId(event.currentTarget.value)}>
-              <optgroup label="Form"><option value={formId}>{form.form.displayName ?? "Form"}</option></optgroup>
-              {page ? <optgroup label="Page"><option value={page.instanceId}>{page.displayName ?? "Untitled page"}</option></optgroup> : null}
-              {fields.length ? <optgroup label="Fields">{fields.map((item) => <option key={item.instanceId} value={item.instanceId}>
-                {item.displayName ?? "Untitled field"}
-              </option>)}</optgroup> : null}
-              {directFields.length ? <optgroup label="Fields outside form pages">{directFields.map((item) => <option key={item.instanceId} value={item.instanceId}>
-                {item.displayName ?? "Untitled field"}
-              </option>)}</optgroup> : null}
-              {controls.length ? <optgroup label="Buttons and messages">{controls.map((item) => <option key={item.instanceId} value={item.instanceId}>
-                {item.displayName ?? item.definitionRef.id}
-              </option>)}</optgroup> : null}
-            </select>
-          </label>
-          {selectedField ? (
-            <>
-              <FieldSettings key={selectedField.instanceId} field={selectedField} onUpdate={onUpdate} />
-              <div className="ui-workflow__actions">
-                <button className="ui-button ui-button--outline" type="button"
-                  disabled={fieldGroup[0] === selectedField} onClick={() => onMove(String(selectedField.instanceId), -1)}>Move field up</button>
-                <button className="ui-button ui-button--outline" type="button"
-                  disabled={fieldGroup[fieldGroup.length - 1] === selectedField} onClick={() => onMove(String(selectedField.instanceId), 1)}>Move field down</button>
-              </div>
-            </>
-          ) : page?.instanceId === selected.instanceId ? (
-            <div className="ui-stack ui-stack--sm" key={page.instanceId}>
-              <label className="ui-stack ui-stack--sm">
-                Form page name
-                <input key={page.displayName} maxLength={200} defaultValue={page.displayName}
-                  onBlur={(event) => {
-                    const title = event.currentTarget.value.trim();
-                    if (title && title !== page.displayName) onUpdate(String(page.instanceId), { title });
-                    else event.currentTarget.value = page.displayName ?? "";
-                  }} />
-              </label>
-              <div className="ui-workflow__actions">
-                <button className="ui-button ui-button--outline" type="button"
-                  disabled={form.steps[0] === page} onClick={() => onMove(String(page.instanceId), -1)}>Move form page up</button>
-                <button className="ui-button ui-button--outline" type="button"
-                  disabled={form.steps[form.steps.length - 1] === page} onClick={() => onMove(String(page.instanceId), 1)}>Move form page down</button>
-              </div>
-              <MorePageProperties element={selected} members={presentation}
-                readDefinition={readDefinition} onUpdate={onUpdatePresentation} />
-            </div>
-          ) : <FormAssetProperties key={selected.instanceId} element={selected} members={presentation}
-            readDefinition={readDefinition} onUpdate={onUpdatePresentation} />}
+          <p className="ui-text-muted">Validation and behavior for {selected.displayName ?? "the selected element"}.</p>
+          {selectedField ? <FieldBehavior key={selectedField.instanceId} field={selectedField} onUpdate={onUpdate} />
+            : propertySource.definition ? <FormAssetControls key={selected.instanceId} part="behavior" element={selected}
+              definition={propertySource.definition} onUpdate={onUpdatePresentation} /> : null}
+          {page ? <SystemFormRoutingEditor key={page.instanceId} form={form.form} steps={form.steps} step={page}
+            fields={fields} bindings={draft.bindings} onSave={(route) => onSaveRoute(formId, route)}
+            onRemove={(id) => onRemoveRoute(formId, id)} /> : null}
+          <SystemFormActionEditor key={formId} formId={formId} fields={actionFields} instances={draft.instances} action={action}
+            onSave={(next) => onUpdateAction(formId, next)} onRemove={() => onUpdateAction(formId)} />
         </aside>
       </div>
+      {removal ? <ModalDialog open title={`Remove ${removalKind}?`} descriptionId={removalDescriptionId}
+        onClose={() => setRemovalId(undefined)}>
+        <div className="ui-stack ui-stack--sm" id={removalDescriptionId}>
+          <p>Remove <strong>{removal.displayName ?? "this element"}</strong> from the form?</p>
+          {removedChildren ? <p>All child fields and controls will also be removed ({removedChildren} total).</p> : null}
+          <p>Use Undo to restore the draft before saving.</p>
+        </div>
+        <div className="ui-workflow__actions">
+          <button type="button" className="ui-button ui-button--outline" data-modal-initial-focus
+            onClick={() => setRemovalId(undefined)}>Cancel</button>
+          <button type="button" className="ui-button ui-button--destructive" onClick={confirmRemoval}>
+            Remove {removalKind}
+          </button>
+        </div>
+      </ModalDialog> : null}
     </section>
   );
 }
 
-interface FormAssetPropertiesProps {
-  readonly element: AssetInstance;
-  readonly members: readonly AssetInstance[];
-  readonly readDefinition: SystemFormComposerViewProps["readDefinition"];
-  readonly onUpdate: SystemFormComposerViewProps["onUpdatePresentation"];
-}
-
-function MorePageProperties(props: FormAssetPropertiesProps) {
-  const [open, setOpen] = useState(false);
-  return <details onToggle={(event) => setOpen(event.currentTarget.open)}>
-    <summary>More page properties</summary>
-    {open ? <FormAssetProperties {...props} /> : null}
-  </details>;
-}
-
-function FormAssetProperties({ element, members, readDefinition, onUpdate }: FormAssetPropertiesProps) {
+function useFormAssetDefinition(
+  element: AssetInstance | undefined,
+  readDefinition: SystemFormComposerViewProps["readDefinition"],
+) {
   const [attempt, setAttempt] = useState(0);
-  const [resolved, setResolved] = useState<{ definition?: SystemBuilderComposerAsset }>();
-  const id = String(element.instanceId);
-  const definitionRef = element.definitionRef;
+  const [resolved, setResolved] = useState<{ id: string; definition?: SystemBuilderComposerAsset }>();
+  const id = element ? String(element.instanceId) : undefined;
+  const ref = element?.definitionRef;
   useEffect(() => {
+    if (!element || !id) return;
     let active = true;
     setResolved(undefined);
     void readDefinition(element, () => active).then((result) => {
       if (!active) return;
       const definition = result.ok && result.value?.builtIn && result.value.configurationSchema ? result.value : undefined;
-      setResolved({ definition });
-    }).catch(() => { if (active) setResolved({}); });
+      setResolved({ id, definition });
+    }).catch(() => { if (active) setResolved({ id }); });
     return () => { active = false; };
-  }, [attempt, definitionRef.id, definitionRef.kind, definitionRef.version, id, readDefinition]);
-  const definition = resolved?.definition;
-  return definition ? <SystemComposerInspector mode="configuration" embedded
-    selectedInstance={element} selectedDefinition={definition} instances={members} catalog={[definition]} bindings={[]}
-    onConfigurationChange={(values) => onUpdate(id, definition, values)} onAddConnection={() => {}} onRemoveConnection={() => {}} />
-    : resolved ? <div className="ui-stack ui-stack--xs">
-      <p role="status">Properties are unavailable for this form asset.</p>
-      <button type="button" className="ui-button ui-button--outline" onClick={() => setAttempt((current) => current + 1)}>Retry properties</button>
-    </div> : <p role="status">Loading form properties…</p>;
+  }, [attempt, id, ref?.id, ref?.kind, ref?.version, readDefinition]);
+  const current = resolved?.id === id ? resolved : undefined;
+  return { definition: current?.definition, failed: Boolean(current && !current.definition),
+    retry: () => setAttempt((value) => value + 1) };
 }
 
+const FORM_BEHAVIOR_FIELDS: ReadonlySet<string> = new Set([
+  "submitBehavior", "validationMode", "collapsible", "defaultExpanded", "visibilityCondition",
+  "showWhen", "fieldRef", "summaryMode", "confirmationRequired", "disabledWhenInvalid", "resetBehavior",
+]);
 
-function FieldSettings({field, onUpdate}: {
+function FormAssetControls({ part, element, definition, onUpdate }: {
+  readonly part: "appearance" | "behavior";
+  readonly element: AssetInstance;
+  readonly definition: SystemBuilderComposerAsset;
+  readonly onUpdate: SystemFormComposerViewProps["onUpdatePresentation"];
+}) {
+  const values = materializeSystemComposerConfiguration(definition, element.selectedConfiguration);
+  const errors = validateSystemComposerConfiguration(definition.configurationSchema, values);
+  const scope = definition.configurationSchema?.fields.filter((field) =>
+    (part === "behavior" ? FORM_BEHAVIOR_FIELDS.has(field.fieldId) : !FORM_BEHAVIOR_FIELDS.has(field.fieldId))) ?? [];
+  const fields = scope.filter((field) =>
+    !(element.definitionRef.id === FORM_COMPOSER_FOUNDATION_ASSET_IDS.step && field.fieldId === "title"));
+  function resetDefaults() {
+    const defaults = materializeSystemComposerConfiguration(definition, undefined);
+    const next = { ...values };
+    for (const field of scope) {
+      const value = defaults[field.fieldId];
+      if (value === undefined) delete next[field.fieldId];
+      else next[field.fieldId] = value;
+    }
+    onUpdate(String(element.instanceId), definition, next);
+  }
+  return scope.length ? (
+    <div className="ui-stack ui-stack--sm">
+      {fields.map((field) => <SystemComposerConfigurationField key={field.fieldId} field={field}
+        value={values[field.fieldId]} errors={errors[field.fieldId] ?? []} catalog={[definition]}
+        onChange={(value) => onUpdate(String(element.instanceId), definition, { ...values, [field.fieldId]: value })} />)}
+      <div><button type="button" className="ui-button ui-button--outline" onClick={resetDefaults}>
+        Reset {part} defaults
+      </button></div>
+    </div>
+  ) : null;
+}
+
+interface FieldControlsProps {
   readonly field: AssetInstance;
   readonly onUpdate: SystemFormComposerViewProps["onUpdate"];
-}) {
+}
+
+function FieldAppearance({ field, onUpdate }: FieldControlsProps) {
   const values = field.selectedConfiguration;
+  const id = String(field.instanceId);
   const label = typeof values?.label === "string" ? values.label : field.displayName ?? "";
   const help = typeof values?.helpText === "string" ? values.helpText : "";
   const definition = field.definitionRef.id;
-  const numeric = definition === "builtin.form.number-field";
-  const text = definition === "builtin.form.text-field" || definition === "builtin.form.text-area";
   const choice = isFormChoiceAsset(definition);
   const options = choice ? readFormChoiceOptions(field) : [];
   const [newOption, setNewOption] = useState("");
-  const [newOptionValue, setNewOptionValue] = useState("");
-  const nextOptionValue = newOptionValue.trim() || newOption.trim();
-  const canAddOption = Boolean(newOption.trim()) && options.length < 32 &&
-    !options.some((option) => option.label === newOption.trim() || option.value === nextOptionValue);
+  const optionLabel = newOption.trim();
+  const canAddOption = Boolean(optionLabel) && options.length < 32 &&
+    !options.some((option) => option.label === optionLabel);
   function addOption(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const next = newOption.trim();
     if (!canAddOption) return;
-    const base = `option-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
-    let index = 1;
-    while (options.some((option) => option.optionId === `${base}-${index}` || option.value === `${base}-${index}`)) index++;
-    const optionId = `${base}-${index}`;
-    onUpdate(String(field.instanceId), { staticOptions: [...options, { optionId, label: next, value: nextOptionValue }] });
+    const idBase = `option-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
+    let optionId = idBase;
+    for (let index = 2; options.some((option) => option.optionId === optionId); index++) optionId = `${idBase}-${index}`;
+    let value = optionLabel;
+    for (let index = 2; options.some((option) => option.value === value); index++) {
+      const suffix = `-${index}`;
+      value = `${optionLabel.slice(0, 200 - suffix.length)}${suffix}`;
+    }
+    onUpdate(id, { staticOptions: [...options, { optionId, label: optionLabel, value }] });
     setNewOption("");
-    setNewOptionValue("");
   }
-  return (
-    <>
-      <label className="ui-stack ui-stack--sm">
-        Field label
-        <input key={label} maxLength={200} defaultValue={label} onBlur={(event) => {
-          const next = event.currentTarget.value.trim();
-          if (next && next !== label) onUpdate(String(field.instanceId), { label: next });
-          else event.currentTarget.value = label;
-        }} />
-      </label>
-      <label className="ui-stack ui-stack--sm">
-        Help text
-        <textarea key={help} maxLength={1000} defaultValue={help} onBlur={(event) => {
-          if (event.currentTarget.value !== help) onUpdate(String(field.instanceId), { helpText: event.currentTarget.value });
-        }} />
-      </label>
-      <label><input type="checkbox" checked={values?.required === true} onChange={(event) => {
-        onUpdate(String(field.instanceId), { required: event.currentTarget.checked });
-      }} /> Required answer</label>
-      {numeric || text ? (numeric ? [["minimum", "Minimum value"], ["maximum", "Maximum value"]]
-        : [["minLength", "Minimum characters"], ["maxLength", "Maximum characters"]]).map(([key, name]) => (
-          <label className="ui-stack ui-stack--sm" key={`${key}-${values?.[key]}`}>
-            {name}
-            <input type="number" step={numeric ? "any" : 1} min={text ? key === "maxLength" ? 1 : 0 : undefined}
-              max={text ? 4000 : undefined} defaultValue={typeof values?.[key] === "number" ? values[key] : ""}
-              onBlur={(event) => {
-                const value = event.currentTarget.valueAsNumber;
-                if (!event.currentTarget.value && !event.currentTarget.validity.badInput && typeof values?.[key] === "number") {
-                  onUpdate(String(field.instanceId), { [key]: null });
-                } else if (event.currentTarget.validity.valid && Number.isFinite(value) && value !== values?.[key]) {
-                  onUpdate(String(field.instanceId), { [key]: value });
-                } else event.currentTarget.value = typeof values?.[key] === "number" ? String(values[key]) : "";
-              }} />
+  return <>
+    <label className="ui-stack ui-stack--sm">
+      Field label
+      <input key={label} maxLength={200} defaultValue={label} onBlur={(event) => {
+        const next = event.currentTarget.value.trim();
+        if (next && next !== label) onUpdate(id, { label: next });
+        else event.currentTarget.value = label;
+      }} />
+    </label>
+    <label className="ui-stack ui-stack--sm">
+      Help text
+      <textarea key={help} maxLength={1000} defaultValue={help} onBlur={(event) => {
+        if (event.currentTarget.value !== help) onUpdate(id, { helpText: event.currentTarget.value });
+      }} />
+    </label>
+    {definition === "builtin.form.date-time-field" ? <label className="ui-stack ui-stack--sm">
+      Date and time format
+      <select value={typeof values?.dateTimeKind === "string" ? values.dateTimeKind : "date"}
+        onChange={(event) => onUpdate(id, { dateTimeKind: event.currentTarget.value })}>
+        <option value="date">Date</option><option value="time">Time</option><option value="date-time">Date and time</option>
+      </select>
+    </label> : null}
+    {choice ? <div className="ui-stack ui-stack--sm">
+      <h5>Choice labels</h5>
+      {options.length ? <ol className="ui-stack ui-stack--xs">{options.map((option, index) => <li key={option.optionId}>
+        <div className="ui-workflow__actions">
+          <label>Choice label {index + 1}
+            <input key={option.label} maxLength={200} defaultValue={option.label} onBlur={(event) => {
+              const next = event.currentTarget.value.trim();
+              if (next && next !== option.label && !options.some((item) => item !== option && item.label === next))
+                onUpdate(id, { staticOptions: options.map((item) => item === option ? { ...item, label: next } : item) });
+              else event.currentTarget.value = option.label;
+            }} />
           </label>
-        )) : null}
-      {definition === "builtin.form.date-time-field" ? <label className="ui-stack ui-stack--sm">
-        Date and time format
-        <select value={typeof values?.dateTimeKind === "string" ? values.dateTimeKind : "date"}
-          onChange={(event) => onUpdate(String(field.instanceId), { dateTimeKind: event.currentTarget.value })}>
-          <option value="date">Date</option><option value="time">Time</option><option value="date-time">Date and time</option>
-        </select>
-      </label> : null}
-      {choice ? <div className="ui-stack ui-stack--sm">
-        <h4>Choice options</h4>
-        {options.length ? <ol>{options.map((option, index) => <li key={option.optionId}>
-          <span>{option.label}</span>{" "}
           <button type="button" className="ui-button ui-button--outline" aria-label={`Remove choice ${index + 1}`}
-            onClick={() => onUpdate(String(field.instanceId), { staticOptions: options.filter((item) => item !== option) })}>Remove</button>
-        </li>)}</ol> : <p>Add an option so respondents can choose an answer.</p>}
-        <form className="ui-stack ui-stack--sm" onSubmit={addOption}>
-          <label className="ui-stack ui-stack--sm">New option label
-            <input required value={newOption} maxLength={200} onChange={(event) => setNewOption(event.currentTarget.value)} />
-          </label>
-          <label className="ui-stack ui-stack--sm">Submitted value (optional)
-            <input value={newOptionValue} maxLength={200} onChange={(event) => setNewOptionValue(event.currentTarget.value)} />
-          </label>
-          <p>Leave the value blank to use the label.</p>
-          <div><button type="submit" className="ui-button ui-button--outline"
-            disabled={!canAddOption}>Add option</button></div>
-        </form>
-      </div> : null}
-    </>
-  );
+            onClick={() => onUpdate(id, { staticOptions: options.filter((item) => item !== option) })}>Remove</button>
+        </div>
+      </li>)}</ol> : <p>Add an option so respondents can choose an answer.</p>}
+      <form className="ui-stack ui-stack--sm" onSubmit={addOption}>
+        <label className="ui-stack ui-stack--sm">New option label
+          <input required value={newOption} maxLength={200} onChange={(event) => setNewOption(event.currentTarget.value)} />
+        </label>
+        <div><button type="submit" className="ui-button ui-button--outline" disabled={!canAddOption}>Add option</button></div>
+      </form>
+    </div> : null}
+  </>;
+}
+
+function FieldBehavior({ field, onUpdate }: FieldControlsProps) {
+  const values = field.selectedConfiguration;
+  const id = String(field.instanceId);
+  const definition = field.definitionRef.id;
+  const numeric = definition === "builtin.form.number-field";
+  const text = definition === "builtin.form.text-field" || definition === "builtin.form.text-area";
+  const options = isFormChoiceAsset(definition) ? readFormChoiceOptions(field) : [];
+  return <>
+    <label><input type="checkbox" checked={values?.required === true} onChange={(event) => {
+      onUpdate(id, { required: event.currentTarget.checked });
+    }} /> Required answer</label>
+    {numeric || text ? (numeric ? [["minimum", "Minimum value"], ["maximum", "Maximum value"]]
+      : [["minLength", "Minimum characters"], ["maxLength", "Maximum characters"]]).map(([key, name]) => (
+        <label className="ui-stack ui-stack--sm" key={`${key}-${values?.[key]}`}>
+          {name}
+          <input type="number" step={numeric ? "any" : 1} min={text ? key === "maxLength" ? 1 : 0 : undefined}
+            max={text ? 4000 : undefined} defaultValue={typeof values?.[key] === "number" ? values[key] : ""}
+            onBlur={(event) => {
+              const value = event.currentTarget.valueAsNumber;
+              if (!event.currentTarget.value && !event.currentTarget.validity.badInput && typeof values?.[key] === "number") {
+                onUpdate(id, { [key]: null });
+              } else if (event.currentTarget.validity.valid && Number.isFinite(value) && value !== values?.[key]) {
+                onUpdate(id, { [key]: value });
+              } else event.currentTarget.value = typeof values?.[key] === "number" ? String(values[key]) : "";
+            }} />
+        </label>
+      )) : null}
+    {options.length ? <fieldset className="ui-stack ui-stack--sm">
+      <legend>Submitted choice values</legend>
+      <p>Change the value used by routes and submission actions. This does not change the choice label.</p>
+      {options.map((option) => <label className="ui-stack ui-stack--sm" key={option.optionId}>
+        Submitted value for {option.label}
+        <input key={option.value} maxLength={200} defaultValue={option.value} onBlur={(event) => {
+          const next = event.currentTarget.value.trim();
+          if (next && next !== option.value && !options.some((item) => item !== option && item.value === next))
+            onUpdate(id, { staticOptions: options.map((item) => item === option ? { ...item, value: next } : item) });
+          else event.currentTarget.value = option.value;
+        }} />
+      </label>)}
+    </fieldset> : null}
+  </>;
 }
