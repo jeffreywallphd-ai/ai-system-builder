@@ -1350,6 +1350,16 @@
       "recordedAt": "2026-11-12T16:27:30Z",
       "summary": "Approve Increment 7 on the condition that it leaves the Canvas editor unchanged. Represent each form as its own Canvas page and use compatible containers where needed.",
       "targetIncrementId": "asset-backed-form-composer"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "form-composer-entry-and-form-element-ownership",
+      "impact": "within-increment",
+      "nextAction": "Preserve existing forms in place, including multiple forms on one page. Verify the contextual navigation, matching asset placement, affected templates and supported form settings before host qualification.",
+      "recordedAt": "2026-11-12T18:48:14Z",
+      "summary": "The author opens a specific form asset with Edit Form. The system has no global Form tab. Create form system starts with the existing Minimal page and a section. Current form fields and controls stay inside their owning form.",
+      "targetIncrementId": "asset-backed-form-composer"
     }
   ],
   "history": [
@@ -2078,6 +2088,12 @@
       "recordedAt": "2026-11-12T17:18:23Z",
       "sequence": 121,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3c92cf30d2db173913b101c014c0c6a94de36d6998d4003b119c27b168d98a83",
+      "recordedAt": "2026-11-12T18:48:14Z",
+      "sequence": 122,
+      "type": "feedback-recorded"
     }
   ],
   "increments": [
@@ -3681,5 +3697,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-12T17:18:23Z"
+  "updatedAt": "2026-11-12T18:48:14Z"
 }

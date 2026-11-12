@@ -12704,6 +12704,118 @@
       "limitations": [
         "This proves the approved release check only. Live actor authorization, action dispatch and host tests remain pending."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "shared-form-and-canvas-draft",
+      "work_id": "open-form-composer-from-canvas-assets",
+      "work_criteria": [
+        "edit-an-exact-embedded-form",
+        "start-a-form-system-with-basic-wrappers"
+      ],
+      "receipt_digest": "09b55afa1911021616a232616607a4f846d0fbc771a040af7b90a036a07516c4",
+      "review_digest": "5b106fa110080a74a173973b1363c3f4489da9ddc936295078aa8180090bc9f3",
+      "scope": "Canvas opens the exact selected form and restores focus to it on return. A new form system uses its original Minimal page.",
+      "limitations": [
+        "Feature-level evidence only. The packaged Desktop and managed browser journeys remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-maps-to-a-canvas-page",
+      "work_id": "keep-form-elements-inside-form-assets",
+      "work_criteria": [
+        "keep-canvas-form-fields-with-a-form",
+        "preserve-reference-template-functionality"
+      ],
+      "receipt_digest": "9518035811cd907317121c58cbb67d0cdf311e7a7f8bb811c67c4e784e0f4674",
+      "review_digest": "9ed27a92f213495844d2f414e8cdee480864263b0eccf2a4e361b339fdeacd29",
+      "scope": "Canvas placement and revision validation keep form elements with their form. Reference templates preserve field IDs, bindings and expected controls.",
+      "limitations": [
+        "Feature-level evidence only. The packaged Desktop and managed browser journeys remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-validation-and-answer-routing",
+      "work_id": "edit-all-supported-form-elements-in-context",
+      "work_criteria": [
+        "edit-all-placed-form-elements",
+        "preview-supported-choices-and-reference-forms"
+      ],
+      "receipt_digest": "819be3bc0f450b59afeeee4e492a6ceaf467dacc70dbd5081d31ff3cc1f04f64",
+      "review_digest": "2d47f835c209b27336252026325acc745cb40b0c2fbd65cc0ea2a4f34e3611d0",
+      "scope": "The Form editor uses the exact owning form, supports radio answers, and lets authors edit the form's placed buttons and messages. Reference forms compile for preview.",
+      "limitations": [
+        "Feature-level evidence only. The packaged Desktop and managed browser journeys remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-submission-triggers",
+      "work_id": "configure-create-record-actions-in-form-composer",
+      "work_criteria": [
+        "author-maps-form-to-record-action-without-code",
+        "action-preview-remains-inert"
+      ],
+      "receipt_digest": "f1de1d0811df5dcb0f14b9481391431765294af833eb910332340a52293a59a9",
+      "review_digest": "5963564a0c0f04fc89a5f826714e355d65e8df7f520310c931e313e16c1e5fe6",
+      "scope": "Authors select the Create Record operation and map validated answers into chosen record fields. Preview makes no changes.",
+      "limitations": [
+        "Feature-level evidence only. The packaged Desktop and managed browser journeys remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-submission-triggers",
+      "work_id": "submit-released-forms-with-stable-record-receipts",
+      "work_criteria": [
+        "form-submits-only-validated-mapped-values",
+        "form-record-retry-is-safe-and-authorized"
+      ],
+      "receipt_digest": "d9a9862d65b00f37cd104c28a65de8c850c60f9c4ec112d4327bd239684217c4",
+      "review_digest": "8822d0d112eef007fcc646a93f098b171b1167dfff6ae151901204c5fb33c3e9",
+      "scope": "The application submits only validated, mapped answers, rechecks permission and records a stable receipt without duplicating records.",
+      "limitations": [
+        "Feature-level evidence only. The packaged Desktop and managed browser journeys remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-preview-and-runtime-parity",
+      "work_id": "project-published-forms-for-authorized-respondents",
+      "work_criteria": [
+        "published-form-list-shares-exact-verified-release",
+        "published-form-runtime-preserves-current-authority"
+      ],
+      "receipt_digest": "69c7eb862f183d275bb0ae3088ca7240ff5e4961b6a6fe0c87fca58dc3196c38",
+      "review_digest": "ac37146ee7967897ad07a8e4de33b862d6d3c6d1c0f96eceeddd2553bbaa7abe",
+      "scope": "The application provides the exact allowed published forms using the shared evaluator.",
+      "limitations": [
+        "Feature-level evidence only. The packaged Desktop and managed browser journeys remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "security-form-submission-and-action-authority",
+      "work_id": "route-published-form-requests-through-api-and-ipc",
+      "work_criteria": [
+        "published-forms-use-narrow-matching-operations",
+        "published-form-transport-does-not-grant-authority"
+      ],
+      "receipt_digest": "89309b1109db7dff795ede8dcfb34d4d3be7ea87727df701e5542f87363123fc",
+      "review_digest": "0172df13ae77876774e9ba3722bc223a3c0e87e33bc5258bea9270bd9c4b484e",
+      "scope": "Desktop IPC and the server API route published form operations through dedicated guarded requests with bounded, plain data.",
+      "limitations": [
+        "Feature-level evidence only. The packaged Desktop and managed browser journeys remain pending."
+      ]
     }
   ]
 }
