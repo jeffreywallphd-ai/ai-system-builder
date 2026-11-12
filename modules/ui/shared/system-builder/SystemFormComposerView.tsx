@@ -1,9 +1,10 @@
 import { useMemo, useState, type FormEvent } from "react";
 import type { AssetConfigurationValues, AssetInstance } from "../../../contracts/asset";
 import type { SystemBuilderComposerAsset } from "../../../contracts/system-builder";
-import type { SystemFormRoute } from "../../../contracts/system-builder";
+import { readSystemFormAction, type SystemFormAction, type SystemFormRoute } from "../../../contracts/system-builder";
 import { compileSystemForm, type CompiledSystemForm } from "../../../application/services/system-builder/system-form-rules.service";
 import { SystemFormPreview } from "./SystemFormPreview";
+import { SystemFormActionEditor } from "./SystemFormActionEditor";
 import { readFormChoiceOptions, SystemFormRoutingEditor } from "./SystemFormRoutingEditor";
 import type { SystemComposerDraft } from "./systemComposerDraft";
 import { FORM_COMPOSER_FOUNDATION_VERSION, readSystemForms } from "./systemFormComposerDraft";
@@ -40,13 +41,14 @@ interface SystemFormComposerViewProps {
   readonly onUpdate: (instanceId: string, values: AssetConfigurationValues) => void;
   readonly onSaveRoute: (formId: string, route: SystemFormRoute) => void;
   readonly onRemoveRoute: (formId: string, bindingId: string) => void;
+  readonly onUpdateAction: (formId: string, action?: SystemFormAction) => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
 }
 
 export function SystemFormComposerView({
   draft, catalog, canUndo, canRedo, onCreateForm, onAddStep, onAddField, onMove,
-  onUpdate, onSaveRoute, onRemoveRoute, onUndo, onRedo,
+  onUpdate, onSaveRoute, onRemoveRoute, onUpdateAction, onUndo, onRedo,
 }: SystemFormComposerViewProps) {
   const [formName, setFormName] = useState("");
   const [stepName, setStepName] = useState("");
@@ -61,6 +63,8 @@ export function SystemFormComposerView({
   const step = form?.steps.find((entry) => entry.instanceId === selectedStepId) ?? form?.steps[0];
   const fields = useMemo(() => step ? readFormStepFields(draft, String(step.instanceId)) : [], [draft, step]);
   const field = fields.find((item) => item.instanceId === selectedFieldId) ?? fields[0];
+  const action = form ? draft.bindings.map(readSystemFormAction).find((entry) => entry?.formId === form.form.instanceId) : undefined;
+  const actionFields = useMemo(() => form?.steps.flatMap((item) => readFormStepFields(draft, String(item.instanceId))) ?? [], [draft, form]);
 
   function submitForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,7 +91,8 @@ export function SystemFormComposerView({
         {form ? <button className="ui-button ui-button--outline" type="button" onClick={openPreview}>Preview form</button> : null}
       </div>
       {previewError?.draft === draft && previewError.formId === form?.form.instanceId ? <p role="alert">{previewError.message}</p> : null}
-      {preview ? <SystemFormPreview form={preview} onClose={() => setPreview(undefined)} /> : null}
+      {preview ? <SystemFormPreview form={preview} hasConfiguredAction={action?.formId === preview.id}
+        onClose={() => setPreview(undefined)} /> : null}
       <form className="ui-panel ui-stack ui-stack--sm" onSubmit={submitForm}>
         <label className="ui-stack ui-stack--sm">
           New form name
@@ -179,6 +184,10 @@ export function SystemFormComposerView({
           {step ? <SystemFormRoutingEditor key={step.instanceId} form={form.form} steps={form.steps} step={step}
             fields={fields} bindings={draft.bindings} onSave={(route) => onSaveRoute(String(form.form.instanceId), route)}
             onRemove={(id) => onRemoveRoute(String(form.form.instanceId), id)} /> : null}
+          <SystemFormActionEditor key={form.form.instanceId} formId={String(form.form.instanceId)}
+            fields={actionFields} instances={draft.instances} action={action}
+            onSave={(next) => onUpdateAction(String(form.form.instanceId), next)}
+            onRemove={() => onUpdateAction(String(form.form.instanceId))} />
         </div>
       ) : <p className="ui-text-muted">Create a form to add its page to the system.</p>}
     </section>
@@ -198,16 +207,21 @@ function FieldSettings({field, onUpdate}: {
   const choice = definition === "builtin.form.select-field";
   const options = choice ? readFormChoiceOptions(field) : [];
   const [newOption, setNewOption] = useState("");
+  const [newOptionValue, setNewOptionValue] = useState("");
+  const nextOptionValue = newOptionValue.trim() || newOption.trim();
+  const canAddOption = Boolean(newOption.trim()) && options.length < 32 &&
+    !options.some((option) => option.label === newOption.trim() || option.value === nextOptionValue);
   function addOption(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const next = newOption.trim();
-    if (!next || options.length >= 32 || options.some((option) => option.label === next)) return;
+    if (!canAddOption) return;
     const base = `option-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
     let index = 1;
     while (options.some((option) => option.optionId === `${base}-${index}` || option.value === `${base}-${index}`)) index++;
     const optionId = `${base}-${index}`;
-    onUpdate(String(field.instanceId), { staticOptions: [...options, { optionId, label: next, value: optionId }] });
+    onUpdate(String(field.instanceId), { staticOptions: [...options, { optionId, label: next, value: nextOptionValue }] });
     setNewOption("");
+    setNewOptionValue("");
   }
   return (
     <>
@@ -262,8 +276,12 @@ function FieldSettings({field, onUpdate}: {
           <label className="ui-stack ui-stack--sm">New option label
             <input required value={newOption} maxLength={200} onChange={(event) => setNewOption(event.currentTarget.value)} />
           </label>
+          <label className="ui-stack ui-stack--sm">Submitted value (optional)
+            <input value={newOptionValue} maxLength={200} onChange={(event) => setNewOptionValue(event.currentTarget.value)} />
+          </label>
+          <p>Leave the value blank to use the label.</p>
           <div><button type="submit" className="ui-button ui-button--outline"
-            disabled={!newOption.trim() || options.length >= 32 || options.some((item) => item.label === newOption.trim())}>Add option</button></div>
+            disabled={!canAddOption}>Add option</button></div>
         </form>
       </div> : null}
     </>

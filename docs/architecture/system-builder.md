@@ -220,6 +220,10 @@ customization, and single-asset Studio workflows.
   only, and the audit lists field names without their answer values. A private
   creation marker lets a retry report that the original submission was already
   recorded even after the record's values have changed.
+  In the Form view, After submission lists the existing Create Record
+  operation and compatible destination fields. Setting or removing an action
+  changes only the shared draft. Preview describes the configured action
+  without dispatching it.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only

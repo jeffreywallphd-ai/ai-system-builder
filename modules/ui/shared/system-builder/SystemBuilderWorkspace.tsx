@@ -33,7 +33,10 @@ import { TransientNotificationPublisher } from "../notifications/TransientNotifi
 import {
   SYSTEM_BUILDER_FOUNDATION_UPGRADE_SOURCE_VERSIONS,
   createSystemFormRouteBinding,
+  createSystemFormActionBinding,
+  SYSTEM_FORM_ACTION_METADATA_KEY,
   readSystemFormRoute,
+  type SystemFormAction,
   type SystemFormRoute,
   systemBuilderFailure,
   systemBuilderSuccess,
@@ -51,6 +54,8 @@ import {
 } from "./SystemComposerStructureEditor";
 import { SystemComposerInspector } from "./SystemComposerInspector";
 import { SystemComposerStylingPanel } from "./SystemComposerStylingPanel";
+import { compileSystemFormAction } from "../../../application/services/system-builder/system-form-action.service";
+import { isFormActionFieldCompatible, readFormActionOptions } from "./SystemFormActionEditor";
 import {
   FORM_COMPOSER_FIELDS,
   readFormStepFields,
@@ -1094,6 +1099,34 @@ export function SystemBuilderWorkspace({
     commitDraft({ ...draft, bindings: bindings.filter((item) => item !== binding) });
   }
 
+  function updateFormAction(formId: string, action?: SystemFormAction) {
+    if (operation.current) return;
+    const form = readSystemForms(draft, composerCatalog).find((entry) => entry.form.instanceId === formId);
+    if (!form || (action && action.formId !== formId)) return;
+    const existing = bindings.filter((binding) => binding.sourceRef.id === formId &&
+      Object.prototype.hasOwnProperty.call(binding.metadata ?? {}, SYSTEM_FORM_ACTION_METADATA_KEY));
+    const retained = bindings.filter((binding) => !existing.includes(binding));
+    if (!action) {
+      if (existing.length) commitDraft({ ...draft, bindings: retained });
+      return;
+    }
+    if (retained.length >= 1024) { setError("This system has no space for another action."); return; }
+    const fields = form.steps.flatMap((step) => readFormStepFields(draft, String(step.instanceId)));
+    const { operations, operationCount, recordFields } = readFormActionOptions(instances);
+    if (operationCount !== 1 || operations.length !== 1 || operations[0]!.instanceId !== action.operationId || action.mappings.some((mapping) => {
+      const source = fields.find((field) => field.instanceId === mapping.fieldId);
+      const destination = recordFields.find((field) => field.name === mapping.recordField);
+      return !source || !destination || !isFormActionFieldCompatible(source, destination);
+    })) { setError("Choose a compatible record action and field mapping."); return; }
+    const binding = createSystemFormActionBinding(String(existing[0]?.bindingId ?? `binding.form-action.${uniqueId()}`), action);
+    const next = { ...draft, bindings: [...retained, binding] };
+    if (!compileSystemFormAction(next, formId)) {
+      setError("Check the form's fields and routes before setting its action.");
+      return;
+    }
+    commitDraft(next);
+  }
+
   function moveFormElement(instanceId: string, direction: -1 | 1) {
     if (operation.current) return;
     const own = placements.find((edge) => edge.childInstanceRef.id === instanceId && edge.slotId === "fields");
@@ -1826,6 +1859,7 @@ export function SystemBuilderWorkspace({
                     onUpdate={updateFormElement}
                     onSaveRoute={setFormRoute}
                     onRemoveRoute={removeFormRoute}
+                    onUpdateAction={updateFormAction}
                     onUndo={undoDraft}
                     onRedo={redoDraft}
                   />

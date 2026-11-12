@@ -6,7 +6,9 @@ import {
 } from "../../../application/services/system-builder/system-form-rules.service";
 import { ModalDialog } from "../components/ModalDialog";
 
-export function SystemFormPreview({ form, onClose }: { readonly form: CompiledSystemForm; readonly onClose: () => void }) {
+export function SystemFormPreview({ form, hasConfiguredAction = false, onClose }: {
+  readonly form: CompiledSystemForm; readonly hasConfiguredAction?: boolean; readonly onClose: () => void;
+}) {
   const [included, setIncluded] = useState<readonly string[]>();
   const [restarted, setRestarted] = useState(false);
   const completion = useRef<HTMLHeadingElement>(null);
@@ -19,6 +21,7 @@ export function SystemFormPreview({ form, onClose }: { readonly form: CompiledSy
           <div role="status" className="ui-stack ui-stack--sm">
             <h3 ref={completion} tabIndex={-1}>Preview complete</h3>
             <p>{included.length ? `Answers included: ${included.join(", ")}.` : "No answers included."}</p>
+            {hasConfiguredAction ? <p>Configured action: Create Record. Preview did not run the action.</p> : null}
             <button className="ui-button ui-button--outline" type="button" onClick={() => {
               setRestarted(true);
               setIncluded(undefined);

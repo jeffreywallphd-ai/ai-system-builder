@@ -12098,111 +12098,115 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "c33d102908b423e056d9823d4f11f94a9927ba0dc2966ede7e052daf6b23836e",
-    "bytes": 71868,
+    "sha256": "8df5c773aa623351ee3587b7d6339f77db2d41fe82c02cf8393db265357a695a",
+    "bytes": 75896,
     "cases": [
      {
+      "name": "does not offer submission mapping for an ambiguous Create Record setup",
+      "line": 42
+     },
+     {
       "name": "authors forms and fields in the shared draft and reopens their existing Canvas pages",
-      "line": 40
+      "line": 69
      },
      {
       "name": "defers the layout catalog until Create system is submitted and then shows the loading wheel",
-      "line": 283
+      "line": 337
      },
      {
       "name": "requests active systems and defensively omits archived records from Compose",
-      "line": 326
+      "line": 380
      },
      {
       "name": "refreshes the active picker after a Manage lifecycle change",
-      "line": 422
+      "line": 476
      },
      {
       "name": "creates a named system with the implicit Minimal layout",
-      "line": 483
+      "line": 537
      },
      {
       "name": "requires a name and uses the primary action when creating from a template",
-      "line": 535
+      "line": 589
      },
      {
       "name": "prefers the nested page content region over an already-full application content region",
-      "line": 591
+      "line": 645
      },
      {
       "name": "loads layouts on demand, applies one to the Canvas, exposes unassigned assets in the scoped modal, and undoes",
-      "line": 680
+      "line": 734
      },
      {
       "name": "requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system",
-      "line": 1003
+      "line": 1057
      },
      {
       "name": "opens and closes a modal for the current safe frontend composition",
-      "line": 1206
+      "line": 1260
      },
      {
       "name": "previews a v2 Foundation upgrade before explicit confirmation",
-      "line": 1326
+      "line": 1380
      },
      {
       "name": "preserves canonical structure and placements when saving configuration",
-      "line": 1453
+      "line": 1507
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "instance",
-      "line": 1823
+      "line": 1877
      },
      {
       "name": "composerDefinition",
-      "line": 1843
+      "line": 1897
      },
      {
       "name": "layoutDefinition",
-      "line": 1915
+      "line": 1969
      },
      {
       "name": "withoutComposerDetail",
-      "line": 1933
+      "line": 1987
      },
      {
       "name": "button",
-      "line": 1944
+      "line": 1998
      },
      {
       "name": "setInputValue",
-      "line": 1951
+      "line": 2005
      },
      {
       "name": "clientFor",
-      "line": 1958
+      "line": 2012
      }
     ],
-    "assertionCount": 135,
-    "assertionDigest": "9c4392ee703bb2041ebe3fc8c315ce1ece8771cd15c553080027dee165db03f0",
+    "assertionCount": 144,
+    "assertionDigest": "cb8e0c77c72a5b7c3944e239621dff3652d99b9e294b28891e7c9ff3f1490754",
     "assertionExamples": [
      {
-      "line": 146,
+      "line": 61,
       "kind": "expect",
-      "sha256": "cdc303f17d8c13691cd5654d3cf52f6617f1f47a1839aea9614750566207477c"
+      "sha256": "2c62027818494a311bac52dfbcaae5d0de13d59ead94d5ae9f48a820e58ecb65"
      },
      {
-      "line": 150,
+      "line": 62,
       "kind": "expect",
-      "sha256": "b49840f056fc59e76c6d94ac464653556495ee6d7cb057d1da1b0520b838ed33"
+      "sha256": "50f0dd194036a974b59b3aaa6cc54d0e7fb51ca51bcabceb42955f84b279c47f"
      },
      {
-      "line": 153,
+      "line": 64,
       "kind": "expect",
-      "sha256": "adbba82f5d60602a9dde34554716033cae2fe897ead64b06d3f137924240e7ee"
+      "sha256": "e92ef3f62e44ed0a8e07d1c348b9335a94af13a2b245a7003c65f31d7b1f7b9e"
      },
      {
-      "line": 165,
+      "line": 65,
       "kind": "expect",
-      "sha256": "260d48911a8235d983b4d1023d778abe079a637cfcb3cc367711112bb8eb743d"
+      "sha256": "50f0dd194036a974b59b3aaa6cc54d0e7fb51ca51bcabceb42955f84b279c47f"
      }
     ],
     "modifiers": []

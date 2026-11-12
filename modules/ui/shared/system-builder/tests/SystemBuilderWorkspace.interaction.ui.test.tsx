@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeAssetId, normalizeAssetSlotId, type AssetInstance } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
+import { readSystemFormAction } from "../../../../contracts/system-builder";
 import type {
   SystemBuilderRecord,
   SystemBuilderComposerAsset,
@@ -20,6 +21,7 @@ import {
   type SystemBuilderClient,
 } from "../SystemBuilderWorkspace";
 import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
+import { readFormActionOptions, SystemFormActionEditor } from "../SystemFormActionEditor";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -37,6 +39,33 @@ afterEach(() => {
 });
 
 describe("SystemBuilderWorkspace UI preview", () => {
+  it("does not offer submission mapping for an ambiguous Create Record setup", async () => {
+    const operation = (id: string, entity: string) => ({
+      ...instance(id, "builtin.data.create-operation", id, { entity }),
+      definitionRef: composerDefinition("builtin.data.create-operation", "Create Record", [], false, "3.0.0").definitionRef,
+    });
+    const recordField = (name: string) => ({
+      ...instance(`fixture.${name}`, "builtin.data.field", name, { name, type: "text" }),
+      definitionRef: composerDefinition("builtin.data.field", "Data Field", [], false, "3.0.0").definitionRef,
+    });
+    expect(readFormActionOptions([recordField("reason"), recordField("constructor")]).recordFields.map((field) => field.name))
+      .toEqual(["reason"]);
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const onSave = vi.fn();
+    const render = (instances: readonly AssetInstance[]) => act(async () => root!.render(
+      <SystemFormActionEditor formId="fixture.form" fields={[]} instances={instances} onSave={onSave} onRemove={() => {}} />,
+    ));
+    await render([operation("fixture.valid", "Request"), operation("fixture.malformed", "Invalid / entity")]);
+    expect(container.textContent).toContain("Keep one Create Record operation");
+    expect(container.querySelector("select")).toBeNull();
+    await render([operation("fixture.malformed", "Invalid / entity")]);
+    expect(container.textContent).toContain("Configure a valid record entity");
+    expect(container.querySelector("select")).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it("authors forms and fields in the shared draft and reopens their existing Canvas pages", async () => {
     const page = {
       ...composerDefinition("builtin.layout.page.single", "Single content", ["content"], false, "3.0.0"),
@@ -82,11 +111,20 @@ describe("SystemBuilderWorkspace UI preview", () => {
         ] } satisfies SystemBuilderComposerAsset["configurationSchema"],
       },
       composerDefinition("builtin.ui.section", "Section", ["content"], false, "3.0.0"),
+      { ...composerDefinition("builtin.data.create-operation", "Create Request", [], false, "3.0.0"), assetType: "tool" as const },
+      { ...composerDefinition("builtin.data.field", "Data Field", [], false, "3.0.0"), assetType: "schema" as const },
     ];
+    const byDefinition = (id: string) => catalog.find((asset) => asset.definitionId === id)!.definitionRef;
     const fixture = [
       { ...instance("fixture.root", rootDefinition.definitionId, "Portal", {}), definitionRef: rootDefinition.definitionRef },
       { ...instance("fixture.shell", shell.definitionId, "Standard", {}), definitionRef: shell.definitionRef },
       { ...instance("fixture.page", page.definitionId, "Main page", {}), definitionRef: page.definitionRef },
+      { ...instance("fixture.operation", "builtin.data.create-operation", "Create Request", { entity: "Request" }),
+        definitionRef: byDefinition("builtin.data.create-operation") },
+      { ...instance("fixture.text-record", "builtin.data.field", "Reason", { name: "reason", label: "Reason", type: "text" }),
+        definitionRef: byDefinition("builtin.data.field") },
+      { ...instance("fixture.number-record", "builtin.data.field", "Count", { name: "count", label: "Count", type: "number" }),
+        definitionRef: byDefinition("builtin.data.field") },
     ];
     const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: normalizeAssetId(item.instanceId) });
     const initial: SystemBuilderRevision = {
@@ -195,6 +233,16 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await choose("Go to step", "Finish form");
     await click("Add route rule");
     expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    await act(async () => [...container!.querySelectorAll("summary")].find((item) => item.textContent === "After submission")!.click());
+    expect([...find<HTMLSelectElement>("Record action", "select").options].map((item) => item.text))
+      .toEqual(["Choose an action", "Create Request (Request)"]);
+    await choose("Record action", "Create Request (Request)");
+    await choose("Form answer to send", "Request reason");
+    expect([...find<HTMLSelectElement>("Destination record field", "select").options].map((item) => item.text))
+      .toEqual(["Choose a field", "Reason"]);
+    await choose("Destination record field", "Reason");
+    await click("Add mapping");
+    await click("Set submission action");
     const previewButton = button(container!, "Preview form");
     await act(async () => { previewButton.focus(); previewButton.click(); });
     const preview = document.querySelector('[role="dialog"]')!;
@@ -209,6 +257,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await act(async () => preview.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
     await press("Finish preview");
     expect(preview.textContent).toContain("Answers included: Fast path.");
+    expect(preview.textContent).toContain("Configured action: Create Record. Preview did not run the action.");
     expect(preview.textContent).not.toContain("Request reason");
     expect(saveRevision).not.toHaveBeenCalled();
     await act(async () => preview.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
@@ -217,6 +266,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await choose("Field type", "Choice");
     await click("Add field");
     await fill("New option label", "Hardware");
+    await fill("Submitted value (optional)", "hardware");
     await click("Add option");
     await fill("New option label", "Software");
     await click("Add option");
@@ -246,11 +296,14 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await act(async () => questionnaire.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
     await click("Save and validate revision");
     await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(1));
-    expect(latest.bindings).toHaveLength(2);
+    expect(latest.bindings).toHaveLength(3);
+    const action = latest.bindings.map(readSystemFormAction).find(Boolean);
+    expect(action?.operationId).toBe("fixture.operation");
+    expect(action?.mappings).toEqual([{ fieldId: latest.instances.find((item) => item.displayName === "Request reason")?.instanceId, recordField: "reason" }]);
     expect(latest.instances.find((item) => item.displayName === "Number Field")?.selectedConfiguration)
       .toEqual({ label: "Number Field", minimum: 1, maximum: 10 });
     expect(latest.instances.find((item) => item.displayName === "Choice")?.selectedConfiguration?.staticOptions)
-      .toEqual([expect.objectContaining({ label: "Hardware" }), expect.objectContaining({ label: "Software" })]);
+      .toEqual([expect.objectContaining({ label: "Hardware", value: "hardware" }), expect.objectContaining({ label: "Software", value: "Software" })]);
     expect(latest.instances.find((item) => item.displayName === "Request reason")?.selectedConfiguration)
       .toEqual({ label: "Request reason", required: true });
     // Simulate reopening a revision with a direct field placed from Canvas between the steps.
@@ -270,6 +323,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect([...find<HTMLSelectElement>("Form", "select").options].map((item) => item.text)).toEqual(["Intake", "Questionnaire"]);
     await choose("Form step", "Details");
     expect(find<HTMLInputElement>("Field label", "input").value).toBe("Request reason");
+    expect(container!.textContent).toContain("Request reason → Reason");
     await click("Move step up");
     expect([...find<HTMLSelectElement>("Form step", "select").options].map((item) => item.text)).toEqual(["Details", "First step"]);
     await click("Save and validate revision");
