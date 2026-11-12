@@ -279,6 +279,7 @@ export class RequestSystemBuildUseCase {
 
       const resolved: SystemBuildResolvedImplementation[] = [];
       const resolutionDiagnostics: SystemBuildDiagnostic[] = [];
+      if (systemRevision.instances.length > 0) await this.dependencies.resolver.ensureReady?.();
       // Only this immutable build request owns these selections. Mutable
       // binding/package/revocation authority is checked again for reused entries.
       const selections = new Map<string, {definitionRef: AssetReference; result: AssetImplementationResolutionResult; reused: boolean}>();

@@ -95,11 +95,18 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "modules/hosts/desktop/composition/composeDesktopHost.ts",
             "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/application/ports/system-build/system-build-services.port.ts",
+            "modules/application/use-cases/system-build/guided-system-build.use-cases.ts",
+            "modules/application/use-cases/system-build/system-build-use-cases.ts",
+            "modules/application/use-cases/system-build/tests/guided-system-build.use-cases.unit.test.ts",
+            "modules/application/use-cases/system-build/tests/system-build-use-cases.unit.test.ts",
             "modules/hosts/desktop/composition/tests/published-form-host-registration.unit.test.ts",
             "modules/hosts/server/composition/tests/published-form-host-registration.unit.test.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--test-concurrency=1", "--",
+            "modules/application/use-cases/system-build/tests/guided-system-build.use-cases.unit.test.ts",
+            "modules/application/use-cases/system-build/tests/system-build-use-cases.unit.test.ts",
             "modules/hosts/desktop/composition/tests/published-form-host-registration.unit.test.ts",
             "modules/hosts/server/composition/tests/published-form-host-registration.unit.test.ts",
         ),

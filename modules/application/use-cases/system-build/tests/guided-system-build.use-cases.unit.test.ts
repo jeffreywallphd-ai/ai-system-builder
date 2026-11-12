@@ -37,6 +37,32 @@ const readyResolver = {
 } as unknown as SystemBuildImplementationResolverPort;
 
 describe("guided system build use cases", () => {
+  it("prepares the catalog once per readiness check and keeps individual resolution live", async () => {
+    const refs = ["builtin.system.system", "builtin.form.form", "builtin.form.text-field"];
+    const saved = { ...revision(), instances: refs.map((id, index) => ({ instanceId: `fixture.${index}`,
+      definitionRef: { kind: "asset-definition-version", id, version: "3.0.0" } })) } as unknown as SystemBuilderRevision;
+    const calls: string[] = [];
+    let failSetup = false;
+    const resolver: SystemBuildImplementationResolverPort = {
+      async ensureReady() { calls.push("setup"); if (failSetup) throw new Error("private setup detail"); },
+      async resolve(input) {
+        calls.push(String(input.definitionRef.id));
+        return { status: "ready", definitionRef: input.definitionRef, selectedRelease: { releaseId: "fixture.release" },
+          selectedFacets: [], diagnostics: [] } as unknown as Awaited<ReturnType<SystemBuildImplementationResolverPort["resolve"]>>;
+      },
+    };
+    const prepare = new PrepareGuidedSystemBuildUseCase(systemsRepository(record(), saved), validatorWith("valid"), profile, resolver);
+    const input = { workspaceId: "workspace-a" as never, systemId: "system-1" as never, systemRevisionId: "revision-1" as never };
+    const first = await prepare.execute(input);
+    expect(first.ok && first.value.status).toBe("ready");
+    expect(calls).toEqual(["setup", ...refs]);
+    failSetup = true;
+    const next = await prepare.execute(input);
+    expect(next.ok && next.value.status).toBe("blocked");
+    expect(calls).toEqual(["setup", ...refs, "setup"]);
+    expect(JSON.stringify(next)).not.toContain("private setup detail");
+  });
+
   it("prepares the exact current saved revision and injects host-owned build policy", async () => {
     const systems = systemsRepository(record(), revision());
     const validator = validatorWith("valid");

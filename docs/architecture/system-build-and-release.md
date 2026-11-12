@@ -63,6 +63,12 @@ a new build; a host never substitutes a default model.
 
 Partial outputs remain quarantined and are deleted or retained as failed-build evidence according to policy. They never become active release content.
 
+The managed host prepares its trusted implementation catalog once for each
+saved-version check and again for each build execution. This avoids repeating
+catalog setup for every asset or facet. Each resolution still checks the
+current workspace, exact version, and permitted implementation. A locked
+authority recheck remains live, and failed setup prevents output writes.
+
 ## Security and workflow compilation
 
 Composed policy is the intersection of platform, organization, system, and asset permissions. A composition can narrow but not widen the upstream authority. Missing required authorization, isolation, masking, audit, or approval declarations block the build.

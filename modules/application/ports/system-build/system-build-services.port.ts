@@ -7,6 +7,8 @@ export interface SystemBuildHasherPort {
 }
 
 export interface SystemBuildImplementationResolverPort {
+  /** Prepare the host's trusted catalog once for the current build phase. */
+  ensureReady?(): Promise<void>;
   resolve(request: AssetImplementationResolutionRequest): Promise<AssetImplementationResolutionResult>;
 }
 

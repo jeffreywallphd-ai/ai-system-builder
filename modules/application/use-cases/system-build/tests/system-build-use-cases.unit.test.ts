@@ -661,16 +661,35 @@ function repeatedRevision(count = 3): SystemBuilderRevision {
 }
 
 it("reuses exact selections per build, refreshes authority and preserves every instance lock", async () => {
-  let calls = 0; const base = resolver();
-  const counting: SystemBuildImplementationResolverPort = {async resolve(request) {calls++;return base.resolve(request);}};
+  let calls = 0; let preparations = 0; const base = resolver();
+  const counting: SystemBuildImplementationResolverPort = {
+    async ensureReady() { preparations++; },
+    async resolve(request) {calls++;return base.resolve(request);},
+  };
   const documents = createInMemoryStructuredDocumentStore(); const repository=createStructuredSystemBuildRepository(documents); const hasher=createSha256SystemBuildHasher(); const artifacts=artifactPort(hasher);
   const build=new RequestSystemBuildUseCase({repository,systems:systemRepository(repeatedRevision(500)),validator:new ValidateSystemBuilderRevisionService({readExactDefinition:async()=>definition}),resolver:counting,artifacts:artifacts.port,hasher,materializer:createDeterministicSystemBuildMaterializer()});
   const first=await build.execute(command("build.reuse.one"));
-  expect(first.ok && first.value.status).toBe("succeeded"); expect(calls).toBe(2);
+  expect(first.ok && first.value.status).toBe("succeeded"); expect(calls).toBe(2); expect(preparations).toBe(1);
   if(first.ok) expect(first.value.lock?.resolvedImplementations.length).toBe(500);
   const next=await Promise.all([build.execute(command("build.reuse.two")),build.execute(command("build.reuse.three"))]);
-  expect(next.every(result=>result.ok && result.value.status==="succeeded")).toBe(true); expect(calls).toBe(6);
+  expect(next.every(result=>result.ok && result.value.status==="succeeded")).toBe(true); expect(calls).toBe(6); expect(preparations).toBe(3);
   if(first.ok && next[0].ok && next[1].ok) {expect(next[0].value.lockDigest).toBe(first.value.lockDigest);expect(next[1].value.lockDigest).toBe(first.value.lockDigest);}
+});
+
+it("fails before resolution or output when trusted setup is unavailable", async () => {
+  const hasher = createSha256SystemBuildHasher(); const artifacts = artifactPort(hasher);
+  let setup = 0, resolution = 0, materializations = 0, writes = 0;
+  const build = new RequestSystemBuildUseCase({ repository: createStructuredSystemBuildRepository(createInMemoryStructuredDocumentStore()),
+    systems: systemRepository(repeatedRevision()), validator: new ValidateSystemBuilderRevisionService({readExactDefinition: async () => definition}),
+    resolver: {
+      async ensureReady() { setup++; throw new Error("private setup detail"); },
+      async resolve(request) { resolution++; return resolver().resolve(request); },
+    }, artifacts: { ...artifacts.port, async putImmutable(value) { writes++; return artifacts.port.putImmutable(value); } },
+    hasher, materializer: { async materialize() { materializations++; return []; } } });
+  const result = await build.execute(command("build.setup-unavailable"));
+  expect(result.ok && result.value.status).toBe("failed");
+  expect({ setup, resolution, materializations, writes }).toEqual({ setup: 1, resolution: 0, materializations: 0, writes: 0 });
+  expect(JSON.stringify(result)).not.toContain("private setup detail");
 });
 
 it("revoked, changed or unavailable reused authority denies before materialization or artifact writes", async () => {

@@ -1646,10 +1646,8 @@ export function composeServerHost(
               documents: organizationDocuments,
               systemBuilder,
               resolver: {
-                async resolve(request) {
-                  await ensureAssetImplementationReady();
-                  return assetImplementation.useCases.resolve.execute(request);
-                },
+                ensureReady: ensureAssetImplementationReady,
+                resolve: (request) => assetImplementation.useCases.resolve.execute(request),
               },
               artifacts: systemBuildArtifacts,
               hasher: createSha256SystemBuildHasher(),
