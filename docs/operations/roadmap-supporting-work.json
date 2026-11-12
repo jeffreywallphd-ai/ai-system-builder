@@ -12483,6 +12483,22 @@
       "limitations": [
         "Component tests used made-up data. The packaged Desktop app and full browser workflows still need their own checks."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "verify-256mib-ingestion-checkpoint-reopen",
+      "work_criteria": [
+        "large-transfer-progress-and-content-survive-reopen",
+        "large-transfer-observation-is-bounded"
+      ],
+      "receipt_digest": "f6a5584a606ec8933005c713c89a7e7b196a9d797335d2d8c523e707049b8014",
+      "review_digest": "a1ebe3ca74ce85202cac773eb406dbf4d362fe75d2555fedec4d05d36d32aee0",
+      "scope": "A 256 MiB upload kept 50% progress after reopening SQLite. Retrying one accepted chunk did not change progress. The final file matched its expected checksum, and the saved progress was cleared.",
+      "limitations": [
+        "This test covers local application storage. Browser uploads, larger input limits, and uploads from a website still need separate checks."
+      ]
     }
   ]
 }

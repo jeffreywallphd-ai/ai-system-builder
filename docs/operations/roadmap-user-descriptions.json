@@ -17728,6 +17728,29 @@
           "The packaged Desktop app and full browser workflows still need their own checks."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "422696f3f2d66a71c6b9ce0eeb62d6c0cf7142997cf88478cba27f746935b276",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A 256 MiB upload kept 50% progress after reopening SQLite.",
+          "Retrying one accepted chunk did not change progress.",
+          "The final file matched its expected checksum, and the saved progress was cleared."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "557b2b3708362df03922100f55970166d2b06dac27d801d6e8aaa2459fc09177",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This test covers local application storage.",
+          "Browser uploads, larger input limits, and uploads from a website still need separate checks."
+        ]
+      }
     }
   ]
 }
