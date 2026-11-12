@@ -1255,6 +1255,16 @@
       "recordedAt": "2026-07-18T19:44:09Z",
       "summary": "Desktop Customize actions and Customizations search reported Unable to complete request because the renderer client parsed an obsolete envelope shape.",
       "targetIncrementId": "unified-asset-studio-saved"
+    },
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "add-asset-backed-form-composer",
+      "impact": "scope-change",
+      "nextAction": "Publish Increment 7 as a draft for review and retain the original six increments and their evidence.",
+      "recordedAt": "2026-11-12T15:50:52Z",
+      "summary": "Add a Form Composer that people can switch to from Canvas in Systems Compose. They can build forms with pages and fields, check answers, send respondents to different pages based on their answers, and start configured actions after submission. Each part of the form uses assets.",
+      "targetIncrementId": null
     }
   ],
   "history": [
@@ -1911,6 +1921,24 @@
       "recordedAt": "2026-10-24T06:06:46Z",
       "sequence": 109,
       "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "f974b5f73e62d5547433b78e4f6ae4ceb9902c88223abe0da5416eedb5ee6aae",
+      "recordedAt": "2026-11-12T15:50:52Z",
+      "sequence": 110,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "d511c4e392c7f70a98c686290e8c7be8649ca4accf7196667159f96708be457c",
+      "recordedAt": "2026-11-12T15:50:52Z",
+      "sequence": 111,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "23a1bfdb4d033c0470cf9a24e76c09934f019457f5498cabef5d3b93bb3ffd64",
+      "recordedAt": "2026-11-12T15:55:06Z",
+      "sequence": 112,
+      "type": "roadmap-revised"
     }
   ],
   "increments": [
@@ -3158,6 +3186,93 @@
           "title": "Documentation and release evidence"
         }
       ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Switch between Canvas and Form with unsaved edits.\n- Add, rename, and reorder pages.\n- Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.\n- Confirm both editors show the same supported changes, including undo and redo.\n- Save and reopen the draft with the same asset IDs, versions, field settings, and order.",
+          "id": "shared-form-and-canvas-draft",
+          "qualification": "local"
+        },
+        {
+          "description": "Configure field validation and answer-based routing without code.\n- Test required answers, an invalid format or range, both branches, and the default route.\n- Go back and change the answer that selected a branch. Confirm the new route and that answers from skipped pages are excluded from submission.\n- Prevent publication of missing destinations, invalid field references, unreachable required steps, or route cycles.",
+          "id": "form-validation-and-answer-routing",
+          "qualification": "local"
+        },
+        {
+          "description": "Preview a form with sample answers, then run a published test form.\n- Verify the same validation and routes in preview and the published form.\n- Verify that preview produces no submissions or action runs.\n- Check that older revisions and Canvas systems still open and retain their current behavior.",
+          "id": "form-preview-and-runtime-parity",
+          "qualification": "local"
+        },
+        {
+          "description": "Connect a submission to a compatible action asset and run it in a published test form.\n- Show when the submission and action succeed, fail, or remain pending.\n- Verify that invalid and canceled forms start no action.\n- Keep a stable identity for each action run across duplicate requests, retries, and restarts.\n- Test a crash after the action takes effect but before the host records completion. Prevent a duplicate effect or keep the uncertain result for safe follow-up without automatically repeating it.\n- Keep form answers out of general logs and notifications.",
+          "id": "form-submission-triggers",
+          "qualification": "local"
+        },
+        {
+          "description": "Independently review the exact change and run automated denial checks.\n- Verify host-owned workspace, actor, released revision, and action permissions.\n- Recheck the release and action permissions before dispatch and retry. Test a permission change after submission that prevents the action from running.\n- Reject untrusted expressions, incompatible ports, stale or revoked versions, unauthorized actions, and oversized inputs.\n- Check that draft, preview, and imported definitions cannot start an action.\n- Confirm that authorized actions receive only configured, validated fields and that errors and audit records protect answer content.",
+          "id": "security-form-submission-and-action-authority",
+          "qualification": "local"
+        },
+        {
+          "description": "Build and run an intake form and a branching questionnaire from scratch in the packaged Desktop app and managed browser.\n- Use the keyboard to author and complete both forms, including invalid input, changing routes, and save and reopen.\n- Check labels, validation announcements, focus, reflow, and reachable controls at standard and narrow widths and at actual 400 percent zoom.\n- Measure page switching, editing, validation, and submission on a representative larger form. Record the agreed test size and budgets before measuring.",
+          "id": "form-composer-desktop-and-browser",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "A shared Canvas and Form switch in Systems Compose, with a page outline, field editor, validation and routing controls, action bindings, and preview.",
+        "Versioned asset placements, configuration, and typed bindings for pages, fields, validation, routes, and submission actions.",
+        "A respondent view that checks answers, moves between pages, and sends a validated submission through the owning host.",
+        "Automated host journeys, focused contract and runtime checks, and a guide with two sample forms."
+      ],
+      "dependsOn": [
+        "unified-asset-studio-saved",
+        "production-qualification"
+      ],
+      "excluded": [
+        "Public anonymous form links, external delivery or provider integration, file uploads, and arbitrary scripts or webhooks.",
+        "General survey distribution and analytics, third-party form import, and a general-purpose workflow designer."
+      ],
+      "id": "asset-backed-form-composer",
+      "number": 7,
+      "objective": "Let a system author build, preview, and publish a multipage form in Systems Compose. People can switch between Canvas and Form and keep their changes. The published form checks answers, follows the configured route, and starts approved actions after a successful submission.",
+      "plan": null,
+      "research": [],
+      "rollback": "Withdraw the Form entry point and stop dispatching form actions. Keep saved asset revisions, submission receipts, and action history readable. Preserve Canvas behavior and the existing authorization and publication checks.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Asset-backed Form Composer",
+      "verification": [
+        "Use focused tests for asset placement, revision round trips, rule evaluation, publication, and submission recovery.",
+        "Use synthetic data for the two real-host feature journeys. Keep full system testing for the combined campaign after roadmap feature work.",
+        "Review the existing form primitives, accepted Asset Kernel and security decisions, and the exact supported runtime bindings before adding assets. Use Qualtrics Survey Flow and Kuali Build submission-to-workflow documentation as interaction references."
+      ],
+      "workPackages": [
+        {
+          "id": "form-pages-and-field-assets",
+          "outcome": "Use the same revision, placements, and undo history in Canvas and Form. Add, rename, and reorder pages. Add compatible field assets inside the selected page. Edit labels, help text, required fields, and options. Reuse existing form and field assets. Define versioned page, rule, or trigger assets only where the current contracts lack the behavior.",
+          "title": "Build pages and add fields"
+        },
+        {
+          "id": "validation-and-answer-routing",
+          "outcome": "Configure validation and answer-based routes using fields, operators, values, and target pages. Show the order in which rules apply and the default route. Show errors next to the relevant field. In preview, test both branches, change a prior answer, and see which pages and answers will be included.",
+          "title": "Check answers and choose the next page"
+        },
+        {
+          "id": "submission-and-approved-actions",
+          "outcome": "Connect successful submission to an approved action or workflow asset through typed ports. Provide one working local example. Recheck the form and action authorization in the host. Give the respondent a clear result and prevent duplicate action runs when submission is retried. Preview uses sample answers and simulates actions.",
+          "title": "Submit a form and start an action"
+        },
+        {
+          "id": "form-journeys-and-guidance",
+          "outcome": "Build and run two distinct sample forms from scratch on Desktop and the managed browser. Cover keyboard operation, narrow windows, route changes, failed submissions, save and reopen, and publication. Fix defects found by the tests and document how to create, test, and publish a form.",
+          "title": "Test and document complete forms"
+        }
+      ]
     }
   ],
   "legacyAcceptanceScopeRevisions": [
@@ -3280,13 +3395,9 @@
       "recordedAt": "2026-10-22T22:18:47Z"
     }
   ],
-  "roadmapApproval": {
-    "approvedAt": "2026-10-22T14:04:02Z",
-    "fingerprint": "cc618942966618e81b3df4ab187cc1037c0ae3997a45e893a7e0d10df0dc825a",
-    "note": "The user explicitly directed AI-executable roadmap acceptance, offline human testing and removal of obsolete scope. This reapproval covers only the independently reviewed human wording amendment; technical qualification and product approval controls are unchanged."
-  },
+  "roadmapApproval": null,
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
-  "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-10-24T06:06:46Z"
+  "status": "roadmap-review",
+  "updatedAt": "2026-11-12T15:55:06Z"
 }

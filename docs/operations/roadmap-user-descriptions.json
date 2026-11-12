@@ -7646,6 +7646,119 @@
           "Keep human studies and manual acceptance offline; all retained technical UI checks are automated. User roadmap approval is separate from permission to implement, final overall approval and production/release authority."
         ]
       }
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "shared-form-and-canvas-draft",
+      "source_description_sha256": "3c670efa5c404977fd85fd283b5144075df6ccfaa4243ef8525ce7736e1eeb5b",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Switch between Canvas and Form with unsaved edits.",
+        "owner": "agent",
+        "next_action": "The agent will connect both editor views to the same draft and history.",
+        "completion_proof": "A saved test form opens with the same pages, fields, and settings in both views.",
+        "requirements": [
+          "Add, rename, and reorder pages.",
+          "Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.",
+          "Confirm both editors show the same supported changes, including undo and redo.",
+          "Save and reopen the draft with the same asset IDs, versions, field settings, and order."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-validation-and-answer-routing",
+      "source_description_sha256": "3f45f3d4853d91e4ab2eed13d001394cd28fd8bc7cb8498465a399caa236817a",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Configure field validation and answer-based routing without code.",
+        "owner": "agent",
+        "next_action": "The agent will add a rule editor and check each possible route.",
+        "completion_proof": "Automated tests verify error messages, both branches, the default route, and answer changes.",
+        "requirements": [
+          "Test required answers, an invalid format or range, both branches, and the default route.",
+          "Go back and change the answer that selected a branch. Confirm the new route and that answers from skipped pages are excluded from submission.",
+          "Prevent publication of missing destinations, invalid field references, unreachable required steps, or route cycles."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-preview-and-runtime-parity",
+      "source_description_sha256": "d257c7b20530fb427dc941b61a48a025c0704240c27c575e8fba5437666cbe92",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Preview a form with sample answers, then run a published test form.",
+        "owner": "agent",
+        "next_action": "The agent will test preview and a published form with the same sample answers.",
+        "completion_proof": "Both views follow the same rules. Preview produces no stored response or action.",
+        "requirements": [
+          "Verify the same validation and routes in preview and the published form.",
+          "Verify that preview produces no submissions or action runs.",
+          "Check that older revisions and Canvas systems still open and retain their current behavior."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-submission-triggers",
+      "source_description_sha256": "adfac852fbb9d2fdbdbe6267ccc24011943ef947250770ef9e0396471003fa99",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Connect a submission to a compatible action asset and run it in a published test form.",
+        "owner": "agent",
+        "next_action": "The agent will connect a submitted form to an allowed local action and test failures and retries.",
+        "completion_proof": "The tests preserve submission and action records after a crash and show that retry cannot repeat an action with an uncertain result.",
+        "requirements": [
+          "Show when the submission and action succeed, fail, or remain pending.",
+          "Verify that invalid and canceled forms start no action.",
+          "Keep a stable identity for each action run across duplicate requests, retries, and restarts.",
+          "Test a crash after the action takes effect but before the host records completion. Prevent a duplicate effect or keep the uncertain result for safe follow-up without automatically repeating it.",
+          "Keep form answers out of general logs and notifications."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "security-form-submission-and-action-authority",
+      "source_description_sha256": "6060443bfbde5a9ec9c7c8bfdbf2cdb2028be853ca7337e740ee3e96e78ecd0a",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Independently review the exact change and run automated denial checks.",
+        "owner": "agent",
+        "next_action": "The agent will test authorization and data protection and obtain an independent technical review.",
+        "completion_proof": "The review confirms the host refuses unauthorized submissions and actions, and protects form answers.",
+        "requirements": [
+          "Verify host-owned workspace, actor, released revision, and action permissions.",
+          "Recheck the release and action permissions before dispatch and retry. Test a permission change after submission that prevents the action from running.",
+          "Reject untrusted expressions, incompatible ports, stale or revoked versions, unauthorized actions, and oversized inputs.",
+          "Check that draft, preview, and imported definitions cannot start an action.",
+          "Confirm that authorized actions receive only configured, validated fields and that errors and audit records protect answer content."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-composer-desktop-and-browser",
+      "source_description_sha256": "e93d15dbfea2fae93ac4c0a4b39ee3ccf75a118b44d82d8c7a6b2eafedabeb06",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Build and run an intake form and a branching questionnaire from scratch in the packaged Desktop app and managed browser.",
+        "owner": "agent",
+        "next_action": "The agent will run both sample forms on Desktop and in the managed browser.",
+        "completion_proof": "Both hosts pass the authoring and respondent journeys, accessibility checks, and the agreed performance checks.",
+        "requirements": [
+          "Use the keyboard to author and complete both forms, including invalid input, changing routes, and save and reopen.",
+          "Check labels, validation announcements, focus, reflow, and reachable controls at standard and narrow widths and at actual 400 percent zoom.",
+          "Measure page switching, editing, validation, and submission on a representative larger form. Record the agreed test size and budgets before measuring."
+        ]
+      }
     }
   ],
   "headings": [
@@ -8909,6 +9022,21 @@
         ]
       },
       "increment_id": "server-browser-and-delivery-qualification"
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "source_title_objective_digest": "574f53c0650f7cd12d427ac66cdd8f8d4949917435f6e1cdf16887a70017c443",
+      "user_description": {
+        "title": "Asset-backed Form Composer",
+        "purpose": "Build forms in Systems Compose with pages, fields, rules, and actions. Switch between Canvas and Form while keeping your edits.",
+        "scope": [
+          "Author, preview, and publish a multipage form.",
+          "Choose the next page based on an answer and run an approved action after submission.",
+          "Verify the experience on Desktop and in the managed browser."
+        ]
+      }
     }
   ],
   "support": [
