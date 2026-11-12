@@ -148,6 +148,22 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(onSelect).toHaveBeenLastCalledWith("instance.root");
     await fire(treeItems[0]!, "keydown", { key: "ArrowRight" });
 
+    const layersTab = container!.querySelector<HTMLButtonElement>("#system-composer-sidebar-tab-layers")!;
+    const propertiesTab = container!.querySelector<HTMLButtonElement>("#system-composer-sidebar-tab-properties")!;
+    const stylingTab = container!.querySelector<HTMLButtonElement>("#system-composer-sidebar-tab-styling")!;
+    layersTab.focus();
+    await fire(layersTab, "keydown", { key: "ArrowRight" });
+    expect(document.activeElement).toBe(propertiesTab);
+    expect(propertiesTab.getAttribute("aria-selected")).toBe("true");
+    await fire(propertiesTab, "keydown", { key: "ArrowRight" });
+    expect(document.activeElement).toBe(stylingTab);
+    await fire(stylingTab, "keydown", { key: "End" });
+    expect(document.activeElement).toBe(layersTab);
+    await fire(layersTab, "keydown", { key: "Home" });
+    expect(document.activeElement).toBe(propertiesTab);
+    await fire(propertiesTab, "keydown", { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(layersTab);
+
     expect(
       Array.from(
         container!.querySelectorAll<HTMLElement>(
@@ -573,10 +589,10 @@ describe("SystemComposerStructureEditor interactions", () => {
     const onAdd = vi.fn();
     const onPlace = vi.fn();
     const onTargetSlotChange = vi.fn();
-    const loadLayouts = vi.fn().mockResolvedValue({
-      ok: true,
-      value: { items: [shell] },
-    });
+    const pendingLayouts = Promise.withResolvers<{ ok: true; value: { items: typeof shell[] } }>();
+    const loadLayouts = vi.fn()
+      .mockRejectedValueOnce(new Error("Synthetic transport failure"))
+      .mockReturnValue(pendingLayouts.promise);
     const loadCompatibleAssets = vi.fn().mockResolvedValue({
       ok: true,
       value: { items: [card, formInput] },
@@ -622,7 +638,15 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(loadLayouts).not.toHaveBeenCalled();
     await click(ariaButton("Show layouts"));
     await flushAsync();
-    expect(loadLayouts).toHaveBeenCalledTimes(1);
+    expect(container!.textContent).toContain("Unable to load predefined layouts. Reopen Layouts to retry.");
+    await click(ariaButton("Hide layouts"));
+    await click(ariaButton("Show layouts"));
+    await click(ariaButton("Hide layouts"));
+    await click(ariaButton("Show layouts"));
+    expect(loadLayouts).toHaveBeenCalledTimes(2);
+    pendingLayouts.resolve({ ok: true, value: { items: [shell] } });
+    await flushAsync();
+    expect(loadLayouts).toHaveBeenCalledTimes(2);
     expect(
       container!.querySelectorAll<HTMLInputElement>(
         'input[name="system-layout"]',

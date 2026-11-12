@@ -47,6 +47,7 @@ export interface SystemComposerTargetSlot {
 }
 
 export type SystemComposerSidebarTab = "properties" | "styling" | "layers";
+const composerDetailsTabs = ["properties", "styling", "layers"] as const;
 
 export interface SystemComposerAssetBrowseRequest {
   readonly searchText?: string;
@@ -237,13 +238,13 @@ export function SystemComposerStructureEditor({
   const detailsToggleRefs = useRef(
     new Map<SystemComposerSidebarTab, HTMLButtonElement>(),
   );
+  const detailsTabRefs = useRef(new Map<SystemComposerSidebarTab, HTMLButtonElement>());
   const canvasRef = useRef<HTMLDivElement>(null);
   const assetGeneration = useRef(0);
   const assetCursors = useRef(new Set<string>());
-  const loadLayoutsRef = useRef(loadLayouts);
+  const layoutRequest = useRef<object | undefined>(undefined);
   const loadCompatibleAssetsRef = useRef(loadCompatibleAssets);
   const sidebarChangeRef = useRef(onSidebarTabChange);
-  loadLayoutsRef.current = loadLayouts;
   loadCompatibleAssetsRef.current = loadCompatibleAssets;
   sidebarChangeRef.current = onSidebarTabChange;
 
@@ -407,36 +408,9 @@ export function SystemComposerStructureEditor({
     };
   }, [draft.instances.length, draft.placements, selectedInstanceId]);
 
-  useEffect(() => {
-    if (!layoutsExpanded || layoutsLoaded || layoutsLoading) return;
-    let active = true;
-    setLayoutsLoading(true);
-    setLayoutError(undefined);
-    const loader = loadLayoutsRef.current;
-    if (!loader) {
-      setLoadedLayouts(layoutOptions);
-      setLayoutsLoaded(true);
-      setLayoutsLoading(false);
-      return;
-    }
-    void loader().then((result) => {
-      if (!active) return;
-      if (result.ok) {
-        setLoadedLayouts(
-          result.value.items.filter(
-            (asset) => asset.layoutRole === "application-shell",
-          ),
-        );
-        setLayoutsLoaded(true);
-      } else {
-        setLayoutError(result.error.message);
-      }
-      setLayoutsLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [layoutOptions, layoutsExpanded, layoutsLoaded]);
+  useEffect(() => () => {
+    layoutRequest.current = undefined;
+  }, []);
 
   useEffect(() => {
     const generation = ++assetGeneration.current;
@@ -631,6 +605,73 @@ export function SystemComposerStructureEditor({
     globalThis.setTimeout(() => detailsPanelRef.current?.focus(), 0);
   };
 
+  function handleDetailsTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    tab: SystemComposerSidebarTab,
+  ) {
+    const current = composerDetailsTabs.indexOf(tab);
+    let next: number;
+    switch (event.key) {
+      case "ArrowLeft":
+        next = (current - 1 + composerDetailsTabs.length) % composerDetailsTabs.length;
+        break;
+      case "ArrowRight":
+        next = (current + 1) % composerDetailsTabs.length;
+        break;
+      case "Home":
+        next = 0;
+        break;
+      case "End":
+        next = composerDetailsTabs.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const target = composerDetailsTabs[next]!;
+    setSidebarTab(target);
+    detailsTabRefs.current.get(target)?.focus();
+  }
+
+  function toggleLayouts() {
+    const expanded = !layoutsExpanded;
+    setLayoutsExpanded(expanded);
+    if (!expanded || layoutsLoaded || layoutRequest.current) return;
+    setLayoutError(undefined);
+    if (!loadLayouts) {
+      setLoadedLayouts(layoutOptions);
+      setLayoutsLoaded(true);
+      return;
+    }
+    const request = {};
+    layoutRequest.current = request;
+    setLayoutsLoading(true);
+    void Promise.resolve()
+      .then(loadLayouts)
+      .then((result) => {
+        if (layoutRequest.current !== request) return;
+        if (result.ok) {
+          setLoadedLayouts(
+            result.value.items.filter((asset) => asset.layoutRole === "application-shell"),
+          );
+          setLayoutsLoaded(true);
+        } else {
+          setLayoutError(result.error.message);
+        }
+      })
+      .catch(() => {
+        if (layoutRequest.current === request) {
+          setLayoutError("Unable to load predefined layouts. Reopen Layouts to retry.");
+        }
+      })
+      .finally(() => {
+        if (layoutRequest.current === request) {
+          layoutRequest.current = undefined;
+          setLayoutsLoading(false);
+        }
+      });
+  }
+
   const availableLayouts = layoutsLoaded ? loadedLayouts : [];
 
   return (
@@ -675,7 +716,7 @@ export function SystemComposerStructureEditor({
           role="group"
           aria-label="Responsive composer panels"
         >
-          {(["properties", "styling", "layers"] as const).map((tab) => (
+          {composerDetailsTabs.map((tab) => (
             <button
               key={tab}
               ref={(element) => {
@@ -731,7 +772,7 @@ export function SystemComposerStructureEditor({
               aria-label={layoutsExpanded ? "Hide layouts" : "Show layouts"}
               aria-expanded={layoutsExpanded}
               aria-controls="system-composer-layout-bar-content"
-              onClick={() => setLayoutsExpanded((current) => !current)}
+              onClick={toggleLayouts}
             >
               <ApplicationIcon name="chevron" />
               <span>Layouts</span>
@@ -821,9 +862,13 @@ export function SystemComposerStructureEditor({
             aria-label="Composer details"
             aria-orientation="horizontal"
           >
-            {(["properties", "styling", "layers"] as const).map((tab) => (
+            {composerDetailsTabs.map((tab) => (
               <button
                 key={tab}
+                ref={(element) => {
+                  if (element) detailsTabRefs.current.set(tab, element);
+                  else detailsTabRefs.current.delete(tab);
+                }}
                 id={`system-composer-sidebar-tab-${tab}`}
                 type="button"
                 role="tab"
@@ -832,6 +877,7 @@ export function SystemComposerStructureEditor({
                 aria-controls={`system-composer-${tab}-panel`}
                 tabIndex={sidebarTab === tab ? 0 : -1}
                 onClick={() => setSidebarTab(tab)}
+                onKeyDown={(event) => handleDetailsTabKeyDown(event, tab)}
               >
                 {tab === "layers"
                   ? "Layers"
