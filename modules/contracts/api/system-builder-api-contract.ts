@@ -1,5 +1,10 @@
 import { createTransportOperation } from "../transport";
 
+export const API_SYSTEM_BUILDER_PUBLISHED_FORM_OPERATIONS = {
+  listPublishedForms: createTransportOperation("system-builder", "list-published-forms"),
+  submitPublishedForm: createTransportOperation("system-builder", "submit-published-form"),
+} as const;
+
 export const API_SYSTEM_BUILDER_OPERATIONS = {
   create: createTransportOperation("system-builder", "create"),
   listTemplates: createTransportOperation("system-builder", "list-templates"),

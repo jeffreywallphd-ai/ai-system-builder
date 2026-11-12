@@ -228,6 +228,11 @@ customization, and single-asset Studio workflows.
   current record-create policy. It returns form steps and field descriptions
   for the admitted respondent. Action mappings and stored answers stay on the
   host. The projection does not create a form submission.
+  The API and Desktop IPC expose dedicated list and submit operations only
+  when the host composes the form runtime. The API uses the existing asset
+  read and write scopes and its authenticated actor. Desktop takes identity
+  from its host. The operations accept bounded form data and no caller roles
+  or actor identities.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only

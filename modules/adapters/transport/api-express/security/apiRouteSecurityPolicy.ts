@@ -438,6 +438,8 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ["GET /api/systems/release", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/releases", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/publication", { public: false, scopes: ["asset:read"] }],
+  ["GET /api/systems/published-forms", { public: false, scopes: ["asset:read"] }],
+  ["POST /api/systems/published-forms/submit", { public: false, scopes: ["asset:write"] }],
   [
     "GET /api/systems/published-lifecycle",
     { public: false, scopes: ["asset:read"] },
