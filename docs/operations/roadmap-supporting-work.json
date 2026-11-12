@@ -12894,6 +12894,53 @@
       "limitations": [
         "Focused UI, compiler and responsive layout checks passed. The packaged Desktop and managed browser journeys remain pending."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "shared-form-and-canvas-draft",
+      "work_id": "separate-form-appearance-and-behavior-and-remove-elements",
+      "work_criteria": [
+        "form-appearance-is-in-page-and-behavior-is-in-sidebar",
+        "form-removal-requires-confirmation-and-keeps-the-first-page"
+      ],
+      "receipt_digest": "01b82256910e16af390ec12a3c9a3d443898ad8d1615c1b73624c9839a53f4f2",
+      "review_digest": "c850a3989dd080b68e63b7c9fe544e02efc9d1b7e69b641f88ec0d36c0cda8a0",
+      "scope": "The Form editor places labels, help text, visible choices and messages on the page. Properties shows validation and behavior. Confirmed field and later-page removal clears affected references and can be undone.",
+      "limitations": [
+        "The first page remains protected in Form Composer. These are focused editor and layout checks; real host journeys are pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "security-form-submission-and-action-authority",
+      "work_id": "deliver-published-form-desktop-and-server-hosts",
+      "work_criteria": [
+        "both-hosts-compose-exact-published-form-operations",
+        "form-access-checks-workspace-actor-and-current-membership"
+      ],
+      "receipt_digest": "3734d4f4fd94c7840ed6a03688b2be35f445d1b40486a19b4e06af5709f6e289",
+      "review_digest": "a577d790c143be3418a876a6dbb792471f4c7906eb70b8279a0d86b211d22fdf",
+      "scope": "The Desktop and server composition roots register both form operations when their authority is configured. Isolated host tests and the gateway deny unavailable authority and workspaces.",
+      "limitations": [
+        "The tests check host registration and denial. Successful published submission in packaged Desktop and managed browser remains pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-preview-and-runtime-parity",
+      "work_id": "connect-desktop-publish-screen-to-form-ipc",
+      "work_criteria": [
+        "desktop-publish-connects-to-the-selected-form-channel"
+      ],
+      "receipt_digest": "0b6022ad886a1a473775aa21578b3c44d15512d07781aa937290221df60c4db2",
+      "review_digest": "6299d8049cbe2a0f4d2e048bbf287cfd67661d9b09b087c6ba14c6db11bd4f43",
+      "scope": "The real Desktop Publish renderer, client and preload opened and submitted a selected form with mocked IPC. Dedicated channels rejected mismatched responses.",
+      "limitations": [
+        "This is a focused interaction with mocked IPC and a Desktop compiler check. It does not qualify packaged Desktop or the managed browser."
+      ]
     }
   ]
 }

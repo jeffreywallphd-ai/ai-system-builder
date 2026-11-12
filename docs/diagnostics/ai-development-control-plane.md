@@ -337,6 +337,8 @@ cannot cover unrelated changed paths or grant a parent qualification.
 Published form work can opt into the exact Desktop bridge and build,
 Form editor interactions, browser client, shared gateway, or host registration checks.
 Each check names fixed repository tests and the source paths it covers.
+The Desktop and browser client checks exercise the actual Publish page with
+isolated transport replies. Packaged host runs remain separate.
 The generic focused check still applies to any other changed path or when
 the work explicitly requires it. The shared gateway check does not cover the
 Desktop or server registration files. The separate registration check exercises

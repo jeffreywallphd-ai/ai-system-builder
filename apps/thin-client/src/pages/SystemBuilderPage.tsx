@@ -14,6 +14,7 @@ import { TabbedPanel } from "../components/ui/TabbedPanel";
 import { createThinClientSystemBuilderClient } from "../features/system-builder/api/thinClientSystemBuilderClient";
 import { createThinClientSystemBuildClient } from "../features/system-builder/api/thinClientSystemBuildClient";
 import { createThinClientSystemPublishedLifecycleClient } from "../features/system-builder/api/thinClientSystemPublishedLifecycleClient";
+import { createThinClientSystemPublishedFormClient } from "../features/system-builder/api/thinClientSystemPublishedFormClient";
 import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
 export interface SystemBuilderPageProps {
   readonly workspaceId: string;
@@ -29,6 +30,7 @@ export function SystemBuilderPage({
     () => createThinClientSystemPublishedLifecycleClient(),
     [],
   );
+  const publishedFormsClient = useMemo(createThinClientSystemPublishedFormClient, []);
   const [activeTabId, setActiveTabId] = useState("compose");
   const [composeSystemId, setComposeSystemId] = useState<string>();
   const [activeSystemsRevision, setActiveSystemsRevision] = useState(0);
@@ -91,6 +93,7 @@ export function SystemBuilderPage({
                 workspaceId={workspaceId}
                 buildClient={buildClient}
                 lifecycleClient={lifecycleClient}
+                publishedFormsClient={publishedFormsClient}
               />
             ),
           },

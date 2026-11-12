@@ -479,16 +479,32 @@ const pendingNotificationDefinition=Object.freeze({priorCommit:"6c785c91f117d816
 ])});
 let notificationPriorCensus;
 const currentPublishedFormCensus = Object.freeze({
-  commit: "26acff85368f0d636ef7d376672af089e1bc6633",
-  digest: "0f195fdd6da6f23f9c202431f50b9488feac929563fd539c077022200b1fba08",
+  commit: "13633aef65ea1150189fd867f4703d927026f5df",
+  digest: "ca853614067ddcf5ed133836cd5d2d0854c90e9cf86323f345abed51c014d3f7",
   previousCommit: "6b0b7b47748c0792dbacbef5c06cbf3b3e5d3ab2",
 });
 const censusDocument = "docs/operations/comprehensive-ui-automation-current-census.json";
+const publishedFormTabInventory = [
+  {source: "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+    before: "9ee37f4843cc9bc324842a60a20861b3404109ef5ea346f86f977540aec60c2b",
+    after: "18fa6e8023f6e607273455aab60c6a8dd2eab35ad68505d45d074ad61a101216"},
+  {source: "apps/thin-client/src/pages/SystemBuilderPage.tsx",
+    before: "8cd543871e43bde6c2ede266d2d0bb53207adda1f94270b7b1581f8a461cf5b9",
+    after: "9db0bd657c3118ec5719603df1de739bf6b709f559e7aac2f88236a794870105"},
+];
 const sourceDrift = map => map.sources.filter(row => row.facts.sha256 !== row.committed_sha256)
   .map(row => ({kind: "unreviewed-source-drift", source: row.path}));
 function currentPublishedFormCensusLegacyView(map, result) {
   if (sha(JSON.stringify(map)) !== currentPublishedFormCensus.digest) return {map, result};
   const actual = JSON.parse(historicalSource(currentPublishedFormCensus.commit, censusDocument));
+  // The census validator independently checks the current source and exact
+  // literal tab labels. Bind only the two updated source digests here.
+  for (const {source,before,after} of publishedFormTabInventory) {
+    const rows = actual.inventories.filter(row => row.source === source && row.property === "label");
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].sha256, before);
+    rows[0].sha256 = after;
+  }
   assert.deepEqual(map, actual);
   assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(actual));
   const previous = JSON.parse(historicalSource(currentPublishedFormCensus.previousCommit, censusDocument));
@@ -1472,4 +1488,8 @@ test("current published form checkpoint preserves its complete source gaps and o
   const forged=structuredClone(map);
   forged.scenarios[0].execution_status="passed";
   assert.throws(()=>assertCompleteCurrentSourceDrift(forged,result));
+  const stale=structuredClone(map);
+  const [pin]=publishedFormTabInventory;
+  stale.inventories.find(row=>row.source===pin.source&&row.property==="label").sha256=pin.before;
+  assert.throws(()=>assertCompleteCurrentSourceDrift(stale,result));
 });

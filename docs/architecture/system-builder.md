@@ -282,6 +282,9 @@ customization, and single-asset Studio workflows.
   Desktop Publish passes the selected release through the dedicated form
   bridge. The preload selects the allowed request fields and checks the
   response channel before returning a result to the renderer.
+  The browser uses the existing authenticated fetch path. It sends the
+  workspace and release in the list query and puts form answers only in the
+  submission request body.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only

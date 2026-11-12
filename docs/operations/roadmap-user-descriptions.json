@@ -18369,6 +18369,74 @@
           "The packaged Desktop and managed browser journeys still need testing."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "98c3ae75683e85cb2a8109498e60afcba2c3dc50e9620331b30dfcb3ac338cf4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Edit what respondents see on the page.",
+          "Use Properties for validation and behavior.",
+          "Confirm before removing a field or a later page.",
+          "Undo restores the removed items and their related settings."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "71ffc2391402cc9b497afafddadcf76abf4a71ebddf4f24da6036cd1047a8467",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The first page cannot be removed in Form Composer.",
+          "The editor and layout checks passed. The packaged Desktop and managed browser journeys still need testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f11ca3d684cbf082e1b652d43d5efbaf3680f046843c771c88da9af4d24cf32c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop and server enable the form operations when their existing permission checks are available.",
+          "The isolated checks deny requests without the required permissions or workspace."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3ea8aa191bcd235defafd6445d2085bc79272ae781fe20dab09d8aed652bae37",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These checks cover registration and denial.",
+          "A successful published submission still needs testing in packaged Desktop and the managed browser."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e7a37f57d8bcd2beb1370352aaab9be98316718015f7a30598e87c7093e9e398",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop Publish screen opened and submitted the selected form using a test connection.",
+          "The preload rejected a reply for a different operation."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7febe90cbfd624c6a059730315d38d8512cc40f1131c1acee8be3617d2f1830b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The interaction used a test connection. The Desktop compiler check also passed.",
+          "Both actual host journeys still need testing."
+        ]
+      }
     }
   ]
 }

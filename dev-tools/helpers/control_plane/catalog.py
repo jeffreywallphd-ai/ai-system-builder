@@ -65,6 +65,7 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedFormClient.ts",
             "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedFormClient.unit.test.ts",
+            "apps/thin-client/src/pages/SystemBuilderPage.tsx",
         ),
         "command": (
             "--import", "tsx", "--test", "--test-concurrency=1", "--",

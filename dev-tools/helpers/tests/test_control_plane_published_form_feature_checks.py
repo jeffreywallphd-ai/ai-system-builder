@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[3]
 DESKTOP = "published-form-desktop-bridge"
 EDITOR = "published-form-editor-interactions"
 BROWSER = "published-form-browser-client"
+BROWSER_PAGE = "apps/thin-client/src/pages/SystemBuilderPage.tsx"
 HOST = "published-form-host-composition"
 HOST_REGISTRATION = "published-form-host-registration"
 PRELOAD = "apps/desktop/src/preload/exposedApi.ts"
@@ -59,6 +60,8 @@ class PublishedFormFeatureChecksTest(unittest.TestCase):
         self.assertIn("focused-tests", chosen([browser, host], [BROWSER]))
         self.assertIn("focused-tests", chosen([DESKTOP_HOST, host], [HOST]))
         self.assertIn("focused-tests", chosen([SERVER_HOST, host], [HOST]))
+        self.assertNotIn("focused-tests", chosen([browser, BROWSER_PAGE], [BROWSER]))
+        self.assertIn("focused-tests", chosen([browser, BROWSER_PAGE, "apps/thin-client/src/pages/UnrelatedPage.tsx"], [BROWSER]))
 
     def test_host_roots_need_actual_registration_coverage(self):
         selected = chosen([DESKTOP_HOST, SERVER_HOST, *REGISTRATION_TESTS], [HOST_REGISTRATION])
