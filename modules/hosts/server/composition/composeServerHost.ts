@@ -250,6 +250,8 @@ import { composeAssetDerivedCustomization } from "../../shared/composition/compo
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
 import { composeSystemData } from "../../shared/composition/composeSystemData";
+import { composePublishedSystemForms } from "../../shared/composition/composePublishedSystemForms";
+import { createStructuredOrganizationRepositories } from "../../../adapters/persistence/organization";
 import { composeSystemReview } from "../../shared/composition/composeSystemReview";
 import {
   composeSystemDeployment,
@@ -1680,6 +1682,17 @@ export function composeServerHost(
               now: options.now,
             })
           : undefined;
+      const formDocuments = options.persistence?.documents;
+      const formOrganizations = options.organizationContextProvider;
+      const publishedForms = systemBuilder && systemBuild && systemData && assetImplementation && workspaceAuthorization && formDocuments && formOrganizations
+        ? composePublishedSystemForms({
+            systems: systemBuilder.repository, builds: systemBuild.repository, artifacts: systemBuildArtifacts,
+            hasher: createSha256SystemBuildHasher(), systemData, workspaceAccess: assetWorkspaceAccess,
+            organizations: formOrganizations, memberships: createStructuredOrganizationRepositories(formDocuments).memberships,
+            revocations: { async listRevokedImplementationReleaseIds(_workspaceId, releaseIds) {
+              return (await assetImplementation.repository.listRevocations(releaseIds)).map((entry) => entry.releaseId);
+            } },
+          }) : undefined;
       const systemReview =
         organizationDocuments && systemBuild
           ? composeSystemReview({
@@ -2711,7 +2724,7 @@ export function composeServerHost(
             }
           : {}),
         ...(systemBuilder
-          ? { systemBuilderServices: systemBuilder.useCases }
+          ? { systemBuilderServices: { ...systemBuilder.useCases, ...(publishedForms ? { publishedForms } : {}) } }
           : {}),
         ...(systemData
           ? { systemDataServices: { runtime: systemData.runtime } }

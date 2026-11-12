@@ -188,6 +188,8 @@ import {
 } from "../../../adapters/storage/system-build";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
 import { composeSystemData } from "../../shared/composition/composeSystemData";
+import { composePublishedSystemForms } from "../../shared/composition/composePublishedSystemForms";
+import { createStructuredOrganizationRepositories } from "../../../adapters/persistence/organization";
 import { composeSystemReview } from "../../shared/composition/composeSystemReview";
 import {
   composeSystemDeployment,
@@ -1155,6 +1157,20 @@ export function composeDesktopHost(
               now: options.now,
             })
           : undefined;
+      const formIdentity = options.localIdentity;
+      const formDocuments = options.persistence?.documents;
+      const publishedForms = systemBuilder && systemBuild && systemData && workspaceAuthorization && formIdentity && formDocuments
+        ? composePublishedSystemForms({
+            systems: systemBuilder.repository, builds: systemBuild.repository, artifacts: systemBuildArtifacts,
+            hasher: createSha256SystemBuildHasher(), systemData, workspaceAccess: assetWorkspaceAccess,
+            organizations: { getCurrentOrganizationContext: () => ({ organizationId: formIdentity.organizationId, principalId: formIdentity.principalId }) },
+            memberships: createStructuredOrganizationRepositories(formDocuments).memberships,
+            revocations: { async listRevokedImplementationReleaseIds(_workspaceId, releaseIds) {
+              const implementation = (await getAssetFeatures()).assetImplementation;
+              if (!implementation) throw new Error("Asset implementation revocation storage is unavailable.");
+              return (await implementation.repository.listRevocations(releaseIds)).map((entry) => entry.releaseId);
+            } },
+          }) : undefined;
       const systemDeploymentReleaseBindings =
         systemBuild && systemBuilder
           ? new SystemDeploymentReleaseBindingService({
@@ -2034,6 +2050,7 @@ export function composeDesktopHost(
               systemBuilder: {
                 ipcMain: registerOptions.ipcMain,
                 ...systemBuilder.useCases,
+                ...(publishedForms ? { publishedForms } : {}),
               },
             }
           : {}),

@@ -270,6 +270,12 @@ customization, and single-asset Studio workflows.
   read and write scopes and its authenticated actor. Desktop takes identity
   from its host. The operations accept bounded form data and no caller roles
   or actor identities.
+  Both hosts use the same gateway to check the active workspace and current
+  organization membership. The server also checks that the authenticated
+  request actor matches the organization context. Each host uses its existing
+  approved release artifacts, revocation records, and release-bound record
+  store. If a host lacks its authorization dependencies, it does not register
+  the form operations.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only
