@@ -24,6 +24,7 @@ import {
 } from "../asset";
 import { validateSystemBuilderStructure } from "./validate-system-builder-structure.service";
 import { validateSystemFormRoutes } from "./system-form-rules.service";
+import { validateSystemFormActions } from "./system-form-action.service";
 import type { SystemBuilderModelAuthorityService } from "./system-builder-model-authority.service";
 
 const MAX_ISSUES = 200;
@@ -130,8 +131,8 @@ export class ValidateSystemBuilderRevisionService {
       issues,
     );
     validateConversationInteractions(revision, instancesById, issues);
-    const routeIssues = validateSystemFormRoutes(revision);
-    if (routeIssues.length) issues.unshift(...routeIssues);
+    const formIssues = [...validateSystemFormRoutes(revision), ...validateSystemFormActions(revision)];
+    if (formIssues.length) issues.unshift(...formIssues);
     await this.validateModelBindings(revision, issues);
 
     const boundedIssues = issues.slice(0, MAX_ISSUES);

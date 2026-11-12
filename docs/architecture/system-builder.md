@@ -203,6 +203,11 @@ customization, and single-asset Studio workflows.
   current step, and drops answers after a changed route. Preview has no save or
   action transport. It reports which fields would be included without showing
   their answer values in the result.
+  A form submission binding connects the exact Foundation `submitted-values`
+  port to the existing Create Record operation's `input` port. It lists the
+  form fields the action may receive and their destination record fields.
+  Revision validation rejects duplicate actions, other operations, incompatible
+  ports, and fields outside the form. A saved binding by itself has no effect.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only

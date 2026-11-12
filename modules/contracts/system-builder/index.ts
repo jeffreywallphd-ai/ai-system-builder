@@ -15,3 +15,4 @@ export * from "./system-builder-foundation-upgrade";
 export * from "./system-builder-model-binding";
 export * from "./system-builder-conversation-interaction";
 export * from "./system-builder-form-route";
+export * from "./system-builder-form-action";
