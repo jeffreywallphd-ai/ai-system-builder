@@ -21,6 +21,7 @@ const organizationId = createOrganizationId("mcp-fixture-org");
 const hostIncarnationId = "d5ed1db7-f069-4c48-bbc4-815697889c5d";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
 const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_templates", "aisb_list_workspaces", "aisb_read_system"];
+const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_preview_edits", "aisb_rename_system"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
 
 function pair(connector: { endpoint: string; fingerprint: string }, pairingCode: string) {
@@ -52,6 +53,65 @@ function resultText(result: Awaited<ReturnType<Client["callTool"]>>): unknown {
   if (block?.type !== "text") throw new Error("Expected a text result.");
   return JSON.parse(block.text);
 }
+
+test("official stdio opt-in lists only finite authoring tools and forwards without retries", { timeout: 20_000 }, async () => {
+  const registrations = createDesktopHeadlessClientAuthority({
+    documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId),
+    identity: { organizationId, principalId: "mcp-fixture-user" },
+    canReadWorkspace: async (id) => id === workspaceId,
+    canAuthorWorkspace: async (id) => id === workspaceId,
+  });
+  let calls = 0;
+  let unknown = false;
+  let revokeAfterDispatch = false;
+  if (!isHeadlessHostIncarnationId(hostIncarnationId)) throw new Error("Invalid test host");
+  const connector = await startDesktopHeadlessLoopback({
+    registrations,
+    async read() { return { ok: false, code: "headless.unavailable" }; },
+    authoring: {
+      hostIncarnationId,
+      async execute(input, grant) {
+        calls++;
+        assert.equal(input.operation, "systems.create");
+        if (revokeAfterDispatch) assert.equal(await registrations.revokeClient(grant.registeredClientId), true);
+        return unknown ? { ok: false, code: "headless.operation-unconfirmed" }
+          : { ok: true, value: { kind: "committed", reference: { systemId, revisionId: "mcp-fixture-system.r1", recordRevision: 1 } } };
+      },
+    },
+  });
+  const client = new Client({ name: "ai-system-builder-authoring-fixture", version: "1.0.0" });
+  try {
+    const pending = await registrations.beginPairing(workspaceId, () => true, "author");
+    assert.equal(pending.status, "ready");
+    const credential = await pair(connector, pending.pairingCode);
+    const transport = new StdioClientTransport({
+      command: process.execPath, args: ["--import", "tsx", entrypoint],
+      env: { AISB_HEADLESS_ENDPOINT: connector.endpoint, AISB_HEADLESS_FINGERPRINT: connector.fingerprint,
+        AISB_HEADLESS_CREDENTIAL: credential, AISB_HEADLESS_ENABLE_AUTHORING: "1", TSX_DISABLE_CACHE: "1" },
+      stderr: "ignore", maxBufferSize: 256 * 1024,
+    });
+    await client.connect(transport);
+    const listed = await client.listTools();
+    assert.deepEqual(listed.tools.map(({ name }) => name).sort(), [...expectedTools, ...authoringTools].sort());
+    assert.equal(calls, 0);
+    const args = { hostIncarnationId, workspaceId, templateId: "reference.secured-data-review@1.0.0",
+      name: "Synthetic system", idempotencyKey: "a6f56324-2051-462c-b45b-d9b49bf6dd4a" };
+    const invalid = await client.callTool({ name: "aisb_create_system", arguments: { ...args, credential: "unexpected" } });
+    assert.equal(Boolean(invalid.isError), true);
+    assert.equal(calls, 0);
+    const saved = await client.callTool({ name: "aisb_create_system", arguments: args });
+    assert.deepEqual(resultText(saved), { ok: true, value: { kind: "committed", reference: { systemId, revisionId: "mcp-fixture-system.r1", recordRevision: 1 } } });
+    unknown = true;
+    const uncertain = await client.callTool({ name: "aisb_create_system", arguments: args });
+    assert.deepEqual(resultText(uncertain), { ok: false, code: "headless.operation-unconfirmed" });
+    assert.equal(calls, 2);
+    unknown = false;
+    revokeAfterDispatch = true;
+    const revoked = await client.callTool({ name: "aisb_create_system", arguments: args });
+    assert.deepEqual(resultText(revoked), { ok: false, code: "headless.operation-unconfirmed" });
+    assert.equal(calls, 3);
+  } finally { try { await client.close(); } finally { registrations.close(); await connector.close(); } }
+});
 
 test("official stdio client finds finite read tools and uses the already running connector in both protocol eras", { timeout: 20_000 }, async () => {
   const registrations = createDesktopHeadlessClientAuthority({

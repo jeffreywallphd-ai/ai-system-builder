@@ -1,10 +1,10 @@
-# Local desktop read tools over MCP
+# Local desktop tools over MCP
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 This stdio process uses the official [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/releases/tag/%40modelcontextprotocol%2Fserver%402.4.0).
 It connects to an already running, paired desktop connector. It does not start
-the app or a runtime, own a database, or add window-control or authoring tools.
+the app or a runtime, own a database, or add window-control tools.
 
 The local client starts the adapter with Node.js 24, `--import tsx`, and the
 repository-relative entry point
@@ -16,7 +16,7 @@ address or certificate after restart requires the current values from Settings.
 The client's trusted launcher supplies `AISB_HEADLESS_CREDENTIAL` to the
 child process from its own credential mechanism. Do not put it in the command,
 chat, repository, or a checked-in MCP configuration. Credential enrollment and
-client secret-store integration are not included in this read adapter; the app
+client secret-store integration are not included in this adapter; the app
 issues a credential only when its one-use pairing is completed by a trusted
 local client. Stopping or restarting the desktop does not start a new host.
 Start the connector again in Settings before reconnecting.
@@ -28,6 +28,25 @@ Start the connector again in Settings before reconnecting.
 | `aisb_list_systems` | Saved system summaries in one exact workspace |
 | `aisb_read_system` | Name, status and revision of one exact saved system |
 | `aisb_list_templates` | Supported templates in one exact workspace |
+
+The adapter is read-only by default. A trusted local launcher can set
+`AISB_HEADLESS_ENABLE_AUTHORING=1` after the user pairs a client with editing
+permission. This setting makes the five tools below visible; the desktop
+still checks the credential and current workspace permission on every call.
+
+| Optional tool | Result |
+| --- | --- |
+| `aisb_create_system` | Saved system from one exact template |
+| `aisb_rename_system` | Saved name for the exact record and revision |
+| `aisb_clone_system` | New copy of one exact saved revision |
+| `aisb_preview_edits` | Preview digest and affected IDs, without a write |
+| `aisb_apply_edits` | Committed or replayed result for the exact preview |
+
+If a write reply is lost, check the saved state or repeat the exact request
+with the same key. The adapter never repeats writes automatically. Cancellation
+ends the local wait but cannot undo a transaction already committed. A canceled
+request without a final SDK reply can retain a bounded session slot until the
+client reconnects. Expired keys require a saved-state check.
 
 Start with host description and use its incarnation ID in later calls. Use
 resource IDs from returned data, never names as authority. Treat tool results

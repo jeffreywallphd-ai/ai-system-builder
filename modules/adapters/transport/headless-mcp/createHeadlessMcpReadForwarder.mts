@@ -1,7 +1,7 @@
 import { request, type Agent } from "node:https";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
-import type { HeadlessReadRequest } from "../../../contracts/headless/index.js";
+import type { HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
 import loopback from "../headless-loopback/index.js";
@@ -48,20 +48,41 @@ type ReadResult = { ok: true; operation: HeadlessReadRequest["operation"]; value
   { ok: false; code: z.infer<typeof resultError>["code"] };
 const unavailable: ReadResult = { ok: false, code: deadlineCode };
 
-export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: unknown, credential: unknown) {
+type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
+type ForwardRequest = HeadlessReadRequest | AuthoringRequest;
+const unknownWrite: HeadlessAuthoringWireResult = { ok: false, code: "headless.operation-unconfirmed" };
+export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: unknown, credential: unknown, enableAuthoring = false) {
   if (!isDesktopHeadlessEndpoint(endpoint) || !isDesktopHeadlessFingerprint(fingerprint) || typeof credential !== "string" ||
       credential.length !== 43 || !/^[A-Za-z0-9_-]{43}$/.test(credential)) return undefined;
-  // Build the sole path locally. The pinned Agent attaches HTTP only to
+  // Build both fixed paths locally. The pinned Agent attaches HTTP only to
   // the exact verified TLS socket; no proxy or redirect changes the target.
   const address = new URL("/aisb-headless/v1/read", endpoint);
+  const authoringAddress = new URL("/aisb-headless/v1/author", endpoint);
   const agent = loopback.createDesktopPinnedLoopbackAgent(endpoint, fingerprint);
   const authorization = `Bearer ${credential}`;
   let active = 0;
-  return async (input: HeadlessReadRequest, signal?: AbortSignal): Promise<ReadResult> => {
+  return async (input: ForwardRequest, signal?: AbortSignal): Promise<ReadResult | HeadlessAuthoringWireResult> => {
+    const author = isAuthoring(input);
+    if (author && !enableAuthoring) return { ok: false, code: "headless.forbidden" };
     if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
     active++;
     try {
-      const { status, raw } = await sendRead(address, agent, authorization, input, signal);
+      const { status, raw } = await sendRead(author ? authoringAddress : address, agent, authorization, input, signal);
+      if (author) {
+        const result = headless.readHeadlessAuthoringWireResult(raw);
+        // The host deliberately uses the same 403 before admission and when
+        // it must suppress a reply after a committed write. The client cannot
+        // safely infer which happened or retry with a different key.
+        if (status === 403 && input.operation !== "systems.preview-edits") return unknownWrite;
+        if (!result.ok && status >= 400 && status < 500 && result.code !== "headless.unavailable") return result;
+        if (status === 200 && result.ok &&
+            (input.operation === "systems.preview-edits" ? result.value.kind === "preview" : result.value.kind !== "preview")) {
+          if (result.value.kind !== "preview" && (input.operation === "systems.apply-edits" || input.operation === "systems.rename") &&
+              result.value.reference.systemId !== input.input.systemId) return unknownWrite;
+          return result;
+        }
+        return input.operation === "systems.preview-edits" ? unavailable : unknownWrite;
+      }
       if (status >= 400 && status < 600) {
         const error = resultError.safeParse(raw);
         return error.success ? error.data : unavailable;
@@ -75,15 +96,21 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
             parsed.data.value.systemId !== input.input.systemId)) return unavailable;
       return parsed.data;
     } catch {
-      return unavailable;
+      return author && input.operation !== "systems.preview-edits" ? unknownWrite : unavailable;
     } finally {
       active--;
     }
   };
 }
 
-function sendRead(address: URL, agent: Agent, authorization: string, input: HeadlessReadRequest, signal?: AbortSignal) {
+function isAuthoring(input: ForwardRequest): input is AuthoringRequest {
+  return input.operation === "systems.preview-edits" || input.operation === "systems.apply-edits" ||
+    input.operation === "systems.create" || input.operation === "systems.rename" || input.operation === "systems.clone";
+}
+
+function sendRead(address: URL, agent: Agent, authorization: string, input: ForwardRequest, signal?: AbortSignal) {
   const body = JSON.stringify(input);
+  if (Buffer.byteLength(body) > 8 * 1024) return Promise.reject(new Error("The local request is too large."));
   return new Promise<{ status: number; raw: unknown }>((resolve, reject) => {
     const client = request(address, {
       method: "POST",
