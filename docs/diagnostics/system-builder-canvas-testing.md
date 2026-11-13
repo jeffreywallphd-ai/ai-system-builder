@@ -84,6 +84,10 @@ enabled, it suppresses decorative transitions and animations. Build status
 and controls remain available. The separate contrast and semantics checks
 still apply.
 
+The controlled chatbot preview presents its assistant response as a named
+status. Its default or configured name and response text remain available.
+The preview does not run a model.
+
 The managed Assets restart case loads its fixture in the Playwright worker.
 It imports the shared process cleanup helper without loading the visual
 composer command-line entry point. The import regression runs without opening

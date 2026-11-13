@@ -536,6 +536,7 @@ export function FoundationAssetSurface({
     return (
       <p
         {...common}
+        role="status"
         aria-label={
           stringValue(configuration?.accessibilityLabel) || "Assistant response"
         }
