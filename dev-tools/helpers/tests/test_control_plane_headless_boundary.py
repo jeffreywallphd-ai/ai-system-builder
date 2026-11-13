@@ -26,6 +26,14 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         ])
         self.assertIn("focused-tests", self.plan([inventory, unrelated], check))
 
+    def test_semantic_edit_check_is_exact_and_preserves_unrelated_fallback(self):
+        source = "modules/application/use-cases/system-builder/headless-semantic-edit.use-case.ts"
+        unrelated = "modules/application/use-cases/system-builder/published-system-form-runtime.use-case.ts"
+        check = "headless-system-builder-semantic-edits"
+        self.assertIn("focused-tests", self.plan([source]))
+        self.assertEqual(set(self.plan([source], check)), {"architecture", check})
+        self.assertIn("focused-tests", self.plan([source, unrelated], check))
+
     def test_owned_provider_and_contract_use_the_exact_check(self):
         host_test = "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts"
         checks = self.plan([host_test, "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts"])

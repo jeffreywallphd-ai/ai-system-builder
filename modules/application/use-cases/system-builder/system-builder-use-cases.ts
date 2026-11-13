@@ -429,6 +429,24 @@ export class SaveSystemBuilderRevisionUseCase {
   public async execute(
     command: SaveSystemBuilderRevisionCommand,
   ): Promise<SystemBuilderResult<SystemBuilderRevision>> {
+    return this.save(command);
+  }
+
+  /** Internal headless callers must validate and reauthorize the exact candidate before commit. */
+  public async executeStrict(
+    command: SaveSystemBuilderRevisionCommand,
+    options: {
+      readonly baseRevisionId: SystemBuilderRevision["revisionId"];
+      readonly authorizeCommit: () => Promise<boolean>;
+    },
+  ): Promise<SystemBuilderResult<SystemBuilderRevision>> {
+    return this.save(command, options);
+  }
+
+  private async save(
+    command: SaveSystemBuilderRevisionCommand,
+    strict?: Parameters<SaveSystemBuilderRevisionUseCase["executeStrict"]>[1],
+  ): Promise<SystemBuilderResult<SystemBuilderRevision>> {
     const current = await this.dependencies.repository.readRecord(
       command.workspaceId,
       command.systemId,
@@ -443,7 +461,8 @@ export class SaveSystemBuilderRevisionUseCase {
         "system-builder.archived",
         "Restore the system before editing it.",
       );
-    if (current.revision !== command.expectedRecordRevision)
+    if (current.revision !== command.expectedRecordRevision ||
+        (strict && current.currentRevisionId !== strict.baseRevisionId))
       return staleFailure();
     if (
       String(command.composition.compositionId) !==
@@ -476,6 +495,13 @@ export class SaveSystemBuilderRevisionUseCase {
         actorId: safeActor(command.actorId),
         timestamp,
       });
+    if (strict && (reconciledInteractions.addedBinding ||
+        preserveDefaultFormPreference(command.composition, current.composition) !== command.composition)) {
+      return systemBuilderFailure(
+        "system-builder.invalid-headless-revision",
+        "The exact preview would require an implicit composition change.",
+      );
+    }
     const candidate = {
       revisionId,
       systemId: command.systemId,
@@ -491,6 +517,14 @@ export class SaveSystemBuilderRevisionUseCase {
       createdBy: safeActor(command.actorId),
     } satisfies SystemBuilderRevision;
     const validation = await this.dependencies.validator.execute(candidate);
+    if (strict && validation.status !== "valid" && validation.status !== "valid-with-warnings") return systemBuilderFailure(
+      "system-builder.invalid-headless-revision",
+      "The batch would create an invalid revision.",
+    );
+    if (strict && !await strict.authorizeCommit()) return systemBuilderFailure(
+      "system-builder.forbidden",
+      "Workspace access is unavailable.",
+    );
     const revision: SystemBuilderRevision = {
       ...candidate,
       validationIssues: validation.issues,
@@ -734,7 +768,7 @@ function createEmptyComposition(
   };
 }
 
-function preserveDefaultFormPreference(
+export function preserveDefaultFormPreference(
   incoming: SystemBuilderComposition,
   saved: SystemBuilderComposition,
 ): SystemBuilderComposition {

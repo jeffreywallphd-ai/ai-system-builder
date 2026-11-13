@@ -1,4 +1,5 @@
 export * from "./system-builder-use-cases";
+export { HeadlessSemanticEditUseCase } from "./headless-semantic-edit.use-case";
 export * from "./list-system-builder-composer-assets.use-case";
 export * from "./read-system-builder-composer-asset.use-case";
 export * from "./list-system-builder-management.use-case";

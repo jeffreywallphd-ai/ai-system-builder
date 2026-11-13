@@ -112,7 +112,13 @@ contract exposes no new product entry point.
 The semantic batch request describes exact add, configure, connect, move and
 remove operations against an existing saved revision. The application must
 resolve the exact definitions and enforce its current graph and workspace
-policy before preview or commit. The decoder alone cannot write any system.
+policy before preview or commit. A preview keeps saved state unchanged and
+identifies removed instances and bindings. Apply recomputes the digest,
+checks both saved revision identifiers, and requires a valid result from the
+same graph validator as the editor. If an old reference needs an implicit
+repair, the user can first save it in Composer; a headless batch cannot add
+that change without preview. This internal application path does not enable
+external writes until durable receipt and change delivery are available.
 
 Composer saves and upgrade previews use the record revision and exact
 composition revision captured when the draft was opened or saved. A newer list

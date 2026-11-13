@@ -126,6 +126,21 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-system-builder-semantic-edits": {
+        "sources": (
+            "modules/application/use-cases/system-builder/headless-semantic-edit-draft.ts",
+            "modules/application/use-cases/system-builder/headless-semantic-edit.use-case.ts",
+            "modules/application/use-cases/system-builder/index.ts",
+            "modules/application/use-cases/system-builder/system-builder-use-cases.ts",
+            "modules/application/use-cases/system-builder/tests/headless-semantic-edit.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/headless-semantic-batch.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/headless-semantic-edit.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/system-builder-use-cases.unit.test.ts",
+        ),
+    },
     "managed-assets-restart-loader": {
         "automatic_sources": MANAGED_ASSETS_RESTART_LOADER_FILES,
         "sources": MANAGED_ASSETS_RESTART_LOADER_FILES,
