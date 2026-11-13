@@ -342,6 +342,11 @@ At narrow widths the picker uses a smaller header inset to give the title
 and Close button room. Longer headings can still wrap. The dialog keeps the
 full destination in its accessible name.
 
+The Preview Page Shell heading inherits the composed page's foreground.
+The application heading color can otherwise appear nearly white against
+the default light page canvas. The Preview dialog and nested assets keep
+their own styling.
+
 The standard and native Canvas journeys wait for temporary success
 notifications to dismiss before auditing Canvas. At narrow widths the picker
 can cover part of a notification and leave the document contrast audit
