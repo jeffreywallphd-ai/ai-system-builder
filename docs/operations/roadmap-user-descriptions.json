@@ -18675,12 +18675,12 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "7ebc3e04de034160558b2b06187f8d911338b4973029ade92703458bdf5171aa",
+      "source_text_sha256": "47f250e4f3a73c736b3d1dbeed528defef4cad303772ed08bbef576be2ee668b",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "This result covers the local browser at a narrow width. The Windows app result below covers 400 percent zoom.",
-          "The managed database could not start. Tests for page layouts and production qualification remain open."
+          "This result covers the local browser at a narrow width. See the other results for Windows zoom and page layouts.",
+          "The managed database could not start. Production qualification remains open."
         ]
       }
     },
@@ -18697,12 +18697,34 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "aa7755e841e81f20e87f0f55574eb69f300b78cb735373dca1e0bb54c8dc1e19",
+      "source_text_sha256": "c573969eab98975fb9614a38c23ef18ed250c9fdc073a94fb0326a2d7bc7a60d",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "This result covers application layouts in the Windows app.",
-          "The managed browser test still needs a working test database. Tests for page layouts and production qualification remain open."
+          "This result covers application layouts in the Windows app. A separate result covers page layouts on both local hosts.",
+          "The managed browser test still needs a working test database."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e0a38b28b8b4435541bb6fd2668eb36137f5ea3c35a417088a3eb9db93da3a83",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Keyboard tests added all six built-in page layouts in the local browser at a narrow width and in the Windows app at 400 percent zoom.",
+          "Each page kept its regions in order and fit the screen. The cards reopened in their saved regions."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "422254f0e29d3207b2f0857950bdb574d64fdd310d4e3bfa2c04bf74a714cfec",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The managed browser test needs a working test database.",
+          "The full accessibility checks and the separate legacy security assessment remain open."
         ]
       }
     }
