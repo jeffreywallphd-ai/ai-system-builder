@@ -68,6 +68,12 @@ The reports include source identity, host, counts, timings and fixed result
 facts. The fixed definition check only lists the four cases per host. It
 does not run them or qualify either host.
 
+The Form submission recovery test runs a child process against an isolated
+SQLite database. The focused test uses the TypeScript child source. The
+combined runner uses its compiled JavaScript sibling. Both require the first
+child to exit after the commit and the second to recover without a duplicate
+record.
+
 The managed Assets restart case loads its fixture in the Playwright worker.
 It imports the shared process cleanup helper without loading the visual
 composer command-line entry point. The import regression runs without opening

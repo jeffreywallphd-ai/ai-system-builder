@@ -11,13 +11,17 @@ test("a committed form record and its creation marker survive writer process exi
   const root = mkdtempSync(path.join(realpathSync(tmpdir()), "aisb-form-durable-"));
   const marker = path.join(root, ".owner");
   const owner = randomUUID();
-  const child = fileURLToPath(new URL("./fixtures/form-submission-recovery-child.ts", import.meta.url));
+  const runsFromSource = fileURLToPath(import.meta.url).endsWith(".ts");
+  const child = fileURLToPath(new URL(runsFromSource
+    ? "./fixtures/form-submission-recovery-child.ts"
+    : "./fixtures/form-submission-recovery-child.js", import.meta.url));
+  const loader = runsFromSource ? ["--import", "tsx"] : [];
   const keys = new Set(["path", "systemroot", "windir", "tmp", "temp", "tmpdir"]);
   const env = { ...Object.fromEntries(Object.entries(process.env).filter(([key]) => keys.has(key.toLowerCase()))),
     AISB_FORM_TEST_OWNER: owner, TSX_DISABLE_CACHE: "1" };
   try {
     writeFileSync(marker, owner, { flag: "wx", mode: 0o600 });
-    const launch = (phase: "write" | "retry") => spawnSync(process.execPath, ["--import", "tsx", child, phase, root], {
+    const launch = (phase: "write" | "retry") => spawnSync(process.execPath, [...loader, child, phase, root], {
       env, windowsHide: true, timeout: 20_000, maxBuffer: 4096, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
     });
     const write = launch("write");
