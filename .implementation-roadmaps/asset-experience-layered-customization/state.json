@@ -1420,6 +1420,17 @@
       "outcome": "pending",
       "recordedAt": "2026-11-13T02:32:34Z",
       "summary": "The registered Desktop and managed browser feature results remain recorded. Separate managed browser checks passed the Canvas picker, Properties, Preview, Layers, save and reopen, and the Asset Details dialog at actual 400 percent zoom in both color modes. Wider production qualification and the separate legacy security assessment remain pending."
+    },
+    {
+      "artifact": ".local-codex/asset-experience-final-feature-qualification-20261112/meaningful-canvas-form-placement-evidence.json",
+      "command": null,
+      "criterionId": "desktop-thin-accessibility",
+      "id": "evidence-50",
+      "incrementId": "production-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-11-13T02:55:57Z",
+      "summary": "Native 400 percent Desktop and managed browser feature results remain in the evidence history, including Canvas and Asset Details. Matching feature runs now built, previewed, saved, and reopened a request form, dashboard and conversation interface on Desktop and in the browser. Desktop reopened all three after an app restart. The dashboard passed its build; the other builds retained their required denials. Broader production checks and the separate legacy security assessment remain pending."
     }
   ],
   "feedback": [
@@ -2417,6 +2428,12 @@
       "eventFingerprint": "35749b485326e5f3deef3ce086197042657a5237a0faca4cb7adbd303b5a36f8",
       "recordedAt": "2026-11-13T02:32:34Z",
       "sequence": 139,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "38692d65be59cada74596fc1396e72c4c3b1234ee355772d74cd1deeed0a1f43",
+      "recordedAt": "2026-11-13T02:55:57Z",
+      "sequence": 140,
       "type": "evidence-recorded"
     }
   ],
@@ -4023,5 +4040,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-13T02:32:34Z"
+  "updatedAt": "2026-11-13T02:55:57Z"
 }
