@@ -1409,6 +1409,17 @@
       "outcome": "pending",
       "recordedAt": "2026-11-13T02:23:54Z",
       "summary": "On the same product source, Desktop passed nine checks at 400 percent zoom. The managed browser passed five Assets tabs at 400 percent and the Canvas picker, Properties, Preview and Layers at 1440 and 320 pixels in both color modes. The managed Canvas save and reopen also passed. Wider qualification and the separate legacy security assessment remain pending."
+    },
+    {
+      "artifact": ".local-codex/asset-experience-final-feature-qualification-20261112/managed-native-assets-supplement-evidence.json",
+      "command": null,
+      "criterionId": "desktop-thin-accessibility",
+      "id": "evidence-49",
+      "incrementId": "production-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-11-13T02:32:34Z",
+      "summary": "The registered Desktop and managed browser feature results remain recorded. Separate managed browser checks passed the Canvas picker, Properties, Preview, Layers, save and reopen, and the Asset Details dialog at actual 400 percent zoom in both color modes. Wider production qualification and the separate legacy security assessment remain pending."
     }
   ],
   "feedback": [
@@ -2400,6 +2411,12 @@
       "eventFingerprint": "806d60b5ff9fe44d5479cc5dc61b00e520d89870a27f38b2096cb5c5239a0891",
       "recordedAt": "2026-11-13T02:23:54Z",
       "sequence": 138,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "35749b485326e5f3deef3ce086197042657a5237a0faca4cb7adbd303b5a36f8",
+      "recordedAt": "2026-11-13T02:32:34Z",
+      "sequence": 139,
       "type": "evidence-recorded"
     }
   ],
@@ -4006,5 +4023,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-13T02:23:54Z"
+  "updatedAt": "2026-11-13T02:32:34Z"
 }
