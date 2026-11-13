@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { DesktopHeadlessPairingStatus } from "../../../../../../../modules/contracts/headless";
+import type { DesktopHeadlessClientAccess, DesktopHeadlessPairingStatus } from "../../../../../../../modules/contracts/headless";
 import { getDesktopApi } from "../../../lib/desktopApi";
 import { useActiveWorkspace } from "../../workspace";
 
@@ -18,11 +18,11 @@ export function HeadlessClientSettings() {
     return () => { current = false; };
   }, [refresh]);
 
-  async function pair() {
+  async function pair(access: DesktopHeadlessClientAccess) {
     if (!activeWorkspaceId || pending) return;
     setPending(true);
     try {
-      const result = await getDesktopApi().beginHeadlessPairing?.(activeWorkspaceId);
+      const result = await getDesktopApi().beginHeadlessPairing?.(activeWorkspaceId, access);
       if (result === "shown") setMessage("Use the one-time code in your local chat client.");
       else if (result !== "canceled") setMessage("Pairing is unavailable for this workspace.");
     } catch {
@@ -64,15 +64,18 @@ export function HeadlessClientSettings() {
 
   return (
     <section aria-label="Local chat clients" className="ui-stack ui-stack--sm">
-      <p>Allow a local chat client to read saved systems in one workspace. The client cannot edit your work or control this window.</p>
+      <p>Choose whether a local chat client can read or edit saved systems in one workspace. Pairing does not give the client control of this window.</p>
       {data?.status === "ready" ? <>
         <p>{data.running ? "The local connector is on." : "The local connector is off."}</p>
         {data.endpoint ? <p>Local address: <code>{data.endpoint}</code></p> : null}
         {data.fingerprint ? <p>Certificate fingerprint: <code style={{ overflowWrap: "anywhere" }}>{data.fingerprint}</code></p> : null}
         <p>{activeWorkspace ? `Selected workspace: ${activeWorkspace.displayName}` : "Select a workspace before pairing."}</p>
         <div>
-          <button type="button" disabled={pending || workspaceStatus !== "ready" || !activeWorkspaceId} onClick={() => void pair()}>
-            Pair a local chat client
+          <button type="button" disabled={pending || workspaceStatus !== "ready" || !activeWorkspaceId} onClick={() => void pair("read")}>
+            Pair a read-only client
+          </button>
+          <button type="button" disabled={pending || workspaceStatus !== "ready" || !activeWorkspaceId} onClick={() => void pair("author")}>
+            Pair a client that can edit
           </button>
           <button type="button" disabled={pending} onClick={() => setRefresh((current) => current + 1)}>
             Refresh clients

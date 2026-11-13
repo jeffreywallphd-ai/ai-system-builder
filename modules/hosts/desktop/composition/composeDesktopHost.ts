@@ -7,6 +7,7 @@ import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconcile
 import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
 import { asyncLazyObject } from "./lazyProxy";
 import { composeDesktopHeadlessReads, type DesktopHeadlessReadHandler } from "./composeDesktopHeadlessReads";
+import { composeDesktopHeadlessAuthoring } from "./composeDesktopHeadlessAuthoring";
 import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
 import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
 import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
@@ -2172,6 +2173,11 @@ export function composeDesktopHost(
               workspaces: startupWorkspaceShell.workspaceRepository,
               authorization: workspaceAuthorization,
               read: headlessReadHandler,
+              authoring: options.persistence?.documents ? composeDesktopHeadlessAuthoring({
+                hostIncarnationId, identity, platformDocuments: options.persistence.documents, rootDirectory: registerOptions.storageRootDirectory,
+                workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+                systems: systemBuilder, isOpen: () => !headlessReadAdmissionClosed,
+              }) : undefined,
             });
           }
         }

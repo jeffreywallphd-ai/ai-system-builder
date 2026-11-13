@@ -33,6 +33,10 @@ class Rollback extends Error {
 export function createStructuredHeadlessOperationStore(
   documents: StructuredDocumentStore,
   now: () => number = Date.now,
+  policy?: {
+    readonly authorize: (transaction: StructuredDocumentStore, scope: HeadlessOperationScope,
+      operation: HeadlessMutation) => Promise<boolean>;
+  },
 ): HeadlessOperationStorePort {
   const readLog = async (store: StructuredDocumentStore, workspaceId: Scope["workspaceId"]) => {
     const document = await store.readDocument(CHANGES, workspaceId);
@@ -42,6 +46,7 @@ export function createStructuredHeadlessOperationStore(
     async run(input) {
       const { scope, operation, key, fingerprint, isCurrent, mutate } = input;
       const { organizationId, workspaceId, principalId, registeredClientId } = scope;
+      const boundScope = { organizationId, workspaceId, principalId, registeredClientId };
       if (!isOrganizationId(organizationId) || !isWorkspaceId(workspaceId) ||
           typeof principalId !== "string" || principalId.length < 1 || principalId.length > 160 ||
           principalId.trim() !== principalId || /[\u0000-\u001f\u007f]/.test(principalId) ||
@@ -53,11 +58,16 @@ export function createStructuredHeadlessOperationStore(
       const countKey = digest(identity);
       const receiptKey = digest([...identity, operation, key]);
       try {
-        const store = documents.forOrganization(organizationId);
+        // Desktop authorization needs the platform directory and the exact
+        // organization partition within one underlying transaction owner.
+        const store = policy ? documents : documents.forOrganization(organizationId);
+        if (policy && documents.organizationId !== undefined) throw new Error("The platform owner is unavailable.");
         if (!store.runInOwnedTransaction) throw new Error("Owned transaction is unavailable.");
         let mustCommit = false;
         let replayExpiry: number | undefined;
-        const outcome = await store.runInOwnedTransaction<HeadlessOperationOutcome>(async (transaction) => {
+        const outcome = await store.runInOwnedTransaction<HeadlessOperationOutcome>(async (owner) => {
+          if (policy && !await policy.authorize(owner, boundScope, operation)) return { kind: "denied" };
+          const transaction = policy ? owner.forOrganization(organizationId) : owner;
           if (!isCurrent()) return { kind: "denied" };
           const existing = await transaction.readDocument(RECEIPTS, receiptKey);
           if (!isCurrent()) return { kind: "denied" };

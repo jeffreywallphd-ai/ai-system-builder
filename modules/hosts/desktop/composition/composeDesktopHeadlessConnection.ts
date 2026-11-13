@@ -7,6 +7,7 @@ import type { DesktopHeadlessClientAccess, DesktopHeadlessPairingStatus } from "
 import type { LocalIdentityProfile } from "../../../contracts/organization";
 import { isWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
 import type { DesktopHeadlessReadHandler } from "./composeDesktopHeadlessReads";
+import type { composeDesktopHeadlessAuthoring } from "./composeDesktopHeadlessAuthoring";
 
 export type DesktopHeadlessConnection = ReturnType<typeof composeDesktopHeadlessConnection>;
 const MAX_MANAGEMENT_OPERATIONS = 4;
@@ -17,6 +18,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   readonly workspaces: Pick<WorkspaceRepository, "readWorkspace">;
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly read: DesktopHeadlessReadHandler;
+  readonly authoring?: ReturnType<typeof composeDesktopHeadlessAuthoring>;
 }) {
   let open = true;
   let start: Promise<DesktopHeadlessLoopback> | undefined;
@@ -34,7 +36,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   }
 
   async function readWorkspaceLabel(workspaceId: WorkspaceId, access: DesktopHeadlessClientAccess = "read"): Promise<string | undefined> {
-    if (!open || !isWorkspaceId(workspaceId)) return undefined;
+    if (!open || !isWorkspaceId(workspaceId) || (access === "author" && !dependencies.authoring)) return undefined;
     try {
       const workspace = await dependencies.workspaces.readWorkspace(workspaceId);
       if (workspace?.workspaceId !== workspaceId || workspace.organizationId !== dependencies.identity.organizationId ||
@@ -54,7 +56,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
     documents: dependencies.documents,
     identity: dependencies.identity,
     canReadWorkspace: async (id) => (await readWorkspaceLabel(id)) !== undefined,
-    canAuthorWorkspace: async (id) => (await readWorkspaceLabel(id, "author")) !== undefined,
+    canAuthorWorkspace: dependencies.authoring ? async (id) => (await readWorkspaceLabel(id, "author")) !== undefined : undefined,
   });
 
   async function startConnector(isStillApproved: () => boolean) {
@@ -62,7 +64,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
     if (endpoint && fingerprint) return { endpoint, fingerprint };
     if (start) return undefined;
     const socket = start = startDesktopHeadlessLoopback({
-      registrations, read: dependencies.read, isAdmitted: () => open && endpoint !== undefined,
+      registrations, read: dependencies.read, authoring: dependencies.authoring, isAdmitted: () => open && endpoint !== undefined,
     });
     let connector: DesktopHeadlessLoopback;
     try {

@@ -70,6 +70,9 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         self.assertIn("focused-tests", self.plan([activation, main], "headless-desktop-read-provider"))
         self.assertNotIn("focused-tests", self.plan([activation, main], check))
         self.assertIn("focused-tests", self.plan([activation, main, other], check))
+        host = "modules/hosts/desktop/composition/composeDesktopHost.ts"
+        self.assertIn("focused-tests", self.plan([activation, host]))
+        self.assertNotIn("focused-tests", self.plan([activation, host], check))
 
     def test_mcp_checks_are_exact_and_preserve_other_transport_coverage(self):
         mcp = "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts"

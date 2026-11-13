@@ -104,6 +104,10 @@ HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES = (
     "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
 )
 HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES = HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES + (
+    "modules/adapters/persistence/system-builder/createStructuredHeadlessOperationStore.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessAuthoring.ts",
+    "modules/hosts/desktop/composition/composeDesktopHost.ts",
+    "modules/hosts/desktop/composition/tests/desktop-headless-authoring.unit.test.ts",
     "modules/contracts/headless/index.ts",
     "apps/desktop/src/main/index.ts",
     "apps/desktop/src/preload/exposedApi.ts",
@@ -597,6 +601,8 @@ def definitions(root: Path) -> list[dict]:
          "argv": [node, "--import", "tsx", "--test", "--",
                   "apps/desktop/src/main/tests/desktop-headless-pairing-ipc.unit.test.ts",
                   "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+                  "modules/hosts/desktop/composition/tests/desktop-headless-authoring.unit.test.ts",
+                  "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
                   "modules/adapters/security/headless/tests/desktop-headless-client-authority.unit.test.ts",
                   "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts"],
          "timeout": 120},

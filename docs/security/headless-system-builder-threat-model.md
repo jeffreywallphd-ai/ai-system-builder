@@ -120,3 +120,8 @@ an explicit writer grant for the exact workspace. Before the response, it
 rechecks current registration and its synchronous grant fence. The response
 admits only fixed errors, bounded preview consequences, and saved revision
 references. This adapter does not activate the authoring route by itself.
+Desktop authoring rechecks the existing organization policy and saved
+workspace status inside the owning SQLite transaction, using the same
+platform and organization views as the application. This prevents an earlier
+authorization result from surviving a workspace or membership change that
+commits first. The outer admission and response still check live policy.

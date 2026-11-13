@@ -82,10 +82,14 @@ adapter must use the existing authenticated server API. An adapter does not
 start a second host or own a data store. Workspace access and window
 presentation remain separate. The desktop's internal read dispatcher uses
 the same System Builder read use cases as IPC. It requires a verified grant
-and current workspace policy. Desktop Settings can start an optional read-only
-loopback connector after an explicit native confirmation. The desktop
-connector closes before platform persistence. The stdio MCP adapter forwards
-only its finite read catalog to the already running connector, authenticating
+and current workspace policy. Desktop Settings can start the optional loopback
+connector after an explicit native confirmation. A new editing client needs a
+separate confirmation and current workspace write permission. Desktop dispatch
+shares the System Builder repository. Its owning SQLite transaction rereads
+the workspace and membership before writing or returning a stored receipt.
+The transaction saves the record, receipt and change together. The connector
+closes before platform persistence.
+The stdio MCP adapter currently forwards its finite read catalog to the running connector, authenticating
 the endpoint with the certificate fingerprint from desktop Settings. Managed parity
 remains pending.
 

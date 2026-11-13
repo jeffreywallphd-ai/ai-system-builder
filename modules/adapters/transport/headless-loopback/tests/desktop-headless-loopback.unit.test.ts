@@ -75,8 +75,9 @@ test("the optional pinned authoring route accepts only a current scoped writer a
       async verifyCredential(credential) {
         const grant = await registry.verifyCredential(credential);
         if (!grant) return undefined;
+        const { isCurrent: _originalFence, ...identity } = grant;
         return {
-          ...grant, authoring: enabled ? ["systems.create"] as const : [],
+          ...identity, authoring: enabled ? ["systems.create"] as const : [],
           ...(loseFence ? {} : { isCurrent: () => !fenced }),
         };
       },
