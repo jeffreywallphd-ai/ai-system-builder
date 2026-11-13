@@ -1629,6 +1629,17 @@
       "outcome": "passed",
       "recordedAt": "2026-11-13T10:18:57Z",
       "summary": "The starter saved its empty first page and reopened from Manage. The editor opened the selected form when two forms shared a Canvas page. A real Layers move changed only the intended sibling order. Reopening Form preserved the field validation and the exact route and action bindings. This is a focused product result; the separate production criteria retain their recorded status."
+    },
+    {
+      "artifact": ".local-codex/asset-experience-final-feature-qualification-20261112/typed-connections-feature-evidence.json",
+      "command": null,
+      "criterionId": "desktop-thin-accessibility",
+      "id": "evidence-53",
+      "incrementId": "production-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-11-13T12:20:58Z",
+      "summary": "At 400 percent zoom, local Chromium and the packaged Windows app passed the keyboard check for a typed connection. The tests added a connection between two preview assets, verified that an incompatible asset was excluded, reopened the saved connection, removed it, and confirmed it stayed removed after saving and reopening. The managed browser and broader accessibility and security checks remain pending."
     }
   ],
   "feedback": [
@@ -2656,6 +2667,12 @@
       "eventFingerprint": "3dde4a2160a20693bd6fb4a89ba325b56896fdce77d505583c6f5080fd5204c1",
       "recordedAt": "2026-11-13T10:18:57Z",
       "sequence": 144,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ff6154b91e08defd8536006df0a43e0c8a0d88d32e7f3298b1f39e1ccb071b7a",
+      "recordedAt": "2026-11-13T12:20:58Z",
+      "sequence": 145,
       "type": "evidence-recorded"
     }
   ],
@@ -4262,5 +4279,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-13T10:18:57Z"
+  "updatedAt": "2026-11-13T12:20:58Z"
 }
