@@ -178,6 +178,10 @@ legacy-only handoff separate and require actual fresh review after scope changes
 
 ## Primary references
 
+The one-time Asset Experience contextual Form alignment is portable state
+handling. Run the roadmap engine tests for the exact approval and plan pins,
+archive integrity, denied substitutions and preservation of open qualification.
+
 For adapters with a user-description view, run its source/qualification binding,
 stale/duplicate/foreign input, joined redaction, historical result preservation and
 inert DOM tests. Confirm technical CLI output remains available, invalid copy gives

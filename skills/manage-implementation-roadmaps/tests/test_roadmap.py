@@ -156,6 +156,99 @@ class RoadmapEngineTest(unittest.TestCase):
         self.state = roadmap.apply_event(self.state, event)
         roadmap.validate_state_shape(self.repo, self.state)
 
+    def contextual_form_fixture(self):
+        increment = increment_definition(roadmap.FORM_INCREMENT, 1)
+        increment["acceptanceCriteria"] = [
+            {"id": key, "description": f"Superseded {key}.", "qualification": "local"}
+            for key in roadmap.FORM_CRITERIA
+        ] + increment["acceptanceCriteria"]
+        increment["deliverables"] = ["Old entry", "Old page mapping", "Retained runtime"]
+        increment["excluded"] = ["External delivery", "Imports", "Old Canvas boundary"]
+        self.define_and_approve([increment])
+        self.state["slug"] = roadmap.FORM_ROADMAP
+        plan = implementation_plan(1)
+        plan["chunks"][0]["criteriaIds"] = [c["id"] for c in increment["acceptanceCriteria"]]
+        plan["chunks"].append({"id": "another-chunk", "title": "Author", "outcome": "Old entry",
+                               "criteriaIds": list(roadmap.FORM_CRITERIA)})
+        plan["focusedTests"].append("Check the original editor switch.")
+        self.state["increments"][0].update(status="verifying", completedChunks=["chunk-1", "another-chunk"],
+                                            plan={**plan, "fingerprint": roadmap.fingerprint(plan)})
+        self.state["currentIncrementId"] = roadmap.FORM_INCREMENT
+        self.state["status"] = "executing"
+        self.state["feedback"].append({"id": roadmap.FORM_SCOPE_AUTHORITY, "targetIncrementId": roadmap.FORM_INCREMENT,
+                                      "category": "clarification", "disposition": "accepted"})
+        for key in roadmap.FORM_CRITERIA:
+            for outcome in ("passed", "failed"):
+                self.state["evidence"].append({"incrementId": roadmap.FORM_INCREMENT, "criterionId": key,
+                                               "kind": "review", "outcome": outcome})
+        self.state["blockers"].append({"id": "separate-check", "status": "open"})
+        active = self.state["increments"][0]
+        baseline = self.state["roadmapApproval"]["fingerprint"]
+        pins = mock.patch.multiple(
+            roadmap, FORM_BASELINE=baseline, FORM_PLAN_BASELINE=roadmap.fingerprint(active["plan"]),
+            FORM_APPROVAL_BASELINE=roadmap.fingerprint(self.state["roadmapApproval"]),
+            FORM_DEFINITION_BASELINE=roadmap.fingerprint({key: active[key] for key in roadmap.FORM_DEFINITION_FIELDS}),
+        )
+        event = {"type": "contextual-form-scope-aligned", "approvedFingerprint": baseline,
+                 "authorityRef": roadmap.FORM_SCOPE_AUTHORITY}
+        return event, pins
+
+    def test_contextual_form_alignment_archives_scope_and_keeps_evidence_and_gates(self):
+        event, pins = self.contextual_form_fixture()
+        original = copy.deepcopy(self.state)
+        with pins:
+            self.apply(event)
+            active = self.state["increments"][0]
+            old = original["increments"][0]
+            archive = self.state["contextualFormScopeAlignment"]
+            self.assertEqual(archive["originalDefinition"], {key: old[key] for key in roadmap.FORM_DEFINITION_FIELDS})
+            self.assertEqual(archive["originalPlan"], old["plan"])
+            self.assertEqual(archive["previousApproval"], original["roadmapApproval"])
+            self.assertEqual(active["acceptanceCriteria"][2:], old["acceptanceCriteria"][2:])
+            self.assertEqual(active["completedChunks"], old["completedChunks"])
+            for key in ("evidence", "chunks", "blockers", "feedback", "currentIncrementId"):
+                self.assertEqual(self.state[key], original[key])
+            for key, description in roadmap.FORM_CRITERIA.items():
+                self.assertEqual(roadmap.latest_criterion_evidence(self.state, roadmap.FORM_INCREMENT, key)["outcome"], "failed")
+                self.assertIn({"id": key, "description": description, "qualification": "local"}, active["acceptanceCriteria"])
+            self.assertFalse(roadmap.approval_is_current(self.state))
+            self.apply({"type": "roadmap-approved", "note": "Record the already accepted contextual scope."})
+            with self.assertRaisesRegex(roadmap.RoadmapError, "pending technical work"):
+                self.apply({"type": "increment-completed", "summary": "Keep the open qualification."})
+            with self.assertRaises(roadmap.RoadmapError):
+                self.apply(event)
+            archive = self.state["contextualFormScopeAlignment"]
+            archive["previousApproval"]["note"] = "Altered historical approval note"
+            with self.assertRaisesRegex(roadmap.RoadmapError, "exact legacy approval"):
+                roadmap.validate_state_shape(self.repo, self.state)
+            archive["previousApproval"] = original["roadmapApproval"]
+            active = self.state["increments"][0]
+            active["acceptanceCriteria"][-1]["description"] = "Changed the security requirement"
+            with self.assertRaisesRegex(roadmap.RoadmapError, "match the exact archived"):
+                roadmap.validate_state_shape(self.repo, self.state)
+
+    def test_contextual_form_alignment_denies_stale_wrong_or_unfinished_input(self):
+        event, pins = self.contextual_form_fixture()
+        states = [copy.deepcopy(self.state) for _ in range(9)]
+        states[0]["slug"] = "another-roadmap"
+        states[1]["evidencePolicy"] = "control-plane-v1"
+        states[2]["currentIncrementId"] = None
+        states[3]["feedback"].clear()
+        states[4]["evidence"].pop()
+        states[5]["increments"][0]["completedChunks"].pop()
+        states[6]["increments"][0]["plan"]["steps"][0] = "A different plan"
+        states[7]["contextualFormScopeAlignment"] = None
+        states[8]["roadmapApproval"]["note"] = "Altered approved note"
+        cases = [(state, event) for state in states]
+        for override in ({"approvedFingerprint": "stale"}, {"authorityRef": "foreign"}, {"description": "A different replacement"}):
+            cases.append((self.state, {**event, **override}))
+        with pins:
+            for index, (state, request) in enumerate(cases):
+                before = copy.deepcopy(state)
+                with self.subTest(index=index), self.assertRaises(roadmap.RoadmapError):
+                    roadmap.apply_event(state, request)
+                self.assertEqual(state, before)
+
     def define_and_approve(self, increments: list[dict]) -> None:
         self.apply(
             {

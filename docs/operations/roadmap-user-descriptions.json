@@ -7651,7 +7651,7 @@
       "roadmap_id": "asset-experience-layered-customization",
       "increment_id": "asset-backed-form-composer",
       "criterion_id": "shared-form-and-canvas-draft",
-      "source_description_sha256": "c9695e96317a3b47daa991dd760fab533248382095c3f7a5d7d12d5cf236aeda",
+      "source_description_sha256": "a3ee0bc97c79b3d5db0d5f623e74802566b14b4df5f7d6b890f620ad549164e1",
       "qualification": "local",
       "user_description": {
         "purpose": "Open the form you want to edit from Canvas and keep your unsaved edits when you return.",
@@ -7662,7 +7662,7 @@
           "Use Edit Form on a form asset to open that form. Use Back to Canvas to return to the same asset.",
           "Confirm that a system without a form stays in Canvas and offers no Form tab.",
           "Add or move fields, form pages, messages, and form controls only inside a form. Check the built-in templates for the same rule.",
-          "When an older system has loose form fields, move the fields into a form before building it.",
+          "If an older draft has a current form field outside a form, move the field into a form before building.",
           "Add, rename, and reorder form pages. Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.",
           "Confirm both views read the same draft and that undo and redo use the shared draft history.",
           "Save and reopen with the same asset IDs, versions, settings, and order."
@@ -7673,7 +7673,7 @@
       "roadmap_id": "asset-experience-layered-customization",
       "increment_id": "asset-backed-form-composer",
       "criterion_id": "form-maps-to-a-canvas-page",
-      "source_description_sha256": "2b158a95aa38a1f5108745efcb6369ce125266763ae2654ebbaff20a8d012ed8",
+      "source_description_sha256": "fc2db9690655cdb7e0caefc0bf5011c2eb7659ee6a5ad82df00ed4cdcdb7f957",
       "qualification": "local",
       "user_description": {
         "purpose": "Build a form as its own system or edit a form within a larger system.",
@@ -7682,7 +7682,8 @@
           "Create a form system. Confirm it has one Canvas page with a section, a form, and its first form page.",
           "Open two forms that share a page. Confirm each Edit Form button opens the correct form and preserves the other form.",
           "Make a supported change in Canvas and reopen the form. Confirm that placements, validation, routes, and actions are preserved.",
-          "Confirm that Edit Form and Back to Canvas do not move or duplicate assets."
+          "Confirm that Edit Form and Back to Canvas do not move or duplicate assets.",
+          "Verify that other Canvas editing controls continue to work."
         ],
         "next_action": "The agent will check both the new system path and forms already placed on Canvas.",
         "completion_proof": "A new form system uses one page. Two existing forms can share a page and keep their fields, order, and rules."
@@ -9049,7 +9050,7 @@
       "record_type": "increment",
       "roadmap_id": "asset-experience-layered-customization",
       "increment_id": "asset-backed-form-composer",
-      "source_title_objective_digest": "4425a3beca380292b78dff3856412798444c9ec7780bee7f6a4600d228debce7",
+      "source_title_objective_digest": "019cfc75302637fc38724b2c8db1826ef212a472b97caa0a747c86fd14e9954f",
       "user_description": {
         "title": "Asset-backed Form Composer",
         "purpose": "Build a form system or edit a form inside a larger system in Systems Compose.",

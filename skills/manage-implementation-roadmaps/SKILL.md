@@ -54,6 +54,10 @@ an obligation or supplies a test pass. Do not publish a technical fallback when
 plain copy is stale; the agent must update it. Keep the technical CLI available
 for implementation and preserve exact qualification outcomes and support limits.
 
+Use the fixed `contextual-form-scope-aligned` event only for the accepted Asset
+Experience Form clarification. Preserve the original definition, plan and evidence.
+See `references/events.md` for admission and fresh verification.
+
 For an explicitly authorized change to a pending technical acceptance policy,
 use `technical-acceptance-revised` as documented in `references/events.md`.
 This governed replacement-only event preserves criterion identity/qualification,

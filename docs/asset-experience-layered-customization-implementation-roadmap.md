@@ -3,7 +3,7 @@
 # Asset Experience and Layered Customization Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-13T02:55:57Z`
+- Updated: `2026-11-13T09:57:05Z`
 
 ## Objective
 
@@ -61,7 +61,7 @@ The accepted authoring ADR permits sparse semantic overrides but defers raw code
 | 4: End-to-end layered Asset Customization workflow | Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset. | architecture-contract, shared-surface-foundation, complete-assets-experience | `completed` |
 | 5: Unified resource-backed Asset Studio and Saved assets | Deliver one ordered Studio surface for creating, saving, reopening, reviewing, and publishing from-scratch semantic assets with actual frontend structure, frontend styling, backend logic, and other backing resources across desktop and thin-client hosts. | layered-customization-workflow | `completed` |
 | 6: End-to-end production qualification and hardening | Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation. | unified-asset-studio-saved | `implemented-pending-qualification` |
-| 7: Asset-backed Form Composer | Let a system author build, preview, and publish a multipage form in the new Form view. Use the switch above the editors to open the same draft in Canvas. Each form occupies a dedicated Canvas page with compatible containers where needed. A published form checks answers, follows the selected route, and starts approved actions. | unified-asset-studio-saved, production-qualification | `verifying` |
+| 7: Asset-backed Form Composer | Let a system author build, preview, and publish a multipage form. Open a specific form from Canvas with Edit Form. A new form system saves its first page. Existing forms keep their Canvas placements. Published forms check answers, follow the selected route, and start approved actions. | unified-asset-studio-saved, production-qualification | `verifying` |
 
 ## Increment 1: Layered customization architecture and contracts
 
@@ -386,19 +386,19 @@ Keep new create operations capability-gated while retaining read-only browse, im
 - Status: `verifying`
 - Dependencies: `unified-asset-studio-saved`, `production-qualification`
 
-Let a system author build, preview, and publish a multipage form in the new Form view. Use the switch above the editors to open the same draft in Canvas. Each form occupies a dedicated Canvas page with compatible containers where needed. A published form checks answers, follows the selected route, and starts approved actions.
+Let a system author build, preview, and publish a multipage form. Open a specific form from Canvas with Edit Form. A new form system saves its first page. Existing forms keep their Canvas placements. Published forms check answers, follow the selected route, and start approved actions.
 
 ### Work packages
 
-- **Build pages and add fields** (`form-pages-and-field-assets`): Add the Form entry and view switch outside the Canvas editor. Use the existing revision and placement model. Give each form a dedicated Canvas page and add compatible container assets where the form or its steps need them. Add, rename, and reorder form steps and their fields in the Form view. Reuse existing assets and add versioned form, rule, or trigger assets only for missing behavior.
+- **Build pages and add fields** (`form-pages-and-field-assets`): Open Form from the selected form asset and return to it with Back to Canvas. Save a new form system inside a page and compatible section. Preserve existing form placements and ownership. Add, rename, and reorder form pages and their fields. Reuse the existing versioned assets and draft model.
 - **Check answers and choose the next page** (`validation-and-answer-routing`): Configure validation and answer-based routes using fields, operators, values, and target pages. Show the order in which rules apply and the default route. Show errors next to the relevant field. In preview, test both branches, change a prior answer, and see which pages and answers will be included.
 - **Submit a form and start an action** (`submission-and-approved-actions`): Connect successful submission to an approved action or workflow asset through typed ports. Provide one working local example. Recheck the form and action authorization in the host. Give the respondent a clear result and prevent duplicate action runs when submission is retried. Preview uses sample answers and simulates actions.
 - **Test and document complete forms** (`form-journeys-and-guidance`): Build and run two distinct sample forms from scratch on Desktop and the managed browser. Cover keyboard operation, narrow windows, route changes, failed submissions, save and reopen, and publication. Fix defects found by the tests and document how to create, test, and publish a form.
 
 ### Deliverables
 
-- A Form view with a switch in Systems Compose above the editors. The Form view provides a page outline, field settings, validation, routing, actions, and preview.
-- One existing Canvas page structure per form, with compatible containers where needed, plus versioned asset placements, field configuration, and typed route and submission bindings.
+- A contextual Form view with page tabs, field editors, styling, validation, routing, actions, and preview.
+- A saved page and section for a new form system, preserved placements for embedded forms, and versioned assets with typed route and submission bindings.
 - A respondent view that checks answers, moves between pages, and sends a validated submission through the owning host.
 - Automated host journeys, focused contract and runtime checks, and a guide with two sample forms.
 
@@ -406,20 +406,25 @@ Let a system author build, preview, and publish a multipage form in the new Form
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `shared-form-and-canvas-draft`: Use the switch above the editors to open Canvas and Form with unsaved edits. - Add, rename, and reorder form steps. Add and configure text, choice, numeric, and date or checkbox fields from compatible assets. - Confirm both views read the same draft and that undo and redo use the shared draft history. - Save and reopen with the same asset IDs, versions, settings, and order. | local | failed (review) |
-| `form-maps-to-a-canvas-page`: Open a form in the existing Canvas editor. - Create two forms in one system. Verify that each has a distinct page and uses compatible containers where required. - Switch between views repeatedly. Confirm each form appears in its page with the correct fields and order and that switching creates no duplicate assets. - Make a supported change in Canvas and switch back. Confirm the Form view reads the same placements and preserves validation, routing, and action bindings. - Verify that the increment makes no changes to Canvas editor controls, rendering, or behavior. | local | failed (review) |
+| `shared-form-and-canvas-draft`: Open a specific form asset with Edit Form and return to it with Back to Canvas. - Confirm a system without a form opens in Canvas. Limit current form-only pages, fields, messages, and controls to their owning form, including in built-in templates. Check that current fields saved outside a form in older drafts can be moved into a form and cannot be built while outside one. - Add, rename, and reorder form pages. Add and configure text, choice, numeric, and date or checkbox fields from compatible assets. - Confirm both views use the same draft and undo and redo history. Save and reopen with the same asset IDs, versions, settings, and order. | local | failed (review) |
+| `form-maps-to-a-canvas-page`: Create a form system and edit forms placed in a larger Canvas system. - Verify a new form system saves a Canvas page, compatible section, form, and empty first form page. Reopen it from Manage in the Form editor. - Open two forms on the same Canvas page. Check that each editor opens its own form and that moving between views keeps the placement, field order, and neighboring assets without duplication. - Make a supported change in Canvas and reopen the form. Confirm that validation, routing, and action bindings stay with their form. - Keep the existing Canvas controls and behavior apart from the contextual Edit Form entry. | local | failed (review) |
 | `form-validation-and-answer-routing`: Configure field validation and answer-based routing without code. - Test required answers, an invalid format or range, both branches, and the default route. - Go back and change the answer that selected a branch. Confirm the new route and that answers from skipped pages are excluded from submission. - Prevent publication of missing destinations, invalid field references, unreachable required steps, or route cycles. | local | passed (test) |
 | `form-preview-and-runtime-parity`: Preview a form with sample answers, then run a published test form. - Verify the same validation and routes in preview and the published form. - Verify that preview produces no submissions or action runs. - Check that older revisions and Canvas systems still open and retain their current behavior. | local | passed (test) |
 | `form-submission-triggers`: Connect a submission to a compatible action asset and run it in a published test form. - Show when the submission and action succeed, fail, or remain pending. - Verify that invalid and canceled forms start no action. - Keep a stable identity for each action run across duplicate requests, retries, and restarts. - Test a crash after the action takes effect but before the host records completion. Prevent a duplicate effect or keep the uncertain result for safe follow-up without automatically repeating it. - Keep form answers out of general logs and notifications. | local | passed (test) |
 | `security-form-submission-and-action-authority`: Independently review the exact change and run automated denial checks. - Verify host-owned workspace, actor, released revision, and action permissions. - Recheck the release and action permissions before dispatch and retry. Test a permission change after submission that prevents the action from running. - Reject untrusted expressions, incompatible ports, stale or revoked versions, unauthorized actions, and oversized inputs. - Check that draft, preview, and imported definitions cannot start an action. - Confirm that authorized actions receive only configured, validated fields and that errors and audit records protect answer content. | local | passed (review) |
 | `form-composer-desktop-and-browser`: Build and run an intake form and a branching questionnaire from scratch in the packaged Desktop app and managed browser. - Use the keyboard to author and complete both forms, including invalid input, changing routes, and save and reopen. - Check labels, validation announcements, focus, reflow, and reachable controls at standard and narrow widths and at actual 400 percent zoom. - Measure page switching, editing, validation, and submission on a representative larger form. Record the agreed test size and budgets before measuring. | controlled-environment | passed (test) |
 
+### Contextual Form scope history
+
+- The approved contextual editor supersedes the global switch and the requirement for one Canvas page per form.
+- The original definition, plan, approval, and review results remain in JSON history. The scope update records no test pass.
+
 ### Verification
 
 - Use focused tests for asset placement, revision round trips, rule evaluation, publication, and submission recovery.
 - Use synthetic data for the two real-host feature journeys. Keep full system testing for the combined campaign after roadmap feature work.
 - Review the existing form primitives, accepted Asset Kernel and security decisions, and the exact supported runtime bindings before adding assets. Use Qualtrics Survey Flow and Kuali Build submission-to-workflow documentation as interaction references.
-- Check that the Form increment leaves Canvas editor code and behavior unchanged. Verify its page and container structure using the existing Canvas view and automated round-trip tests.
+- Verify that the contextual Edit Form entry preserves existing Canvas editing and rendering. Check page and container placement in Canvas and run automated round-trip tests.
 
 ### Rollback
 
@@ -429,7 +434,7 @@ Withdraw the Form entry point and stop dispatching form actions. Keep the Canvas
 
 - Public anonymous form links, external delivery or provider integration, file uploads, and arbitrary scripts or webhooks.
 - General survey distribution and analytics, third-party form import, and a general-purpose workflow designer.
-- Changes to the Canvas editor, its rendering, or its behavior. The editor switch belongs to the surrounding Systems Compose interface.
+- Changes to existing Canvas editing or rendering apart from adding the contextual Edit Form entry.
 
 ## Pending work
 

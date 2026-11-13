@@ -478,6 +478,30 @@ and separate review still govern qualification. Neither amendment nor reapproval
 is a measurement, hardware result, pass or completion. Never use this event to
 remove a security control or conceal a genuine feature/runtime/resource failure.
 
+### `contextual-form-scope-aligned`
+
+This one-time legacy amendment records the accepted contextual Form design for
+Asset Experience. The exact approved original roadmap, active Form increment,
+original plan, completed chunks, accepted clarification and failed scope reviews
+must match. The engine owns the replacement text. The caller supplies no new
+criteria, plan fields, pass claims or authority for any other roadmap.
+
+```json
+{
+  "type": "contextual-form-scope-aligned",
+  "approvedFingerprint": "exact-current-approved-roadmap-fingerprint",
+  "authorityRef": "form-composer-entry-and-form-element-ownership"
+}
+```
+
+`contextualFormScopeAlignment` archives the original scope, plan and approval.
+The prior evidence and unresolved work remain in their original records. Record
+`roadmap-approved` using the actual accepted user clarification. Then run the
+focused Form checks and obtain independent review before recording new evidence
+for the two revised local criteria. Refresh their source-bound descriptions.
+Neither the amendment nor the renewed approval qualifies security, production,
+or overall results. Other started roadmaps use their own supported events.
+
 ### `increment-completed`
 
 ```json

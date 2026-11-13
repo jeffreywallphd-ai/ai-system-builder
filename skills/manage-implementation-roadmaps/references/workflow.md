@@ -405,6 +405,11 @@ evidence record and history entry, and never infer a new qualification pass.
 
 ## Feedback loop
 
+For the accepted contextual Form clarification in Asset Experience, use the
+fixed `contextual-form-scope-aligned` event in `events.md`. Independently review
+the exact archived scope and retained obligations, then verify the two revised
+local checks. Keep unrelated qualification and all earlier outcomes.
+
 Explicit technical policy changes use `technical-acceptance-revised`, not the
 human-only scope events. It replaces one pending governed controlled nonsecurity
 criterion under the same identity/qualification after all chunks are implemented.

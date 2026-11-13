@@ -1298,6 +1298,132 @@ def handle_technical_acceptance_revised(state: dict[str, Any], event: dict[str, 
     state["status"] = "approval-required"
 
 
+FORM_ROADMAP = "asset-experience-layered-customization"
+FORM_INCREMENT = "asset-backed-form-composer"
+FORM_SCOPE_AUTHORITY = "form-composer-entry-and-form-element-ownership"
+FORM_BASELINE = "0122fa1c8255f79f2cf0a0629058330b69666625dac0a468899ebf4bace34ee8"
+FORM_APPROVAL_BASELINE = "233d9326b1df3c8ef0d51230547d8a7f6a19dd0dc1c6bd674001d833d585494b"
+FORM_DEFINITION_BASELINE = "625a39fc5074cf825e4549d999f4107686459682975e145b424321d6dd16dda9"
+FORM_PLAN_BASELINE = "9a745c68f66a0a775a930e380c0ea22e5f121da2e2655957b9896624d9f9f307"
+FORM_DEFINITION_FIELDS = ("objective", "workPackages", "deliverables", "excluded", "verification", "acceptanceCriteria")
+FORM_CRITERIA = {
+    "shared-form-and-canvas-draft": (
+        "Open a specific form asset with Edit Form and return to it with Back to Canvas.\n"
+        "- Confirm a system without a form opens in Canvas. Limit current form-only pages, fields, messages, and controls to their owning form, including in built-in templates. Check that current fields saved outside a form in older drafts can be moved into a form and cannot be built while outside one.\n"
+        "- Add, rename, and reorder form pages. Add and configure text, choice, numeric, and date or checkbox fields from compatible assets.\n"
+        "- Confirm both views use the same draft and undo and redo history. Save and reopen with the same asset IDs, versions, settings, and order."
+    ),
+    "form-maps-to-a-canvas-page": (
+        "Create a form system and edit forms placed in a larger Canvas system.\n"
+        "- Verify a new form system saves a Canvas page, compatible section, form, and empty first form page. Reopen it from Manage in the Form editor.\n"
+        "- Open two forms on the same Canvas page. Check that each editor opens its own form and that moving between views keeps the placement, field order, and neighboring assets without duplication.\n"
+        "- Make a supported change in Canvas and reopen the form. Confirm that validation, routing, and action bindings stay with their form.\n"
+        "- Keep the existing Canvas controls and behavior apart from the contextual Edit Form entry."
+    ),
+}
+
+
+def contextual_form_scope(definition: dict[str, Any], plan: dict[str, Any]) -> tuple[dict, dict]:
+    """Project the fixed user clarification onto the exact archived definition."""
+    definition, plan = copy.deepcopy((definition, plan))
+    definition["objective"] = (
+        "Let a system author build, preview, and publish a multipage form. Open a specific form from Canvas with Edit Form. "
+        "A new form system saves its first page. Existing forms keep their Canvas placements. "
+        "Published forms check answers, follow the selected route, and start approved actions."
+    )
+    definition["workPackages"][0]["outcome"] = (
+        "Open Form from the selected form asset and return to it with Back to Canvas. "
+        "Save a new form system inside a page and compatible section. Preserve existing form placements and ownership. "
+        "Add, rename, and reorder form pages and their fields. Reuse the existing versioned assets and draft model."
+    )
+    definition["deliverables"][:2] = [
+        "A contextual Form view with page tabs, field editors, styling, validation, routing, actions, and preview.",
+        "A saved page and section for a new form system, preserved placements for embedded forms, and versioned assets with typed route and submission bindings.",
+    ]
+    definition["excluded"][2] = "Changes to existing Canvas editing or rendering apart from adding the contextual Edit Form entry."
+    definition["verification"][-1] = (
+        "Verify that the contextual Edit Form entry preserves existing Canvas editing and rendering. "
+        "Check page and container placement in Canvas and run automated round-trip tests."
+    )
+    for criterion in definition["acceptanceCriteria"]:
+        if criterion["id"] in FORM_CRITERIA:
+            criterion["description"] = FORM_CRITERIA[criterion["id"]]
+
+    plan["summary"] = "Build Form as a contextual editor over the shared Systems Compose draft. Save the first form page in a new system and preserve existing Canvas placements. Verify the feature on both hosts."
+    plan["steps"][:2] = [
+        "Save and reopen the page, compatible section, form, and first form page for a standalone Form system. Preserve existing form placements.",
+        "Open a specific form through Edit Form and return with Back to Canvas, using the shared draft and history.",
+    ]
+    plan["focusedTests"][1] = "Test contextual Edit Form, Back to Canvas, and the shared draft and history."
+    plan["assumptions"][0] = "Existing Canvas editing and rendering stay intact apart from the contextual Edit Form entry."
+    plan["chunks"][0]["title"] = "Save standalone forms and preserve embedded forms"
+    plan["chunks"][0]["outcome"] = "Save a new Form system on a Canvas page with a compatible section. Reopen its first form page and preserve embedded form placements."
+    plan["chunks"][1]["outcome"] = "Open and edit the selected form. Add, reorder, and configure pages and fields. Test the return to Canvas, shared undo and redo, save, and reopen."
+    plan.pop("fingerprint")
+    plan["fingerprint"] = fingerprint(plan)
+    return definition, plan
+
+
+def validate_form_scope_archive(state: dict[str, Any], archive: Any) -> None:
+    archive = require_object(archive, "contextual Form scope archive")
+    reject_unknown(archive, {"authorityRef", "previousApproval", "originalDefinition", "originalPlan", "recordedAt"},
+                   "contextual Form scope archive")
+    approval = require_object(archive.get("previousApproval"), "contextual Form scope previous approval")
+    if (
+        state["slug"] != FORM_ROADMAP or state.get("evidencePolicy") is not None
+        or archive.get("authorityRef") != FORM_SCOPE_AUTHORITY or fingerprint(approval) != FORM_APPROVAL_BASELINE
+        or fingerprint(archive.get("originalDefinition")) != FORM_DEFINITION_BASELINE
+        or fingerprint(archive.get("originalPlan")) != FORM_PLAN_BASELINE
+    ):
+        raise RoadmapError("Contextual Form scope archive must match the exact legacy approval, definition and plan.")
+    require_string(archive.get("recordedAt"), "contextual Form scope recordedAt", maximum=80)
+    definition, plan = contextual_form_scope(archive["originalDefinition"], archive["originalPlan"])
+    target = find_increment(state, FORM_INCREMENT)
+    if any(target.get(key) != value for key, value in definition.items()) or target.get("plan") != plan:
+        raise RoadmapError("The active Form scope must match the exact archived contextual revision.")
+
+
+def handle_contextual_form_scope_aligned(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "approvedFingerprint", "authorityRef"}, "event")
+    if (
+        state["slug"] != FORM_ROADMAP or state.get("evidencePolicy") is not None
+        or state.get("currentIncrementId") != FORM_INCREMENT or "contextualFormScopeAlignment" in state
+        or event.get("approvedFingerprint") != FORM_BASELINE or event.get("authorityRef") != FORM_SCOPE_AUTHORITY
+        or not approval_is_current(state) or roadmap_fingerprint(state) != FORM_BASELINE
+    ):
+        raise RoadmapError("Contextual Form alignment requires its exact active legacy roadmap and approval.")
+    target = current_increment(state)
+    plan = target.get("plan") or {}
+    planned = [item["id"] for item in plan.get("chunks", [])]
+    if target["status"] != "verifying" or sorted(planned) != sorted(target["completedChunks"]) or not planned:
+        raise RoadmapError("Contextual Form alignment requires every Form chunk to be complete.")
+    if not any(
+        row["id"] == FORM_SCOPE_AUTHORITY and row.get("targetIncrementId") == FORM_INCREMENT
+        and row.get("category") == "clarification" and row.get("disposition") == "accepted"
+        for row in state["feedback"]
+    ):
+        raise RoadmapError("Record the accepted contextual Form clarification before aligning scope.")
+    for criterion_id in FORM_CRITERIA:
+        result = latest_criterion_evidence(state, FORM_INCREMENT, criterion_id) or {}
+        if result.get("kind") != "review" or result.get("outcome") != "failed":
+            raise RoadmapError("Contextual Form alignment preserves the recorded obsolete-criterion failures.")
+    definition = {key: target[key] for key in FORM_DEFINITION_FIELDS}
+    if (fingerprint(state["roadmapApproval"]) != FORM_APPROVAL_BASELINE
+            or fingerprint(definition) != FORM_DEFINITION_BASELINE or fingerprint(plan) != FORM_PLAN_BASELINE):
+        raise RoadmapError("Contextual Form alignment requires the original approval, definition and plan.")
+    revised, revised_plan = contextual_form_scope(definition, plan)
+    state["contextualFormScopeAlignment"] = {
+        "authorityRef": FORM_SCOPE_AUTHORITY,
+        "previousApproval": state["roadmapApproval"],
+        "originalDefinition": definition,
+        "originalPlan": plan,
+        "recordedAt": now_utc(),
+    }
+    target.update(revised, plan=revised_plan)
+    invalidate_roadmap_approval(state)
+    state["status"] = "approval-required"
+
+
 def revise_human_scope(state: dict[str, Any], event: dict[str, Any], archive_key: str) -> None:
     reject_unknown(event, {"type", "incrementId", "approvedFingerprint", "authorityRef",
                            "onlyHumanScope", "summary", "removeCriterionIds", "replaceCriteria"}, "event")
@@ -1691,6 +1817,7 @@ EVENT_HANDLERS = {
     "acceptance-scope-revised": handle_acceptance_scope_revised,
     "legacy-acceptance-scope-revised": handle_legacy_acceptance_scope_revised,
     "technical-acceptance-revised": handle_technical_acceptance_revised,
+    "contextual-form-scope-aligned": handle_contextual_form_scope_aligned,
     "feedback-recorded": handle_feedback_recorded,
     "blocker-recorded": handle_blocker_recorded,
     "blocker-reclassified": handle_blocker_reclassified,
@@ -1770,9 +1897,12 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "acceptanceScopeRevisions",
         "legacyAcceptanceScopeRevisions",
         "technicalAcceptanceRevisions",
+        "contextualFormScopeAlignment",
         "blockerReclassifications",
     }
     reject_unknown(state, allowed, "state")
+    if "contextualFormScopeAlignment" in state:
+        validate_form_scope_archive(state, state["contextualFormScopeAlignment"])
     for blocker in require_list(state.get("blockers"), "state.blockers"):
         blocker = require_object(blocker, "state.blocker")
         if ACTION_FIELDS.intersection(blocker) - {"requiredAction"}:
@@ -2158,6 +2288,11 @@ def render_roadmap(state: dict[str, Any]) -> str:
                 lines.append(f"  - Original `{revision['originalCriterion']['id']}`: {markdown(revision['originalCriterion']['description'])}")
                 lines.append(f"  - Superseded requirements: {markdown('; '.join(revision['supersededRequirements']))}")
                 lines.append(f"  - Retained requirements: {markdown('; '.join(revision['retainedRequirements']))}")
+        form_alignment = state.get("contextualFormScopeAlignment")
+        if form_alignment and increment["id"] == FORM_INCREMENT:
+            lines.extend(["", "### Contextual Form scope history", "",
+                          "- The approved contextual editor supersedes the global switch and the requirement for one Canvas page per form.",
+                          "- The original definition, plan, approval, and review results remain in JSON history. The scope update records no test pass."])
         transfers = [t for t in state.get("humanAcceptanceTransfers", []) if t["incrementId"] == increment["id"]]
         if transfers:
             lines.extend(["", "### Human acceptance handled offline", ""])
