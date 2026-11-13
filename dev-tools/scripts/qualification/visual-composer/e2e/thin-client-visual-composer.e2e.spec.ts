@@ -4,7 +4,7 @@ import { operationalStatusUrl } from "../operational-ui-oracles";
 import { runOwnedRestartPhase } from "../asset-authoring-oracles";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { navigateCriticalApplicationArea, qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { observeComposerProtocol } from "./meaningful-system-journeys";
 import {
   assertGuidedLifecycleReflow,
@@ -73,23 +73,28 @@ async function runBrowserLifecycle(page: Page, request: import("@playwright/test
   await page.goto(new URL("/systems", origin).href);
   const workspaceRequired = page.getByRole("region", { name: "Workspace required" });
   await expect(workspaceRequired.or(page.getByRole("heading", { name: "Systems", exact: true }))).toBeVisible();
-  if (!(await workspaceRequired.isVisible())) {
-    await page.getByRole("button", { name: "Home", exact: true }).click();
+  const startsWithoutWorkspace = await workspaceRequired.isVisible();
+  if (!startsWithoutWorkspace) {
+    await navigateCriticalApplicationArea(page, "Home");
     await page.getByRole("button", { name: "Create new workspace", exact: true }).click();
   }
+  const workspaceSelection = page.getByLabel("Select current workspace");
+  const previousWorkspaceId = startsWithoutWorkspace ? "" : await workspaceSelection.inputValue();
   await expect(page.locator('input[name="workspaceName"]')).toBeVisible();
   await qualifyCriticalSurfaceAccessibility(page, test.info(), "workspace-create", mode);
   await page
     .locator('input[name="workspaceName"]')
     .fill("Browser lifecycle qualification");
   await page.getByRole("button", { name: "Create workspace" }).click();
-  await page.getByRole("button", { name: "Systems", exact: true }).click();
+  await expect(page.locator('input[name="workspaceName"]')).toBeHidden();
+  await expect(workspaceSelection).toHaveValue(/^workspace\./);
+  await expect(workspaceSelection).not.toHaveValue(previousWorkspaceId);
+  const workspaceId = await workspaceSelection.inputValue();
+  await navigateCriticalApplicationArea(page, "Systems");
   await expect(
     page.getByRole("heading", { name: "Systems", level: 1 }),
   ).toBeVisible();
-  const workspaceId = await page
-    .getByLabel("Select current workspace")
-    .inputValue();
+  await expect(workspaceSelection).toHaveValue(workspaceId);
   const authorization = { authorization: `Bearer ${bearerToken}` };
   const savedModelResponse = await request.post(
     new URL("/api/model/reference/save", serverOrigin).href,

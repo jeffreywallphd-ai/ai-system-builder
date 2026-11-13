@@ -74,6 +74,11 @@ combined runner uses its compiled JavaScript sibling. Both require the first
 child to exit after the commit and the second to recover without a duplicate
 record.
 
+The shared form-workspace driver waits until the new workspace replaces the
+previous selection. At narrow widths and native zoom, the guided lifecycle
+driver uses the application navigation menu and the responsive Canvas panel
+controls. The same contrast and lifecycle checks still apply.
+
 The managed Assets restart case loads its fixture in the Playwright worker.
 It imports the shared process cleanup helper without loading the visual
 composer command-line entry point. The import regression runs without opening

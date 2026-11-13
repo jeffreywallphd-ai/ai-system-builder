@@ -7821,8 +7821,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts",
    "facts": {
-    "sha256": "7b8e3c34e37f11b182cc8f8378bb91d68976fcee2b8c0b81e2fc1008e87dcf76",
-    "bytes": 15106,
+    "sha256": "c1a0090245be44d12a062a27b3c6eca1a7b213260a3a3b9a909a3df0e0cb00aa",
+    "bytes": 15853,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -7832,23 +7832,23 @@
      },
      {
       "name": "readContext",
-      "line": 207
+      "line": 220
      },
      {
       "name": "selectPublished",
-      "line": 222
+      "line": 235
      },
      {
       "name": "completeGuidedSystemLifecycle",
-      "line": 270
+      "line": 283
      },
      {
       "name": "assertGuidedLifecycleReflow",
-      "line": 279
+      "line": 292
      }
     ],
-    "assertionCount": 67,
-    "assertionDigest": "19e9e9848f6be68e33664ecd1d7910326a275d007b572734f087d2dbfa21565a",
+    "assertionCount": 71,
+    "assertionDigest": "64a9b7565c0e012cc74a0185f19b98525dfbfc841e967417028657c66202a13c",
     "assertionExamples": [
      {
       "line": 31,
@@ -9581,16 +9581,16 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts",
    "facts": {
-    "sha256": "47b0843dfdda6af5ef2068ecb0a48d9cbf5be4cde06824d003feee0757e5ca68",
-    "bytes": 8465,
+    "sha256": "227ffb5966cd3d6785fba911effe35cb81498a7016d24f395e5ac4c453b5d595",
+    "bytes": 8927,
     "cases": [
      {
       "name": "thin client completes the guided build and publication lifecycle",
-      "line": 164
+      "line": 169
      },
      {
       "name": "thin client completes system build and publication at native 400 percent zoom",
-      "line": 168
+      "line": 173
      }
     ],
     "dynamicCases": 0,
@@ -9601,11 +9601,11 @@
      },
      {
       "name": "requiredEnvironment",
-      "line": 179
+      "line": 184
      }
     ],
-    "assertionCount": 16,
-    "assertionDigest": "be2b53d89c68a2caffbec9335c6ae6e737443383fe0cd75add4e2a6946f4402e",
+    "assertionCount": 20,
+    "assertionDigest": "93d85af734b5caa35feec10f1665d69deae17c1e3f814ab755b1aaf42364e56a",
     "assertionExamples": [
      {
       "line": 45,
@@ -9623,7 +9623,7 @@
       "sha256": "4a623b4df74aec12fd2263fa759c8848732804457b20735eeda57b6db2370a23"
      },
      {
-      "line": 80,
+      "line": 83,
       "kind": "expect",
       "sha256": "3050b37f233facbcf0da50a38c73f7c7b0ad535aca734781e33c1ad2f323a29c"
      }

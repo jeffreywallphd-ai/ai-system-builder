@@ -44,10 +44,10 @@ export async function observeOwnedBrowserProcessRoles(page: Page) {
 }
 
 /** Use the mounted navigation layout. Never force a hidden sidebar control. */
-export async function navigateCriticalApplicationArea(page: Page, area: "Home" | "Data" | "Artifacts" | "Context") {
+export async function navigateCriticalApplicationArea(page: Page, area: "Home" | "Systems" | "Data" | "Artifacts" | "Context") {
   let stage = "target-admission";
   try {
-    if (!["Home", "Data", "Artifacts", "Context"].includes(area)) throw new Error();
+    if (!["Home", "Systems", "Data", "Artifacts", "Context"].includes(area)) throw new Error();
     stage = "sidebar-admission";
     const sidebar = page.locator("aside.ui-shell__sidebar");
     if (await sidebar.count() !== 1) throw new Error();

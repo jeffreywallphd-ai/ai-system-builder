@@ -48,19 +48,32 @@ export async function prepareGuidedSystemLifecycle(
     page.getByRole("heading", { name: "Canvas", level: 3 }),
   ).toBeVisible({ timeout: 30_000 });
 
-  await page.getByRole("tab", { name: "Layers", exact: true }).click();
+  const composerDetails = page.getByRole("complementary", { name: "Composer details" });
+  const selectDetails = async (name: "Layers" | "Properties") => {
+    const responsive = page.getByRole("group", { name: "Responsive composer panels" })
+      .getByRole("button", { name, exact: true });
+    if (await responsive.isVisible()) {
+      await expect(responsive).toBeEnabled({ timeout: 30_000 });
+      if (await responsive.getAttribute("aria-expanded") !== "true") {
+        await responsive.scrollIntoViewIfNeeded();
+        await responsive.focus();
+        await expect(responsive).toBeFocused();
+        await responsive.press("Enter");
+      }
+      await expect(responsive).toHaveAttribute("aria-expanded", "true");
+    } else {
+      await composerDetails.getByRole("tab", { name, exact: true }).click();
+    }
+    await expect(composerDetails.getByRole("tab", { name, exact: true })).toHaveAttribute("aria-selected", "true");
+  };
+  await selectDetails("Layers");
   const messageComposer = page
     .getByRole("treeitem")
     .filter({ hasText: "Message composer" })
     .last();
   await expect(messageComposer).toBeVisible({ timeout: 30_000 });
   await messageComposer.click();
-  const composerDetails = page.getByRole("complementary", {
-    name: "Composer details",
-  });
-  await composerDetails
-    .getByRole("tab", { name: "Properties", exact: true })
-    .click();
+  await selectDetails("Properties");
   await composerDetails.getByRole("tab", { name: "Data", exact: true }).click();
   const modelPicker = composerDetails.getByLabel("Text generation model");
   await expect(modelPicker).toBeVisible({ timeout: 30_000 });

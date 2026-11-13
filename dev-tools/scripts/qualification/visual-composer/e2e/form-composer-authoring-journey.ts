@@ -13,11 +13,13 @@ const fillAndLeave = async (control: Locator, text: string) => { await control.f
 
 export async function createFormWorkspace(page: Page, name = "Form qualification workspace") {
   const selection = page.getByLabel("Select current workspace");
+  const previous = await selection.inputValue();
   await key(page.getByRole("button", { name: "Create new workspace", exact: true }));
   await page.locator('input[name="workspaceName"]').fill(name);
   await key(page.getByRole("button", { name: "Create workspace", exact: true }));
   await expect(selection).toHaveValue(/^workspace\./, { timeout: 30_000 });
   await expect(page.locator(".workspace-create-form")).toHaveCount(0);
+  await expect(selection).not.toHaveValue(previous, { timeout: 30_000 });
   return selection.inputValue();
 }
 

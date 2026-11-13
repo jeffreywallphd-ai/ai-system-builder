@@ -733,7 +733,26 @@ const reviewedConnectionsCensus = Object.freeze({
   ].map(Object.freeze)),
 });
 
+const reviewedResponsiveAssetDriverCensus = Object.freeze({
+  priorCommit: "39eabfa0842b763d4f9e1f48e52b860bf7c857ed",
+  before: "78a1db7a862ca910ae668b8a306262ba6475d309388f452a972b0f9759c5d8e1",
+  after: "1b6e660ac8cb24906a82e57a168d998ffa9b98684ec10941d3582132f3206368",
+  pins: Object.freeze([
+    {
+      path: "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts",
+      source: "c1a0090245be44d12a062a27b3c6eca1a7b213260a3a3b9a909a3df0e0cb00aa",
+      facts: "6f9774cd2fe1cc3a168ab343d70c8286919082b1e87709adb610bbe8a81bda68",
+    },
+    {
+      path: "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts",
+      source: "227ffb5966cd3d6785fba911effe35cb81498a7016d24f395e5ac4c453b5d595",
+      facts: "d03152f77ef99c3fe78dc05c532702cb17336ab5b6f1f1af876126d099545c20",
+    },
+  ].map(Object.freeze)),
+});
+
 function pageLayoutLegacyView(map, result) {
+  ({map, result} = verifyExactLayoutCensus(map, result, reviewedResponsiveAssetDriverCensus));
   ({map, result} = verifyExactLayoutCensus(map, result, reviewedConnectionsCensus));
   return verifyExactLayoutCensus(map, result, reviewedPageLayoutCensus);
 }
@@ -1911,8 +1930,15 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,28);
-  const connectionsPrior = verifyExactLayoutCensus(map,result,reviewedConnectionsCensus);
+  assert.equal(result.gaps.length,30);
+  const responsivePrior = verifyExactLayoutCensus(map,result,reviewedResponsiveAssetDriverCensus);
+  assert.equal(responsivePrior.result.gaps.length,28);
+  assert.equal(sha(JSON.stringify(responsivePrior.map)),reviewedResponsiveAssetDriverCensus.before);
+  for (const pin of reviewedResponsiveAssetDriverCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
+  const connectionsPrior = verifyExactLayoutCensus(responsivePrior.map,responsivePrior.result,reviewedConnectionsCensus);
   assert.equal(connectionsPrior.result.gaps.length,27);
   assert.equal(sha(JSON.stringify(connectionsPrior.map)),reviewedConnectionsCensus.before);
   for (const pin of reviewedConnectionsCensus.pins) {
