@@ -91,7 +91,8 @@
   shared modal scoped to that container, lets the user choose an available
   region, and requests bounded searchable compatible definitions and compatible
   unassigned visual instances. Results are grouped into labeled UI categories
-  with a category filter directly below search. Selection maps to canonical add/place commands,
+  with a category filter directly below search. Compatible built-in page
+  layouts appear under Containers and layout. Selection maps to canonical add/place commands,
   closes the modal, selects the result, and reveals it on the Canvas. Layers
   retains explicit native move-destination and order controls. Do not restore a
   persistent Asset Palette, drag surfaces, or renderer drag state.

@@ -8,6 +8,7 @@ import type {
 import type { SystemBuilderComposerAsset } from "../../../../contracts/system-builder";
 import {
   groupSystemComposerUnplacedInstances,
+  isSystemComposerVisualAsset,
   isSystemComposerVisualInstance,
 } from "../systemComposerAssetClassification";
 
@@ -87,6 +88,18 @@ describe("System Composer unplaced asset classification", () => {
       },
     ];
     expect(isSystemComposerVisualInstance(shell, catalog)).toBe(false);
+  });
+
+  it("allows built-in page layouts and refuses unavailable or untrusted layouts", () => {
+    const page = {
+      ...asset("builtin.layout.page.main-aside", "page"),
+      layoutRole: "page-layout" as const,
+    };
+    expect(isSystemComposerVisualAsset(page)).toBe(true);
+    expect(isSystemComposerVisualAsset({ ...page, assetType: "feature" })).toBe(false);
+    expect(isSystemComposerVisualAsset({ ...page, builtIn: false })).toBe(false);
+    expect(isSystemComposerVisualAsset({ ...page, implementationAvailability: "definition-only" })).toBe(false);
+    expect(isSystemComposerVisualAsset({ ...page, previewAvailability: "unavailable" })).toBe(false);
   });
 
   it("fails closed for an untrusted system container", () => {

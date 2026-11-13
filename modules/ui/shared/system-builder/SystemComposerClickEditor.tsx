@@ -2171,7 +2171,9 @@ function categoryForComposerAsset(
   const identity =
     `${asset.definitionId} ${asset.displayName} ${asset.assetType} ${asset.assetFamily}`.toLowerCase();
   let id: ComposerAssetBrowseCategoryId;
-  if (/\b(navigation|menu|breadcrumb|tabs?|link)\b/.test(identity)) {
+  if (asset.layoutRole === "page-layout") {
+    id = "containers";
+  } else if (/\b(navigation|menu|breadcrumb|tabs?|link)\b/.test(identity)) {
     id = "navigation";
   } else if (/\b(button|action|submit|trigger|toolbar)\b/.test(identity)) {
     id = "actions";

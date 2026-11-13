@@ -35,7 +35,8 @@ Exercise Browse, Import Assets, Studio, Saved, Customizations, and the Systems t
 - With a supported screen reader, confirm page and tab names, ordered workflow sections, field labels and descriptions, selected target state, loading/status/error announcements, modal names, and actionable button names.
 - At 400-percent browser zoom and at a 320 CSS-pixel viewport, confirm reflow without horizontal page scrolling, clipped controls, overlapping tabs, hidden modal controls, or loss of content. Source editors may scroll internally.
 - Verify text and non-text contrast, non-color status cues, pointer target size, reduced-motion behavior, error association, and timeout/cancellation behavior.
-- In Systems Compose, review the Asset Palette, every predefined layout family,
+- In Systems Compose, review the Add element picker, the application layouts
+  in the Layouts bar, all six built-in page layouts from compatible regions,
   nested Canvas regions, Properties, Layers and Structure, Connections, preview,
   dialogs, and narrow panel controls. Complete insert, reorder, and reparent with
   keyboard only; repeat the structural path with physical touch hardware when the

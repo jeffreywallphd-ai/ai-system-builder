@@ -176,7 +176,9 @@ customization, and single-asset Studio workflows.
   when needed, searches bounded paged compatible candidates, and selects either
   a new definition or compatible unassigned visual instance. The choice maps to
   the existing canonical add/place command, closes the modal, selects the
-  result, and reveals it on the Canvas. Layers retain explicit native
+  result, and reveals it on the Canvas. Compatible built-in page layouts
+  appear under **Containers and layout**. Application layouts use the separate
+  Layouts bar. Layers retain explicit native
   destination and order controls for reparenting and reorder. The selected
   removable Canvas asset and the Layers panel open the same confirmation.
   Confirming removes that asset, its descendants, and their connections from

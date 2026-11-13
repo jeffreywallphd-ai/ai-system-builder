@@ -65,9 +65,9 @@
   definition detail for its current asset. Layers also separates System resources and logic.
   Every exact slot-bearing container exposes Add element. Its shared modal scopes
   compatible new definitions and unassigned visual instances to the selected
-  region, groups and filters them by UI category, and inserts or reattaches a
-  clicked choice without drag state. Explicit Move up, Move down, and Move to
-  controls preserve accessible ordering and reparenting. Foundation layouts
+  region. Compatible built-in page layouts appear under Containers and layout.
+  Insert or reattach from the picker. Use Move up, Move down, and Move to for
+  accessible ordering and reparenting. Foundation layouts
   expose labels but no editable dimensions, regions, responsive rules, raw JSON,
   CSS, or coordinates. Ordinary containers retain bounded Layout fields and
   nested regions. Containers expose structure; leaf nodes render one

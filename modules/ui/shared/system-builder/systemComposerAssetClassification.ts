@@ -42,8 +42,13 @@ export function isSystemComposerVisualInstance(
 export function isSystemComposerVisualAsset(
   asset: SystemBuilderComposerAsset,
 ): boolean {
-  if (asset.layoutRole || asset.definitionId === "builtin.system.system") {
+  if (asset.definitionId === "builtin.system.system" || asset.layoutRole === "application-shell") {
     return false;
+  }
+  if (asset.layoutRole === "page-layout") {
+    return asset.assetType === "page" && asset.builtIn &&
+      asset.implementationAvailability === "trusted-system-foundation" &&
+      asset.previewAvailability === "trusted-declarative";
   }
   if (VISUAL_ASSET_TYPES.has(asset.assetType)) return true;
   if (
