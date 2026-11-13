@@ -264,7 +264,9 @@ def action_assignment(value: dict[str, Any], label: str) -> dict[str, str]:
 
 
 def unresolved_work(state: dict[str, Any]) -> list[dict[str, Any]]:
-    return [item for item in state.get("blockers", []) if item.get("status") != "resolved"]
+    excluded = state.get("assetLegacyAssessmentExclusion")
+    return [item for item in state.get("blockers", []) if item.get("status") != "resolved"
+            and not (excluded and item == {**excluded["originalIssue"], "status": "excluded-unperformed"})]
 
 
 def requires_human_action(item: dict[str, Any]) -> bool:
@@ -1090,7 +1092,7 @@ def handle_chunk_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
     )
 
 
-def handle_evidence_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
+def handle_evidence_recorded(state: dict[str, Any], event: dict[str, Any], *, revised_asset_review: bool = False) -> None:
     reject_unknown(
         event,
         {
@@ -1136,6 +1138,10 @@ def handle_evidence_recorded(state: dict[str, Any], event: dict[str, Any]) -> No
         raise RoadmapError("event.outcome must be passed, failed, or pending.")
     if outcome == "pending" and criterion["qualification"] != "controlled-environment":
         raise RoadmapError("Only controlled-environment evidence may remain pending.")
+    if (state.get("assetLegacyAssessmentExclusion") and increment_id == ASSET_SCOPE_TARGET
+            and criterion_id == ASSET_SCOPE_CRITERION and outcome == "passed"
+            and not revised_asset_review):
+        raise RoadmapError("Revised Asset security acceptance requires the executed independent review event.")
     state["evidence"].append(
         {
             "id": f"evidence-{len(state['evidence']) + 1}",
@@ -1422,6 +1428,156 @@ def handle_contextual_form_scope_aligned(state: dict[str, Any], event: dict[str,
     target.update(revised, plan=revised_plan)
     invalidate_roadmap_approval(state)
     state["status"] = "approval-required"
+
+
+ASSET_SCOPE_TARGET = "production-qualification"
+ASSET_SCOPE_CRITERION = "security-review"
+ASSET_SCOPE_ISSUE = "restricted-legacy-authority-review-pending"
+ASSET_SCOPE_AUTHORITY = "user-limit-asset-acceptance-to-executable-checks"
+ASSET_SECURITY_CHECKS = frozenset({"asset-authoring-ui", "architecture"})
+ASSET_SCOPE_BASELINE = "9af7b38d2d30692ccddcaba031c4b9f87dcafdd1b529c417b535290a241c8ac5"
+ASSET_SCOPE_PINS = {
+    "originalCriterion": "ce2b0d1ca44e5d46af03a7941e1cc9194c2b4b5feed6c4abf0913f9808ae4251",
+    "originalPlan": "0aa992c2d8db98f0318ac421046bb9f3ec8b95322226f508edda800e98a3e274",
+    "previousApproval": "05b83b064d8c4f98e2d7f80d9fae49aae34e5511525ffda4db647f1f1723746b",
+    "originalIssue": "d1ff31e024eab47742318ab8f14d87f19e07e5e6348247396e9cbc726419ac45",
+    "originalEvidence": "71fc028d75620d6a9cef7f19618ae51c17e41bf5c69a92432207765c6c0a0252",
+}
+ASSET_SCOPE_DESCRIPTION = (
+    "Run current automated denial and failure checks and obtain a separate review of Asset Experience. "
+    "Confirm source containment, non-execution during browsing and import inspection, workspace isolation, "
+    "immutable bases, safe diagnostics, and no implied activation or deployment authority."
+)
+
+
+def validate_asset_assessment_exclusion(state: dict[str, Any], archive: Any) -> None:
+    archive = require_object(archive, "Asset legacy assessment scope archive")
+    reject_unknown(archive, {*ASSET_SCOPE_PINS, "authorityRef", "recordedAt", "status"}, "Asset scope archive")
+    if (state["slug"] != FORM_ROADMAP or state.get("evidencePolicy") is not None
+            or archive.get("authorityRef") != ASSET_SCOPE_AUTHORITY
+            or archive.get("status") != "excluded-unperformed"
+            or any(fingerprint(archive.get(key)) != pin for key, pin in ASSET_SCOPE_PINS.items())):
+        raise RoadmapError("Asset scope exclusion requires the exact original assessment and approval.")
+    require_string(archive.get("recordedAt"), "Asset scope recordedAt", maximum=80)
+    target = find_increment(state, ASSET_SCOPE_TARGET)
+    criteria = [c for c in target["acceptanceCriteria"] if c["id"] == ASSET_SCOPE_CRITERION]
+    if (criteria != [{**archive["originalCriterion"], "description": ASSET_SCOPE_DESCRIPTION}]
+            or target["plan"] != archive["originalPlan"]
+            or archive["originalEvidence"] not in state["evidence"]
+            or [{**archive["originalIssue"], "status": "excluded-unperformed"}] !=
+               [b for b in state["blockers"] if b.get("id") == ASSET_SCOPE_ISSUE]):
+        raise RoadmapError("Asset scope exclusion must preserve the original history and retain executable security checks.")
+
+
+def handle_asset_legacy_assessment_excluded(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "approvedFingerprint", "authorityRef"}, "event")
+    if (state["slug"] != FORM_ROADMAP or state.get("evidencePolicy") is not None
+            or "assetLegacyAssessmentExclusion" in state
+            or event.get("approvedFingerprint") != ASSET_SCOPE_BASELINE
+            or event.get("authorityRef") != ASSET_SCOPE_AUTHORITY
+            or not approval_is_current(state) or roadmap_fingerprint(state) != ASSET_SCOPE_BASELINE):
+        raise RoadmapError("Asset scope exclusion requires its exact currently approved legacy roadmap.")
+    target = find_increment(state, ASSET_SCOPE_TARGET)
+    planned = [c["id"] for c in (target.get("plan") or {}).get("chunks", [])]
+    if (target["status"] != "implemented-pending-qualification" or not planned
+            or sorted(target["completedChunks"]) != sorted(planned)
+            or ASSET_SCOPE_CRITERION not in target.get("pendingCriteria", [])):
+        raise RoadmapError("Asset scope exclusion requires the completed implementation and pending assessment.")
+    criterion = next((c for c in target["acceptanceCriteria"] if c["id"] == ASSET_SCOPE_CRITERION), None)
+    issue = next((b for b in state["blockers"] if b.get("id") == ASSET_SCOPE_ISSUE), None)
+    archive = {
+        "originalCriterion": copy.deepcopy(criterion),
+        "originalPlan": copy.deepcopy(target["plan"]),
+        "previousApproval": copy.deepcopy(state["roadmapApproval"]),
+        "originalIssue": copy.deepcopy(issue),
+        "originalEvidence": copy.deepcopy(latest_criterion_evidence(state, ASSET_SCOPE_TARGET, ASSET_SCOPE_CRITERION)),
+        "authorityRef": ASSET_SCOPE_AUTHORITY, "recordedAt": now_utc(), "status": "excluded-unperformed",
+    }
+    if any(fingerprint(archive[key]) != pin for key, pin in ASSET_SCOPE_PINS.items()):
+        raise RoadmapError("Asset scope exclusion requires the exact pending assessment; it cannot retire another result.")
+    criterion["description"] = ASSET_SCOPE_DESCRIPTION
+    issue["status"] = "excluded-unperformed"
+    state["assetLegacyAssessmentExclusion"] = archive
+    validate_asset_assessment_exclusion(state, archive)
+    invalidate_roadmap_approval(state)
+    state["status"] = "approval-required"
+
+
+def asset_security_proof(event: dict[str, Any]) -> dict[str, str]:
+    work_id = require_identifier(event.get("workId"), "event.workId")
+    proof = {"workId": work_id}
+    for key in ("receiptDigest", "reviewDigest"):
+        value = require_string(event.get(key), "event." + key, maximum=64)
+        if not re.fullmatch(r"[a-f0-9]{64}", value):
+            raise RoadmapError("Revised Asset security acceptance requires exact receipt and review digests.")
+        proof[key] = value
+    return proof
+
+
+def require_asset_security_review(repo: Path, state: dict[str, Any], event: dict[str, Any]) -> None:
+    proof = asset_security_proof(event)
+    if not state.get("assetLegacyAssessmentExclusion") or not approval_is_current(state):
+        raise RoadmapError("Revised Asset security acceptance requires current approval.")
+    helper = repo / "dev-tools" / "helpers"
+    if not (helper / "control_plane" / "work.py").is_file():
+        raise RoadmapError("Revised Asset security acceptance requires the repository control-plane adapter.")
+    sys.path.insert(0, str(helper))
+    try:
+        from control_plane.common import digest
+        from control_plane.work import Work
+        controller = Work(repo)
+        candidate = controller.records.load()["work_items"][proof["workId"]]
+        receipt = controller.current_receipt(candidate)
+        review = next(r for r in candidate["reviews"] if r["review_digest"] == proof["reviewDigest"])
+        if asset_review_matches(state, proof, candidate, receipt, review, digest):
+            return
+    except Exception as error:
+        raise RoadmapError("The revised Asset security receipt or separate review is unavailable or stale.") from error
+    finally:
+        sys.path.pop(0)
+    raise RoadmapError("The revised Asset security receipt or separate review is unavailable or stale.")
+
+
+def asset_review_matches(state, proof, candidate, receipt, review, digest) -> bool:
+    complete = candidate["completion"]
+    spec = candidate["spec"]
+    return (
+        candidate["status"] == "complete"
+        and spec["work_id"] == receipt["work_id"] == review["work_id"] == proof["workId"]
+        and spec["kind"] == "lightweight"
+        and spec["authority_ref"] == "asset-scope-qualification-" + roadmap_fingerprint(state)
+        and len(spec["acceptance"]) == 1 and spec["acceptance"][0]["id"] == ASSET_SCOPE_CRITERION
+        and spec["acceptance"][0]["description"] == ASSET_SCOPE_DESCRIPTION
+        and ASSET_SECURITY_CHECKS <= {a["check_id"] for a in receipt["attempts"]}
+        and receipt["receipt_digest"] == complete["receipt_digest"] == proof["receiptDigest"]
+        and receipt["source_digest"] == complete["source_digest"] == review["source_digest"]
+        and receipt["recorded_at"] >= state["roadmapApproval"]["approvedAt"]
+        and complete["review_digest"] == proof["reviewDigest"]
+        and review["receipt_digest"] == proof["receiptDigest"]
+        and review["disposition"] == "accepted"
+        and review["reviewed_criteria"] == [ASSET_SCOPE_CRITERION]
+        and review["invocation_id"] not in candidate["contributors"]
+        and review["review_digest"] == digest({k: v for k, v in review.items() if k != "review_digest"})
+    )
+
+
+def handle_asset_security_review_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "workId", "receiptDigest", "reviewDigest", "summary"}, "event")
+    if not state.get("assetLegacyAssessmentExclusion") or not approval_is_current(state):
+        raise RoadmapError("Revised Asset security acceptance requires current approval.")
+    proof = asset_security_proof(event)
+    proofs = state.setdefault("assetRevisedSecurityProofs", [])
+    latest = latest_criterion_evidence(state, ASSET_SCOPE_TARGET, ASSET_SCOPE_CRITERION)
+    if (latest and latest.get("outcome") == "passed") or any(
+        row["receiptDigest"] == proof["receiptDigest"] or row["reviewDigest"] == proof["reviewDigest"]
+        for row in proofs
+    ):
+        raise RoadmapError("The revised Asset security review is already recorded.")
+    handle_evidence_recorded(state, {
+        "incrementId": ASSET_SCOPE_TARGET, "criterionId": ASSET_SCOPE_CRITERION, "kind": "review",
+        "outcome": "passed", "summary": event.get("summary"), "artifact": proof["workId"],
+    }, revised_asset_review=True)
+    proofs.append({**proof, "evidenceId": state["evidence"][-1]["id"]})
 
 
 def revise_human_scope(state: dict[str, Any], event: dict[str, Any], archive_key: str) -> None:
@@ -1818,6 +1974,8 @@ EVENT_HANDLERS = {
     "legacy-acceptance-scope-revised": handle_legacy_acceptance_scope_revised,
     "technical-acceptance-revised": handle_technical_acceptance_revised,
     "contextual-form-scope-aligned": handle_contextual_form_scope_aligned,
+    "asset-legacy-assessment-excluded": handle_asset_legacy_assessment_excluded,
+    "asset-security-review-recorded": handle_asset_security_review_recorded,
     "feedback-recorded": handle_feedback_recorded,
     "blocker-recorded": handle_blocker_recorded,
     "blocker-reclassified": handle_blocker_reclassified,
@@ -1898,16 +2056,47 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "legacyAcceptanceScopeRevisions",
         "technicalAcceptanceRevisions",
         "contextualFormScopeAlignment",
+        "assetLegacyAssessmentExclusion",
+        "assetRevisedSecurityProofs",
         "blockerReclassifications",
     }
     reject_unknown(state, allowed, "state")
     if "contextualFormScopeAlignment" in state:
         validate_form_scope_archive(state, state["contextualFormScopeAlignment"])
+    asset_exclusion = state.get("assetLegacyAssessmentExclusion")
+    if "assetLegacyAssessmentExclusion" in state:
+        validate_asset_assessment_exclusion(state, asset_exclusion)
+    proof_ids = set()
+    proof_digests = set()
+    for value in require_list(state.get("assetRevisedSecurityProofs", []), "Asset security proofs"):
+        proof = require_object(value, "Asset security proof")
+        reject_unknown(proof, {"workId", "receiptDigest", "reviewDigest", "evidenceId"}, "Asset security proof")
+        asset_security_proof(proof)
+        evidence_id = require_identifier(proof.get("evidenceId"), "Asset security proof evidenceId")
+        digests = {proof["receiptDigest"], proof["reviewDigest"]}
+        if evidence_id in proof_ids or digests & proof_digests or len(digests) != 2:
+            raise RoadmapError("The revised Asset security review must not reuse proof.")
+        proof_ids.add(evidence_id)
+        proof_digests.update(digests)
+        if not asset_exclusion or not any(
+            e.get("id") == proof.get("evidenceId") and e.get("incrementId") == ASSET_SCOPE_TARGET
+            and e.get("criterionId") == ASSET_SCOPE_CRITERION and e.get("kind") == "review"
+            and e.get("outcome") == "passed" and e.get("artifact") == proof["workId"]
+            for e in state["evidence"]
+        ):
+            raise RoadmapError("The retained Asset security review must match its executed proof.")
+    if asset_exclusion and any(
+        e.get("incrementId") == ASSET_SCOPE_TARGET and e.get("criterionId") == ASSET_SCOPE_CRITERION
+        and e.get("outcome") == "passed" and e.get("id") not in proof_ids for e in state["evidence"]
+    ):
+        raise RoadmapError("The revised Asset security pass requires its executed proof.")
     for blocker in require_list(state.get("blockers"), "state.blockers"):
         blocker = require_object(blocker, "state.blocker")
         if ACTION_FIELDS.intersection(blocker) - {"requiredAction"}:
             action_assignment(blocker, "state.blocker")
-            if blocker.get("status") not in {"open", "resolved"}:
+            if (blocker.get("status") not in {"open", "resolved"}
+                    and not (asset_exclusion and blocker ==
+                             {**asset_exclusion["originalIssue"], "status": "excluded-unperformed"})):
                 raise RoadmapError("Assigned blocker work must remain open or explicitly resolved.")
     latest_assignments = {}
     for revision in require_list(state.get("blockerReclassifications", []), "state.blockerReclassifications"):
@@ -2298,6 +2487,10 @@ def render_roadmap(state: dict[str, Any]) -> str:
             lines.extend(["", "### Contextual Form scope history", "",
                           "- The approved contextual editor supersedes the global switch and the requirement for one Canvas page per form.",
                           "- The original definition, plan, approval, and review results remain in JSON history. The scope update records no test pass."])
+        if state.get("assetLegacyAssessmentExclusion") and increment["id"] == ASSET_SCOPE_TARGET:
+            lines.extend(["", "### Security scope history", "",
+                          "- The earlier legacy authorization assessment was not performed. It is outside this roadmap's acceptance and remains with the Security roadmap.",
+                          "- The original requirement, plan, approval, pending evidence, and issue remain in JSON history. This change records no test pass or release qualification."])
         transfers = [t for t in state.get("humanAcceptanceTransfers", []) if t["incrementId"] == increment["id"]]
         if transfers:
             lines.extend(["", "### Human acceptance handled offline", ""])
@@ -2735,6 +2928,8 @@ def command_apply(args: argparse.Namespace) -> dict[str, Any]:
             completion = require_control_completion(repo, state, increment_id=target_id, work_id=work_id)
             if completion is None or any(event.get(k) != v for k, v in completion.items()):
                 raise RoadmapError("Qualification must consume the exact current target work, receipt and independent review.")
+        elif event.get("type") == "asset-security-review-recorded":
+            require_asset_security_review(repo, state, event)
         elif event.get("type") == "roadmap-completed":
             require_control_completion(repo, state, overall=True)
         updated = apply_event(state, event)

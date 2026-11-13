@@ -58,6 +58,13 @@ Use the fixed `contextual-form-scope-aligned` event only for the accepted Asset
 Experience Form clarification. Preserve the original definition, plan and evidence.
 See `references/events.md` for admission and fresh verification.
 
+For the expressly authorized Asset Experience exclusion, use only the exact
+`asset-legacy-assessment-excluded` event in `references/events.md`. Keep the
+unperformed assessment in the Security roadmap and preserve original evidence.
+Reapprove the exact revised Asset scope and obtain a fresh, separate technical
+review of the retained checks. This event does not qualify the release profile
+and is not a general way to remove technical acceptance.
+
 For an explicitly authorized change to a pending technical acceptance policy,
 use `technical-acceptance-revised` as documented in `references/events.md`.
 This governed replacement-only event preserves criterion identity/qualification,

@@ -511,6 +511,28 @@ or overall results. Other started roadmaps use their own supported events.
 }
 ```
 
+### `asset-legacy-assessment-excluded`
+
+This one-time legacy Asset Experience event accepts only the fixed
+`production-qualification` target, original approval, plan, security criterion,
+pending evidence and agent-owned issue. Supply the current approved fingerprint
+and `authorityRef: "user-limit-asset-acceptance-to-executable-checks"`. It
+archives those inputs, marks only that issue `excluded-unperformed`, and retains
+the `security-review` criterion with explicit automated denial/failure checks and
+independent review. The separate Security roadmap and release profile are unchanged.
+
+The event invalidates Asset approval without changing implementation, evidence,
+other criteria or their outcomes. Failed checks cannot use this exclusion.
+
+Record the authorized revised approval. Complete work with the exact revised
+`security-review` description, authority `asset-scope-qualification-` plus the
+current roadmap fingerprint, and passing `asset-authoring-ui` and `architecture`
+checks. After accepted separate-invocation review, apply
+`asset-security-review-recorded` with `workId`, `receiptDigest`, `reviewDigest`,
+and a concise `summary`. The CLI resolves the current receipt and actual
+accepted review before recording the pass. An ordinary evidence declaration
+cannot replace this review.
+
 ### `increment-qualified`
 
 After all implementation is complete, record each target criterion's actual

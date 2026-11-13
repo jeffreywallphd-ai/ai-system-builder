@@ -172,6 +172,123 @@ class RoadmapEngineTest(unittest.TestCase):
         self.state = roadmap.apply_event(self.state, event)
         roadmap.validate_state_shape(self.repo, self.state)
 
+    def asset_assessment_fixture(self):
+        target = increment_definition(roadmap.ASSET_SCOPE_TARGET, 1)
+        target["acceptanceCriteria"].append({"id": "security-review", "description": "Prior controlled review.",
+                                             "qualification": "controlled-environment"})
+        self.define_and_approve([target])
+        self.state["slug"] = roadmap.FORM_ROADMAP
+        increment = self.state["increments"][0]
+        plan = implementation_plan(1)
+        plan["chunks"][0]["criteriaIds"].append("security-review")
+        increment.update(status="implemented-pending-qualification", completedChunks=["chunk-1"],
+                         pendingCriteria=["security-review"], plan={**plan, "fingerprint": roadmap.fingerprint(plan)})
+        self.state["evidence"].append({"incrementId": increment["id"], "criterionId": "security-review",
+                                       "outcome": "pending", "kind": "manual"})
+        self.state["blockers"].extend([{"id": roadmap.ASSET_SCOPE_ISSUE, "status": "open"},
+                                       {"id": "other-pending", "status": "open", "actionOwner": "agent",
+                                        "authorityRef": "synthetic-authority", "responsibleRole": "Agent",
+                                        "requiredAction": "Run test.", "actionLocation": "Fixture",
+                                        "completionCondition": "See report."}])
+        baseline = self.state["roadmapApproval"]["fingerprint"]
+        pins = {"originalCriterion": increment["acceptanceCriteria"][-1], "originalPlan": increment["plan"],
+                "previousApproval": self.state["roadmapApproval"], "originalIssue": self.state["blockers"][0],
+                "originalEvidence": self.state["evidence"][-1]}
+        patch = mock.patch.multiple(roadmap, ASSET_SCOPE_BASELINE=baseline,
+                                    ASSET_SCOPE_PINS={key: roadmap.fingerprint(value) for key, value in pins.items()})
+        event = {"type": "asset-legacy-assessment-excluded", "authorityRef": roadmap.ASSET_SCOPE_AUTHORITY,
+                 "approvedFingerprint": baseline}
+        return event, patch
+
+    def test_asset_exclusion_is_not_a_pass_and_requires_fresh_independent_review(self):
+        event, patch = self.asset_assessment_fixture()
+        original = copy.deepcopy(self.state)
+        proof = {"type": "asset-security-review-recorded", "workId": "fixture-work",
+                 "receiptDigest": "a" * 64, "reviewDigest": "b" * 64, "summary": "Independent technical review."}
+        with patch:
+            self.apply(event)
+            self.assertEqual(self.state["evidence"], original["evidence"])
+            self.assertEqual(roadmap.unresolved_work(self.state), [original["blockers"][1]])
+            self.assertEqual(self.state["increments"][0]["pendingCriteria"], ["security-review"])
+            self.assertFalse(roadmap.approval_is_current(self.state))
+            self.assertIn("was not performed", roadmap.render_roadmap(self.state))
+            with self.assertRaisesRegex(roadmap.RoadmapError, "current approval"):
+                self.apply(proof)
+            self.apply({"type": "roadmap-approved", "note": "Renew approval for the revised scope."})
+            with self.assertRaisesRegex(roadmap.RoadmapError, "executed independent review"):
+                self.apply({"type": "evidence-recorded", "incrementId": roadmap.ASSET_SCOPE_TARGET,
+                            "criterionId": "security-review", "kind": "review", "outcome": "passed",
+                            "summary": "An unverified declaration.", "artifact": "docs/tmp/review.json"})
+            with self.assertRaisesRegex(roadmap.RoadmapError, "control-plane adapter"):
+                roadmap.require_asset_security_review(self.repo, self.state, proof)
+            with self.assertRaisesRegex(roadmap.RoadmapError, "exact receipt and review digests"):
+                self.apply({**proof, "reviewDigest": "bad"})
+            self.apply(proof)
+            self.assertEqual(self.state["increments"][0]["status"], "implemented-pending-qualification")
+            missing = copy.deepcopy(self.state)
+            del missing["assetRevisedSecurityProofs"]
+            with self.assertRaisesRegex(roadmap.RoadmapError, "requires its executed proof"):
+                roadmap.validate_state_shape(self.repo, missing)
+            self.apply({"type": "evidence-recorded", "incrementId": roadmap.ASSET_SCOPE_TARGET,
+                        "criterionId": "security-review", "kind": "test", "outcome": "failed",
+                        "summary": "A later change failed the security check."})
+            with self.assertRaisesRegex(roadmap.RoadmapError, "already recorded"):
+                self.apply(proof)
+            self.apply({**proof, "receiptDigest": "c" * 64, "reviewDigest": "d" * 64})
+            self.assertEqual(len(self.state["assetRevisedSecurityProofs"]), 2)
+            roadmap.validate_state_shape(self.repo, self.state)
+            with self.assertRaises(roadmap.RoadmapError):
+                self.apply(event)
+            changed = copy.deepcopy(self.state)
+            changed["evidence"].pop(0)
+            with self.assertRaisesRegex(roadmap.RoadmapError, "preserve the original history"):
+                roadmap.validate_state_shape(self.repo, changed)
+
+    def test_asset_exclusion_refuses_other_roadmaps_failed_evidence_and_unfinished_chunks(self):
+        event, patch = self.asset_assessment_fixture()
+        original = self.state
+        with patch:
+            for field, value in [("slug", "security-findings-refresh"), ("evidencePolicy", "control-plane-v1")]:
+                with self.assertRaises(roadmap.RoadmapError):
+                    roadmap.apply_event({**original, field: value}, event)
+            changed = copy.deepcopy(original)
+            changed["evidence"][-1]["outcome"] = "failed"
+            with self.assertRaisesRegex(roadmap.RoadmapError, "exact pending assessment"):
+                roadmap.apply_event(changed, event)
+            changed = copy.deepcopy(original)
+            changed["increments"][0]["completedChunks"].clear()
+            with self.assertRaisesRegex(roadmap.RoadmapError, "completed implementation"):
+                roadmap.apply_event(changed, event)
+
+    def test_asset_review_binding_checks_lineage_and_separate_invocation(self):
+        event, patch = self.asset_assessment_fixture()
+        with patch:
+            self.apply(event)
+            self.apply({"type": "roadmap-approved", "note": "Renew approval for the revised scope."})
+        source = "f" * 64
+        receipt_digest = "a" * 64
+        review = {"work_id": "asset-test", "receipt_digest": receipt_digest, "source_digest": source,
+                  "disposition": "accepted", "reviewed_criteria": ["security-review"], "invocation_id": "other"}
+        review["review_digest"] = roadmap.fingerprint(review)
+        proof = {"workId": "asset-test", "receiptDigest": receipt_digest, "reviewDigest": review["review_digest"]}
+        receipt = {"work_id": "asset-test", "source_digest": source, "receipt_digest": receipt_digest,
+                   "recorded_at": self.state["roadmapApproval"]["approvedAt"],
+                   "attempts": [{"check_id": key} for key in roadmap.ASSET_SECURITY_CHECKS]}
+        candidate = {"status": "complete", "contributors": ["author"],
+                     "completion": {"receipt_digest": receipt_digest, "source_digest": source,
+                                    "review_digest": review["review_digest"]},
+                     "spec": {"kind": "lightweight", "work_id": "asset-test", "authority_ref":
+                              "asset-scope-qualification-" + roadmap.roadmap_fingerprint(self.state),
+                              "acceptance": [{"id": "security-review", "description": roadmap.ASSET_SCOPE_DESCRIPTION}]}}
+        matches = lambda c, r, v: roadmap.asset_review_matches(self.state, proof, c, r, v, roadmap.fingerprint)
+        self.assertTrue(matches(candidate, receipt, review))
+        self.assertFalse(matches({**candidate, "contributors": ["other"]}, receipt, review))
+        self.assertFalse(matches({**candidate, "spec": {**candidate["spec"], "authority_ref": "other"}}, receipt, review))
+        self.assertFalse(matches(candidate, {**receipt, "receipt_digest": "b" * 64}, review))
+        self.assertFalse(matches(candidate, {**receipt, "attempts": receipt["attempts"][:1]}, review))
+        self.assertFalse(matches(candidate, receipt, {**review, "reviewed_criteria": ["unrelated"]}))
+        self.assertFalse(matches(candidate, receipt, {**review, "recorded_at": "changed-after-review"}))
+
     def contextual_form_fixture(self):
         increment = increment_definition(roadmap.FORM_INCREMENT, 1)
         increment["acceptanceCriteria"] = [

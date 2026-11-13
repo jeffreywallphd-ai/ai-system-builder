@@ -137,6 +137,10 @@ does not grant push, history rewrite, main advancement or release authority.
 Test a mixed dirty worktree with accepted local work and a pending parent check;
 the checkpoint must neither capture unrelated changes nor complete the parent.
 
+Keep the fixed Asset legacy scope event, archived pending result, and denial
+tests together. This event applies to the exact legacy record only and cannot
+replace the normal technical policy workflow.
+
 Keep `technical-acceptance-revised` engine, archive validation, rendering and denial
 tests together with portable routing. It is governed and replacement-only; require
 current approval, complete unique chunks, pending controlled nonsecurity identity,

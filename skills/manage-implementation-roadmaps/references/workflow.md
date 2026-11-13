@@ -410,6 +410,11 @@ fixed `contextual-form-scope-aligned` event in `events.md`. Independently review
 the exact archived scope and retained obligations, then verify the two revised
 local checks. Keep unrelated qualification and all earlier outcomes.
 
+The exact Asset Experience legacy assessment has its own one-time
+`asset-legacy-assessment-excluded` event. Preserve its Security owner, its
+unperformed evidence and the existing release qualification profile; independently
+review the scope revision and reapprove it before fresh Asset security evidence.
+
 Explicit technical policy changes use `technical-acceptance-revised`, not the
 human-only scope events. It replaces one pending governed controlled nonsecurity
 criterion under the same identity/qualification after all chunks are implemented.

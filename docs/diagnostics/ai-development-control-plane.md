@@ -15,6 +15,11 @@ reintroduce the removed Run & Test surface. Mixed legacy human acceptance uses
 the explicit scope event and independent classification. Technical qualification
 and product approval remain.
 
+Asset Experience has a separate exact legacy scope event for its unperformed
+authorization assessment. It preserves the original issue and evidence, keeps
+the separate Security roadmap and release profile unchanged, and still requires
+current automated security checks and a separate review for Asset closure.
+
 - Status: current
 - Verification: `dev-tools/helpers/tests/`, `npm run agent-support:check`
 
