@@ -8,3 +8,4 @@ export {
   type HeadlessReadRequest,
   type HeadlessReadRequestParseResult,
 } from "./headless-read-request";
+export type { HeadlessReadResult, HeadlessSystemSummary } from "./headless-read-result";

@@ -48,8 +48,10 @@ ownership. Desktop is the first target; the server and browser follow.
 
 ## Current implementation and consequences
 
-The initial contract defines bounded, read-only request shapes and host
-incarnation matching. It opens no listener and grants no authority. Further
+The initial contract and internal desktop provider define bounded, read-only
+requests and match the host incarnation. The provider shares the UI's read use
+cases and checks current workspace authority before returning projected results.
+They open no listener and grant no authority. Further
 work requires bounded host transport, credential storage and verification,
 tested application integration and actual packaged-host evidence before any
 supported-capability claim. See the

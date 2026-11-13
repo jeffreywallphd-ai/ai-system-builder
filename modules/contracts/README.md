@@ -12,8 +12,9 @@ Current contract families include:
 - `artifact-browser` read-side operation and read-model contracts
 - `runtime`, `persistence`, `storage`, and `ingestion`
 - `system-builder` for workspace-owned composed-system design records that specialize Asset Kernel compositions
-- `headless` for versioned, finite read requests to an existing host. Request
-  validation does not grant access or advertise a supported capability.
+- `headless` for versioned, finite read requests and bounded read projections
+  from an existing host. Request validation does not grant access or
+  advertise a supported capability.
 - `asset-authoring` for safe authored records plus exact-base layered
   customizations, typed semantic sections, bounded source overlays, review
   evidence, distinct publication lineage, and shared operation identities used

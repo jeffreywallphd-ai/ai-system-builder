@@ -78,6 +78,23 @@ MANAGED_ASSETS_RESTART_LOADER_FILES = (
     "dev-tools/scripts/qualification/tests/managed-assets-restart-loader.unit.test.mjs",
 )
 
+HEADLESS_DESKTOP_READ_SOURCES = (
+    "modules/contracts/README.md",
+    "modules/contracts/headless/index.ts",
+    "modules/contracts/headless/headless-read-result.ts",
+    "modules/hosts/shared/composition/composeSystemBuilder.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts",
+    "modules/hosts/desktop/composition/composeDesktopHost.ts",
+    "modules/hosts/desktop/composition/README.md",
+    "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
+)
+HEADLESS_DESKTOP_READ_CHECK = "headless-desktop-read-provider"
+HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES = (
+    "modules/contracts/headless/headless-read-result.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts",
+    "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
+)
+
 PUBLISHED_FORM_CHECKS = {
     "managed-assets-restart-loader": {
         "automatic_sources": MANAGED_ASSETS_RESTART_LOADER_FILES,
@@ -507,6 +524,11 @@ def definitions(root: Path) -> list[dict]:
            "timeout": 120} for name, (_, test) in OPT_IN_REGRESSION_CHECKS.items()],
         *[{"id": name, "patterns": [], "argv": [node, *check["command"]], "timeout": 120}
           for name, check in PUBLISHED_FORM_CHECKS.items()],
+        {"id": HEADLESS_DESKTOP_READ_CHECK, "patterns": [],
+         "argv": [node, "--import", "tsx", "--test", "--",
+                  "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
+                  "modules/contracts/headless/tests/headless-read-request.unit.test.ts"],
+         "timeout": 120},
         {"id": "asset-defensive-acceptance", "patterns": [],
          "argv": [node, "--import", "tsx", "--test", "--test-concurrency=1", "--", *ASSET_DEFENSIVE_TESTS],
          "timeout": 180},
@@ -548,6 +570,10 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     # A form-only UI check never claims coverage of the shared Canvas CSS.
     # Include its existing stylesheet contracts only for the explicit Form slice.
     required = set(required)
+    headless_explicit = HEADLESS_DESKTOP_READ_CHECK in required
+    headless_sources = HEADLESS_DESKTOP_READ_SOURCES if headless_explicit else HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES
+    if set(paths).intersection(HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES):
+        required.add(HEADLESS_DESKTOP_READ_CHECK)
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
                     if set(paths).intersection(check.get("automatic_sources", ())))
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
@@ -556,6 +582,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                    if any(fnmatch.fnmatchcase(p, pat) for pat in c["patterns"])
                    or (c["id"] in required and (
                        p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()) or
+                       (c["id"] == HEADLESS_DESKTOP_READ_CHECK and p in headless_sources) or
                        p in PUBLISHED_FORM_CHECKS.get(c["id"], {}).get("sources", ()) or
                        (c["id"] == "standard-source-fixture-runner" and p in STANDARD_RUNNER_SOURCES) or
                        (c["id"] == "asset-browser-qualification-contract" and p in ASSET_BROWSER_SOURCES)
@@ -576,6 +603,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
         declared_sources.update(STANDARD_RUNNER_SOURCES)
     if "asset-browser-qualification-contract" in required:
         declared_sources.update(ASSET_BROWSER_SOURCES)
+    if HEADLESS_DESKTOP_READ_CHECK in required:
+        declared_sources.update(headless_sources)
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))

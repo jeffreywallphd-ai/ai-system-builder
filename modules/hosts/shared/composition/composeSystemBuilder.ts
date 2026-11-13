@@ -43,6 +43,14 @@ export interface ComposeSystemBuilderOptions {
   readonly now?: () => string;
 }
 
+/** Reuse one reader on first use without constructing it for passive host discovery. */
+function lazyRead<Args extends unknown[], Result>(
+  create: () => { execute: (...args: Args) => Promise<Result> },
+) {
+  let reader: ReturnType<typeof create> | undefined;
+  return { execute: (...args: Args) => (reader ??= create()).execute(...args) };
+}
+
 export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
   const repository = createStructuredSystemBuilderRepository(options.documents);
   const buildRepository = createStructuredSystemBuildRepository(
@@ -76,12 +84,12 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
     modelAuthority,
     useCases: {
       create: new CreateSystemBuilderSystemUseCase(dependencies),
-      listTemplates: new ListSystemBuilderTemplatesUseCase(templates),
+      listTemplates: lazyRead(() => new ListSystemBuilderTemplatesUseCase(templates)),
       createFromTemplate: new CreateSystemBuilderFromTemplateUseCase(
         dependencies,
         templates,
       ),
-      list: new ListSystemBuilderSystemsUseCase(repository),
+      list: lazyRead(() => new ListSystemBuilderSystemsUseCase(repository)),
       listManagement: new ListSystemBuilderManagementUseCase(
         repository,
         buildRepository,
@@ -89,7 +97,7 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
       listModelOptions: new ListSystemBuilderModelOptionsUseCase(
         modelAuthority,
       ),
-      read: new ReadSystemBuilderSystemUseCase(repository),
+      read: lazyRead(() => new ReadSystemBuilderSystemUseCase(repository)),
       rename: new RenameSystemBuilderSystemUseCase(dependencies),
       archive: new ArchiveSystemBuilderSystemUseCase(dependencies),
       restore: new RestoreSystemBuilderSystemUseCase(dependencies),

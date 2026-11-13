@@ -6,6 +6,8 @@ import { createWorkspaceAssetAuthoringReaders } from "../../../application/servi
 import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
 import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
 import { asyncLazyObject } from "./lazyProxy";
+import { composeDesktopHeadlessReads, type DesktopHeadlessReadHandler } from "./composeDesktopHeadlessReads";
+import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
 import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
 import { WorkspaceAssetAccessService } from "../../../application/services/asset/workspace-asset-access.service";
 import { composeWorkspaceSummary } from "../../shared/composition/composeWorkspaceSummary";
@@ -332,6 +334,8 @@ export interface DesktopHostComposition {
   registerDesktopIpc: (
     options: RegisterDesktopArtifactUploadIpcOptions,
   ) => void;
+  /** Main-process use only; the future connector must authenticate every request. */
+  getHeadlessReadHandler: () => DesktopHeadlessReadHandler | undefined;
   registerArtifactUploadIpc: (
     options: RegisterDesktopArtifactUploadIpcOptions,
   ) => void;
@@ -681,6 +685,8 @@ export function composeDesktopHost(
   recordHostMemorySnapshot("desktop.host.compose.return");
 
   const taskReconciler = createOwnedTaskReconciler();
+  let headlessReadHandler: DesktopHeadlessReadHandler | undefined;
+  let headlessReadAdmissionClosed = false;
   let closeImageAdmission: (() => void) | undefined;
   let stopOwnedImageRuntime: (() => Promise<void>) | undefined;
   let readComfyUiLifecycleState: Parameters<typeof createDesktopRuntimeReadinessService>[0]["readComfyUiLifecycleState"] = () => "uninitialized";
@@ -701,6 +707,8 @@ export function composeDesktopHost(
       await (await getPythonRuntimeFoundation()).supervisor.start();
     },
     async shutdownBackgroundTasks() {
+      headlessReadAdmissionClosed = true;
+      headlessReadHandler = undefined;
       taskReconciler.stopAccepting();
       closeImageAdmission?.();
       await shutdownOwnedTasks({ reconciler: taskReconciler,
@@ -753,6 +761,7 @@ export function composeDesktopHost(
       return internalAssetRegistry;
     },
     getFeatureLifecycleState: featureLifecycle.getFeatureLifecycleState,
+    getHeadlessReadHandler: () => headlessReadHandler,
     disposeFeature: featureLifecycle.disposeFeature,
     markFeatureIdle: featureLifecycle.markFeatureIdle,
     disposeIdleFeatures: featureLifecycle.disposeIdleFeatures,
@@ -2137,6 +2146,20 @@ export function composeDesktopHost(
       recordHostMemorySnapshot(
         "desktop.host.ipc-registration.lazy-handlers.after",
       );
+      const identity = options.localIdentity;
+      if (!headlessReadAdmissionClosed && !headlessReadHandler && identity && workspaceAuthorization && systemBuilder) {
+        const hostIncarnationId = randomUUID();
+        if (isHeadlessHostIncarnationId(hostIncarnationId)) {
+          headlessReadHandler = composeDesktopHeadlessReads({
+            hostIncarnationId,
+            identity,
+            authorization: workspaceAuthorization,
+            workspaceRepository: startupWorkspaceShell.workspaceRepository,
+            getUseCases: () => systemBuilder.useCases,
+            isOpen: () => !headlessReadAdmissionClosed,
+          });
+        }
+      }
       recordHostMemorySnapshot("desktop.host.ipc-registration.return");
     },
     registerArtifactUploadIpc(registerOptions) {

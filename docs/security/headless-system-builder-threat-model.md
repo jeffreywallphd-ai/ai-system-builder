@@ -19,7 +19,10 @@ host incarnation and explicit resource targets. It rejects extra fields and
 uses fixed failure codes. It operates on already bounded decoded data; a future
 transport must enforce frame size, duplicate-field policy, identity and rate
 limits before it dispatches any request. A well-formed request is never a
-grant. No listener or credential exists in this slice.
+grant. The internal desktop dispatcher requires a grant returned by its
+trusted caller and checks local identity, exact scope, current policy and
+host shutdown state. It returns selected workspace, template and saved-system
+metadata only. No listener or credential issuer exists in this slice.
 
 Managed parity must recheck existing OIDC, membership and row-security
 authority, including for streams, receipts and worker replay. Neither synthetic

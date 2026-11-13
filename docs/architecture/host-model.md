@@ -80,8 +80,9 @@ keeps one owning host per client connection. The optional desktop connector
 must reuse the running app's lazy application providers, and the managed
 adapter must use the existing authenticated server API. An adapter does not
 start a second host or own a data store. Workspace access and window
-presentation remain separate. The initial read request contract does not open
-either host path.
+presentation remain separate. The desktop's internal read dispatcher uses
+the same System Builder read use cases as IPC. It requires a verified grant
+and current workspace policy; neither host exposes an external connector yet.
 
 - Owns server process lifecycle and composition.
 - Uses transport adapters (default: Express) for API exposure.
