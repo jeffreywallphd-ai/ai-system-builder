@@ -17,6 +17,7 @@ type Grant = {
 const invalid = { kind: "invalid" } as const;
 const denied = { kind: "denied" } as const;
 const unconfirmed = { kind: "unconfirmed" } as const;
+type DispatchResult = { readonly kind: "observed"; readonly reference: HeadlessTurnReference } | typeof unconfirmed;
 
 /** Finite dispatch to a preapproved session. This use case has no approval or cancellation port. */
 export class HeadlessApprovedConversationDispatchUseCase {
@@ -26,7 +27,10 @@ export class HeadlessApprovedConversationDispatchUseCase {
     readonly fingerprint: (data: string) => string;
     /** The trusted owner must check the exact prepared target and live fence at invocation. */
     readonly submit: (command: { workspaceId: WorkspaceId; conversationSessionId: string; operationId: string; text: string },
-      authority: { readonly target: PreparedTarget; readonly isCurrent: () => boolean }) => Promise<unknown>;
+      authority: { readonly target: PreparedTarget; readonly isCurrent: () => boolean;
+        readonly onAdmitted?: (reference: HeadlessTurnReference) => Promise<boolean> }) => Promise<unknown>;
+    /** Optional bounded host lifetime owner. Must start at most once and hold the task through settlement. */
+    readonly runOwned?: (task: () => Promise<void>) => boolean;
   }) {}
 
   public async execute(input: unknown, grant: Grant) {
@@ -60,15 +64,65 @@ export class HeadlessApprovedConversationDispatchUseCase {
       if (admission.kind === "absent") return unconfirmed;
       if (admission.kind !== "reserved") return await allowed(canObserve) && current() ? admission : denied;
       if (!await allowed(canDispatch) || !current()) return unconfirmed;
-      const result = await this.dependencies.submit({
+      const command = {
         workspaceId: target.workspaceId, conversationSessionId: target.sessionId, operationId: admission.operationId, text,
-      }, { target, isCurrent: current });
+      };
+      if (this.dependencies.runOwned) {
+        return await this.submitOwned(command, target, current, () => allowed(canObserve), reference =>
+          this.dependencies.reservations.confirm({ scope, key, operationId: admission.operationId, reference }));
+      }
+      const result = await this.dependencies.submit(command, { target, isCurrent: current });
       const reference = project(result);
       if (!reference || !await this.dependencies.reservations.confirm({ scope, key, operationId: admission.operationId, reference }))
         return unconfirmed;
       if (!await allowed(canObserve) || !current()) return unconfirmed;
       return { kind: "observed", reference } as const;
     } catch { return unconfirmed; }
+  }
+
+  private async submitOwned(
+    command: Parameters<HeadlessApprovedConversationDispatchUseCase["dependencies"]["submit"]>[0],
+    target: PreparedTarget,
+    isCurrent: () => boolean,
+    canObserve: () => Promise<boolean>,
+    confirm: (reference: HeadlessTurnReference) => Promise<boolean>,
+  ): Promise<DispatchResult> {
+    return new Promise<DispatchResult>((resolve) => {
+      let started = false;
+      let callbackOpen = false;
+      let signal: Promise<boolean> | undefined;
+      let admit!: (accepted: boolean) => void;
+      const scheduling = new Promise<boolean>(settled => { admit = settled; });
+      const task = async () => {
+        if (started) return;
+        started = true;
+        try {
+          if (!await scheduling || !isCurrent()) return;
+          callbackOpen = true;
+          await this.dependencies.submit(command, { target, isCurrent, onAdmitted(raw) {
+            if (!callbackOpen || signal) return Promise.resolve(false);
+            signal = (async () => {
+              const reference = projectReference(raw);
+              if (!reference || !await confirm(reference)) return false;
+              // Suppress the handle if access changed while its receipt was committing.
+              if (!await canObserve() || !isCurrent()) return false;
+              resolve({ kind: "observed", reference });
+              return true;
+            })().catch(() => false);
+            return signal;
+          } });
+        } catch { /* The caller gets a fixed outcome and may only reconcile the saved key. */ }
+        finally {
+          callbackOpen = false;
+          await signal;
+          resolve(unconfirmed);
+        }
+      };
+      let scheduled = false;
+      try { scheduled = this.dependencies.runOwned?.(task) === true; } catch { /* Refused. */ }
+      admit(scheduled);
+      if (!scheduled) resolve(unconfirmed);
+    });
   }
 }
 
@@ -95,7 +149,13 @@ function project(value: unknown): HeadlessTurnReference | undefined {
   const result = value.value;
   if (typeof result !== "object" || result === null || !("conversationTurnId" in result) || !("executionRunId" in result))
     return undefined;
-  const { conversationTurnId: turnId, executionRunId: runId } = result;
+  return projectReference({ turnId: result.conversationTurnId, runId: result.executionRunId });
+}
+
+function projectReference(raw: unknown): HeadlessTurnReference | undefined {
+  let reference: Record<string, unknown>;
+  try { reference = readStrictPassiveRecord(raw, ["turnId", "runId"]); } catch { return undefined; }
+  const { turnId, runId } = reference;
   return safeId(turnId) && normalizeConversationTurnId(turnId) === turnId && safeId(runId) &&
     normalizeExecutionRunId(runId) === runId ? { turnId, runId } : undefined;
 }

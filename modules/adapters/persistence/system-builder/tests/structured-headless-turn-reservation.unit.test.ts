@@ -63,6 +63,81 @@ test("reserves once across concurrent callers, persists only the handle, and rep
   assert.equal(invoked, 1);
 });
 
+test("an owned invocation returns and replays its durable handle while the runtime is still running", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  let release!: () => void;
+  const waitForRuntime = new Promise<void>(resolve => { release = resolve; });
+  let task: Promise<void> | undefined;
+  let calls = 0;
+  const make = () => new HeadlessApprovedConversationDispatchUseCase({
+    reservations: createStructuredHeadlessTurnReservation({ documents, authorize: async () => true }),
+    fingerprint: input => createHmac("sha256", "synthetic-key").update(input).digest("hex"),
+    runOwned(work) { task = work(); return true; },
+    async submit(_command, authority) {
+      calls++;
+      assert.equal(await authority.onAdmitted?.(reference), true);
+      await waitForRuntime;
+      return { kind: "success", value: { conversationTurnId: reference.turnId, executionRunId: reference.runId } };
+    },
+  });
+  const grant = { scope, isCurrent: () => true, canObserve: async () => true, canDispatch: async () => true };
+  try {
+    const expected = { kind: "observed", reference };
+    assert.deepEqual(await make().execute(request, grant), expected);
+    assert.deepEqual(await make().execute(request, grant), expected);
+    assert.equal(calls, 1);
+  } finally { release(); await task; }
+});
+
+test("the owned path refuses a saved handle if authority closes before it can be returned", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  let current = true;
+  let starts = 0;
+  let task: Promise<void> | undefined;
+  const useCase = new HeadlessApprovedConversationDispatchUseCase({
+    reservations: createStructuredHeadlessTurnReservation({ documents, authorize: async () => true }),
+    fingerprint: input => createHmac("sha256", "synthetic-key").update(input).digest("hex"),
+    runOwned(work) { task = work(); return true; },
+    async submit(_command, authority) {
+      current = false;
+      if (await authority.onAdmitted?.(reference)) starts++;
+    },
+  });
+  const grant = { scope, isCurrent: () => current, canObserve: async () => current, canDispatch: async () => current };
+  assert.deepEqual(await useCase.execute(request, grant), { kind: "unconfirmed" });
+  await task;
+  assert.equal(starts, 0);
+  assert.deepEqual(await useCase.execute(request, grant), { kind: "denied" });
+});
+
+test("refused scheduling and an escaped callback cannot admit a delegated task", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  let delayed: (() => Promise<void>) | undefined;
+  let escaped: ((value: typeof reference) => Promise<boolean>) | undefined;
+  let calls = 0;
+  const reservations = createStructuredHeadlessTurnReservation({ documents, authorize: async () => true });
+  let confirmations = 0;
+  const run = (runOwned: (task: () => Promise<void>) => boolean) => new HeadlessApprovedConversationDispatchUseCase({
+    reservations: { ...reservations, async confirm(input) { confirmations++; return reservations.confirm(input); } },
+    fingerprint: input => createHmac("sha256", "synthetic-key").update(input).digest("hex"),
+    runOwned,
+    async submit(_command, { onAdmitted }) { calls++; escaped = onAdmitted; },
+  });
+  const grant = { scope, isCurrent: () => true, canObserve: async () => true, canDispatch: async () => true };
+  assert.deepEqual(await run(work => { delayed = work; return false; }).execute(request, grant), { kind: "unconfirmed" });
+  assert.ok(delayed);
+  await delayed();
+  assert.equal(calls, 0);
+  let accepted: Promise<void> | undefined;
+  const newRequest = { ...request, key: "07dd00fa-c443-4b7f-8d12-f03c787a36dc" };
+  assert.deepEqual(await run(work => { accepted = work(); return true; }).execute(newRequest, grant), { kind: "unconfirmed" });
+  await accepted;
+  assert.equal(calls, 1);
+  assert.ok(escaped);
+  assert.equal(await escaped(reference), false);
+  assert.equal(confirmations, 0);
+});
+
 test("an uncertain persisted reservation does not start again, including after receipt expiry", async () => {
   const documents = createInMemoryStructuredDocumentStore();
   let clock = 1000;
