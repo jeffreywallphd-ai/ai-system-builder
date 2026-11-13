@@ -73,6 +73,31 @@
         "Packaged Windows run 2026-11-13t19-41-48-461z-1373d58d proved visible Manage refresh and ordinary IPC delivery; dirty Canvas packaged coverage is still pending."
       ],
       "title": "Refresh saved systems without losing drafts"
+    },
+    {
+      "areas": [
+        "Desktop SQLite operation receipts and change journal",
+        "Pinned MCP replay",
+        "Desktop Manage and Canvas"
+      ],
+      "chunkId": "durable-retry-and-change-feed",
+      "completedAt": "2026-11-13T20:53:35Z",
+      "criteriaIds": [
+        "durable-retries-and-current-authority",
+        "committed-change-delivery"
+      ],
+      "documentation": [
+        "Headless source coverage and roadmap supporting work"
+      ],
+      "feedbackAddressed": [],
+      "id": "headless-authoring-and-synchronization-durable-retry-and-change-feed",
+      "incrementId": "headless-authoring-and-synchronization",
+      "summary": "The owning desktop transaction saves the revision, retry receipt and change entry together. The packaged Windows app recovered a committed create after a lost reply and restart, and delivered 100 of 100 changes. Managed API and worker parity remain in increment 3.",
+      "tests": [
+        "Exact packaged receipt f7710058cdde9f798ab4091183d71a51ff4b607db35e8b1ff3b1a31996d2e368; independent review bc107e6e9e980e329e21452930ea82b1d3dc71d30bfbac923a313dc8b88049d4",
+        "Windows run 2026-11-13t20-36-57-540z-e399ba3f: p95 858 ms, reconnect recovery 677 ms, 100 of 100 delivered"
+      ],
+      "title": "Retry safely and replay committed changes"
     }
   ],
   "completion": null,
@@ -444,6 +469,12 @@
       "recordedAt": "2026-11-13T19:48:10Z",
       "sequence": 17,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b8bf70af42a12c3640b8477c7322e434619ad3adf3b67afe446f3a553ccb1790",
+      "recordedAt": "2026-11-13T20:53:35Z",
+      "sequence": 18,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -505,7 +536,8 @@
       "completedChunks": [
         "authority-and-finite-contract",
         "shared-desktop-connector",
-        "composer-draft-refresh"
+        "composer-draft-refresh",
+        "durable-retry-and-change-feed"
       ],
       "deliverables": [
         "Successor ADR for desktop connector/delegation and shared authority, plus updates to decision readiness, host model, System Builder, persistence, security threat/control guidance and relevant README/context sources.",
@@ -892,5 +924,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-13T19:48:10Z"
+  "updatedAt": "2026-11-13T20:53:35Z"
 }

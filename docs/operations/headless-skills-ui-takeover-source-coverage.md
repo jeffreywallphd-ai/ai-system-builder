@@ -10,13 +10,22 @@ invariant and acceptance scenario has an owning criterion. Server/browser
 parity repeats the applicable checks against the same server authority; it
 does not synchronize desktop and server data.
 
-The user later authorized implementation. In the isolated Windows app, a
-separate MCP client paired, created and renamed a saved system, observed an
-ordinary desktop save in the same feed and replayed the original create after
-restart. For 100 bounded edits, dispatch-to-visible p95 was 873 ms. The client
-reconnected and replayed all changes in 651 ms. These observations do not cover
-dirty Canvas conflict in the packaged app, a lost reply injection, UI takeover,
-or server/browser parity.
+The packaged Windows run `2026-11-13t20-36-57-540z-e399ba3f` passed on the
+authoring checkpoint in commit `a1894a3a1`. A separate MCP client paired,
+created and renamed a saved system, and saw an ordinary desktop save in the
+same feed. The test dropped the committed create reply, then retried with the
+same key and found one saved system. Restart preserved the original receipt.
+A later competing edit reached a clean Canvas, while a dirty Canvas kept its
+local values and original revision and refused to overwrite the newer save.
+
+On Windows x64 with 20 logical processors, 16 GiB RAM, Node 24.22.1 and
+Electron 42.11.18, the one-system fixture delivered 100 of 100 sequential
+edits. Timing began before dispatch: p50 was 841 ms, p95 was 858 ms, and
+the maximum was 865 ms. Reconnect and replay took 677 ms. The fixture used
+one outstanding mutation at a time and did not measure resource peaks or
+queue saturation. The earlier failed timing attempt remains in local history.
+This is scoped desktop authoring evidence. It does not qualify approved
+conversation execution, window takeover, or the managed server and browser.
 
 ## Architectural invariants
 
