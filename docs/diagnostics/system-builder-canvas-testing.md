@@ -54,7 +54,7 @@ npm run test:visual-composer -- --project=packaged-desktop packaged-desktop-form
 npm exec -- playwright test --config dev-tools/config/playwright.managed-reference.config.ts --project=managed-thin-chrome managed-reference-form-composer.e2e.spec.ts
 ```
 
-Use the [owned managed qualification database](../operations/managed-reference-qualification.md)
+Use the owned database in the [managed host qualification procedure](../operations/functionality-outcome-qualification.md#whole-host-task-qualification)
 for the browser case. The cases use separate test profiles or workspaces and
 synthetic answers. They keep screenshots, video and traces off.
 

@@ -78,7 +78,7 @@ Static review confirms substantial implemented shared workflows and deterministi
 - [Existing constrained generation qualification](<../.implementation-roadmaps/optional-constrained-json-generation/state.json>) - Representative CPU/accelerator and non-developer usability evidence remains pending.
 - [Existing asset experience qualification](<../.implementation-roadmaps/asset-experience-layered-customization/state.json>) - Production qualification remains pending; preserve owning roadmap.
 - [Existing active-source workflow proposal](<../.implementation-roadmaps/systems-run-workflow-active-source/state.json>) - Unapproved independent proposal; do not silently implement it here.
-- [Current aggregate runner report](<../artifacts/test-reports/test-suite-report.json>) - Existing all-suite run failed standard Node; other runner groups passed. Skipped live AI tests do not qualify models.
+- Current aggregate runner report (`artifacts/test-reports/test-suite-report.json`) - Existing all-suite run failed standard Node; other runner groups passed. Skipped live AI tests do not qualify models.
 
 ## High-level decisions
 

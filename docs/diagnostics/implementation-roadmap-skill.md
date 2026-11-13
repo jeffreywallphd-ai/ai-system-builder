@@ -69,6 +69,10 @@ The workflow requires:
    review acceptance evidence, with proportional threat/control, denial-path,
    rollback, and residual-risk coverage.
 
+Generated roadmap Markdown shows ignored `artifacts/` evidence paths as text.
+The canonical record retains the path, outcome, and limitations; its presence
+does not imply that the local evidence is available in another checkout.
+
 When implementation is explicitly requested and the completed roadmap is approved,
 the default is continuous execution through every ordered increment to an end-to-end
 production-ready result. Routine increment completion, research, planning, report,

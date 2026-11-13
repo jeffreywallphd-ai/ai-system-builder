@@ -2077,12 +2077,17 @@ def render_sources(
         if source.get("url"):
             source_url = source["url"]
             parsed = urlsplit(source_url)
-            rendered_url = (
-                source_url
-                if parsed.scheme or source_url.startswith(("#", "?"))
-                else relative_markdown_link(from_path, source_url)
-            )
-            title = f"[{title}](<{rendered_url}>)"
+            if re.fullmatch(r"artifacts(?:/[a-zA-Z0-9_-][a-zA-Z0-9_.-]*)+", source_url):
+                # Ignored local evidence may not be available in another checkout.
+                # Preserve the exact reference without creating a broken link.
+                title = f"{title} (`{source_url}`)"
+            else:
+                rendered_url = (
+                    source_url
+                    if parsed.scheme or source_url.startswith(("#", "?"))
+                    else relative_markdown_link(from_path, source_url)
+                )
+                title = f"[{title}](<{rendered_url}>)"
         note = f" - {markdown(source['note'])}" if source.get("note") else ""
         lines.append(f"- {title}{note}")
     return lines or ["None recorded."]

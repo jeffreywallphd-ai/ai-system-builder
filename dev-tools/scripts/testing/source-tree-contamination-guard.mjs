@@ -12,8 +12,11 @@ const ignoredDirectoryNames = new Set([
   "node_modules",
 ]);
 
-// No JavaScript implementation files are currently allowed under modules/**.
-const allowedModuleJavaScriptPaths = new Set([]);
+// Authored Node fixtures are exceptions by exact path. Implementation output
+// and any other emitted JavaScript still fail this guard.
+const allowedModuleJavaScriptPaths = new Set([
+  "modules/ui/shared/styles/tests/forced-colors-theme.unit.test.mjs",
+]);
 
 const normalizeToPosixPath = (value) => value.split(path.sep).join("/");
 

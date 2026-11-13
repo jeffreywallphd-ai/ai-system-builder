@@ -20,6 +20,22 @@ roadmap = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(roadmap)
 
 
+class RoadmapEvidenceRenderingTest(unittest.TestCase):
+    def test_local_evidence_is_named_without_masking_other_links(self):
+        lines = roadmap.render_sources([
+            {"title": "Report", "url": "artifacts/test-reports/test-suite-report.json", "note": "Failed"},
+            {"title": "Procedure", "url": "docs/operations/qualification.md"},
+            {"title": "External", "url": "https://example.com/artifacts/report.json"},
+            {"title": "Out of scope", "url": "artifacts/../missing.md"},
+        ], "docs/example-roadmap.md")
+        self.assertEqual(lines, [
+            "- Report (`artifacts/test-reports/test-suite-report.json`) - Failed",
+            "- [Procedure](<operations/qualification.md>)",
+            "- [External](<https://example.com/artifacts/report.json>)",
+            "- [Out of scope](<../missing.md>)",
+        ])
+
+
 class PublicationSecurityTest(unittest.TestCase):
     def test_precreated_predictable_entry_is_never_written_or_removed(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -56,7 +56,7 @@ Current Composer is the accepted click-to-add/move editor; drag/drop was explici
 - [Current Canvas and draft history](<../modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx>)
 - [Recursive editor](<../modules/ui/shared/system-builder/SystemComposerClickEditor.tsx>)
 - [Real host UI harness](<../dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts>)
-- [Actual local browser baseline](<../artifacts/qualification/visual-composer/runs/2026-10-21t11-18-20-489z-a87402b6/evidence.json>) - One small synthetic system passed; no representative performance, participant or real-model qualification.
+- Actual local browser baseline (`artifacts/qualification/visual-composer/runs/2026-10-21t11-18-20-489z-a87402b6/evidence.json`) - One small synthetic system passed; no representative performance, participant or real-model qualification.
 
 ## High-level decisions
 
