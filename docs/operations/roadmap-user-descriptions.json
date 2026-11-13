@@ -18661,6 +18661,28 @@
           "This result covers the Canvas feature. The managed native zoom, wider Assets checks and legacy security assessment are separate."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d7da02630922172472a30f31ac09f614810dbb0ceb6d1c4a1cc8e65a934ed54e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the local browser, keyboard users could move through all eight Canvas application layouts at a narrow width.",
+          "The selected layout stayed in focus while it loaded. The last choice opened again after saving. Closing the element picker returned focus to the button."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3a8998b8b0e4e61617868b425aa11e13d4170370b7a0caa9675a3617bc0d0cc3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to run this layout test in the managed browser and the packaged Desktop app.",
+          "The managed database could not start. The tests for page layouts, 400 percent zoom, and production qualification remain open."
+        ]
+      }
     }
   ]
 }

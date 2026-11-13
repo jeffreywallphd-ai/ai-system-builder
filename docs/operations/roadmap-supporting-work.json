@@ -13108,6 +13108,21 @@
       "limitations": [
         "The managed result covers the registered Canvas feature and does not establish managed native zoom, additional Assets surfaces, independent legacy security review or overall qualification."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "preserve-canvas-layout-focus-on-definition-load",
+      "work_criteria": [
+        "restore-layout-focus-after-editor-ready"
+      ],
+      "receipt_digest": "94adaafce592e4819ca88868868b5afe1085fb7b63421f0b7d5672b4568540e5",
+      "review_digest": "7fd8945bb6d6ba822c686f3ca64168b35b7d611203852224b107329e29d9af46",
+      "scope": "The local Chromium Canvas case used Tab, Space, and Arrow Right to select all eight application layouts at 320 CSS pixels. Each choice kept keyboard focus after loading. The last layout survived save and reopen, and the element picker returned focus when closed.",
+      "limitations": [
+        "This is evidence from the local thin-client fixture only. The managed browser and packaged Desktop runs for this layout case, actual 400 percent zoom, page-layout choices and the rest of production qualification remain pending. The managed run could not start because its local database engine was unavailable."
+      ]
     }
   ]
 }
