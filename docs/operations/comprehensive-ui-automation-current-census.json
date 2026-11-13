@@ -12021,72 +12021,76 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderCanvasReliability.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "24344b272f81849f0414d425b70004436bf6f34c48568a22f73ddaaaa1067dbf",
-    "bytes": 27906,
+    "sha256": "b714f9655acb729e229d41d1acb16b4f72047bd43df5a7507a5497994750d9fd",
+    "bytes": 29785,
     "cases": [
      {
+      "name": "uses keyboard tab semantics for Connections and preserves the unsaved Design draft",
+      "line": 76
+     },
+     {
       "name": "keeps the saved checkpoint independent of the50entry undo limit",
-      "line": 94
+      "line": 133
      },
      {
       "name": "renders the current Canvas without waiting for optional revision history",
-      "line": 102
-     },
-     {
-      "name": "prevents a pending save from silently erasing a later configuration edit",
-      "line": 108
-     },
-     {
-      "name": "recovers a rejected current revision with an explicit retry and no raw exception",
-      "line": 124
-     },
-     {
-      "name": "keeps the current Canvas usable after optional history rejects",
-      "line": 135
-     },
-     {
-      "name": "rejected saves retain the draft, release the lock and permit a deliberate retry",
       "line": 141
      },
      {
+      "name": "prevents a pending save from silently erasing a later configuration edit",
+      "line": 147
+     },
+     {
+      "name": "recovers a rejected current revision with an explicit retry and no raw exception",
+      "line": 163
+     },
+     {
+      "name": "keeps the current Canvas usable after optional history rejects",
+      "line": 174
+     },
+     {
+      "name": "rejected saves retain the draft, release the lock and permit a deliberate retry",
+      "line": 180
+     },
+     {
       "name": "rejects a substituted save revision without clearing the real draft",
-      "line": 156
+      "line": 195
      },
      {
       "name": "ignores a late save after moving to a different workspace",
-      "line": 164
+      "line": 203
      },
      {
       "name": "discards to the owned saved checkpoint after an external client-response mutation",
-      "line": 186
+      "line": 225
      },
      {
       "name": "admits only one save when clicks occur before React renders the busy state",
-      "line": 192
+      "line": 231
      },
      {
       "name": "preserves the selected model through a delayed layout change and immutable save",
-      "line": 200
+      "line": 239
      },
      {
       "name": "keeps the draft and records the error when configured definition verification fails before save",
-      "line": 249
+      "line": 288
      },
      {
       "name": "opens only the exact definitions in use without enumerating an unrelated catalog",
-      "line": 301
+      "line": 340
      },
      {
       "name": "creates with Minimal on the first page without reading the unrelated continuation",
-      "line": 314
+      "line": 353
      },
      {
       "name": "retains newly saved history when the initial optional history resolves late",
-      "line": 328
+      "line": 367
      },
      {
       "name": "releases an obsolete operation lock when initialSystemId changes within the same workspace",
-      "line": 338
+      "line": 377
      }
     ],
     "dynamicCases": 2,
@@ -12120,8 +12124,8 @@
       "line": 65
      }
     ],
-    "assertionCount": 77,
-    "assertionDigest": "644047174cd9fc21caae234030ccd27d112ea917a4ec1ef921299bc1c59dda28",
+    "assertionCount": 95,
+    "assertionDigest": "96333951bec48b4dde0437938324e2fbf4967d39a3846c84043d7986c17b28f6",
     "assertionExamples": [
      {
       "line": 68,
@@ -12134,14 +12138,14 @@
       "sha256": "d04b6c6e0349fbe3a40d627c3978f9975ebe6635ec9c6673de2240efd2b9dbd9"
      },
      {
-      "line": 80,
+      "line": 89,
       "kind": "expect",
-      "sha256": "eefac440d493781bb9166a9c26a05c482b0d2216dc5aa6fbf6ece3dbe5e3de64"
+      "sha256": "5d6a109cd1d1bbf9aea7e8ee4d4403e64fcbd6bfc25086e16aeb82ba8d5e0a1c"
      },
      {
-      "line": 83,
+      "line": 90,
       "kind": "expect",
-      "sha256": "f53b0f07e52b1e34d4e574024a3ae63ca33c32f77ffb7d1a15ec0802bcaec152"
+      "sha256": "9d80f55dec9a7128c52f74b71dad64e153c4b8236924d9308b718fe5e4527765"
      }
     ],
     "modifiers": []

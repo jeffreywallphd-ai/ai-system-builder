@@ -170,6 +170,8 @@ customization, and single-asset Studio workflows.
   after that bar is opened. States regions start collapsed. Only the active
   details panel body mounts, and disclosure, selection, focus, and panel state
   are not persisted.
+  Design and Connections use arrow keys, Home, and End to select and focus the
+  named panels. Switching panels retains the current draft.
   Every exact slot-bearing Canvas container recursively exposes its named
   regions, placed descendants, and Add element action. Add element opens the
   shared modal scoped to that exact parent. The user chooses an available region

@@ -61,8 +61,8 @@
   for Properties, Styling, and Layers. Styling uses color pickers and allowlisted typography, density,
   button, form, and surface selects; semantic styles are unavailable through
   Advanced JSON, and per-asset roles remain bounded Properties selects. Canvas
-  States start collapsed. Only the active details body mounts and receives exact
-  definition detail for its current asset. Layers also separates System resources and logic.
+  Design and Connections support arrow, Home and End navigation. States start
+  collapsed. Only active details receive exact definition detail. Layers separates System resources and logic.
   Every exact slot-bearing container exposes Add element. Its shared modal scopes
   compatible new definitions and unassigned visual instances to the selected
   region. Compatible built-in page layouts appear under Containers and layout.

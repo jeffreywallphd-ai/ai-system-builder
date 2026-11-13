@@ -720,7 +720,21 @@ function verifyExactLayoutCensus(map, result, witness) {
   ]}};
 }
 
+const reviewedConnectionsCensus = Object.freeze({
+  priorCommit: "04f6e61e6addfd8740fee66aca24871e8612038d",
+  before: "0b6169539877044db013b76f713d218ce68022008f8004b1483dc3cf569c5fef",
+  after: "78a1db7a862ca910ae668b8a306262ba6475d309388f452a972b0f9759c5d8e1",
+  pins: Object.freeze([
+    {
+      "path": "modules/ui/shared/system-builder/tests/SystemBuilderCanvasReliability.interaction.ui.test.tsx",
+      "source": "b714f9655acb729e229d41d1acb16b4f72047bd43df5a7507a5497994750d9fd",
+      "facts": "0f412e73a236739ce7eda9deabda6f0d0c4f9b48a8c822f6a11da4bb90996ee2"
+    }
+  ].map(Object.freeze)),
+});
+
 function pageLayoutLegacyView(map, result) {
+  ({map, result} = verifyExactLayoutCensus(map, result, reviewedConnectionsCensus));
   return verifyExactLayoutCensus(map, result, reviewedPageLayoutCensus);
 }
 
@@ -1897,7 +1911,14 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,27);
+  assert.equal(result.gaps.length,28);
+  const connectionsPrior = verifyExactLayoutCensus(map,result,reviewedConnectionsCensus);
+  assert.equal(connectionsPrior.result.gaps.length,27);
+  assert.equal(sha(JSON.stringify(connectionsPrior.map)),reviewedConnectionsCensus.before);
+  for (const pin of reviewedConnectionsCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
   const pagePrior = pageLayoutLegacyView(map,result);
   assert.equal(pagePrior.result.gaps.length,26);
   assert.equal(sha(JSON.stringify(pagePrior.map)),reviewedPageLayoutCensus.before);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   normalizeAssetId,
   MAX_ASSET_PLACEMENTS_PER_COMPOSITION,
@@ -252,6 +252,7 @@ export function SystemBuilderWorkspace({
   const [stylingRootDetailError, setStylingRootDetailError] =
     useState<string>();
   const [requestedComposerMode, setComposerMode] = useState<"design" | "connections">("design");
+  const composerModeId = useId();
   const [newSystemName, setNewSystemName] = useState("");
   const [referenceSystemName, setReferenceSystemName] = useState("");
   const [revisions, setRevisions] = useState<readonly SystemBuilderRevision[]>(
@@ -1872,13 +1873,29 @@ export function SystemBuilderWorkspace({
                 className="system-composer__modes"
                 role="tablist"
                 aria-label="Composer mode"
+                aria-orientation="horizontal"
+                onKeyDown={(event) => {
+                  const tab = event.target;
+                  if (!(tab instanceof HTMLButtonElement) || tab.parentElement !== event.currentTarget) return;
+                  const mode = event.key === "Home" ? "design" : event.key === "End" ? "connections"
+                    : event.key === "ArrowLeft" || event.key === "ArrowRight"
+                      ? tab.id === composerModeId + "-design-tab" ? "connections" : "design"
+                      : undefined;
+                  if (!mode) return;
+                  event.preventDefault();
+                  setComposerMode(mode);
+                  tab.ownerDocument.getElementById(composerModeId + "-" + mode + "-tab")?.focus();
+                }}
               >
                 {(["design", "connections"] as const).map((mode) => (
                   <button
                     key={mode}
                     type="button"
                     role="tab"
+                    id={composerModeId + "-" + mode + "-tab"}
                     aria-selected={composerMode === mode}
+                    aria-controls={composerModeId + "-" + mode + "-panel"}
+                    tabIndex={composerMode === mode ? 0 : -1}
                     className="system-composer__flat-control"
                     onClick={() => setComposerMode(mode)}
                   >
@@ -1887,6 +1904,18 @@ export function SystemBuilderWorkspace({
                 ))}
               </div> : null}
               {catalogError ? <div role="alert"><p>{catalogError}</p><button type="button" onClick={requestComposerCatalog}>Retry component definitions</button></div> : null}
+              {!activeForm ? <div
+                id={composerModeId + "-" + (requestedComposerMode === "design" ? "connections" : "design") + "-panel"}
+                role="tabpanel"
+                aria-labelledby={composerModeId + "-" + (requestedComposerMode === "design" ? "connections" : "design") + "-tab"}
+                hidden
+              /> : null}
+              <div
+                id={!activeForm ? composerModeId + "-" + composerMode + "-panel" : undefined}
+                role={!activeForm ? "tabpanel" : undefined}
+                aria-labelledby={!activeForm ? composerModeId + "-" + composerMode + "-tab" : undefined}
+                tabIndex={!activeForm ? 0 : undefined}
+              >
               <fieldset ref={editorRegion} disabled={busy || !componentsReady} aria-busy={!componentsReady && !catalogError} aria-label="System draft editor" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                 {composerMode === "design" ? (
                   <SystemComposerStructureEditor
@@ -2002,6 +2031,7 @@ export function SystemBuilderWorkspace({
                   />
                 )}
               </fieldset>
+              </div>
               {revision.validationIssues.length ? (
                 <section
                   className="system-builder__diagnostics"

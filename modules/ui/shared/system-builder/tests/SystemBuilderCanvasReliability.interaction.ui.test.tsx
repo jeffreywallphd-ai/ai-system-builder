@@ -73,6 +73,45 @@ async function cardTitle() {
 }
 
 describe("Canvas draft integrity and recovery", () => {
+  it("uses keyboard tab semantics for Connections and preserves the unsaved Design draft", async () => {
+    const f = fixture();
+    await mount(f.client);
+    await input(await cardTitle(), "Unsaved keyboard draft");
+    const design = button("Design");
+    const connections = button("Connections");
+    const panel = (tab: HTMLButtonElement) => document.getElementById(tab.getAttribute("aria-controls")!);
+    const press = async (tab: HTMLButtonElement, key: string) => {
+      await act(async () => {
+        tab.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+      });
+    };
+
+    expect(design.tabIndex).toBe(0);
+    expect(connections.tabIndex).toBe(-1);
+    expect(panel(connections)?.hidden).toBe(true);
+    design.focus();
+    await press(design, "ArrowRight");
+    expect(document.activeElement).toBe(connections);
+    expect(connections.getAttribute("aria-selected")).toBe("true");
+    expect(connections.tabIndex).toBe(0);
+    expect(design.tabIndex).toBe(-1);
+    expect(panel(design)?.hidden).toBe(true);
+    expect(panel(connections)?.getAttribute("role")).toBe("tabpanel");
+    expect(panel(connections)?.getAttribute("aria-labelledby")).toBe(connections.id);
+    expect(panel(connections)?.textContent).toContain("Typed connections and value sources");
+
+    await press(connections, "Home");
+    expect(document.activeElement).toBe(design);
+    expect(panel(design)?.querySelector('[aria-labelledby="composer-canvas-title"]')).not.toBeNull();
+    await press(design, "End");
+    expect(document.activeElement).toBe(connections);
+    await press(connections, "ArrowLeft");
+    expect(document.activeElement).toBe(design);
+    expect(design.getAttribute("aria-selected")).toBe("true");
+    expect((await cardTitle()).value).toBe("Unsaved keyboard draft");
+    expect(f.client.saveRevision).not.toHaveBeenCalled();
+  });
+
   for (const mode of ["empty", "template"] as const) {
     it(`preserves an unsaved system before ${mode} creation`, async () => {
       const f = fixture(); await mount(f.client);
