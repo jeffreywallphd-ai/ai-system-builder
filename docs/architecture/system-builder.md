@@ -102,6 +102,13 @@ Design-time statuses are `draft`, `in-composition`, `blocked`, `ready-for-valida
 
 ## Ownership and dependency boundaries
 
+[Headless authoring](../adr/ADR-0047-headless-system-builder-delegation.md)
+uses the same application authority, validation and immutable saved revisions
+as UI authoring. The host authenticates a registered client and checks its
+current workspace access. Saved data notifications must neither steer UI
+navigation nor change a human draft's save base. The initial versioned read
+contract exposes no new product entry point.
+
 - System Builder records are workspace-owned and require explicit workspace identity at every future contract, client, transport, use-case, repository, and persistence seam.
 - Asset Kernel definitions, instances, bindings, compositions, and references remain canonical component vocabulary.
 - Asset composition planning remains the non-executing compatibility/planning input. A system record may reference a plan but must not mutate the plan or effective asset projections implicitly.

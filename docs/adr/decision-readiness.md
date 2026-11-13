@@ -45,6 +45,13 @@ ownership, waive dependency findings, or admit unsupported routes.
 
 ## How to Use This Register
 
+Headless System Builder access is ready within
+[ADR-0047](ADR-0047-headless-system-builder-delegation.md): add the optional
+desktop connector and separate revocable window authority before managed
+parity. Preserve current application and organization authorization. This
+decision excludes desktop-to-server synchronization, external relay, generic
+window control and deployment scaling.
+
 Desktop tooling is ready within ADR-0044: use the exactly pinned official Forge
 Vite plugin, preserve both isolated renderer/preload entries, source-confined
 loopback development and self-contained provider imports. Updates need actual

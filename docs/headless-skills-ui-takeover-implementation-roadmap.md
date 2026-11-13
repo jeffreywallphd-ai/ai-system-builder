@@ -2,8 +2,8 @@
 
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
-- Status: `ready`
-- Updated: `2026-11-10T13:38:24Z`
+- Status: `executing`
+- Updated: `2026-11-13T16:03:43Z`
 
 ## Objective
 
@@ -119,14 +119,14 @@ The design spans a running desktop instance and a managed server/browser deploym
 
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
-| 1: Use chat tools to author systems and keep saved data synchronized | Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control. | None | `pending` |
+| 1: Use chat tools to author systems and keep saved data synchronized | Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control. | None | `implementing` |
 | 2: Accept and revoke automation control of one desktop window | Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue. | headless-authoring-and-synchronization | `pending` |
 | 3: Deliver the same workflow through the authenticated server and browser | Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay. | revocable-desktop-presentation | `pending` |
 
 ## Increment 1: Use chat tools to author systems and keep saved data synchronized
 
 - Id: `headless-authoring-and-synchronization`
-- Status: `pending`
+- Status: `implementing`
 - Dependencies: None
 
 Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control.

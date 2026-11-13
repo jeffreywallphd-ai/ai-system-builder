@@ -55,6 +55,11 @@
 
 ## Key Constraints
 
+- Headless access follows ADR-0047. Reuse the running host's lazy providers and
+  keep explicit interactive window authority separate from delegated requests.
+  The versioned request decoder is not a listener, identity check, or readiness
+  signal. Load the security pack and headless threat model before wiring it.
+
 - Do not turn IPC handlers into a miscellaneous service layer.
 - Keep desktop transport translation thin, contract-driven, and sanitized.
 - Do not leak Electron objects, raw paths, storage roots, env values, tokens, stack traces, process internals, or raw adapter payloads through IPC/preload.

@@ -1,10 +1,34 @@
 {
   "blockers": [],
-  "chunks": [],
+  "chunks": [
+    {
+      "areas": [
+        "Headless contracts",
+        "Desktop and managed authority"
+      ],
+      "chunkId": "authority-and-finite-contract",
+      "completedAt": "2026-11-13T16:03:43Z",
+      "criteriaIds": [
+        "same-host-and-finite-tool-boundary",
+        "security-headless-reviewed"
+      ],
+      "documentation": [
+        "ADR-0047, threat model, host model and System Builder"
+      ],
+      "feedbackAddressed": [],
+      "id": "headless-authoring-and-synchronization-authority-and-finite-contract",
+      "incrementId": "headless-authoring-and-synchronization",
+      "summary": "Documented the approved desktop and managed trust boundaries; added the strict versioned read decoder without enabling a listener. Independent control-plane review c60fd1beb4a5121ff3f369e8eee82b98614d3b5eec7735750b4232732edc66de accepted exact receipt 5593951c1acb8496fc0b45a47fb042c7b5d7fbf7568b50dba8a19cba809df006. Parent qualification remains pending.",
+      "tests": [
+        "Focused read decoder and denial cases, TypeScript ES2021, documentation, architecture, agent support"
+      ],
+      "title": "Set the headless trust and tool boundaries"
+    }
+  ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "headless-authoring-and-synchronization",
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -334,6 +358,30 @@
       "recordedAt": "2026-11-10T13:38:24Z",
       "sequence": 11,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "9c41fbbdeaefd56a33fc6201d946c24fc7494051dc3ae6c5a20018436b4eabd1",
+      "recordedAt": "2026-11-13T15:55:15Z",
+      "sequence": 12,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "fb0e9a14678973a0aa7355ed796d302e75faa53251f08f0e962882b78e833f0e",
+      "recordedAt": "2026-11-13T15:55:44Z",
+      "sequence": 13,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "cefe20597911a6d79f1871f7ddec4da00c1897b54022c6c1be00f6fb6ba6db75",
+      "recordedAt": "2026-11-13T15:55:44Z",
+      "sequence": 14,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "87b05b07467b21f2ef0eaf9fa9a01452df92d1ec2656304b72e7da4c5d2134a7",
+      "recordedAt": "2026-11-13T16:03:43Z",
+      "sequence": 15,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -392,7 +440,9 @@
       ],
       "allowPendingQualification": true,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "authority-and-finite-contract"
+      ],
       "deliverables": [
         "Successor ADR for desktop connector/delegation and shared authority, plus updates to decision readiness, host model, System Builder, persistence, security threat/control guidance and relevant README/context sources.",
         "Narrow host provider seam, authenticated loopback connector, versioned contract families and runtime validation, official SDK-backed stdio MCP adapter with an evidenced client/SDK protocol matrix.",
@@ -410,11 +460,132 @@
       "id": "headless-authoring-and-synchronization",
       "number": 1,
       "objective": "Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "The desktop host is already running and owns one local data root; no new identity issuer or process continuity is implied.",
+          "Current host and application policy authorize every operation; an agent cannot accept its own UI takeover.",
+          "Only technical executable checks qualify this work; no operator study or release approval is required."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "same-host-and-finite-tool-boundary",
+              "security-headless-reviewed"
+            ],
+            "id": "authority-and-finite-contract",
+            "outcome": "Review the approved desktop delegation boundary and define a finite versioned compatibility contract. No listener is opened by this change.",
+            "title": "Set the headless trust and tool boundaries"
+          },
+          {
+            "criteriaIds": [
+              "same-host-and-finite-tool-boundary",
+              "security-headless-reviewed"
+            ],
+            "id": "shared-desktop-connector",
+            "outcome": "Share lazy System Builder providers with IPC and admit only registered, explicitly paired clients through a bounded loopback connector and typed MCP.",
+            "title": "Connect to the running desktop app"
+          },
+          {
+            "criteriaIds": [
+              "revision-safe-semantic-authoring",
+              "workflow-and-task-truth"
+            ],
+            "id": "semantic-authoring-and-tasks",
+            "outcome": "Discover supported resources and work through existing application validation, expected revisions and authoritative task handles.",
+            "title": "Edit saved systems with explicit revisions"
+          },
+          {
+            "criteriaIds": [
+              "durable-retries-and-current-authority",
+              "committed-change-delivery"
+            ],
+            "id": "durable-retry-and-change-feed",
+            "outcome": "Authorize replay and commit the resource write, receipt and change event together for supported transactional operations.",
+            "title": "Retry safely and replay committed changes"
+          },
+          {
+            "criteriaIds": [
+              "draft-base-and-refetch-ownership",
+              "committed-change-delivery"
+            ],
+            "id": "composer-draft-refresh",
+            "outcome": "Observe committed changes without controlling navigation, and keep the original save revision and local edits until an explicit save, reload or rebase.",
+            "title": "Refresh saved systems without losing drafts"
+          },
+          {
+            "criteriaIds": [
+              "portable-skill-and-result-contract",
+              "desktop-headless-real-host",
+              "headless-observation-targets"
+            ],
+            "id": "portable-skill-and-desktop-proof",
+            "outcome": "A real MCP client authors in the packaged desktop app without taking over its UI; record bounded performance and recovery evidence.",
+            "title": "Package the skill and qualify real desktop authoring"
+          }
+        ],
+        "completionTests": [
+          "Focused packaged Windows Electron with actual MCP stdio client and isolated persistence",
+          "Required headless latency and reconnect measurement",
+          "Increment checks and separate-invocation review; defer whole software suites until every Headless implementation chunk is recorded"
+        ],
+        "documentation": [
+          "Successor ADR and decision readiness",
+          "Threat controls, host model, System Builder, persistence and portable skill",
+          "Source-scenario crosswalk and exact qualification records"
+        ],
+        "fingerprint": "390ba4a7d57e106bc245881be2a65ee9a6542987deb8c00f08eadcf2cea45ad8",
+        "focusedTests": [
+          "Strict closed contract and sanitized failure tests",
+          "Same-provider and current delegation denial tests",
+          "Semantic validation, expected revision and atomic receipt/outbox tests",
+          "Composer dirty-base, navigation and reverse-refetch regressions"
+        ],
+        "recordedAt": "2026-11-13T15:55:44Z",
+        "rollback": "Keep the optional connector disabled and revoke its grants; preserve ordinary UI and durable data, and retain existing draft behavior outside the new path.",
+        "steps": [
+          "Set the desktop delegation and receipt boundaries in a successor ADR.",
+          "Extract one shared provider and implement finite delegated authoring on existing application validation.",
+          "Add durable retry receipts and scoped change delivery with an immutable UI draft base.",
+          "Package the portable skill and qualify the real desktop journey and timing."
+        ],
+        "summary": "Build a finite typed authoring path on the running desktop app before adding window controls. Preserve the existing UI and product authorization seams."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-13T15:55:44Z",
+          "risks": [
+            "Security-relevant: protect local identity, access to workspace data, immutable saved revisions and drafts across a new trust boundary. Require exact interactive grants, current application authorization, strict inputs, sanitized output and independently reviewed denial checks.",
+            "Receipt lookup and UI refetch must never bypass current scope or advance a dirty draft base. Keep desktop takeover, managed delivery and actual host qualification separate.",
+            "A schema or design checkpoint does not make any connector or tool available."
+          ],
+          "sources": [
+            {
+              "title": "Desktop composition",
+              "url": "modules/hosts/desktop/composition/composeDesktopHost.ts"
+            },
+            {
+              "title": "System Builder architecture",
+              "url": "docs/architecture/system-builder.md"
+            },
+            {
+              "title": "Approval and source crosswalk",
+              "url": "docs/operations/headless-skills-ui-takeover-source-coverage.md"
+            },
+            {
+              "title": "Security architecture",
+              "url": "docs/adr/ADR-0015-security-by-design.md"
+            },
+            {
+              "title": "Module dependencies",
+              "url": "docs/architecture/module-dependency-rules.md"
+            }
+          ],
+          "summary": "The desktop IPC registration builds the System Builder providers; the approved connector must consume the same lazy provider. Existing application ports own scoped access and expected revisions. There is no shared committed-change or retry receipt boundary yet."
+        }
+      ],
       "rollback": "Disable connector discovery/admission, revoke its delegated client credentials and stop its listeners/adapter processes; restore existing IPC-only composition without opening a second database. Retain immutable revisions, business receipts and outbox/audit records under their access policy. Stop dispatch safely and resynchronize ordinary UI from saved records. Apply only compatible additive-schema rollback; never delete newer data or restore unauthenticated/permissive access.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-11-13T15:55:15Z",
+      "status": "implementing",
       "title": "Use chat tools to author systems and keep saved data synchronized",
       "verification": [
         "Extend System Builder use-case/repository/API-IPC parity and Composer tests; add fixed-router connector/MCP, semantic, receipt/outbox and denial cases.",
@@ -656,6 +827,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "ready",
-  "updatedAt": "2026-11-10T13:38:24Z"
+  "status": "executing",
+  "updatedAt": "2026-11-13T16:03:43Z"
 }
