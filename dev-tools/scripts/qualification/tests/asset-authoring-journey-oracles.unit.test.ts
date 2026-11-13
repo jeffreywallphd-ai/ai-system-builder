@@ -199,7 +199,28 @@ test("each standard and native host case awaits the Assets core after its browse
     const named = (name: string) => calls.filter(call => call.expression.getText(source) === name);
     const titles = host === "thin-chrome" ? ["thin client preserves the complete browse authoring journey", "thin client completes Assets and System editing at native 400 percent zoom"]
       : ["packaged desktop preserves the complete browse authoring journey", "packaged desktop completes Assets and System editing at native 400 percent zoom"];
-    const cases = named("test"); assert.equal(cases.length, 2);
+    const allCases = named("test");
+    const layoutTitle = "packaged desktop changes Canvas layouts with the keyboard at native 400 percent zoom";
+    const layoutCases = allCases.filter((call) => ts.isStringLiteral(call.arguments[0]!) && call.arguments[0].text === layoutTitle);
+    assert.equal(layoutCases.length, host === "packaged-desktop" ? 1 : 0);
+    if (host === "packaged-desktop") {
+      const callback = layoutCases[0]!.arguments[1]!;
+      assert(ts.isArrowFunction(callback));
+      const local = (name: string) => named(name).filter(call => call.pos >= callback.body.pos && call.end <= callback.body.end);
+      const slots = local("prepareIsolatedDesktopCase");
+      assert.equal(slots.length, 1);
+      assert(ts.isStringLiteral(slots[0]!.arguments[0]!));
+      assert.equal(slots[0]!.arguments[0].text, "browse-layout-native400");
+      for (const name of ["applyOwnedDesktopNativeZoom", "qualifyCanvasLayoutKeyboard"]) {
+        const steps = local(name);
+        assert.equal(steps.length, 1);
+        assert(ts.isAwaitExpression(steps[0]!.parent));
+      }
+      assert.equal(local("lifetime.retire").length, 1);
+      assert.equal(local("completeAssetAuthoringJourney").length, 0);
+    }
+    const cases = allCases.filter((call) => !layoutCases.includes(call));
+    assert.equal(cases.length, 2);
     assert.deepEqual(cases.map(call => {assert(ts.isStringLiteral(call.arguments[0]!)); return call.arguments[0].text;}), titles);
     for (const [index, title] of titles.entries()) {
     const entry = cases[index]!; assert.equal((entry.arguments[0] as ts.StringLiteral).text, title);

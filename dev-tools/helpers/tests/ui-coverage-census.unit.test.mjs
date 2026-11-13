@@ -623,7 +623,73 @@ const reviewedMeaningfulDesktopRestartCensus = Object.freeze({
     }
   ].map(Object.freeze)),
 });
+const reviewedLayoutKeyboardCensus = Object.freeze({
+  priorCommit: "2ee74ec3cba764a19e84e783a32ab4ea29ce69d1",
+  before: "904cc0d0a1848841d4cdc3c33e233948de4274ad81403d01039b3ab9d0749dd9",
+  after: "f3c2520dafe477830e1680fedf076f2e3a941ebc8f5b91e2886a7af21ad257a3",
+  pins: Object.freeze([
+  {
+    "path": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+    "source": "aae3ab02592df4ee2328d3356780b7df1be6efb17a94defdfc76afba7216b42c",
+    "facts": "fa29e89265686b2591ef3a6d506f65852f7ae675eee2d3031ab6062fd42010b9"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
+    "source": "070abb2b7e6a45e134a9d8b06acf759b2763e0b2a9356269ad8c309330db0f14",
+    "facts": "d4577f9f7b1bb14d5d2ca4bde356626592f0b4e7e32a460986dbf07ba32387f5"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-browse.e2e.spec.ts",
+    "source": "03d0ea02fad18b159befef4be20747469240f24f7e6186d81bb3a164e8c44de2",
+    "facts": "34100ecd5e8fdb391b72e9e3b8f4dcec5ae0d56a2952c05427872b012152c2bc"
+  },
+  {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+    "source": "e1997dce6738202414d0d00736d01c52a40599b7e080a86f4e67750dc9edcacf",
+    "facts": "858bccbc5c83b6a651dbf30d8ebfe7d075b25ef0ac6462dd4c75f3c004edb6a7"
+  },
+  {
+    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+    "source": "d94ea9bd27cc2b6fac7aa7ed133b6a423a3874d38b675aacc7d40d3b945de8e5",
+    "facts": "158c92ac7fded47d2ac337bc110282e19afd17566a40c2a961b2270f629088bd"
+  },
+  {
+    "path": "modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
+    "source": "8e3d11b49c3d7ca439d4f1c03be49491bae085bf8df46035a52eb33dfd7d16f3",
+    "facts": "5e80c4ed859f41c8f38ef052b0dcc73669fe473fd933d23f73945cb422b107ba"
+  },
+  {
+    "path": "modules/ui/shared/system-builder/tests/systemComposerDraft.unit.test.ts",
+    "source": "02cbd193085bcae9c133d1d40eba1878f2d02399a2c4eeba06aa8bfe6333fab6",
+    "facts": "f4dac370da7566384357dc9bce43e18474cc3f5cdfef73c923ad62cf6a0d08de"
+  }
+].map(Object.freeze)),
+});
+function layoutKeyboardLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) !== reviewedLayoutKeyboardCensus.after) return {map, result};
+  const previous = JSON.parse(historicalSource(reviewedLayoutKeyboardCensus.priorCommit, censusDocument));
+  assert.equal(sha(JSON.stringify(previous)), reviewedLayoutKeyboardCensus.before);
+  const expected = structuredClone(previous);
+  for (const pin of reviewedLayoutKeyboardCensus.pins) {
+    const [row] = map.sources.filter(item => item.path === pin.path);
+    const original = expected.sources.find(item => item.path === pin.path);
+    assert(row && original);
+    assert.equal(row.committed_sha256, original.committed_sha256);
+    assert.notEqual(row.facts.sha256, original.facts.sha256);
+    assert.equal(row.facts.sha256, pin.source);
+    assert.equal(sha(JSON.stringify(row.facts)), pin.facts);
+    assert.notEqual(row.facts.sha256, row.committed_sha256);
+    original.facts = structuredClone(row.facts);
+  }
+  assert.deepEqual(map, expected);
+  assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+  return {map: previous, result: {...result, gaps: [
+    ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+  ]}};
+}
+
 function meaningfulDesktopRestartLegacyView(map, result) {
+  ({map,result}=layoutKeyboardLegacyView(map,result));
   if (sha(JSON.stringify(map)) !== reviewedMeaningfulDesktopRestartCensus.after) return {map, result};
   const previous = JSON.parse(historicalSource(reviewedMeaningfulDesktopRestartCensus.priorCommit, censusDocument));
   assert.equal(sha(JSON.stringify(previous)), reviewedMeaningfulDesktopRestartCensus.before);
@@ -1791,6 +1857,13 @@ test("current published form checkpoint preserves its complete source gaps and o
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
   assert.equal(result.gaps.length,26);
+  const layoutPrior = layoutKeyboardLegacyView(map,result);
+  assert.equal(layoutPrior.result.gaps.length,26);
+  assert.equal(sha(JSON.stringify(layoutPrior.map)),reviewedLayoutKeyboardCensus.before);
+  for (const pin of reviewedLayoutKeyboardCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
   const desktopRestartPrior = meaningfulDesktopRestartLegacyView(map,result);
   assert.equal(desktopRestartPrior.result.gaps.length,25);
   assert.equal(sha(JSON.stringify(desktopRestartPrior.map)),reviewedMeaningfulDesktopRestartCensus.before);

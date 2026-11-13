@@ -1,3 +1,4 @@
+import { SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS } from "../../../../../modules/application/services/asset-packs/system-packs";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { collectNative400Frame, composerRegionAdd, qualifyTechnicalAccessibility } from "./technical-accessibility";
@@ -203,4 +204,62 @@ async function verifyKeyboardPlacement(page: Page, parent: Locator, firstId: str
   if (await expand.isVisible()) await expand.press("Enter");
   await expect(nestedContent.locator(`[data-instance-id="${secondId}"]`)).toHaveCount(1);
   await expect.poll(order).toEqual([firstId]);
+}
+
+export async function qualifyCanvasLayoutKeyboard(page: Page, name: string, reopen: () => Promise<void>) {
+  await page.getByLabel("New system name").fill(name);
+  await page.getByRole("button", {name: "Create system", exact: true}).press("Enter");
+  const canvas = page.getByRole("region", {name: "Canvas", exact: true});
+  await expect(canvas).toBeVisible({timeout: 30_000});
+
+  const toggle = page.locator('button[aria-controls="system-composer-layout-bar-content"]');
+  await expect(toggle).toHaveAccessibleName("Show layouts");
+  await expect(toggle).toBeEnabled();
+  await toggle.focus();
+  await expect(toggle).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  const gallery = page.locator("#system-composer-layout-bar-content").locator("fieldset");
+  await expect(gallery).toBeVisible();
+  await expect(gallery).toHaveAccessibleName("Layout");
+  const choices = gallery.getByRole("radio");
+  await expect(choices).toHaveCount(SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS.length);
+  const layoutFor = (id: string) => gallery.locator(`input[type=radio][value="${id}"]`);
+  const first = layoutFor(SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS[0]);
+  await expect(first).toBeChecked();
+  const renderedIds = await choices.evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value));
+  expect([...renderedIds].sort()).toEqual([...SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS].sort());
+  const initialIndex = renderedIds.indexOf(SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS[0]);
+  const traversal = [...renderedIds.slice(initialIndex), ...renderedIds.slice(0, initialIndex)];
+  await toggle.press("Tab");
+  await expect(first).toBeFocused();
+  for (const [index, id] of traversal.entries()) {
+    const current = layoutFor(id);
+    await expect(current).toBeChecked();
+    await expect(canvas).toHaveAttribute("data-active-layout", id);
+    await expect(current).toBeFocused();
+    await expect(canvas.getByRole("button", {name: /^Add element to /}).first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    if (index < traversal.length - 1) await current.press("ArrowRight");
+  }
+  const last = traversal.at(-1)!;
+  await toggle.press("Enter");
+  await expect(gallery).toBeHidden();
+  await page.getByRole("button", {name: "Save and validate revision", exact: true}).press("Enter");
+  await expect(page.getByText("Revision saved and validated.", {exact: true})).toBeVisible({timeout: 30_000});
+  await reopen();
+  await page.getByRole("tab", {name: "Compose", exact: true}).click();
+  await page.getByRole("combobox", {name: "System", exact: true}).selectOption({label: name});
+  await page.getByRole("button", {name: "Edit system", exact: true}).press("Enter");
+  await expect(canvas).toHaveAttribute("data-active-layout", last, {timeout: 30_000});
+
+  const add = canvas.getByRole("button", {name: /^Add element to /}).first();
+  await expect(add).toBeEnabled();
+  await add.press("Enter");
+  const picker = page.getByRole("dialog", {name: /^Add an element to /});
+  await expect(picker.getByLabel("Search compatible elements")).toBeFocused();
+  await picker.press("Escape");
+  await expect(picker).toBeHidden();
+  await expect(add).toBeFocused();
+  return { applicationLayouts: traversal.length, selectedLayout: last };
 }

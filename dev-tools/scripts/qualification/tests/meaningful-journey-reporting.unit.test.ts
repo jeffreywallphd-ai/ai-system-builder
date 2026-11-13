@@ -109,6 +109,12 @@ const privateProviderPrivacyPriorCommit="26000fe16c1eab3b1f071960493c40b30a264fc
 const workspaceSwitchHistoryPath="docs/operations/comprehensive-ui-automation-workspace-switch-census-history.json";
 const workspaceSwitchPriorCommit="f62aa7176eccfb065eab27ea56edf6bbb1bc0dbc";
 const workspaceSwitchCompletedCommit="75efdd2456f67757fd07b749dd398128af969e03";
+const originalDefinitionBaseline="be0a48e241ca94d1ad18fda89ffa8f095d98e56c";
+const publishedFormHostCommit="b79a006a51358cb03cc7f5a289e2769869ed3d34";
+const publishedFormHostSources=new Set([
+  "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-form-composer.e2e.spec.ts",
+  "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-form-composer.e2e.spec.ts",
+]);
 const reviewReferenceSources=[
   "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
   "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
@@ -173,12 +179,25 @@ async function censusBundle() {
     hostSpecPaths:fs.readdirSync(path.join(root,folder)).filter(name=>name.endsWith(".e2e.spec.ts")).map(name=>folder+name).sort()};
 }
 type CensusBundle=Awaited<ReturnType<typeof censusBundle>>;
+function originalCensusRows(bundle:CensusBundle,map:CensusMap) {
+  // These two host definitions arrived after the retained baseline. Authenticate
+  // their exact later source while keeping their baseline drift visible.
+  return map.sources.filter(row=>{
+    if(map.source_baseline!==originalDefinitionBaseline||!publishedFormHostSources.has(row.path))return true;
+    if(row.committed_sha256!=="0".repeat(64)||
+        jsonSha(row.facts)!==jsonSha(bundle.api.sourceFacts(row.path,gitSource(publishedFormHostCommit,row.path)))) {
+      throw new Error("UI definition Git pin does not match its published Form source version.");
+    }
+    return false;
+  });
+}
 function checkedCensus(bundle:CensusBundle,map:CensusMap) {
   const result=bundle.api.validateCensus({mapText:JSON.stringify(map),ledgerText:bundle.ledgerText,discoveryText:bundle.discoveryText,readSource:bundle.read,hostSpecPaths:bundle.hostSpecPaths});
   // Canonical mismatch is deliberately a drift result. Authenticate the Git
   // pin separately so a forged pin cannot inherit a source-only validity flag.
-  primeGitSources(map.source_baseline,map.sources.map(row=>row.path));
-  for(const row of map.sources) {
+  const originalRows=originalCensusRows(bundle,map);
+  primeGitSources(map.source_baseline,originalRows.map(row=>row.path));
+  for(const row of originalRows) {
     const text=new TextDecoder("utf-8",{fatal:true}).decode(gitSource(map.source_baseline,row.path)).replace(/\r\n/g,"\n");
     if(row.committed_sha256!==sha(text))throw new Error("UI definition Git pin does not match its source version.");
   }
@@ -339,8 +358,9 @@ function checkedWorkspaceSwitchHistory(bundle:CensusBundle,map:CensusMap,history
 function expectedWorkingDrift(bundle:CensusBundle,map:CensusMap) {
   // Derive the expectation from authenticated Git bytes, independently of the
   // validator's stored hash comparison. Working edits remain explicit gaps.
-  primeGitSources(map.source_baseline,map.sources.map(row=>row.path));
-  return map.sources.filter(row=>bundle.read(row.path).toString("utf8").replace(/\r\n/g,"\n") !==
+  const originalRows=new Set(originalCensusRows(bundle,map));
+  primeGitSources(map.source_baseline,[...originalRows].map(row=>row.path));
+  return map.sources.filter(row=>!originalRows.has(row)||bundle.read(row.path).toString("utf8").replace(/\r\n/g,"\n") !==
     gitSource(map.source_baseline,row.path).toString("utf8").replace(/\r\n/g,"\n"))
     .map(row=>({kind:"unreviewed-source-drift",source:row.path}));
 }
@@ -391,7 +411,7 @@ function historicalWorkspaceSwitchMap() {
 }
 it("keeps current coverage definitions bound to real source and preserves unrun qualification",async()=>{
   const bundle=await censusBundle(),result=checkedCensus(bundle,bundle.map);
-  expect(result).toMatchObject({scenario_count:39,behavior_links:131,source_files:181,current_host_spec_files:29,inventory_groups:16,
+  expect(result).toMatchObject({scenario_count:39,behavior_links:131,source_files:183,current_host_spec_files:31,inventory_groups:16,
     definition_map_valid:true,executed_tests:0,actual_host_pass:false,parent_qualification_granted:false,full_testing_status:"deferred-by-user"});
   expect(result.gaps.filter(gap=>gap.kind === "actual-host-not-run-by-census")).toHaveLength(39);
   expect(result.gaps.some(gap=>gap.kind === "declared-test-modifier")).toBe(true);
@@ -524,12 +544,13 @@ it.each(["row-hash","current-row","missing-row","duplicate-row","prior-history",
   if(variant === "unrelated-field")map.scenarios[0]!.execution_status="passed";
   expect(()=>checkedWorkspaceSwitchHistory(bundle,map,history)).toThrow();
 });
-it.each(["facts","execution-status","committed-pin","missing-version"] as const)("refuses forged census %s without a host or execution claim",async variant=>{
+it.each(["facts","execution-status","committed-pin","missing-version","form-host-pin"] as const)("refuses forged census %s without a host or execution claim",async variant=>{
   const bundle=await censusBundle();checkedCensus(bundle,bundle.map);const map=structuredClone(bundle.map);
   if(variant === "facts")map.sources[0]!.facts.sha256="0".repeat(64);
   if(variant === "execution-status")map.scenarios[0]!.execution_status="passed";
   if(variant === "committed-pin")map.sources[0]!.committed_sha256="0".repeat(64);
   if(variant === "missing-version")map.source_baseline="0".repeat(40);
+  if(variant === "form-host-pin")map.sources.find(row=>publishedFormHostSources.has(row.path))!.committed_sha256="f".repeat(64);
   expect(()=>checkedCensus(bundle,map)).toThrow(/^(UI coverage census input|UI definition Git)/);
 });
 it.each(["row-hash","current-row","missing-row","old-archive","prior-map","working-map","qualification"] as const)("refuses forged census history %s",async variant=>{
