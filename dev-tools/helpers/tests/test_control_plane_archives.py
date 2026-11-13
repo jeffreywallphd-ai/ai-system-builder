@@ -206,10 +206,13 @@ class CompletedArchiveTests(unittest.TestCase):
 
     def test_v2_journal_and_state_interruption_recover_idempotently_with_same_inner_digests(self):
         for phase in ("journal", "state"):
-            with self.subTest(phase=phase), tempfile.TemporaryDirectory(prefix="cp-archive-recover-") as folder:
+            # The archive and atomic temporary leaf names already include the
+            # full digest. Leave room for them in nested Windows worktrees.
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory(prefix="ar-") as folder:
                 records = Records(Path(folder)); records.mutate(lambda s: s["work_items"].update({"work-a": completed("work-a")}))
                 before = records.load()
-                with self.assertRaises(OSError): records._archive_completed(archive_request(records, ["work-a"]), fault_after=phase)
+                with self.assertRaisesRegex(OSError, "^injected publication interruption$"):
+                    records._archive_completed(archive_request(records, ["work-a"]), fault_after=phase)
                 self.assertEqual(read_json(records.journal)["schema_version"], "development-transaction-v2")
                 self.assertTrue(records.recover()); self.assertFalse(records.recover())
                 after = records.load(); self.assertEqual(after["work_items"], before["work_items"])
