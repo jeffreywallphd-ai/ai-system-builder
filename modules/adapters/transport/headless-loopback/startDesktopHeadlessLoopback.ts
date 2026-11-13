@@ -4,12 +4,17 @@ import { createServer } from "node:https";
 import type { Duplex } from "node:stream";
 import { performance } from "node:perf_hooks";
 import selfsigned from "selfsigned";
-import type { HeadlessReadResult } from "../../../contracts/headless";
+import {
+  parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest, readHeadlessAuthoringWireResult,
+  type HeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadResult,
+  type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
+} from "../../../contracts/headless";
 import type { createDesktopHeadlessClientAuthority } from "../../security/headless";
 
 const LOOPBACK = "127.0.0.1";
 const PAIR_PATH = "/aisb-headless/v1/pair";
 const READ_PATH = "/aisb-headless/v1/read";
+const AUTHOR_PATH = "/aisb-headless/v1/author";
 const MAX_REQUEST_BYTES = 8 * 1024;
 const MAX_RESPONSE_BYTES = 128 * 1024;
 const MAX_CONNECTIONS = 16;
@@ -19,7 +24,13 @@ const REQUEST_LIMIT_MS = 5_000;
 const TOKEN_PATTERN = /^Bearer ([a-zA-Z0-9_-]{43})$/;
 
 type Registration = ReturnType<typeof createDesktopHeadlessClientAuthority>;
-type Grant = Awaited<ReturnType<Registration["verifyCredential"]>>;
+type LegacyGrant = NonNullable<Awaited<ReturnType<Registration["verifyCredential"]>>>;
+type Grant = DesktopHeadlessAuthoringWireGrant | undefined;
+type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
+export interface DesktopHeadlessAuthoringWireGrant extends Pick<LegacyGrant, "organizationId" | "principalId" | "registeredClientId" | "workspaceIds" | "operations"> {
+  readonly authoring?: readonly AuthoringRequest["operation"][];
+  readonly isCurrent?: () => boolean;
+}
 
 export interface DesktopHeadlessLoopback {
   readonly endpoint: string;
@@ -33,8 +44,13 @@ export interface DesktopHeadlessLoopback {
  * There is no registration/admin/interactive authority route.
  */
 export async function startDesktopHeadlessLoopback(dependencies: {
-  readonly registrations: Pick<Registration, "completePairing" | "verifyCredential">;
+  readonly registrations: Pick<Registration, "completePairing"> & { readonly verifyCredential: (credential: unknown) => Promise<Grant> };
   readonly read: (request: unknown, currentGrant: () => Promise<Grant>) => Promise<HeadlessReadResult>;
+  readonly authoring?: {
+    readonly hostIncarnationId: HeadlessHostIncarnationId;
+    readonly execute: (request: AuthoringRequest, grant: DesktopHeadlessAuthoringWireGrant,
+      currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessAuthoringWireResult>;
+  };
   /** Allows the owning desktop to keep a newly bound listener dormant until confirmed. */
   readonly isAdmitted?: () => boolean;
 }): Promise<DesktopHeadlessLoopback> {
@@ -129,7 +145,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       fail(response, 403, "headless.forbidden");
       return;
     }
-    if (request.method !== "POST" || (request.url !== PAIR_PATH && request.url !== READ_PATH)) {
+    if (request.method !== "POST" || (request.url !== PAIR_PATH && request.url !== READ_PATH &&
+        (request.url !== AUTHOR_PATH || !dependencies.authoring))) {
       fail(response, 404, "headless.not-found");
       return;
     }
@@ -169,7 +186,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       }
       const currentGrant = await dependencies.registrations.verifyCredential(pairing.credential);
       if (!admitting() || response.destroyed) return;
-      if (currentGrant?.registeredClientId !== pairing.registeredClientId) {
+      if (currentGrant?.registeredClientId !== pairing.registeredClientId || !grantIsCurrent(currentGrant)) {
         fail(response, 403, "headless.forbidden");
         return;
       }
@@ -182,8 +199,9 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     }
 
     const credential = TOKEN_PATTERN.exec(uniqueHeader(request, "authorization") ?? "")?.[1];
-    const initialGrant = credential && await dependencies.registrations.verifyCredential(credential);
-    if (!credential || !initialGrant || !admitting() || response.destroyed) {
+    const initialGrant: DesktopHeadlessAuthoringWireGrant | undefined = credential
+      ? await dependencies.registrations.verifyCredential(credential) : undefined;
+    if (!credential || !initialGrant || !grantIsCurrent(initialGrant) || !admitting() || response.destroyed) {
       fail(response, 403, "headless.forbidden");
       return;
     }
@@ -193,18 +211,35 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       return;
     }
     if (!admitting() || response.destroyed) return;
-    const currentGrant = async () => {
+    const requiresFence = request.url === AUTHOR_PATH || initialGrant.isCurrent !== undefined;
+    const currentGrant = async (): Promise<DesktopHeadlessAuthoringWireGrant | undefined> => {
       if (!admitting() || response.destroyed) return undefined;
-      const current = await dependencies.registrations.verifyCredential(credential);
+      const current: DesktopHeadlessAuthoringWireGrant | undefined = await dependencies.registrations.verifyCredential(credential);
       if (!admitting() || response.destroyed || !current || current.registeredClientId !== initialGrant.registeredClientId ||
           current.principalId !== initialGrant.principalId || current.organizationId !== initialGrant.organizationId ||
-          !sameScope(current, initialGrant)) return undefined;
+          !sameScope(current, initialGrant) || !grantIsCurrent(current, requiresFence)) return undefined;
       return current;
     };
-    const result = await dependencies.read(body, currentGrant);
+    let result: HeadlessReadResult | HeadlessAuthoringWireResult;
+    if (request.url === AUTHOR_PATH && dependencies.authoring) {
+      const { hostIncarnationId, execute } = dependencies.authoring;
+      if (!initialGrant.authoring?.length || !initialGrant.isCurrent) { fail(response, 403, "headless.forbidden"); return; }
+      const edit = parseHeadlessSemanticBatchRequest(body, hostIncarnationId);
+      const management = edit.ok ? undefined : parseHeadlessSystemManagementRequest(body, hostIncarnationId);
+      const decoded = edit.ok ? edit.request : management?.ok ? management.request : undefined;
+      if (!decoded) {
+        const code = !edit.ok && edit.code !== "headless.invalid-request" ? edit.code :
+          management && !management.ok ? management.code : "headless.invalid-request";
+        fail(response, errorStatus(code), code);
+        return;
+      }
+      if (!initialGrant.authoring.includes(decoded.operation) || !initialGrant.workspaceIds.includes(decoded.input.workspaceId) ||
+          !initialGrant.isCurrent()) { fail(response, 403, "headless.forbidden"); return; }
+      result = readHeadlessAuthoringWireResult(await execute(decoded, initialGrant, currentGrant));
+    } else result = await dependencies.read(body, currentGrant);
     const finalGrant = await currentGrant();
     if (!admitting() || response.destroyed) return;
-    if (!finalGrant) {
+    if (!finalGrant || !grantIsCurrent(finalGrant, requiresFence)) {
       fail(response, 403, "headless.forbidden");
       return;
     }
@@ -230,10 +265,11 @@ export async function startDesktopHeadlessLoopback(dependencies: {
   return { endpoint: `https://${LOOPBACK}:${port}`, fingerprint, close };
 }
 
-function sameScope(left: NonNullable<Grant>, right: NonNullable<Grant>): boolean {
+function sameScope(left: DesktopHeadlessAuthoringWireGrant, right: DesktopHeadlessAuthoringWireGrant): boolean {
   const equal = <T>(a: readonly T[], b: readonly T[]) =>
     a.length === b.length && a.every((value) => b.includes(value)) && b.every((value) => a.includes(value));
-  return equal(left.workspaceIds, right.workspaceIds) && equal(left.operations, right.operations);
+  return equal(left.workspaceIds, right.workspaceIds) && equal(left.operations, right.operations) &&
+    equal(left.authoring ?? [], right.authoring ?? []);
 }
 
 function hasHeader(request: IncomingMessage, name: string): boolean {
@@ -269,15 +305,20 @@ function isPairRequest(value: unknown): value is { readonly pairingCode: string 
     "pairingCode" in value && typeof value.pairingCode === "string" && value.pairingCode.length === 43;
 }
 
-function errorStatus(code: Extract<HeadlessReadResult, { ok: false }>["code"]): number {
+function errorStatus(code: Extract<HeadlessReadResult | HeadlessAuthoringWireResult, { ok: false }>["code"]): number {
   switch (code) {
     case "headless.forbidden": return 403;
     case "headless.not-found": return 404;
-    case "headless.host-changed": return 409;
-    case "headless.unavailable": return 503;
+    case "headless.host-changed": case "headless.stale-revision": case "headless.idempotency-conflict": return 409;
+    case "headless.idempotency-expired": return 410;
+    case "headless.unavailable": case "headless.operation-unconfirmed": case "headless.operation-capacity": return 503;
     case "headless.result-too-large": return 413;
     default: return 400;
   }
+}
+
+function grantIsCurrent(grant: DesktopHeadlessAuthoringWireGrant, required = false): boolean {
+  return grant.isCurrent?.() ?? !required;
 }
 
 function fail(response: ServerResponse, status: number, code: string): void {

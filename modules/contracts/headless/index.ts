@@ -34,3 +34,4 @@ export {
   type DesktopHeadlessRevokeResult,
 } from "./desktop-headless-pairing";
 export * from "./headless-system-management";
+export { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } from "./headless-authoring-result";

@@ -17,6 +17,7 @@ assert.ok(isHeadlessHostIncarnationId(incarnation));
 const describe = JSON.stringify({ version: HEADLESS_CONTRACT_VERSION, operation: "host.describe", input: {} });
 const readPath = "/aisb-headless/v1/read";
 const pairPath = "/aisb-headless/v1/pair";
+const authorPath = "/aisb-headless/v1/author";
 
 function post(connector: { endpoint: string; fingerprint: string }, path: string, body: string, headers: Record<string, string> = {}) {
   return new Promise<{
@@ -54,6 +55,106 @@ function registrations() {
     canReadWorkspace: async (id) => id === workspaceId,
   });
 }
+
+test("the optional pinned authoring route accepts only a current scoped writer and emits a finite result", async () => {
+  const registry = registrations();
+  const code = await registry.beginPairing(workspaceId);
+  assert.equal(code.status, "ready");
+  const pairing = await registry.completePairing(code.pairingCode);
+  assert.equal(pairing.status, "paired");
+  let enabled = false;
+  let fenced = false;
+  let dispatches = 0;
+  let revokeInHandler = false;
+  let unexpectedOutput = false;
+  let loseFence = false;
+  let omitFenceAfterDispatch = false;
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: {
+      completePairing: registry.completePairing,
+      async verifyCredential(credential) {
+        const grant = await registry.verifyCredential(credential);
+        if (!grant) return undefined;
+        return {
+          ...grant, authoring: enabled ? ["systems.create"] as const : [],
+          ...(loseFence ? {} : { isCurrent: () => !fenced }),
+        };
+      },
+    },
+    async read() { return { ok: false, code: "headless.unavailable" }; },
+    authoring: {
+      hostIncarnationId: incarnation,
+      async execute(request, _grant, currentGrant) {
+        dispatches++;
+        assert.ok(await currentGrant());
+        assert.equal(request.operation, "systems.create");
+        if (revokeInHandler) fenced = true;
+        if (omitFenceAfterDispatch) loseFence = true;
+        return { ok: true, value: { kind: "committed", reference: {
+          systemId: "fixture-system", revisionId: "fixture-system.r1", recordRevision: 1,
+          ...(unexpectedOutput ? { internalField: "fixture diagnostic" } : {}),
+        } } };
+      },
+    },
+  });
+  const body = {
+    version: HEADLESS_CONTRACT_VERSION, operation: "systems.create",
+    input: {
+      hostIncarnationId: incarnation, workspaceId, name: "Fixture", templateId: "reference.secured-data-review@1.0.0",
+      idempotencyKey: "a6f56324-2051-462c-b45b-d9b49bf6dd4a",
+    },
+  };
+  const headers = { Authorization: "Bearer " + pairing.credential };
+  try {
+    assert.equal((await post(connector, authorPath, JSON.stringify(body), headers)).status, 403);
+    enabled = true;
+    assert.equal((await post(connector, authorPath, JSON.stringify({ ...body, operation: "systems.archive" }), headers)).status, 400);
+    assert.equal((await post(connector, authorPath, JSON.stringify({ ...body, input: { ...body.input,
+      workspaceId: "other-fixture-workspace" } }), headers)).status, 403);
+    assert.equal(dispatches, 0);
+    assert.deepEqual((await post(connector, authorPath, JSON.stringify(body), headers)).json, {
+      ok: true, value: { kind: "committed", reference: { systemId: "fixture-system", revisionId: "fixture-system.r1", recordRevision: 1 } },
+    });
+    unexpectedOutput = true;
+    assert.deepEqual((await post(connector, authorPath, JSON.stringify(body), headers)).json, { ok: false, code: "headless.unavailable" });
+    unexpectedOutput = false;
+    omitFenceAfterDispatch = true;
+    assert.deepEqual((await post(connector, authorPath, JSON.stringify(body), headers)).json, { ok: false, code: "headless.forbidden" });
+    omitFenceAfterDispatch = false;
+    loseFence = false;
+    revokeInHandler = true;
+    assert.deepEqual((await post(connector, authorPath, JSON.stringify(body), headers)).json, { ok: false, code: "headless.forbidden" });
+    assert.equal(dispatches, 4);
+  } finally { registry.close(); await connector.close(); }
+});
+
+test("the read response is withheld when the final grant fence closes after verification", async () => {
+  const registry = registrations();
+  const code = await registry.beginPairing(workspaceId);
+  assert.equal(code.status, "ready");
+  const pairing = await registry.completePairing(code.pairingCode);
+  assert.equal(pairing.status, "paired");
+  let verifies = 0;
+  let checks = 0;
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: {
+      completePairing: registry.completePairing,
+      async verifyCredential(credential) {
+        const grant = await registry.verifyCredential(credential);
+        const ordinal = ++verifies;
+        return grant && { ...grant, isCurrent: () => ordinal === 1 || ++checks === 1 };
+      },
+    },
+    async read() { return { ok: false, code: "headless.unavailable" }; },
+  });
+  try {
+    const headers = { Authorization: "Bearer " + pairing.credential };
+    assert.equal((await post(connector, authorPath, describe, headers)).status, 404);
+    assert.deepEqual((await post(connector, readPath, describe, headers)).json, { ok: false, code: "headless.forbidden" });
+    assert.equal(verifies, 2);
+    assert.equal(checks, 2);
+  } finally { registry.close(); await connector.close(); }
+});
 
 test("binds to literal loopback, pairs once and checks the bearer before read dispatch", async () => {
   const registry = registrations();

@@ -114,3 +114,9 @@ around its transaction and replays. The application must separately check
 current resource authority before lookup and before any response leaves the
 host. After result expiry the retained key stops another write; capacity
 exhaustion and unknown outcomes require reconciliation.
+The optional authoring route uses the same pinned literal loopback listener
+and frame limits. It accepts only the finite authoring contract and requires
+an explicit writer grant for the exact workspace. Before the response, it
+rechecks current registration and its synchronous grant fence. The response
+admits only fixed errors, bounded preview consequences, and saved revision
+references. This adapter does not activate the authoring route by itself.
