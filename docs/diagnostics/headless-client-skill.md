@@ -1,23 +1,47 @@
 # Headless client skill
 
 Use [Control AI System Builder](../../skills/control-ai-system-builder/SKILL.md)
-when an agent needs to inspect or edit a saved system through a paired desktop
-app. Keep the skill in the client’s supported skills location, or reference its
-repository location if the client supports project skills. This installs
-instructions only; it does not enroll a client or turn on editing.
+to inspect or edit saved systems, check task status, or send one requested turn
+to an approved conversation through a paired desktop app. Copy the entire skill
+folder into the client's supported skills location, or reference its repository
+location if the client supports project skills. Keep its
+[generated tool reference](../../skills/control-ai-system-builder/references/mcp-tools.json)
+with the skill.
 
-Start the connector in the app's Settings. Follow the
+Start the connector in desktop Settings. Follow the
 [local MCP adapter instructions](../../modules/adapters/transport/headless-mcp/README.md)
-to connect the client to that app and supply its credential through a secure
-launcher. Keep the credential out of chat, source control, and command arguments.
-To confirm setup, ask the agent to list visible workspaces without changing
-anything. Use the separate editing permission only when you want the client to
-make saved changes.
+to use the current address and certificate fingerprint. Configure the trusted
+client launcher to supply its paired credential from secure storage. Keep
+the credential out of chat, source control, and command arguments.
+
+To confirm setup, ask the agent to list visible workspaces. For saved edits,
+pair a client with editing permission and enable authoring in the launcher.
+If the desktop offers conversation access, pair a client for that access and
+enable conversation in the launcher. The flags control tool discovery.
+The desktop checks pairing, workspace permission and the existing exact
+conversation approval when it receives a request. If the desktop does not
+offer conversation access, leave that feature unavailable. Installing the skill
+grants none of these permissions.
 
 If the app restarts, open Settings and use the current connection address and
-certificate fingerprint. If a write reply is lost, ask the agent to check the
-saved system before retrying. A missing window or an unchanged selection does
-not tell you whether the edit was saved.
+certificate fingerprint. If a write or turn reply is lost, check saved state
+or task status before replaying the exact request with the original key.
+A missing window does not establish whether work was saved or canceled.
+
+The tool reference is generated from the official SDK's `listTools` for
+read, authoring, conversation, and combined modes. The generator starts no
+connector and calls no tools. It emits names and input schemas without
+workspace data, credentials or message content. For a repository update,
+run this from the repository root with the existing dependencies installed.
+
+```text
+node --import tsx modules/adapters/transport/headless-mcp/generateHeadlessMcpToolReference.mts
+```
+
+Save the output as `skills/control-ai-system-builder/references/mcp-tools.json`.
+The existing pinned MCP check compares the saved file with real SDK discovery.
+Discovery checks the adapter catalog. Access to a particular host remains
+subject to that host's current permissions.
 
 The Windows qualification fixture
 `packaged-desktop-headless.e2e.spec.ts` uses the repository's packaged

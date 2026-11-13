@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { createServer, request } from "node:https";
 import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
@@ -9,7 +10,7 @@ import selfsigned from "selfsigned";
 import { createInMemoryStructuredDocumentStore } from "../../../persistence/shared";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
 import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../../headless-loopback";
-import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_READ_OPERATIONS, isHeadlessHostIncarnationId, parseHeadlessReadRequest } from "../../../../contracts/headless";
+import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_READ_OPERATIONS, isHeadlessHostIncarnationId, parseHeadlessReadRequest, type HeadlessChangeCursor } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
@@ -24,6 +25,49 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_preview_edits", "aisb_rename_system"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
+
+test("the portable reference matches the exact credential-free SDK discovery catalog", { timeout: 45_000 }, async () => {
+  const { collectHeadlessMcpToolReference } = await import("../generateHeadlessMcpToolReference.mjs");
+  const reference = await collectHeadlessMcpToolReference();
+  const saved = await readFile("skills/control-ai-system-builder/references/mcp-tools.json", "utf8");
+  assert.equal(JSON.stringify(reference, null, 2) + "\n", saved.replaceAll("\r\n", "\n"));
+  const conversation = "aisb_send_approved_turn";
+  assert.deepEqual(reference.modes, [
+    { mode: "read", tools: expectedTools },
+    { mode: "authoring", tools: [...expectedTools, ...authoringTools].sort() },
+    { mode: "conversation", tools: [...expectedTools, conversation].sort() },
+    { mode: "authoring-and-conversation", tools: [...expectedTools, ...authoringTools, conversation].sort() },
+  ]);
+  const schemas = new Map(reference.tools.map(({ name, inputSchema }) => [name, inputSchema]));
+  const assertExactObject = (name: string, required: string[], optional: string[] = []) => {
+    const schema = schemas.get(name);
+    assert.ok(schema, name);
+    assert.equal(schema.additionalProperties, false, name);
+    assert.deepEqual(Object.keys(schema.properties ?? {}).sort(), [...required, ...optional].sort(), name);
+    assert.deepEqual([...(schema.required ?? [])].sort(), [...required].sort(), name);
+    return schema;
+  };
+  const host = ["hostIncarnationId"];
+  const workspace = [...host, "workspaceId"];
+  const savedSystem = [...workspace, "systemId"];
+  const base = [...savedSystem, "baseRecordRevision", "baseRevisionId"];
+  const namedEdit = [...base, "idempotencyKey", "name"];
+  assertExactObject("aisb_host_describe", []);
+  assertExactObject("aisb_list_workspaces", host);
+  for (const name of ["aisb_list_systems", "aisb_list_templates", "aisb_saved_system_snapshot"]) assertExactObject(name, workspace);
+  assertExactObject("aisb_read_system", savedSystem);
+  assertExactObject("aisb_saved_system_changes", [...workspace, "cursor"]);
+  assertExactObject("aisb_list_workflows", [...workspace, "sourceKind"]);
+  assertExactObject("aisb_prepare_workflow", [...workspace, "profileId", "source"]);
+  assertExactObject("aisb_read_conversation_task", [...workspace, "sessionId", "turnId"]);
+  assertExactObject("aisb_create_system", [...workspace, "templateId", "name", "idempotencyKey"]);
+  assertExactObject("aisb_rename_system", namedEdit, ["description"]);
+  assertExactObject("aisb_clone_system", namedEdit);
+  assertExactObject("aisb_preview_edits", [...base, "edits"]);
+  assertExactObject("aisb_apply_edits", [...base, "edits", "previewDigest", "idempotencyKey"]);
+  const turn = assertExactObject(conversation, [...workspace, "planId", "planRevision", "sessionId", "snapshotRevision", "key", "text"]);
+  assert.deepEqual(turn.properties?.text, { type: "string", minLength: 1, maxLength: 2_000 });
+});
 
 function pair(connector: { endpoint: string; fingerprint: string }, pairingCode: string) {
   return new Promise<string>((resolve, reject) => {
@@ -113,7 +157,7 @@ test("the opt-in stdio tool requires a separately granted, exact approved turn",
     assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(), [...expectedTools, name].sort());
     const args = { hostIncarnationId, workspaceId, planId: "fixture-plan", planRevision: "revision-1",
       snapshotRevision: "snapshot-1", sessionId: "fixture-session", key: "a6f56324-2051-462c-b45b-d9b49bf6dd4a", text: "Synthetic turn" };
-    const invoke = async (input = args) => resultText(await client.callTool({ name, arguments: input }));
+    const invoke = async (input: Record<string, unknown> = args) => resultText(await client.callTool({ name, arguments: input }));
     const unconfirmed = { ok: false, code: "headless.operation-unconfirmed" };
     assert.deepEqual(await invoke(), unconfirmed);
     active.add(grant.registeredClientId);
@@ -268,7 +312,7 @@ test("official stdio client finds finite read tools and uses the already running
         });
         const read = await client.callTool({ name: "aisb_read_system", arguments: { hostIncarnationId, workspaceId, systemId } });
         assert.deepEqual(resultText(read), { ok: true, operation: "systems.read", value: { systemId, name: "Fixture system", revision: 4, status: "draft" } });
-        const cursor = { hostIncarnationId, sequence: 3, scopeTag: "a".repeat(64) };
+        const cursor: HeadlessChangeCursor = { hostIncarnationId, sequence: 3, scopeTag: "a".repeat(64) };
         const snapshot = await client.callTool({ name: "aisb_saved_system_snapshot", arguments: { hostIncarnationId, workspaceId } });
         assert.deepEqual(resultText(snapshot), { ok: true, operation: "systems.snapshot", value: { systems: [], cursor } });
         const changes = await client.callTool({ name: "aisb_saved_system_changes", arguments: { hostIncarnationId, workspaceId, cursor } });

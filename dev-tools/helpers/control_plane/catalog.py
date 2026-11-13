@@ -150,6 +150,7 @@ HEADLESS_MCP_SOURCES = (
     "modules/adapters/transport/headless-mcp/README.md",
     "modules/adapters/transport/headless-mcp/boundHeadlessMcpStdio.mts",
     "modules/adapters/transport/headless-mcp/createHeadlessMcpReadForwarder.mts",
+    "modules/adapters/transport/headless-mcp/generateHeadlessMcpToolReference.mts",
     "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
     "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
 )
