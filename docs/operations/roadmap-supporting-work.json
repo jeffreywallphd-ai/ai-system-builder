@@ -13183,6 +13183,96 @@
       "limitations": [
         "This result covers one typed connection between built-in preview assets on both local hosts. The managed browser test, broader accessibility and separate security review remain pending."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "all-gates-pass",
+      "work_id": "assets-clean-checkout-qualification-gates",
+      "work_criteria": [
+        "clean-checkout-gates"
+      ],
+      "receipt_digest": "2ebceaa3bdaf0882f12a6fefc1b4a5c758d06259f97230ae76bda8f2340173a5",
+      "review_digest": "e126e39aa0cd993ba6a72289bfe490d8f63c8606b60487f108b362b15db61120",
+      "scope": "The clean-checkout fixes let the standard Node runner start and allow the documentation gate to run without private files.",
+      "limitations": [
+        "The combined test and dependency gates still require a passing current run."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "asset-backed-form-composer",
+      "criterion_id": "form-submission-triggers",
+      "work_id": "assets-form-recovery-staged-runner",
+      "work_criteria": [
+        "source-and-compiled-fixture"
+      ],
+      "receipt_digest": "ce2ceffdb7257c11b2f92d882c5d28d6d25587e272bdfb02f67ee50170a38966",
+      "review_digest": "ca0670098316d88cac5ad7d438aecdb3a6c2b24afe0aff5a4123bc4bf29fda54",
+      "scope": "The Form recovery test passed in both source and compiled modes. A fresh process recovered the saved submission without creating a duplicate.",
+      "limitations": [
+        "This result covers the isolated submission recovery test. It grants no new whole-roadmap qualification."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "assets-record-full-qualification-attempt-1113",
+      "work_criteria": [
+        "full-attempt-evidence-keeps-qualification-pending"
+      ],
+      "receipt_digest": "b44429fc813e4503510a24761f395035d75a8d4a4abe12a15fd3086a29ad60f7",
+      "review_digest": "a9e282a2d33a7342e8768d5b632e9b1fbb52e28a5580f2731cb0ed8e02db446c",
+      "scope": "Six Windows desktop Assets and Form Composer journeys passed. Both combined end-to-end groups also passed.",
+      "limitations": [
+        "Browser contrast, managed restart, standard regression, development dependency and separate security evidence are still open."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "assets-responsive-browser-driver-census-repair",
+      "work_criteria": [
+        "drivers-match-responsive-ui"
+      ],
+      "receipt_digest": "7aa30dd3ab113be215d111d39350d2385ecfe7efbd6c0a223a46293c0a4bfdf9",
+      "review_digest": "0788406f27c4d0245848d64fddebd2966aa00c38bd65be82093558ec9df8f787",
+      "scope": "The browser test now uses the menu and Canvas controls available at narrow widths. It checks that the new workspace is selected before continuing.",
+      "limitations": [
+        "The browser reached the Build and test dialog at 400 percent zoom. Its accessibility audit still needs a complete pass."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "assets-build-dialog-reduced-motion",
+      "work_criteria": [
+        "build-dialog-honors-motion-setting"
+      ],
+      "receipt_digest": "fe59c0377d9823b1e17caf0e596fe51ed0d571905f74deee9fb9dd30e2ef7130",
+      "review_digest": "cb75d353e1d3698b5e8430defbc5a096de6ac5aa2df715f560b732d9404adf19",
+      "scope": "The Build and test dialog now removes decorative motion when reduced motion is enabled. The browser passed the motion stage at 400 percent zoom.",
+      "limitations": [
+        "The dialog contrast check is separate and remains open."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "assets-preview-assistant-status-semantics",
+      "work_criteria": [
+        "preview-has-named-status"
+      ],
+      "receipt_digest": "0b8242e6b27b73a10abf13df9d471317ed01c671234bfb983508f469622631cb",
+      "review_digest": "174ab44a80205bafed3ce4949251106b157f1f044024c69383a8cb3907904f2f",
+      "scope": "The assistant response preview now exposes a named status without hiding its text. The focused preview and reference tests passed.",
+      "limitations": [
+        "The contrast checks and overall browser qualification remain open."
+      ]
     }
   ]
 }

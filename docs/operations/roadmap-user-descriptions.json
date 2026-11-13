@@ -18772,6 +18772,126 @@
           "The managed browser, broader accessibility and separate security checks remain open."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7959537cb7d09f5f946fcca59e7c927ca36090adbb9783e72e5de9bb902342b5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The clean-checkout fixes let the standard Node runner start and allow the documentation gate to run without private files."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6d8320f19567b3d63067aa1414a624d017c4989a26095850ee4062f1246bb627",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The combined test and dependency gates still require a passing current run."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ca43c998828a8a74ecb9f9cc4a034dd0da4ecc5410b7a2f9140de63ff9b1f409",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Form recovery test passed in both source and compiled modes. A fresh process recovered the saved submission without creating a duplicate."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "29449a1d662f8b93b7d0232ef49f341e7ff4537e95bec263844c9bfbd5efcdbc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers the isolated submission recovery test. It grants no new whole-roadmap qualification."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fcc4eac1162fb7466210e101067cd7128481bdc4d44f4ec4e184e5dbf21916b9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Six Windows desktop Assets and Form Composer journeys passed. Both combined end-to-end groups also passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d713dcc99538fb2c99357ba23c902f81fb84f99d3d99bfb29a02c70b33917693",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Browser contrast, managed restart, standard regression, development dependency and separate security evidence are still open."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2bae32801a2169fb7df187b9d6c6f8a3f7b995eb5d96b17e72e9c4266ff59941",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The browser test now uses the menu and Canvas controls available at narrow widths. It checks that the new workspace is selected before continuing."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3679b4e6c0e391acd40e8377378c002325984461aea442caa7c768d478076aa6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The browser reached the Build and test dialog at 400 percent zoom. Its accessibility audit still needs a complete pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "720e8b9b5b342d50ad8d603ab147aa6581719227ade9ec633fa9a6cbd3300ee1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Build and test dialog now removes decorative motion when reduced motion is enabled. The browser passed the motion stage at 400 percent zoom."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2d3753ba2d954506508d4351961d9a6dfbd7ebe2a610b038f531681c0ac96655",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The dialog contrast check is separate and remains open."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "801113265fca8f2c445d2e7eab007483f68e529375f26b3e959935e80b72c6f4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The assistant response preview now exposes a named status without hiding its text. The focused preview and reference tests passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "577673f8391e6e020b0209af0de4bf344c661ce318496389edac5ab62a93dd8c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The contrast checks and overall browser qualification remain open."
+        ]
+      }
     }
   ]
 }
