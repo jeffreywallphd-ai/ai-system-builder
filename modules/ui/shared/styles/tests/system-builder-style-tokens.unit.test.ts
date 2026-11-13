@@ -29,6 +29,31 @@ const repositoryUiSources = (relativeDirectory: string): readonly string[] => {
 };
 
 describe("system builder shared styles", () => {
+  it("uses the selected Layers row foreground for its placement text in forced colors", () => {
+    const dom = new JSDOM(`<style>
+      ${readStyle("modules/ui/shared/styles/forced-colors.css")}
+    </style><div class="system-composer__tree">
+      <button role="treeitem" aria-selected="true"><small id="selected">Region content / layer 1</small></button>
+      <button role="treeitem" aria-selected="false"><small id="unselected">Region content / layer 2</small></button>
+    </div><small id="outside">Other text</small>`);
+    try {
+      const { document, CSSMediaRule, CSSStyleRule } = dom.window;
+      const rules = [...document.styleSheets[0]!.cssRules].find(
+        (rule): rule is CSSMediaRule => rule instanceof CSSMediaRule &&
+          rule.conditionText === "(forced-colors: active)",
+      )!.cssRules;
+      const inheritingRules = [...rules].filter(
+        (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule &&
+          rule.style.getPropertyValue("color").trim() === "inherit",
+      );
+      for (const [id, expected] of [["selected", true], ["unselected", false], ["outside", false]] as const) {
+        expect(inheritingRules.some(rule => document.querySelector(`#${id}`)!.matches(rule.selectorText))).toBe(expected);
+      }
+    } finally {
+      dom.window.close();
+    }
+  });
+
   it("keeps muted revision text separate from the primary save label", () => {
     const dom = new JSDOM(`<style>
       ${readStyle("modules/ui/shared/styles/components/feature-surfaces.css")}

@@ -85,6 +85,8 @@ the body. Its accessible dialog name still includes the system name. Preview
 coverage and the rendered surface are named groups. Preview uses the registered
 System Foundation renderers without executing backend logic, activating a
 release, or deploying the system.
+The selected Layers row uses its highlight foreground for placement details in
+forced colors. Normal themes and unselected rows keep their existing styles.
 
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown

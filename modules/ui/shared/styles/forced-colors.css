@@ -159,6 +159,10 @@
     color: inherit;
   }
 
+  :root .system-composer__tree [role="treeitem"][aria-selected="true"] > small {
+    color: inherit;
+  }
+
   :root .ui-tabbed-panel__tab--active::after,
   :root .asset-library-tabs [role="tab"][aria-selected="true"]::after {
     background: currentColor;
