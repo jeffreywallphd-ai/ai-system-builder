@@ -425,6 +425,9 @@
 .asset-customizer__readonly-source {
   max-block-size: 24rem;
   overflow: auto;
+  padding: var(--space-sm);
+  background: var(--color-bg-panel);
+  color: var(--color-text-primary);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

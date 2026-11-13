@@ -29,6 +29,25 @@ const repositoryUiSources = (relativeDirectory: string): readonly string[] => {
 };
 
 describe("system builder shared styles", () => {
+  it("gives read-only asset source its own themed reading surface", () => {
+    const dom = new JSDOM(`<style>
+      ${readStyle("modules/ui/shared/styles/components/feature-surfaces.css")}
+    </style><pre class="asset-customizer__readonly-source"><code>Sample</code></pre><textarea></textarea>`);
+    try {
+      const { document, CSSStyleRule } = dom.window;
+      const readingRule = [...document.styleSheets[0]!.cssRules].find(
+        (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule &&
+          document.querySelector("pre")!.matches(rule.selectorText) &&
+          rule.style.getPropertyValue("background").trim() === "var(--color-bg-panel)",
+      );
+      expect(readingRule?.style.getPropertyValue("color").trim()).toBe("var(--color-text-primary)");
+      expect(readingRule?.style.getPropertyValue("overflow").trim()).toBe("auto");
+      expect(document.querySelector("textarea")!.matches(readingRule!.selectorText)).toBe(false);
+    } finally {
+      dom.window.close();
+    }
+  });
+
   it("uses the selected Layers row foreground for its placement text in forced colors", () => {
     const dom = new JSDOM(`<style>
       ${readStyle("modules/ui/shared/styles/forced-colors.css")}
