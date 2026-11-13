@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { JSDOM } from "jsdom";
 import { describe, expect, it } from "../../../../testing/node-test";
 
 const readStyle = (relativePath: string): string =>
@@ -28,6 +29,26 @@ const repositoryUiSources = (relativeDirectory: string): readonly string[] => {
 };
 
 describe("system builder shared styles", () => {
+  it("keeps muted revision text separate from the primary save label", () => {
+    const dom = new JSDOM(`<style>
+      ${readStyle("modules/ui/shared/styles/components/feature-surfaces.css")}
+    </style><footer class="system-builder__footer">
+      <div><span id="revision">r1</span></div>
+      <div class="ui-inline-actions"><button><span id="save">Save and validate revision</span></button></div>
+    </footer>`);
+    try {
+      const { document, CSSStyleRule } = dom.window;
+      const mutedRules = [...document.styleSheets[0]!.cssRules].filter(
+        (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule &&
+          rule.style.getPropertyValue("color") === "var(--color-text-muted)",
+      );
+      expect(mutedRules.some(rule => document.querySelector("#revision")!.matches(rule.selectorText))).toBe(true);
+      expect(mutedRules.some(rule => document.querySelector("#save")!.matches(rule.selectorText))).toBe(false);
+    } finally {
+      dom.window.close();
+    }
+  });
+
   it("uses only declared shared design tokens", () => {
     const tokenSource = readStyle("modules/ui/shared/styles/tokens.css");
     const declaredTokens = new Set(

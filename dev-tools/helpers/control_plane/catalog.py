@@ -101,7 +101,11 @@ PUBLISHED_FORM_CHECKS = {
     },
     "published-form-editor-styles": {
         "companion_to": "published-form-editor-interactions",
-        "sources": ("modules/ui/shared/styles/components/system-composer.css",),
+        "sources": (
+            "modules/ui/shared/styles/components/system-composer.css",
+            "modules/ui/shared/styles/components/feature-surfaces.css",
+            "modules/ui/shared/styles/tests/system-builder-style-tokens.unit.test.ts",
+        ),
         "command": ("--import", "tsx", "--test", "--", "modules/ui/shared/styles/tests/system-builder-style-tokens.unit.test.ts"),
     },
     "published-form-browser-client": {

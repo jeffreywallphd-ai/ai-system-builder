@@ -1174,7 +1174,7 @@
   display: grid;
   gap: 0.25rem;
 }
-.system-builder__footer span {
+.system-builder__footer > div:not(.ui-inline-actions) > span {
   color: var(--color-text-muted);
   font-size: 0.8125rem;
 }
