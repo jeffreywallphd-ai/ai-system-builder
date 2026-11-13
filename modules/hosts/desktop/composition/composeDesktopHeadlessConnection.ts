@@ -21,6 +21,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   let open = true;
   let start: Promise<DesktopHeadlessLoopback> | undefined;
   let endpoint: string | undefined;
+  let fingerprint: string | undefined;
   const operations = new Set<Promise<unknown>>();
 
   function track<T>(whenBusy: T, work: () => Promise<T>): Promise<T> {
@@ -56,7 +57,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
 
   async function startConnector(isStillApproved: () => boolean) {
     if (!open || !isStillApproved()) return undefined;
-    if (endpoint) return endpoint;
+    if (endpoint && fingerprint) return { endpoint, fingerprint };
     if (start) return undefined;
     const socket = start = startDesktopHeadlessLoopback({
       registrations, read: dependencies.read, isAdmitted: () => open && endpoint !== undefined,
@@ -79,7 +80,8 @@ export function composeDesktopHeadlessConnection(dependencies: {
       return undefined;
     }
     endpoint = connector.endpoint;
-    return endpoint;
+    fingerprint = connector.fingerprint;
+    return { endpoint, fingerprint };
   }
 
   return {
@@ -89,7 +91,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
       return track<DesktopHeadlessPairingStatus>({ status: "unavailable" }, async () => {
         const value = await registrations.listClients();
         if (value.status !== "ready" || !open) return { status: "unavailable" };
-        return { status: "ready", running: endpoint !== undefined, endpoint, clients: value.clients };
+        return { status: "ready", running: endpoint !== undefined, endpoint, fingerprint, clients: value.clients };
       });
     },
     async startExistingClients(isStillApproved: () => boolean) {
@@ -110,7 +112,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
     async beginPairing(workspaceId: WorkspaceId, isStillApproved: () => boolean) {
       if (!open || !isStillApproved()) return { status: "denied" } as const;
       type Result = { readonly status: "denied" | "unavailable" } |
-        { readonly status: "ready"; readonly endpoint: string; readonly pairingCode: string };
+        { readonly status: "ready"; readonly endpoint: string; readonly fingerprint: string; readonly pairingCode: string };
       return track<Result>({ status: "unavailable" }, async () => {
         if (!await readWorkspaceLabel(workspaceId) || !isStillApproved()) return { status: "denied" } as const;
         const address = await startConnector(isStillApproved);
@@ -118,7 +120,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
         const code = await registrations.beginPairing(workspaceId, isStillApproved);
         if (!open) return { status: "unavailable" } as const;
         if (code.status !== "ready") return code;
-        return { status: "ready", endpoint: address, pairingCode: code.pairingCode } as const;
+        return { status: "ready", ...address, pairingCode: code.pairingCode } as const;
       });
     },
     async revoke(clientId: string) {
@@ -127,6 +129,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
     async close() {
       open = false;
       endpoint = undefined;
+      fingerprint = undefined;
       registrations.close();
       const closing = start?.then((connector) => connector.close(), () => {});
       let timer: ReturnType<typeof setTimeout> | undefined;

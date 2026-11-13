@@ -58,6 +58,26 @@ The desktop admits up to four concurrent management operations. It fences and
 drains them along with socket work before releasing persistence; a timed-out
 drain remains pending for an explicit retry.
 
+The stdio MCP adapter accepts a literal loopback HTTPS address, its current
+certificate fingerprint, and a credential only from its trusted launcher.
+The desktop makes a new in-memory certificate at listener startup. Native
+pairing and Settings display the fingerprint. The adapter releases no HTTP
+bytes until the same TLS socket proves possession of the pinned key. A stale
+port or untrusted replacement listener receives no credential. It exposes
+five strict read tools and cannot
+receive a URL, credential, or arbitrary command through them. It uses no HTTP
+proxy or redirect, limits four active forwards, limits each to five seconds
+and 128 KiB of result, and validates fixed result fields before returning
+them. The SDK bounds its stdio read buffer to 16 KiB; the adapter caps eight
+unanswered requests, four pending writes and 256 KiB per response. It closes
+on overflow. Incoming responses and unused notifications are discarded. An
+initialization notification is admitted once and cancellation is bounded by
+outstanding request IDs and actual response progress. The desktop tracks raw
+sockets through TLS negotiation and destroys them on listener shutdown.
+The in-memory pin protects against a different local listener,
+not compromise of the app, trusted launcher or OS account. Client secret
+enrollment, packaged host and managed delivery need separate qualification.
+
 Managed parity must recheck existing OIDC, membership and row-security
 authority, including for streams, receipts and worker replay. Neither synthetic
 tests nor localhost timing qualify production deployment. Compromise of the OS

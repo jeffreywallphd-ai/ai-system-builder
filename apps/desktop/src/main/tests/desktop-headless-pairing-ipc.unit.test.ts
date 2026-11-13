@@ -7,7 +7,8 @@ import { captureDesktopHeadlessPairingWindow, registerDesktopHeadlessPairingIpc 
 
 const workspace = "fixture-workspace";
 const clientId = "b02c24dc-0335-4675-ac71-f498ae703101";
-const address = "http://127.0.0.1:13339";
+const address = "https://127.0.0.1:13339";
+const fingerprint = "1".repeat(64);
 const code = "pairing-test-fixture";
 
 test("trusted pairing requires a fresh window, explicit confirmation, and never returns codes to preload", async () => {
@@ -26,7 +27,7 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
     ipcMain,
     getConnection: () => ({
       async status() {
-        return { status: "ready", running: true, endpoint: address, clients: [{ registeredClientId: clientId,
+        return { status: "ready", running: true, endpoint: address, fingerprint, clients: [{ registeredClientId: clientId,
           workspaceId: workspace as never, expiresAt: 5_000, internalCode: code }] };
       },
       async readWorkspaceLabel(id) {
@@ -35,7 +36,7 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
       },
       async beginPairing(id) {
         effects.push(["begin", id]);
-        return { status: "ready", endpoint: address, pairingCode: code };
+        return { status: "ready", endpoint: address, fingerprint, pairingCode: code };
       },
       async startExistingClients() { effects.push("start"); return "started"; },
       async revoke(id) { effects.push(["revoke", id]); return id === clientId; },
@@ -49,7 +50,7 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
         return confirmed;
       },
       async confirmStart() { return confirmed; },
-      async showCode(endpoint, pairingCode) { effects.push(["private native dialog", endpoint, pairingCode]); },
+      async showCode(endpoint, pin, pairingCode) { effects.push(["private native dialog", endpoint, pin, pairingCode]); },
     } : undefined,
   });
   const api = createDesktopPreloadApi({ ipcRenderer: { async invoke(channel, input) {
@@ -70,8 +71,8 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
   usable = true;
   closeOnConfirm = false;
   assert.equal(await api.beginHeadlessPairing(workspace), "shown");
-  assert.deepEqual(effects.slice(-2), [["begin", workspace], ["private native dialog", address, code]]);
-  assert.deepEqual(await api.readHeadlessPairingStatus(), { status: "ready", running: true, endpoint: address,
+  assert.deepEqual(effects.slice(-2), [["begin", workspace], ["private native dialog", address, fingerprint, code]]);
+  assert.deepEqual(await api.readHeadlessPairingStatus(), { status: "ready", running: true, endpoint: address, fingerprint,
     clients: [{ registeredClientId: clientId, workspaceId: workspace, expiresAt: 5_000 }] });
   assert.equal(await api.startHeadlessConnector(), "started");
   assert.equal(await api.revokeHeadlessClient(clientId + "\n"), "denied");

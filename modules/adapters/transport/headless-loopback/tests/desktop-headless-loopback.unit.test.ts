@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
-import { request } from "node:http";
+import { request } from "node:https";
+import { connect } from "node:net";
 import { test } from "node:test";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId } from "../../../../contracts/headless";
 import { createInMemoryStructuredDocumentStore } from "../../../persistence/shared";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
-import { startDesktopHeadlessLoopback } from "../index";
+import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../index";
 
 const workspaceId = createWorkspaceId("loopback-fixture-workspace");
 const organizationId = createOrganizationId("loopback-fixture-org");
@@ -17,16 +18,16 @@ const describe = JSON.stringify({ version: HEADLESS_CONTRACT_VERSION, operation:
 const readPath = "/aisb-headless/v1/read";
 const pairPath = "/aisb-headless/v1/pair";
 
-function post(endpoint: string, path: string, body: string, headers: Record<string, string> = {}) {
+function post(connector: { endpoint: string; fingerprint: string }, path: string, body: string, headers: Record<string, string> = {}) {
   return new Promise<{
     status: number;
     cacheControl?: string;
     json: { ok: boolean; code?: string; value?: { credential?: string; registeredClientId?: string } };
   }>((resolve, reject) => {
-    const req = request(new URL(path, endpoint), {
+    const req = request(new URL(path, connector.endpoint), {
       method: "POST",
       headers: { "Content-Length": String(Buffer.byteLength(body)), "Content-Type": "application/json", ...headers },
-      agent: false,
+      agent: createDesktopPinnedLoopbackAgent(connector.endpoint, connector.fingerprint),
     }, (res) => {
       let text = "";
       res.setEncoding("utf8");
@@ -72,32 +73,32 @@ test("binds to literal loopback, pairs once and checks the bearer before read di
   try {
     const { endpoint } = connector;
     assert.equal(new URL(endpoint).hostname, "127.0.0.1");
-    const missing = await post(endpoint, readPath, describe);
+    const missing = await post(connector, readPath, describe);
     assert.equal(missing.status, 403);
     assert.equal(missing.json.code, "headless.forbidden");
     assert.equal(reads, 0);
     const pending = await registry.beginPairing(workspaceId);
     assert.equal(pending.status, "ready");
     const pairingBody = JSON.stringify({ pairingCode: pending.pairingCode });
-    const paired = await post(endpoint, pairPath, pairingBody);
+    const paired = await post(connector, pairPath, pairingBody);
     assert.equal(paired.status, 200);
     assert.equal(paired.cacheControl, "no-store");
     const credential = paired.json.value?.credential;
     const clientId = paired.json.value?.registeredClientId;
     assert.ok(credential && clientId);
-    assert.equal((await post(endpoint, pairPath, pairingBody)).status, 403);
+    assert.equal((await post(connector, pairPath, pairingBody)).status, 403);
     const auth = { Authorization: `Bearer ${credential}` };
-    const actual = await post(endpoint, readPath, describe, auth);
+    const actual = await post(connector, readPath, describe, auth);
     assert.equal(actual.status, 200);
     assert.equal(actual.cacheControl, "no-store");
     assert.equal(reads, 1);
     assert.equal(await registry.revokeClient(clientId), true);
-    assert.equal((await post(endpoint, readPath, describe, auth)).status, 403);
+    assert.equal((await post(connector, readPath, describe, auth)).status, 403);
     assert.equal(reads, 1);
   } finally {
     await connector.close();
   }
-  await assert.rejects(post(connector.endpoint, readPath, describe));
+  await assert.rejects(post(connector, readPath, describe));
 });
 
 test("rejects foreign host and origin, unknown paths and malformed or oversized JSON before dispatch", async () => {
@@ -121,17 +122,17 @@ test("rejects foreign host and origin, unknown paths and malformed or oversized 
       { "X-Forwarded-Host": new URL(endpoint).host },
     ];
     for (const headers of rejectedHeaders) {
-      const result = await post(endpoint, readPath, describe, { ...auth, ...headers });
+      const result = await post(connector, readPath, describe, { ...auth, ...headers });
       assert.equal(result.status, 403);
       assert.equal(result.json.code, "headless.forbidden");
     }
-    assert.equal((await post(endpoint, readPath + "?extra=1", describe, auth)).status, 404);
-    assert.equal((await post(endpoint, "/aisb-headless/v1/READ", describe, auth)).status, 404);
+    assert.equal((await post(connector, readPath + "?extra=1", describe, auth)).status, 404);
+    assert.equal((await post(connector, "/aisb-headless/v1/READ", describe, auth)).status, 404);
     for (const body of ["not json", " " + describe, '{"operation":"first","operation":"second"}', "\uFEFF" + describe]) {
-      assert.equal((await post(endpoint, readPath, body, auth)).status, 400);
+      assert.equal((await post(connector, readPath, body, auth)).status, 400);
     }
-    assert.equal((await post(endpoint, readPath, "x".repeat(8193), auth)).status, 413);
-    assert.equal((await post(endpoint, readPath, describe, { ...auth, "Content-Encoding": "gzip" })).status, 400);
+    assert.equal((await post(connector, readPath, "x".repeat(8193), auth)).status, 413);
+    assert.equal((await post(connector, readPath, describe, { ...auth, "Content-Encoding": "gzip" })).status, 400);
     assert.equal(reads, 0);
   } finally {
     await connector.close();
@@ -158,7 +159,7 @@ test("stops admission and drains in-flight work before reporting closed", { time
       return { ok: false, code: "headless.forbidden" };
     },
   });
-  const result = post(connector.endpoint, readPath, describe, { Authorization: `Bearer ${paired.credential}` })
+  const result = post(connector, readPath, describe, { Authorization: `Bearer ${paired.credential}` })
     .then(() => "response", () => "closed");
   try {
     await waiting;
@@ -198,7 +199,7 @@ test("does not return a read admitted before an exact client revocation", { time
       } };
     },
   });
-  const result = post(connector.endpoint, readPath, describe, { Authorization: `Bearer ${paired.credential}` });
+  const result = post(connector, readPath, describe, { Authorization: `Bearer ${paired.credential}` });
   try {
     await waiting;
     assert.equal(await registry.revokeClient(paired.registeredClientId), true);
@@ -238,11 +239,33 @@ test("never passes a mid-request scope expansion to the read provider", async ()
     },
   });
   try {
-    const result = await post(connector.endpoint, readPath, describe, { Authorization: `Bearer ${paired.credential}` });
+    const result = await post(connector, readPath, describe, { Authorization: `Bearer ${paired.credential}` });
     assert.equal(checks, 3);
     assert.equal(result.status, 403);
     assert.deepEqual(result.json, { ok: false, code: "headless.forbidden" });
   } finally {
+    await connector.close();
+  }
+});
+
+test("closing the connector terminates owned TCP sockets still waiting for TLS", { timeout: 3_000 }, async () => {
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: registrations(),
+    async read() { throw new Error("Unexpected read before TLS."); },
+  });
+  const socket = connect({ host: "127.0.0.1", port: Number(new URL(connector.endpoint).port) });
+  const connected = new Promise<void>((resolve, reject) => {
+    socket.once("connect", resolve);
+    socket.once("error", reject);
+  });
+  const closed = new Promise<void>((resolve) => { socket.once("close", () => resolve()); });
+  try {
+    await connected;
+    await connector.close();
+    await closed;
+    assert.ok(socket.destroyed);
+  } finally {
+    socket.destroy();
     await connector.close();
   }
 });

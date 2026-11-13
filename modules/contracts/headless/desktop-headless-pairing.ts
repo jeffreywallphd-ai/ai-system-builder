@@ -14,6 +14,7 @@ export type DesktopHeadlessPairingStatus =
       readonly status: "ready";
       readonly running: boolean;
       readonly endpoint?: string;
+      readonly fingerprint?: string;
       readonly clients: readonly {
         readonly registeredClientId: string;
         readonly workspaceId: WorkspaceId;
@@ -32,9 +33,13 @@ export function isDesktopHeadlessClientId(value: unknown): value is string {
 }
 
 export function isDesktopHeadlessEndpoint(value: unknown): value is string {
-  if (typeof value !== "string" || value.length > 22) return false;
-  const port = /^http:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/.exec(value)?.[1];
-  return port !== undefined && Number(port) <= 65_535 && value === `http://127.0.0.1:${port}`;
+  if (typeof value !== "string" || value.length > 23) return false;
+  const port = /^https:\/\/127\.0\.0\.1:([1-9][0-9]{0,4})$/.exec(value)?.[1];
+  return port !== undefined && Number(port) <= 65_535 && value === `https://127.0.0.1:${port}`;
+}
+
+export function isDesktopHeadlessFingerprint(value: unknown): value is string {
+  return typeof value === "string" && value.length === 64 && /^[0-9a-f]{64}$/.test(value);
 }
 
 /** Rebuild the allowed result projection before crossing the preload boundary. */
@@ -43,7 +48,9 @@ export function readDesktopHeadlessPairingStatus(value: unknown): DesktopHeadles
       value.status !== "ready" || !("running" in value) || typeof value.running !== "boolean" ||
       !("clients" in value) || !Array.isArray(value.clients) || value.clients.length > 32) return { status: "unavailable" };
   const endpoint = "endpoint" in value ? value.endpoint : undefined;
-  if (value.running ? !isDesktopHeadlessEndpoint(endpoint) : endpoint !== undefined) return { status: "unavailable" };
+  const fingerprint = "fingerprint" in value ? value.fingerprint : undefined;
+  const address = isDesktopHeadlessEndpoint(endpoint) && isDesktopHeadlessFingerprint(fingerprint) ? { endpoint, fingerprint } : undefined;
+  if (value.running ? !address : endpoint !== undefined || fingerprint !== undefined) return { status: "unavailable" };
   const clients = [];
   for (const item of value.clients) {
     if (typeof item !== "object" || item === null || !("registeredClientId" in item) ||
@@ -55,5 +62,5 @@ export function readDesktopHeadlessPairingStatus(value: unknown): DesktopHeadles
     };
     clients.push({ registeredClientId, workspaceId, expiresAt });
   }
-  return { status: "ready", running: value.running, clients, ...(isDesktopHeadlessEndpoint(endpoint) ? { endpoint } : {}) };
+  return { status: "ready", running: value.running, clients, ...address };
 }

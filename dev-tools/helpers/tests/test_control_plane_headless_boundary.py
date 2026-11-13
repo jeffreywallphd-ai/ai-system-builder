@@ -45,3 +45,12 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         self.assertIn("focused-tests", self.plan([activation, main], "headless-desktop-read-provider"))
         self.assertNotIn("focused-tests", self.plan([activation, main], check))
         self.assertIn("focused-tests", self.plan([activation, main, other], check))
+
+    def test_mcp_checks_are_exact_and_preserve_other_transport_coverage(self):
+        mcp = "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts"
+        self.assertEqual(set(self.plan([mcp])), {"architecture", "headless-desktop-pinned-mcp"})
+        other = "modules/adapters/transport/headless-loopback/other-source.ts"
+        self.assertIn("focused-tests", self.plan([mcp, other], "headless-desktop-activation"))
+        barrel = "modules/contracts/headless/index.ts"
+        self.assertIn("focused-tests", self.plan([mcp, barrel]))
+        self.assertNotIn("focused-tests", self.plan([mcp, barrel], "headless-desktop-activation"))

@@ -14,7 +14,7 @@ interface PairingWindow {
   isUsable(): boolean;
   confirm(workspaceLabel: string): Promise<boolean>;
   confirmStart(): Promise<boolean>;
-  showCode(endpoint: string, code: string): Promise<void>;
+  showCode(endpoint: string, fingerprint: string, code: string): Promise<void>;
 }
 
 /** Resolve and capture the exact foreground main frame, then recheck it after every wait. */
@@ -62,7 +62,7 @@ export function registerDesktopHeadlessPairingIpc(dependencies: {
       const outcome = await connection.beginPairing(input, window.isUsable);
       if (outcome.status !== "ready") return outcome.status;
       if (!window.isUsable()) return "denied";
-      await window.showCode(outcome.endpoint, outcome.pairingCode);
+      await window.showCode(outcome.endpoint, outcome.fingerprint, outcome.pairingCode);
       return "shown";
     } catch {
       return "unavailable";

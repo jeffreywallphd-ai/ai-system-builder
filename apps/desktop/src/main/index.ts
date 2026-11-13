@@ -315,12 +315,12 @@ app.whenReady().then(async () => {
           });
           return response === 1;
         },
-        async showCode(endpoint, code) {
+        async showCode(endpoint, fingerprint, code) {
           await dialog.showMessageBox(window, {
             type: "info",
             title: "One-time pairing code",
             message: "Use this code in your trusted local chat client.",
-            detail: `Local address: ${endpoint}\nCode: ${code}\nThis code expires in two minutes. Do not share it with another person.`,
+            detail: `Local address: ${endpoint}\nCertificate fingerprint: ${fingerprint}\nCode: ${code}\nThis code expires in two minutes. Do not share it with another person.`,
             buttons: ["Done"], defaultId: 0, cancelId: 0, noLink: true,
           });
         },

@@ -2,7 +2,10 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
-The transport binds an OS-selected port on 127.0.0.1. It accepts only compact
+The transport binds an OS-selected HTTPS port on 127.0.0.1 and generates a
+certificate for that listener only. The client verifies the exact SHA-256
+fingerprint supplied by the desktop before the request attaches to the TLS
+socket. It accepts only compact
 UTF-8 JSON over POST at two fixed routes: complete a one-use pairing, and
 dispatch a finite read. Reads require the existing client credential.
 Requests with another Host, an Origin, or forwarding headers are denied.

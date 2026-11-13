@@ -57,8 +57,10 @@ is owned by the optional desktop connector. The transport serves two fixed
 local routes with bounded framing and shutdown. Desktop Settings asks for
 native confirmation before starting the connector for an exact workspace or
 for still-authorized existing clients. No listener opens on launch or status
-reads. The renderer does not receive the pairing code. The MCP adapter and
-packaged-host qualification are still pending. See the
+reads. The renderer does not receive the pairing code. The official SDK
+adapter forwards only the finite read catalog to the paired desktop. It
+checks the desktop's current certificate fingerprint before sending a bearer. Actual
+packaged-host qualification and the remaining authoring work are pending. See the
 [threat model](../security/headless-system-builder-threat-model.md) and the
 [approved roadmap](../headless-skills-ui-takeover-implementation-roadmap.md).
 

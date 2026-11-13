@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { request } from "node:http";
+import { request } from "node:https";
 import { test } from "node:test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import type { StructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { createDesktopPinnedLoopbackAgent } from "../../../../adapters/transport/headless-loopback";
 import { composeDesktopHeadlessConnection } from "../composeDesktopHeadlessConnection";
 
 const workspaceId = createWorkspaceId("local-connection-workspace");
@@ -14,11 +15,11 @@ const at = "2026-11-13T00:00:00.000Z";
 const hostIncarnationId = "632cfa6b-c323-419a-b2bd-5880b1f34858";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
 
-function call(endpoint: string, path: "pair" | "read", input: object, credential?: string) {
+function call(connector: { endpoint: string; fingerprint: string }, path: "pair" | "read", input: object, credential?: string) {
   const body = JSON.stringify(input);
   return new Promise<{ status: number; result: { value?: { credential?: string; registeredClientId?: string } } }>((resolve, reject) => {
-    const req = request(new URL("/aisb-headless/v1/" + path, endpoint), {
-      method: "POST", agent: false,
+    const req = request(new URL("/aisb-headless/v1/" + path, connector.endpoint), {
+      method: "POST", agent: createDesktopPinnedLoopbackAgent(connector.endpoint, connector.fingerprint),
       headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body),
         ...(credential ? { Authorization: "Bearer " + credential } : {}) },
     }, (res) => {
@@ -74,12 +75,12 @@ test("starts only on explicit approved workspace pairing or reconnect and closes
     focused = true;
     const pairing = await first.beginPairing(workspaceId, approved);
     assert.equal(pairing.status, "ready");
-    const reply = await call(pairing.endpoint, "pair", { pairingCode: pairing.pairingCode });
+    const reply = await call(pairing, "pair", { pairingCode: pairing.pairingCode });
     assert.equal(reply.status, 200);
     const { credential, registeredClientId } = reply.result.value ?? {};
     assert.ok(credential && registeredClientId);
     await first.close();
-    await assert.rejects(call(pairing.endpoint, "read", describe, credential));
+    await assert.rejects(call(pairing, "read", describe, credential));
 
     restart = compose();
     const dormant = await restart.status();
@@ -90,10 +91,10 @@ test("starts only on explicit approved workspace pairing or reconnect and closes
     allowed = true;
     assert.equal(await restart.startExistingClients(approved), "started");
     const started = await restart.status();
-    assert.ok(started.status === "ready" && started.running && started.endpoint);
-    assert.equal((await call(started.endpoint, "read", describe, credential)).status, 200);
+    assert.ok(started.status === "ready" && started.running && started.endpoint && started.fingerprint);
+    assert.equal((await call({endpoint: started.endpoint, fingerprint: started.fingerprint}, "read", describe, credential)).status, 200);
     assert.equal(await restart.revoke(registeredClientId), true);
-    assert.equal((await call(started.endpoint, "read", describe, credential)).status, 403);
+    assert.equal((await call({endpoint: started.endpoint, fingerprint: started.fingerprint}, "read", describe, credential)).status, 403);
   } finally {
     await first.close();
     await restart?.close();

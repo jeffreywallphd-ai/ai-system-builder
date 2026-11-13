@@ -68,6 +68,7 @@ export function HeadlessClientSettings() {
       {data?.status === "ready" ? <>
         <p>{data.running ? "The local connector is on." : "The local connector is off."}</p>
         {data.endpoint ? <p>Local address: <code>{data.endpoint}</code></p> : null}
+        {data.fingerprint ? <p>Certificate fingerprint: <code style={{ overflowWrap: "anywhere" }}>{data.fingerprint}</code></p> : null}
         <p>{activeWorkspace ? `Selected workspace: ${activeWorkspace.displayName}` : "Select a workspace before pairing."}</p>
         <div>
           <button type="button" disabled={pending || workspaceStatus !== "ready" || !activeWorkspaceId} onClick={() => void pair()}>

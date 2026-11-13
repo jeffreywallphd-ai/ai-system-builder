@@ -104,12 +104,25 @@ HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES = (
     "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
 )
 HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES = HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES + (
+    "modules/contracts/headless/index.ts",
     "apps/desktop/src/main/index.ts",
     "apps/desktop/src/preload/exposedApi.ts",
     "apps/desktop/src/renderer/lib/desktopApi.ts",
     "apps/desktop/src/renderer/pages/SettingsPage.tsx",
     "modules/adapters/security/headless/createDesktopHeadlessClientAuthority.ts",
     "modules/adapters/transport/headless-loopback/startDesktopHeadlessLoopback.ts",
+    "modules/adapters/transport/headless-loopback/createDesktopPinnedLoopbackAgent.ts",
+    "modules/adapters/transport/headless-loopback/index.ts",
+    "modules/adapters/transport/headless-loopback/README.md",
+    "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
+)
+HEADLESS_MCP_CHECK = "headless-desktop-pinned-mcp"
+HEADLESS_MCP_SOURCES = (
+    "modules/adapters/transport/headless-mcp/README.md",
+    "modules/adapters/transport/headless-mcp/boundHeadlessMcpStdio.mts",
+    "modules/adapters/transport/headless-mcp/createHeadlessMcpReadForwarder.mts",
+    "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
+    "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
 )
 
 PUBLISHED_FORM_CHECKS = {
@@ -553,6 +566,10 @@ def definitions(root: Path) -> list[dict]:
                   "modules/adapters/security/headless/tests/desktop-headless-client-authority.unit.test.ts",
                   "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts"],
          "timeout": 120},
+        {"id": HEADLESS_MCP_CHECK, "patterns": list(HEADLESS_MCP_SOURCES),
+         "argv": [node, "--import", "tsx", "--test", "--",
+                  "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts"],
+         "timeout": 120},
         {"id": "asset-defensive-acceptance", "patterns": [],
          "argv": [node, "--import", "tsx", "--test", "--test-concurrency=1", "--", *ASSET_DEFENSIVE_TESTS],
          "timeout": 180},
@@ -636,6 +653,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
         declared_sources.update(headless_sources)
     if HEADLESS_DESKTOP_ACTIVATION_CHECK in required:
         declared_sources.update(activation_sources)
+    if HEADLESS_MCP_CHECK in selected_ids:
+        declared_sources.update(HEADLESS_MCP_SOURCES)
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))

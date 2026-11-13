@@ -84,7 +84,10 @@ presentation remain separate. The desktop's internal read dispatcher uses
 the same System Builder read use cases as IPC. It requires a verified grant
 and current workspace policy. Desktop Settings can start an optional read-only
 loopback connector after an explicit native confirmation. The desktop
-connector closes before platform persistence; managed parity remains pending.
+connector closes before platform persistence. The stdio MCP adapter forwards
+only its finite read catalog to the already running connector, authenticating
+the endpoint with the certificate fingerprint from desktop Settings. Managed parity
+remains pending.
 
 - Owns server process lifecycle and composition.
 - Uses transport adapters (default: Express) for API exposure.

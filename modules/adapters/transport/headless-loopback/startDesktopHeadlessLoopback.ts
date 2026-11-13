@@ -1,5 +1,9 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { X509Certificate } from "node:crypto";
+import type { IncomingMessage, ServerResponse } from "node:http";
+import { createServer } from "node:https";
+import type { Duplex } from "node:stream";
 import { performance } from "node:perf_hooks";
+import selfsigned from "selfsigned";
 import type { HeadlessReadResult } from "../../../contracts/headless";
 import type { createDesktopHeadlessClientAuthority } from "../../security/headless";
 
@@ -19,6 +23,7 @@ type Grant = Awaited<ReturnType<Registration["verifyCredential"]>>;
 
 export interface DesktopHeadlessLoopback {
   readonly endpoint: string;
+  readonly fingerprint: string;
   /** Close local admission and sockets. Host owns subsequent persistence teardown. */
   readonly close: () => Promise<void>;
 }
@@ -33,14 +38,27 @@ export async function startDesktopHeadlessLoopback(dependencies: {
   /** Allows the owning desktop to keep a newly bound listener dormant until confirmed. */
   readonly isAdmitted?: () => boolean;
 }): Promise<DesktopHeadlessLoopback> {
+  const now = new Date();
+  const pems = await selfsigned.generate([{ name: "commonName", value: LOOPBACK }], {
+    algorithm: "sha256", keySize: 2048, notBeforeDate: now,
+    notAfterDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+    extensions: [{ name: "basicConstraints", cA: false }, { name: "keyUsage", digitalSignature: true },
+      { name: "extKeyUsage", serverAuth: true }, { name: "subjectAltName", altNames: [{ type: 7, ip: LOOPBACK }] }],
+  });
+  const fingerprint = new X509Certificate(pems.cert).fingerprint256.replaceAll(":", "").toLowerCase();
   let port: number | undefined;
   let open = true;
   const active = new Set<Promise<void>>();
+  const sockets = new Set<Duplex>();
   let windowStart = performance.now();
   let admitted = 0;
   let socketsClosed: Promise<void> | undefined;
   const admitting = () => open && (dependencies.isAdmitted?.() ?? true);
   const server = createServer({
+    cert: pems.cert,
+    key: pems.private,
+    minVersion: "TLSv1.3",
+    handshakeTimeout: REQUEST_LIMIT_MS,
     headersTimeout: REQUEST_LIMIT_MS,
     requestTimeout: REQUEST_LIMIT_MS,
     connectionsCheckingInterval: 500,
@@ -65,6 +83,14 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     void task.then(() => { active.delete(task); });
   });
   server.maxConnections = MAX_CONNECTIONS;
+  server.on("connection", (socket) => {
+    if (!open || sockets.size >= MAX_CONNECTIONS) {
+      socket.destroy();
+      return;
+    }
+    sockets.add(socket);
+    socket.once("close", () => { sockets.delete(socket); });
+  });
   server.maxRequestsPerSocket = 8;
   server.setTimeout(REQUEST_LIMIT_MS, (socket) => socket.destroy());
   server.on("checkContinue", (_request, response) => fail(response, 417, "headless.invalid-request"));
@@ -79,6 +105,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       socketsClosed = new Promise<void>((resolve, reject) => {
         server.close((error) => error ? reject(new Error("Desktop connector shutdown could not be confirmed.")) : resolve());
         server.closeAllConnections();
+        for (const socket of sockets) socket.destroy();
       });
     }
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -200,7 +227,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       }
     });
   });
-  return { endpoint: `http://${LOOPBACK}:${port}`, close };
+  return { endpoint: `https://${LOOPBACK}:${port}`, fingerprint, close };
 }
 
 function sameScope(left: NonNullable<Grant>, right: NonNullable<Grant>): boolean {

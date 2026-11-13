@@ -13,6 +13,7 @@ export {
   DESKTOP_HEADLESS_PAIRING_CHANNELS,
   isDesktopHeadlessClientId,
   isDesktopHeadlessEndpoint,
+  isDesktopHeadlessFingerprint,
   readDesktopHeadlessPairingStatus,
   type DesktopHeadlessPairingAction,
   type DesktopHeadlessPairingResult,
