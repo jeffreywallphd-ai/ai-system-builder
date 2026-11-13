@@ -96,3 +96,12 @@ account or trusted host remains outside the protection claim. Revocation cannot
 recall context already delivered. Rollback disables the connector and
 presentation routes, invalidates their grants and preserves committed data,
 ordinary UI access and evidence.
+The internal operation store partitions receipts by verified organization and
+hashes the complete principal, client, workspace, operation and key scope.
+Receipts hold a fingerprint and the minimum saved revision reference; change
+entries hold only workspace-scoped system and revision identifiers and a
+sequence. The store checks the host's synchronous authorization fence
+around its transaction and replays. The application must separately check
+current resource authority before lookup and before any response leaves the
+host. After result expiry the retained key stops another write; capacity
+exhaustion and unknown outcomes require reconciliation.

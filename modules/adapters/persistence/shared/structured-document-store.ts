@@ -37,6 +37,12 @@ export interface StructuredDocumentStore {
   ): Promise<StructuredDocument<T>>;
   deleteDocument(namespace: string, key: string, expectedRevision?: number): Promise<boolean>;
   runInTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>): Promise<T>;
+  /**
+   * Optional root-owned transaction with a synchronous check immediately before
+   * commit. Transaction views must omit it. Never reports a callback error as
+   * confirmed when rollback itself was not confirmed.
+   */
+  runInOwnedTransaction?<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit: () => void): Promise<T>;
 }
 
 export class StructuredDocumentConflictError extends Error {

@@ -64,6 +64,15 @@ packaged-host qualification and the remaining authoring work are pending. See th
 [threat model](../security/headless-system-builder-threat-model.md) and the
 [approved roadmap](../headless-skills-ui-takeover-implementation-roadmap.md).
 
+The internal operation store keeps 24 hours of result replay per key. A
+known expired key returns a reconciliation response and never runs again.
+The bounded receipt namespace accepts 2,048 keys per registered
+client/principal/workspace; reaching it denies new writes instead of evicting
+key history. The workspace change log retains the latest 256 entries and
+returns up to 64 per read. A cursor outside that range requires a fresh,
+authorized snapshot. These are local storage bounds; the adapter alone
+does not grant mutation or stream access.
+
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay
 state and a separate window-control lifecycle. Roll back by disabling the new
