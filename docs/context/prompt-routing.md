@@ -144,6 +144,10 @@ by default; do not insert routine per-increment approval pauses. Stop only when 
 skill's scope, authority, security, blocker, controlled-environment, or final
 approval gates apply.
 
+Requests to inspect or edit a saved AI System Builder system through a paired
+MCP client route to `skills/control-ai-system-builder/SKILL.md`. Repository
+development and roadmap implementation continue to use the contributor workflow.
+
 For the accepted Asset Experience contextual Form clarification, use the roadmap
 skill's fixed alignment event. Preserve prior evidence and obtain fresh focused
 verification for the two revised local criteria.

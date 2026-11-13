@@ -44,6 +44,8 @@ This directory separates canonical system guidance from downstream task context 
     loops under `dev-tools/helpers/`.
   - `implementation-roadmap-skill.md` documents the cross-agent repository
     skill, durable roadmap/report artifacts, installation, and maintenance.
+  - [Headless client skill](diagnostics/headless-client-skill.md) explains how to
+    connect a local agent and inspect or edit saved systems.
 - `docs/tmp/`
   - Ignored local-only implementation report summaries. Roadmap state keeps the
     complete evidence history; generated reports are removed after explicit
