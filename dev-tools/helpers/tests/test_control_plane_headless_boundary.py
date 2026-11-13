@@ -37,6 +37,14 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         self.assertIn("focused-tests", self.plan([shared]))
         self.assertNotIn("focused-tests", self.plan([shared, source], check))
 
+    def test_scoped_committed_change_check_has_exact_ownership(self):
+        source = "modules/application/use-cases/system-builder/headless-committed-changes.use-case.ts"
+        check = "headless-system-builder-semantic-edits"
+        self.assertIn("focused-tests", self.plan([source]))
+        self.assertEqual(set(self.plan([source], check)), {"architecture", check})
+        self.assertIn("modules/application/use-cases/system-builder/tests/headless-committed-changes.unit.test.ts",
+                      self.plan([source], check)[check]["argv"])
+
     def test_owned_provider_and_contract_use_the_exact_check(self):
         host_test = "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts"
         checks = self.plan([host_test, "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts"])

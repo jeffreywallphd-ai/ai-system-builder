@@ -133,6 +133,12 @@ change, retry receipt and change notification together. A changed host
 incarnation does not change the saved retry identity. No connector tools
 are granted by the internal service alone.
 
+The committed change reader captures its cursor before reading the saved
+snapshot. A change made during that read can appear again on replay. The
+consumer compares record revisions before applying it. The host binds each
+cursor to its incarnation, organization, workspace, reader and sequence.
+An invalid or expired cursor requires an authorized resync.
+
 Composer saves and upgrade previews use the record revision and exact
 composition revision captured when the draft was opened or saved. A newer list
 response does not advance that base. The Canvas keeps dirty content and undo
