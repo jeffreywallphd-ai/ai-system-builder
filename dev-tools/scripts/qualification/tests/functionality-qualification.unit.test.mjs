@@ -215,7 +215,10 @@ test("repository crosswalk resolves every actual controlled criterion and availa
   const root = process.cwd();
   const result = readFunctionalityQualification(root);
   assert.equal(result.owner_states.length, 4);
-  assert.equal(result.controlled_criteria, 11);
+  assert.equal(result.controlled_criteria, 12);
+  assert(result.criteria.some((criterion) =>
+    criterion.owner === "asset-experience-layered-customization"
+      && criterion.criterion_id === "form-composer-desktop-and-browser"));
   // Live owner evidence may advance from pending to failed without changing
   // coverage. This assessor cannot qualify a pass from declarative evidence.
   assert.equal(result.pending_criteria + result.failed_criteria, result.controlled_criteria);

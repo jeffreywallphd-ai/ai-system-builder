@@ -183,8 +183,11 @@ describe("desktop image UI through preload and durable finalization", () => {
     const model = [...container!.querySelectorAll("select")].find(select => [...select.options].some(option => option.value === "qualification/synthetic-image"))!;
     await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(model, "qualification/synthetic-image"); model.dispatchEvent(new Event("change", { bubbles: true })); });
     for (const [label, value] of [["Prompt", "A red square for a synthetic inventory label"], ["Negative Prompt", "blur"], ["Width", "64"], ["Height", "64"], ["Seed", "0"], ["Steps", "2"], ["CFG", "4"], ["Denoise", "0.8"], ["Sampler", "euler"], ["Scheduler", "normal"], ["Number of Images", "1"]]) {
-      const wrapper = [...container!.querySelectorAll("label")].find(node => node.querySelector("span")?.textContent?.trim().startsWith(label))!;
-      const input = wrapper.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea")!;
+      const labels = [...container!.querySelectorAll("label")].filter(node => node.textContent?.trim() === label);
+      expect(labels, `Expected one label for ${label}`).toHaveLength(1);
+      const control = labels[0]!.control;
+      expect(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement, `Expected a text control for ${label}`).toBe(true);
+      const input = control as HTMLInputElement | HTMLTextAreaElement;
       await act(async () => { Object.getOwnPropertyDescriptor(input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, "value")!.set!.call(input, value); input.dispatchEvent(new Event("input", { bubbles: true })); });
     }
   }

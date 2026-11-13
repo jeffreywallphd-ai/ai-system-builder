@@ -751,7 +751,49 @@ const reviewedResponsiveAssetDriverCensus = Object.freeze({
   ].map(Object.freeze)),
 });
 
+const reviewedDesktopImageLabelCensus = Object.freeze({
+  priorCommit: "b4d280e827006803d8a4cbf072063d6fbbdfcaaa",
+  before: "1b6e660ac8cb24906a82e57a168d998ffa9b98684ec10941d3582132f3206368",
+  after: "42a1e63e5aeaf9eaaaf7021821b48b1e4932373b5f6ed91c2d967cc755218721",
+  pins: Object.freeze([Object.freeze({
+    path: "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+    source: "472100888add0d25862cf91549b6a14d2eae361d332a5b0b67df77a0e1575491",
+    facts: "30ba714ae52db2d050e8ff7e0122c2b3c41bbb2e00ab6dce125be92784b4c5ba",
+  })]),
+});
+
+const reviewedBrowserModalCensus = Object.freeze({
+  after: "0da3b1ce8e4f4724a858e9846e5b5122247251fa5a71f58330008fbeb4c72655",
+  pins: Object.freeze([Object.freeze({
+    path: "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts",
+    source: "400c7d837eb48b2a8da7336c37369c63f5eddf62a16e6d6e3b3e75ca447838d3",
+    facts: "c36fb3ccb2a50da49ac5d0c34209ebfc5f0d7afe5b2545c6f26b68a55d0419ec",
+  })]),
+});
+
+function beforeDesktopImageLabelCensus(map, result) {
+  if (sha(JSON.stringify(map)) === reviewedBrowserModalCensus.after) {
+    const previous = JSON.parse(historicalSource(reviewedDesktopImageLabelCensus.priorCommit, censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), reviewedDesktopImageLabelCensus.before);
+    const expected = structuredClone(previous);
+    for (const pin of [...reviewedDesktopImageLabelCensus.pins, ...reviewedBrowserModalCensus.pins]) {
+      const [row] = map.sources.filter(item => item.path === pin.path);
+      const original = expected.sources.find(item => item.path === pin.path);
+      assert(row && original);
+      assert.equal(row.committed_sha256, original.committed_sha256);
+      assert.equal(row.facts.sha256, pin.source);
+      assert.equal(sha(JSON.stringify(row.facts)), pin.facts);
+      original.facts = structuredClone(row.facts);
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return {map: previous, result: {...result, gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous)]}};
+  }
+  return verifyExactLayoutCensus(map, result, reviewedDesktopImageLabelCensus);
+}
+
 function pageLayoutLegacyView(map, result) {
+  ({map, result} = beforeDesktopImageLabelCensus(map, result));
   ({map, result} = verifyExactLayoutCensus(map, result, reviewedResponsiveAssetDriverCensus));
   ({map, result} = verifyExactLayoutCensus(map, result, reviewedConnectionsCensus));
   return verifyExactLayoutCensus(map, result, reviewedPageLayoutCensus);
@@ -1930,8 +1972,15 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,30);
-  const responsivePrior = verifyExactLayoutCensus(map,result,reviewedResponsiveAssetDriverCensus);
+  assert.equal(result.gaps.length,31);
+  const imageLabelPrior = beforeDesktopImageLabelCensus(map,result);
+  assert.equal(imageLabelPrior.result.gaps.length,30);
+  assert.equal(sha(JSON.stringify(imageLabelPrior.map)),reviewedDesktopImageLabelCensus.before);
+  for (const pin of reviewedDesktopImageLabelCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
+  const responsivePrior = verifyExactLayoutCensus(imageLabelPrior.map,imageLabelPrior.result,reviewedResponsiveAssetDriverCensus);
   assert.equal(responsivePrior.result.gaps.length,28);
   assert.equal(sha(JSON.stringify(responsivePrior.map)),reviewedResponsiveAssetDriverCensus.before);
   for (const pin of reviewedResponsiveAssetDriverCensus.pins) {

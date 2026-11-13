@@ -1071,6 +1071,10 @@
   .system-build-test-modal *,
   .system-build-test-modal *::before,
   .system-build-test-modal *::after,
+  .system-publish-confirmation,
+  .system-publish-confirmation *,
+  .system-publish-confirmation *::before,
+  .system-publish-confirmation *::after,
   .system-composition-preview * {
     animation: none !important;
     transition: none !important;
@@ -1422,6 +1426,51 @@
     min-inline-size: 0;
     flex-wrap: wrap;
     white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+body:has(.system-publish-confirmation) > #root {
+  opacity: 0;
+}
+
+.ui-modal-overlay:has(> .system-publish-confirmation) {
+  background: var(--color-bg-primary);
+  backdrop-filter: none;
+}
+
+@media (max-width: 30rem) {
+  body:has(:is(.system-build-test-modal, .system-publish-confirmation)) > #root {
+    opacity: 0;
+  }
+  .ui-modal-overlay:has(> :is(.system-build-test-modal, .system-publish-confirmation)) {
+    padding: 0;
+    background: var(--color-bg-panel);
+    backdrop-filter: none;
+  }
+  .ui-modal-dialog:is(.system-build-test-modal, .system-publish-confirmation) {
+    inline-size: 100%;
+    block-size: 100%;
+    max-block-size: 100%;
+    border-radius: 0;
+  }
+  :is(.system-build-test-modal, .system-publish-confirmation) > .ui-modal-body {
+    flex: 1;
+  }
+  :is(.system-build-test-modal, .system-publish-confirmation) > .ui-modal-header {
+    gap: var(--space-xs);
+    padding-inline: var(--space-sm);
+  }
+  :is(.system-build-test-modal, .system-publish-confirmation) > .ui-modal-header h2 {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  :is(.system-build-test-modal, .system-publish-confirmation) > .ui-modal-body {
+    padding-inline: var(--space-sm);
+    scrollbar-gutter: stable;
+  }
+  .system-build-test-modal .system-build__diagnostics li {
+    background: var(--color-bg-subtle);
     overflow-wrap: anywhere;
   }
 }

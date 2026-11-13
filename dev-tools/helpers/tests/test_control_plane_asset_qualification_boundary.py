@@ -46,6 +46,20 @@ class AssetQualificationBoundaryTests(unittest.TestCase):
                 self.assertEqual(exact[name]["argv"], argv)
                 self.assertIn("focused-tests", self.plan([source, "dev-tools/scripts/unknown.ts"], [name]))
 
+    def test_browser_contract_owns_exact_paths_and_retains_unknown_fallback(self):
+        name = "asset-browser-qualification-contract"
+        checked = list(catalog.ASSET_BROWSER_SOURCES)
+        self.assertIn("focused-tests", self.plan(checked, ["documentation"]))
+        self.assertNotIn(name, self.plan(checked, ["documentation"]))
+        scoped = self.plan(checked, [name])
+        self.assertNotIn("focused-tests", scoped)
+        self.assertEqual(scoped[name]["argv"], [
+            "node", "--import", "tsx", "--test", "--", checked[1],
+            "modules/ui/shared/styles/tests/page-dashboard-layout.unit.test.ts",
+        ])
+        self.assertNotIn(name, self.plan(["modules/ui/shared/styles/unknown.css"], ["documentation"]))
+        self.assertIn("focused-tests", self.plan(checked + ["modules/ui/shared/styles/unknown.css"], [name]))
+
 
 if __name__ == "__main__":
     unittest.main()

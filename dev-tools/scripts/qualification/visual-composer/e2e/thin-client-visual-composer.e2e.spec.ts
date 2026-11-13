@@ -140,8 +140,15 @@ async function runBrowserLifecycle(page: Page, request: import("@playwright/test
     accessibility: { mode: "initial", info: test.info() },
     zoomMode: mode,
   });
-  const summary = page.getByRole("region", { name: "Page summary", exact: true });
-  await expect(summary.getByText("Summary unavailable.", { exact: true })).toBeVisible();
+  const summary = page.getByRole("region", { name: "Page summary", exact: true, includeHidden: true });
+  if (mode === "standard") {
+    await expect(summary).toBeVisible();
+    await expect(summary.getByRole("status")).toHaveText("Summary unavailable.");
+  } else {
+    await expect(summary).toHaveCount(1);
+    await expect(summary).toBeHidden();
+    await expect(summary.getByRole("status", { includeHidden: true })).toHaveText("Summary unavailable.");
+  }
   await expect(summary).not.toHaveAttribute("aria-busy", "true");
   expect(await summary.locator("dd").allTextContents()).toEqual(["—", "—"]);
   const axe = await new AxeBuilder({ page }).include(".system-build").analyze();

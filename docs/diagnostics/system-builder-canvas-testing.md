@@ -735,3 +735,10 @@ palette and its fallback. The count, accessible label and controls are unchanged
 This source check does not qualify a rendered browser or desktop result. The
 separate unresolved partial-obscuring measurement still needs diagnosis. Keep
 the original failure and all existing accessibility and host requirements.
+
+On narrow screens and at native browser zoom, the Build and Publish dialogs
+use the full viewport so covered Canvas text does not compete with the dialog.
+The browser journey checks the same contrast rules, keyboard focus and exact
+publication identity. At narrow widths it also verifies that the compact
+layout hides the dashboard while still reporting unavailable counts in its
+mounted state.

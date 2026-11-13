@@ -54,6 +54,11 @@ STANDARD_RUNNER_SOURCES = (
     "dev-tools/scripts/testing/non-browser-test-runner-core.mjs",
     STANDARD_RUNNER_CORE_TEST,
 )
+ASSET_BROWSER_SOURCES = (
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts",
+    "dev-tools/scripts/qualification/tests/functionality-qualification.unit.test.mjs",
+    "modules/ui/shared/styles/components/home.css",
+)
 
 # Keep Form-specific paths exact so unrelated Desktop and host work still needs evidence.
 FORM_HOST_DEFINITIONS = (
@@ -507,6 +512,9 @@ def definitions(root: Path) -> list[dict]:
          "timeout": 180},
         {"id": "standard-source-fixture-runner", "patterns": [],
          "argv": [node, "--import", "tsx", "--test", "--", STANDARD_RUNNER_CORE_TEST], "timeout": 120},
+        {"id": "asset-browser-qualification-contract", "patterns": [],
+         "argv": [node, "--import", "tsx", "--test", "--", ASSET_BROWSER_SOURCES[1],
+                  "modules/ui/shared/styles/tests/page-dashboard-layout.unit.test.ts"], "timeout": 120},
         {"id": "documentation", "patterns": ["docs/*", "*.md", "skills/*/*.md", "dev-tools/*/*.md"], "argv": [node, "dev-tools/scripts/docs/check-doc-drift.mjs"], "timeout": 120},
         {"id": "agent-support", "patterns": ["AGENTS.md", "skills/*", "docs/context/*", "dev-tools/agent-evals/*", "dev-tools/helpers/*", "dev-tools/review-site/*"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
         {"id": "control-plane", "patterns": ["dev-tools/helpers/control_plane/*", "dev-tools/helpers/development_control_plane.py", "dev-tools/helpers/run_focused_checks.py", "dev-tools/helpers/requirements-tests.txt", "dev-tools/config/pytest-focused.ini", "dev-tools/config/contributor-check-profiles.json", "dev-tools/helpers/tests/*", "dev-tools/review-site/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"], "timeout": 600},
@@ -549,7 +557,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                    or (c["id"] in required and (
                        p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()) or
                        p in PUBLISHED_FORM_CHECKS.get(c["id"], {}).get("sources", ()) or
-                       c["id"] == "standard-source-fixture-runner" and p in STANDARD_RUNNER_SOURCES
+                       (c["id"] == "standard-source-fixture-runner" and p in STANDARD_RUNNER_SOURCES) or
+                       (c["id"] == "asset-browser-qualification-contract" and p in ASSET_BROWSER_SOURCES)
                    ))]
                for p in paths}
     # The fixed controller config is exercised by controller routing/isolation
@@ -565,6 +574,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     declared_sources.update(path for check in required for path in PUBLISHED_FORM_CHECKS.get(check, {}).get("sources", ()))
     if "standard-source-fixture-runner" in required:
         declared_sources.update(STANDARD_RUNNER_SOURCES)
+    if "asset-browser-qualification-contract" in required:
+        declared_sources.update(ASSET_BROWSER_SOURCES)
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))

@@ -379,20 +379,20 @@
   {
    "path": "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
    "facts": {
-    "sha256": "cda6eca41fe89b9939057b3f6481ee1858016d6c2d0fedbdca9f0e05fba4f273",
-    "bytes": 25113,
+    "sha256": "472100888add0d25862cf91549b6a14d2eae361d332a5b0b67df77a0e1575491",
+    "bytes": 25309,
     "cases": [
      {
       "name": "configures, finalizes and reopens exact image bytes and workspace-owned records",
-      "line": 216
+      "line": 219
      },
      {
       "name": "retries failed registration without copying or registering another image",
-      "line": 225
+      "line": 228
      },
      {
       "name": "continues observation after refused cancellation and denies foreign task reads",
-      "line": 233
+      "line": 236
      }
     ],
     "dynamicCases": 0,
@@ -435,15 +435,15 @@
      },
      {
       "name": "persisted",
-      "line": 192
+      "line": 195
      },
      {
       "name": "inspect",
-      "line": 194
+      "line": 197
      }
     ],
-    "assertionCount": 67,
-    "assertionDigest": "487a6348166fcf7cec6c4396adde048aa6ce904baa9223c784255dfb4dcec424",
+    "assertionCount": 69,
+    "assertionDigest": "799e18cbcd5a3a89f4cf37061fe173118b383f9109743fbb8bfe53362b7ed839",
     "assertionExamples": [
      {
       "line": 61,
@@ -9581,16 +9581,16 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts",
    "facts": {
-    "sha256": "227ffb5966cd3d6785fba911effe35cb81498a7016d24f395e5ac4c453b5d595",
-    "bytes": 8927,
+    "sha256": "400c7d837eb48b2a8da7336c37369c63f5eddf62a16e6d6e3b3e75ca447838d3",
+    "bytes": 9214,
     "cases": [
      {
       "name": "thin client completes the guided build and publication lifecycle",
-      "line": 169
+      "line": 176
      },
      {
       "name": "thin client completes system build and publication at native 400 percent zoom",
-      "line": 173
+      "line": 180
      }
     ],
     "dynamicCases": 0,
@@ -9601,11 +9601,11 @@
      },
      {
       "name": "requiredEnvironment",
-      "line": 184
+      "line": 191
      }
     ],
-    "assertionCount": 20,
-    "assertionDigest": "93d85af734b5caa35feec10f1665d69deae17c1e3f814ab755b1aaf42364e56a",
+    "assertionCount": 24,
+    "assertionDigest": "d1b37f1571bac656d54f7799df4a99dd3daa671e5741ec9978788e717e669e4e",
     "assertionExamples": [
      {
       "line": 45,

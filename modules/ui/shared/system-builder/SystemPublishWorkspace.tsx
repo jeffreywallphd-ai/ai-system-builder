@@ -308,6 +308,7 @@ function SystemPublishSession({
         onClose={closeConfirmation}
         closeDisabled={publishing}
         descriptionId="publish-confirmation-description"
+        dialogClassName="system-publish-confirmation"
         stacked
       >
         <p id="publish-confirmation-description">
