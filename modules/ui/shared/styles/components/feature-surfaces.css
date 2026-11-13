@@ -1050,6 +1050,10 @@
   .ui-modal-dialog.system-composition-preview-dialog {
     inline-size: 100%;
   }
+
+  .system-composition-preview__summary > p:first-child {
+    font-size: var(--font-size-sm);
+  }
 }
 
 .system-builder__toolbar,

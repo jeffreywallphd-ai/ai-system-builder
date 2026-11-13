@@ -349,7 +349,8 @@ their own styling.
 
 Preview keeps the execution and deployment notices short enough to read in a
 narrow dialog. The system name and each coverage count render as one label so
-the browser can measure their text together. Long names still wrap.
+the browser can measure their text together. At narrow widths the system name
+uses the existing caption size. Long names still wrap without truncation.
 
 The standard and native Canvas journeys wait for temporary success
 notifications to dismiss before auditing Canvas. At narrow widths the picker
