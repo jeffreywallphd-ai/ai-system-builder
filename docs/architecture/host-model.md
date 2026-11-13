@@ -89,9 +89,15 @@ shares the System Builder repository. Its owning SQLite transaction rereads
 the workspace and membership before writing or returning a stored receipt.
 The transaction saves the record, receipt and change together. The connector
 closes before platform persistence.
-The stdio MCP adapter forwards its finite read catalog and optional authoring tools to the running connector, authenticating
-the endpoint with the certificate fingerprint from desktop Settings. Managed parity
-remains pending.
+The stdio MCP adapter forwards its finite read catalog and optional authoring
+and approved conversation tools to the running connector. It authenticates
+the endpoint with the certificate fingerprint from desktop Settings. A
+separate conversation registration permits requests in one workspace.
+The host checks the exact approved session on each turn. The desktop's existing conversation provider
+owns the saved run and worker lifecycle. The connector can return its
+handle before execution completes. Ending the request does not cancel the
+task, and desktop shutdown does not close persistence before retirement.
+Managed parity remains pending.
 
 Paired desktop clients can read a saved-system snapshot and replay bounded
 pages of committed changes when the owning host advertises those operations.

@@ -59,9 +59,11 @@
   keep explicit interactive window authority separate from delegated requests.
   The versioned request decoder is not a listener, identity check, or readiness
   signal. Load the security pack and headless threat model before wiring it.
-- The optional read connector is dormant until native confirmation from the
-  owned app window. Never expose pairing codes to preload or renderer. Drain
-  the connector before closing persistence.
+- The optional connector is dormant until native confirmation from the owned
+  app window. Keep read, edit, and approved conversation registration distinct.
+  Never expose pairing codes to preload or renderer. The existing desktop
+  runtime owns admitted conversation tasks; drain the connector and retire
+  those tasks before closing persistence.
 
 - Do not turn IPC handlers into a miscellaneous service layer.
 - Keep desktop transport translation thin, contract-driven, and sanitized.

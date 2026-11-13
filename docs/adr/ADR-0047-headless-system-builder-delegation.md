@@ -48,19 +48,25 @@ ownership. Desktop is the first target; the server and browser follow.
 
 ## Current implementation and consequences
 
-The initial contract and internal desktop provider define bounded, read-only
-requests and match the host incarnation. The provider shares the UI's read use
-cases and checks current workspace authority before returning projected results.
-The internal registration adapter stores only credential digests and supports
-one-use pairing, expiry and revocation on the existing organization store. It
-is owned by the optional desktop connector. The transport serves two fixed
-local routes with bounded framing and shutdown. Desktop Settings asks for
-native confirmation before starting the connector for an exact workspace or
-for still-authorized existing clients. No listener opens on launch or status
-reads. The renderer does not receive the pairing code. The official SDK
-adapter forwards only the finite read catalog to the paired desktop. It
-checks the desktop's current certificate fingerprint before sending a bearer. Actual
-packaged-host qualification and the remaining authoring work are pending. See the
+The optional desktop connector shares the UI's existing application providers
+and checks the exact host incarnation and current workspace authority. It
+stores only credential digests and supports one-use pairing, expiry and
+revocation. Desktop Settings asks for native confirmation for read, edit,
+or approved conversation access in one workspace. These are distinct
+registrations. No listener opens on launch or status reads. The renderer
+does not receive the pairing code.
+
+The desktop connector has fixed local routes for pairing, reads, saved
+system edits and one approved conversation turn. A trusted client completes
+the one-use pairing before the official SDK adapter starts. The adapter
+verifies the current desktop certificate fingerprint before forwarding
+authenticated read, edit or turn requests. The
+conversation path reuses the existing approval, session, worker and task
+records; it cannot create approval or change runtime settings. A saved
+turn/run handle can return before generation finishes. A later disconnect
+does not cancel work the host already owns. Desktop shutdown retires that
+work before closing persistence. Window presentation and managed parity
+are tracked separately in the approved roadmap. See the
 [threat model](../security/headless-system-builder-threat-model.md) and the
 [approved roadmap](../headless-skills-ui-takeover-implementation-roadmap.md).
 
@@ -70,8 +76,8 @@ The bounded receipt namespace accepts 2,048 keys per registered
 client/principal/workspace; reaching it denies new writes instead of evicting
 key history. The workspace change log retains the latest 256 entries and
 returns up to 64 per read. A cursor outside that range requires a fresh,
-authorized snapshot. These are local storage bounds; the adapter alone
-does not grant mutation or stream access.
+authorized snapshot. These are local storage bounds. The adapter advertises
+tools; the current host and paired registration decide access.
 
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay
