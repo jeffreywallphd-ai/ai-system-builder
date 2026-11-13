@@ -16,10 +16,9 @@ export async function completeBrowseAuthoringJourney(
   await page.getByLabel("New system name").fill(name);
   await page.getByRole("button", {name: "Create system", exact: true}).click();
   await expect(page.getByRole("heading", {name: "Canvas", exact: true})).toBeVisible({timeout: 30_000});
+  const toasts = page.locator(".ui-notification__toast");
   // Audit the settled Canvas. Notification presentation has its own journey.
-  if (mode === "native400") {
-    await expect(page.locator(".ui-notification__toast")).toHaveCount(0, {timeout: 10_000});
-  }
+  if (!verifyPlacement) await expect(toasts).toHaveCount(0, {timeout: 10_000});
 
   async function openDetails(panel: "Properties" | "Layers") {
     if (mode === "native400") {
@@ -97,6 +96,7 @@ export async function completeBrowseAuthoringJourney(
   await previewDialog.press("Escape"); await expect(previewDialog).toBeHidden(); await expect(preview).toBeFocused();
   await page.getByRole("button", {name: "Save and validate revision"}).click();
   await expect(page.getByText("Revision saved and validated.", {exact: true})).toBeVisible({timeout: 30_000});
+  if (!verifyPlacement) await expect(toasts).toHaveCount(0, {timeout: 10_000});
 
   await reopen();
   await page.getByRole("tab", {name: "Compose", exact: true}).click();

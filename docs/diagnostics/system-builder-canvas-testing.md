@@ -338,6 +338,13 @@ text expression so the type, separator and version are measured together.
 The picker retains the same text, wrapping and colors. Unresolved samples
 still fail the host check.
 
+The standard and native Canvas journeys wait for temporary success
+notifications to dismiss before auditing Canvas. At narrow widths the picker
+can cover part of a notification and leave the document contrast audit
+indeterminate. This bounded readiness check preserves the notification and
+the full document audit; the separate notification journeys still measure the
+notification itself.
+
 The regression exposed narrow nested-panel label/badge overlap, insufficient
 selected-tree detail contrast, unsupported preview labels and lost tree focus.
 The Canvas now wraps labels/actions and reduces nested padding on narrow screens;

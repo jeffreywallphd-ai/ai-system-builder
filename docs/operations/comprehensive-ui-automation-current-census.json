@@ -7695,8 +7695,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
    "facts": {
-    "sha256": "ab24ff0332af2c0bec624cbea88ce5bd9d360856dd110c6ed7570d688284b408",
-    "bytes": 13208,
+    "sha256": "3bec8ccb8f7cff183c95fed621f3c940dadd8faa41f895f3fa592116b92ae10c",
+    "bytes": 13299,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -7706,11 +7706,11 @@
      },
      {
       "name": "openDetails",
-      "line": 24
+      "line": 23
      },
      {
       "name": "insert",
-      "line": 39
+      "line": 38
      },
      {
       "name": "verifyConfirmedRemoval",
@@ -7721,8 +7721,8 @@
       "line": 172
      }
     ],
-    "assertionCount": 56,
-    "assertionDigest": "95b6dd55eca5f3cfbf81965da7abd4d3bbf3cf446b9e29c054ad89f0c569f278",
+    "assertionCount": 57,
+    "assertionDigest": "fa9f80136dccf07a46488d5d7303b9b5a5e389780e18e642e94b7783df340ee9",
     "assertionExamples": [
      {
       "line": 18,
@@ -7732,15 +7732,15 @@
      {
       "line": 21,
       "kind": "expect",
-      "sha256": "0fc016f9f39a33ff031a9646a158670e32dc722e3308f274d0b40ae3bf7cd6aa"
+      "sha256": "4f1f54d736ab0396a36a530a66dec0206e71e8c04f83897ce06fc6aa04c43e0d"
      },
      {
-      "line": 29,
+      "line": 28,
       "kind": "expect",
       "sha256": "996d9072b2ab9e201cfc2142242a7879026ad8a8348b2113048b980551eb7d4f"
      },
      {
-      "line": 34,
+      "line": 33,
       "kind": "expect",
       "sha256": "19ac6183a08d703f71a3fc6d3d00e925ab71cba3151d64ba119a8c6d5e0764ac"
      }

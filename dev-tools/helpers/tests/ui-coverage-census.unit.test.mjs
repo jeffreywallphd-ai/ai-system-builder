@@ -570,7 +570,43 @@ const reviewedNativeAssetUiCensus = Object.freeze({
     }
   ].map(Object.freeze)),
 });
+const reviewedSettledCanvasAuditCensus = Object.freeze({
+  priorCommit: "2c2efdf11dd77a52360b845253c6d1798a5e4277",
+  before: "2251a101e0619aeb5a9460bb9a7076e94122186e5a90dce79b5cb638fd579523",
+  after: "7f283029bd5621bb230b3cddee4f92c4072ca469a5d262f39cd95581df728ae5",
+  pins: Object.freeze([
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
+      "source": "3bec8ccb8f7cff183c95fed621f3c940dadd8faa41f895f3fa592116b92ae10c",
+      "facts": "d54764203d68de46a1b244ca4b81c030a6cb18243d895217951d63e4c3833852"
+    }
+  ].map(Object.freeze)),
+});
+function settledCanvasAuditLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) !== reviewedSettledCanvasAuditCensus.after) return {map, result};
+  const previous = JSON.parse(historicalSource(reviewedSettledCanvasAuditCensus.priorCommit, censusDocument));
+  assert.equal(sha(JSON.stringify(previous)), reviewedSettledCanvasAuditCensus.before);
+  const expected = structuredClone(previous);
+  for (const pin of reviewedSettledCanvasAuditCensus.pins) {
+    const [row] = map.sources.filter(item => item.path === pin.path);
+    const original = expected.sources.find(item => item.path === pin.path);
+    assert(row && original);
+    assert.equal(row.committed_sha256, original.committed_sha256);
+    assert.notEqual(row.facts.sha256, original.facts.sha256);
+    assert.equal(row.facts.sha256, pin.source);
+    assert.equal(sha(JSON.stringify(row.facts)), pin.facts);
+    assert.notEqual(row.facts.sha256, row.committed_sha256);
+    original.facts = structuredClone(row.facts);
+  }
+  assert.deepEqual(map, expected);
+  assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+  return {map: previous, result: {...result, gaps: [
+    ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+  ]}};
+}
+
 function nativeAssetUiCensusLegacyView(map, result) {
+  ({map,result}=settledCanvasAuditLegacyView(map,result));
   if (sha(JSON.stringify(map)) !== reviewedNativeAssetUiCensus.after) return {map, result};
   const previous = JSON.parse(historicalSource(reviewedNativeAssetUiCensus.priorCommit, censusDocument));
   assert.equal(sha(JSON.stringify(previous)), reviewedNativeAssetUiCensus.before);
@@ -1642,6 +1678,13 @@ test("current published form checkpoint preserves its complete source gaps and o
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
   assert.equal(result.gaps.length,24);
+  const settledPrior = settledCanvasAuditLegacyView(map,result);
+  assert.equal(settledPrior.result.gaps.length,24);
+  assert.equal(sha(JSON.stringify(settledPrior.map)),reviewedSettledCanvasAuditCensus.before);
+  for (const pin of reviewedSettledCanvasAuditCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
   const nativePrior = nativeAssetUiCensusLegacyView(map,result);
   assert.equal(nativePrior.result.gaps.length,23);
   assert.equal(sha(JSON.stringify(nativePrior.map)),reviewedNativeAssetUiCensus.before);
