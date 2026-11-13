@@ -90,6 +90,22 @@ test("owned SQLite admission compares exact saved authority and rolls back every
     await assertAbsent();
     await approvals.saveExecutionApproval(permission);
 
+    const platformNamespace = "test-delegated-admission";
+    await db.documents.writeDocument(platformNamespace, "policy", { active: false }, { expectedRevision: 0 });
+    const platformAdmission = createLocalDelegatedConversationTurnAdmission({
+      ...options,
+      platform: { documents: db.documents, async authorize(owner, workspace, plan, revision) {
+        assert.equal(owner.organizationId, undefined);
+        assert.deepEqual([workspace, plan, revision], [workspaceId, "fixture-plan", "fixture-plan-r1"]);
+        return (await owner.readDocument<{ active: boolean }>(platformNamespace, "policy"))?.value.active === true;
+      } },
+    });
+    assert.equal(await platformAdmission.admit(request), undefined);
+    assert.equal(await platformAdmission.isStillCurrent(request), false);
+    await assertAbsent();
+    await db.documents.writeDocument(platformNamespace, "policy", { active: true }, { expectedRevision: 1 });
+    assert.equal(await platformAdmission.isStillCurrent(request), true);
+
     const wrapped: StructuredDocumentStore = { ...documents,
       runInOwnedTransaction: (work, beforeCommit) => documents.runInOwnedTransaction!(work, () => { current = false; beforeCommit(); }),
     };
@@ -102,7 +118,7 @@ test("owned SQLite admission compares exact saved authority and rolls back every
     await assertAbsent();
 
     current = true;
-    const [linked, duplicate] = await Promise.all([admission.admit(request), admission.admit(request)]);
+    const [linked, duplicate] = await Promise.all([platformAdmission.admit(request), platformAdmission.admit(request)]);
     assert.deepEqual(linked, { ...approved, status: "active", turnIds: [turnId] });
     assert.equal(duplicate, undefined);
     assert.equal(writes, 2);

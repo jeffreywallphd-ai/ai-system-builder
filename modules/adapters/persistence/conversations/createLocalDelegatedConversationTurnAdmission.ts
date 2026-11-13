@@ -1,7 +1,7 @@
 import type { DelegatedConversationTurnAdmissionPort } from "../../../application/ports/conversations/delegated-conversation-turn-admission.port";
 import { normalizeConversationSessionRecord } from "../../../contracts/conversations";
 import { normalizeExecutionApprovalRecord } from "../../../contracts/execution-runs";
-import { createWorkspaceId } from "../../../contracts/workspace";
+import { createWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
 import { createLocalExecutionRunRepositoryAdapters } from "../execution-runs";
 import type { StructuredDocumentStore } from "../shared";
 import { createLocalConversationRepositoryAdapters } from "./createLocalConversationRepositoryAdapters";
@@ -13,22 +13,32 @@ export function createLocalDelegatedConversationTurnAdmission(options: {
   readonly rootDir: string;
   readonly documents: StructuredDocumentStore;
   readonly now?: () => string;
+  readonly platform?: {
+    readonly documents: StructuredDocumentStore;
+    readonly authorize: (owner: StructuredDocumentStore, workspaceId: WorkspaceId, planId: string, planRevision: string) => Promise<boolean>;
+  };
 }): DelegatedConversationTurnAdmissionPort {
-  const { documents } = options;
+  const { documents, platform } = options;
+  const owner = platform?.documents ?? documents;
+  const organizationId = documents.organizationId;
+  const safeOwner = () => Boolean(organizationId && owner.runInOwnedTransaction && (!platform || owner.organizationId === undefined));
+  const scoped = (transaction: StructuredDocumentStore) => platform ? transaction.forOrganization(organizationId!) : transaction;
+  const allowed = async (transaction: StructuredDocumentStore, workspaceId: WorkspaceId, planId: string, revision?: string) =>
+    !platform || Boolean(revision && await platform.authorize(transaction, workspaceId, planId, revision) === true);
   const createRepositories = (transaction: StructuredDocumentStore) => ({
     ...createLocalConversationRepositoryAdapters({ ...options, documents: transaction }),
     ...createLocalExecutionRunRepositoryAdapters({ ...options, documents: transaction }),
   });
   return {
     async isStillCurrent({ session, approval, isCurrent }) {
-      if (!documents.organizationId || !documents.runInOwnedTransaction || !isCurrent()) return false;
+      if (!safeOwner() || !isCurrent()) return false;
       try {
         const workspaceId = createWorkspaceId(session.workspaceId);
         const capturedSession = JSON.stringify(normalizeConversationSessionRecord(session));
         const capturedApproval = JSON.stringify(normalizeExecutionApprovalRecord(approval));
-        const same = await documents.runInOwnedTransaction(async (transaction) => {
-          if (!isCurrent()) return false;
-          const { conversationSessionRepository, executionApprovalRepository } = createRepositories(transaction);
+        const same = await owner.runInOwnedTransaction!(async (transaction) => {
+          if (!isCurrent() || !await allowed(transaction, workspaceId, session.sourceExecutionPlanId, approval.sourcePlanRevision)) return false;
+          const { conversationSessionRepository, executionApprovalRepository } = createRepositories(scoped(transaction));
           const saved = await conversationSessionRepository.getConversationSessionById(workspaceId, session.id);
           const permission = await executionApprovalRepository.getExecutionApprovalById(workspaceId, approval.id);
           return JSON.stringify(saved) === capturedSession && JSON.stringify(permission) === capturedApproval;
@@ -39,15 +49,16 @@ export function createLocalDelegatedConversationTurnAdmission(options: {
       }
     },
     async admit({ session, approval, turnId, operationId, updatedAt, isCurrent, writeInitialRecords }) {
-      if (!documents.organizationId || !documents.runInOwnedTransaction || !isCurrent()) return undefined;
+      if (!safeOwner() || !isCurrent()) return undefined;
       const workspaceId = createWorkspaceId(session.workspaceId);
       const capturedSession = JSON.stringify(normalizeConversationSessionRecord(session));
       const capturedApproval = JSON.stringify(normalizeExecutionApprovalRecord(approval));
       const ensureCurrent = () => { if (!isCurrent()) throw refused; };
       try {
-        return await documents.runInOwnedTransaction(async (transaction) => {
+        return await owner.runInOwnedTransaction!(async (transaction) => {
           ensureCurrent();
-          const repositories = createRepositories(transaction);
+          if (!await allowed(transaction, workspaceId, session.sourceExecutionPlanId, approval.sourcePlanRevision)) throw refused;
+          const repositories = createRepositories(scoped(transaction));
           const { conversationSessionRepository: sessions, conversationOperationRepository: operations,
             executionApprovalRepository: approvals } = repositories;
           const saved = await sessions.getConversationSessionById(workspaceId, session.id);

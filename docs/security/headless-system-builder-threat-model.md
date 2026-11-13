@@ -163,8 +163,7 @@ host shows the option only when it supplies the application access callback.
 Issuing, exchanging and verifying conversation credentials requires current
 workspace policy. A missing or unavailable callback denies the credential, and
 revocation during verification invalidates the pending grant. Actual dispatch
-must still recheck the current workspace, client and session approval. This
-change leaves conversation dispatch unwired.
+also rechecks the current workspace, client and session approval.
 
 The optional approved-turn route is absent unless the host provides a handler.
 The pinned loopback transport requires a current conversation grant for the
@@ -187,4 +186,9 @@ in the same transaction as the initial transcript and lifecycle records. A
 failed commit fence rolls those writes back. After asynchronous runtime policy
 checks, the owning store compares the same session and approval snapshots in
 one no-write transaction. The adapter checks the live grant before task start.
-These checks protect admission. They do not cancel a task already started.
+For desktop, the platform transaction also verifies current workspace and
+membership authority and exact plan revision. The final read transaction
+orders later stored changes after admission; the adapter separately checks
+the live registration before submitting. These checks do not cancel a
+task already accepted by the runtime. The desktop owns its detached work
+and waits for retirement before releasing persistence.

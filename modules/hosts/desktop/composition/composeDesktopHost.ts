@@ -8,6 +8,7 @@ import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
 import { asyncLazyObject } from "./lazyProxy";
 import { composeDesktopHeadlessReads, type DesktopHeadlessReadHandler } from "./composeDesktopHeadlessReads";
 import { composeDesktopHeadlessAuthoring } from "./composeDesktopHeadlessAuthoring";
+import { composeDesktopHeadlessConversation } from "./composeDesktopHeadlessConversation";
 import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
 import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
 import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
@@ -122,6 +123,8 @@ import {
 } from "../../../adapters/persistence/runtime-readiness";
 import { createLocalExecutionPlanRepositoryAdapter } from "../../../adapters/persistence/execution-plans";
 import { createLocalConversationRepositoryAdapters } from "../../../adapters/persistence/conversations";
+import { createLocalDelegatedConversationTurnAdmission } from "../../../adapters/persistence/conversations/createLocalDelegatedConversationTurnAdmission";
+import { normalizeExecutionPlanId } from "../../../contracts/execution-plans";
 import { createLocalExecutionRunRepositoryAdapters } from "../../../adapters/persistence/execution-runs";
 import { composeExecutionPlanServices } from "../../shared/composition/composeExecutionPlanServices";
 import { composeConversationExecutionServices } from "../../shared/composition/composeConversationExecutionServices";
@@ -696,6 +699,7 @@ export function composeDesktopHost(
   const taskReconciler = createOwnedTaskReconciler();
   let headlessReadHandler: DesktopHeadlessReadHandler | undefined;
   let headlessConnection: DesktopHeadlessConnection | undefined;
+  let headlessConversation: ReturnType<typeof composeDesktopHeadlessConversation> | undefined;
   let headlessReadAdmissionClosed = false;
   let closeImageAdmission: (() => void) | undefined;
   let stopOwnedImageRuntime: (() => Promise<void>) | undefined;
@@ -719,6 +723,7 @@ export function composeDesktopHost(
     async shutdownBackgroundTasks() {
       headlessReadAdmissionClosed = true;
       headlessReadHandler = undefined;
+      headlessConversation?.stopAdmission();
       taskReconciler.stopAccepting();
       closeImageAdmission?.();
       await headlessConnection?.close();
@@ -727,6 +732,8 @@ export function composeDesktopHost(
         stopPython: async () => { if (pythonRuntimeFoundationPromise) await (await pythonRuntimeFoundationPromise).supervisor.stop(); },
         stopImage: async () => { await stopOwnedImageRuntime?.(); },
       });
+      await headlessConversation?.drain();
+      headlessConversation = undefined;
     },
     async stopPythonRuntime() {
       if (!pythonRuntimeFoundationPromise) return;
@@ -1393,10 +1400,39 @@ export function composeDesktopHost(
         createLocalConversationRepositoryAdapters(structuredRepositoryOptions);
       const executionRunRepositories =
         createLocalExecutionRunRepositoryAdapters(structuredRepositoryOptions);
+      const conversationIdentity = options.localIdentity;
+      const platformDocuments = options.persistence?.documents;
+      const delegatedTurnAdmission = conversationIdentity && platformDocuments?.runInOwnedTransaction &&
+        organizationDocuments?.organizationId === conversationIdentity.organizationId
+        ? createLocalDelegatedConversationTurnAdmission({
+          ...structuredRepositoryOptions,
+          documents: organizationDocuments,
+          platform: {
+            documents: platformDocuments,
+            async authorize(owner, workspaceId, planId, planRevision) {
+              if (headlessReadAdmissionClosed) return false;
+              try {
+                const documents = owner.forOrganization(conversationIdentity.organizationId);
+                const workspaces = createLocalWorkspaceRepository({ rootDirectory: registerOptions.storageRootDirectory, documents });
+                const workspace = await workspaces.readWorkspace(workspaceId);
+                if (workspace?.workspaceId !== workspaceId || workspace.organizationId !== conversationIdentity.organizationId ||
+                    workspace.status !== "active") return false;
+                await composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: conversationIdentity }).authorizeWorkspaceOperation({
+                  workspace, operation: "headless.conversation.admit", requiredScopes: ["workspace:read", "asset:read", "asset:write", "runtime:read"],
+                });
+                const plan = await createLocalExecutionPlanRepositoryAdapter({ ...structuredRepositoryOptions, documents })
+                  .getExecutionPlanById(workspaceId, normalizeExecutionPlanId(planId));
+                return Boolean(plan?.id === planId && plan.workspaceId === workspaceId && plan.updatedAt === planRevision &&
+                  plan.status === "ready-for-review" && !plan.archivedAt && !headlessReadAdmissionClosed);
+              } catch { return false; }
+            },
+          },
+        }) : undefined;
       const conversationExecutionServices =
         composeConversationExecutionServices({
           ...conversationRepositories,
           ...executionRunRepositories,
+          delegatedTurnAdmission,
           executionPlanRepository,
           runtimeReadinessBindingRepository,
           assetCompositionPlanRepository,
@@ -2164,6 +2200,16 @@ export function composeDesktopHost(
       if (!headlessReadAdmissionClosed && !headlessReadHandler && identity && workspaceAuthorization && systemBuilder) {
         const hostIncarnationId = randomUUID();
         if (isHeadlessHostIncarnationId(hostIncarnationId)) {
+          const workflows = new HeadlessWorkflowMetadataUseCase(systemRunWorkflow.useCases);
+          const readWorkflowRole = async () => {
+            if (!platformDocuments) return undefined;
+            const { memberships } = createStructuredOrganizationRepositories(platformDocuments);
+            const membership = await memberships.readMembership({
+              organizationId: identity.organizationId, principalId: identity.principalId,
+            });
+            return membership?.status === "active" && membership.organizationId === identity.organizationId &&
+              membership.principalId === identity.principalId ? membership.role : undefined;
+          };
           const committedChanges = organizationDocuments?.organizationId === identity.organizationId
             ? (() => {
               const cursorKey = randomBytes(32);
@@ -2181,17 +2227,8 @@ export function composeDesktopHost(
             workspaceRepository: startupWorkspaceShell.workspaceRepository,
             getUseCases: () => systemBuilder.useCases,
             committedChanges,
-            workflows: new HeadlessWorkflowMetadataUseCase(systemRunWorkflow.useCases),
-            readWorkflowRole: async () => {
-              const platformDocuments = options.persistence?.documents;
-              if (!platformDocuments) return undefined;
-              const { memberships } = createStructuredOrganizationRepositories(platformDocuments);
-              const membership = await memberships.readMembership({
-                organizationId: identity.organizationId, principalId: identity.principalId,
-              });
-              return membership?.status === "active" && membership.organizationId === identity.organizationId &&
-                membership.principalId === identity.principalId ? membership.role : undefined;
-            },
+            workflows,
+            readWorkflowRole,
             conversationStatus: new HeadlessConversationStatusUseCase({
               sessions: conversationRepositories.conversationSessionRepository, turns: conversationRepositories.conversationTurnRepository,
               runs: executionRunRepositories.executionRunRepository,
@@ -2199,6 +2236,14 @@ export function composeDesktopHost(
             isOpen: () => !headlessReadAdmissionClosed,
           });
           if (organizationDocuments?.organizationId === identity.organizationId) {
+            if (platformDocuments && delegatedTurnAdmission) {
+              headlessConversation = composeDesktopHeadlessConversation({
+                hostIncarnationId, identity, platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
+                workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+                workflows, readRole: readWorkflowRole, sessions: conversationRepositories.conversationSessionRepository,
+                submit: conversationExecutionServices.submitTurn, isOpen: () => !headlessReadAdmissionClosed,
+              });
+            }
             registerDesktopSystemChangePoll({
               ipcMain: registerOptions.ipcMain, senderTrust: registerOptions.senderTrust,
               workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
@@ -2211,6 +2256,7 @@ export function composeDesktopHost(
               workspaces: startupWorkspaceShell.workspaceRepository,
               authorization: workspaceAuthorization,
               read: headlessReadHandler,
+              conversation: headlessConversation,
               authoring: options.persistence?.documents ? composeDesktopHeadlessAuthoring({
                 hostIncarnationId, identity, platformDocuments: options.persistence.documents, rootDirectory: registerOptions.storageRootDirectory,
                 workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,

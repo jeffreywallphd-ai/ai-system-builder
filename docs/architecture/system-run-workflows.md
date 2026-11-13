@@ -47,15 +47,13 @@ workspace, asset and runtime read permission. Its read-only task tool checks
 the saved conversation session, turn and run belong to the same workspace,
 plan and turn. It returns their identity and status without loading a worker.
 
-The internal Headless turn dispatch seam reads an existing key under the
-observation policy. Only the dispatch policy can reserve a new key. A host
-must supply both live policies and a persistent keyed fingerprint. The
-trusted submit dependency receives the exact plan, session, revisions and
-grant fence. It must recheck them at the actual invocation boundary before a
-host wires this seam to the conversation use case. A successful submission
-can save a result handle. An interrupted or ambiguous attempt remains
-unconfirmed and cannot dispatch on replay. This seam grants no execution
-permission and creates no approval.
+The desktop connector sends an approved turn through the same conversation
+use case as the desktop workflow. An explicit conversation registration and
+current workspace permissions are required. A repeat with the same key can
+read an existing handle. Only the dispatch policy can reserve a new key.
+The app can return a saved turn and run handle before generation finishes.
+The host tracks at most two delegated turns and one turn per session.
+A lost reply or transport disconnect cannot authorize another turn.
 The existing conversation use case supports an internal optional delegated
 fence. It checks the exact saved approval and plan revision before allocating
 a turn. The owning SQLite transaction rechecks the saved session and approval.
@@ -65,8 +63,12 @@ internal callback can read the committed turn and run IDs before dispatch.
 The trusted policy rechecks the exact target after protected context preparation
 and after model resolution. After async validity checks, a read-only comparison
 of the saved session and approval in one transaction fences adapter submission.
-Ordinary callers retain the existing approval checks. This seam registers no
-tool and grants no access.
+On desktop that transaction also reads current workspace and membership
+authority and the exact active plan revision. The comparison commit sets the
+order for later stored changes. The adapter checks the live grant separately
+before handing off to the runtime. Neither this check nor a socket close
+cancels a task the runtime has accepted. Ordinary callers retain the
+existing approval checks.
 
 ## Contract primitives
 

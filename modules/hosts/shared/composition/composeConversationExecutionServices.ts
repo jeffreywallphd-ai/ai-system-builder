@@ -45,6 +45,7 @@ import type {
   ExecutionRuntimeReferenceRepositoryPort,
 } from "../../../application/ports/execution-runs";
 import type { RuntimeReadinessBindingRepositoryPort } from "../../../application/ports/runtime-readiness";
+import type { DelegatedConversationTurnAdmissionPort } from "../../../application/ports/conversations/delegated-conversation-turn-admission.port";
 
 export interface ComposeConversationExecutionServicesDependencies {
   conversationSessionRepository: ConversationSessionRepositoryPort;
@@ -65,6 +66,7 @@ export interface ComposeConversationExecutionServicesDependencies {
   runtimeGuard: ConversationalRuntimeGuardPort;
   invocationPort: ConversationTurnInvocationPort;
   hostCapabilities: ConversationSessionHostCapabilities;
+  delegatedTurnAdmission?: DelegatedConversationTurnAdmissionPort;
   now?: () => string;
 }
 
@@ -137,6 +139,7 @@ export function composeConversationExecutionServices(
     messageRepository: d.conversationMessageRepository,
     assistantResponseRepository: d.assistantResponseRepository,
     operationRepository: d.conversationOperationRepository,
+    delegatedTurnAdmission: d.delegatedTurnAdmission,
     executionRunRepository: d.executionRunRepository,
     executionAttemptRepository: d.executionAttemptRepository,
     executionEventRepository: d.executionEventRepository,
