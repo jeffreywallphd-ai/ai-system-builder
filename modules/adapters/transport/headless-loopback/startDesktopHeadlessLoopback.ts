@@ -1,0 +1,273 @@
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { performance } from "node:perf_hooks";
+import type { HeadlessReadResult } from "../../../contracts/headless";
+import type { createDesktopHeadlessClientAuthority } from "../../security/headless";
+
+const LOOPBACK = "127.0.0.1";
+const PAIR_PATH = "/aisb-headless/v1/pair";
+const READ_PATH = "/aisb-headless/v1/read";
+const MAX_REQUEST_BYTES = 8 * 1024;
+const MAX_RESPONSE_BYTES = 128 * 1024;
+const MAX_CONNECTIONS = 16;
+const MAX_REQUESTS_PER_SECOND = 128;
+const MAX_ACTIVE = 8;
+const REQUEST_LIMIT_MS = 5_000;
+const TOKEN_PATTERN = /^Bearer ([a-zA-Z0-9_-]{43})$/;
+
+type Registration = ReturnType<typeof createDesktopHeadlessClientAuthority>;
+type Grant = Awaited<ReturnType<Registration["verifyCredential"]>>;
+
+export interface DesktopHeadlessLoopback {
+  readonly endpoint: string;
+  /** Close local admission and sockets. Host owns subsequent persistence teardown. */
+  readonly close: () => Promise<void>;
+}
+
+/**
+ * The desktop owner starts this only for an explicitly enabled connector.
+ * There is no registration/admin/interactive authority route.
+ */
+export async function startDesktopHeadlessLoopback(dependencies: {
+  readonly registrations: Pick<Registration, "completePairing" | "verifyCredential" | "close">;
+  readonly read: (request: unknown, currentGrant: () => Promise<Grant>) => Promise<HeadlessReadResult>;
+}): Promise<DesktopHeadlessLoopback> {
+  let port: number | undefined;
+  let open = true;
+  const active = new Set<Promise<void>>();
+  let windowStart = performance.now();
+  let admitted = 0;
+  let socketsClosed: Promise<void> | undefined;
+  const server = createServer({
+    headersTimeout: REQUEST_LIMIT_MS,
+    requestTimeout: REQUEST_LIMIT_MS,
+    connectionsCheckingInterval: 500,
+    keepAliveTimeout: 1_000,
+    maxHeaderSize: 8 * 1024,
+  }, (request, response) => {
+    const current = performance.now();
+    if (current - windowStart >= 1_000) {
+      windowStart = current;
+      admitted = 0;
+    }
+    if (!open || active.size >= MAX_ACTIVE || admitted >= MAX_REQUESTS_PER_SECOND) {
+      fail(response, 503, "headless.unavailable");
+      return;
+    }
+    admitted++;
+    response.setTimeout(REQUEST_LIMIT_MS, () => response.destroy());
+    const task = serve(request, response).catch(() => {
+      try { fail(response, 503, "headless.unavailable"); } catch { response.destroy(); }
+    });
+    active.add(task);
+    void task.then(() => { active.delete(task); });
+  });
+  server.maxConnections = MAX_CONNECTIONS;
+  server.maxRequestsPerSocket = 8;
+  server.setTimeout(REQUEST_LIMIT_MS, (socket) => socket.destroy());
+  server.on("checkContinue", (_request, response) => fail(response, 417, "headless.invalid-request"));
+  server.on("checkExpectation", (_request, response) => fail(response, 417, "headless.invalid-request"));
+  server.on("clientError", (_error, socket) => socket.destroy());
+  server.on("upgrade", (_request, socket) => socket.destroy());
+  server.on("connect", (_request, socket) => socket.destroy());
+
+  async function close(): Promise<void> {
+    if (!socketsClosed) {
+      open = false;
+      dependencies.registrations.close();
+      socketsClosed = new Promise<void>((resolve, reject) => {
+        server.close((error) => error ? reject(new Error("Desktop connector shutdown could not be confirmed.")) : resolve());
+        server.closeAllConnections();
+      });
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        Promise.all([socketsClosed, ...active]),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error("Desktop connector shutdown could not be confirmed.")), REQUEST_LIMIT_MS);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function serve(request: IncomingMessage, response: ServerResponse) {
+    if (port === undefined || request.socket.remoteAddress !== LOOPBACK ||
+        uniqueHeader(request, "host") !== `${LOOPBACK}:${port}` ||
+        hasHeader(request, "origin") || hasHeader(request, "forwarded") ||
+        Object.keys(request.headers).some((name) => name.startsWith("x-forwarded-"))) {
+      fail(response, 403, "headless.forbidden");
+      return;
+    }
+    if (request.method !== "POST" || (request.url !== PAIR_PATH && request.url !== READ_PATH)) {
+      fail(response, 404, "headless.not-found");
+      return;
+    }
+    if (uniqueHeader(request, "content-type") !== "application/json" || hasHeader(request, "content-encoding") ||
+        hasHeader(request, "transfer-encoding")) {
+      fail(response, 400, "headless.invalid-request");
+      return;
+    }
+    const declaredLength = uniqueHeader(request, "content-length");
+    if (!declaredLength || !/^[1-9][0-9]{0,6}$/.test(declaredLength)) {
+      fail(response, 400, "headless.invalid-request");
+      return;
+    }
+    const length = Number(declaredLength);
+    if (length > MAX_REQUEST_BYTES) {
+      fail(response, 413, "headless.invalid-request");
+      return;
+    }
+
+    if (request.url === PAIR_PATH) {
+      if (hasHeader(request, "authorization")) {
+        fail(response, 400, "headless.invalid-request");
+        return;
+      }
+      const body = await decodeRequest(request, length);
+      if (!isPairRequest(body)) {
+        fail(response, 400, "headless.invalid-request");
+        return;
+      }
+      if (!open || response.destroyed) return;
+      const pairing = await dependencies.registrations.completePairing(body.pairingCode);
+      if (!open || response.destroyed) return;
+      if (pairing.status !== "paired") {
+        fail(response, pairing.status === "unavailable" ? 503 : 403,
+          pairing.status === "unavailable" ? "headless.unavailable" : "headless.forbidden");
+        return;
+      }
+      const currentGrant = await dependencies.registrations.verifyCredential(pairing.credential);
+      if (!open || response.destroyed) return;
+      if (currentGrant?.registeredClientId !== pairing.registeredClientId) {
+        fail(response, 403, "headless.forbidden");
+        return;
+      }
+      send(response, 200, { ok: true, value: {
+        credential: pairing.credential,
+        registeredClientId: pairing.registeredClientId,
+        expiresAt: pairing.expiresAt,
+      } });
+      return;
+    }
+
+    const credential = TOKEN_PATTERN.exec(uniqueHeader(request, "authorization") ?? "")?.[1];
+    const initialGrant = credential && await dependencies.registrations.verifyCredential(credential);
+    if (!credential || !initialGrant || !open || response.destroyed) {
+      fail(response, 403, "headless.forbidden");
+      return;
+    }
+    const body = await decodeRequest(request, length);
+    if (body === undefined) {
+      fail(response, 400, "headless.invalid-request");
+      return;
+    }
+    if (!open || response.destroyed) return;
+    const currentGrant = async () => {
+      if (!open || response.destroyed) return undefined;
+      const current = await dependencies.registrations.verifyCredential(credential);
+      if (!open || response.destroyed || !current || current.registeredClientId !== initialGrant.registeredClientId ||
+          current.principalId !== initialGrant.principalId || current.organizationId !== initialGrant.organizationId ||
+          !sameScope(current, initialGrant)) return undefined;
+      return current;
+    };
+    const result = await dependencies.read(body, currentGrant);
+    const finalGrant = await currentGrant();
+    if (!open || response.destroyed) return;
+    if (!finalGrant) {
+      fail(response, 403, "headless.forbidden");
+      return;
+    }
+    send(response, result.ok ? 200 : errorStatus(result.code), result);
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const onError = () => reject(new Error("The desktop connector could not open its loopback listener."));
+    server.once("error", onError);
+    server.listen(0, LOOPBACK, () => {
+      server.off("error", onError);
+      server.on("error", () => { void close().catch(() => {}); });
+      const address = server.address();
+      if (address && typeof address === "object" && address.address === LOOPBACK) {
+        port = address.port;
+        resolve();
+      } else {
+        void close().catch(() => {});
+        onError();
+      }
+    });
+  });
+  return { endpoint: `http://${LOOPBACK}:${port}`, close };
+}
+
+function sameScope(left: NonNullable<Grant>, right: NonNullable<Grant>): boolean {
+  const equal = <T>(a: readonly T[], b: readonly T[]) =>
+    a.length === b.length && a.every((value) => b.includes(value)) && b.every((value) => a.includes(value));
+  return equal(left.workspaceIds, right.workspaceIds) && equal(left.operations, right.operations);
+}
+
+function hasHeader(request: IncomingMessage, name: string): boolean {
+  return request.headersDistinct[name] !== undefined;
+}
+
+function uniqueHeader(request: IncomingMessage, name: string): string | undefined {
+  const values = request.headersDistinct[name];
+  return values?.length === 1 ? values[0] : undefined;
+}
+
+async function decodeRequest(request: IncomingMessage, length: number): Promise<unknown> {
+  const bytes = Buffer.allocUnsafe(length);
+  let offset = 0;
+  try {
+    for await (const chunk of request) {
+      if (!Buffer.isBuffer(chunk) || offset + chunk.length > length) return undefined;
+      offset += chunk.copy(bytes, offset);
+    }
+    if (offset !== length) return undefined;
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    const parsed: unknown = JSON.parse(text);
+    // Compact JSON from the official adapter only; duplicate object names,
+    // leading/trailing input and noncanonical encodings cannot round trip.
+    return JSON.stringify(parsed) === text ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isPairRequest(value: unknown): value is { readonly pairingCode: string } {
+  return typeof value === "object" && value !== null && Object.keys(value).length === 1 &&
+    "pairingCode" in value && typeof value.pairingCode === "string" && value.pairingCode.length === 43;
+}
+
+function errorStatus(code: Extract<HeadlessReadResult, { ok: false }>["code"]): number {
+  switch (code) {
+    case "headless.forbidden": return 403;
+    case "headless.not-found": return 404;
+    case "headless.host-changed": return 409;
+    case "headless.unavailable": return 503;
+    case "headless.result-too-large": return 413;
+    default: return 400;
+  }
+}
+
+function fail(response: ServerResponse, status: number, code: string): void {
+  send(response, status, { ok: false, code });
+}
+
+function send(response: ServerResponse, status: number, payload: unknown): void {
+  if (response.destroyed || response.headersSent) return;
+  let body = JSON.stringify(payload);
+  if (Buffer.byteLength(body) > MAX_RESPONSE_BYTES) {
+    status = 413;
+    body = '{"ok":false,"code":"headless.result-too-large"}';
+  }
+  response.writeHead(status, {
+    "Content-Type": "application/json",
+    "Content-Length": Buffer.byteLength(body),
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "Connection": "close",
+  });
+  response.end(body);
+}

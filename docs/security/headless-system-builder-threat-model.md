@@ -31,7 +31,19 @@ the digest, and remains stable while the same credential reconnects after a
 desktop restart. Revoke removes the exact registration; it does not remove
 any retry records. Unexpected persistence content or unavailable storage
 denies admission. The test uses an isolated local SQLite database and no
-actual user credential. The adapter is not yet wired to a listener or UI.
+actual user credential.
+
+The separately tested transport binds an OS-assigned port to literal
+`127.0.0.1` and accepts only exact Host, no Origin or forwarding headers,
+and POST to its two fixed paths. It accepts up to 8 KiB of compact UTF-8 JSON
+and rejects non-round-tripping framing, including duplicate fields. Read
+requires a verified bearer. Pairing completion can consume only a code
+already issued by the interactive authority; it cannot begin pairing.
+The caps are 16 connections, eight concurrent admitted requests, 128
+admissions per one-second window, 8 KiB of headers, 128 KiB of response,
+and a five-second I/O and shutdown wait. Shutdown fences new calls, closes
+owned sockets and waits for admitted work; timeout is not proof of cleanup.
+No application listener is enabled until explicit host composition.
 
 Managed parity must recheck existing OIDC, membership and row-security
 authority, including for streams, receipts and worker replay. Neither synthetic
