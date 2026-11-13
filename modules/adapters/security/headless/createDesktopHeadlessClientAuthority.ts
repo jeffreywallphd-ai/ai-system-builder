@@ -1,6 +1,9 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import type { StructuredDocumentStore } from "../../persistence/shared";
-import { HEADLESS_READ_OPERATIONS, type HeadlessReadOperation } from "../../../contracts/headless";
+import {
+  DESKTOP_HEADLESS_AUTHORING_OPERATIONS, HEADLESS_READ_OPERATIONS,
+  type DesktopHeadlessClientAccess, type HeadlessReadOperation,
+} from "../../../contracts/headless";
 import type { LocalIdentityProfile } from "../../../contracts/organization";
 import { isWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
 import { secureRandomBase64Url } from "../shared/secureRandom";
@@ -23,9 +26,11 @@ type ClientRecord = {
   readonly workspaceId: WorkspaceId;
   readonly credentialDigest: string;
   readonly expiresAt: number;
+  readonly access?: "author";
 };
 type Pairing = {
   readonly workspaceId: WorkspaceId;
+  readonly access: DesktopHeadlessClientAccess;
   readonly codeDigest: string;
   readonly expiresAt: number;
   remainingAttempts: number;
@@ -40,6 +45,7 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
   readonly identity: DesktopIdentity;
   /** Must check current workspace and organization authority. Never trust a UI selection. */
   readonly canReadWorkspace: (workspaceId: WorkspaceId) => Promise<boolean>;
+  readonly canAuthorWorkspace?: (workspaceId: WorkspaceId) => Promise<boolean>;
   readonly now?: () => number;
 }) {
   const { documents, canReadWorkspace, now = Date.now } = dependencies;
@@ -47,8 +53,13 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
   if (documents.organizationId !== organizationId || !principalId) throw new Error("Desktop client authority is unavailable.");
   let pending: Pairing | undefined;
   let generation = 0;
+  let grantGeneration = 0;
   let open = true;
   let completing = false;
+  const revoking = new Set<string>();
+  const canUseWorkspace = (workspaceId: WorkspaceId, access: DesktopHeadlessClientAccess) =>
+    access === "author" ? dependencies.canAuthorWorkspace?.(workspaceId) ?? Promise.resolve(false)
+      : canReadWorkspace(workspaceId);
 
   async function readRegistry(store: StructuredDocumentStore) {
     const saved = await store.readDocument<unknown>(NAMESPACE, KEY);
@@ -63,16 +74,17 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
 
   return {
     /** Trusted, explicit interactive action only. Do not expose to the connector. */
-    async beginPairing(workspaceId: WorkspaceId, isStillApproved: () => boolean = () => true) {
-      if (!open || completing || !isWorkspaceId(workspaceId) || !isStillApproved()) return denied;
+    async beginPairing(workspaceId: WorkspaceId, isStillApproved: () => boolean = () => true, access: DesktopHeadlessClientAccess = "read") {
+      if (!open || completing || !isWorkspaceId(workspaceId) || !isStillApproved() ||
+          (access !== "read" && access !== "author")) return denied;
       const attempt = ++generation;
       pending = undefined;
       try {
-        if (!await canReadWorkspace(workspaceId) || !open || attempt !== generation || !isStillApproved()) return denied;
+        if (!await canUseWorkspace(workspaceId, access) || !open || attempt !== generation || !isStillApproved()) return denied;
         const pairingCode = secureRandomBase64Url(32);
         const expiresAt = now() + PAIRING_TTL_MS;
         pending = {
-          workspaceId, expiresAt, codeDigest: digest("pairing", pairingCode), remainingAttempts: MAX_PAIRING_ATTEMPTS,
+          workspaceId, access, expiresAt, codeDigest: digest("pairing", pairingCode), remainingAttempts: MAX_PAIRING_ATTEMPTS,
         };
         return { status: "ready", pairingCode, expiresAt } as const;
       } catch {
@@ -91,7 +103,7 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
       const attempt = generation;
       completing = true;
       try {
-        if (!await canReadWorkspace(selected.workspaceId) || !open || generation !== attempt || selected.expiresAt <= now()) return denied;
+        if (!await canUseWorkspace(selected.workspaceId, selected.access) || !open || generation !== attempt || selected.expiresAt <= now()) return denied;
         const credential = secureRandomBase64Url(32);
         const client: ClientRecord = {
           registeredClientId: randomUUID(),
@@ -99,6 +111,7 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
           workspaceId: selected.workspaceId,
           credentialDigest: digest("credential", credential),
           expiresAt: now() + CREDENTIAL_TTL_MS,
+          ...(selected.access === "author" ? { access: selected.access } : {}),
         };
         const saved = await documents.runInTransaction(async (transaction) => {
           const { clients, revision } = await readRegistry(transaction);
@@ -108,12 +121,14 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
           return true;
         });
         if (!saved || !open || generation !== attempt || selected.expiresAt <= now()) return denied;
-        if (!await canReadWorkspace(selected.workspaceId)) return denied;
+        if (!await canUseWorkspace(selected.workspaceId, selected.access)) return denied;
+        const publication = grantGeneration;
         const { clients } = await readRegistry(documents);
-        if (!open || generation !== attempt || selected.expiresAt <= now() ||
+        if (!open || generation !== attempt || grantGeneration !== publication || revoking.has(client.registeredClientId) ||
+            selected.expiresAt <= now() ||
             !clients.some((entry) => entry.registeredClientId === client.registeredClientId &&
               entry.credentialDigest === client.credentialDigest && entry.principalId === principalId &&
-              entry.workspaceId === selected.workspaceId && entry.expiresAt > now())) return denied;
+              entry.workspaceId === selected.workspaceId && entry.access === client.access && entry.expiresAt > now())) return denied;
         return { status: "paired", credential, registeredClientId: client.registeredClientId, expiresAt: client.expiresAt } as const;
       } catch {
         return unavailable;
@@ -124,14 +139,18 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
     /** Current registration only. The application must also check current scope on dispatch and return. */
     async verifyCredential(credential: unknown) {
       if (!open || !isSecret(credential)) return undefined;
+      const attempt = grantGeneration;
       try {
         const fingerprint = digest("credential", credential);
         const { clients } = await readRegistry(documents);
         const client = clients.find((entry) => digestEqual(entry.credentialDigest, fingerprint));
-        if (!open || !client || client.principalId !== principalId || client.expiresAt <= now()) return undefined;
+        if (!open || grantGeneration !== attempt || !client || revoking.has(client.registeredClientId) ||
+            client.principalId !== principalId || client.expiresAt <= now()) return undefined;
         return {
           organizationId, principalId, registeredClientId: client.registeredClientId,
           workspaceIds: [client.workspaceId], operations: READ_PERMISSIONS,
+          authoring: client.access === "author" && dependencies.canAuthorWorkspace ? DESKTOP_HEADLESS_AUTHORING_OPERATIONS : [],
+          isCurrent: () => open && grantGeneration === attempt && !revoking.has(client.registeredClientId) && client.expiresAt > now(),
         } as const;
       } catch {
         return undefined;
@@ -146,7 +165,7 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
         return {
           status: "ready",
           clients: clients.filter((entry) => entry.principalId === principalId && entry.expiresAt > now())
-            .map(({ registeredClientId, workspaceId, expiresAt }) => ({ registeredClientId, workspaceId, expiresAt })),
+            .map(({ registeredClientId, workspaceId, expiresAt, access }) => ({ registeredClientId, workspaceId, expiresAt, ...(access ? { access } : {}) })),
         } as const;
       } catch {
         return unavailable;
@@ -154,22 +173,30 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
     },
     /** Trusted interactive revocation of one exact identity. */
     async revokeClient(clientId: unknown) {
-      if (!open || typeof clientId !== "string" || clientId.length !== 36 || !CLIENT_ID_PATTERN.test(clientId)) return false;
+      if (!open || typeof clientId !== "string" || clientId.length !== 36 || !CLIENT_ID_PATTERN.test(clientId) ||
+          revoking.has(clientId) || revoking.size >= MAX_CLIENTS) return false;
+      grantGeneration++;
+      revoking.add(clientId);
       try {
-        return await documents.runInTransaction(async (transaction) => {
+        const removed = await documents.runInTransaction(async (transaction) => {
           const { clients, revision } = await readRegistry(transaction);
           const active = clients.filter((entry) => !(entry.registeredClientId === clientId && entry.principalId === principalId));
           if (!open || active.length === clients.length) return false;
           await transaction.writeDocument(NAMESPACE, KEY, active, { expectedRevision: revision });
           return true;
         });
+        revoking.delete(clientId);
+        return removed;
       } catch {
+        // The saved outcome is unknown. Refuse this credential until a
+        // trusted restart rereads the saved registration.
         return false;
       }
     },
     close() {
       open = false;
       generation++;
+      grantGeneration++;
       pending = undefined;
     },
   };
@@ -189,8 +216,12 @@ function digestEqual(left: string, right: string): boolean {
 }
 
 function validRecord(value: unknown): value is ClientRecord {
-  if (typeof value !== "object" || value === null || Object.keys(value).length !== 5) return false;
+  if (typeof value !== "object" || value === null) return false;
   const record = value as Partial<ClientRecord>;
+  const keys = Object.keys(value);
+  const fields = ["registeredClientId", "principalId", "workspaceId", "credentialDigest", "expiresAt"];
+  if (record.access === "author") fields.push("access");
+  if (keys.length !== fields.length || keys.some((field) => !fields.includes(field))) return false;
   return typeof record.registeredClientId === "string" && record.registeredClientId.length === 36 &&
     CLIENT_ID_PATTERN.test(record.registeredClientId) &&
     typeof record.principalId === "string" && record.principalId.length > 0 && record.principalId.length <= 200 &&

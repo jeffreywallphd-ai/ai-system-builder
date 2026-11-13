@@ -33,6 +33,15 @@ any retry records. Unexpected persistence content or unavailable storage
 denies admission. The test uses an isolated local SQLite database and no
 actual user credential.
 
+The authoring grant requires a new pairing with a separate native editing
+confirmation. Older records and the original workspace-only request grant
+read access only. The trusted pairing flow checks current workspace read and
+write authority before issuing and exchanging an editing code. A pending
+revoke fences in-flight grants immediately; an uncertain registry update
+keeps that client denied until the host rereads saved state after restart.
+The grant excludes all window control and privileged operations. The authoring
+transport and its Settings entry point are wired separately.
+
 The separately tested transport binds an OS-assigned port to literal
 `127.0.0.1` and accepts only exact Host, no Origin or forwarding headers,
 and POST to its two fixed paths. It accepts up to 8 KiB of compact UTF-8 JSON

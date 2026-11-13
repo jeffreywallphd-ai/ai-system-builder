@@ -8,6 +8,29 @@ export const DESKTOP_HEADLESS_PAIRING_CHANNELS = Object.freeze({
 });
 
 export type DesktopHeadlessPairingAction = keyof typeof DESKTOP_HEADLESS_PAIRING_CHANNELS;
+export type DesktopHeadlessClientAccess = "read" | "author";
+
+export const DESKTOP_HEADLESS_AUTHORING_OPERATIONS = Object.freeze([
+  "systems.preview-edits", "systems.apply-edits", "systems.create", "systems.rename", "systems.clone",
+] as const);
+export type DesktopHeadlessAuthoringOperation = typeof DESKTOP_HEADLESS_AUTHORING_OPERATIONS[number];
+
+/** The previous workspace-only IPC shape remains explicitly read-only. */
+export function readDesktopHeadlessPairingRequest(value: unknown): {
+  readonly workspaceId: WorkspaceId;
+  readonly access: DesktopHeadlessClientAccess;
+} | undefined {
+  if (isWorkspaceId(value)) return { workspaceId: value, access: "read" };
+  try {
+    if (!value || typeof value !== "object" || Array.isArray(value) ||
+        Object.getPrototypeOf(value) !== Object.prototype || Reflect.ownKeys(value).length !== 2) return undefined;
+    const workspace = Object.getOwnPropertyDescriptor(value, "workspaceId");
+    const mode = Object.getOwnPropertyDescriptor(value, "access");
+    if (!workspace?.enumerable || !("value" in workspace) || !isWorkspaceId(workspace.value) ||
+        !mode?.enumerable || !("value" in mode) || (mode.value !== "read" && mode.value !== "author")) return undefined;
+    return { workspaceId: workspace.value, access: mode.value };
+  } catch { return undefined; }
+}
 
 export type DesktopHeadlessPairingStatus =
   | {
@@ -19,6 +42,7 @@ export type DesktopHeadlessPairingStatus =
         readonly registeredClientId: string;
         readonly workspaceId: WorkspaceId;
         readonly expiresAt: number;
+        readonly access?: DesktopHeadlessClientAccess;
       }[];
     }
   | { readonly status: "unavailable" };
@@ -60,7 +84,9 @@ export function readDesktopHeadlessPairingStatus(value: unknown): DesktopHeadles
     const { registeredClientId, workspaceId, expiresAt } = item as {
       registeredClientId: string; workspaceId: WorkspaceId; expiresAt: number;
     };
-    clients.push({ registeredClientId, workspaceId, expiresAt });
+    const access = "access" in item ? item.access : undefined;
+    if (access !== undefined && access !== "read" && access !== "author") return { status: "unavailable" };
+    clients.push({ registeredClientId, workspaceId, expiresAt, ...(access === "author" ? { access } : {}) });
   }
   return { status: "ready", running: value.running, clients, ...address };
 }

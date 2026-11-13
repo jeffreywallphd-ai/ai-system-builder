@@ -30,12 +30,12 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
         return { status: "ready", running: true, endpoint: address, fingerprint, clients: [{ registeredClientId: clientId,
           workspaceId: workspace as never, expiresAt: 5_000, internalCode: code }] };
       },
-      async readWorkspaceLabel(id) {
-        effects.push(["workspace", id]);
+      async readWorkspaceLabel(id, access) {
+        effects.push(["workspace", id, access]);
         return "Synthetic workspace\nname";
       },
-      async beginPairing(id) {
-        effects.push(["begin", id]);
+      async beginPairing(id, _current, access) {
+        effects.push(["begin", id, access]);
         return { status: "ready", endpoint: address, fingerprint, pairingCode: code };
       },
       async startExistingClients() { effects.push("start"); return "started"; },
@@ -44,8 +44,8 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
     }),
     resolveWindow: (event) => event === owned ? {
       isUsable: () => usable,
-      async confirm(label) {
-        effects.push(["confirm", label]);
+      async confirm(label, access) {
+        effects.push(["confirm", label, access]);
         if (closeOnConfirm) usable = false;
         return confirmed;
       },
@@ -63,7 +63,7 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
   assert.equal(await pair(owned, { workspaceId: workspace, principalId: "fixture" }), "denied");
   assert.deepEqual(effects, []);
   assert.equal(await api.beginHeadlessPairing(workspace), "canceled");
-  assert.deepEqual(effects, [["workspace", workspace], ["confirm", "Synthetic workspace name (fixture-workspace)"]]);
+  assert.deepEqual(effects, [["workspace", workspace, "read"], ["confirm", "Synthetic workspace name (fixture-workspace)", "read"]]);
   confirmed = true;
   closeOnConfirm = true;
   assert.equal(await api.beginHeadlessPairing(workspace), "denied");
@@ -71,7 +71,13 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
   usable = true;
   closeOnConfirm = false;
   assert.equal(await api.beginHeadlessPairing(workspace), "shown");
-  assert.deepEqual(effects.slice(-2), [["begin", workspace], ["private native dialog", address, fingerprint, code]]);
+  assert.deepEqual(effects.slice(-2), [["begin", workspace, "read"], ["private native dialog", address, fingerprint, code]]);
+  confirmed = false;
+  assert.equal(await api.beginHeadlessPairing(workspace, "author"), "canceled");
+  assert.deepEqual(effects.slice(-2), [["workspace", workspace, "author"], ["confirm", "Synthetic workspace name (fixture-workspace)", "author"]]);
+  confirmed = true;
+  assert.equal(await api.beginHeadlessPairing(workspace, "author"), "shown");
+  assert.deepEqual(effects.slice(-2), [["begin", workspace, "author"], ["private native dialog", address, fingerprint, code]]);
   assert.deepEqual(await api.readHeadlessPairingStatus(), { status: "ready", running: true, endpoint: address, fingerprint,
     clients: [{ registeredClientId: clientId, workspaceId: workspace, expiresAt: 5_000 }] });
   assert.equal(await api.startHeadlessConnector(), "started");

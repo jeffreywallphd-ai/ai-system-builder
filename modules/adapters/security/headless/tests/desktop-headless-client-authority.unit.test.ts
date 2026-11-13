@@ -9,12 +9,45 @@ import { createInMemoryStructuredDocumentStore } from "../../../persistence/shar
 import type { StructuredDocumentStore } from "../../../persistence/shared";
 import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../../persistence/sqlite";
 import { createDesktopHeadlessClientAuthority } from "../index";
+import { DESKTOP_HEADLESS_AUTHORING_OPERATIONS } from "../../../../contracts/headless";
 
 const workspaceId = createWorkspaceId("paired-fixture-workspace");
 const identity = { organizationId: createOrganizationId("paired-fixture-org"), principalId: "paired-fixture-principal" };
 const otherIdentity = { ...identity, principalId: "other-fixture-principal" };
 const storeNamespace = "headless-client-authority";
 const denied = { status: "denied" };
+
+test("authoring requires its own current permission and old grants remain read-only", async () => {
+  const documents = createInMemoryStructuredDocumentStore().forOrganization(identity.organizationId);
+  let canAuthor = false;
+  const authority = createDesktopHeadlessClientAuthority({
+    documents, identity, canReadWorkspace: async () => true, canAuthorWorkspace: async () => canAuthor,
+  });
+  assert.deepEqual(await authority.beginPairing(workspaceId, () => true, "author"), denied);
+  const read = await authority.beginPairing(workspaceId);
+  assert.equal(read.status, "ready");
+  const reader = await authority.completePairing(read.pairingCode);
+  assert.equal(reader.status, "paired");
+  canAuthor = true;
+  const pending = await authority.beginPairing(workspaceId, () => true, "author");
+  assert.equal(pending.status, "ready");
+  canAuthor = false;
+  assert.deepEqual(await authority.completePairing(pending.pairingCode), denied);
+  canAuthor = true;
+  const approved = await authority.beginPairing(workspaceId, () => true, "author");
+  assert.equal(approved.status, "ready");
+  const writer = await authority.completePairing(approved.pairingCode);
+  assert.equal(writer.status, "paired");
+  assert.deepEqual((await authority.verifyCredential(reader.credential))?.authoring, []);
+  const grant = await authority.verifyCredential(writer.credential);
+  assert.deepEqual(grant?.authoring, DESKTOP_HEADLESS_AUTHORING_OPERATIONS);
+  assert.equal(grant?.isCurrent(), true);
+  const revoking = authority.revokeClient(writer.registeredClientId);
+  assert.equal(grant?.isCurrent(), false);
+  assert.equal(await revoking, true);
+  assert.equal(await authority.verifyCredential(writer.credential), undefined);
+  assert.ok(await authority.verifyCredential(reader.credential));
+});
 
 function fixture() {
   const documents = createInMemoryStructuredDocumentStore().forOrganization(identity.organizationId);
@@ -197,4 +230,31 @@ test("does not report a paired credential when the exact client was revoked befo
   }
   assert.deepEqual(await completing, denied);
   assert.deepEqual(await authority.listClients(), { status: "ready", clients: [] });
+});
+
+test("does not publish a credential after revocation overtakes the final stored snapshot", async () => {
+  const current = fixture();
+  let captured!: (clientId: string) => void;
+  let resume!: () => void;
+  const snapshot = new Promise<string>((resolve) => { captured = resolve; });
+  const release = new Promise<void>((resolve) => { resume = resolve; });
+  const documents: StructuredDocumentStore = {
+    ...current.documents,
+    async readDocument<T>(namespace: string, key: string) {
+      const document = await current.documents.readDocument<T>(namespace, key);
+      if (namespace === storeNamespace && Array.isArray(document?.value) && document.value.length === 1) {
+        captured(document.value[0].registeredClientId);
+        await release;
+      }
+      return document;
+    },
+  };
+  const authority = createDesktopHeadlessClientAuthority({ ...current.dependencies, documents });
+  const code = await authority.beginPairing(workspaceId);
+  assert.equal(code.status, "ready");
+  const completing = authority.completePairing(code.pairingCode);
+  try {
+    assert.equal(await authority.revokeClient(await snapshot), true);
+  } finally { resume(); }
+  assert.deepEqual(await completing, denied);
 });

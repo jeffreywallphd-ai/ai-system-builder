@@ -295,12 +295,15 @@ app.whenReady().then(async () => {
       getFocusedWindow: () => BrowserWindow.getFocusedWindow(),
       ownsAndTrusts: (window, caller) => openWindows.has(window) && isTrustedIpcSender(caller, [window]),
       dialogs: (window) => ({
-        async confirm(workspaceLabel) {
+        async confirm(workspaceLabel, access = "read") {
+          const canEdit = access === "author";
           const { response } = await dialog.showMessageBox(window, {
             type: "question",
             title: "Pair a chat client",
-            message: "Allow a local chat client to read saved systems?",
-            detail: `Workspace: ${workspaceLabel}\nThe new client can read saved systems in this workspace. This also turns on the local connector so previously paired clients can reconnect to their approved workspaces. No client can edit a system or control this window.`,
+            message: canEdit ? "Allow a local chat client to edit saved systems?" : "Allow a local chat client to read saved systems?",
+            detail: `Workspace: ${workspaceLabel}\n${canEdit
+              ? "The new client can create, rename, copy and edit saved systems in this workspace."
+              : "The new client can read saved systems in this workspace."} The local connector also lets previously paired clients reconnect with their existing access. This does not give the client control of this window.`,
             buttons: ["Cancel", "Create pairing code"], defaultId: 0, cancelId: 0, noLink: true,
           });
           return response === 1;
@@ -310,7 +313,7 @@ app.whenReady().then(async () => {
             type: "question",
             title: "Turn on the local connector",
             message: "Allow your paired local chat clients to reconnect?",
-            detail: "Each client can read saved systems only in the workspace you approved for it.",
+            detail: "Each client keeps the access you approved for its workspace.",
             buttons: ["Cancel", "Turn on"], defaultId: 0, cancelId: 0, noLink: true,
           });
           return response === 1;

@@ -3,16 +3,17 @@ import {
   DESKTOP_HEADLESS_PAIRING_CHANNELS,
   isDesktopHeadlessClientId,
   readDesktopHeadlessPairingStatus,
+  readDesktopHeadlessPairingRequest,
+  type DesktopHeadlessClientAccess,
   type DesktopHeadlessPairingResult,
   type DesktopHeadlessRevokeResult,
   type DesktopHeadlessStartResult,
 } from "../../../../modules/contracts/headless";
-import { isWorkspaceId } from "../../../../modules/contracts/workspace";
 import type { DesktopHeadlessConnection } from "../../../../modules/hosts/desktop/composition/composeDesktopHeadlessConnection";
 
 interface PairingWindow {
   isUsable(): boolean;
-  confirm(workspaceLabel: string): Promise<boolean>;
+  confirm(workspaceLabel: string, access?: DesktopHeadlessClientAccess): Promise<boolean>;
   confirmStart(): Promise<boolean>;
   showCode(endpoint: string, fingerprint: string, code: string): Promise<void>;
 }
@@ -52,14 +53,16 @@ export function registerDesktopHeadlessPairingIpc(dependencies: {
   ipcMain.handle(DESKTOP_HEADLESS_PAIRING_CHANNELS.pair, async (event, input: unknown): Promise<DesktopHeadlessPairingResult> => {
     const window = resolveWindow(event);
     const connection = getConnection();
-    if (!window?.isUsable() || !connection || !isWorkspaceId(input) || promptOpen) return "denied";
+    const selection = readDesktopHeadlessPairingRequest(input);
+    if (!window?.isUsable() || !connection || !selection || promptOpen) return "denied";
+    const { workspaceId, access } = selection;
     promptOpen = true;
     try {
-      const label = await connection.readWorkspaceLabel(input);
+      const label = await connection.readWorkspaceLabel(workspaceId, access);
       if (!label || !window.isUsable()) return "denied";
-      if (!await window.confirm(`${oneLine(label)} (${input})`)) return "canceled";
+      if (!await window.confirm(`${oneLine(label)} (${workspaceId})`, access)) return "canceled";
       if (!window.isUsable()) return "denied";
-      const outcome = await connection.beginPairing(input, window.isUsable);
+      const outcome = await connection.beginPairing(workspaceId, window.isUsable, access);
       if (outcome.status !== "ready") return outcome.status;
       if (!window.isUsable()) return "denied";
       await window.showCode(outcome.endpoint, outcome.fingerprint, outcome.pairingCode);

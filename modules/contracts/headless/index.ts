@@ -19,10 +19,14 @@ export {
 } from "./headless-semantic-batch";
 export {
   DESKTOP_HEADLESS_PAIRING_CHANNELS,
+  DESKTOP_HEADLESS_AUTHORING_OPERATIONS,
   isDesktopHeadlessClientId,
   isDesktopHeadlessEndpoint,
   isDesktopHeadlessFingerprint,
   readDesktopHeadlessPairingStatus,
+  readDesktopHeadlessPairingRequest,
+  type DesktopHeadlessAuthoringOperation,
+  type DesktopHeadlessClientAccess,
   type DesktopHeadlessPairingAction,
   type DesktopHeadlessPairingResult,
   type DesktopHeadlessPairingStatus,

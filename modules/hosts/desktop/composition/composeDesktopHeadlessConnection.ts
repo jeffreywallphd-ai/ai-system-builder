@@ -3,7 +3,7 @@ import { startDesktopHeadlessLoopback, type DesktopHeadlessLoopback } from "../.
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
-import type { DesktopHeadlessPairingStatus } from "../../../contracts/headless";
+import type { DesktopHeadlessClientAccess, DesktopHeadlessPairingStatus } from "../../../contracts/headless";
 import type { LocalIdentityProfile } from "../../../contracts/organization";
 import { isWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
 import type { DesktopHeadlessReadHandler } from "./composeDesktopHeadlessReads";
@@ -33,7 +33,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
     return task;
   }
 
-  async function readWorkspaceLabel(workspaceId: WorkspaceId): Promise<string | undefined> {
+  async function readWorkspaceLabel(workspaceId: WorkspaceId, access: DesktopHeadlessClientAccess = "read"): Promise<string | undefined> {
     if (!open || !isWorkspaceId(workspaceId)) return undefined;
     try {
       const workspace = await dependencies.workspaces.readWorkspace(workspaceId);
@@ -41,7 +41,8 @@ export function composeDesktopHeadlessConnection(dependencies: {
           workspace.status !== "active" || typeof workspace.displayName !== "string" ||
           workspace.displayName.length < 1 || workspace.displayName.length > 200) return undefined;
       await dependencies.authorization.authorizeWorkspaceOperation({
-        operation: "headless.pairing.begin", workspace, requiredScopes: ["workspace:read", "asset:read"],
+        operation: "headless.pairing.begin", workspace,
+        requiredScopes: access === "author" ? ["workspace:read", "asset:read", "asset:write"] : ["workspace:read", "asset:read"],
       });
       return open ? workspace.displayName : undefined;
     } catch {
@@ -53,6 +54,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
     documents: dependencies.documents,
     identity: dependencies.identity,
     canReadWorkspace: async (id) => (await readWorkspaceLabel(id)) !== undefined,
+    canAuthorWorkspace: async (id) => (await readWorkspaceLabel(id, "author")) !== undefined,
   });
 
   async function startConnector(isStillApproved: () => boolean) {
@@ -85,7 +87,8 @@ export function composeDesktopHeadlessConnection(dependencies: {
   }
 
   return {
-    readWorkspaceLabel: (id: WorkspaceId) => track<string | undefined>(undefined, () => readWorkspaceLabel(id)),
+    readWorkspaceLabel: (id: WorkspaceId, access: DesktopHeadlessClientAccess = "read") =>
+      track<string | undefined>(undefined, () => readWorkspaceLabel(id, access)),
     async status(): Promise<DesktopHeadlessPairingStatus> {
       if (!open) return { status: "unavailable" };
       return track<DesktopHeadlessPairingStatus>({ status: "unavailable" }, async () => {
@@ -109,15 +112,15 @@ export function composeDesktopHeadlessConnection(dependencies: {
         return "denied" as const;
       });
     },
-    async beginPairing(workspaceId: WorkspaceId, isStillApproved: () => boolean) {
+    async beginPairing(workspaceId: WorkspaceId, isStillApproved: () => boolean, access: DesktopHeadlessClientAccess = "read") {
       if (!open || !isStillApproved()) return { status: "denied" } as const;
       type Result = { readonly status: "denied" | "unavailable" } |
         { readonly status: "ready"; readonly endpoint: string; readonly fingerprint: string; readonly pairingCode: string };
       return track<Result>({ status: "unavailable" }, async () => {
-        if (!await readWorkspaceLabel(workspaceId) || !isStillApproved()) return { status: "denied" } as const;
+        if (!await readWorkspaceLabel(workspaceId, access) || !isStillApproved()) return { status: "denied" } as const;
         const address = await startConnector(isStillApproved);
         if (!address || !open) return { status: "unavailable" } as const;
-        const code = await registrations.beginPairing(workspaceId, isStillApproved);
+        const code = await registrations.beginPairing(workspaceId, isStillApproved, access);
         if (!open) return { status: "unavailable" } as const;
         if (code.status !== "ready") return code;
         return { status: "ready", ...address, pairingCode: code.pairingCode } as const;
