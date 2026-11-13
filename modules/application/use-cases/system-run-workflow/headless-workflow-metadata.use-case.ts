@@ -14,6 +14,7 @@ type Target = { readonly profileId: string; readonly source: ExactSource };
 type Access = {
   readonly context: SystemRunWorkflowRequestContext;
   readonly canRead: (workspaceId: WorkspaceId, kind: SourceKind) => Promise<boolean>;
+  readonly canDiscoverApprovedTurns?: (workspaceId: WorkspaceId) => Promise<boolean>;
 };
 const denied = { ok: false, code: "headless.forbidden" } as const;
 const unavailable = { ok: false, code: "headless.unavailable" } as const;
@@ -63,9 +64,34 @@ export class HeadlessWorkflowMetadataUseCase {
         const projected = projectAction(profileId, action);
         return projected ? [{ ...projected, fields: projected.fields }] : [];
       });
-      return { ok: true, value: { profile, snapshotRevision: snapshot.snapshotRevision, actions } } as const;
+      let approvedSessionIds: readonly string[] | undefined;
+      if (profileId === "builtin.workflow.conversation@1.0.0" && access.canDiscoverApprovedTurns &&
+          await access.canDiscoverApprovedTurns(workspaceId)) {
+        approvedSessionIds = projectApprovedSessionIds(snapshot.blocks);
+        if (approvedSessionIds === undefined) return unavailable;
+        if (!await authorized(access, workspaceId, source.kind)) return denied;
+        if (!await access.canDiscoverApprovedTurns(workspaceId)) return denied;
+      }
+      return { ok: true, value: { profile, snapshotRevision: snapshot.snapshotRevision, actions,
+        ...(approvedSessionIds === undefined ? {} : { approvedSessionIds }) } } as const;
     } catch { return unavailable; }
   }
+}
+
+function projectApprovedSessionIds(blocks: import("../../../contracts/system-run-workflow").SystemRunWorkflowSnapshot["blocks"]):
+  readonly string[] | undefined {
+  const tables = blocks.filter(block => block.blockId === "sessions");
+  if (tables.length !== 1 || tables[0]?.kind !== "table" || tables[0].rows.length > 100) return undefined;
+  const seen = new Set<string>();
+  const eligible: string[] = [];
+  for (const row of tables[0].rows) {
+    const { sessionId, status, approval, maySubmitMessage } = row.values;
+    if (!safeId(sessionId) || sessionId !== row.rowId || seen.has(sessionId)) return undefined;
+    seen.add(sessionId);
+    if ((status === "approved" || status === "active") && approval === "approved" && maySubmitMessage === true)
+      eligible.push(sessionId);
+  }
+  return eligible;
 }
 
 async function authorized(access: Access, workspaceId: WorkspaceId, kind: SourceKind) {

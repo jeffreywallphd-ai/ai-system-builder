@@ -73,3 +73,51 @@ test("omits secret-dependent actions and denies invalid, stale and no-longer-gra
   const revoked = setup({ revokeOnPrepare: true });
   assert.deepEqual(await revoked.metadata.prepare(workspaceId, target, revoked.auth), { ok: false, code: "headless.forbidden" });
 });
+
+test("prepares only approved session IDs for a current exact conversation grant", async () => {
+  const conversationSource = { kind: "reviewed-execution-plan", sourceId: "fixture-plan", sourceRevision: "plan-r1" } as const;
+  const conversation = { ...profile, profileId: "builtin.workflow.conversation@1.0.0",
+    source: { ...conversationSource, label: "Private plan" }, category: "conversation" as const,
+    availability: "available" as const, blockers: [] };
+  const conversationTarget = { profileId: conversation.profileId, source: conversationSource };
+  const row = (sessionId: string, status: string, approval: string, maySubmitMessage: boolean) =>
+    ({ rowId: sessionId, values: { sessionId, status, approval, maySubmitMessage } });
+  const rows = [
+    row("session-active", "active", "approved", true), row("session-awaiting", "awaiting-approval", "approval-required", false),
+    row("session-revoked", "active", "approval-invalidated", true), row("session-closed", "closed", "approved", true),
+    row("session-busy", "active", "approved", false), row("session-runtime-unavailable", "approved", "approved", false),
+    { rowId: "session-unknown", values: { sessionId: "session-unknown", status: "approved", approval: "approved" } },
+  ];
+  let duplicate = false;
+  const handler: SystemRunWorkflowHandlerPort = {
+    profileId: conversation.profileId,
+    async discover() { return systemRunWorkflowSuccess([conversation]); },
+    async prepare() {
+      return systemRunWorkflowSuccess({ schemaVersion: "1.0", profile: conversation,
+        snapshotRevision: "fixture-snapshot-r1", refreshedAt: "2026-11-13T00:00:00Z", actions: [],
+        blocks: [{ blockId: "sessions", kind: "table", title: "Private session table",
+          columns: [{ columnId: "sessionId", label: "Private label" }, { columnId: "status", label: "Status" },
+            { columnId: "approval", label: "Approval" }],
+          rows: duplicate ? [...rows, rows[0]!] : rows }],
+      });
+    },
+    async invoke() { assert.fail("Metadata cannot invoke a workflow"); },
+  };
+  const metadata = new HeadlessWorkflowMetadataUseCase(createSystemRunWorkflowUseCases({ handlers: [handler] }));
+  const ordinary = await metadata.prepare(workspaceId, conversationTarget, access);
+  assert.ok(ordinary.ok);
+  assert.equal("approvedSessionIds" in ordinary.value, false);
+  const delegated = { ...access, canDiscoverApprovedTurns: async (targetWorkspace: typeof workspaceId) => targetWorkspace === workspaceId };
+  const prepared = await metadata.prepare(workspaceId, conversationTarget, delegated);
+  assert.ok(prepared.ok);
+  assert.deepEqual(prepared.value.approvedSessionIds, ["session-active"]);
+  assert.ok(!JSON.stringify(prepared).includes("maySubmitMessage"));
+  assert.equal(prepared.value.snapshotRevision, "fixture-snapshot-r1");
+  assert.ok(!JSON.stringify(prepared).includes("Private"));
+  let checks = 0;
+  assert.deepEqual(await metadata.prepare(workspaceId, conversationTarget, {
+    ...access, canDiscoverApprovedTurns: async () => ++checks === 1,
+  }), { ok: false, code: "headless.forbidden" });
+  duplicate = true;
+  assert.deepEqual(await metadata.prepare(workspaceId, conversationTarget, delegated), { ok: false, code: "headless.unavailable" });
+});

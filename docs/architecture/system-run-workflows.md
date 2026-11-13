@@ -150,3 +150,9 @@ read-action invocation, input denial, explicit confirmation, sensitive-value
 masking, all bounded result primitives, object-URL cleanup, host client failure
 mapping, and lazy host-page mounting. Desktop preload and both host composition
 roots are covered by their boundary checks.
+Headless preparation may expose the saved IDs of eligible conversation
+sessions for the same reviewed plan and workflow snapshot. The connector
+includes this metadata only with current conversation consent and when the
+existing session read model permits a new message. Preparation does not
+start a worker, load a model or create approval. Execution must independently
+verify the exact session, plan and approval.

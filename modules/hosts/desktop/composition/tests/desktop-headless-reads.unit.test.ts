@@ -244,3 +244,30 @@ test("withholds a role-dependent workflow reply if membership changes during the
   assert.equal(described, true);
   assert.equal(role, "member");
 });
+
+test("withholds prepared session identifiers if conversation permission is lost before egress", async () => {
+  let granted: DesktopHeadlessReadGrant = { ...grant, conversation: true };
+  const profileId = "builtin.workflow.conversation@1.0.0";
+  const source = { kind: "reviewed-execution-plan", sourceId: "fixture-plan", sourceRevision: "plan-r1" } as const;
+  const handler = composeDesktopHeadlessReads({
+    hostIncarnationId, identity: { organizationId, principalId },
+    workspaceRepository: { async readWorkspace(id) {
+      return { organizationId, workspaceId: id, displayName: "Fixture", status: "active", createdAt: at, updatedAt: at };
+    } },
+    authorization: { async authorizeWorkspaceOperation() {} },
+    getUseCases() { assert.fail("Preparing a conversation does not start the System Builder."); },
+    readWorkflowRole: async () => "owner",
+    workflows: {
+      async list() { assert.fail("Only preparation is requested."); },
+      async prepare(workspace, _target, access) {
+        assert.equal(await access.canDiscoverApprovedTurns?.(workspace), true);
+        granted = grant;
+        return { ok: true, value: { profile: { profileId, source, title: "Controlled conversation", availability: "available", blockers: [] },
+          snapshotRevision: "fixture-snapshot-r1", actions: [], approvedSessionIds: ["session-1"] } };
+      },
+    },
+    isOpen: () => true,
+  });
+  assert.deepEqual(await handler(request("workflows.prepare", { hostIncarnationId, workspaceId, profileId, source }), async () => granted),
+    forbidden);
+});

@@ -139,6 +139,11 @@ deployment, mutation and execution. The projection does not relay private
 labels, defaults, transcripts, record values, artifact previews or errors.
 Fields marked sensitive or referring to secrets remove the entire action
 from the projection.
+Preparation of a reviewed conversation can also return a bounded list of
+approved session identifiers to a current conversation grant. It includes
+only sessions the existing read model marks ready for a new message. It does
+not return labels, transcripts or approval records. The list is advisory. The exact
+plan, session, approval and runtime are checked again before dispatch.
 
 The internal conversation dispatch reservation separates current permission
 to observe from permission to start a new turn. Observation leaves an

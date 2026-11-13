@@ -67,7 +67,10 @@ export type HeadlessReadResult =
   | { readonly ok: true; readonly operation: "systems.changes"; readonly value: HeadlessSavedChanges }
   | { readonly ok: true; readonly operation: "workflows.list"; readonly value: readonly WorkflowProfile[] }
   | { readonly ok: true; readonly operation: "workflows.prepare"; readonly value: {
-    readonly profile: WorkflowProfile; readonly snapshotRevision: string; readonly actions: readonly {
+    readonly profile: WorkflowProfile; readonly snapshotRevision: string;
+    /** Only a current conversation grant may receive these saved handles. */
+    readonly approvedSessionIds?: readonly string[];
+    readonly actions: readonly {
       readonly actionId: string; readonly intent: "read"; readonly enabled: boolean; readonly requiresConfirmation: false;
       readonly fields: readonly WorkflowField[];
     }[];

@@ -21,7 +21,7 @@ const source = {
   label: "Plan 1",
 };
 
-const fixture = () => {
+const fixture = (sessions: readonly unknown[] = []) => {
   const calls = { listSessions: 0, create: 0, transcript: 0 };
   const executionPlans = {
     getExecutionPlanById: async () => plan,
@@ -40,13 +40,13 @@ const fixture = () => {
         },
       },
       approve: { execute: async () => ({ kind: "success", value: {} }) },
-      submitTurn: { execute: async () => ({ kind: "success", value: {} }) },
+      submitTurn: { execute: async () => { throw new Error("This fixture never submits a turn."); } },
       cancelTurn: { execute: async () => ({ kind: "success", value: {} }) },
       retryTurn: { execute: async () => ({ kind: "success", value: {} }) },
       readSessions: {
         async listConversationSessions() {
           calls.listSessions += 1;
-          return { items: [] };
+          return { items: sessions };
         },
         async readDetail() {
           return {
@@ -79,6 +79,22 @@ const fixture = () => {
 };
 
 describe("conversation workflow handler", () => {
+  it("keeps submit readiness in the saved session row without adding a visible column", async () => {
+    const { handler } = fixture([
+      { conversationSessionId: "session-1", sessionStatus: "active", approvalStatus: "approved",
+        actions: { maySubmitMessage: true }, updatedAt: plan.updatedAt },
+      { conversationSessionId: "session-2", sessionStatus: "active", approvalStatus: "approved",
+        actions: { maySubmitMessage: false }, updatedAt: plan.updatedAt },
+    ]);
+    const result = await handler.prepare({ workspaceId: "workspace-1", profileId: handler.profileId, source }, actor);
+    const table = result.ok ? result.value.blocks.find(block => block.blockId === "sessions") : undefined;
+    expect(table?.kind === "table" ? table.rows : []).toEqual([
+      { rowId: "session-1", values: { sessionId: "session-1", status: "active", approval: "approved", maySubmitMessage: true } },
+      { rowId: "session-2", values: { sessionId: "session-2", status: "active", approval: "approved", maySubmitMessage: false } },
+    ]);
+    expect(table?.kind === "table" ? table.columns.map(column => column.columnId) : []).toEqual(["sessionId", "status", "approval"]);
+  });
+
   it("discovers reviewed plans without reading sessions", async () => {
     const { calls, handler } = fixture();
     const result = await handler.discover(

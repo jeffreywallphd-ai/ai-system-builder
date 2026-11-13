@@ -70,7 +70,9 @@ const resultValue = {
     }),
   ]),
   "workflows.list": z.array(workflowProfile).max(64),
-  "workflows.prepare": z.strictObject({ profile: workflowProfile, snapshotRevision: workflowId, actions: z.array(z.strictObject({
+  "workflows.prepare": z.strictObject({ profile: workflowProfile, snapshotRevision: workflowId,
+    approvedSessionIds: z.array(workflowId).max(100).refine(ids => new Set(ids).size === ids.length).optional(),
+    actions: z.array(z.strictObject({
     actionId: workflowId, intent: z.literal("read"), enabled: z.boolean(), requiresConfirmation: z.literal(false),
     fields: z.array(field).max(16),
   })).max(32) }),
@@ -174,6 +176,9 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
         const result = resultValue["workflows.prepare"].safeParse(parsed.data.value);
         const target = input.input.source;
         if (!result.success || result.data.profile.profileId !== input.input.profileId) return unavailable;
+        if (result.data.approvedSessionIds !== undefined &&
+            (result.data.profile.profileId !== "builtin.workflow.conversation@1.0.0" || target.kind !== "reviewed-execution-plan"))
+          return unavailable;
         const actual = result.data.profile.source;
         if (actual.sourceId !== target.sourceId || actual.kind !== target.kind ||
             (actual.kind === "approved-release" && target.kind === "approved-release" && actual.sourceDigest !== target.sourceDigest) ||

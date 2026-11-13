@@ -27,6 +27,7 @@ export interface DesktopHeadlessReadGrant {
   readonly organizationId: LocalIdentityProfile["organizationId"];
   readonly workspaceIds: readonly WorkspaceId[];
   readonly operations: readonly HeadlessReadOperation[];
+  readonly conversation?: true;
 }
 
 export type DesktopHeadlessReadHandler = (
@@ -183,6 +184,9 @@ export function composeDesktopHeadlessReads(dependencies: {
             context: { actorId: identity.principalId, organizationId: identity.organizationId, authenticated: true, roles: [role] },
             canRead: async (id: WorkspaceId) => id === workspaceId && Boolean(
               await authorizedWorkspace(id, operation) && await readWorkflowRole() === role && await currentScopedGrant([id])),
+            canDiscoverApprovedTurns: async (id: WorkspaceId) => id === workspaceId && grant.conversation === true &&
+              Boolean(await authorizedWorkspace(id, operation) && await readWorkflowRole() === role &&
+                (await currentScopedGrant([id]))?.conversation === true),
           };
           if (operation === "workflows.list") {
             const result = await workflows.list(workspaceId, input.sourceKind, workflowAccess);
@@ -201,9 +205,12 @@ export function composeDesktopHeadlessReads(dependencies: {
           break;
         }
       }
-      if (!await authorizedWorkspace(workspaceId, operation) || !await currentScopedGrant([workspaceId])) return forbidden;
+      if (!await authorizedWorkspace(workspaceId, operation)) return forbidden;
       if (capturedWorkflowRole && (!readWorkflowRole || await readWorkflowRole() !== capturedWorkflowRole || !isOpen()))
         return forbidden;
+      const finalGrant = await currentScopedGrant([workspaceId]);
+      if (!finalGrant || (response.ok && response.operation === "workflows.prepare" &&
+          response.value.approvedSessionIds !== undefined && finalGrant.conversation !== true)) return forbidden;
       return response;
     } catch {
       return unavailable;

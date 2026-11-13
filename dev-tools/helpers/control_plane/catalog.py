@@ -155,6 +155,8 @@ HEADLESS_MCP_SOURCES = (
 PUBLISHED_FORM_CHECKS = {
     "headless-workflow-metadata": {
         "sources": (
+            "modules/application/services/system-run-workflow/conversation-workflow-handler.service.ts",
+            "modules/application/services/system-run-workflow/tests/conversation-workflow-handler.unit.test.ts",
             "modules/application/ports/system-run-workflow/headless-turn-reservation.port.ts",
             "modules/application/use-cases/system-run-workflow/headless-approved-conversation-dispatch.use-case.ts",
             "modules/adapters/persistence/system-builder/createStructuredHeadlessTurnReservation.ts",
@@ -165,12 +167,15 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/system-run-workflow/tests/headless-conversation-status.unit.test.ts",
         ),
         "automatic_sources": (
+            "modules/application/services/system-run-workflow/conversation-workflow-handler.service.ts",
+            "modules/application/services/system-run-workflow/tests/conversation-workflow-handler.unit.test.ts",
             "modules/application/use-cases/system-run-workflow/headless-workflow-metadata.use-case.ts",
             "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--",
             "modules/adapters/persistence/system-builder/tests/structured-headless-turn-reservation.unit.test.ts",
+            "modules/application/services/system-run-workflow/tests/conversation-workflow-handler.unit.test.ts",
             "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
             "modules/application/use-cases/system-run-workflow/tests/headless-conversation-status.unit.test.ts",
             "modules/application/use-cases/system-run-workflow/tests/system-run-workflow-use-cases.unit.test.ts",
