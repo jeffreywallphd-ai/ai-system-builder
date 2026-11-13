@@ -10,6 +10,14 @@ export {
 } from "./headless-read-request";
 export type { HeadlessReadResult, HeadlessSystemSummary } from "./headless-read-result";
 export {
+  HEADLESS_MAX_SEMANTIC_EDITS,
+  parseHeadlessSemanticBatchRequest,
+  type HeadlessAssetPlacementTarget,
+  type HeadlessSemanticBatchRequest,
+  type HeadlessSemanticBatchTarget,
+  type HeadlessSemanticEdit,
+} from "./headless-semantic-batch";
+export {
   DESKTOP_HEADLESS_PAIRING_CHANNELS,
   isDesktopHeadlessClientId,
   isDesktopHeadlessEndpoint,

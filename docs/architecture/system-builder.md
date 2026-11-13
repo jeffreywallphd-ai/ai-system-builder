@@ -109,6 +109,11 @@ current workspace access. Saved data notifications must neither steer UI
 navigation nor change a human draft's save base. The initial versioned read
 contract exposes no new product entry point.
 
+The semantic batch request describes exact add, configure, connect, move and
+remove operations against an existing saved revision. The application must
+resolve the exact definitions and enforce its current graph and workspace
+policy before preview or commit. The decoder alone cannot write any system.
+
 - System Builder records are workspace-owned and require explicit workspace identity at every future contract, client, transport, use-case, repository, and persistence seam.
 - Asset Kernel definitions, instances, bindings, compositions, and references remain canonical component vocabulary.
 - Asset composition planning remains the non-executing compatibility/planning input. A system record may reference a plan but must not mutate the plan or effective asset projections implicitly.

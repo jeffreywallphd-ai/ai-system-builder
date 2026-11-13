@@ -16,6 +16,8 @@ Current contract families include:
   from an existing host. Request validation does not grant access or
   advertise a supported capability. Desktop pairing IPC is separate and never
   returns the one-time code through its status or action results.
+  The internal semantic batch contract binds edits to the exact workspace,
+  system, saved record revision and composition revision.
 - `asset-authoring` for safe authored records plus exact-base layered
   customizations, typed semantic sections, bounded source overlays, review
   evidence, distinct publication lineage, and shared operation identities used

@@ -54,6 +54,17 @@ client metadata. Restart leaves the listener off; existing authorized clients
 can reconnect after an explicit start with no new pairing. Closing the desktop
 retires the listener before persistence. This does not grant write or window
 control, or qualify packaged-host MCP delivery.
+
+The internal edit decoder admits only exact add, configure, connect, move and
+remove operations on a batch of 1–24 edits. It captures passive input before
+parsing and binds the host incarnation, workspace, system, record revision and
+composition revision. Apply additionally requires a preview digest and an
+idempotency key. This shape check grants no permission; workspace access,
+asset/configuration/placement policy and atomic writes remain application
+responsibilities. No connector write operation is enabled by the decoder.
+Asset versions are literal identifier values, including prerelease or build
+metadata. Floating aliases, ranges and path forms are unavailable. The
+application still has to resolve the exact version in the granted workspace.
 The desktop admits up to four concurrent management operations. It fences and
 drains them along with socket work before releasing persistence; a timed-out
 drain remains pending for an explicit retry.
