@@ -1,2 +1,5 @@
 # Keep this bounded JSON census below the same read limit on Windows.
 docs/operations/comprehensive-ui-automation-current-census.json text eol=lf
+# Historical evidence records pin the exact canonical bytes.
+docs/operations/comprehensive-ui-automation-census-source-history.json text eol=lf
+docs/operations/comprehensive-ui-automation-*-census-history.json text eol=lf

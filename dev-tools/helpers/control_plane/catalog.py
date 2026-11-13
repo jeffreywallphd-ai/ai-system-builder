@@ -175,6 +175,20 @@ PUBLISHED_FORM_CHECKS = {
             "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
         ),
     },
+    "headless-composer-draft-witnesses": {
+        "sources": (
+            "modules/ui/shared/notifications/tests/notificationMigrationInventory.ts",
+            "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
+            "docs/operations/comprehensive-ui-automation-current-census.json",
+            "dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs",
+            "dev-tools/helpers/ui_coverage_census.mjs",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
+            "dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs",
+        ),
+    },
     "published-form-editor-styles": {
         "companion_to": "published-form-editor-interactions",
         "sources": (

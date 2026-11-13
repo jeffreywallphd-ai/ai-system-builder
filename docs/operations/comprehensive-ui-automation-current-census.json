@@ -12155,8 +12155,8 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "d94ea9bd27cc2b6fac7aa7ed133b6a423a3874d38b675aacc7d40d3b945de8e5",
-    "bytes": 110777,
+    "sha256": "8b09340db67d2b7a5bc212e3dca036ed02337ca322e865cd76aab8930bd78837",
+    "bytes": 114699,
     "cases": [
      {
       "name": "submits a published form only after valid answers and reuses the same request on retry",
@@ -12239,35 +12239,35 @@
      },
      {
       "name": "instance",
-      "line": 2384
+      "line": 2449
      },
      {
       "name": "composerDefinition",
-      "line": 2404
+      "line": 2469
      },
      {
       "name": "layoutDefinition",
-      "line": 2476
+      "line": 2541
      },
      {
       "name": "withoutComposerDetail",
-      "line": 2494
+      "line": 2559
      },
      {
       "name": "button",
-      "line": 2505
+      "line": 2570
      },
      {
       "name": "setInputValue",
-      "line": 2512
+      "line": 2577
      },
      {
       "name": "clientFor",
-      "line": 2519
+      "line": 2584
      }
     ],
-    "assertionCount": 274,
-    "assertionDigest": "6ef91ad08a57a2be3221f37ceb9a52a4c99aaf3ea311a1d92e3788b226a3b3f0",
+    "assertionCount": 287,
+    "assertionDigest": "9e8e7edc4a3b1b194faed8d44c57c05acc6f0ce18c61c11fef12b9a132d48992",
     "assertionExamples": [
      {
       "line": 66,

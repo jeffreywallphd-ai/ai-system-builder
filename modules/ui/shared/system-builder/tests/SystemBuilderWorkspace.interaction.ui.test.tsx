@@ -2207,8 +2207,15 @@ describe("SystemBuilderWorkspace UI preview", () => {
         ]).get(String(input.definitionRef.id))!,
       }),
     );
+    let listRecord: SystemBuilderRecord | undefined = record;
+    const readRevision = vi.fn(async ({ revisionId }: Parameters<SystemBuilderClient["readRevision"]>[0]) => ({
+      ok: true as const,
+      value: revisionId === "system-revision-3" ? { ...revision, revisionNumber: 3, revisionId: normalizeSystemBuilderRevisionId("system-revision-3") } : revision,
+    }));
     const client = {
       ...clientFor(record, revision),
+      list: async () => ({ ok: true as const, value: listRecord ? [listRecord] : [] }),
+      readRevision,
       saveRevision,
       listComposerAssets,
       readComposerAsset,
@@ -2378,6 +2385,64 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(
       JSON.stringify(saveRevision.mock.calls[0]?.[0].instances),
     ).not.toMatch(/sampleUserMessage|sampleAssistantMessage|previewValue/);
+
+    listRecord = { ...record, revision: 3, currentRevisionId: normalizeSystemBuilderRevisionId("system-revision-3") };
+    await act(async () => {
+      await button(container!, "Properties").click();
+      await button(container!, "Layers").click();
+    });
+    const latestShell = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'))
+      .find((entry) => entry.textContent?.includes("Standard shell"));
+    expect(latestShell).toBeDefined();
+    await act(async () => latestShell!.click());
+    await act(async () => button(container!, "Properties").click());
+    const nextTitle = await vi.waitFor(() => {
+      const input = container!.querySelector<HTMLInputElement>("#title");
+      expect(input).not.toBeNull();
+      return input!;
+    });
+    await act(async () => setInputValue(nextTitle, "Keep my local title"));
+    saveRevision.mockImplementationOnce(async () => ({
+      ok: false, error: { code: "system-builder.stale-record-revision", message: "This system changed. Reopen it before saving." },
+    }) as never);
+    await act(async () => {
+      root!.render(<SystemBuilderWorkspace workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} activeSystemsRevision={1} />);
+    });
+    await vi.waitFor(() => expect(container!.textContent).toContain("A newer saved version exists."));
+    await act(async () => button(container!, "Save and validate revision").click());
+    await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(2));
+    expect(saveRevision.mock.calls[1]?.[0].expectedRecordRevision).toBe(2);
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Keep my local title");
+    await act(async () => button(container!, "Undo").click());
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Configured portal");
+    await act(async () => button(container!, "Redo").click());
+    await act(async () => button(container!, "Discard changes").click());
+    await vi.waitFor(() => expect(readRevision).toHaveBeenLastCalledWith({
+      workspaceId: "workspace-a", systemId: String(record.systemId), revisionId: "system-revision-3",
+    }));
+
+    await act(async () => button(container!, "Layers").click());
+    const refreshedShell = [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]')]
+      .find((item) => item.textContent?.includes("Standard shell"));
+    expect(refreshedShell).toBeDefined();
+    await act(async () => refreshedShell!.click());
+    await act(async () => button(container!, "Properties").click());
+    const finalTitle = await vi.waitFor(() => {
+      const field = container!.querySelector<HTMLInputElement>("#title");
+      expect(field).not.toBeNull();
+      return field!;
+    });
+    await act(async () => setInputValue(finalTitle, "Keep after archive"));
+    listRecord = undefined;
+    await act(async () => {
+      root!.render(<SystemBuilderWorkspace workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} activeSystemsRevision={2} />);
+    });
+    await vi.waitFor(() => expect(container!.textContent).toContain("This saved system is no longer in the list."));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Keep after archive");
+    await act(async () => button(container!, "Discard changes").click());
+    expect(container.querySelector(".system-composer__workspace")).toBeNull();
   });
 });
 

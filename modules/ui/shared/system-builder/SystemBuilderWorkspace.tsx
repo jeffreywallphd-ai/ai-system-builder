@@ -264,6 +264,12 @@ export function SystemBuilderWorkspace({
   const [historyError, setHistoryError] = useState<string>();
   const [loadAttempt, setLoadAttempt] = useState(0);
   const savedDraft = useRef<SystemComposerDraft | undefined>(undefined);
+  const draftBase = useRef<{
+    scope: object;
+    systemId: string;
+    recordRevision: number;
+    revisionId: SystemBuilderRevision["revisionId"];
+  } | undefined>(undefined);
   const appliedInitialSystem = useRef<string | undefined>(undefined);
   const scope = useMemo(() => ({ client, workspaceId }), [client, workspaceId]);
   const [formTarget, setFormTarget] = useState<{ scope: typeof scope; systemId: string; formId: string }>();
@@ -286,9 +292,19 @@ export function SystemBuilderWorkspace({
   const [foundationUpgradeOpen, setFoundationUpgradeOpen] = useState(false);
   const [foundationUpgradePreview, setFoundationUpgradePreview] =
     useState<SystemBuilderFoundationUpgradePreview>();
-  const selectedSystem = systems.find(
+  const currentListRecord = systems.find(
     (system) => String(system.systemId) === selectedSystemId,
   );
+  const [detachedSystem, setDetachedSystem] = useState<SystemBuilderRecord>();
+  const selectedSystem = currentListRecord ?? (dirty && detachedSystem && detachedSystem.systemId === selectedSystemId &&
+    detachedSystem.targetWorkspaceId === workspaceId ? detachedSystem : undefined);
+  const savedElsewhere = Boolean(dirty && selectedSystemId && draftBase.current?.systemId === selectedSystemId &&
+    draftBase.current.scope === scope && (!currentListRecord ||
+      currentListRecord.revision !== draftBase.current.recordRevision));
+  const liveDraft = useRef<string | undefined>(undefined);
+  liveDraft.current = dirty ? selectedSystemId : undefined;
+  const liveList = useRef(systems);
+  liveList.current = systems;
   const existingSystemIsLoaded = Boolean(
     selectedSystem && revision && String(revision.systemId) === selectedSystemId && String(revision.targetWorkspaceId) === workspaceId && existingSystemId === selectedSystemId,
   );
@@ -411,6 +427,8 @@ export function SystemBuilderWorkspace({
     operation.current = undefined;
     appliedInitialSystem.current = undefined;
     savedDraft.current = undefined;
+    draftBase.current = undefined;
+    setDetachedSystem(undefined);
     setBusy(false);
     setRevisionError(undefined);
     setHistoryError(undefined);
@@ -455,9 +473,10 @@ export function SystemBuilderWorkspace({
 
   useEffect(() => {
     let active = true;
+    const isCurrentList = () => active && currentScope.current === scope;
     void Promise.resolve().then(() => client.list({ workspaceId, includeArchived: false }))
       .then((systemResult) => {
-        if (!active) return;
+        if (!isCurrentList()) return;
         if (!systemResult.ok) {
           setError(systemResult.error.message);
           return;
@@ -468,14 +487,23 @@ export function SystemBuilderWorkspace({
         const activeSystemIds = new Set(
           activeSystems.map((item) => String(item.systemId)),
         );
-        setSystems(activeSystems);
+        setSystems((previous) => {
+          const sameWorkspace = new Map(previous
+            .filter((record) => record.targetWorkspaceId === workspaceId)
+            .map((record) => [record.systemId, record]));
+          return activeSystems.map((record) => {
+            const existing = sameWorkspace.get(record.systemId);
+            return existing && existing.revision > record.revision ? existing : record;
+          });
+        });
+        const keepDraft = liveDraft.current;
         setExistingSystemId((current) =>
-          current && !activeSystemIds.has(current) ? "" : current,
+          current && !activeSystemIds.has(current) && current !== keepDraft ? "" : current,
         );
         setSelectedSystemId((current) =>
-          current && !activeSystemIds.has(current) ? undefined : current,
+          current && !activeSystemIds.has(current) && current !== keepDraft ? undefined : current,
         );
-      }).catch(() => { if (active) setError("Systems are unavailable. Retry opening the workspace."); });
+      }).catch(() => { if (isCurrentList()) setError("Systems are unavailable. Retry opening the workspace."); });
     return () => {
       active = false;
     };
@@ -521,6 +549,7 @@ export function SystemBuilderWorkspace({
 
   useEffect(() => {
     if (!selectedSystemId) {
+      draftBase.current = undefined;
       setRevisionLoading(false);
       setRevision(undefined);
       setInstances([]);
@@ -533,9 +562,13 @@ export function SystemBuilderWorkspace({
       setFoundationUpgradePreview(undefined);
       return;
     }
+    const loadedFrom = liveList.current.find((record) => record.systemId === selectedSystemId);
+    if (!loadedFrom || (loadedFrom.targetWorkspaceId && loadedFrom.targetWorkspaceId !== workspaceId)) return;
     let active = true;
+    const isCurrentLoad = () => active && currentScope.current === scope && currentSystem.current === selectedSystemId;
     setRevisionLoading(true);
     setRevision(undefined);
+    draftBase.current = undefined;
     setInstances([]);
     setBindings([]);
     setPlacements([]);
@@ -544,11 +577,14 @@ export function SystemBuilderWorkspace({
     setRevisionError(undefined);
     setHistoryError(undefined);
     const acceptRevision = (value: SystemBuilderRevision) => {
-      if (String(value.systemId) !== selectedSystemId || String(value.targetWorkspaceId) !== workspaceId) {
+      if (String(value.systemId) !== selectedSystemId || String(value.targetWorkspaceId) !== workspaceId ||
+          (loadedFrom.currentRevisionId && value.revisionId !== loadedFrom.currentRevisionId)) {
         setRevisionError("The loaded revision does not belong to this system. Retry loading it.");
         return;
       }
       setRevision(value);
+      draftBase.current = { scope, systemId: selectedSystemId, recordRevision: loadedFrom.revision, revisionId: value.revisionId };
+      setDetachedSystem(loadedFrom);
       const checkpoint = installSavedDraft(value);
       setSelectedLayoutDefinitionId(value.structure?.layoutPresetRef ? String(value.structure.layoutPresetRef.id) : undefined);
       setUndoDrafts([]);
@@ -564,23 +600,25 @@ export function SystemBuilderWorkspace({
       setDirty(false);
     };
     // Optional history never gates the usable current Canvas.
-    void Promise.resolve().then(() => client.readRevision({ workspaceId, systemId: selectedSystemId }))
+    void Promise.resolve().then(() => client.readRevision({ workspaceId, systemId: selectedSystemId,
+      ...(loadedFrom.currentRevisionId ? { revisionId: loadedFrom.currentRevisionId } : {}),
+    }))
       .then(result => {
-        if (!active) return;
+        if (!isCurrentLoad()) return;
         if (result.ok) acceptRevision(result.value);
         else setRevisionError("Unable to load this system revision. Retry loading it.");
-      }).catch(() => { if (active) setRevisionError("Unable to load this system revision. Retry loading it."); })
-      .finally(() => { if (active) setRevisionLoading(false); });
+      }).catch(() => { if (isCurrentLoad()) setRevisionError("Unable to load this system revision. Retry loading it."); })
+      .finally(() => { if (isCurrentLoad()) setRevisionLoading(false); });
     void Promise.resolve().then(() => client.listRevisions({ workspaceId, systemId: selectedSystemId }))
       .then(result => {
-        if (!active) return;
+        if (!isCurrentLoad()) return;
         if (result.ok) setRevisions(current => {
           const owned = result.value.filter(item => String(item.systemId) === selectedSystemId && String(item.targetWorkspaceId) === workspaceId);
           const byId = new Map([...owned, ...current].map(item => [String(item.revisionId), item]));
           return [...byId.values()].sort((a, b) => b.revisionNumber - a.revisionNumber);
         });
         else setHistoryError("Revision history is unavailable. Your current Canvas is ready.");
-      }).catch(() => { if (active) setHistoryError("Revision history is unavailable. Your current Canvas is ready."); });
+      }).catch(() => { if (isCurrentLoad()) setHistoryError("Revision history is unavailable. Your current Canvas is ready."); });
     return () => { active = false; };
   }, [client, selectedSystemId, workspaceId, loadAttempt]);
 
@@ -770,6 +808,19 @@ export function SystemBuilderWorkspace({
     return checkpoint;
   }
 
+  function captureDraftBase() {
+    const base = draftBase.current;
+    return base && base.scope === scope && base.systemId === selectedSystemId &&
+      base.revisionId === revision?.revisionId ? base : undefined;
+  }
+
+  function recordSavedBase(value: SystemBuilderRevision, previous: NonNullable<typeof draftBase.current>) {
+    draftBase.current = { ...previous, recordRevision: previous.recordRevision + 1, revisionId: value.revisionId };
+    setDetachedSystem((record) => record?.systemId === previous.systemId ? {
+      ...record, revision: previous.recordRevision + 1, currentRevisionId: value.revisionId, composition: value.composition,
+    } : record);
+  }
+
   async function transact(action: (isCurrent: () => boolean) => Promise<void>) {
     if (operation.current) return;
     const token = {};
@@ -799,6 +850,8 @@ export function SystemBuilderWorkspace({
       return;
     }
     setError(undefined);
+    if (!dirty && existingSystemId === selectedSystemId &&
+        currentListRecord?.revision !== draftBase.current?.recordRevision) setLoadAttempt((value) => value + 1);
     setSelectedSystemId(existingSystemId);
     requestComposerCatalog();
   }
@@ -1309,6 +1362,12 @@ export function SystemBuilderWorkspace({
     );
     setDirty(false);
     setError(undefined);
+    if (!currentListRecord) {
+      setSelectedSystemId(undefined);
+      setExistingSystemId("");
+    } else if (currentListRecord.revision !== draftBase.current?.recordRevision) {
+      setLoadAttempt((value) => value + 1);
+    }
     setNotice("Unsaved changes discarded.");
   }
 
@@ -1392,6 +1451,8 @@ export function SystemBuilderWorkspace({
       );
       return;
     }
+    const base = captureDraftBase();
+    if (!base) return;
     if (
       structure &&
       String(structure.layoutPresetRef?.id) === layout.definitionId &&
@@ -1412,7 +1473,7 @@ export function SystemBuilderWorkspace({
       const result = await client.previewLayoutChange({
         workspaceId,
         systemId: String(selectedSystem.systemId),
-        expectedRecordRevision: selectedSystem.revision,
+        expectedRecordRevision: base.recordRevision,
         targetLayoutPresetRef: layout.definitionRef,
         composition: revision.composition,
         instances,
@@ -1433,6 +1494,8 @@ export function SystemBuilderWorkspace({
 
   async function save() {
     if (!revision || !selectedSystem) return;
+    const base = captureDraftBase();
+    if (!base) return;
     return transact(async (isCurrent) => {
       setError(undefined);
       setNotice(undefined);
@@ -1508,7 +1571,7 @@ export function SystemBuilderWorkspace({
       const result = await client.saveRevision({
         workspaceId,
         systemId: String(selectedSystem.systemId),
-        expectedRecordRevision: selectedSystem.revision,
+        expectedRecordRevision: base.recordRevision,
         composition,
         instances: saveInstances,
         bindings,
@@ -1521,6 +1584,7 @@ export function SystemBuilderWorkspace({
         return;
       }
       if (result.ok) {
+        recordSavedBase(result.value, base);
         setRevision(result.value);
         installSavedDraft(result.value);
         setUndoDrafts([]);
@@ -1532,10 +1596,10 @@ export function SystemBuilderWorkspace({
         ).length;
         setSystems((current) =>
           current.map((item) =>
-            String(item.systemId) === selectedSystemId
+            String(item.systemId) === selectedSystemId && item.revision <= base.recordRevision
               ? {
                 ...item,
-                revision: item.revision + 1,
+                revision: base.recordRevision + 1,
                 currentRevisionId: result.value.revisionId,
                 composition,
                 status: invalid
@@ -1558,13 +1622,15 @@ export function SystemBuilderWorkspace({
 
   async function previewFoundationUpgrade() {
     if (!revision || !selectedSystem || dirty) return;
+    const base = captureDraftBase();
+    if (!base) return;
     return transact(async (isCurrent) => {
       setError(undefined);
       setNotice(undefined);
       const result = await client.previewFoundationUpgrade({
         workspaceId,
         systemId: String(selectedSystem.systemId),
-        expectedRecordRevision: selectedSystem.revision,
+        expectedRecordRevision: base.recordRevision,
       });
       if (!isCurrent()) return;
       if (result.ok) {
@@ -1585,12 +1651,14 @@ export function SystemBuilderWorkspace({
     ) {
       return;
     }
+    const base = captureDraftBase();
+    if (!base) return;
     return transact(async (isCurrent) => {
       setError(undefined);
       const result = await client.upgradeFoundation({
         workspaceId,
         systemId: String(selectedSystem.systemId),
-        expectedRecordRevision: selectedSystem.revision,
+        expectedRecordRevision: base.recordRevision,
         sourceRevisionId: foundationUpgradePreview.sourceRevisionId,
       });
       if (!isCurrent()) return;
@@ -1599,6 +1667,7 @@ export function SystemBuilderWorkspace({
         return;
       }
       if (result.ok) {
+        recordSavedBase(result.value, base);
         setRevision(result.value);
         installSavedDraft(result.value);
         setSelectedLayoutDefinitionId(
@@ -1615,10 +1684,10 @@ export function SystemBuilderWorkspace({
         setDirty(false);
         setSystems((current) =>
           current.map((item) =>
-            String(item.systemId) === selectedSystemId
+            String(item.systemId) === selectedSystemId && item.revision <= base.recordRevision
               ? {
                 ...item,
-                revision: item.revision + 1,
+                revision: base.recordRevision + 1,
                 currentRevisionId: result.value.revisionId,
                 composition: result.value.composition,
                 status: "validated",
@@ -1665,6 +1734,9 @@ export function SystemBuilderWorkspace({
         <div className="ui-panel__section-body ui-stack ui-stack--md">
           <TransientNotificationPublisher message={error} title="System Composer needs attention" tone="error" source="System Composer" workspaceId={workspaceId} />
           {contextualNotice ? <p className="ui-status" role="status">{notice}</p> : null}
+          {savedElsewhere ? <p className="ui-status" role="status">{currentListRecord
+            ? "A newer saved version exists. Your unsaved changes are still here."
+            : "This saved system is no longer in the list. Your unsaved changes are still here."}</p> : null}
           <TransientNotificationPublisher message={!contextualNotice ? notice : undefined} title="System Composer updated" tone="success" source="System Composer" workspaceId={workspaceId} />
           <p id="system-builder-entry-instructions" className="ui-text-muted">
             Choose an option below to interact with the System Composer.

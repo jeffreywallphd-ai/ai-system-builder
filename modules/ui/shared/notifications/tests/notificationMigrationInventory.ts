@@ -90,6 +90,11 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     rationale: "Inline feedback is required to validate, unblock, retry, inspect, or follow active task progress in this surface.",
   })),
   {
+    path: "apps/desktop/src/renderer/features/settings/components/HeadlessClientSettings.tsx",
+    classification: "contextual-only",
+    rationale: "Pairing and client access outcomes tell the user whether to retry, enter the one-time code, or check the current client list. Code and credential material are never part of the status.",
+  },
+  {
     path: "modules/ui/shared/system-builder/SystemFormComposerView.tsx",
     classification: "contextual-only",
     rationale: "A preview readiness error belongs to the current form draft and disappears when that draft changes.",

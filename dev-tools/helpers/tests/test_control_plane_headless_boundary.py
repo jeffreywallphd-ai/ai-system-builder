@@ -12,6 +12,20 @@ class HeadlessReadRoutingTests(unittest.TestCase):
     def plan(self, paths, *required):
         return {row["id"]: row for row in catalog.plan(HELPERS.parents[1], paths, ["architecture", *required], "a" * 64)["selected"]}
 
+    def test_composer_witness_routing_is_opt_in_and_exact(self):
+        check = "headless-composer-draft-witnesses"
+        inventory = "modules/ui/shared/notifications/tests/notificationMigrationInventory.ts"
+        unrelated = "modules/ui/shared/system-builder/SystemFormComposerView.tsx"
+        self.assertNotIn(check, self.plan([inventory]))
+        scoped = self.plan([inventory], check)
+        self.assertIn("operational-ui", scoped)
+        self.assertNotIn("focused-tests", scoped)
+        self.assertEqual(scoped[check]["argv"][-2:], [
+            "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
+            "dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs",
+        ])
+        self.assertIn("focused-tests", self.plan([inventory, unrelated], check))
+
     def test_owned_provider_and_contract_use_the_exact_check(self):
         host_test = "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts"
         checks = self.plan([host_test, "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts"])

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /** Bounded, read-only definition inventory. Never executes inspected source. */
 import fs from "node:fs";
 import path from "node:path";

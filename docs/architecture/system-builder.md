@@ -114,6 +114,13 @@ remove operations against an existing saved revision. The application must
 resolve the exact definitions and enforce its current graph and workspace
 policy before preview or commit. The decoder alone cannot write any system.
 
+Composer saves and upgrade previews use the record revision and exact
+composition revision captured when the draft was opened or saved. A newer list
+response does not advance that base. The Canvas keeps dirty content and undo
+state when a newer revision arrives or the saved system leaves the list.
+Discard loads the current listed revision if it changed. A stale write still
+fails through the application and keeps the user's edits.
+
 - System Builder records are workspace-owned and require explicit workspace identity at every future contract, client, transport, use-case, repository, and persistence seam.
 - Asset Kernel definitions, instances, bindings, compositions, and references remain canonical component vocabulary.
 - Asset composition planning remains the non-executing compatibility/planning input. A system record may reference a plan but must not mutate the plan or effective asset projections implicitly.

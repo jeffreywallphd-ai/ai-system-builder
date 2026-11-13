@@ -771,7 +771,21 @@ const reviewedBrowserModalCensus = Object.freeze({
   })]),
 });
 
+// The new Composer case changes an existing drift row only. Reconstruct the
+// predecessor for the earlier witnesses; the published gap stays visible.
+const reviewedHeadlessDraftCensus = Object.freeze({
+  priorCommit: "9f1a77f5057652a891c00597d668aebab2fc8bb5",
+  before: reviewedBrowserModalCensus.after,
+  after: "2ffea6c2f0995a85712fe87c6eb57aa4c531ae7799f2ce4bf959f55d5e4de56b",
+  pins: Object.freeze([Object.freeze({
+    path: "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+    source: "8b09340db67d2b7a5bc212e3dca036ed02337ca322e865cd76aab8930bd78837",
+    facts: "97f6a1fbc047da6b7e42a032cd01f5d448144798cae0b1a0f1a9d9fcb9d9cdec",
+  })]),
+});
+
 function beforeDesktopImageLabelCensus(map, result) {
+  ({map, result} = verifyExactLayoutCensus(map, result, reviewedHeadlessDraftCensus));
   if (sha(JSON.stringify(map)) === reviewedBrowserModalCensus.after) {
     const previous = JSON.parse(historicalSource(reviewedDesktopImageLabelCensus.priorCommit, censusDocument));
     assert.equal(sha(JSON.stringify(previous)), reviewedDesktopImageLabelCensus.before);
