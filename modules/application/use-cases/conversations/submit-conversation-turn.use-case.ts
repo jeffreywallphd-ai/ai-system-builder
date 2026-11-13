@@ -1,9 +1,13 @@
 import {
+  normalizeConversationMessageId,
+  normalizeConversationTurnId,
   normalizeUserVisibleMessageText,
+  type ConversationSessionRecord,
   type ConversationFailure,
   type ConversationSuccess,
 } from "../../../contracts/conversations";
 import { createWorkspaceId } from "../../../contracts/workspace";
+import { normalizeExecutionAttemptId, normalizeExecutionEventId, normalizeExecutionRunId, type ExecutionApprovalRecord } from "../../../contracts/execution-runs";
 import { ConversationTurnFailureClassificationService } from "./conversation-turn-failure-classification.service";
 import type {
   ConversationSessionRepositoryPort,
@@ -12,6 +16,7 @@ import type {
   AssistantResponseRepositoryPort,
   ConversationOperationRepositoryPort,
 } from "../../ports/conversations";
+import type { DelegatedConversationTurnAdmissionPort, InitialConversationTurnWrites } from "../../ports/conversations/delegated-conversation-turn-admission.port";
 import type {
   ExecutionApprovalRepositoryPort,
   ExecutionAttemptRepositoryPort,
@@ -33,6 +38,25 @@ export type SubmitConversationTurnCommand = {
   text: string;
   operationId: string;
 };
+export type DelegatedConversationTurnFence = {
+  readonly planId: string;
+  readonly planRevision: string;
+  readonly snapshotRevision: string;
+  readonly validate: (input: {
+    readonly phase: "before-record" | "before-runtime";
+    readonly workspaceId: string;
+    readonly planId: string;
+    readonly planRevision: string;
+    readonly snapshotRevision: string;
+    readonly sessionId: string;
+    readonly approvalId: string;
+    readonly runtimeReferenceId: string;
+    readonly turnId?: string;
+  }) => Promise<boolean>;
+  readonly isCurrent: () => boolean;
+  /** Internal owner notification after durable admission and before runtime dispatch. */
+  readonly onAdmitted?: (reference: { readonly turnId: string; readonly runId: string }) => Promise<boolean>;
+};
 export type SubmitConversationTurnResult =
   | ConversationSuccess<{
       conversationTurnId: string;
@@ -51,6 +75,7 @@ export class SubmitConversationTurnUseCase {
       messageRepository: ConversationMessageRepositoryPort;
       assistantResponseRepository: AssistantResponseRepositoryPort;
       operationRepository: ConversationOperationRepositoryPort;
+      delegatedTurnAdmission?: DelegatedConversationTurnAdmissionPort;
       executionRunRepository: ExecutionRunRepositoryPort;
       executionAttemptRepository: ExecutionAttemptRepositoryPort;
       executionEventRepository: ExecutionEventRepositoryPort;
@@ -68,8 +93,18 @@ export class SubmitConversationTurnUseCase {
   ) {}
   public async execute(
     command: SubmitConversationTurnCommand,
+    delegation?: DelegatedConversationTurnFence,
   ): Promise<SubmitConversationTurnResult> {
     const now = (this.d.now ?? (() => new Date().toISOString()))();
+    const delegated = delegation && Object.freeze({ ...delegation });
+    const delegatedDenied = () => this.fail("conflict", "conversation-delegation-stale", "The delegated conversation target changed.");
+    const delegationCurrent = () => {
+      try { return delegated?.isCurrent() === true; } catch { return false; }
+    };
+    if (delegated) {
+      if (!this.d.delegatedTurnAdmission || !delegationCurrent()) return delegatedDenied();
+      command = { ...command };
+    }
     try {
       command.text = normalizeUserVisibleMessageText(command.text);
     } catch {
@@ -79,7 +114,7 @@ export class SubmitConversationTurnUseCase {
         "Workspace, session, text, and operation id are required.",
       );
       if (
-        command.workspaceId &&
+        !delegated && command.workspaceId &&
         command.conversationSessionId &&
         command.operationId
       )
@@ -110,12 +145,14 @@ export class SubmitConversationTurnUseCase {
       command.conversationSessionId,
       command.operationId,
     );
-    if (prior) return prior.result as SubmitConversationTurnResult;
-    const session = await this.d.sessionRepository.getConversationSessionById(
+    if (prior) return delegated ? delegatedDenied() : prior.result as SubmitConversationTurnResult;
+    const savedSession = await this.d.sessionRepository.getConversationSessionById(
       workspaceId,
       command.conversationSessionId as any,
     );
+    const session = delegated && savedSession ? structuredClone(savedSession) : savedSession;
     if (!session) {
+      if (delegated) return delegatedDenied();
       const fail = this.fail(
         "not-found",
         "conversation-session-not-found",
@@ -137,6 +174,7 @@ export class SubmitConversationTurnUseCase {
       session.archivedAt ||
       session.closedAt
     ) {
+      if (delegated) return delegatedDenied();
       const fail = this.fail(
         "conflict",
         "conversation-session-not-eligible",
@@ -153,12 +191,48 @@ export class SubmitConversationTurnUseCase {
       });
       return fail;
     }
-    const approval = session.executionApprovalId
+    const savedApproval = session.executionApprovalId
       ? await this.d.approvalRepository.getExecutionApprovalById(
           command.workspaceId as any,
           session.executionApprovalId as any,
         )
       : undefined;
+    const approval = delegated && savedApproval ? structuredClone(savedApproval) : savedApproval;
+    const matchesDelegation = (candidate: ConversationSessionRecord, permission: ExecutionApprovalRecord | undefined) =>
+      Boolean(delegated && candidate.workspaceId === command.workspaceId && candidate.id === command.conversationSessionId &&
+        (candidate.status === "approved" || candidate.status === "active") && !candidate.closedAt && !candidate.archivedAt &&
+        candidate.sourceExecutionPlanId === delegated.planId && delegated.snapshotRevision && permission &&
+        permission.id === candidate.executionApprovalId && permission.workspaceId === command.workspaceId &&
+        permission.conversationSessionId === candidate.id && permission.sourceExecutionPlanId === delegated.planId &&
+        permission.sourcePlanRevision === delegated.planRevision && permission.approvalKind === "conversation-session-execution" &&
+        permission.approvalStatus === "granted" && !permission.revokedAt && !permission.invalidatedAt &&
+        candidate.runtimeReferenceId && permission.runtimeReferenceId === candidate.runtimeReferenceId);
+    const validateDelegated = async (phase: "before-record" | "before-runtime", turnId?: string) => {
+      try {
+        if (!delegated || !approval || !session.runtimeReferenceId || !delegationCurrent() ||
+            !matchesDelegation(session, approval) ||
+            !await delegated.validate({
+              phase, workspaceId, planId: delegated.planId, planRevision: delegated.planRevision,
+              snapshotRevision: delegated.snapshotRevision, sessionId: session.id, approvalId: approval.id,
+              runtimeReferenceId: session.runtimeReferenceId, ...(turnId ? { turnId } : {}),
+            }) || !delegationCurrent()) return false;
+        const latestSession = await this.d.sessionRepository.getConversationSessionById(workspaceId, session.id);
+        const latestApproval = await this.d.approvalRepository.getExecutionApprovalById(workspaceId, approval.id);
+        if (!latestSession || !latestApproval || !matchesDelegation(latestSession, latestApproval) ||
+            latestSession.executionApprovalId !== session.executionApprovalId || latestSession.runtimeReferenceId !== session.runtimeReferenceId ||
+            latestSession.sourceCompositionPlanId !== session.sourceCompositionPlanId ||
+            latestSession.sourceRuntimeReadinessBindingId !== session.sourceRuntimeReadinessBindingId ||
+            latestApproval.updatedAt !== approval.updatedAt || latestApproval.sourceReadinessRevision !== approval.sourceReadinessRevision ||
+            (turnId && !latestSession.turnIds.some((id) => id === turnId)) ||
+            !(await this.d.approvalValidityService.isValidForInvocation(latestSession, latestApproval)).valid ||
+            !delegationCurrent()) return false;
+        if (phase === "before-record") return true;
+        return await this.d.delegatedTurnAdmission?.isStillCurrent({
+          session: latestSession, approval: latestApproval, isCurrent: delegationCurrent,
+        }) === true && delegationCurrent();
+      } catch { return false; }
+    };
+    if (delegated && (!await validateDelegated("before-record") || !delegationCurrent())) return delegatedDenied();
     const validity = await this.d.approvalValidityService.isValidForInvocation(
       session,
       approval,
@@ -169,7 +243,7 @@ export class SubmitConversationTurnUseCase {
         "conversation-session-approval-invalid",
         "Conversation session approval is no longer valid for invocation.",
       );
-      await this.d.operationRepository.saveConversationOperation({
+      if (!delegated) await this.d.operationRepository.saveConversationOperation({
         workspaceId: command.workspaceId,
         conversationSessionId: command.conversationSessionId,
         operationId: command.operationId,
@@ -186,7 +260,7 @@ export class SubmitConversationTurnUseCase {
         "conversation-session-runtime-reference-missing",
         "Conversation session is missing an approved runtime reference.",
       );
-      await this.d.operationRepository.saveConversationOperation({
+      if (!delegated) await this.d.operationRepository.saveConversationOperation({
         workspaceId: command.workspaceId,
         conversationSessionId: command.conversationSessionId,
         operationId: command.operationId,
@@ -208,7 +282,7 @@ export class SubmitConversationTurnUseCase {
         "runtime-reference-not-eligible",
         "Conversation runtime reference is not eligible for invocation.",
       );
-      await this.d.operationRepository.saveConversationOperation({
+      if (!delegated) await this.d.operationRepository.saveConversationOperation({
         workspaceId: command.workspaceId,
         conversationSessionId: command.conversationSessionId,
         operationId: command.operationId,
@@ -225,7 +299,7 @@ export class SubmitConversationTurnUseCase {
         "runtime-reference-capability-unsupported",
         "Conversation runtime reference capability is unsupported.",
       );
-      await this.d.operationRepository.saveConversationOperation({
+      if (!delegated) await this.d.operationRepository.saveConversationOperation({
         workspaceId: command.workspaceId,
         conversationSessionId: command.conversationSessionId,
         operationId: command.operationId,
@@ -242,7 +316,7 @@ export class SubmitConversationTurnUseCase {
         "runtime-reference-model-binding-missing",
         "Conversation runtime model selection is unavailable.",
       );
-      await this.d.operationRepository.saveConversationOperation({
+      if (!delegated) await this.d.operationRepository.saveConversationOperation({
         workspaceId: command.workspaceId,
         conversationSessionId: command.conversationSessionId,
         operationId: command.operationId,
@@ -264,7 +338,7 @@ export class SubmitConversationTurnUseCase {
         "conversation-session-source-association-missing",
         "Conversation session is missing an approved source association.",
       );
-      await this.d.operationRepository.saveConversationOperation({
+      if (!delegated) await this.d.operationRepository.saveConversationOperation({
         workspaceId: command.workspaceId,
         conversationSessionId: command.conversationSessionId,
         operationId: command.operationId,
@@ -300,7 +374,7 @@ export class SubmitConversationTurnUseCase {
         "conversation-runtime-unsupported",
         "Conversation runtime adapter is unsupported for the approved runtime reference.",
       );
-      await this.d.operationRepository.saveConversationOperation({
+      if (!delegated) await this.d.operationRepository.saveConversationOperation({
         workspaceId: command.workspaceId,
         conversationSessionId: command.conversationSessionId,
         operationId: command.operationId,
@@ -322,7 +396,7 @@ export class SubmitConversationTurnUseCase {
         "conversation-runtime-not-ready",
         "Conversation runtime is unavailable or not ready.",
       );
-      await this.d.operationRepository.saveConversationOperation({
+      if (!delegated) await this.d.operationRepository.saveConversationOperation({
         workspaceId: command.workspaceId,
         conversationSessionId: command.conversationSessionId,
         operationId: command.operationId,
@@ -333,131 +407,150 @@ export class SubmitConversationTurnUseCase {
       });
       return fail;
     }
-    const turnId = this.d.nextId();
-    const messageId = this.d.nextId();
-    const runId = this.d.nextId();
-    const attemptId = this.d.nextId();
-    await this.d.messageRepository.saveConversationMessage({
-      id: messageId as any,
-      workspaceId: command.workspaceId as any,
-      conversationSessionId: session.id,
-      conversationTurnId: turnId as any,
-      role: "user",
-      contentKind: "plain-text",
-      text: command.text,
-      createdAt: now,
-    });
-    await this.d.turnRepository.saveConversationTurn({
-      id: turnId as any,
-      workspaceId,
-      conversationSessionId: session.id,
-      sourceExecutionPlanId: session.sourceExecutionPlanId,
-      userMessageId: messageId as any,
-      status: "submitted",
-      sequence: session.turnIds.length + 1,
-      blockers: [],
-      diagnostics: [],
-      provenance: [
-        { at: now, kind: "conversation-turn-created", actorId: "application" },
-      ],
-      createdAt: now,
-      updatedAt: now,
-    });
-    await this.d.executionRunRepository.saveExecutionRun({
-      id: runId as any,
-      workspaceId,
-      sourceExecutionPlanId: session.sourceExecutionPlanId,
-      sourceCompositionPlanId: session.sourceCompositionPlanId,
-      sourceRuntimeReadinessBindingId: session.sourceRuntimeReadinessBindingId,
-      sourceContextKind: "conversation-turn",
-      sourceContextId: turnId,
-      status: "queued",
-      attemptIds: [attemptId as any],
-      eventIds: [],
-      resultIds: [],
-      blockers: [],
-      diagnostics: [],
-      provenance: [
-        {
-          at: now,
-          kind: "execution-run-start-requested",
-          actorId: "application",
-        },
-      ],
-      createdAt: now,
-      updatedAt: now,
-    });
-    await this.d.executionAttemptRepository.saveExecutionAttempt({
-      id: attemptId as any,
-      workspaceId,
-      executionRunId: runId as any,
-      attemptNumber: 1,
-      runtimeReferenceId:
-        session.runtimeReferenceId ?? "runtime-reference-missing",
-      status: "pending",
-      blockers: [],
-      diagnostics: [],
-      provenance: [
-        {
-          at: now,
-          kind: "execution-run-attempt-created",
-          actorId: "application",
-        },
-      ],
-      createdAt: now,
-      updatedAt: now,
-    });
-    const startedEventId = this.d.nextId();
-    await this.d.executionEventRepository.appendExecutionEvent({
-      id: startedEventId as any,
+    if (delegated && (!await validateDelegated("before-record") || !delegationCurrent())) return delegatedDenied();
+    const turnId = normalizeConversationTurnId(this.d.nextId());
+    const messageId = normalizeConversationMessageId(this.d.nextId());
+    const runId = normalizeExecutionRunId(this.d.nextId());
+    const attemptId = normalizeExecutionAttemptId(this.d.nextId());
+    const writeInitialRecords = async (repositories: InitialConversationTurnWrites) => {
+      await repositories.messageRepository.saveConversationMessage({
+        id: messageId,
+        workspaceId,
+        conversationSessionId: session.id,
+        conversationTurnId: turnId,
+        role: "user",
+        contentKind: "plain-text",
+        text: command.text,
+        createdAt: now,
+      });
+      await repositories.turnRepository.saveConversationTurn({
+        id: turnId,
+        workspaceId,
+        conversationSessionId: session.id,
+        sourceExecutionPlanId: session.sourceExecutionPlanId,
+        userMessageId: messageId,
+        status: "submitted",
+        sequence: session.turnIds.length + 1,
+        blockers: [],
+        diagnostics: [],
+        provenance: [
+          { at: now, kind: "conversation-turn-created", actorId: "application" },
+        ],
+        createdAt: now,
+        updatedAt: now,
+      });
+      await repositories.executionRunRepository.saveExecutionRun({
+        id: runId,
+        workspaceId,
+        sourceExecutionPlanId: session.sourceExecutionPlanId,
+        sourceCompositionPlanId: session.sourceCompositionPlanId,
+        sourceRuntimeReadinessBindingId: session.sourceRuntimeReadinessBindingId,
+        sourceContextKind: "conversation-turn",
+        sourceContextId: turnId,
+        status: "queued",
+        attemptIds: [attemptId],
+        eventIds: [],
+        resultIds: [],
+        blockers: [],
+        diagnostics: [],
+        provenance: [
+          {
+            at: now,
+            kind: "execution-run-start-requested",
+            actorId: "application",
+          },
+        ],
+        createdAt: now,
+        updatedAt: now,
+      });
+      await repositories.executionAttemptRepository.saveExecutionAttempt({
+        id: attemptId,
+        workspaceId,
+        executionRunId: runId,
+        attemptNumber: 1,
+        runtimeReferenceId:
+          session.runtimeReferenceId ?? "runtime-reference-missing",
+        status: "pending",
+        blockers: [],
+        diagnostics: [],
+        provenance: [
+          {
+            at: now,
+            kind: "execution-run-attempt-created",
+            actorId: "application",
+          },
+        ],
+        createdAt: now,
+        updatedAt: now,
+      });
+      const startedEventId = normalizeExecutionEventId(this.d.nextId());
+      await repositories.executionEventRepository.appendExecutionEvent({
+        id: startedEventId,
+        workspaceId: command.workspaceId,
+        executionRunId: runId,
+        executionAttemptId: attemptId,
+        conversationSessionId: session.id,
+        conversationTurnId: turnId as any,
+        kind: "run-start-requested",
+        category: "lifecycle",
+        message: "Run start requested.",
+        at: now,
+      });
+      await repositories.turnRepository.updateConversationTurn({
+        ...(await repositories.turnRepository.getConversationTurnById(
+          workspaceId,
+          turnId,
+        ))!,
+        executionRunId: runId,
+        status: "generating",
+        updatedAt: now,
+      });
+      await repositories.executionRunRepository.updateExecutionRun({
+        ...(await repositories.executionRunRepository.getExecutionRunById(
+          workspaceId,
+          runId,
+        ))!,
+        status: "running",
+        startedAt: now,
+        updatedAt: now,
+      });
+      await repositories.executionAttemptRepository.updateExecutionAttempt({
+        ...(await repositories.executionAttemptRepository.getExecutionAttemptById(
+          workspaceId,
+          attemptId,
+        ))!,
+        status: "started",
+        startedAt: now,
+        updatedAt: now,
+      });
+    };
+    let activeSession = session;
+    let allowDispatch = true;
+    if (delegated) {
+      if (!approval) return delegatedDenied();
+      const admitted = await this.d.delegatedTurnAdmission?.admit({
+        session, approval, turnId, operationId: command.operationId, updatedAt: now,
+        isCurrent: delegationCurrent, writeInitialRecords,
+      });
+      if (!admitted) return delegatedDenied();
+      activeSession = admitted;
+      if (delegated.onAdmitted) {
+        try { allowDispatch = await delegated.onAdmitted({ turnId, runId }) === true; }
+        catch { allowDispatch = false; }
+      }
+      allowDispatch &&= delegationCurrent();
+    } else {
+      await writeInitialRecords(this.d);
+      await this.d.sessionRepository.updateConversationSession({
+          ...session,
+          status: "active",
+          turnIds: session.turnIds.includes(turnId) ? session.turnIds : [...session.turnIds, turnId],
+          updatedAt: now,
+        });
+    }
+    const orchestration = !allowDispatch ? { status: "approval-invalidated" } as const : await this.d.orchestrator.invoke({
       workspaceId: command.workspaceId,
-      executionRunId: runId as any,
-      executionAttemptId: attemptId as any,
-      conversationSessionId: session.id,
-      conversationTurnId: turnId as any,
-      kind: "run-start-requested",
-      category: "lifecycle",
-      message: "Run start requested.",
-      at: now,
-    });
-    await this.d.turnRepository.updateConversationTurn({
-      ...(await this.d.turnRepository.getConversationTurnById(
-        workspaceId,
-        turnId as any,
-      ))!,
-      executionRunId: runId as any,
-      status: "generating",
-      updatedAt: now,
-    });
-    await this.d.executionRunRepository.updateExecutionRun({
-      ...(await this.d.executionRunRepository.getExecutionRunById(
-        workspaceId,
-        runId as any,
-      ))!,
-      status: "running",
-      startedAt: now,
-      updatedAt: now,
-    });
-    await this.d.executionAttemptRepository.updateExecutionAttempt({
-      ...(await this.d.executionAttemptRepository.getExecutionAttemptById(
-        workspaceId,
-        attemptId as any,
-      ))!,
-      status: "started",
-      startedAt: now,
-      updatedAt: now,
-    });
-    await this.d.sessionRepository.updateConversationSession({
-      ...session,
-      status: "active",
-      turnIds: session.turnIds.includes(turnId as any)
-        ? session.turnIds
-        : [...session.turnIds, turnId as any],
-      updatedAt: now,
-    });
-    const orchestration = await this.d.orchestrator.invoke({
-      workspaceId: command.workspaceId,
-      session,
+      session: activeSession,
       approval,
       runtime,
       userTurnContent: command.text,
@@ -465,6 +558,7 @@ export class SubmitConversationTurnUseCase {
       executionRunId: runId,
       executionAttemptId: attemptId,
       operationId: command.operationId,
+      ...(delegated ? { beforeInvoke: () => validateDelegated("before-runtime", turnId), isInvocationCurrent: delegationCurrent } : {}),
     });
     if (orchestration.status !== "completed") {
       await this.d.turnRepository.updateConversationTurn({

@@ -70,7 +70,9 @@ function inMemory() {
         ),
       },
       runtimeReferenceRepository: {
-        getExecutionRuntimeReferenceById: async () => ({
+        getExecutionRuntimeReferenceById: async (): Promise<{
+          id: string; runtimeKind: string; capabilityKind: string; status: string; selectedModelRecordId?: string;
+        }> => ({
           id: "runtime.reference.1",
           runtimeKind: "python-sidecar",
           capabilityKind: "text-generation",
@@ -106,6 +108,176 @@ function approvedSession() {
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
 }
+
+test("delegated submit refuses an approval for a different exact plan revision before allocating a turn", async () => {
+  const m = inMemory();
+  m.stores.sessions.set("s1", approvedSession());
+  const useCase = new SubmitConversationTurnUseCase({
+    ...(m.ports as any),
+    delegatedTurnAdmission: {
+      admit: async () => assert.fail("The old approval may not reach persistence."),
+      isStillCurrent: async () => assert.fail("The old approval may not reach runtime validation."),
+    },
+    approvalRepository: { async getExecutionApprovalById() { return {
+      id: "a1", workspaceId: "w1", conversationSessionId: "s1", sourceExecutionPlanId: "ep1",
+      approvalStatus: "granted", approvalKind: "conversation-session-execution", sourcePlanRevision: "revision-new",
+      runtimeReferenceId: "runtime.reference.1",
+    }; } } as any,
+    approvalValidityService: { isValidForInvocation: () => assert.fail("Stale approval must be rejected first.") } as any,
+    adapterSelectionService: {} as any, runtimeGuardService: {} as any, orchestrator: {} as any,
+    nextId: () => assert.fail("No turn may be allocated for the old plan."),
+  });
+  const result = await useCase.execute({ workspaceId: "w1", conversationSessionId: "s1", operationId: "op-1", text: "Synthetic input" }, {
+    planId: "ep1", planRevision: "revision-old", snapshotRevision: "snap.1", isCurrent: () => true,
+    validate: async () => assert.fail("The approved source does not match."),
+  });
+  assert.equal(result.kind, "failure");
+  assert.equal(m.stores.turns.size, 0);
+});
+
+test("a rejected delegated admission cannot persist its turn or invoke a worker", async () => {
+  const m = inMemory();
+  const session = approvedSession();
+  m.stores.sessions.set(session.id, session);
+  let attempted = 0;
+  let next = 0;
+  const closed = { ...session, status: "closed", closedAt: "2026-01-01T00:00:01.000Z", turnIds: ["newer-turn"] };
+  const useCase = new SubmitConversationTurnUseCase({
+    ...(m.ports as any),
+    delegatedTurnAdmission: {
+      async admit({ session: captured }) {
+        assert.deepEqual(captured, session);
+        m.stores.sessions.set(session.id, closed);
+        return undefined;
+      },
+      isStillCurrent: async () => assert.fail("A refused admission may not reach runtime validation."),
+    },
+    approvalRepository: { async getExecutionApprovalById() { return {
+      id: "a1", workspaceId: "w1", conversationSessionId: "s1", sourceExecutionPlanId: "ep1",
+      approvalStatus: "granted", approvalKind: "conversation-session-execution", sourcePlanRevision: "revision-one",
+      runtimeReferenceId: "runtime.reference.1",
+    }; } } as any,
+    approvalValidityService: { isValidForInvocation: async () => ({ valid: true }) } as any,
+    adapterSelectionService: { select: async () => ({ status: "supported", adapterId: "adapter" }) } as any,
+    runtimeGuardService: { canInvoke: async () => ({ allowed: true, status: "ready" }) } as any,
+    orchestrator: { async invoke() { attempted++; return { status: "blocked" }; } } as any,
+    nextId: () => `fixture-${++next}`,
+  });
+  const result = await useCase.execute({ workspaceId: "w1", conversationSessionId: "s1", operationId: "op-closed", text: "Synthetic input" }, {
+    planId: "ep1", planRevision: "revision-one", snapshotRevision: "snap.1",
+    isCurrent: () => true, validate: async () => true,
+    onAdmitted: async () => assert.fail("A refused admission has no durable task."),
+  });
+  assert.deepEqual(m.stores.sessions.get(session.id), closed);
+  assert.equal(attempted, 0);
+  assert.equal(result.kind, "failure");
+  assert.equal(m.stores.turns.size, 0);
+  assert.equal(m.stores.msgs.size, 0);
+  assert.equal(m.stores.runs.size, 0);
+  assert.equal(m.stores.atts.size, 0);
+  assert.equal(m.stores.events.length, 0);
+  assert.equal(m.stores.operations.size, 0);
+});
+
+test("the delegated post-commit callback sees the durable handles and can prevent worker dispatch", async () => {
+  const m = inMemory();
+  const session = approvedSession();
+  m.stores.sessions.set(session.id, session);
+  let admitted = false;
+  let next = 0;
+  const useCase = new SubmitConversationTurnUseCase({
+    ...(m.ports as any),
+    delegatedTurnAdmission: {
+      async admit({ session: captured, turnId, writeInitialRecords, updatedAt }) {
+        await writeInitialRecords(m.ports);
+        const linked = { ...captured, status: "active" as const, updatedAt, turnIds: [turnId] };
+        m.stores.sessions.set(linked.id, linked);
+        admitted = true;
+        return linked;
+      },
+      isStillCurrent: async () => assert.fail("A refused callback may not reach runtime validation."),
+    },
+    approvalRepository: { async getExecutionApprovalById() { return {
+      id: "a1", workspaceId: "w1", conversationSessionId: "s1", sourceExecutionPlanId: "ep1",
+      approvalStatus: "granted", approvalKind: "conversation-session-execution", sourcePlanRevision: "revision-one",
+      runtimeReferenceId: "runtime.reference.1",
+    }; } } as any,
+    approvalValidityService: { isValidForInvocation: async () => ({ valid: true }) } as any,
+    adapterSelectionService: { select: async () => ({ status: "supported", adapterId: "adapter" }) } as any,
+    runtimeGuardService: { canInvoke: async () => ({ allowed: true, status: "ready" }) } as any,
+    orchestrator: { async invoke() { assert.fail("The callback refused worker dispatch."); } } as any,
+    nextId: () => `fixture-${++next}`,
+  });
+  const result = await useCase.execute({ workspaceId: "w1", conversationSessionId: "s1", operationId: "op-callback", text: "Synthetic input" }, {
+    planId: "ep1", planRevision: "revision-one", snapshotRevision: "snap.1", isCurrent: () => true,
+    validate: async () => true,
+    async onAdmitted({ turnId, runId }) {
+      assert.equal(admitted, true);
+      assert.equal(m.stores.turns.get(turnId).executionRunId, runId);
+      assert.ok(m.stores.runs.has(runId));
+      return false;
+    },
+  });
+  assert.equal(result.kind, "failure");
+  assert.equal([...m.stores.turns.values()][0]?.status, "failed");
+  assert.equal([...m.stores.runs.values()][0]?.status, "failed");
+});
+
+test("a saved close or revocation during async approval validation stops delegated runtime dispatch", async () => {
+  for (const change of ["none", "close-session", "revoke-approval"] as const) {
+    const m = inMemory();
+    const session = approvedSession();
+    m.stores.sessions.set(session.id, session);
+    const permission = {
+      id: "a1", workspaceId: "w1", conversationSessionId: "s1", sourceExecutionPlanId: "ep1",
+      approvalStatus: "granted", approvalKind: "conversation-session-execution", sourcePlanRevision: "revision-one",
+      runtimeReferenceId: "runtime.reference.1",
+    };
+    let savedPermission = permission;
+    let phase: "before-record" | "before-runtime" = "before-record";
+    let workers = 0;
+    let next = 0;
+    const useCase = new SubmitConversationTurnUseCase({
+      ...(m.ports as any),
+      delegatedTurnAdmission: {
+        async admit({ session: captured, turnId, writeInitialRecords, updatedAt }) {
+          await writeInitialRecords(m.ports);
+          const linked = { ...captured, status: "active" as const, updatedAt, turnIds: [turnId] };
+          m.stores.sessions.set(linked.id, linked);
+          return linked;
+        },
+        async isStillCurrent({ session: checked, approval }) {
+          return m.stores.sessions.get(checked.id) === checked && savedPermission === approval;
+        },
+      },
+      approvalRepository: { async getExecutionApprovalById() { return savedPermission; } } as any,
+      approvalValidityService: { async isValidForInvocation() {
+        if (phase === "before-runtime") {
+          await Promise.resolve();
+          if (change === "close-session") {
+            const active = m.stores.sessions.get(session.id);
+            m.stores.sessions.set(session.id, { ...active, status: "closed", closedAt: "2026-01-01T00:00:01.000Z" });
+          } else if (change === "revoke-approval") {
+            savedPermission = { ...permission, approvalStatus: "revoked" };
+          }
+        }
+        return { valid: true };
+      } } as any,
+      adapterSelectionService: { select: async () => ({ status: "supported", adapterId: "adapter" }) } as any,
+      runtimeGuardService: { canInvoke: async () => ({ allowed: true, status: "ready" }) } as any,
+      orchestrator: { async invoke(input: { beforeInvoke?: () => Promise<boolean> }) {
+        if (await input.beforeInvoke?.()) workers++;
+        return { status: "blocked" };
+      } } as any,
+      nextId: () => "fixture-" + ++next,
+    });
+    await useCase.execute({ workspaceId: "w1", conversationSessionId: "s1", operationId: "op-fence", text: "Synthetic input" }, {
+      planId: "ep1", planRevision: "revision-one", snapshotRevision: "snap.1", isCurrent: () => true,
+      async validate(input) { phase = input.phase; return true; },
+    });
+    assert.equal(workers, change === "none" ? 1 : 0, change);
+  }
+});
 
 test("submit turn persists lifecycle and response, with idempotent operation key", async () => {
   const m = inMemory();

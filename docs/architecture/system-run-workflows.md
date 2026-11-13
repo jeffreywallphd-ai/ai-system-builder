@@ -56,6 +56,17 @@ host wires this seam to the conversation use case. A successful submission
 can save a result handle. An interrupted or ambiguous attempt remains
 unconfirmed and cannot dispatch on replay. This seam grants no execution
 permission and creates no approval.
+The existing conversation use case supports an internal optional delegated
+fence. It checks the exact saved approval and plan revision before allocating
+a turn. The owning SQLite transaction rechecks the saved session and approval.
+It saves the operation reservation, message, turn and initial run records
+together. A stale or closed session receives none of these writes. An optional
+internal callback can read the committed turn and run IDs before dispatch.
+The trusted policy rechecks the exact target after protected context preparation
+and after model resolution. After async validity checks, a read-only comparison
+of the saved session and approval in one transaction fences adapter submission.
+Ordinary callers retain the existing approval checks. This seam registers no
+tool and grants no access.
 
 ## Contract primitives
 

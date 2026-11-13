@@ -39,6 +39,9 @@ export type ConversationTurnInvocationOrchestratorInput = Readonly<{
   executionRunId?: string;
   executionAttemptId?: string;
   operationId?: string;
+  /** Internal host-owned policy for an exact delegated target. Not a wire field. */
+  beforeInvoke?: () => Promise<boolean>;
+  isInvocationCurrent?: () => boolean;
 }>;
 
 const SESSION_BLOCKING_STATUSES = new Set([
@@ -210,6 +213,9 @@ export class ConversationTurnInvocationOrchestratorService {
       ReturnType<ConversationTurnInvocationPort["invokeConversationTurn"]>
     >;
     try {
+      const { beforeInvoke, isInvocationCurrent } = input;
+      if (beforeInvoke && (!isInvocationCurrent || !await beforeInvoke() || !isInvocationCurrent()))
+        return { status: "approval-invalidated" };
       outcome = await this.dependencies.invocationPort.invokeConversationTurn({
         source,
         runtime: input.runtime,
@@ -218,6 +224,7 @@ export class ConversationTurnInvocationOrchestratorService {
         executionRunId: input.executionRunId,
         executionAttemptId: input.executionAttemptId,
         operationId: input.operationId,
+        ...(beforeInvoke && isInvocationCurrent ? { dispatchFence: { check: beforeInvoke, isCurrent: isInvocationCurrent } } : {}),
       });
     } catch {
       return { status: "internal-unavailable" };

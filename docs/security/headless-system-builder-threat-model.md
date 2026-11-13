@@ -179,3 +179,12 @@ The authenticated request is admitted only while its connection is open.
 Once admitted to the trusted handler, registration and workspace policy,
 not the HTTP socket, govern the host-owned conversation task. Disconnects
 cannot disclose a result and do not themselves cancel a saved task.
+
+Delegated turn admission carries an in-process policy callback and the
+exact saved target. The callback is never sent to the worker. The SQLite
+owner compares the saved session and approval and reserves the operation ID
+in the same transaction as the initial transcript and lifecycle records. A
+failed commit fence rolls those writes back. After asynchronous runtime policy
+checks, the owning store compares the same session and approval snapshots in
+one no-write transaction. The adapter checks the live grant before task start.
+These checks protect admission. They do not cancel a task already started.

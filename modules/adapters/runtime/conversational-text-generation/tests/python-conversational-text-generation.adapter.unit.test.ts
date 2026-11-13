@@ -162,6 +162,47 @@ test("invocation adapter blocks a missing or cross-workspace model record before
   assert.equal(submissions, 0);
 });
 
+test("the delegated fence denies task submission after model resolution", async () => {
+  let submissions = 0;
+  let modelReads = 0;
+  let current = true;
+  let checks = 0;
+  const invocation = createPythonConversationalTextGenerationInvocationAdapter({
+    startTask: async () => { submissions++; return { requestId: "fixture" }; },
+    readTaskStatus: async () => ({
+      requestId: "fixture", status: "succeeded", data: { assistantResponseText: "Synthetic reply" },
+    }),
+  } as never, {
+    listModels: async () => ({ models: [] }),
+    async getModelRecord(workspaceId, modelRecordId) {
+      modelReads++;
+      return {
+        workspaceId, modelRecordId, displayName: "Local chat", source: "local",
+        lifecycleStatus: "validated", artifactForm: "full-model", provider: "huggingface",
+        modelId: "local/chat-v1", taskTags: ["chat"], validationStatus: "valid",
+        createdAt: "2026-07-29T00:00:00.000Z", updatedAt: "2026-07-29T00:00:00.000Z",
+      } as never;
+    },
+  });
+  const outcome = await invocation.invokeConversationTurn({
+    source, runtime, context: {
+      contextKind: "protected-conversational-invocation", source, runtime, userTurnContent: "Synthetic input",
+    },
+    dispatchFence: {
+      async check() {
+        checks++;
+        assert.ok(modelReads > 0);
+        queueMicrotask(() => { current = false; });
+        return true;
+      },
+      isCurrent: () => current,
+    },
+  });
+  assert.equal(submissions, 0);
+  assert.equal(checks, 1);
+  assert.deepEqual(outcome, { status: "blocked" });
+});
+
 test("invocation adapter resolves and submits an associated base model with a selected LoRA", async () => {
   let submitted: any;
   const baseModel = {

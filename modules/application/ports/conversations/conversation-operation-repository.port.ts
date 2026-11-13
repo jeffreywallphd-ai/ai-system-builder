@@ -1,4 +1,4 @@
-export type ConversationOperationStatus = 'accepted' | 'failed';
+export type ConversationOperationStatus = 'pending' | 'accepted' | 'failed';
 
 export type ConversationOperationRecord = {
   workspaceId: string;
