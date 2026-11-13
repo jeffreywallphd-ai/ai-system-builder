@@ -23,6 +23,7 @@ import {
   getAssetLibraryTypeLabel,
 } from "../../../../../../modules/ui/shared/asset-library/assetLibraryPresentation";
 import { AssetMutationConfirmationDialog } from "../../../../../../modules/ui/shared/asset-library/AssetMutationConfirmationDialog";
+import { AssetLibraryDefinitionDialogTitle } from "../../../../../../modules/ui/shared/asset-library/assetLibraryDetailPanels";
 import { AssetDefinitionDetailPanel } from "./AssetDefinitionDetailPanel";
 import { AssetDefinitionList } from "./AssetDefinitionList";
 import { AssetLibraryFilters } from "./AssetLibraryFilters";
@@ -197,7 +198,12 @@ export function AssetLibraryFeature({
 
       <ModalDialog
         open={detailModal !== undefined}
-        title={detailModal?.title ?? "Asset details"}
+        title={
+          detailModal?.kind === "definition" && state.selectedDetail &&
+          !state.isLoadingDetail && !state.detailError
+            ? <AssetLibraryDefinitionDialogTitle name={detailModal.title} />
+            : detailModal?.title ?? "Asset details"
+        }
         closeLabel="Close asset details"
         closeDisabled={isMutating || pendingAction !== undefined}
         onClose={() => {

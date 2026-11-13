@@ -134,6 +134,23 @@ PUBLISHED_FORM_CHECKS = {
             "modules/ui/shared/system-builder/tests/SystemCompositionPreview.unit.test.tsx",
         ),
     },
+    "asset-library-definition-dialog": {
+        "companion_to": "asset-authoring-ui",
+        "sources": (
+            "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFeature.tsx",
+            "apps/thin-client/src/features/asset-library/components/AssetLibraryFeature.tsx",
+            "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+            "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+            "modules/ui/shared/asset-library/assetLibraryDetailPanels.tsx",
+            "modules/ui/shared/asset-library/tests/assetLibraryDetailPanels.unit.test.tsx",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+            "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+            "modules/ui/shared/asset-library/tests/assetLibraryDetailPanels.unit.test.tsx",
+        ),
+    },
     "published-form-browser-client": {
         "sources": (
             "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedFormClient.ts",

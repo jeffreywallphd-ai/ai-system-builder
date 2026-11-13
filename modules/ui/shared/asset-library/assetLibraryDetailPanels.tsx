@@ -149,6 +149,15 @@ export function AssetLibraryAdvancedPanel({
   );
 }
 
+export function AssetLibraryDefinitionDialogTitle({ name }: { readonly name: string }) {
+  return (
+    <>
+      <span className="ui-visually-hidden">{name}</span>
+      <span aria-hidden="true">Asset details</span>
+    </>
+  );
+}
+
 export function AssetLibraryDefinitionDetailView({
   detail,
   isLoading,
@@ -227,7 +236,7 @@ export function AssetLibraryDefinitionDetailView({
 
       <AssetLibraryDetailSection title="Validation details">
         {!detail.validationSummary ? (
-          <p className="asset-library-panel-note">Validation details are loaded only when requested.</p>
+          <p className="asset-library-panel-note">Check validation when needed.</p>
         ) : null}
         <button
           className="ui-button"

@@ -86,8 +86,8 @@
   {
    "path": "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
    "facts": {
-    "sha256": "679cc94f54b54994ba8e3393c2325a00a03f047025415297a4e7343aa85d7523",
-    "bytes": 38413,
+    "sha256": "d083c1cec6bac8c8975b2daf5ed4d5b05a624bbb67a49654212ff41eaa36e682",
+    "bytes": 38783,
     "cases": [
      {
       "name": "renders successful cards with category, system default, lifecycle, type, and family cues",
@@ -99,63 +99,63 @@
      },
      {
       "name": "offers a per-card Customize action for the exact definition",
-      "line": 347
+      "line": 353
      },
      {
       "name": "renders resource-backed views in a read-only Resource views tab",
-      "line": 361
+      "line": 367
      },
      {
       "name": "requires confirmation and calls the finalize mutation with a safe command",
-      "line": 392
+      "line": 398
      },
      {
       "name": "routes register and localize actions to their matching client methods",
-      "line": 452
+      "line": 458
      },
      {
       "name": "does not render unsafe resource view diagnostics or mutation details",
-      "line": 607
+      "line": 613
      },
      {
       "name": "renders empty states for no registered definitions and filtered misses",
-      "line": 749
+      "line": 755
      },
      {
       "name": "keeps Search assets stable while help and native search operate independently",
-      "line": 776
+      "line": 782
      },
      {
       "name": "sends filter changes through the supported query fields",
-      "line": 824
+      "line": 830
      },
      {
       "name": "filters definitions locally by category and source metadata",
-      "line": 854
+      "line": 860
      },
      {
       "name": "loads selected definition details without validation and keeps advanced sections collapsed by default",
-      "line": 893
+      "line": 899
      },
      {
       "name": "renders validation only after the explicit validation action and keeps sections collapsed",
-      "line": 937
+      "line": 943
      },
      {
       "name": "renders safe validation load errors",
-      "line": 992
+      "line": 998
      },
      {
       "name": "renders available advanced sections only after selection and keeps safe metadata hidden until expanded",
-      "line": 1025
+      "line": 1031
      },
      {
       "name": "does not render unsafe detail values or unsupported action buttons",
-      "line": 1056
+      "line": 1062
      },
      {
       "name": "uses accessible loading and error states with safe messages",
-      "line": 1086
+      "line": 1092
      }
     ],
     "dynamicCases": 0,
@@ -193,8 +193,8 @@
       "line": 276
      }
     ],
-    "assertionCount": 106,
-    "assertionDigest": "315b569a9af9b05cbebafa947d4d3bad3608d4643f6990ff97ed5a443c4925f5",
+    "assertionCount": 109,
+    "assertionDigest": "457cb9f940bbef9e527cafa1f8899293ec3947a1401fcf66c17fa5f9bfbbea40",
     "assertionExamples": [
      {
       "line": 259,
@@ -2803,8 +2803,8 @@
   {
    "path": "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx",
    "facts": {
-    "sha256": "a1423e77bdc77427440f8d2ebc67f1bb5d63b834e0b71ccb2e481c91ccb620c6",
-    "bytes": 29964,
+    "sha256": "67cd67ef6dd4f22420658607d6abda76ced1db8f5ee1b7e1201240dd70036b3a",
+    "bytes": 30334,
     "cases": [
      {
       "name": "renders cards with category, system default, lifecycle, type, and family cues",
@@ -2816,55 +2816,55 @@
      },
      {
       "name": "renders resource-backed views in a read-only Resource views tab",
-      "line": 334
+      "line": 340
      },
      {
       "name": "requires confirmation and calls the import mutation with a safe thin-client command",
-      "line": 366
+      "line": 372
      },
      {
       "name": "does not render unsafe top-level diagnostics while preserving safe diagnostics",
-      "line": 428
+      "line": 434
      },
      {
       "name": "renders empty states for no registered definitions and filtered misses",
-      "line": 509
+      "line": 515
      },
      {
       "name": "keeps Search assets stable while help and native search operate independently",
-      "line": 536
+      "line": 542
      },
      {
       "name": "sends filter changes through supported query fields",
-      "line": 584
+      "line": 590
      },
      {
       "name": "filters definitions locally by category and source metadata",
-      "line": 614
+      "line": 620
      },
      {
       "name": "loads selected detail without validation and keeps advanced sections collapsed by default",
-      "line": 653
+      "line": 659
      },
      {
       "name": "renders validation only after the explicit validation action and keeps sections collapsed",
-      "line": 696
+      "line": 702
      },
      {
       "name": "renders safe validation load errors",
-      "line": 751
+      "line": 757
      },
      {
       "name": "renders available advanced sections only and hides safe metadata until expanded",
-      "line": 784
+      "line": 790
      },
      {
       "name": "does not render unsafe detail values or unsupported action buttons",
-      "line": 819
+      "line": 825
      },
      {
       "name": "uses accessible loading and error states with safe messages",
-      "line": 843
+      "line": 849
      }
     ],
     "dynamicCases": 0,
@@ -2902,8 +2902,8 @@
       "line": 272
      }
     ],
-    "assertionCount": 88,
-    "assertionDigest": "e4f6fcbbdb510c9dd1771ad0383cca9ad6dfda118a8bd1becdb1a8d248b4a85c",
+    "assertionCount": 91,
+    "assertionDigest": "66b70f4ac8a17cd85799c07b3a3d0710c062ac77e139d1bde109b230e34cd552",
     "assertionExamples": [
      {
       "line": 255,
@@ -4896,8 +4896,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
    "facts": {
-    "sha256": "459216ecf3dceb8e658bf1a795895938856d3397f28b8de681428ce9ac6f1869",
-    "bytes": 23914,
+    "sha256": "b70fa1edaee91a99d3bd512f7028cc76dcfb5fa6b04338edf53b17a3c8fc3ed6",
+    "bytes": 24093,
     "cases": [
      {
       "name": "declared journeys have three useful distinct assets, exact roles and finite phase budgets",
@@ -4945,59 +4945,59 @@
      },
      {
       "name": "exact public definition reads reject same-name substitutions, changed semantics and failure envelopes",
-      "line": 130
+      "line": 132
      },
      {
       "name": "replay checks refuse a process-restart claim, incomplete counts and workspace changes",
-      "line": 142
+      "line": 144
      },
      {
       "name": "replacement check refuses the retired page without consuming the fresh-page attempt",
-      "line": 148
+      "line": 150
      },
      {
       "name": "replacement check admits one same-turn attempt while verification is pending",
-      "line": 157
+      "line": 159
      },
      {
       "name": "replacement observation failure stays failed and cannot be retried with another page",
-      "line": 167
+      "line": 169
      },
      {
       "name": "restart phase settles the journey before owned shutdown and resolves only after both",
-      "line": 174
+      "line": 176
      },
      {
       "name": "each standard and native host case awaits the Assets core after its browse journey",
-      "line": 192
+      "line": 194
      },
      {
       "name": "desktop metadata probe forwards only the captured public query and clears its deadline",
-      "line": 241
+      "line": 243
      },
      {
       "name": "desktop metadata probe safely refuses missing, failed and oversized replies",
-      "line": 246
+      "line": 248
      },
      {
       "name": "desktop metadata probe has an executable bounded timeout",
-      "line": 251
+      "line": 253
      },
      {
       "name": "browser metadata probe uses the paired same-origin exact GET and bounded chunk decoding",
-      "line": 258
+      "line": 260
      },
      {
       "name": "browser metadata probe refuses missing pairing before any fetch",
-      "line": 268
+      "line": 270
      },
      {
       "name": "browser metadata probe bounds output and hides failed HTTP, malformed and interrupted replies",
-      "line": 272
+      "line": 274
      },
      {
       "name": "browser metadata timeout aborts the owned read and clears the timer",
-      "line": 283
+      "line": 285
      }
     ],
     "dynamicCases": 3,
@@ -5008,15 +5008,15 @@
      },
      {
       "name": "clock",
-      "line": 236
+      "line": 238
      },
      {
       "name": "browserEnvironment",
-      "line": 255
+      "line": 257
      }
     ],
-    "assertionCount": 112,
-    "assertionDigest": "690b669bcf403dc521a593f225b9e1cd0c5daa97664766889769173e729bb080",
+    "assertionCount": 113,
+    "assertionDigest": "78718755343f7b164663ce0c5589064e9396b20644c4797f65b9114b0d5951c1",
     "assertionExamples": [
      {
       "line": 30,
@@ -7569,8 +7569,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
    "facts": {
-    "sha256": "73e0c5090466bcc29a31758d7c9979e0b4971d7c897ad2c44d648ae7aad65999",
-    "bytes": 21024,
+    "sha256": "b03b0186d618586c078917fdc3b9bd41b324c7e88a7a90fe9550b4b6f6bf103f",
+    "bytes": 21069,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -7587,20 +7587,24 @@
       "line": 50
      },
      {
+      "name": "verifyPublishedHistory",
+      "line": 76
+     },
+     {
       "name": "selectBase",
-      "line": 80
+      "line": 86
      },
      {
       "name": "readBase",
-      "line": 95
+      "line": 101
      },
      {
       "name": "verifyPublishedState",
-      "line": 210
+      "line": 215
      }
     ],
-    "assertionCount": 41,
-    "assertionDigest": "e33e1fd6a36c710e9cfeedb22be62da93200990a1db172713c6f166df553da80",
+    "assertionCount": 40,
+    "assertionDigest": "44d1f140f0e78d0011672cbff7ecb076e1c4def3ecb9b292bf34abcf2a408edf",
     "assertionExamples": [
      {
       "line": 62,
@@ -10213,8 +10217,8 @@
   {
    "path": "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "0ec0755bd0ee63edec0165fcc7243da0361412bac9984eb5c1f2d6ce20596502",
-    "bytes": 40823,
+    "sha256": "40728424074f56c94f3b311b0e743e51814125cd60a0a68728b80b2124f312bb",
+    "bytes": 42089,
     "cases": [
      {
       "name": "keeps the user's exact search when the older default list arrives later",
@@ -10237,68 +10241,72 @@
       "line": 77
      },
      {
-      "name": "keeps the chosen target when a manual search includes the initial preference=%s",
+      "name": "makes read-only source keyboard focusable without adding an editor",
       "line": 111
      },
      {
+      "name": "keeps the chosen target when a manual search includes the initial preference=%s",
+      "line": 141
+     },
+     {
       "name": "replaces preferred detail on a new client, denied=%s",
-      "line": 128
+      "line": 158
      },
      {
       "name": "ignores an old owner's save %s without releasing the new owner's save",
-      "line": 143
+      "line": 173
      },
      {
       "name": "releases rejected review controls, keeps safe feedback and retries the same exact revision",
-      "line": 160
+      "line": 190
      },
      {
       "name": "releases rejected abandon controls and preserves the draft history",
-      "line": 172
+      "line": 202
      },
      {
       "name": "locks content before publication dispatch and releases it after a failed publication",
-      "line": 207
+      "line": 237
      },
      {
       "name": "keeps preparation errors in fixed notification copy",
-      "line": 241
+      "line": 271
      },
      {
       "name": "saves a useful semantic and source copy before review and explicit publication",
-      "line": 263
+      "line": 293
      },
      {
       "name": "keeps unsaved edits after a failed save and permits explicit retry",
-      "line": 318
+      "line": 348
      },
      {
       "name": "keeps new edits unsaved when a prior review finishes",
-      "line": 329
+      "line": 359
      },
      {
       "name": "locks the distinct derived identity after creation while keeping semantic edits available",
-      "line": 338
+      "line": 368
      },
      {
       "name": "keeps the visible owner's save when a replacement render has not committed",
-      "line": 349
+      "line": 379
      },
      {
       "name": "locks edits while an abandon is pending and restores them after failure",
-      "line": 363
+      "line": 393
      },
      {
       "name": "accepts a fresh canonical server-assigned customization identity",
-      "line": 408
+      "line": 438
      },
      {
       "name": "preserves valid read-only HTML as displayed text alongside editable CSS",
-      "line": 465
+      "line": 495
      },
      {
       "name": "retains the accepted base snapshot when a client later mutates its reply alias",
-      "line": 476
+      "line": 506
      }
     ],
     "dynamicCases": 7,
@@ -10353,27 +10361,27 @@
      },
      {
       "name": "editField",
-      "line": 182
+      "line": 212
      },
      {
       "name": "editSource",
-      "line": 189
+      "line": 219
      },
      {
       "name": "editingClient",
-      "line": 195
+      "line": 225
      },
      {
       "name": "Uncommitted",
-      "line": 353
+      "line": 383
      },
      {
       "name": "actOnce",
-      "line": 395
+      "line": 425
      }
     ],
-    "assertionCount": 139,
-    "assertionDigest": "f4277bc8712995329b1c777ee2179dca4ab54eccf463c93d6e40b0e244bffc82",
+    "assertionCount": 144,
+    "assertionDigest": "25fdc036833d8b4b0b310329a944eef4ab8d2cbbf26a04ec19691ec98166ed1a",
     "assertionExamples": [
      {
       "line": 34,

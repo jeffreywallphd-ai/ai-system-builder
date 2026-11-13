@@ -511,7 +511,65 @@ const pendingFormHostSources = Object.freeze([
     facts: "ee9e798d64978e92112ceeedf422ddeb522b9e0e0d740f562d8dd1f1f00bd9be"},
 ].map(Object.freeze));
 
+const reviewedAssetUiCensus = Object.freeze({
+  priorCommit: "c520852ea9b9d619775ff7beb803af49e56bc742",
+  before: "7edfe4ce16613ce7c7e140be05794a1bf82ffe4ed2c075153fb4ad74af0975cc",
+  after: "4febc48d2f06bc85f40206d117f6219e3c8f7d89552aab52fa1bcb2c6399418c",
+  pins: Object.freeze([
+    {
+      "path": "apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+      "source": "d083c1cec6bac8c8975b2daf5ed4d5b05a624bbb67a49654212ff41eaa36e682",
+      "facts": "ab9152cc0956af70b8497c7a9c386b2dfb699f12633635ad02b100b284d290b1"
+    },
+    {
+      "path": "apps/thin-client/src/features/asset-library/tests/asset-library-feature.unit.test.tsx",
+      "source": "67cd67ef6dd4f22420658607d6abda76ced1db8f5ee1b7e1201240dd70036b3a",
+      "facts": "a689733e0c52fffe0962d21a33ccecc3dce45d0047e2c8509ab192f0e34a7ea0"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+      "source": "b70fa1edaee91a99d3bd512f7028cc76dcfb5fa6b04338edf53b17a3c8fc3ed6",
+      "facts": "ec3efb95d8b77544a2c3e538219e2d5cb4710ca78c50c0d2b7133b92975d46fa"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
+      "source": "b03b0186d618586c078917fdc3b9bd41b324c7e88a7a90fe9550b4b6f6bf103f",
+      "facts": "44994d2b40f65916256401d309f82a44900cabe5e3efdf6b6746a111bba50331"
+    },
+    {
+      "path": "modules/ui/shared/asset-authoring/tests/AssetDerivedCustomizationEditor.interaction.ui.test.tsx",
+      "source": "40728424074f56c94f3b311b0e743e51814125cd60a0a68728b80b2124f312bb",
+      "facts": "d5552d1a1eff38f4c5a9dbeb9864141e454f7ca59b72daaf6a2bf573d56edad3"
+    }
+  ].map(Object.freeze)),
+});
+function assetUiCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) !== reviewedAssetUiCensus.after) return {map, result};
+  const previous = JSON.parse(historicalSource(reviewedAssetUiCensus.priorCommit, censusDocument));
+  assert.equal(sha(JSON.stringify(previous)), reviewedAssetUiCensus.before);
+  const expected = structuredClone(previous), newDrift = new Set();
+  for (const pin of reviewedAssetUiCensus.pins) {
+    const [row] = map.sources.filter(item => item.path === pin.path);
+    const original = expected.sources.find(item => item.path === pin.path);
+    assert(row && original && !newDrift.has(pin.path));
+    assert.equal(row.committed_sha256, original.committed_sha256);
+    assert.equal(original.facts.sha256, original.committed_sha256);
+    assert.equal(row.facts.sha256, pin.source);
+    assert.equal(sha(JSON.stringify(row.facts)), pin.facts);
+    assert.notEqual(row.facts.sha256, row.committed_sha256);
+    original.facts = structuredClone(row.facts);
+    newDrift.add(pin.path);
+  }
+  assert.deepEqual(map, expected);
+  assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+  // The published census keeps every gap. Only the historical validator sees
+  // its own prior definitions; neither inventory asserts host execution.
+  return {map: previous, result: {...result, gaps: result.gaps.filter(row =>
+    !(row.kind === "unreviewed-source-drift" && newDrift.has(row.source)))}};
+}
+
 function formHostCensusLegacyView(map, result) {
+  ({map,result}=assetUiCensusLegacyView(map,result));
   const editor = map.sources.find(row => row.path === currentFormEditorAssertions.path);
   if (editor?.facts.sha256 === currentFormEditorAssertions.picker) {
     assert.equal(sha(JSON.stringify(editor.facts)), currentFormEditorAssertions.pickerFacts);
@@ -1532,7 +1590,14 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,18);
+  assert.equal(result.gaps.length,23);
+  const prior = assetUiCensusLegacyView(map,result);
+  assert.equal(prior.result.gaps.length,18);
+  assert.equal(sha(JSON.stringify(prior.map)),reviewedAssetUiCensus.before);
+  for (const pin of reviewedAssetUiCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
   assert.equal(formHostCensusLegacyView(map,result).result.gaps.length,16);
   assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(map,result));
   assert.equal(JSON.stringify({map,result}),before);

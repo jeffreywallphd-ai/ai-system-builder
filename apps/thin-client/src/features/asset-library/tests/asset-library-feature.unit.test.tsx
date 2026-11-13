@@ -315,6 +315,12 @@ describe("thin-client AssetLibraryFeature", () => {
 
     const dialog = getTopmostDialog();
     expect(dialog.classList.contains("asset-library-detail-dialog")).toBe(true);
+    const heading = dialog.querySelector(".ui-modal-header h2");
+    expect(heading?.id).toBe(dialog.getAttribute("aria-labelledby"));
+    expect(heading?.querySelector('[aria-hidden="true"]')?.textContent).toBe("Asset details");
+    expect(heading?.querySelector(".ui-visually-hidden")?.textContent).toBe(
+      dialog.querySelector(".asset-library-detail__header h2")?.textContent,
+    );
     expect(dialog.textContent).toContain("Represent document-backed assets");
     expect(cardButton.getAttribute("aria-expanded")).toBe("true");
 
@@ -709,7 +715,7 @@ describe("thin-client AssetLibraryFeature", () => {
     await flush();
 
     expect(container.textContent).toContain(
-      "Validation details are loaded only when requested.",
+      "Check validation when needed.",
     );
     expect(container.textContent).not.toContain("Validation summary");
     expect(container.textContent).not.toContain("Valid With Warnings");
