@@ -324,6 +324,11 @@ describe("SystemBuilderWorkspace UI preview", () => {
       createdAt: initial.createdAt, updatedAt: initial.createdAt, createdBy: "person-1", updatedBy: "person-1",
     };
     const other = { ...record, systemId: normalizeSystemBuilderSystemId("alternate"), name: "Other portal" };
+    const otherRevision = {
+      ...initial, systemId: other.systemId,
+      composition: { ...initial.composition, instanceRefs: fixture.slice(0, 3).map(ref) },
+      instances: fixture.slice(0, 3), placements: initial.placements!.slice(0, 2),
+    };
     let latest = initial;
     const saveRevision = vi.fn(async (input: Parameters<SystemBuilderClient["saveRevision"]>[0]) => {
       latest = { ...initial, revisionNumber: 2, composition: input.composition, instances: input.instances,
@@ -339,7 +344,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
       readComposerAsset: async ({definitionRef}) => ({
         ok: true, value: catalog.find((item) => item.definitionRef.id === definitionRef.id && item.version === definitionRef.version)!,
       }),
-      readRevision: async ({systemId}) => ({ ok: true, value: systemId === other.systemId ? { ...initial, systemId: other.systemId } : latest }) };
+      readRevision: async ({systemId}) => ({ ok: true, value: systemId === other.systemId ? otherRevision : latest }) };
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -650,6 +655,31 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(latest.placements!.find((edge) => edge.childInstanceRef.id === canvasField.instanceId)?.order).toBe(1);
     expect(latest.placements!.find((edge) => edge.childInstanceRef.id === intake.instanceId)?.parentInstanceRef.id).toBe("fixture.page");
     expect(latest.placements!.find((edge) => edge.childInstanceRef.id === questionnaire.instanceId)?.parentInstanceRef.id).toBe(section.instanceId);
+    const beforeCanvasMove = latest;
+    await click("Back to Canvas");
+    const intakeSelect = container!.querySelector<HTMLButtonElement>(
+      '.system-composer__canvas-node[data-instance-id="fixture.intake"] > .system-composer__canvas-node-heading > .system-composer__canvas-node-select',
+    )!;
+    await act(async () => intakeSelect.click());
+    await click("Layers");
+    await click("Move down");
+    await editForm("Intake");
+    await choosePage("Details");
+    await chooseElement("Request reason");
+    expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
+    expect(properties().textContent).toContain("Request reason → Reason");
+    await click("Save and validate revision");
+    await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(3));
+    expect(latest.instances).toEqual(beforeCanvasMove.instances);
+    expect(latest.bindings).toEqual(beforeCanvasMove.bindings);
+    const placementByChild = (revision: SystemBuilderRevision) =>
+      Object.fromEntries(revision.placements!.map((edge) => [edge.childInstanceRef.id, edge]));
+    const beforePlacements = placementByChild(beforeCanvasMove);
+    expect(placementByChild(latest)).toEqual({
+      ...beforePlacements,
+      [intake.instanceId]: { ...beforePlacements[intake.instanceId], order: 1 },
+      [browser.instanceId]: { ...beforePlacements[browser.instanceId], order: 0 },
+    });
     await click("Back to Canvas");
     await editForm("Questionnaire");
     await chooseElement("Number Field");
@@ -661,6 +691,8 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await choose("System", "Other portal");
     await click("Edit system");
     expect(button(container!, "Design").getAttribute("aria-selected")).toBe("true");
+    expect(container!.querySelector('button[data-edit-form-id]')).toBeNull();
+    expect(container!.querySelector('[role="tablist"][aria-label="Form pages"]')).toBeNull();
   });
 
   it("reopens the saved empty first form from Manage without adding a field or saving", async () => {

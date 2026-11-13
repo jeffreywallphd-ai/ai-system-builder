@@ -51,6 +51,28 @@ describe("System composer draft operations", () => {
       instanceId: text.instanceId, parentInstanceId: "instance.shell", slotId: "content",
     }).ok).toBe(false);
     expect(field.value.placements.find((edge) => edge.childInstanceRef.id === text.instanceId)?.parentInstanceRef.id).toBe("instance.form");
+
+    // An older draft may already contain a current field in a Canvas slot.
+    const fieldInstance = field.value.instances.find((item) => item.instanceId === text.instanceId)!;
+    const legacyDraft: SystemComposerDraft = {
+      ...field.value,
+      instances: field.value.instances.map((item) =>
+        item === fieldInstance ? { ...item, selectedConfiguration: { label: "Saved answer", required: true } } : item),
+      placements: field.value.placements.map((edge) =>
+        edge.childInstanceRef.id === text.instanceId
+          ? { ...edge, parentInstanceRef: { kind: "asset-instance", id: normalizeAssetId("instance.shell") },
+              slotId: normalizeAssetSlotId("content"), order: 1 }
+          : edge),
+    };
+    const restored = reparentSystemComposerAsset(legacyDraft, {
+      instanceId: text.instanceId, parentInstanceId: "instance.form", slotId: "fields",
+    });
+    expect(restored.ok).toBe(true);
+    if (!restored.ok) return;
+    expect(restored.value.instances).toEqual(legacyDraft.instances);
+    expect(restored.value.placements).toEqual(field.value.placements);
+    expect(legacyDraft.placements.find((edge) => edge.childInstanceRef.id === text.instanceId)?.parentInstanceRef.id).toBe("instance.shell");
+
     const put = (current: SystemComposerDraft, id: string, definition: string, parentInstanceId: string, slotId: string) =>
       addSystemComposerAsset(current, { asset: formAsset(definition), compositionId: "composition.demo",
         instanceId: id, parentInstanceId, slotId });
