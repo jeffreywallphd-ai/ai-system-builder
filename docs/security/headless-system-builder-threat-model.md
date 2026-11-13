@@ -139,3 +139,14 @@ deployment, mutation and execution. The projection does not relay private
 labels, defaults, transcripts, record values, artifact previews or errors.
 Fields marked sensitive or referring to secrets remove the entire action
 from the projection.
+
+The internal conversation dispatch reservation separates current permission
+to observe from permission to start a new turn. Observation leaves an
+absent key and its capacity unchanged. The owning transaction rechecks
+dispatch policy before reserving a new key. The caller checks the grant
+before passing the detached prepared target and fence to trusted submission,
+and checks observation again before returning the result. The future
+invocation owner must enforce the same exact target and live fence. A
+pending reservation cannot dispatch again after a crash or uncertain reply.
+The host-keyed receipt stores no prompt or reply text. A confirmed receipt
+stores only the turn and run identifiers with the fingerprint and expiry.

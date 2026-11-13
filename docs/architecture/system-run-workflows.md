@@ -47,6 +47,16 @@ workspace, asset and runtime read permission. Its read-only task tool checks
 the saved conversation session, turn and run belong to the same workspace,
 plan and turn. It returns their identity and status without loading a worker.
 
+The internal Headless turn dispatch seam reads an existing key under the
+observation policy. Only the dispatch policy can reserve a new key. A host
+must supply both live policies and a persistent keyed fingerprint. The
+trusted submit dependency receives the exact plan, session, revisions and
+grant fence. It must recheck them at the actual invocation boundary before a
+host wires this seam to the conversation use case. A successful submission
+can save a result handle. An interrupted or ambiguous attempt remains
+unconfirmed and cannot dispatch on replay. This seam grants no execution
+permission and creates no approval.
+
 ## Contract primitives
 
 The shared contract permits a finite set of inputs: text, multiline text,
