@@ -1607,6 +1607,28 @@
       "outcome": "pending",
       "recordedAt": "2026-11-13T02:55:57Z",
       "summary": "Native 400 percent Desktop and managed browser feature results remain in the evidence history, including Canvas and Asset Details. Matching feature runs now built, previewed, saved, and reopened a request form, dashboard and conversation interface on Desktop and in the browser. Desktop reopened all three after an app restart. The dashboard passed its build; the other builds retained their required denials. Broader production checks and the separate legacy security assessment remain pending."
+    },
+    {
+      "artifact": "verify-contextual-form-canvas-roundtrip; receipt df9df77d1c480290b2f243e72ecdef92831c36a697bc337d977b53aec9241b94; review b2c4e9ee61a1e8ea4153bbf657f0c6369968b5b060460abafa835985968c4ce3",
+      "command": null,
+      "criterionId": "shared-form-and-canvas-draft",
+      "id": "evidence-51",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-13T10:18:57Z",
+      "summary": "The contextual editor passed focused checks for a shared draft and undo/redo, reopening saved forms, page and field editing, and a system without a Form entry. Current form fields were rejected outside a form, and a synthetic older draft retained a field's identity and settings when the field was moved into its form. Template checks passed. The exact product receipt and separate review verify this local scope."
+    },
+    {
+      "artifact": "verify-contextual-form-canvas-roundtrip; receipt df9df77d1c480290b2f243e72ecdef92831c36a697bc337d977b53aec9241b94; review b2c4e9ee61a1e8ea4153bbf657f0c6369968b5b060460abafa835985968c4ce3",
+      "command": null,
+      "criterionId": "form-maps-to-a-canvas-page",
+      "id": "evidence-52",
+      "incrementId": "asset-backed-form-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-13T10:18:57Z",
+      "summary": "The starter saved its empty first page and reopened from Manage. The editor opened the selected form when two forms shared a Canvas page. A real Layers move changed only the intended sibling order. Reopening Form preserved the field validation and the exact route and action bindings. This is a focused product result; the separate production criteria retain their recorded status."
     }
   ],
   "feedback": [
@@ -2623,6 +2645,18 @@
       "recordedAt": "2026-11-13T09:57:05Z",
       "sequence": 142,
       "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "65ce0efd286df7f482d39864285c8affb15a4d3f49f7d7a6436d4a8c2a618651",
+      "recordedAt": "2026-11-13T10:18:57Z",
+      "sequence": 143,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3dde4a2160a20693bd6fb4a89ba325b56896fdce77d505583c6f5080fd5204c1",
+      "recordedAt": "2026-11-13T10:18:57Z",
+      "sequence": 144,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -4228,5 +4262,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-13T09:57:05Z"
+  "updatedAt": "2026-11-13T10:18:57Z"
 }
