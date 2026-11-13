@@ -592,6 +592,10 @@ export interface DesktopPythonRuntimeApi {
 }
 
 interface DesktopApiBridge {
+  readHeadlessPairingStatus?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingStatus>;
+  startHeadlessConnector?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessStartResult>;
+  beginHeadlessPairing?: (workspaceId: string) => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingResult>;
+  revokeHeadlessClient?: (clientId: string) => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessRevokeResult>;
   memoryDiagnosticsEnabled?: boolean;
   getHuggingFaceTokenStatus: () => Promise<unknown>;
   setHuggingFaceToken: (input: { token: string }) => Promise<unknown>;

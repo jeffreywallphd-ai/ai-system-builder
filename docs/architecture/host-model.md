@@ -82,7 +82,9 @@ adapter must use the existing authenticated server API. An adapter does not
 start a second host or own a data store. Workspace access and window
 presentation remain separate. The desktop's internal read dispatcher uses
 the same System Builder read use cases as IPC. It requires a verified grant
-and current workspace policy; neither host exposes an external connector yet.
+and current workspace policy. Desktop Settings can start an optional read-only
+loopback connector after an explicit native confirmation. The desktop
+connector closes before platform persistence; managed parity remains pending.
 
 - Owns server process lifecycle and composition.
 - Uses transport adapters (default: Express) for API exposure.

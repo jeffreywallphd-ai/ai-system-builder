@@ -1,4 +1,5 @@
 import { DESKTOP_RUNTIME_READINESS_READ_LATEST_FOR_COMPOSITION_PLAN_REQUEST_CHANNEL, DESKTOP_RUNTIME_READINESS_READ_DETAIL_REQUEST_CHANNEL } from "../../../../modules/contracts/ipc";
+import { DESKTOP_HEADLESS_PAIRING_CHANNELS, readDesktopHeadlessPairingStatus, type DesktopHeadlessPairingResult, type DesktopHeadlessPairingStatus, type DesktopHeadlessRevokeResult, type DesktopHeadlessStartResult } from "../../../../modules/contracts/headless";
 import { normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary, type ReadWorkspaceSummaryRequest } from "../../../../modules/contracts/workspace";
 import { createDesktopWorkspaceSummaryRequest, DESKTOP_WORKSPACE_SUMMARY_OPERATION, DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, type DesktopWorkspaceSummaryResponse } from "../../../../modules/contracts/ipc";
 import {
@@ -755,6 +756,10 @@ type DesktopSystemDeploymentContextInput = {
 
 export interface DesktopPreloadApi {
   memoryDiagnosticsEnabled: boolean;
+  readHeadlessPairingStatus: () => Promise<DesktopHeadlessPairingStatus>;
+  startHeadlessConnector: () => Promise<DesktopHeadlessStartResult>;
+  beginHeadlessPairing: (workspaceId: string) => Promise<DesktopHeadlessPairingResult>;
+  revokeHeadlessClient: (clientId: string) => Promise<DesktopHeadlessRevokeResult>;
   getHuggingFaceTokenStatus: (
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopHuggingFaceTokenGetResponse>;
@@ -2105,6 +2110,21 @@ export function createDesktopPreloadApi(
 
   return {
     memoryDiagnosticsEnabled: dependencies.memoryDiagnosticsEnabled === true,
+    async readHeadlessPairingStatus() {
+      return readDesktopHeadlessPairingStatus(await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.status, null));
+    },
+    async startHeadlessConnector() {
+      const result = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.start, null);
+      return result === "started" || result === "canceled" || result === "denied" ? result : "unavailable";
+    },
+    async beginHeadlessPairing(workspaceId) {
+      const result = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.pair, workspaceId);
+      return result === "shown" || result === "canceled" || result === "denied" ? result : "unavailable";
+    },
+    async revokeHeadlessClient(clientId) {
+      const result = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.revoke, clientId);
+      return result === "revoked" || result === "denied" ? result : "unavailable";
+    },
 
     async getHuggingFaceTokenStatus(context = {}) {
       const request = createDesktopHuggingFaceTokenGetRequest(context);

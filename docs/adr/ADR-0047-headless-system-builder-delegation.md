@@ -53,10 +53,12 @@ requests and match the host incarnation. The provider shares the UI's read use
 cases and checks current workspace authority before returning projected results.
 The internal registration adapter stores only credential digests and supports
 one-use pairing, expiry and revocation on the existing organization store. It
-has no product entry point. The standalone transport serves two fixed local
-routes with bounded framing and shutdown. The app does not yet start it.
-Interactive pairing, tested integration and actual packaged-host evidence are
-still required before any supported-capability claim. See the
+is owned by the optional desktop connector. The transport serves two fixed
+local routes with bounded framing and shutdown. Desktop Settings asks for
+native confirmation before starting the connector for an exact workspace or
+for still-authorized existing clients. No listener opens on launch or status
+reads. The renderer does not receive the pairing code. The MCP adapter and
+packaged-host qualification are still pending. See the
 [threat model](../security/headless-system-builder-threat-model.md) and the
 [approved roadmap](../headless-skills-ui-takeover-implementation-roadmap.md).
 

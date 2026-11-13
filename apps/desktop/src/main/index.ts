@@ -15,6 +15,7 @@ import {
   readLocalIdentityProfile,
 } from "../../../../modules/adapters/security/local-identity";
 import { isTrustedIpcSender } from "./trustedIpcSender";
+import { captureDesktopHeadlessPairingWindow, registerDesktopHeadlessPairingIpc } from "./desktopHeadlessPairingIpc";
 import { createRevealModelPath } from "./revealModelPath";
 import {
   createSystemRuntimeWindowManager,
@@ -286,6 +287,45 @@ app.whenReady().then(async () => {
     runtimeRootDirectory: desktopDataRootDirectory,
     systemRuntimeWindows,
     revealModelPath: createRevealModelPath(shell),
+  });
+  registerDesktopHeadlessPairingIpc({
+    ipcMain,
+    getConnection: desktopHost.getHeadlessConnection,
+    resolveWindow: (event) => captureDesktopHeadlessPairingWindow(event, {
+      getFocusedWindow: () => BrowserWindow.getFocusedWindow(),
+      ownsAndTrusts: (window, caller) => openWindows.has(window) && isTrustedIpcSender(caller, [window]),
+      dialogs: (window) => ({
+        async confirm(workspaceLabel) {
+          const { response } = await dialog.showMessageBox(window, {
+            type: "question",
+            title: "Pair a chat client",
+            message: "Allow a local chat client to read saved systems?",
+            detail: `Workspace: ${workspaceLabel}\nThe new client can read saved systems in this workspace. This also turns on the local connector so previously paired clients can reconnect to their approved workspaces. No client can edit a system or control this window.`,
+            buttons: ["Cancel", "Create pairing code"], defaultId: 0, cancelId: 0, noLink: true,
+          });
+          return response === 1;
+        },
+        async confirmStart() {
+          const { response } = await dialog.showMessageBox(window, {
+            type: "question",
+            title: "Turn on the local connector",
+            message: "Allow your paired local chat clients to reconnect?",
+            detail: "Each client can read saved systems only in the workspace you approved for it.",
+            buttons: ["Cancel", "Turn on"], defaultId: 0, cancelId: 0, noLink: true,
+          });
+          return response === 1;
+        },
+        async showCode(endpoint, code) {
+          await dialog.showMessageBox(window, {
+            type: "info",
+            title: "One-time pairing code",
+            message: "Use this code in your trusted local chat client.",
+            detail: `Local address: ${endpoint}\nCode: ${code}\nThis code expires in two minutes. Do not share it with another person.`,
+            buttons: ["Done"], defaultId: 0, cancelId: 0, noLink: true,
+          });
+        },
+      }),
+    }),
   });
   recordDesktopMemorySnapshot({
     milestone: "desktop.ipc.register.after",

@@ -9,8 +9,9 @@ Requests with another Host, an Origin, or forwarding headers are denied.
 Do not use the connector through a browser, reverse proxy, or remote relay.
 
 The adapter limits connection count, header and body bytes, request admission
-and concurrent requests. Shutdown closes admission and sockets, revokes the
-in-memory authority and waits for admitted work before allowing persistence
-teardown. If the wait expires, shutdown is unconfirmed and can be retried.
-No request or bearer bytes enter logs. The transport is not yet started by
-the app; see ADR-0047 and the Headless System Builder threat model.
+and concurrent requests. Shutdown closes admission and sockets and waits for
+admitted work before allowing persistence teardown. The desktop separately
+closes its in-memory authority during app shutdown. If the wait expires,
+shutdown is unconfirmed and can be retried. No request or bearer bytes enter
+logs. The app starts the connector only after explicit desktop confirmation;
+see ADR-0047 and the Headless System Builder threat model.

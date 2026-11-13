@@ -28,8 +28,10 @@ export interface DesktopHeadlessLoopback {
  * There is no registration/admin/interactive authority route.
  */
 export async function startDesktopHeadlessLoopback(dependencies: {
-  readonly registrations: Pick<Registration, "completePairing" | "verifyCredential" | "close">;
+  readonly registrations: Pick<Registration, "completePairing" | "verifyCredential">;
   readonly read: (request: unknown, currentGrant: () => Promise<Grant>) => Promise<HeadlessReadResult>;
+  /** Allows the owning desktop to keep a newly bound listener dormant until confirmed. */
+  readonly isAdmitted?: () => boolean;
 }): Promise<DesktopHeadlessLoopback> {
   let port: number | undefined;
   let open = true;
@@ -37,6 +39,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
   let windowStart = performance.now();
   let admitted = 0;
   let socketsClosed: Promise<void> | undefined;
+  const admitting = () => open && (dependencies.isAdmitted?.() ?? true);
   const server = createServer({
     headersTimeout: REQUEST_LIMIT_MS,
     requestTimeout: REQUEST_LIMIT_MS,
@@ -49,7 +52,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       windowStart = current;
       admitted = 0;
     }
-    if (!open || active.size >= MAX_ACTIVE || admitted >= MAX_REQUESTS_PER_SECOND) {
+    if (!admitting() || active.size >= MAX_ACTIVE || admitted >= MAX_REQUESTS_PER_SECOND) {
       fail(response, 503, "headless.unavailable");
       return;
     }
@@ -73,7 +76,6 @@ export async function startDesktopHeadlessLoopback(dependencies: {
   async function close(): Promise<void> {
     if (!socketsClosed) {
       open = false;
-      dependencies.registrations.close();
       socketsClosed = new Promise<void>((resolve, reject) => {
         server.close((error) => error ? reject(new Error("Desktop connector shutdown could not be confirmed.")) : resolve());
         server.closeAllConnections();
@@ -130,16 +132,16 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         fail(response, 400, "headless.invalid-request");
         return;
       }
-      if (!open || response.destroyed) return;
+      if (!admitting() || response.destroyed) return;
       const pairing = await dependencies.registrations.completePairing(body.pairingCode);
-      if (!open || response.destroyed) return;
+      if (!admitting() || response.destroyed) return;
       if (pairing.status !== "paired") {
         fail(response, pairing.status === "unavailable" ? 503 : 403,
           pairing.status === "unavailable" ? "headless.unavailable" : "headless.forbidden");
         return;
       }
       const currentGrant = await dependencies.registrations.verifyCredential(pairing.credential);
-      if (!open || response.destroyed) return;
+      if (!admitting() || response.destroyed) return;
       if (currentGrant?.registeredClientId !== pairing.registeredClientId) {
         fail(response, 403, "headless.forbidden");
         return;
@@ -154,7 +156,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
 
     const credential = TOKEN_PATTERN.exec(uniqueHeader(request, "authorization") ?? "")?.[1];
     const initialGrant = credential && await dependencies.registrations.verifyCredential(credential);
-    if (!credential || !initialGrant || !open || response.destroyed) {
+    if (!credential || !initialGrant || !admitting() || response.destroyed) {
       fail(response, 403, "headless.forbidden");
       return;
     }
@@ -163,18 +165,18 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       fail(response, 400, "headless.invalid-request");
       return;
     }
-    if (!open || response.destroyed) return;
+    if (!admitting() || response.destroyed) return;
     const currentGrant = async () => {
-      if (!open || response.destroyed) return undefined;
+      if (!admitting() || response.destroyed) return undefined;
       const current = await dependencies.registrations.verifyCredential(credential);
-      if (!open || response.destroyed || !current || current.registeredClientId !== initialGrant.registeredClientId ||
+      if (!admitting() || response.destroyed || !current || current.registeredClientId !== initialGrant.registeredClientId ||
           current.principalId !== initialGrant.principalId || current.organizationId !== initialGrant.organizationId ||
           !sameScope(current, initialGrant)) return undefined;
       return current;
     };
     const result = await dependencies.read(body, currentGrant);
     const finalGrant = await currentGrant();
-    if (!open || response.destroyed) return;
+    if (!admitting() || response.destroyed) return;
     if (!finalGrant) {
       fail(response, 403, "headless.forbidden");
       return;

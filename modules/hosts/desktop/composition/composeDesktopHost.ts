@@ -7,6 +7,7 @@ import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconcile
 import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
 import { asyncLazyObject } from "./lazyProxy";
 import { composeDesktopHeadlessReads, type DesktopHeadlessReadHandler } from "./composeDesktopHeadlessReads";
+import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
 import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
 import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
 import { WorkspaceAssetAccessService } from "../../../application/services/asset/workspace-asset-access.service";
@@ -336,6 +337,8 @@ export interface DesktopHostComposition {
   ) => void;
   /** Main-process use only; the future connector must authenticate every request. */
   getHeadlessReadHandler: () => DesktopHeadlessReadHandler | undefined;
+  /** Interactive main-process entry point. Never expose the object to a renderer. */
+  getHeadlessConnection: () => DesktopHeadlessConnection | undefined;
   registerArtifactUploadIpc: (
     options: RegisterDesktopArtifactUploadIpcOptions,
   ) => void;
@@ -686,6 +689,7 @@ export function composeDesktopHost(
 
   const taskReconciler = createOwnedTaskReconciler();
   let headlessReadHandler: DesktopHeadlessReadHandler | undefined;
+  let headlessConnection: DesktopHeadlessConnection | undefined;
   let headlessReadAdmissionClosed = false;
   let closeImageAdmission: (() => void) | undefined;
   let stopOwnedImageRuntime: (() => Promise<void>) | undefined;
@@ -711,6 +715,8 @@ export function composeDesktopHost(
       headlessReadHandler = undefined;
       taskReconciler.stopAccepting();
       closeImageAdmission?.();
+      await headlessConnection?.close();
+      headlessConnection = undefined;
       await shutdownOwnedTasks({ reconciler: taskReconciler,
         stopPython: async () => { if (pythonRuntimeFoundationPromise) await (await pythonRuntimeFoundationPromise).supervisor.stop(); },
         stopImage: async () => { await stopOwnedImageRuntime?.(); },
@@ -762,6 +768,7 @@ export function composeDesktopHost(
     },
     getFeatureLifecycleState: featureLifecycle.getFeatureLifecycleState,
     getHeadlessReadHandler: () => headlessReadHandler,
+    getHeadlessConnection: () => headlessConnection,
     disposeFeature: featureLifecycle.disposeFeature,
     markFeatureIdle: featureLifecycle.markFeatureIdle,
     disposeIdleFeatures: featureLifecycle.disposeIdleFeatures,
@@ -2158,6 +2165,15 @@ export function composeDesktopHost(
             getUseCases: () => systemBuilder.useCases,
             isOpen: () => !headlessReadAdmissionClosed,
           });
+          if (organizationDocuments?.organizationId === identity.organizationId) {
+            headlessConnection = composeDesktopHeadlessConnection({
+              documents: organizationDocuments,
+              identity,
+              workspaces: startupWorkspaceShell.workspaceRepository,
+              authorization: workspaceAuthorization,
+              read: headlessReadHandler,
+            });
+          }
         }
       }
       recordHostMemorySnapshot("desktop.host.ipc-registration.return");

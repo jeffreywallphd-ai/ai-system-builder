@@ -43,7 +43,20 @@ The caps are 16 connections, eight concurrent admitted requests, 128
 admissions per one-second window, 8 KiB of headers, 128 KiB of response,
 and a five-second I/O and shutdown wait. Shutdown fences new calls, closes
 owned sockets and waits for admitted work; timeout is not proof of cleanup.
-No application listener is enabled until explicit host composition.
+Desktop Settings starts the listener only after native confirmation from an
+owned foreground window. Pairing validates the exact workspace and confirms
+its current label and ID; the native dialog alone shows the code. The app
+rechecks the exact foreground window and main frame during interactive
+admission. Both start prompts tell the user that existing authorized clients
+can reconnect once the shared listener starts. The preload
+returns fixed outcomes and projects only the connector address and bounded
+client metadata. Restart leaves the listener off; existing authorized clients
+can reconnect after an explicit start with no new pairing. Closing the desktop
+retires the listener before persistence. This does not grant write or window
+control, or qualify packaged-host MCP delivery.
+The desktop admits up to four concurrent management operations. It fences and
+drains them along with socket work before releasing persistence; a timed-out
+drain remains pending for an explicit retry.
 
 Managed parity must recheck existing OIDC, membership and row-security
 authority, including for streams, receipts and worker replay. Neither synthetic

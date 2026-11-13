@@ -34,3 +34,14 @@ class HeadlessReadRoutingTests(unittest.TestCase):
                 self.assertIn("focused-tests", self.plan([root, auto]))
                 self.assertNotIn("focused-tests", self.plan([root, auto], check))
                 self.assertIn("focused-tests", self.plan([other, root, auto], check))
+
+    def test_activation_keeps_generic_for_broad_or_unrelated_desktop_changes_without_opt_in(self):
+        check = "headless-desktop-activation"
+        activation = "apps/desktop/src/main/desktopHeadlessPairingIpc.ts"
+        main = "apps/desktop/src/main/index.ts"
+        other = "apps/desktop/src/main/revealModelPath.ts"
+        self.assertEqual(set(self.plan([activation])), {check, "architecture"})
+        self.assertIn("focused-tests", self.plan([activation, main]))
+        self.assertIn("focused-tests", self.plan([activation, main], "headless-desktop-read-provider"))
+        self.assertNotIn("focused-tests", self.plan([activation, main], check))
+        self.assertIn("focused-tests", self.plan([activation, main, other], check))

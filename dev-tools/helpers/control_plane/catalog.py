@@ -94,6 +94,23 @@ HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES = (
     "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts",
     "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
 )
+HEADLESS_DESKTOP_ACTIVATION_CHECK = "headless-desktop-activation"
+HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES = (
+    "apps/desktop/src/main/desktopHeadlessPairingIpc.ts",
+    "apps/desktop/src/main/tests/desktop-headless-pairing-ipc.unit.test.ts",
+    "apps/desktop/src/renderer/features/settings/components/HeadlessClientSettings.tsx",
+    "modules/contracts/headless/desktop-headless-pairing.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessConnection.ts",
+    "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+)
+HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES = HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES + (
+    "apps/desktop/src/main/index.ts",
+    "apps/desktop/src/preload/exposedApi.ts",
+    "apps/desktop/src/renderer/lib/desktopApi.ts",
+    "apps/desktop/src/renderer/pages/SettingsPage.tsx",
+    "modules/adapters/security/headless/createDesktopHeadlessClientAuthority.ts",
+    "modules/adapters/transport/headless-loopback/startDesktopHeadlessLoopback.ts",
+)
 
 PUBLISHED_FORM_CHECKS = {
     "managed-assets-restart-loader": {
@@ -529,6 +546,13 @@ def definitions(root: Path) -> list[dict]:
                   "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
                   "modules/contracts/headless/tests/headless-read-request.unit.test.ts"],
          "timeout": 120},
+        {"id": HEADLESS_DESKTOP_ACTIVATION_CHECK, "patterns": [],
+         "argv": [node, "--import", "tsx", "--test", "--",
+                  "apps/desktop/src/main/tests/desktop-headless-pairing-ipc.unit.test.ts",
+                  "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+                  "modules/adapters/security/headless/tests/desktop-headless-client-authority.unit.test.ts",
+                  "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts"],
+         "timeout": 120},
         {"id": "asset-defensive-acceptance", "patterns": [],
          "argv": [node, "--import", "tsx", "--test", "--test-concurrency=1", "--", *ASSET_DEFENSIVE_TESTS],
          "timeout": 180},
@@ -572,8 +596,12 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     required = set(required)
     headless_explicit = HEADLESS_DESKTOP_READ_CHECK in required
     headless_sources = HEADLESS_DESKTOP_READ_SOURCES if headless_explicit else HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES
+    activation_explicit = HEADLESS_DESKTOP_ACTIVATION_CHECK in required
+    activation_sources = HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES if activation_explicit else HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES
     if set(paths).intersection(HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES):
         required.add(HEADLESS_DESKTOP_READ_CHECK)
+    if set(paths).intersection(HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES):
+        required.add(HEADLESS_DESKTOP_ACTIVATION_CHECK)
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
                     if set(paths).intersection(check.get("automatic_sources", ())))
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
@@ -583,6 +611,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                    or (c["id"] in required and (
                        p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()) or
                        (c["id"] == HEADLESS_DESKTOP_READ_CHECK and p in headless_sources) or
+                       (c["id"] == HEADLESS_DESKTOP_ACTIVATION_CHECK and p in activation_sources) or
                        p in PUBLISHED_FORM_CHECKS.get(c["id"], {}).get("sources", ()) or
                        (c["id"] == "standard-source-fixture-runner" and p in STANDARD_RUNNER_SOURCES) or
                        (c["id"] == "asset-browser-qualification-contract" and p in ASSET_BROWSER_SOURCES)
@@ -605,6 +634,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
         declared_sources.update(ASSET_BROWSER_SOURCES)
     if HEADLESS_DESKTOP_READ_CHECK in required:
         declared_sources.update(headless_sources)
+    if HEADLESS_DESKTOP_ACTIVATION_CHECK in required:
+        declared_sources.update(activation_sources)
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))

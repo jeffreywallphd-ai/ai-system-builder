@@ -63,12 +63,12 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
 
   return {
     /** Trusted, explicit interactive action only. Do not expose to the connector. */
-    async beginPairing(workspaceId: WorkspaceId) {
-      if (!open || completing || !isWorkspaceId(workspaceId)) return denied;
+    async beginPairing(workspaceId: WorkspaceId, isStillApproved: () => boolean = () => true) {
+      if (!open || completing || !isWorkspaceId(workspaceId) || !isStillApproved()) return denied;
       const attempt = ++generation;
       pending = undefined;
       try {
-        if (!await canReadWorkspace(workspaceId) || !open || attempt !== generation) return denied;
+        if (!await canReadWorkspace(workspaceId) || !open || attempt !== generation || !isStillApproved()) return denied;
         const pairingCode = secureRandomBase64Url(32);
         const expiresAt = now() + PAIRING_TTL_MS;
         pending = {

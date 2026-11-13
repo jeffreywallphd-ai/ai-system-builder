@@ -9,3 +9,14 @@ export {
   type HeadlessReadRequestParseResult,
 } from "./headless-read-request";
 export type { HeadlessReadResult, HeadlessSystemSummary } from "./headless-read-result";
+export {
+  DESKTOP_HEADLESS_PAIRING_CHANNELS,
+  isDesktopHeadlessClientId,
+  isDesktopHeadlessEndpoint,
+  readDesktopHeadlessPairingStatus,
+  type DesktopHeadlessPairingAction,
+  type DesktopHeadlessPairingResult,
+  type DesktopHeadlessPairingStatus,
+  type DesktopHeadlessStartResult,
+  type DesktopHeadlessRevokeResult,
+} from "./desktop-headless-pairing";

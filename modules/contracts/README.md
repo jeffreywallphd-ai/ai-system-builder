@@ -14,7 +14,8 @@ Current contract families include:
 - `system-builder` for workspace-owned composed-system design records that specialize Asset Kernel compositions
 - `headless` for versioned, finite read requests and bounded read projections
   from an existing host. Request validation does not grant access or
-  advertise a supported capability.
+  advertise a supported capability. Desktop pairing IPC is separate and never
+  returns the one-time code through its status or action results.
 - `asset-authoring` for safe authored records plus exact-base layered
   customizations, typed semantic sections, bounded source overlays, review
   evidence, distinct publication lineage, and shared operation identities used
