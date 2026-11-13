@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
-import type { HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest } from "../../../contracts/headless/index.js";
+import type { HeadlessApprovedTurnRequest, HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import type { SystemBuilderSystemId } from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
@@ -20,12 +20,13 @@ const workflowSource = z.discriminatedUnion("kind", [
 ]);
 const version = headless.HEADLESS_CONTRACT_VERSION;
 const enableAuthoring = process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
+const enableConversation = process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
 const forward = createHeadlessMcpReadForwarder(
-  process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL, enableAuthoring,
+  process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL, enableAuthoring, enableConversation,
 );
 delete process.env.AISB_HEADLESS_CREDENTIAL;
 
-async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest, signal?: AbortSignal) {
+async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest | HeadlessApprovedTurnRequest, signal?: AbortSignal) {
   const result = await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" };
   return { content: [{ type: "text" as const, text: JSON.stringify(result) }], isError: !result.ok };
 }
@@ -156,6 +157,18 @@ serveStdio(() => {
     ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
   if (enableAuthoring) addAuthoringTools(server);
+  if (enableConversation) server.registerTool("aisb_send_approved_turn", {
+    description: "Send one message to an already approved conversation at its exact saved revisions. An uncertain reply never authorizes a new key; reconcile before retrying the same request.",
+    inputSchema: z.strictObject({
+      hostIncarnationId, workspaceId, planId: workflowId, planRevision: workflowId, sessionId: workflowId,
+      snapshotRevision: workflowId, key: z.string().refine(headless.isHeadlessHostIncarnationId, "Invalid retry key"),
+      text: z.string().min(1).max(2_000),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  }, (input, context) => {
+    const decoded = headless.parseHeadlessApprovedTurnRequest({ version, operation: headless.HEADLESS_APPROVED_TURN_OPERATION, input });
+    return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
+  });
   return server;
 }, {
   transport: boundHeadlessMcpStdio(process.stdin, process.stdout, () => {

@@ -4,7 +4,7 @@ import { connect } from "node:net";
 import { test } from "node:test";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
-import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId } from "../../../../contracts/headless";
+import { HEADLESS_APPROVED_TURN_OPERATION, HEADLESS_APPROVED_TURN_PATH, HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId } from "../../../../contracts/headless";
 import { createInMemoryStructuredDocumentStore } from "../../../persistence/shared";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
 import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../index";
@@ -55,6 +55,115 @@ function registrations() {
     canReadWorkspace: async (id) => id === workspaceId,
   });
 }
+
+test("disconnect does not revoke an admitted conversation task but live registration revocation does", { timeout: 8_000 }, async () => {
+  const registry = registrations();
+  const pairingCode = await registry.beginPairing(workspaceId);
+  assert.equal(pairingCode.status, "ready");
+  const pairing = await registry.completePairing(pairingCode.pairingCode);
+  assert.equal(pairing.status, "paired");
+  let entered!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  let inspected!: (result: boolean) => void;
+  const afterDisconnect = new Promise<boolean>(resolve => { inspected = resolve; });
+  let revoked!: (result: boolean) => void;
+  const afterRevoke = new Promise<boolean>(resolve => { revoked = resolve; });
+  let continueAfterRevoke!: () => void;
+  const checked = new Promise<void>(resolve => { continueAfterRevoke = resolve; });
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: {
+      completePairing: registry.completePairing,
+      async verifyCredential(credential) {
+        const grant = await registry.verifyCredential(credential);
+        return grant && { ...grant, conversation: true };
+      },
+    },
+    async read() { return { ok: false, code: "headless.unavailable" }; },
+    conversation: {
+      hostIncarnationId: incarnation,
+      async execute(_input, authority) {
+        entered();
+        await held;
+        inspected(Boolean(await authority.currentGrant()));
+        await checked;
+        revoked(Boolean(await authority.currentGrant()));
+        return { ok: true, value: { turnId: "fixture-turn", runId: "fixture-run" } };
+      },
+    },
+  });
+  const body = JSON.stringify({ version: HEADLESS_CONTRACT_VERSION, operation: HEADLESS_APPROVED_TURN_OPERATION, input: {
+    hostIncarnationId: incarnation, workspaceId, planId: "fixture-plan", planRevision: "plan-r1",
+    sessionId: "fixture-session", snapshotRevision: "snapshot-r1", key: "a6f56324-2051-462c-b45b-d9b49bf6dd4a",
+    text: "Synthetic turn",
+  } });
+  let replies = 0;
+  const client = request(new URL(HEADLESS_APPROVED_TURN_PATH, connector.endpoint), {
+    method: "POST", agent: createDesktopPinnedLoopbackAgent(connector.endpoint, connector.fingerprint),
+    headers: { Authorization: "Bearer " + pairing.credential, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+  }, response => { replies++; response.resume(); });
+  client.on("error", () => {});
+  const closed = new Promise<void>(resolve => client.once("close", resolve));
+  client.end(body);
+  try {
+    await started;
+    client.destroy();
+    await closed;
+    release();
+    assert.equal(await afterDisconnect, true);
+    assert.equal(await registry.revokeClient(pairing.registeredClientId), true);
+    continueAfterRevoke();
+    assert.equal(await afterRevoke, false);
+    assert.equal(replies, 0);
+  } finally {
+    client.destroy();
+    release();
+    continueAfterRevoke();
+    registry.close();
+    await connector.close();
+  }
+});
+
+test("a listener closed in the final grant microtask gap cannot admit a turn", { timeout: 8_000 }, async () => {
+  const registry = registrations();
+  const code = await registry.beginPairing(workspaceId);
+  assert.equal(code.status, "ready");
+  const pairing = await registry.completePairing(code.pairingCode);
+  assert.equal(pairing.status, "paired");
+  let verification = 0;
+  let dispatches = 0;
+  let stopped: Promise<void> | undefined;
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: {
+      completePairing: registry.completePairing,
+      async verifyCredential(credential) {
+        const grant = await registry.verifyCredential(credential);
+        const checked = ++verification;
+        return grant && { ...grant, conversation: true, isCurrent() {
+          if (checked === 2 && !stopped) queueMicrotask(() => { stopped ??= connector.close(); });
+          return grant.isCurrent();
+        } };
+      },
+    },
+    async read() { return { ok: false, code: "headless.unavailable" }; },
+    conversation: { hostIncarnationId: incarnation, async execute() {
+      dispatches++;
+      return { ok: true, value: { turnId: "fixture-turn", runId: "fixture-run" } };
+    } },
+  });
+  try {
+    const body = JSON.stringify({ version: HEADLESS_CONTRACT_VERSION, operation: HEADLESS_APPROVED_TURN_OPERATION, input: {
+      hostIncarnationId: incarnation, workspaceId, planId: "fixture-plan", planRevision: "plan-r1",
+      sessionId: "fixture-session", snapshotRevision: "snapshot-r1", key: "a6f56324-2051-462c-b45b-d9b49bf6dd4a", text: "Synthetic turn",
+    } });
+    await assert.rejects(post(connector, HEADLESS_APPROVED_TURN_PATH, body, { Authorization: "Bearer " + pairing.credential }));
+    assert.ok(stopped);
+    await stopped;
+    assert.ok(await registry.verifyCredential(pairing.credential));
+    assert.equal(dispatches, 0);
+  } finally { registry.close(); await connector.close(); }
+});
 
 test("the optional pinned authoring route accepts only a current scoped writer and emits a finite result", async () => {
   const registry = registrations();

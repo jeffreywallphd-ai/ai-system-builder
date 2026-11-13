@@ -143,6 +143,8 @@ HEADLESS_PACKAGED_SOURCES = (
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
 )
 HEADLESS_MCP_SOURCES = (
+    "modules/contracts/headless/headless-approved-turn.ts",
+    "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
     "modules/adapters/transport/headless-mcp/README.md",
     "modules/adapters/transport/headless-mcp/boundHeadlessMcpStdio.mts",
     "modules/adapters/transport/headless-mcp/createHeadlessMcpReadForwarder.mts",
@@ -659,6 +661,7 @@ def definitions(root: Path) -> list[dict]:
          "timeout": 120},
         {"id": HEADLESS_MCP_CHECK, "patterns": list(HEADLESS_MCP_SOURCES),
          "argv": [node, "--import", "tsx", "--test", "--",
+                  "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
                   "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts"],
          "timeout": 120},
         {"id": HEADLESS_PACKAGED_CHECK, "patterns": [],

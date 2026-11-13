@@ -73,3 +73,10 @@ arguments. A replacement listener observes no HTTP request. The adapter caps
 eight unanswered requests and four pending writes and closes on overflow.
 This evidence does not qualify the packaged desktop or a named
 third-party client's secret configuration.
+The optional `AISB_HEADLESS_ENABLE_CONVERSATION=1` adapter flag adds
+`aisb_send_approved_turn`. The desktop must separately enable the route and
+the user must pair a client for approved conversation access. The tool accepts
+the exact saved plan and session revisions and returns only a turn ID and a
+run ID for status lookup. It does not grant approval or select a provider.
+If a reply is uncertain, reconcile the saved task. Never retry it under a
+different key.

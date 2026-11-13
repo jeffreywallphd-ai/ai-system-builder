@@ -55,6 +55,88 @@ function resultText(result: Awaited<ReturnType<Client["callTool"]>>): unknown {
   return JSON.parse(block.text);
 }
 
+test("the opt-in stdio tool requires a separately granted, exact approved turn", { timeout: 25_000 }, async () => {
+  const registry = createDesktopHeadlessClientAuthority({
+    documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId),
+    identity: { organizationId, principalId: "mcp-fixture-user" },
+    canReadWorkspace: async (id) => id === workspaceId,
+  });
+  const host = hostIncarnationId;
+  assert.ok(isHeadlessHostIncarnationId(host));
+  const active = new Set<string>();
+  let calls = 0;
+  let withhold = false;
+  let invalidResult = false;
+  let previousFingerprint: string | undefined;
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: {
+      completePairing: registry.completePairing,
+      async verifyCredential(credential) {
+        const grant = await registry.verifyCredential(credential);
+        if (!grant || !active.has(grant.registeredClientId)) return grant;
+        return { ...grant, conversation: true, isCurrent: () => active.has(grant.registeredClientId) && grant.isCurrent() };
+      },
+    },
+    async read() { return { ok: false, code: "headless.unavailable" }; },
+    conversation: {
+      hostIncarnationId: host,
+      async execute(input, authority) {
+        calls++;
+        assert.equal(input.text, "Synthetic turn");
+        assert.ok(!("hostIncarnationId" in input));
+        assert.ok(await authority.currentGrant());
+        const fingerprint = authority.fingerprint("synthetic fingerprint input");
+        assert.match(fingerprint, /^[a-f0-9]{64}$/);
+        if (previousFingerprint !== undefined) assert.equal(fingerprint, previousFingerprint);
+        previousFingerprint = fingerprint;
+        if (withhold) active.delete(authority.grant.registeredClientId);
+        return { ok: true, value: { turnId: "fixture-turn", runId: "fixture-run",
+          ...(invalidResult ? { diagnostic: "synthetic internal text" } : {}) } };
+      },
+    },
+  });
+  const client = new Client({ name: "ai-system-builder-conversation-fixture", version: "1.0.0" });
+  try {
+    const pending = await registry.beginPairing(workspaceId);
+    assert.equal(pending.status, "ready");
+    const credential = await pair(connector, pending.pairingCode);
+    const grant = await registry.verifyCredential(credential);
+    assert.ok(grant);
+    const transport = new StdioClientTransport({
+      command: process.execPath, args: ["--import", "tsx", entrypoint],
+      env: { AISB_HEADLESS_ENDPOINT: connector.endpoint, AISB_HEADLESS_FINGERPRINT: connector.fingerprint,
+        AISB_HEADLESS_CREDENTIAL: credential, AISB_HEADLESS_ENABLE_CONVERSATION: "1", TSX_DISABLE_CACHE: "1" },
+      stderr: "ignore", maxBufferSize: 256 * 1024,
+    });
+    await client.connect(transport);
+    const name = "aisb_send_approved_turn";
+    assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(), [...expectedTools, name].sort());
+    const args = { hostIncarnationId, workspaceId, planId: "fixture-plan", planRevision: "revision-1",
+      snapshotRevision: "snapshot-1", sessionId: "fixture-session", key: "a6f56324-2051-462c-b45b-d9b49bf6dd4a", text: "Synthetic turn" };
+    const invoke = async (input = args) => resultText(await client.callTool({ name, arguments: input }));
+    const unconfirmed = { ok: false, code: "headless.operation-unconfirmed" };
+    assert.deepEqual(await invoke(), unconfirmed);
+    active.add(grant.registeredClientId);
+    assert.deepEqual(await invoke({ ...args, hostIncarnationId: args.key }), { ok: false, code: "headless.host-changed" });
+    assert.deepEqual(await invoke({ ...args, workspaceId: createWorkspaceId("other-workspace") }), unconfirmed);
+    const extra = await client.callTool({ name, arguments: { ...args, approvalId: "untrusted" } });
+    assert.equal(Boolean(extra.isError), true);
+    assert.equal(calls, 0);
+    assert.deepEqual(await invoke(), { ok: true, value: { turnId: "fixture-turn", runId: "fixture-run" } });
+    invalidResult = true;
+    assert.deepEqual(await invoke(), unconfirmed);
+    invalidResult = false;
+    withhold = true;
+    assert.deepEqual(await invoke(), unconfirmed);
+    assert.deepEqual(await invoke(), unconfirmed);
+    assert.equal(calls, 3);
+  } finally {
+    await client.close();
+    registry.close();
+    await connector.close();
+  }
+});
+
 test("official stdio opt-in lists only finite authoring tools and forwards without retries", { timeout: 20_000 }, async () => {
   const registrations = createDesktopHeadlessClientAuthority({
     documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId),

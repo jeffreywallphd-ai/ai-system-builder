@@ -1,7 +1,7 @@
 import { request, type Agent } from "node:https";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
-import type { HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest } from "../../../contracts/headless/index.js";
+import type { HeadlessApprovedTurnRequest, HeadlessApprovedTurnResult, HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
 import loopback from "../headless-loopback/index.js";
@@ -87,25 +87,41 @@ type ReadResult = { ok: true; operation: HeadlessReadRequest["operation"]; value
 const unavailable: ReadResult = { ok: false, code: deadlineCode };
 
 type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
-type ForwardRequest = HeadlessReadRequest | AuthoringRequest;
+type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest;
 const unknownWrite: HeadlessAuthoringWireResult = { ok: false, code: "headless.operation-unconfirmed" };
-export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: unknown, credential: unknown, enableAuthoring = false) {
+const unknownTurn = { ok: false, code: "headless.operation-unconfirmed" } as const;
+export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: unknown, credential: unknown,
+  enableAuthoring = false, enableConversation = false) {
   if (!isDesktopHeadlessEndpoint(endpoint) || !isDesktopHeadlessFingerprint(fingerprint) || typeof credential !== "string" ||
       credential.length !== 43 || !/^[A-Za-z0-9_-]{43}$/.test(credential)) return undefined;
-  // Build both fixed paths locally. The pinned Agent attaches HTTP only to
+  // Build fixed paths locally. The pinned Agent attaches HTTP only to
   // the exact verified TLS socket; no proxy or redirect changes the target.
   const address = new URL("/aisb-headless/v1/read", endpoint);
   const authoringAddress = new URL("/aisb-headless/v1/author", endpoint);
+  const conversationAddress = new URL(headless.HEADLESS_APPROVED_TURN_PATH, endpoint);
   const agent = loopback.createDesktopPinnedLoopbackAgent(endpoint, fingerprint);
   const authorization = `Bearer ${credential}`;
   let active = 0;
-  return async (input: ForwardRequest, signal?: AbortSignal): Promise<ReadResult | HeadlessAuthoringWireResult> => {
+  return async (input: ForwardRequest, signal?: AbortSignal): Promise<ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult> => {
     const author = isAuthoring(input);
-    if (author && !enableAuthoring) return { ok: false, code: "headless.forbidden" };
+    const converse = input.operation === headless.HEADLESS_APPROVED_TURN_OPERATION;
+    if ((author && !enableAuthoring) || (converse && !enableConversation)) return { ok: false, code: "headless.forbidden" };
     if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
     active++;
     try {
-      const { status, raw } = await sendRead(author ? authoringAddress : address, agent, authorization, input, signal);
+      const { status, raw } = await sendRead(converse ? conversationAddress : author ? authoringAddress : address, agent, authorization, input, signal);
+      if (converse) {
+        const result = headless.readHeadlessApprovedTurnResult(raw);
+        if (status === 200 && result.ok) return result;
+        // A 403 can also suppress the response to work already accepted.
+        // Only definite pre-dispatch validation and reservation errors are final.
+        if (!result.ok && (
+          (status === 400 && (result.code === "headless.invalid-request" || result.code === "headless.unsupported-version")) ||
+          (status === 409 && (result.code === "headless.host-changed" || result.code === "headless.idempotency-conflict")) ||
+          (status === 410 && result.code === "headless.idempotency-expired")
+        )) return result;
+        return unknownTurn;
+      }
       if (author) {
         const result = headless.readHeadlessAuthoringWireResult(raw);
         // The host deliberately uses the same 403 before admission and when
@@ -166,7 +182,7 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
       }
       return parsed.data;
     } catch {
-      return author && input.operation !== "systems.preview-edits" ? unknownWrite : unavailable;
+      return converse ? unknownTurn : author && input.operation !== "systems.preview-edits" ? unknownWrite : unavailable;
     } finally {
       active--;
     }

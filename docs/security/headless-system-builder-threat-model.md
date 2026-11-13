@@ -160,3 +160,17 @@ workspace policy. A missing or unavailable callback denies the credential, and
 revocation during verification invalidates the pending grant. Actual dispatch
 must still recheck the current workspace, client and session approval. This
 change leaves conversation dispatch unwired.
+
+The optional approved-turn route is absent unless the host provides a handler.
+The pinned loopback transport requires a current conversation grant for the
+exact workspace and host. Its strict request excludes approvals, privileges,
+providers and runtime controls. A credential-derived, domain-separated HMAC
+binds the receipt to the same verified registration; neither the credential nor
+message text enters the receipt. The response contains only turn/run IDs or a
+fixed error and is suppressed after grant loss. The stdio launcher advertises
+the tool only by opt-in, grants no additional permission, and does not
+automatically resend an uncertain request.
+The authenticated request is admitted only while its connection is open.
+Once admitted to the trusted handler, registration and workspace policy,
+not the HTTP socket, govern the host-owned conversation task. Disconnects
+cannot disclose a result and do not themselves cancel a saved task.
