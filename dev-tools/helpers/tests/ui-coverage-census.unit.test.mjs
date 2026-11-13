@@ -796,6 +796,7 @@ const reviewedHeadlessPassiveRefreshCensus = Object.freeze({
 });
 
 function beforeDesktopImageLabelCensus(map, result) {
+  ({map, result} = headlessPackagedCensusLegacyView(map, result));
   // This page changed how it refreshes, but its tabs and qualifications did not.
   if (sha(JSON.stringify(map)) === "0e3adf3631d4f9dc03f0021e75685037f343ec8f03fd297753665875e99149d7") {
     const previous = JSON.parse(historicalSource("507533ef743355842cb5ce4e4038d801926bf5df", censusDocument));
@@ -1093,7 +1094,24 @@ function navigationCensusLegacyView(map,result){
   return{map:structuredClone(navigationPriorCensus),result:{...result,gaps:result.gaps.filter(row=>!(row.kind==="unreviewed-source-drift"&&names.has(row.source)))}};
 }
 let committedCensusWitness;
+const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
+function headlessPackagedCensusLegacyView(map, result) {
+  const source = map.sources.find(row => row.path === headlessPackagedSpec);
+  if (!source) return {map, result};
+  const prior = JSON.parse(historicalSource("2ae9ccfd296d7dfa9c4f7465d81145a776081309", censusDocument));
+  assert.equal(sha(JSON.stringify(prior)), "0e3adf3631d4f9dc03f0021e75685037f343ec8f03fd297753665875e99149d7");
+  assert.equal(source.facts.sha256, "798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd");
+  assert.equal(source.committed_sha256, source.facts.sha256);
+  assert.equal(sha(JSON.stringify(source.facts)), "4af822bfed55376be4f7f81dd3924dd1ecc848726842ac8ce1ef0aa8582f8c93");
+  const expected = structuredClone(prior);
+  expected.sources.push(source);
+  expected.host_spec_files = [...expected.host_spec_files, headlessPackagedSpec].sort();
+  assert.deepEqual(map, expected);
+  assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(prior));
+  return {map: prior, result};
+}
 function committedCensusLegacyView(map,result){
+  ({map,result}=headlessPackagedCensusLegacyView(map,result));
   ({map,result}=navigationCensusLegacyView(map,result));
   if(map.source_baseline!==committedCensusDefinition.baseline){
     assert.equal(map.source_baseline,"608679a6095ef5617921e504bf208858df6a7c49");
@@ -1300,7 +1318,7 @@ test("checks the current repository map against original scope and actual source
   const result=validateCensus({mapText:read("docs/operations/comprehensive-ui-automation-current-census.json").toString(),
     ledgerText:read("docs/operations/comprehensive-ui-automation-coverage.json").toString(),
     discoveryText:read("docs/operations/comprehensive-ui-automation-discovery.json").toString(),readSource:read,hostSpecPaths});
-  assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,31);
+  assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,32);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
   const committedHistory=committedCensusLegacyView(map,result);
@@ -1541,7 +1559,7 @@ test("preserves exact historical versions without inheriting their current cover
   const ledger=JSON.parse(read("docs/operations/comprehensive-ui-automation-coverage.json"));
   assert.equal(ledger.current_definition_census.historical_source_archive,"docs/operations/comprehensive-ui-automation-census-source-history.json");
   assert.equal(ledger.full_testing_status,"deferred-by-user");assert(ledger.scenarios.every(s=>s.actual_host_qualification==="pending"));
-  assert.equal(CENSUS_LIMITS.files,194);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
+  assert.equal(CENSUS_LIMITS.files,195);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
 });
 
 test("reintroduced oracle coverage refuses old, missing, duplicate, future or unrelated versions",()=>{

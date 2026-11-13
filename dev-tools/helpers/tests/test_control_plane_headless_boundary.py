@@ -108,3 +108,15 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         barrel = "modules/contracts/headless/index.ts"
         self.assertIn("focused-tests", self.plan([mcp, barrel]))
         self.assertNotIn("focused-tests", self.plan([mcp, barrel], "headless-desktop-activation"))
+
+    def test_packaged_headless_check_is_opt_in_and_exact(self):
+        fixture = "dev-tools/scripts/qualification/visual-composer/e2e/headless-desktop-fixture.ts"
+        unrelated = "modules/contracts/headless/some-other-source.ts"
+        check = "headless-packaged-desktop-journey"
+        self.assertNotIn(check, self.plan([fixture]))
+        selected = self.plan([fixture], check)
+        self.assertNotIn("focused-tests", selected)
+        self.assertEqual(selected[check]["argv"][-2:], [
+            "--project=packaged-desktop", "packaged-desktop-headless.e2e.spec.ts",
+        ])
+        self.assertIn("focused-tests", self.plan([fixture, unrelated], check))

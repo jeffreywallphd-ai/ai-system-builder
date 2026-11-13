@@ -136,6 +136,11 @@ HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES = HEADLESS_DESKTOP_ACTIVATION_AUTOMAT
     "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
 )
 HEADLESS_MCP_CHECK = "headless-desktop-pinned-mcp"
+HEADLESS_PACKAGED_CHECK = "headless-packaged-desktop-journey"
+HEADLESS_PACKAGED_SOURCES = (
+    "dev-tools/scripts/qualification/visual-composer/e2e/headless-desktop-fixture.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+)
 HEADLESS_MCP_SOURCES = (
     "modules/adapters/transport/headless-mcp/README.md",
     "modules/adapters/transport/headless-mcp/boundHeadlessMcpStdio.mts",
@@ -650,6 +655,11 @@ def definitions(root: Path) -> list[dict]:
          "argv": [node, "--import", "tsx", "--test", "--",
                   "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts"],
          "timeout": 120},
+        {"id": HEADLESS_PACKAGED_CHECK, "patterns": [],
+         "argv": [node, "node_modules/@playwright/test/cli.js", "test",
+                  "--config=dev-tools/config/playwright.visual-composer.config.ts", "--project=packaged-desktop",
+                  "packaged-desktop-headless.e2e.spec.ts"],
+         "timeout": 540},
         {"id": "asset-defensive-acceptance", "patterns": [],
          "argv": [node, "--import", "tsx", "--test", "--test-concurrency=1", "--", *ASSET_DEFENSIVE_TESTS],
          "timeout": 180},
@@ -709,6 +719,7 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                        p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()) or
                        (c["id"] == HEADLESS_DESKTOP_READ_CHECK and p in headless_sources) or
                        (c["id"] == HEADLESS_DESKTOP_ACTIVATION_CHECK and p in activation_sources) or
+                       (c["id"] == HEADLESS_PACKAGED_CHECK and p in HEADLESS_PACKAGED_SOURCES) or
                        p in PUBLISHED_FORM_CHECKS.get(c["id"], {}).get("sources", ()) or
                        (c["id"] == "standard-source-fixture-runner" and p in STANDARD_RUNNER_SOURCES) or
                        (c["id"] == "asset-browser-qualification-contract" and p in ASSET_BROWSER_SOURCES)
@@ -735,6 +746,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
         declared_sources.update(activation_sources)
     if HEADLESS_MCP_CHECK in selected_ids:
         declared_sources.update(HEADLESS_MCP_SOURCES)
+    if HEADLESS_PACKAGED_CHECK in required:
+        declared_sources.update(HEADLESS_PACKAGED_SOURCES)
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))

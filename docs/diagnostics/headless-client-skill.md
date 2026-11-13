@@ -18,3 +18,9 @@ If the app restarts, open Settings and use the current connection address and
 certificate fingerprint. If a write reply is lost, ask the agent to check the
 saved system before retrying. A missing window or an unchanged selection does
 not tell you whether the edit was saved.
+
+The Windows qualification fixture
+`packaged-desktop-headless.e2e.spec.ts` uses the repository's packaged
+Playwright profile and a separate official MCP client process. It uses
+synthetic data, drives the native pairing response only in the test process,
+and retains no trace, screenshot, video, pairing code, or credential.

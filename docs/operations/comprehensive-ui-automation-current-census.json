@@ -15163,6 +15163,72 @@
     "modifiers": []
    },
    "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+   "facts": {
+    "sha256": "798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd",
+    "bytes": 12936,
+    "cases": [
+     {
+      "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart",
+      "line": 64
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "call",
+      "line": 15
+     },
+     {
+      "name": "connectorSettings",
+      "line": 22
+     },
+     {
+      "name": "runningAddress",
+      "line": 28
+     },
+     {
+      "name": "hostId",
+      "line": 35
+     },
+     {
+      "name": "timings",
+      "line": 42
+     },
+     {
+      "name": "saveObservation",
+      "line": 48
+     }
+    ],
+    "assertionCount": 26,
+    "assertionDigest": "156a4364cbfe4b660d8f5804744167c873e1da84bddbc0a5ea2534c97f606cb6",
+    "assertionExamples": [
+     {
+      "line": 29,
+      "kind": "expect",
+      "sha256": "ddda5a711b2e3497f1be9c2fb51362ed5af24f23da2f4a8170002f7525f86f86"
+     },
+     {
+      "line": 74,
+      "kind": "expect",
+      "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+     },
+     {
+      "line": 77,
+      "kind": "expect",
+      "sha256": "7e99e8898098edb67fe52f08e1043e78072e95ee826c328184cbebbe90db3f65"
+     },
+     {
+      "line": 83,
+      "kind": "expect",
+      "sha256": "735ff47d07049887ff3360956d90e226592983e114b24b99fcc2e71f7033daaa"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd"
   }
  ],
  "scenarios": [
@@ -17543,6 +17609,7 @@
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-cold-canvas.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-form-composer.e2e.spec.ts",
+  "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
