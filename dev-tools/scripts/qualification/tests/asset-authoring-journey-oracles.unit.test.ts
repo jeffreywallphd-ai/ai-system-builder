@@ -210,6 +210,10 @@ test("each standard and native host case awaits the Assets core after its browse
     assert(ts.isAwaitExpression(browse[0]!.parent));
     assert(ts.isAwaitExpression(assets[0]!.parent)); assert.equal((assets[0]!.arguments[1] as ts.StringLiteral).text, host);
     const native = index === 1;
+    if (host === "packaged-desktop") {
+      assert.equal(local("closeDesktopAndQualifyOwnedWorkers").length, native ? 0 : 1);
+      assert.equal(local("lifetime.retire").length, native ? 1 : 0);
+    }
     assert.equal(assets[0]!.arguments.length, native ? 6 : 5);
     assert.equal(browse[0]!.arguments.length, native ? 5 : 4);
     if (native) {

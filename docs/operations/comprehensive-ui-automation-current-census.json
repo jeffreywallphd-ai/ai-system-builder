@@ -4896,8 +4896,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
    "facts": {
-    "sha256": "b70fa1edaee91a99d3bd512f7028cc76dcfb5fa6b04338edf53b17a3c8fc3ed6",
-    "bytes": 24093,
+    "sha256": "5c06d7e51c36a989042a47eda14a797754a05c4966a95d1ed71aebe67f61907b",
+    "bytes": 24295,
     "cases": [
      {
       "name": "declared journeys have three useful distinct assets, exact roles and finite phase budgets",
@@ -4973,31 +4973,31 @@
      },
      {
       "name": "desktop metadata probe forwards only the captured public query and clears its deadline",
-      "line": 243
+      "line": 247
      },
      {
       "name": "desktop metadata probe safely refuses missing, failed and oversized replies",
-      "line": 248
+      "line": 252
      },
      {
       "name": "desktop metadata probe has an executable bounded timeout",
-      "line": 253
+      "line": 257
      },
      {
       "name": "browser metadata probe uses the paired same-origin exact GET and bounded chunk decoding",
-      "line": 260
+      "line": 264
      },
      {
       "name": "browser metadata probe refuses missing pairing before any fetch",
-      "line": 270
-     },
-     {
-      "name": "browser metadata probe bounds output and hides failed HTTP, malformed and interrupted replies",
       "line": 274
      },
      {
+      "name": "browser metadata probe bounds output and hides failed HTTP, malformed and interrupted replies",
+      "line": 278
+     },
+     {
       "name": "browser metadata timeout aborts the owned read and clears the timer",
-      "line": 285
+      "line": 289
      }
     ],
     "dynamicCases": 3,
@@ -5008,15 +5008,15 @@
      },
      {
       "name": "clock",
-      "line": 238
+      "line": 242
      },
      {
       "name": "browserEnvironment",
-      "line": 257
+      "line": 261
      }
     ],
-    "assertionCount": 113,
-    "assertionDigest": "78718755343f7b164663ce0c5589064e9396b20644c4797f65b9114b0d5951c1",
+    "assertionCount": 115,
+    "assertionDigest": "bf3a59c59cd2f36c13b32ebe58d8733d20824aa2e534a75e8ea24dd97f4a84c3",
     "assertionExamples": [
      {
       "line": 30,
@@ -7569,8 +7569,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
    "facts": {
-    "sha256": "b03b0186d618586c078917fdc3b9bd41b324c7e88a7a90fe9550b4b6f6bf103f",
-    "bytes": 21069,
+    "sha256": "fc588ba839112e1e0abed3a3e7eb425a12bdbb28c5fceb0393460d45d7f380de",
+    "bytes": 21279,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -7600,11 +7600,11 @@
      },
      {
       "name": "verifyPublishedState",
-      "line": 215
+      "line": 219
      }
     ],
-    "assertionCount": 40,
-    "assertionDigest": "44d1f140f0e78d0011672cbff7ecb076e1c4def3ecb9b292bf34abcf2a408edf",
+    "assertionCount": 41,
+    "assertionDigest": "43dcd97eb09eb52b647382fc3a25b88624e4a7d64b10b918c88b57972622f91b",
     "assertionExamples": [
      {
       "line": 62,
@@ -7695,8 +7695,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
    "facts": {
-    "sha256": "1874cff38edd953fa7319b34be53952dbdcdd2575c3726d7e43c3ed4c4b49dde",
-    "bytes": 12553,
+    "sha256": "ab24ff0332af2c0bec624cbea88ce5bd9d360856dd110c6ed7570d688284b408",
+    "bytes": 13208,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
@@ -7705,20 +7705,24 @@
       "line": 7
      },
      {
+      "name": "openDetails",
+      "line": 24
+     },
+     {
       "name": "insert",
-      "line": 21
+      "line": 39
      },
      {
       "name": "verifyConfirmedRemoval",
-      "line": 133
+      "line": 150
      },
      {
       "name": "verifyKeyboardPlacement",
-      "line": 155
+      "line": 172
      }
     ],
-    "assertionCount": 54,
-    "assertionDigest": "2286cb882b49e2b34776b2db313d5c1032108d7b30dad0e95c3b0489af3e910a",
+    "assertionCount": 56,
+    "assertionDigest": "95b6dd55eca5f3cfbf81965da7abd4d3bbf3cf446b9e29c054ad89f0c569f278",
     "assertionExamples": [
      {
       "line": 18,
@@ -7726,19 +7730,19 @@
       "sha256": "acf6689eb0a06f6e324225bd435f6b87d5e73ff3961e264794c3d12758a8c4d3"
      },
      {
-      "line": 25,
+      "line": 21,
       "kind": "expect",
-      "sha256": "55f51550fa8a426be2da4c9409aaddcf079495dbc3047a7d7067392e531f6b34"
+      "sha256": "0fc016f9f39a33ff031a9646a158670e32dc722e3308f274d0b40ae3bf7cd6aa"
      },
      {
       "line": 29,
       "kind": "expect",
-      "sha256": "8ccdd8e0c54cf8070830bbe856ad0ff3831fa66837e632a9dfc4cb14998b9b6b"
+      "sha256": "996d9072b2ab9e201cfc2142242a7879026ad8a8348b2113048b980551eb7d4f"
      },
      {
-      "line": 31,
+      "line": 34,
       "kind": "expect",
-      "sha256": "efdfb37bf8573ff0356e401c6ae1fb6a96ab9cc3a6329460ca1aec32868e3447"
+      "sha256": "19ac6183a08d703f71a3fc6d3d00e925ab71cba3151d64ba119a8c6d5e0764ac"
      }
     ],
     "modifiers": []
@@ -8306,40 +8310,45 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
    "facts": {
-    "sha256": "a51402ddeb9828f31ad876669870e7479f7df3b03cfc8f0cdc275f27d12c469d",
-    "bytes": 7178,
+    "sha256": "3db95d34eff5e2815dded5dba19e0416fd1b5e6a1f2b4d87e7a607d6562dc7e3",
+    "bytes": 8321,
     "cases": [
      {
       "name": "packaged desktop preserves the complete browse authoring journey",
-      "line": 14
+      "line": 15
      },
      {
       "name": "packaged desktop completes Assets and System editing at native 400 percent zoom",
-      "line": 62
+      "line": 63
      }
     ],
     "dynamicCases": 0,
-    "functions": [],
-    "assertionCount": 14,
-    "assertionDigest": "ff9863bd539e984706ecf9d998153017d31e8dd00f3df0a412f562f12272283e",
+    "functions": [
+     {
+      "name": "navigate",
+      "line": 74
+     }
+    ],
+    "assertionCount": 19,
+    "assertionDigest": "46bc5740d86f47b155e8a4950c9af67d530543e993c0cb586d0857eacd241ab2",
     "assertionExamples": [
      {
-      "line": 24,
+      "line": 25,
       "kind": "expect",
       "sha256": "706f596313c86b07d1a7e12fb1f2e74d877e6f0be455e90aeec365a50993f49d"
      },
      {
-      "line": 29,
+      "line": 30,
       "kind": "expect",
       "sha256": "714a093f33d93c8075421fdc83ac0bea0a65b9f0ae635a8ef89a73040830e48b"
      },
      {
-      "line": 32,
+      "line": 33,
       "kind": "expect",
       "sha256": "e625f2c7035648094859303beed2b30a276150e954ba7267a5c46c4f786365a5"
      },
      {
-      "line": 32,
+      "line": 33,
       "kind": "expect",
       "sha256": "05d873934d8edfb91dcfcb8b23f8d69ad2dfffd0443467b182366db4cb0bbcad"
      }

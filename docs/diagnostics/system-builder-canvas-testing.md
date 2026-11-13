@@ -99,6 +99,11 @@ outside the application shell.
 Once an asset definition loads, its details dialog shows a short heading and
 keeps the full asset name in the body and in the dialog's accessible name.
 The validation control remains available on request.
+The registered native 400 percent Desktop browse case waits for the selected
+workspace, uses compact navigation and responsive inspector controls, and lets
+transient notifications dismiss before auditing the underlying surface. It
+checks test-owned application exit. The standard restart case retains its
+separate native worker cleanup checks.
 
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown

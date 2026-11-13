@@ -16,6 +16,24 @@ export async function completeBrowseAuthoringJourney(
   await page.getByLabel("New system name").fill(name);
   await page.getByRole("button", {name: "Create system", exact: true}).click();
   await expect(page.getByRole("heading", {name: "Canvas", exact: true})).toBeVisible({timeout: 30_000});
+  // Audit the settled Canvas. Notification presentation has its own journey.
+  if (mode === "native400") {
+    await expect(page.locator(".ui-notification__toast")).toHaveCount(0, {timeout: 10_000});
+  }
+
+  async function openDetails(panel: "Properties" | "Layers") {
+    if (mode === "native400") {
+      const button = page.getByRole("group", {name: "Responsive composer panels"})
+        .getByRole("button", {name: panel, exact: true});
+      if (await button.getAttribute("aria-expanded") !== "true") await button.press("Enter");
+      await expect(button).toHaveAttribute("aria-expanded", "true");
+    } else {
+      const tab = page.getByRole("complementary", {name: "Composer details"})
+        .getByRole("tab", {name: panel, exact: true});
+      await tab.click();
+      await expect(tab).toHaveAttribute("aria-selected", "true");
+    }
+  }
 
   let pickerAudited = false;
   async function insert(
@@ -46,6 +64,7 @@ export async function completeBrowseAuthoringJourney(
     const id = await selected.getAttribute("data-instance-id"); expect(id).toBeTruthy();
     const reference = await selected.locator(":scope > .system-composer__canvas-node-heading small").innerText();
     expect(reference.endsWith(`@${version}`)).toBe(true);
+    if (mode === "native400") await openDetails("Properties");
     await expect(page.getByRole("complementary", {name: "Composer details"})).toContainText(reference);
     return {id: id!, label, reference};
   }
@@ -55,9 +74,7 @@ export async function completeBrowseAuthoringJourney(
   const parent = page.locator(`[data-instance-id="${pageShell.id}"]`);
   const addToPageContent = composerRegionAdd(parent, "content");
   const added = await insert("card", addToPageContent);
-  const details = page.getByRole("complementary", {name: "Composer details"});
-  const properties = details.getByRole("tab", {name: "Properties", exact: true});
-  await properties.click(); await expect(properties).toHaveAttribute("aria-selected", "true");
+  await openDetails("Properties");
   if (!verifyPlacement) await qualifyCriticalSurfaceAccessibility(page, info, "system-properties", mode);
   const node = page.locator(`[data-instance-id="${added.id}"]`);
   await page.getByRole("button", {name: "Undo", exact: true}).press("Enter");
@@ -91,7 +108,7 @@ export async function completeBrowseAuthoringJourney(
     await expect(node.locator(`[data-slot-id="content"] [data-instance-id="${nestedCardId}"]`)).toHaveCount(1);
   }
   await node.locator(":scope > .system-composer__canvas-node-heading button").first().click();
-  await page.getByRole("tab", {name: "Layers", exact: true}).click();
+  await openDetails("Layers");
   const tree = page.getByRole("tree", {name: "System asset hierarchy"});
   await expect(tree).toBeVisible();
   const firstItem = tree.getByRole("treeitem").first(); await firstItem.focus(); await firstItem.press("ArrowDown");

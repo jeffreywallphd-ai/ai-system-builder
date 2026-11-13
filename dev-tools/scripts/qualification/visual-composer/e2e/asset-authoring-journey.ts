@@ -158,6 +158,10 @@ export async function completeAssetAuthoringJourney(
     await editor.getByLabel("Description", {exact: true}).fill(plan.copyDescription);
     await editor.getByLabel("Summary", {exact: true}).fill(plan.copyDescription);
     if (!customizationAudited) {
+      // A transient save notification can obscure the source at 400%.
+      if (mode === "native400") {
+        await expect(page.locator(".ui-notification__toast")).toHaveCount(0, {timeout: 10_000});
+      }
       await qualifyCriticalSurfaceAccessibility(page, info, "asset-customization", mode);
       customizationAudited = true;
     }

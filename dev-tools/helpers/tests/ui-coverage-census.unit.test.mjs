@@ -543,7 +543,58 @@ const reviewedAssetUiCensus = Object.freeze({
     }
   ].map(Object.freeze)),
 });
+const reviewedNativeAssetUiCensus = Object.freeze({
+  priorCommit: "2846ac1eba4bc72b4a49e61a6bdcaddd6c937666",
+  before: "4febc48d2f06bc85f40206d117f6219e3c8f7d89552aab52fa1bcb2c6399418c",
+  after: "2251a101e0619aeb5a9460bb9a7076e94122186e5a90dce79b5cb638fd579523",
+  pins: Object.freeze([
+    {
+      "path": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+      "source": "5c06d7e51c36a989042a47eda14a797754a05c4966a95d1ed71aebe67f61907b",
+      "facts": "974f501a206ffb649fde1b3a29d4427540b68f5d51ff3a9ef2360209b3030f28"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts",
+      "source": "fc588ba839112e1e0abed3a3e7eb425a12bdbb28c5fceb0393460d45d7f380de",
+      "facts": "84022e374c324f0e4159977e17749f4d688fa87f916c4e2dc756d4bf9c5d9e05"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
+      "source": "ab24ff0332af2c0bec624cbea88ce5bd9d360856dd110c6ed7570d688284b408",
+      "facts": "ba038fa14d25ad2fd7917d42230ec9328c1aa69202b0be883a56592f7bd5590a"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+      "source": "3db95d34eff5e2815dded5dba19e0416fd1b5e6a1f2b4d87e7a607d6562dc7e3",
+      "facts": "508040b5f21116c90dbec1f54b0b6bf05cf7e62e17273389c8018a83c44a6c18"
+    }
+  ].map(Object.freeze)),
+});
+function nativeAssetUiCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) !== reviewedNativeAssetUiCensus.after) return {map, result};
+  const previous = JSON.parse(historicalSource(reviewedNativeAssetUiCensus.priorCommit, censusDocument));
+  assert.equal(sha(JSON.stringify(previous)), reviewedNativeAssetUiCensus.before);
+  const expected = structuredClone(previous);
+  for (const pin of reviewedNativeAssetUiCensus.pins) {
+    const [row] = map.sources.filter(item => item.path === pin.path);
+    const original = expected.sources.find(item => item.path === pin.path);
+    assert(row && original);
+    assert.equal(row.committed_sha256, original.committed_sha256);
+    assert.notEqual(row.facts.sha256, original.facts.sha256);
+    assert.equal(row.facts.sha256, pin.source);
+    assert.equal(sha(JSON.stringify(row.facts)), pin.facts);
+    assert.notEqual(row.facts.sha256, row.committed_sha256);
+    original.facts = structuredClone(row.facts);
+  }
+  assert.deepEqual(map, expected);
+  assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+  return {map: previous, result: {...result, gaps: [
+    ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+  ]}};
+}
+
 function assetUiCensusLegacyView(map, result) {
+  ({map,result}=nativeAssetUiCensusLegacyView(map,result));
   if (sha(JSON.stringify(map)) !== reviewedAssetUiCensus.after) return {map, result};
   const previous = JSON.parse(historicalSource(reviewedAssetUiCensus.priorCommit, censusDocument));
   assert.equal(sha(JSON.stringify(previous)), reviewedAssetUiCensus.before);
@@ -1590,7 +1641,14 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,23);
+  assert.equal(result.gaps.length,24);
+  const nativePrior = nativeAssetUiCensusLegacyView(map,result);
+  assert.equal(nativePrior.result.gaps.length,23);
+  assert.equal(sha(JSON.stringify(nativePrior.map)),reviewedNativeAssetUiCensus.before);
+  for (const pin of reviewedNativeAssetUiCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
   const prior = assetUiCensusLegacyView(map,result);
   assert.equal(prior.result.gaps.length,18);
   assert.equal(sha(JSON.stringify(prior.map)),reviewedAssetUiCensus.before);
