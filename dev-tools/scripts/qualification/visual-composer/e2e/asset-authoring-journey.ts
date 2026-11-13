@@ -73,6 +73,12 @@ export async function completeAssetAuthoringJourney(
     await page.getByRole("tablist", {name: "Assets sections"}).getByRole("tab", {name, exact: true}).click();
   };
   const baseSnapshots = new Map<string, BaseObservation>();
+  async function verifyPublishedHistory(copy: (typeof plan.copies)[number]) {
+    const rows = page.locator(".asset-customizer__history li").filter({hasText: copy.id});
+    await expect(rows).toHaveCount(1);
+    // The rendered line break separates the revision and definition ID.
+    assertPublishedHistory(copy, await rows.allInnerTexts());
+  }
   const publishedDefinitions = new Map<string, PublishedDefinitionObservation>([[plan.studio.id, {
     definitionId: plan.studio.id, version: plan.studio.version, displayName: plan.studio.name,
     assetType: plan.studio.type, assetFamily: plan.studio.family, lifecycleStatus: "published", description: plan.studio.definition,
@@ -163,8 +169,7 @@ export async function completeAssetAuthoringJourney(
     await expect(status).toHaveText("Status: published - revision 4");
     await reload(); await selectBase(copy.baseId, copy.baseVersion);
     assertBaseUnchanged(plan, copy, before, await readBase());
-    const rows = page.locator(".asset-customizer__history li").filter({hasText: copy.id});
-    await expect(rows).toHaveCount(1); assertPublishedHistory(copy, await rows.allTextContents());
+    await verifyPublishedHistory(copy);
   }, {timeout: AUTHORING_STEP_BUDGET_MS});
 
   await test.step("Save, reopen, review and publish a three-resource Studio asset", async () => {
@@ -236,8 +241,7 @@ export async function completeAssetAuthoringJourney(
     for (const copy of plan.copies) {
       await selectBase(copy.baseId, copy.baseVersion);
       assertBaseUnchanged(plan, copy, baseSnapshots.get(copy.baseId)!, await readBase());
-      const rows = page.locator(".asset-customizer__history li").filter({hasText: copy.id});
-      await expect(rows).toHaveCount(1); assertPublishedHistory(copy, await rows.allTextContents());
+      await verifyPublishedHistory(copy);
     }
   }
   await test.step("Rediscover exact published copies and unchanged originals", async () => {

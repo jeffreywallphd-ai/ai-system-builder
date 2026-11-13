@@ -91,6 +91,9 @@ In Assets Customizations, each open read-only source panel has a keyboard
 focus stop. Its accessible name identifies the resource, and the text remains
 read-only. The source has its own theme background and text color, including
 when the user chooses Windows high contrast.
+The Assets history test compares the rendered publication row after reload. It
+allows a visible line break between the revision and asset ID while requiring
+the exact name, status, revision, ID, and version.
 
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown

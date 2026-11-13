@@ -125,6 +125,8 @@ test("valid changed source, semantic, media and order are still detected as base
 test("published history requires one exact identity, version, name, status and revision", () => {
   const exact = `${copy.name} - published - revision 4 ${copy.id} v1.0.0`;
   assertPublishedHistory(copy, [exact.replace(" revision", "\n revision")]);
+  assertPublishedHistory(copy, [exact.replace("revision 4 ", "revision 4\n")]);
+  assert.throws(() => assertPublishedHistory(copy, [exact.replace("revision 4 ", "revision 4")]));
   for (const rows of [[], [exact, exact], [exact.replace("revision 4", "revision 3")], [exact.replace("published", "draft")], [exact.replace(copy.id, plan.copies[1]!.id)], [exact.replace("v1.0.0", "v2.0.0")], [exact.replace(copy.name, "Other name")], [exact + " Abandon"]]) assert.throws(() => assertPublishedHistory(copy, rows));
 });
 test("exact public definition reads reject same-name substitutions, changed semantics and failure envelopes", () => {
