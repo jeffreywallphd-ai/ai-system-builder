@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "roadmapId": "headless-skills-ui-takeover",
-  "status": "planned-not-run",
+  "status": "implementation-in-progress",
   "source": "Supplied Headless Skills and Revocable UI Takeover design v1.0, 2026-11-10",
   "sourceBaseline": "3f35f581c92a30f5bdb4f3368afedc9fce4526ee (historical reference)",
   "discoveryBaseline": "3272dc4d54a0247aa9bf8544330a60efb83bb70e; source37dba8a596abcffe5191f70b7d4a7141f18c242cdf740022780b7c2d67a0923b with unrelated dirty work preserved; recheck before implementation",
@@ -1255,7 +1255,7 @@
     "Shared deterministic tests prove protocol logic; real packaged Windows and Chrome/server/PostgreSQL tests prove host behavior.",
     "Use an existing supported observable backend operation with a bounded deterministic test runtime where needed. Substitution does not prove native model accuracy, external-provider effects or new crash recovery.",
     "Human product acceptance and revoke are simulated by UI tests. No human acceptance/study task is part of technical closure.",
-    "No test, model, application, service, dependency installation or full suite was executed for this planning artifact.",
-    "The roadmap is published and approved. The user explicitly deferred implementation. A separate explicit implementation request, current-source reconciliation and preservation of unrelated changes, roadmap history and actual qualification remain required."
+    "The original plan did not run tests. Current checkpoint evidence is tracked separately from prospective ownership in this crosswalk.",
+    "The user later authorized implementation. Preserve unrelated changes, roadmap history and real pending qualification."
   ]
 }

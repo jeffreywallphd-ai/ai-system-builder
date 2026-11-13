@@ -1,12 +1,22 @@
 # Headless Skills and UI Takeover Source Coverage
 
-- Status: roadmap approved; implementation is on hold; technical checks are planned, not run
+- Status: implementation in progress. See the roadmap and review site for qualification status.
 - Roadmap: [Headless Skills and Revocable UI Takeover](../headless-skills-ui-takeover-implementation-roadmap.md)
 - Complete executable owners and host scope: [coverage JSON](headless-skills-ui-takeover-source-coverage.json)
 
-The user selected desktop first, then server/browser support. The user approved this roadmap and explicitly deferred its implementation. It summarizes the supplied design without publishing the private source document. Every invariant and acceptance scenario has an owning criterion. Server/browser parity repeats the applicable checks against the same server authority; it does not synchronize desktop and server data.
+The approved order is desktop, then server and browser. This crosswalk summarizes
+the supplied design without publishing the private source document. Every
+invariant and acceptance scenario has an owning criterion. Server/browser
+parity repeats the applicable checks against the same server authority; it
+does not synchronize desktop and server data.
 
-The earlier discovery limit to ignored planning files describes the preparation period before publication was handed off. That period has ended. Future implementation must reconcile current source and preserve unrelated changes, roadmap history and actual qualification. Implementation remains on hold until a separate explicit user request; roadmap approval is now recorded.
+The user later authorized implementation. In the isolated Windows app, a
+separate MCP client paired, created and renamed a saved system, observed an
+ordinary desktop save in the same feed and replayed the original create after
+restart. For 100 bounded edits, dispatch-to-visible p95 was 873 ms. The client
+reconnected and replayed all changes in 651 ms. These observations do not cover
+dirty Canvas conflict in the packaged app, a lost reply injection, UI takeover,
+or server/browser parity.
 
 ## Architectural invariants
 
