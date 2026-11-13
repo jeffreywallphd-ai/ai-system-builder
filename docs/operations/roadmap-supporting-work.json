@@ -12988,6 +12988,66 @@
       "limitations": [
         "Uses the production SQLite adapter with a disposable local fixture. It does not establish durability on a remote database or qualify other action types."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "improve-canvas-element-picker-readability",
+      "work_criteria": [
+        "picker-keeps-destination-and-readable-card-metadata"
+      ],
+      "receipt_digest": "1d84b598342465fca298ede2912de395a62f0c1ef7c74cd6c8f8d93aaa88b11a",
+      "review_digest": "06dda876870a4fe4a1e10ca55a393a2edbf350e12196acc797bb7b5a9b620c0d",
+      "scope": "The actual Canvas picker passed native 400 percent contrast, focus, and control fit on both local hosts.",
+      "limitations": [
+        "The picker evidence does not qualify the broader Canvas journey or other surfaces."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "preserve-canvas-save-button-contrast",
+      "work_criteria": [
+        "canvas-save-keeps-primary-button-color"
+      ],
+      "receipt_digest": "46f3f4a71cb1df68a6c1b64c5f5b1cdb83652e2a439d42b3891c06e7095c8dbe",
+      "review_digest": "5536451bc2559057615d47fccb2778633d48de4500ed5d7186a31fec2fe33a2b",
+      "scope": "The actual Canvas Properties panel passed native 400 percent normal and forced-color contrast on both local hosts after the draft footer fix.",
+      "limitations": [
+        "The Properties evidence does not qualify the broader Canvas journey or other surfaces."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "clarify-canvas-preview-title-and-groups",
+      "work_criteria": [
+        "canvas-preview-retains-system-name-and-uses-valid-groups"
+      ],
+      "receipt_digest": "f299b32477f31f63477f10b5b66b5232b0f67b942e3213a343c239ccf10a595a",
+      "review_digest": "4d453ed6f51964b50761cbb372667ad7c01ee4d9058aa9738513569d7f3dbb2e",
+      "scope": "The actual Canvas Preview passed native 400 percent normal and forced-color checks on both local hosts. Its accessible name still identifies the system.",
+      "limitations": [
+        "The Preview evidence does not qualify the broader Canvas journey or other surfaces."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "preserve-selected-canvas-layer-label-contrast",
+      "work_criteria": [
+        "selected-layer-placement-inherits-highlight-text"
+      ],
+      "receipt_digest": "b6b1f90a3e8bf86a1829b2d0bf24a4c3727387e63947f14e384809db2218b932",
+      "review_digest": "732db63887d4abda4addcab8203c0580c689dafa2e1c097c8c8fcb3b2d76e655",
+      "scope": "The selected Layers row kept its matching system text color at actual 400 percent zoom on both local hosts. Normal and forced-color audits passed.",
+      "limitations": [
+        "Local Layers feature evidence does not qualify the broader Canvas journey or legacy assessment."
+      ]
     }
   ]
 }

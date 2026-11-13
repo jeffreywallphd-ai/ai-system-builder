@@ -18500,6 +18500,86 @@
           "The test used a temporary local SQLite database. It does not cover remote databases or other actions."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b582b2da2f6f24f16392f156711a642fa214c6cda3855699f52a35cd80404696",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The element picker passed at 400% zoom in Desktop and the browser. The tests checked text contrast, focus, and whether every control fit."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ffb118e004cbac2923ddd8136c68ba1171716dae5f49b5baaefc88404b70878f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The result covers the picker only. The full Canvas check remains open."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9bad60f838d48676137dde210dd4678ec7513f2dc5a6311edff675c7cce8b000",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Canvas Properties panel passed at 400% zoom in Desktop and the browser, in normal and forced colors."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5082e4f4af64d4a28c361e2419ea7593351aabbcd7273ed03db22e50fcbf77c4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The result covers the Properties panel only. The full Canvas check remains open."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "853b18df45b90af626096fbb487c5e54800efb345c5331ebbf020f899328c3b0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Canvas Preview passed at 400% zoom in Desktop and the browser, in normal and forced colors. Assistive technology can identify the system from the dialog name."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3c222506a97031704cf66b31ddefc68a4ca0506ce48451733a8d73c3d1fafee3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The result covers Preview only. The full Canvas check remains open."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d733f33e18a7aa450751ba00285184f27b1c94ccbe26eb828e401537548dcf79",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Canvas Layers passed at 400% zoom in Desktop and the browser, in normal and forced colors."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3b061cfe614af2f6738e9619978503c425e50db8e4c66a7081275ec1fff32672",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The result covers Layers only. The full Canvas check and the separate legacy security assessment remain open."
+        ]
+      }
     }
   ]
 }

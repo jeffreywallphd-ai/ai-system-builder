@@ -1376,6 +1376,17 @@
       "outcome": "pending",
       "recordedAt": "2026-11-12T23:34:41Z",
       "summary": "Desktop Assets and managed browser Assets passed their actual 400 percent checks. The managed browser also passed keyboard move, reorder, and removal. The remaining Systems Canvas zoom checks did not pass. Desktop must use the compact navigation and verify its own app exit. The browser picker still has one unverified text contrast sample after its transient notification clears."
+    },
+    {
+      "artifact": ".local-codex/asset-experience-final-feature-qualification-20261112/canvas-surface-qualification-evidence.json",
+      "command": null,
+      "criterionId": "desktop-thin-accessibility",
+      "id": "evidence-46",
+      "incrementId": "production-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-11-13T00:37:40Z",
+      "summary": "The Canvas picker, Properties, Preview, and Layers passed at 400 percent zoom on Desktop and in the browser. Both normal and forced colors passed. The wider browser test stopped at Assets package inspection. The wider Desktop test stopped at the Customizations accessibility check. Keep this criterion pending."
     }
   ],
   "feedback": [
@@ -2349,6 +2360,12 @@
       "eventFingerprint": "cd64b15cbe795d6534573f8665a0c63a583064efe4dea5b0f6028a3696cf72de",
       "recordedAt": "2026-11-12T23:34:41Z",
       "sequence": 135,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9c7b35d22c13ddd1a10c9472da1ea31325a15984e0d5fe6de0726e0514d48651",
+      "recordedAt": "2026-11-13T00:37:40Z",
+      "sequence": 136,
       "type": "evidence-recorded"
     }
   ],
@@ -3955,5 +3972,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-12T23:34:41Z"
+  "updatedAt": "2026-11-13T00:37:40Z"
 }
