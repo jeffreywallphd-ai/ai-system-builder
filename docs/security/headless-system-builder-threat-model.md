@@ -22,7 +22,16 @@ limits before it dispatches any request. A well-formed request is never a
 grant. The internal desktop dispatcher requires a grant returned by its
 trusted caller and checks local identity, exact scope, current policy and
 host shutdown state. It returns selected workspace, template and saved-system
-metadata only. No listener or credential issuer exists in this slice.
+metadata only. The internal credential adapter stores an organization-scoped
+registry with at most 32 registrations. A pairing code has 256 random bits,
+expires after two minutes, and is consumed after one completion or five
+attempts. Bearer credentials have 256 random bits and expire after seven
+days. Only domain-separated digests persist. The client ID is independent of
+the digest, and remains stable while the same credential reconnects after a
+desktop restart. Revoke removes the exact registration; it does not remove
+any retry records. Unexpected persistence content or unavailable storage
+denies admission. The test uses an isolated local SQLite database and no
+actual user credential. The adapter is not yet wired to a listener or UI.
 
 Managed parity must recheck existing OIDC, membership and row-security
 authority, including for streams, receipts and worker replay. Neither synthetic
