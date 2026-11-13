@@ -13048,6 +13048,51 @@
       "limitations": [
         "Local Layers feature evidence does not qualify the broader Canvas journey or legacy assessment."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "make-read-only-asset-source-keyboard-scrollable",
+      "work_criteria": [
+        "asset-readonly-source-retains-content-and-keyboard-access"
+      ],
+      "receipt_digest": "90bef213120b507241bf69a9a1a7497e1add35a0c25fe73ea96bfa2ebdb7a10d",
+      "review_digest": "40bd6f2748497f6f9988512713bc4b7f92ca8f364ded268822c908e7fabc269a",
+      "scope": "The read-only Customizations source panel is a named keyboard focus stop. The actual Desktop scrollable-region violation was removed.",
+      "limitations": [
+        "This verifies keyboard focus and unchanged source text, not complete qualification of Customizations or the roadmap."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "make-read-only-asset-source-colors-verifiable",
+      "work_criteria": [
+        "read-only-asset-source-uses-matching-theme-colors"
+      ],
+      "receipt_digest": "cbf401d32d7c2ad6a2330e0c51fc2be7b72c681dc570b403ee60b9b530cb9970",
+      "review_digest": "362da02cbc5c2ba1d77d8f5443b0520b2e354200ac60cd0a89b56d64808b01da",
+      "scope": "Read-only source has its own theme foreground and background. Desktop Customizations passed the normal and forced-color audits at 400 percent zoom.",
+      "limitations": [
+        "The result covers the Customizations reading surface and does not establish a managed browser or overall qualification."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "stabilize-registered-native-assets-and-canvas-journey",
+      "work_criteria": [
+        "native-browse-uses-visible-controls-without-weaker-audits"
+      ],
+      "receipt_digest": "2d701b044e392e09fe27ec9f6ae54899a23f8c0f76a7d0ed33d874ab44b27b65",
+      "review_digest": "886b5cb081c58600f593b3a4e9bc7b8c87c3af7694afa0f643fe1df48df9314c",
+      "scope": "The registered Desktop Canvas and Assets journey passed all nine native 400 percent surfaces. A separate managed browser case passed five Assets tabs on the same source.",
+      "limitations": [
+        "The managed result covers the five Assets tabs. Managed Canvas and Asset Details are not part of that case. The Desktop native case confirms app exit, not a worker or server restart."
+      ]
     }
   ]
 }

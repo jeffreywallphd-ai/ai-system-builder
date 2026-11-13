@@ -18580,6 +18580,66 @@
           "The result covers Layers only. The full Canvas check and the separate legacy security assessment remain open."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1726d341ee0e7136a9fb2f07929c349ae0307a028e6cb69f11d744edd96a23cf",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Keyboard users can focus and scroll the read-only source panel. The code remains read-only."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8a7f756a4699cc963ccc8f1334a8979e5e701ef6f9924c3388009b62c3e326e4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers the source panel keyboard check only."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0ea7c4e4f3d6973bce167dad0c0b5a441db57c09e9800bdc12e193b7c07c97d2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop Customizations passed its text contrast audit at 400% zoom. The source panel uses the same theme as the app."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0eae57b71d6d309e5a6e1bea524909c84fbf5fcf14520d7605012f2a3c216a60",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers the Desktop reading surface only."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a93b1059ccb9a59e3b857a99c51b6682313b4af7a1e1b376d85de0d106d350da",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The registered Desktop test passed nine Canvas and Assets checks at 400% zoom. The managed browser passed five Assets tabs on the same source."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a234f09e5ace1e1c3cdb0fd28ea77551d46544d2a20b10ad20763b424d52f6dc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The browser result does not cover its Canvas or Asset Details. The Desktop run checks that its app closes. It does not test worker or server restart."
+        ]
+      }
     }
   ]
 }
