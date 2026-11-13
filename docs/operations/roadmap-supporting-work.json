@@ -13153,6 +13153,21 @@
       "limitations": [
         "The managed browser test is registered but has not run because its local database engine is unavailable. Production accessibility and the separate legacy review remain pending."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "make-canvas-connections-mode-keyboard-accessible",
+      "work_criteria": [
+        "canvas-modes-support-roving-focus-and-panel-association"
+      ],
+      "receipt_digest": "cfe97dcd55a019017d1dd787717805034fd0fdefd57ac851c266f7fb5d48922c",
+      "review_digest": "7ed9c11851433a78fe0bd51cee5954e080abe70e9fa31e06869e411bb634d59e",
+      "scope": "Local Chromium passed keyboard switching between Canvas Design and Connections at 320 CSS pixels. Chromium and the packaged Windows app also passed at actual 400 percent zoom. The focused interaction test verified arrow keys, Home and End, selected tab and panel semantics, and preservation of unsaved edits when returning to Design.",
+      "limitations": [
+        "This is a local test of tab navigation, focus and draft preservation. The full Connections workflow, managed browser, legacy security and broader production qualification remain pending."
+      ]
     }
   ]
 }

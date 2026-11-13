@@ -18727,6 +18727,29 @@
           "The full accessibility checks and the separate legacy security assessment remain open."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fa5d9a17a4bdc1a09f2a819c94a8a534fcb03e7e5861db1ac4a320cc5a29cf1d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Keyboard users could switch between Design and Connections in the local browser at a narrow width and in both the browser and the Windows app at 400 percent zoom.",
+          "The tests checked arrow keys, Home and End, and that unsaved edits were still present on return to Design."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "74a776f2835cec4aaa8abd8c0221c988eee500ad6e2d811898e6fca5254da7b4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers tab navigation and the focused check for unsaved edits.",
+          "The full Connections workflow and production qualification remain open.",
+          "The managed browser test and the separate security assessment also remain open."
+        ]
+      }
     }
   ]
 }
