@@ -18640,6 +18640,26 @@
           "The browser result does not cover its Canvas or Asset Details. The Desktop run checks that its app closes. It does not test worker or server restart."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f4bbd20c2400607cfedda5d309019001882715019e599b8ecb48441b675045b5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The managed browser passed the Canvas picker, Properties, Preview and Layers checks at 1440 and 320 pixels. The journey also passed save and reopen."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "506e07ab81229166d7087a69991bace96ecd33bc1256d50bee26e398285e39f9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers the Canvas feature. The managed native zoom, wider Assets checks and legacy security assessment are separate."
+        ]
+      }
     }
   ]
 }

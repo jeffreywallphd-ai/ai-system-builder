@@ -13093,6 +13093,21 @@
       "limitations": [
         "The managed result covers the five Assets tabs. Managed Canvas and Asset Details are not part of that case. The Desktop native case confirms app exit, not a worker or server restart."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "fit-the-preview-system-caption-at-narrow-width",
+      "work_criteria": [
+        "preview-system-caption-uses-standard-narrow-type"
+      ],
+      "receipt_digest": "0fab650c27c1cf385c5f5288d08c85dfc018b5bb303b777b38abe14584b7bfde",
+      "review_digest": "5edc57689ea80e50d0f94e24b4d5aa3b4efda93316550e580a0c590b3cd8d81d",
+      "scope": "The registered managed browser Canvas journey passed keyboard insertion, edit history, Preview, save and reopen. Picker, Properties, Preview and Layers passed at 1440 and 320 CSS pixels in normal and forced colors.",
+      "limitations": [
+        "The managed result covers the registered Canvas feature and does not establish managed native zoom, additional Assets surfaces, independent legacy security review or overall qualification."
+      ]
     }
   ]
 }
