@@ -1640,6 +1640,17 @@
       "outcome": "pending",
       "recordedAt": "2026-11-13T12:20:58Z",
       "summary": "At 400 percent zoom, local Chromium and the packaged Windows app passed the keyboard check for a typed connection. The tests added a connection between two preview assets, verified that an incompatible asset was excluded, reopened the saved connection, removed it, and confirmed it stayed removed after saving and reopening. The managed browser and broader accessibility and security checks remain pending."
+    },
+    {
+      "artifact": ".local-codex/asset-experience-final-feature-qualification-20261112/asset-full-qualification-attempt-20261113.json",
+      "command": null,
+      "criterionId": "desktop-thin-accessibility",
+      "id": "evidence-54",
+      "incrementId": "production-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-11-13T13:09:08Z",
+      "summary": "The full qualification attempt on November 13 passed six Windows desktop Assets and Form Composer journeys, including restart, publication, and actual 400 percent zoom. The local browser Canvas saved and reopened systems, but the narrow workspace accessibility audit did not pass. The managed browser restart could not run because its local PostgreSQL fixture was unavailable. Both combined end-to-end groups passed; the standard groups and development dependency audit did not. The independent legacy assessment remains unperformed. No final qualification is claimed."
     }
   ],
   "feedback": [
@@ -2673,6 +2684,12 @@
       "eventFingerprint": "ff6154b91e08defd8536006df0a43e0c8a0d88d32e7f3298b1f39e1ccb071b7a",
       "recordedAt": "2026-11-13T12:20:58Z",
       "sequence": 145,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f3eb701be94682ac81a449c7f87d2cd3d6edaac18be7754199565e3cd2f5dcec",
+      "recordedAt": "2026-11-13T13:09:08Z",
+      "sequence": 146,
       "type": "evidence-recorded"
     }
   ],
@@ -4279,5 +4296,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-13T12:20:58Z"
+  "updatedAt": "2026-11-13T13:09:08Z"
 }
