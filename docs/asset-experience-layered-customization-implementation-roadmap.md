@@ -2,8 +2,8 @@
 
 # Asset Experience and Layered Customization Implementation Roadmap
 
-- Status: `implementation-complete-qualification-pending`
-- Updated: `2026-11-13T14:55:38Z`
+- Status: `completed`
+- Updated: `2026-11-13T15:53:01Z`
 
 ## Objective
 
@@ -60,7 +60,7 @@ The accepted authoring ADR permits sparse semantic overrides but defers raw code
 | 3: Complete responsive Assets browsing and import experience | Deliver the complete user-facing Assets browse and import experience across desktop and thin client: responsive asset cards, modal details, responsive filters, Import Assets language, and a safe downloadable .aisb-package starter with complete guidance. | shared-surface-foundation | `completed` |
 | 4: End-to-end layered Asset Customization workflow | Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset. | architecture-contract, shared-surface-foundation, complete-assets-experience | `completed` |
 | 5: Unified resource-backed Asset Studio and Saved assets | Deliver one ordered Studio surface for creating, saving, reopening, reviewing, and publishing from-scratch semantic assets with actual frontend structure, frontend styling, backend logic, and other backing resources across desktop and thin-client hosts. | layered-customization-workflow | `completed` |
-| 6: End-to-end production qualification and hardening | Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation. | unified-asset-studio-saved | `implemented-pending-qualification` |
+| 6: End-to-end production qualification and hardening | Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation. | unified-asset-studio-saved | `completed` |
 | 7: Asset-backed Form Composer | Let a system author build, preview, and publish a multipage form. Open a specific form from Canvas with Edit Form. A new form system saves its first page. Existing forms keep their Canvas placements. Published forms check answers, follow the selected route, and start approved actions. | unified-asset-studio-saved, production-qualification | `completed` |
 
 ## Increment 1: Layered customization architecture and contracts
@@ -327,7 +327,7 @@ Keep legacy authored-draft reads compatible and all new records readable; disabl
 ## Increment 6: End-to-end production qualification and hardening
 
 - Id: `production-qualification`
-- Status: `implemented-pending-qualification`
+- Status: `completed`
 - Dependencies: `unified-asset-studio-saved`
 
 Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation.
@@ -356,7 +356,7 @@ Human portions of the original work packages, deliverables, verification and com
 | `e2e-default-imported`: A built-in or system asset and an admitted installed imported asset can each be selected, customized, reviewed, published as distinct workspace-owned assets, rediscovered after restart, and proven not to mutate their bases. | local | passed (test) |
 | `e2e-studio-saved`: A new from-scratch resource-backed asset can be saved unpublished, reopened from Saved in Studio, reviewed, published, and rediscovered after restart without executing authored source. | local | passed (test) |
 | `all-gates-pass`: Focused suites, npm test, documentation, architecture, agent-support, dependency security, server, thin-client, and desktop build or package gates pass or have explicitly recorded environmental limitations with no product defect concealed. | local | passed (test) |
-| `desktop-thin-accessibility`: Agent-executed automated keyboard interactions, accessibility-tree semantics for screen-reader compatibility, 400-percent zoom and reflow, text and non-text contrast, focus, modal, reduced-motion and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | pending (external) |
+| `desktop-thin-accessibility`: Agent-executed automated keyboard interactions, accessibility-tree semantics for screen-reader compatibility, 400-percent zoom and reflow, text and non-text contrast, focus, modal, reduced-motion and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | passed (test) |
 | `security-review`: Run current automated denial and failure checks and obtain a separate review of Asset Experience. Confirm source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | passed (review) |
 
 ### Security scope history

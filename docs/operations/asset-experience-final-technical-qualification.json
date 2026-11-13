@@ -1,0 +1,129 @@
+{
+  "schema_version": "asset-experience-final-technical-qualification-v1",
+  "roadmap_id": "asset-experience-layered-customization",
+  "increment_id": "production-qualification",
+  "scope": "Approved executable Asset Experience roadmap acceptance for Windows Desktop and local and managed Thin Client.",
+  "qualification": "passed-for-roadmap-scope",
+  "release_profile_qualified": false,
+  "prior_independent_legacy_assessment": {
+    "outcome": "excluded-unperformed",
+    "owning_roadmap": "security-findings-refresh",
+    "reason": "Outside the amended Asset roadmap scope; not a passing test."
+  },
+  "candidate": {
+    "dependency_lock_sha256": "9ad5090ba878620e4981e188b7722c0240a09d4113d8ef4e3cbee86090724b39",
+    "dependency_manifest_sha256": "06d741468645dec4b9dd5df751e84f7468fdd338c639c2ebc7a3b750162b206b",
+    "product_paths_verified": {
+      "modules/ui/shared/styles/components/home.css": "db8f1a555467c7a7582ca796e2bdd4ac1a3038902f6bf69835dcfa4098be3459",
+      "modules/ui/shared/styles/components/system-composer.css": "dc4412f379c7af7f0dcc2216a6c17650214bf9a74d153af5e96992cb9bea3aa2",
+      "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx": "5ad70b78fca14623e6b40618583758395e4a5f1cdb05436c8eb5c36fafdf2a02"
+    },
+    "base_commit": "7ef1e578e3ac85ea6a500db4754d072cf6b04eef",
+    "current_control_plane_changes_are_test_routing_only": true,
+    "verified_source_lineage": {
+      "current": "source.721d0915f9e9ac65a8e51c4594637af170ba268b6edcc6acdb5eb4092a1761ca",
+      "managed_restart_only_earlier": "source.36513187a59d1eb2530e336d19526d67b9176a052ed80e87e65b8558e8c9cd4d",
+      "guided_thin_only_earlier": "source.a771951df4234162167aaf11211116bbdbffc24772ce2362f6aea5203e3cc6b2",
+      "reconstruction": "Independent replay of the exact qualification hashing algorithm. For the prior managed restart, use the pre-fix Windows bytes of dev-tools/helpers/tests/test_control_plane_archives.py. For the prior guided browser run, also omit dev-tools/scripts/qualification/visual-composer/managed-reference-database.mjs, which was absent at that time. All product and dependency bytes match."
+    },
+    "checkout_product_dependency_tree": {
+      "tracked_base": "7ef1e578e3ac85ea6a500db4754d072cf6b04eef",
+      "product_deltas": [
+        "modules/ui/shared/styles/components/home.css",
+        "modules/ui/shared/styles/components/system-composer.css",
+        "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx"
+      ],
+      "dependency_deltas": [
+        "package.json",
+        "package-lock.json"
+      ]
+    },
+    "verified_rebuild_product_commit": "2aeafe79bdc9c0f17eda9aaa35bb60389e4ae68b"
+  },
+  "host_and_combined_results": {
+    "packaged-desktop": {
+      "run_id": "2026-11-13t15-41-32-122z-43499ffa",
+      "source_revision": "source.721d0915f9e9ac65a8e51c4594637af170ba268b6edcc6acdb5eb4092a1761ca",
+      "report_sha256": "01390ed93dc34a185d4ad24dfc3e6661d5026b380a7f2f44ab18710b63f4c547",
+      "passed_cases": 6
+    },
+    "thin-client-guided": {
+      "run_id": "2026-11-13t15-22-06-964z-069baf04",
+      "source_revision": "source.a771951df4234162167aaf11211116bbdbffc24772ce2362f6aea5203e3cc6b2",
+      "report_sha256": "93842a18a5c41c7dcbd02883b59afd7502452c6c73de8c93b7ca0fe39456cb8a",
+      "passed_cases": 2
+    },
+    "managed-assets-restart": {
+      "run_id": "2026-11-13t15-28-32-004z-44a15a01",
+      "source_revision": "worktree",
+      "report_sha256": "50249d98ae5f8ca849049be95ac2a13eac99bfe71d2ac73da56549798cad7ec7",
+      "passed_cases": 1,
+      "verified_host_source": "source.36513187a59d1eb2530e336d19526d67b9176a052ed80e87e65b8558e8c9cd4d",
+      "managed_host_report_sha256": "674d244c222c69515f7e8dd4844089b4f0d6bfe05d97046d941774a72b8db3dc",
+      "asset_accessibility_sha256": "e54800a2c427ea29e5abab2b664cf4fac4712b7050c1fc3c3bc103797a66339c",
+      "graceful_restarts": 4
+    },
+    "managed-assets-native-zoom": {
+      "run_id": "managed-10373ca6efd24279963c40304e8ee7a6",
+      "source_revision": "source.721d0915f9e9ac65a8e51c4594637af170ba268b6edcc6acdb5eb4092a1761ca",
+      "report_sha256": "cb413ad8ba18ec35b45e00131ac70961527c826b4c3576d6a6419b0229c6b5a5",
+      "passed_cases": 1,
+      "managed_host_report_sha256": "c006a49e0f83887ef62e09d0b14a8b704f820154775a5fe44d8bcff8be98288d"
+    },
+    "combined": {
+      "command": "npm run test:standardande2e",
+      "status": "passed",
+      "report_sha256": "535f80d084d9122f1f78541c73b12997260b003ada7594e7ac733e8a0a0b6040",
+      "lanes": {
+        "standard-node": {
+          "status": "passed",
+          "passed": 5397,
+          "skipped": 2,
+          "report_sha256": "a7c1f2ed839aa83f54880302aa59ec5114db4fe846da2e9e1ffcb509fb02a7f0"
+        },
+        "standard-vitest": {
+          "status": "passed",
+          "passed": 1645,
+          "skipped": 0,
+          "report_sha256": "36b590ffc646ed9bedf90b539499ee6a822e93dcc9dfaa08c3cc98cfa150f842"
+        },
+        "e2e-node": {
+          "status": "passed",
+          "passed": 229,
+          "skipped": 2,
+          "report_sha256": "f11d7b71df07bc5f7d22c8f7d43d3fd852a7a20c1449d158d9da3c73e5e5f773"
+        },
+        "e2e-vitest": {
+          "status": "passed",
+          "passed": 3,
+          "skipped": 0,
+          "report_sha256": "4ae4f835fa22dc4b252f3b34296293d5f9b11258ad9c1bd83a8df5c916747cb5"
+        }
+      }
+    }
+  },
+  "release_gate_results": {
+    "runtime_npm_advisories": 0,
+    "toolchain_npm_advisories": 0,
+    "npm_security_dependencies": "passed",
+    "desktop_package": "passed",
+    "server_build": "passed",
+    "thin_client_build": "passed",
+    "docs": "passed",
+    "architecture": "passed",
+    "agent_support": "passed",
+    "asset_system_configuration": "passed"
+  },
+  "retained_asset_security": {
+    "work_id": "asset-retained-defensive-security-1113",
+    "receipt_digest": "7bac6effc3d93fce7d639f15a52d187c9c433aeed66ee3331de2a24ab5bc4765",
+    "review_digest": "90f66e9b7ffa603e4aec43adccec4c24512197e37cc172be6ccf2083cd152c82",
+    "allowed_checks_passed": 186
+  },
+  "limitations": [
+    "The managed restart wrapper labels its source worktree. The host report supplies the exact source identity and clean teardown evidence.",
+    "Individual runs retain their actual source IDs; unrelated contributor/test-only revisions differ. No pending external or security release assessment is declared passed.",
+    "The full suite retains four test skips; no separately excluded independent legacy assessment was run.",
+    "The test checkout excludes unrelated working-copy changes. Evidence qualifies only the reviewed Asset source and candidate dependency tree recorded here."
+  ]
+}
