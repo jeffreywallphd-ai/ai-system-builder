@@ -1,4 +1,111 @@
 {
+  "assetLegacyAssessmentExclusion": {
+    "authorityRef": "user-limit-asset-acceptance-to-executable-checks",
+    "originalCriterion": {
+      "description": "A controlled security review confirms source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority.",
+      "id": "security-review",
+      "qualification": "controlled-environment"
+    },
+    "originalEvidence": {
+      "artifact": null,
+      "command": "Follow docs/operations/asset-experience-controlled-review.md",
+      "criterionId": "security-review",
+      "id": "evidence-34",
+      "incrementId": "production-qualification",
+      "kind": "manual",
+      "outcome": "pending",
+      "recordedAt": "2026-07-18T21:14:31Z",
+      "summary": "Automated review passed for source containment, unsafe paths, protected content, secrets, size limits, stale revisions, workspace isolation, immutable bases, non-execution, safe diagnostics, and fail-closed revocation truth. The controlled target-environment security review remains required and is not inferred."
+    },
+    "originalIssue": {
+      "actionLocation": "Existing security-legacy-assets-workspace-authority work; Security file-and-workspace-authority/security-impact-reviewed and Assets production-qualification/security-review",
+      "actionOwner": "agent",
+      "authorityRef": "user-automated-only-security-review-no-owner-assessment",
+      "completionCondition": "Required current security checks and separately permitted independent review validate the actual candidate. An unperformed restricted assessment remains pending; this responsibility change cannot qualify or resolve it.",
+      "id": "restricted-legacy-authority-review-pending",
+      "kind": "dependency",
+      "recordedAt": "2026-10-22T22:18:47Z",
+      "requiredAction": "Continue permitted automated security checks and remediate their findings. Preserve the restricted legacy Assets assessment as unperformed; do not retry it through another agent, tool or route. Reconcile only actually satisfied technical evidence without inventing independent review.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Coding agent",
+      "status": "open",
+      "summary": "The repository owner is not required to conduct or arrange a security review. Permitted automated checks and remediation remain agent-owned. The shared independent assessment of the existing legacy Assets authorization change is still unperformed because that review was restricted. Existing test results remain historical evidence; no separate reviewer acceptance or parent qualification is invented."
+    },
+    "originalPlan": {
+      "assumptions": [
+        "The shared React surfaces are the authoritative UI implementation for both desktop and thin client.",
+        "Imported and authored source remains non-executable until a separately qualified sandbox exists.",
+        "Controlled manual accessibility and security evidence may remain pending when the required environment or reviewer is unavailable, but it must never be inferred from automated tests."
+      ],
+      "chunks": [
+        {
+          "criteriaIds": [
+            "e2e-default-imported",
+            "e2e-studio-saved"
+          ],
+          "id": "representative-lifecycle-matrix",
+          "outcome": "System Foundation, admitted imported, and Studio-authored assets are qualified through save, reopen, review, publication, restart rediscovery, immutable-base, and non-execution assertions.",
+          "title": "Representative lifecycle and restart matrix"
+        },
+        {
+          "criteriaIds": [
+            "desktop-thin-accessibility",
+            "security-review"
+          ],
+          "id": "failure-security-accessibility",
+          "outcome": "Negative matrices and cross-host shared-surface checks cover isolation, stale state, unsafe and oversized content, unavailable adapters, modal/focus semantics, keyboard naming, status announcements, and narrow-layout CSS; controlled manual evidence is recorded truthfully.",
+          "title": "Fail-closed, security, accessibility, and responsive qualification"
+        },
+        {
+          "criteriaIds": [
+            "all-gates-pass"
+          ],
+          "id": "release-evidence-gates",
+          "outcome": "Canonical docs and support qualification match implemented behavior and limitations, sanitized evidence is ready for controlled review, and every applicable repository, security, build, and package gate has one final recorded result.",
+          "title": "Release evidence, canonical docs, and complete gates"
+        }
+      ],
+      "completionTests": [
+        "npm test",
+        "npm run docs:check",
+        "npm run architecture:check",
+        "npm run agent-support:check",
+        "npm run security:dependencies",
+        "npm run asset-system:check",
+        "npm run build:server",
+        "npm run build:thin-client",
+        "npm run package"
+      ],
+      "documentation": [
+        "Asset and System Support Qualification",
+        "Asset authoring and execution security architecture",
+        "Asset authoring context pack and nearest READMEs",
+        "Temporary concise roadmap implementation report"
+      ],
+      "fingerprint": "8df22d4ffc926280f02ea98ceed5a72e1b362a4891afab8205251c4ab67b4560",
+      "focusedTests": [
+        "Focused lifecycle tests for the representative matrix",
+        "Focused qualification and shared UI tests for failure, security, accessibility semantics, and responsive contracts",
+        "Qualification harness and documentation checks for release evidence"
+      ],
+      "recordedAt": "2026-07-18T20:45:36Z",
+      "rollback": "Retain safe browse, import, Saved, Studio, and Customizations behavior plus persisted drafts; revert qualification-only checks independently and capability-gate create operations without deleting user data.",
+      "steps": [
+        "Extend representative lifecycle coverage across System Foundation, admitted imported, and from-scratch Studio assets, including restart rediscovery and immutable-base or non-execution proofs.",
+        "Exercise failure, security, accessibility-semantic, modal, and responsive invariants across shared desktop and thin-client surfaces; fix any product defects found.",
+        "Update canonical qualification documentation and sanitized controlled-review templates, then run the complete release gate set once all chunks are implemented."
+      ],
+      "summary": "Qualify the complete Assets experience with representative lifecycle matrices, fail-closed and cross-host UI hardening, then one final release-evidence and repository-gate pass."
+    },
+    "previousApproval": {
+      "approvedAt": "2026-11-13T09:57:05Z",
+      "fingerprint": "9af7b38d2d30692ccddcaba031c4b9f87dcafdd1b529c417b535290a241c8ac5",
+      "note": "Records the user's accepted contextual Form design: Edit Form from a specific asset and Back to Canvas; embedded forms keep their placements and can share a page. New Form systems save a page, section, and first form page. Existing Canvas editing and rendering are preserved apart from the contextual entry. Other acceptance, including production qualification, remains open where previously pending."
+    },
+    "recordedAt": "2026-11-13T14:28:55Z",
+    "status": "excluded-unperformed"
+  },
   "blockerReclassifications": [
     {
       "assignment": {
@@ -100,7 +207,7 @@
       "resolution": null,
       "resolvedAt": null,
       "responsibleRole": "Coding agent",
-      "status": "open",
+      "status": "excluded-unperformed",
       "summary": "The repository owner is not required to conduct or arrange a security review. Permitted automated checks and remediation remain agent-owned. The shared independent assessment of the existing legacy Assets authorization change is still unperformed because that review was restricted. Existing test results remain historical evidence; no separate reviewer acceptance or parent qualification is invented."
     }
   ],
@@ -2691,6 +2798,18 @@
       "recordedAt": "2026-11-13T13:09:08Z",
       "sequence": 146,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "382ed1485b99e995edef5cb22a8e1c90ca31bc199e88467ac5c9e922d8e09280",
+      "recordedAt": "2026-11-13T14:28:55Z",
+      "sequence": 147,
+      "type": "asset-legacy-assessment-excluded"
+    },
+    {
+      "eventFingerprint": "7d6b2efba6f02231453570f5fcaede2e5d9d88ca906bce676a4cf1a1abd779ae",
+      "recordedAt": "2026-11-13T14:28:55Z",
+      "sequence": 148,
+      "type": "roadmap-approved"
     }
   ],
   "increments": [
@@ -3769,7 +3888,7 @@
           "qualification": "controlled-environment"
         },
         {
-          "description": "A controlled security review confirms source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority.",
+          "description": "Run current automated denial and failure checks and obtain a separate review of Asset Experience. Confirm source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority.",
           "id": "security-review",
           "qualification": "controlled-environment"
         }
@@ -4289,12 +4408,12 @@
     }
   ],
   "roadmapApproval": {
-    "approvedAt": "2026-11-13T09:57:05Z",
-    "fingerprint": "9af7b38d2d30692ccddcaba031c4b9f87dcafdd1b529c417b535290a241c8ac5",
-    "note": "Records the user's accepted contextual Form design: Edit Form from a specific asset and Back to Canvas; embedded forms keep their placements and can share a page. New Form systems save a page, section, and first form page. Existing Canvas editing and rendering are preserved apart from the contextual entry. Other acceptance, including production qualification, remains open where previously pending."
+    "approvedAt": "2026-11-13T14:28:55Z",
+    "fingerprint": "7b14e9df89bd3e098c0b2b5e5d12b7bc3c1893e29d5422c3a1bdeed2b017bd82",
+    "note": "Records the user-directed Asset-only acceptance scope: retain executable technical tests and independent review; keep the unperformed prior assessment with Security."
   },
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-11-13T13:09:08Z"
+  "updatedAt": "2026-11-13T14:28:55Z"
 }

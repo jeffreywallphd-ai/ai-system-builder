@@ -3,7 +3,7 @@
 # Asset Experience and Layered Customization Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-13T13:09:08Z`
+- Updated: `2026-11-13T14:28:55Z`
 
 ## Objective
 
@@ -357,7 +357,12 @@ Human portions of the original work packages, deliverables, verification and com
 | `e2e-studio-saved`: A new from-scratch resource-backed asset can be saved unpublished, reopened from Saved in Studio, reviewed, published, and rediscovered after restart without executing authored source. | local | passed (test) |
 | `all-gates-pass`: Focused suites, npm test, documentation, architecture, agent-support, dependency security, server, thin-client, and desktop build or package gates pass or have explicitly recorded environmental limitations with no product defect concealed. | local | passed (test) |
 | `desktop-thin-accessibility`: Agent-executed automated keyboard interactions, accessibility-tree semantics for screen-reader compatibility, 400-percent zoom and reflow, text and non-text contrast, focus, modal, reduced-motion and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | pending (external) |
-| `security-review`: A controlled security review confirms source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | pending (manual) |
+| `security-review`: Run current automated denial and failure checks and obtain a separate review of Asset Experience. Confirm source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | pending (manual) |
+
+### Security scope history
+
+- The earlier legacy authorization assessment was not performed. It is outside this roadmap's acceptance and remains with the Security roadmap.
+- The original requirement, plan, approval, pending evidence, and issue remain in JSON history. This change records no test pass or release qualification.
 
 ### Human scope handled offline
 
@@ -435,12 +440,3 @@ Withdraw the Form entry point and stop dispatching form actions. Keep the Canvas
 - Public anonymous form links, external delivery or provider integration, file uploads, and arbitrary scripts or webhooks.
 - General survey distribution and analytics, third-party form import, and a general-purpose workflow designer.
 - Changes to existing Canvas editing or rendering apart from adding the contextual Edit Form entry.
-
-## Pending work
-
-Owner: coding agent. No user action is needed. Technical checks are not passed.
-- **restricted-legacy-authority-review-pending**: The repository owner is not required to conduct or arrange a security review. Permitted automated checks and remediation remain agent-owned. The shared independent assessment of...
-  - Owner: Coding agent
-  - Action: Continue permitted automated security checks and remediate their findings. Preserve the restricted legacy Assets assessment as unperformed; do not retry it through another agent, tool or route. Reconcile only actually...
-  - Where: Existing security-legacy-assets-workspace-authority work; Security file-and-workspace-authority/security-impact-reviewed and Assets production-qualification/security-review
-  - Done when: Required current security checks and separately permitted independent review validate the actual candidate. An unperformed restricted assessment remains pending; this responsibility change cannot qualify or resolve it.

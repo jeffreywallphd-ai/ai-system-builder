@@ -1664,17 +1664,17 @@
       "roadmap_id": "asset-experience-layered-customization",
       "increment_id": "production-qualification",
       "criterion_id": "security-review",
-      "source_description_sha256": "306335cdd8e394d70906e917cb4aa6f846426102194387f4e39625f9a77cf3ae",
+      "source_description_sha256": "74d86d6f1f0f459b0c9538018b6901e3ab0f350b0a501dbfc8867f30858e3d26",
       "qualification": "controlled-environment",
       "user_description": {
-        "purpose": "Verify asset protection without granting execution or deployment authority.",
+        "purpose": "Check how Asset Experience protects source files and workspaces.",
         "owner": "agent",
-        "next_action": "The agent must check the current evidence against every requirement below.",
-        "completion_proof": "Completion needs evidence for every listed requirement and any independent review required by the roadmap.",
+        "next_action": "The agent must run the checks below and record a separate technical review. No action is needed from you.",
+        "completion_proof": "The tests must pass and the separate review must accept the same version. Any older manual result is historical: the assessment was not run and remains with the Security roadmap.",
         "requirements": [
-          "A controlled security review must confirm source containment and no execution during browsing or import inspection.",
-          "The review must confirm workspace isolation, unchanged bases and safe diagnostics.",
-          "The workflow must not imply permission to activate or deploy an asset."
+          "Test that the app keeps source files within allowed locations and does not run them when you browse or inspect imports.",
+          "Test that workspaces stay separate, original assets stay unchanged, and error messages protect private details.",
+          "Check that browsing or inspecting an asset grants no permission to activate or deploy it."
         ]
       }
     },
