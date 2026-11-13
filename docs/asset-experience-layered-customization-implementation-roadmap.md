@@ -2,8 +2,8 @@
 
 # Asset Experience and Layered Customization Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-11-13T14:28:55Z`
+- Status: `implementation-complete-qualification-pending`
+- Updated: `2026-11-13T14:55:38Z`
 
 ## Objective
 
@@ -61,7 +61,7 @@ The accepted authoring ADR permits sparse semantic overrides but defers raw code
 | 4: End-to-end layered Asset Customization workflow | Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset. | architecture-contract, shared-surface-foundation, complete-assets-experience | `completed` |
 | 5: Unified resource-backed Asset Studio and Saved assets | Deliver one ordered Studio surface for creating, saving, reopening, reviewing, and publishing from-scratch semantic assets with actual frontend structure, frontend styling, backend logic, and other backing resources across desktop and thin-client hosts. | layered-customization-workflow | `completed` |
 | 6: End-to-end production qualification and hardening | Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation. | unified-asset-studio-saved | `implemented-pending-qualification` |
-| 7: Asset-backed Form Composer | Let a system author build, preview, and publish a multipage form. Open a specific form from Canvas with Edit Form. A new form system saves its first page. Existing forms keep their Canvas placements. Published forms check answers, follow the selected route, and start approved actions. | unified-asset-studio-saved, production-qualification | `verifying` |
+| 7: Asset-backed Form Composer | Let a system author build, preview, and publish a multipage form. Open a specific form from Canvas with Edit Form. A new form system saves its first page. Existing forms keep their Canvas placements. Published forms check answers, follow the selected route, and start approved actions. | unified-asset-studio-saved, production-qualification | `completed` |
 
 ## Increment 1: Layered customization architecture and contracts
 
@@ -357,7 +357,7 @@ Human portions of the original work packages, deliverables, verification and com
 | `e2e-studio-saved`: A new from-scratch resource-backed asset can be saved unpublished, reopened from Saved in Studio, reviewed, published, and rediscovered after restart without executing authored source. | local | passed (test) |
 | `all-gates-pass`: Focused suites, npm test, documentation, architecture, agent-support, dependency security, server, thin-client, and desktop build or package gates pass or have explicitly recorded environmental limitations with no product defect concealed. | local | passed (test) |
 | `desktop-thin-accessibility`: Agent-executed automated keyboard interactions, accessibility-tree semantics for screen-reader compatibility, 400-percent zoom and reflow, text and non-text contrast, focus, modal, reduced-motion and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | pending (external) |
-| `security-review`: Run current automated denial and failure checks and obtain a separate review of Asset Experience. Confirm source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | pending (manual) |
+| `security-review`: Run current automated denial and failure checks and obtain a separate review of Asset Experience. Confirm source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | passed (review) |
 
 ### Security scope history
 
@@ -388,7 +388,7 @@ Keep new create operations capability-gated while retaining read-only browse, im
 ## Increment 7: Asset-backed Form Composer
 
 - Id: `asset-backed-form-composer`
-- Status: `verifying`
+- Status: `completed`
 - Dependencies: `unified-asset-studio-saved`, `production-qualification`
 
 Let a system author build, preview, and publish a multipage form. Open a specific form from Canvas with Edit Form. A new form system saves its first page. Existing forms keep their Canvas placements. Published forms check answers, follow the selected route, and start approved actions.
