@@ -13168,6 +13168,21 @@
       "limitations": [
         "This is a local test of tab navigation, focus and draft preservation. The full Connections workflow, managed browser, legacy security and broader production qualification remain pending."
       ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "record-assets-typed-connections-feature-evidence",
+      "work_criteria": [
+        "typed-connection-workflow-uses-scoped-local-evidence"
+      ],
+      "receipt_digest": "791b979a59522c7ac139f398edc1b8b781b30e2b9a1198a117d51d45a452d732",
+      "review_digest": "a6d7a895cc4b505a16800c95d43da7fb579d8e1ae2457ab2506ae57aa378c59f",
+      "scope": "Local Chromium and the packaged Windows app passed a keyboard journey at actual 400 percent zoom. The tests added a typed connection between two preview assets, excluded an incompatible asset, validated and reopened the saved connection, removed it, and verified that it stayed removed after saving and reopening.",
+      "limitations": [
+        "This result covers one typed connection between built-in preview assets on both local hosts. The managed browser test, broader accessibility and separate security review remain pending."
+      ]
     }
   ]
 }

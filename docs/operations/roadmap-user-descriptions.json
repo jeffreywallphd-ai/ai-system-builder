@@ -18750,6 +18750,28 @@
           "The managed browser test and the separate security assessment also remain open."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8faf1e866c5e06ff908ccbf35485126185dcaade2c1ca16c43c95d6f66384110",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At 400 percent zoom, the local browser and Windows app both passed the keyboard test for a connection between two preview assets.",
+          "The test checked that an incompatible asset was excluded. The connection reopened after saving, and its removal also persisted."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "40f8bd00c5e86ed3a8e37d6e20a12a914200a9351ff8125b24928e5284dd7f0a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers one kind of connection on both local hosts.",
+          "The managed browser, broader accessibility and separate security checks remain open."
+        ]
+      }
     }
   ]
 }
