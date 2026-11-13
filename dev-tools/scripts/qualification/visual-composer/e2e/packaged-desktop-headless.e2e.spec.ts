@@ -39,6 +39,64 @@ async function hostId(client: Client) {
   return id;
 }
 
+async function canvasCompetition(page: Page, mcp: Client, workspace: { workspaceId: string; hostIncarnationId: string },
+  systemId: string, name: string) {
+  type Ref = { systemId: string; revisionId: string; recordRevision: number };
+  const target = { ...workspace, systemId };
+  const current = async () => {
+    const result = await call(mcp, "aisb_read_system", target);
+    const row = result.value as { revision?: number; currentRevisionId?: string } | undefined;
+    if (!result.ok || !row?.revision || !row.currentRevisionId) throw new Error("No current composition revision was found.");
+    return { baseRecordRevision: row.revision, baseRevisionId: row.currentRevisionId };
+  };
+  await page.getByRole("tab", { name: "Compose", exact: true }).click();
+  await page.getByRole("combobox", { name: "System", exact: true }).selectOption({ label: name });
+  await page.getByRole("button", { name: "Edit system", exact: true }).click();
+  const editor = page.getByRole("group", { name: "System draft editor", exact: true });
+  await expect(editor).toHaveAttribute("aria-busy", "false");
+  await expect(editor).not.toHaveAttribute("disabled");
+  const tableId = systemId + ".table";
+  const table = page.locator(".system-composer__canvas-node").filter({ has: page.getByText("Artifact results", { exact: true }) });
+  const select = page.locator(`.system-composer__canvas-node[data-instance-id="${tableId}"] > .system-composer__canvas-node-heading > button`);
+  await expect(table.last()).toBeVisible();
+  await select.first().click();
+  const inspector = page.getByRole("complementary", { name: "Composer details" });
+  await inspector.getByRole("tab", { name: "Properties", exact: true }).click();
+  const title = inspector.locator('[id="title"]');
+  for (const tab of ["Design", "Data", "Events"]) {
+    await inspector.getByRole("tab", { name: tab, exact: true }).click();
+    if (await title.isVisible()) break;
+  }
+  await expect(title).toHaveValue("Authorized artifacts");
+
+  async function apply(title: string) {
+    const input = { ...target, ...await current(), edits: [{ kind: "configure", instanceId: tableId, values: { title } }] };
+    const preview = await call(mcp, "aisb_preview_edits", input);
+    const previewDigest = (preview.value as { previewDigest?: string } | undefined)?.previewDigest;
+    if (!preview.ok || !previewDigest) throw new Error("The owned composition edit did not preview.");
+    const result = await call(mcp, "aisb_apply_edits", { ...input, previewDigest, idempotencyKey: randomUUID() });
+    const reference = (result.value as { reference?: Ref } | undefined)?.reference;
+    if (!result.ok || !reference) throw new Error("The owned composition edit did not commit.");
+    return reference;
+  }
+
+  await apply("Saved external title");
+  await expect(title).toHaveValue("Saved external title", { timeout: 10_000 });
+  await title.fill("My unsaved local title");
+  const save = page.getByRole("button", { name: "Save and validate revision", exact: true });
+  await expect(save).toBeEnabled();
+  const winner = await apply("Newer saved external title");
+  await expect(page.getByText("A newer saved version exists. Your unsaved changes are still here.", { exact: true })).toBeVisible();
+  await expect(title).toHaveValue("My unsaved local title");
+  await save.click();
+  await page.getByRole("button", { name: /^Notifications(?:,|$)/ }).click();
+  const notifications = page.getByRole("dialog", { name: "Notifications", exact: true });
+  await expect(notifications.getByText("This system changed. Reload it before saving again.", { exact: true })).toBeVisible();
+  await notifications.press("Escape");
+  await expect(title).toHaveValue("My unsaved local title");
+  expect(await current()).toEqual({ baseRevisionId: winner.revisionId, baseRecordRevision: winner.recordRevision });
+}
+
 function timings(samples: readonly number[]) {
   const sorted = [...samples].sort((left, right) => left - right);
   const at = (percentile: number) => Math.round(sorted[Math.ceil(sorted.length * percentile) - 1] ?? 0);
@@ -99,14 +157,28 @@ test("packaged Desktop pairs a real MCP client, observes its saved edit, and rep
     const management = page.getByRole("region", { name: "Manage systems", exact: true });
     const systemName = "System created by local client";
     const create = { workspaceId, templateId, name: systemName, idempotencyKey: randomUUID() };
-    const observedAt = performance.now();
+    const createdSystem = management.getByText(systemName, { exact: true });
+    await expect(createdSystem).toHaveCount(0);
+    let droppedCommittedCreate = 0;
+    const lossyClient = await connectMcp(address, fingerprint, credential, () => { droppedCommittedCreate++; });
+    try {
+      const observedAt = performance.now();
+      const [lostReply, visible] = await Promise.allSettled([
+        lossyClient.callTool({ name: "aisb_create_system", arguments: { hostIncarnationId, ...create } }, { timeout: 5_000 }),
+        expect(createdSystem).toBeVisible({ timeout: 5_000 }).then(() => performance.now() - observedAt),
+      ]);
+      expect({ replyLost: lostReply.status === "rejected", droppedCommittedCreate })
+        .toEqual({ replyLost: true, droppedCommittedCreate: 1 });
+      if (visible.status === "rejected") throw visible.reason;
+      expect(visible.value).toBeLessThanOrEqual(5_000);
+      await expect(manage).toHaveAttribute("aria-selected", "true");
+    } finally { await lossyClient.close(); }
     const created = await call(mcp, "aisb_create_system", { hostIncarnationId, ...create });
     const createdValue = created.value as { kind?: string; reference?: { systemId: string; revisionId: string; recordRevision: number } };
-    expect(created.ok && createdValue?.kind === "committed" && Boolean(createdValue.reference)).toBe(true);
+    expect(created.ok && createdValue?.kind === "replayed" && Boolean(createdValue.reference)).toBe(true);
     const saved = createdValue.reference!;
-    await expect(management.getByText(systemName, { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(createdSystem).toBeVisible({ timeout: 5_000 });
     await expect(manage).toHaveAttribute("aria-selected", "true");
-    expect(performance.now() - observedAt).toBeLessThanOrEqual(5_000);
 
     const nextName = "Renamed by local client";
     const renamed = await call(mcp, "aisb_rename_system", { ...workspace, systemId: saved.systemId,
@@ -199,6 +271,8 @@ test("packaged Desktop pairs a real MCP client, observes its saved edit, and rep
     expect(current.ok && Array.isArray(current.value) && current.value.length === 1 && current.value[0]?.name === finalName).toBe(true);
     const oldFeed = await call(mcp, "aisb_saved_system_changes", { hostIncarnationId: newHost, workspaceId, cursor });
     expect(oldFeed).toEqual({ ok: true, operation: "systems.changes", value: { kind: "resync" } });
+    await next.getByRole("button", { name: "Systems", exact: true }).click();
+    await canvasCompetition(next, mcp, { hostIncarnationId: newHost, workspaceId }, saved.systemId, finalName);
   } finally {
     try { await mcp?.close(); }
     finally { await lifetime.retire(); }

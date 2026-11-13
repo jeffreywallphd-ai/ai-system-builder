@@ -1098,6 +1098,26 @@ const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2
 function headlessPackagedCensusLegacyView(map, result) {
   const source = map.sources.find(row => row.path === headlessPackagedSpec);
   if (!source) return {map, result};
+  if (sha(JSON.stringify(map)) === "e20baf59bdd2461036c73745b83bcad0566fae507541c9d9cd313b57c5962bc9") {
+    const commit = "6ce8b3255a935f3a02e65f902a2989b31a417bf6";
+    const saved = JSON.parse(historicalSource(commit, censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "3cca8c5a8478e7355c5b88e930875f2979f074d3e2fd9e1f89fbc788db2fc133");
+    const prior = saved.sources.find(row => row.path === headlessPackagedSpec);
+    const committed = sourceFacts(headlessPackagedSpec, historicalSource(commit, headlessPackagedSpec));
+    assert.deepEqual(prior.facts, committed);
+    assert.equal(prior.committed_sha256, committed.sha256);
+    assert.equal(source.committed_sha256, committed.sha256);
+    assert.equal(source.facts.sha256, "8f78b003b93d10cd55fa7a26045d9e9e7f1d64901e946fabbe22cc4e01634e38");
+    assert.equal(sha(JSON.stringify(source.facts)), "205d01b56f5e64bfecd6d77f0efb5b8a5d4cea232522a3e587dfdd43de7d4ae9");
+    const expected = structuredClone(saved);
+    expected.sources[expected.sources.findIndex(row => row.path === headlessPackagedSpec)].facts = source.facts;
+    assert.deepEqual(map, expected);
+    const isPending = item => item.kind === "unreviewed-source-drift" && item.source === headlessPackagedSpec;
+    assert.equal(result.gaps.filter(isPending).length, 1);
+    const priorResult = {...result, gaps:result.gaps.filter(item => !isPending(item))};
+    assert.deepEqual(priorResult.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(saved));
+    return headlessPackagedCensusLegacyView(saved, priorResult);
+  }
   const prior = JSON.parse(historicalSource("2ae9ccfd296d7dfa9c4f7465d81145a776081309", censusDocument));
   assert.equal(sha(JSON.stringify(prior)), "0e3adf3631d4f9dc03f0021e75685037f343ec8f03fd297753665875e99149d7");
   assert.equal(source.facts.sha256, "798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd");
@@ -2036,7 +2056,10 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,31);
+  assert.equal(result.gaps.length,32);
+  const isPendingHeadless = row => row.kind === "unreviewed-source-drift" && row.source === headlessPackagedSpec;
+  assert.equal(result.gaps.filter(isPendingHeadless).length,1);
+  assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>!isPendingHeadless(row))}));
   const imageLabelPrior = beforeDesktopImageLabelCensus(map,result);
   assert.equal(imageLabelPrior.result.gaps.length,30);
   assert.equal(sha(JSON.stringify(imageLabelPrior.map)),reviewedDesktopImageLabelCensus.before);

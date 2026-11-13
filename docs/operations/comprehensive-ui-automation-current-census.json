@@ -15167,12 +15167,12 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
    "facts": {
-    "sha256": "798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd",
-    "bytes": 12936,
+    "sha256": "8f78b003b93d10cd55fa7a26045d9e9e7f1d64901e946fabbe22cc4e01634e38",
+    "bytes": 17821,
     "cases": [
      {
       "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart",
-      "line": 64
+      "line": 122
      }
     ],
     "dynamicCases": 0,
@@ -15194,16 +15194,24 @@
       "line": 35
      },
      {
-      "name": "timings",
+      "name": "canvasCompetition",
       "line": 42
      },
      {
+      "name": "apply",
+      "line": 72
+     },
+     {
+      "name": "timings",
+      "line": 100
+     },
+     {
       "name": "saveObservation",
-      "line": 48
+      "line": 106
      }
     ],
-    "assertionCount": 26,
-    "assertionDigest": "156a4364cbfe4b660d8f5804744167c873e1da84bddbc0a5ea2534c97f606cb6",
+    "assertionCount": 41,
+    "assertionDigest": "a3324c4c8ade869dd845ee9436ba03a56399e59b040b461a2d63b8fc8dc186df",
     "assertionExamples": [
      {
       "line": 29,
@@ -15211,19 +15219,19 @@
       "sha256": "ddda5a711b2e3497f1be9c2fb51362ed5af24f23da2f4a8170002f7525f86f86"
      },
      {
-      "line": 74,
+      "line": 56,
       "kind": "expect",
-      "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+      "sha256": "a18914c717eb55722082ea8a53df6400cdb234e9d2d9200fe76b12005e516fc6"
      },
      {
-      "line": 77,
+      "line": 57,
       "kind": "expect",
-      "sha256": "7e99e8898098edb67fe52f08e1043e78072e95ee826c328184cbebbe90db3f65"
+      "sha256": "a20b8ee8026adf836fb79ec6223314d9692db7f4c43e150669109bc921077438"
      },
      {
-      "line": 83,
+      "line": 61,
       "kind": "expect",
-      "sha256": "735ff47d07049887ff3360956d90e226592983e114b24b99fcc2e71f7033daaa"
+      "sha256": "cbeeb56369e8307a64536d5180a185cb2bbf00645e6a47d365fbb6c9adcf1627"
      }
     ],
     "modifiers": []

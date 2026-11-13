@@ -8,6 +8,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import type { ElectronApplication } from "playwright";
 import { createDesktopPinnedLoopbackAgent } from "../../../../../modules/adapters/transport/headless-loopback";
+import { readHeadlessAuthoringWireResult } from "../../../../../modules/contracts/headless";
 import { pickFormDesktopSystemEnvironment } from "./form-composer-desktop-profile";
 
 export function prepareHeadlessDesktopProfile() {
@@ -97,7 +98,7 @@ export async function exchangePairing(address: string, fingerprint: string, pair
   });
 }
 
-export async function connectMcp(address: string, fingerprint: string, credential: string) {
+export async function connectMcp(address: string, fingerprint: string, credential: string, onDroppedCommittedCreate?: () => void) {
   const client = new Client({ name: "packaged-headless-fixture", version: "1.0.0" });
   const transport = new StdioClientTransport({
     command: process.execPath, args: ["--import", "tsx", "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts"],
@@ -107,5 +108,38 @@ export async function connectMcp(address: string, fingerprint: string, credentia
   });
   try { await client.connect(transport); }
   catch { await client.close(); throw new Error("The owned MCP process did not connect."); }
+  if (onDroppedCommittedCreate) {
+    let createRequestId: string | number | undefined;
+    const send = transport.send.bind(transport);
+    transport.send = (message) => {
+      if ("id" in message && "method" in message && message.method === "tools/call" &&
+          message.params?.name === "aisb_create_system") createRequestId = message.id;
+      return send(message);
+    };
+    const receive = transport.onmessage;
+    transport.onmessage = (message) => {
+      if (createRequestId !== undefined && "id" in message && message.id === createRequestId &&
+          "result" in message && isCommittedCreateReply(message.result)) {
+        // Drop the committed reply for this exact request before the SDK can see it.
+        transport.send = send;
+        transport.onmessage = receive;
+        onDroppedCommittedCreate();
+        void client.close().catch(() => undefined);
+        return;
+      }
+      receive?.(message);
+    };
+  }
   return client;
+}
+
+function isCommittedCreateReply(result: unknown): boolean {
+  if (!result || typeof result !== "object" || !("content" in result) || !Array.isArray(result.content) ||
+      result.content.length !== 1) return false;
+  const [block] = result.content;
+  if (block?.type !== "text" || typeof block.text !== "string") return false;
+  try {
+    const reply = readHeadlessAuthoringWireResult(JSON.parse(block.text));
+    return reply.ok && reply.value.kind === "committed";
+  } catch { return false; }
 }
