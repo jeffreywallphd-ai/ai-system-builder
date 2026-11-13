@@ -1428,9 +1428,7 @@ export function SystemComposerStructureEditor({
                       >
                         <ApplicationIcon name={iconForComposerAsset(asset)} />
                         <strong>{asset.displayName}</strong>
-                        <span>
-                          {asset.assetType} / v{asset.version}
-                        </span>
+                        <span>{`${asset.assetType} / v${asset.version}`}</span>
                       </button>
                     </li>
                   ))}

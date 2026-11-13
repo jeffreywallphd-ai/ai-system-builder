@@ -331,6 +331,13 @@ results and all noncontrast incomplete checks fail. Initial and retry results,
 counts, source/profile digests and runtime identities remain in per-run JSON.
 No DOM, credentials, entered content or external script is retained/fetched.
 
+The managed browser picker showed two indeterminate contrast samples on the
+asset type and version labels at 1440 pixels. The same text rendered as one
+text node let the browser audit verify the labels. Keep that metadata in one
+text expression so the type, separator and version are measured together.
+The picker retains the same text, wrapping and colors. Unresolved samples
+still fail the host check.
+
 The regression exposed narrow nested-panel label/badge overlap, insufficient
 selected-tree detail contrast, unsupported preview labels and lost tree focus.
 The Canvas now wraps labels/actions and reduces nested padding on narrow screens;
