@@ -63,6 +63,12 @@ tests with the same installed test tools, even if PYTHON is missing or names
 another interpreter. Other profiles keep their existing environment behavior.
 The caller environment and the existing test and catalog time limits stay intact.
 
+The non-browser suite stages most Node tests as JavaScript. Its fixed
+source-fixture list runs separately from the original paths so those tests can
+read the real HTML, stylesheet, and host files beside their modules. Discovery,
+suite selection, Vitest ownership and process isolation are the same in both
+groups. The single suite report counts both groups and retains failures from either.
+
 ## Local configuration
 
 Copy `dev-tools/helpers/helpers.example.json` to an ignored location such as

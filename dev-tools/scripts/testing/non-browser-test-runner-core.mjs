@@ -133,12 +133,28 @@ export const createTestTimingTracker = ({ limit = 20 } = {}) => {
   };
 };
 
-export const buildNonBrowserNodeTestRunOptions = ({ files, cwd }) => ({
+export const buildNonBrowserNodeTestRunOptions = ({ files, cwd, originalSource = false }) => ({
   cwd,
   files: [...files],
   isolation: "process",
   concurrency: 4,
+  ...(originalSource ? {
+    // A source checkout can share dependencies through a junction. Resolve
+    // actual package locations so a renderer and its components share React.
+    execArgv: ["--no-preserve-symlinks", "--no-preserve-symlinks-main", "--import", "tsx"],
+  } : {}),
 });
+
+export const createNonBrowserSummary = () => ({
+  counts: { cancelled: 0, passed: 0, failed: 0, skipped: 0, suites: 0, tests: 0, todo: 0, topLevel: 0 },
+  durationMs: 0,
+  success: false,
+});
+
+export const mergeNonBrowserSummary = (target, lane) => {
+  for (const key of Object.keys(target.counts)) target.counts[key] += lane.counts[key];
+  target.durationMs += lane.durationMs;
+};
 
 const formatSerializedError = (error) => {
   if (!error || typeof error !== "object") {

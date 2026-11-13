@@ -13,14 +13,15 @@ import { run } from "node:test";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import {
-  applyDiagnosticSummaryMetric,
   buildNonBrowserNodeTestRunOptions,
   createNonBrowserAssetModule,
+  createNonBrowserSummary,
   createTestTimingTracker,
   formatNonBrowserFailureSummary,
   isNonBrowserAssetSource,
   isVitestOwnedTestSource,
   isSuccessfulNonBrowserRun,
+  mergeNonBrowserSummary,
   parseTestSuiteArgument,
   shouldIncludeTestFileForSuite,
 } from "./non-browser-test-runner-core.mjs";
@@ -69,8 +70,27 @@ const ignoredDirectories = new Set([
 ]);
 const transpileEligiblePattern = /\.[cm]?[jt]sx?$/i;
 const declarationFilePattern = /\.d\.[cm]?ts$/i;
+// These tests resolve real sources or fixtures beside the importing module.
+// Keep the list fixed; discovery and suite ownership still decide what runs.
+const sourceBoundTests = new Set([
+  "apps/desktop/src/renderer/tests/app-lazy-pages.ui.test.tsx",
+  "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedFormClient.unit.test.ts",
+  "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+  "dev-tools/scripts/qualification/tests/form-composer-host-definitions.unit.test.mjs",
+  "dev-tools/scripts/qualification/tests/managed-assets-restart-loader.unit.test.mjs",
+  "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts",
+  "dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts",
+  "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs",
+  "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts",
+  "dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs",
+  "dev-tools/scripts/qualification/tests/source-context-host-journey.unit.test.ts",
+  "dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs",
+  "dev-tools/scripts/qualification/visual-composer/tests/composer-protocol-evidence.unit.test.ts",
+  "modules/contracts/runtime/python-runtime-startup-diagnostics.unit.test.ts",
+]);
 
 const discoveredRuntimeTestFiles = [];
+const discoveredOriginalTestFiles = [];
 const discoveredSourceTestFiles = [];
 const runtimeToSourceFile = new Map();
 
@@ -84,20 +104,7 @@ const report = {
   configuredDiscoveryRoots: discoveryRoots,
   discoveredFileCount: 0,
   discoveredFiles: [],
-  summary: {
-    counts: {
-      cancelled: 0,
-      passed: 0,
-      failed: 0,
-      skipped: 0,
-      suites: 0,
-      tests: 0,
-      todo: 0,
-      topLevel: 0,
-    },
-    durationMs: 0,
-    success: false,
-  },
+  summary: createNonBrowserSummary(),
   slowestFiles: [],
   slowestTests: [],
   failures: [],
@@ -433,7 +440,11 @@ const walkAndBuildRuntime = (startPath) => {
       });
       if (!isOwnedByVitest && isSelected) {
         discoveredSourceTestFiles.push(normalizedSourcePath);
-        discoveredRuntimeTestFiles.push(path.resolve(runtimeAbsolutePath));
+        if (sourceBoundTests.has(normalizedSourcePath)) {
+          discoveredOriginalTestFiles.push(absolutePath);
+        } else {
+          discoveredRuntimeTestFiles.push(runtimeAbsolutePath);
+        }
       }
     }
   }
@@ -466,6 +477,7 @@ const discoverAndPrepareRuntime = () => {
   }
 
   discoveredRuntimeTestFiles.sort((left, right) => left.localeCompare(right));
+  discoveredOriginalTestFiles.sort((left, right) => left.localeCompare(right));
   discoveredSourceTestFiles.sort((left, right) => left.localeCompare(right));
   rewriteRuntimeImports(runtimeRoot);
 };
@@ -487,7 +499,7 @@ try {
   assertNoSourceTreeJavaScriptArtifacts(repoRoot);
   discoverAndPrepareRuntime();
 
-  if (discoveredRuntimeTestFiles.length === 0) {
+  if (discoveredSourceTestFiles.length === 0) {
     if (suite !== "ai") {
       throw new Error("No non-browser test files were discovered.");
     }
@@ -496,63 +508,58 @@ try {
     );
   }
 
-  const testsStream =
-    discoveredRuntimeTestFiles.length === 0
-      ? []
-      : run(
-          buildNonBrowserNodeTestRunOptions({
-            files: discoveredRuntimeTestFiles,
-            cwd: repoRoot,
-          }),
-        );
+  for (const [originalSource, files] of [
+    [false, discoveredRuntimeTestFiles],
+    [true, discoveredOriginalTestFiles],
+  ]) {
+    if (!files.length) continue;
+    let laneSummary;
+    const priorFailureCount = report.failures.length;
+    for await (const streamEvent of run(buildNonBrowserNodeTestRunOptions({ files, cwd: repoRoot, originalSource }))) {
+      const eventType = streamEvent?.type;
+      const event = streamEvent?.data ?? streamEvent;
 
-  for await (const streamEvent of testsStream) {
-    const eventType = streamEvent?.type;
-    const event = streamEvent?.data ?? streamEvent;
+      if (eventType === "test:pass" || eventType === "test:fail") {
+        timingTracker.record({
+          file: resolveSourcePath(event.file),
+          name: event.name,
+          nesting: event.nesting,
+          durationMs: event.details?.duration_ms,
+          status: eventType === "test:pass" ? "passed" : "failed",
+        });
+      }
 
-    if (eventType === "test:pass" || eventType === "test:fail") {
-      timingTracker.record({
-        file: resolveSourcePath(event.file),
-        name: event.name,
-        nesting: event.nesting,
-        durationMs: event.details?.duration_ms,
-        status: eventType === "test:pass" ? "passed" : "failed",
-      });
-    }
+      if (eventType === "test:summary" && event.file === undefined) {
+        laneSummary = { counts: event.counts, durationMs: event.duration_ms, success: event.success };
+      }
 
-    if (eventType === "test:diagnostic") {
-      const didApply = applyDiagnosticSummaryMetric(
-        report.summary,
-        event?.message,
-      );
-      if (didApply) {
-        continue;
+      if (eventType === "test:fail") {
+        report.failures.push({
+          name: event.name,
+          file: resolveSourcePath(event.file),
+          line: event.line,
+          column: event.column,
+          nesting: event.nesting,
+          testNumber: event.testNumber,
+          details: {
+            durationMs: event.details?.duration_ms,
+            type: event.details?.type,
+            error: serializeError(event.details?.error),
+          },
+        });
       }
     }
-
-    if (eventType === "test:fail") {
-      const sourceFile = resolveSourcePath(event.file);
-      report.failures.push({
-        name: event.name,
-        file: sourceFile,
-        line: event.line,
-        column: event.column,
-        nesting: event.nesting,
-        testNumber: event.testNumber,
-        details: {
-          durationMs: event.details?.duration_ms,
-          type: event.details?.type,
-          error: serializeError(event.details?.error),
-        },
-      });
-      continue;
+    if (!laneSummary) throw new Error("A non-browser test lane did not report its result.");
+    mergeNonBrowserSummary(report.summary, laneSummary);
+    if (!laneSummary.success && report.failures.length === priorFailureCount) {
+      throw new Error("A non-browser test lane failed without a test failure record.");
     }
   }
 
   report.summary.success = isSuccessfulNonBrowserRun({
     summary: report.summary,
     failures: report.failures,
-    discoveredCount: discoveredRuntimeTestFiles.length,
+    discoveredCount: discoveredSourceTestFiles.length,
     delegatedEmpty: suite === "ai",
   });
   const didFail = report.summary.success === false;

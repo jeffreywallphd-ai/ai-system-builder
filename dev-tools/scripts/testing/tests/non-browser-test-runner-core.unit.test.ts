@@ -10,11 +10,13 @@ import {
   buildNonBrowserNodeTestRunOptions,
   classifyTestFileSuite,
   createNonBrowserAssetModule,
+  createNonBrowserSummary,
   createTestTimingTracker,
   formatNonBrowserFailureSummary,
   isVitestOwnedTestSource,
   isSuccessfulNonBrowserRun,
   isNonBrowserAssetSource,
+  mergeNonBrowserSummary,
   parseTestSuiteArgument,
   shouldIncludeTestFileForSuite,
 } from "../non-browser-test-runner-core.mjs";
@@ -46,6 +48,26 @@ describe("non-browser test runner core helpers", () => {
     assert.notEqual(runOptions.files, files);
     assert.equal(runOptions.isolation, "process");
     assert.equal(runOptions.concurrency, 4);
+    assert.equal(runOptions.execArgv, undefined);
+    assert.deepEqual(
+      buildNonBrowserNodeTestRunOptions({ files, cwd: "C:/repo", originalSource: true }).execArgv,
+      ["--no-preserve-symlinks", "--no-preserve-symlinks-main", "--import", "tsx"],
+    );
+  });
+
+  it("keeps failures from both lanes visible even when the second lane passes", () => {
+    const report = createNonBrowserSummary();
+    const staged = createNonBrowserSummary();
+    Object.assign(staged.counts, { tests: 3, passed: 1, failed: 1, skipped: 1 });
+    staged.durationMs = 100;
+    const original = createNonBrowserSummary();
+    Object.assign(original.counts, { tests: 4, passed: 4 });
+    original.durationMs = 50;
+    mergeNonBrowserSummary(report, staged);
+    mergeNonBrowserSummary(report, original);
+    assert.deepEqual([report.counts.tests, report.counts.passed, report.counts.failed, report.counts.skipped], [7, 5, 1, 1]);
+    assert.equal(report.durationMs, 150);
+    assert.equal(isSuccessfulNonBrowserRun({ summary: report, failures: [], discoveredCount: 2 }), false);
   });
 
   it("executes files with separate globals and retains one/all denied child spawns", () => {
