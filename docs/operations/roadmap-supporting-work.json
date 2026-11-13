@@ -13121,7 +13121,22 @@
       "review_digest": "7fd8945bb6d6ba822c686f3ca64168b35b7d611203852224b107329e29d9af46",
       "scope": "The local Chromium Canvas case used Tab, Space, and Arrow Right to select all eight application layouts at 320 CSS pixels. Each choice kept keyboard focus after loading. The last layout survived save and reopen, and the element picker returned focus when closed.",
       "limitations": [
-        "This is evidence from the local thin-client fixture only. The managed browser and packaged Desktop runs for this layout case, actual 400 percent zoom, page-layout choices and the rest of production qualification remain pending. The managed run could not start because its local database engine was unavailable."
+        "This result covers the local browser at a narrow viewport. The separate packaged Windows result covers actual zoom. The managed browser run could not start because its local database engine was unavailable. Page-layout and broader production qualification remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "qualify-assets-layout-census-and-historical-witnesses",
+      "work_criteria": [
+        "census-records-exact-layout-and-form-definitions"
+      ],
+      "receipt_digest": "e9301202b3d16964b633bdc065797cf561dc9285f92546a263f25f99a1f6d26d",
+      "review_digest": "dc1da10a00b308fc2c13fc6cb71ca9dd6d7bac1f518eb9c8311e3cceed8787c6",
+      "scope": "The packaged Windows app passed the Canvas application-layout keyboard journey at actual 400 percent zoom. The test selected all eight layouts, checked focus after each update, saved and reopened the last layout in the same workspace after a renderer reload, and verified that Escape in the element picker restored focus. The isolated app closed at the end.",
+      "limitations": [
+        "This result covers application layouts on the packaged Windows app. The managed browser case remains unrun because its local database engine is unavailable. Page-layout and broader production qualification remain pending."
       ]
     }
   ]

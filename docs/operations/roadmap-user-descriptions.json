@@ -18675,12 +18675,34 @@
     },
     {
       "kind": "support-limitation",
-      "source_text_sha256": "3a8998b8b0e4e61617868b425aa11e13d4170370b7a0caa9675a3617bc0d0cc3",
+      "source_text_sha256": "7ebc3e04de034160558b2b06187f8d911338b4973029ade92703458bdf5171aa",
       "user_description": {
         "owner": "agent",
         "sentences": [
-          "The agent still needs to run this layout test in the managed browser and the packaged Desktop app.",
-          "The managed database could not start. The tests for page layouts, 400 percent zoom, and production qualification remain open."
+          "This result covers the local browser at a narrow width. The Windows app result below covers 400 percent zoom.",
+          "The managed database could not start. Tests for page layouts and production qualification remain open."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c4a2d4b3d9ba170a92d59719e59b11836b2308165626c33ae2e7f267284ac2fd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the packaged Windows app, the keyboard test moved through all eight Canvas application layouts at 400 percent zoom.",
+          "Each layout kept focus as it loaded. The last layout reopened after saving, and Escape closed the element picker and returned focus."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "aa7755e841e81f20e87f0f55574eb69f300b78cb735373dca1e0bb54c8dc1e19",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers application layouts in the Windows app.",
+          "The managed browser test still needs a working test database. Tests for page layouts and production qualification remain open."
         ]
       }
     }
