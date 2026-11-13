@@ -120,6 +120,11 @@ repair, the user can first save it in Composer; a headless batch cannot add
 that change without preview. This internal application path does not enable
 external writes until durable receipt and change delivery are available.
 
+The management contract names the exact installed template when creating a
+system. Rename and clone include the saved record and composition revision
+that the client read. All three requests require an idempotency key and explicit
+workspace. The internal decoder adds no write permissions or connector tools.
+
 Composer saves and upgrade previews use the record revision and exact
 composition revision captured when the draft was opened or saved. A newer list
 response does not advance that base. The Canvas keeps dirty content and undo
