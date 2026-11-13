@@ -3,6 +3,10 @@ import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import {
+  SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS,
+  SYSTEM_FOUNDATION_LAYOUT_PRESETS,
+} from "../../../../application/services/asset-packs/system-packs";
 import type {
   AssetInstance,
   AssetPlacement,
@@ -533,47 +537,57 @@ describe("SystemComposerStructureEditor interactions", () => {
 
   it("offers predefined layouts as a native single-choice gallery", async () => {
     const onSelect = vi.fn();
-    const standard = applicationLayout(
-      "builtin.layout.application.standard",
-      ["top-bar", "content"],
-      [["top-bar"], ["content"]],
-      "single",
-    );
-    const sidebar = applicationLayout(
-      "builtin.layout.application.navigation",
-      ["top-bar", "start-sidebar", "content"],
-      [
-        ["top-bar", "top-bar"],
-        ["start-sidebar", "content"],
-      ],
-      "start-content",
-    );
-
-    render(
-      <SystemLayoutGallery
-        layouts={[standard, sidebar]}
-        selectedDefinitionId={standard.definitionId}
+    const presets = SYSTEM_FOUNDATION_LAYOUT_PRESETS.filter((preset) => preset.kind === "application-shell");
+    const layouts = presets.map((preset) => ({
+      ...applicationLayout(preset.presetId, preset.sourceOrder, preset.responsive.regular.areas, preset.responsive.regular.columnPattern),
+      displayName: preset.displayName,
+      slots: preset.slots,
+    }));
+    function LayoutFixture({ disabled = false }: { disabled?: boolean }) {
+      const [selected, setSelected] = useState(layouts[0]!.definitionId);
+      return <SystemLayoutGallery
+        layouts={layouts}
+        selectedDefinitionId={selected}
+        disabled={disabled}
+        mode="change"
         compact
-        onSelect={onSelect}
-      />,
-    );
+        hideLegend
+        onSelect={(layout) => { onSelect(layout); setSelected(layout.definitionId); }}
+      />;
+    }
+    render(<LayoutFixture />);
 
     const choices = Array.from(
       container!.querySelectorAll<HTMLInputElement>(
         'input[name="system-layout"]',
       ),
     );
-    expect(choices).toHaveLength(2);
+    expect(choices.map((choice) => choice.value)).toEqual(SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS);
+    expect(container!.querySelector("fieldset > legend")?.textContent).toBe("Layout");
     expect(choices[0]?.checked).toBe(true);
-    expect(
-      container!.querySelector<HTMLElement>(
-        '[data-layout-area="start-sidebar"]',
-      )?.style.gridArea,
-    ).toBe("start-sidebar");
-    await act(async () => {
-      choices[1]?.click();
-    });
-    expect(onSelect).toHaveBeenCalledWith(sidebar);
+
+    for (const [index, choice] of choices.entries()) {
+      const layout = layouts[index]!;
+      expect(choice.type).toBe("radio");
+      const label = choice.labels?.[0];
+      expect(label?.querySelector("strong")?.textContent).toBe(layout.displayName);
+      expect(label?.querySelector("[aria-hidden=true]")).toBe(choice.nextElementSibling);
+      const regions = Array.from(label?.querySelectorAll<HTMLElement>("[data-layout-area]") ?? []);
+      expect(regions.map((region) => region.style.gridArea)).toEqual(presets[index]!.sourceOrder);
+      choice.focus();
+      expect(document.activeElement).toBe(choice);
+      if (index > 0) {
+        await click(choice);
+        expect(onSelect).toHaveBeenLastCalledWith(layout);
+      }
+      expect(choices.filter((item) => item.checked)).toEqual([choice]);
+    }
+
+    await act(async () => root!.render(<LayoutFixture disabled />));
+    expect(choices.every((choice) => choice.matches(":disabled"))).toBe(true);
+    await click(choices[0]!);
+    expect(onSelect).toHaveBeenCalledTimes(layouts.length - 1);
+    expect(choices.at(-1)?.checked).toBe(true);
   });
 
   it("loads layouts on demand and adds compatible elements through a container-scoped modal", async () => {
