@@ -101,6 +101,12 @@
     "brace-expansion": "$brace-expansion",
     "tar": "7.5.22",
     "tmp": "0.2.7",
+    "@electron/packager": {
+      "@electron/asar": "4.3.2"
+    },
+    "@electron/universal": {
+      "@electron/asar": "4.3.2"
+    },
     "@electron/get": {
       "undici": "7.30.1"
     }

@@ -49,6 +49,13 @@ upstream interface directly.
 
 ## Advisory policy
 
+The Windows packaging tools pin the original-supplier
+[ASAR 4.3.2 release](https://github.com/electron/asar/releases/tag/v4.3.2) only
+beneath Electron Packager and Universal. Its dependencies bring in the repaired
+glob and minimatch releases. ASAR 3.x consumers, Forge and Electron keep their
+existing versions. The lockfile owns the exact resolved tree. Run both dependency
+audits, build a production desktop package, and exercise it after changing this pin.
+
 The maintained HTTP dependency boundary pins original-supplier `body-parser`
 `2.4.0` and scopes original-supplier Undici `7.30.1` to `@electron/get`.
 Compatible 6.x consumers keep their supported major; Forge and Electron pins
