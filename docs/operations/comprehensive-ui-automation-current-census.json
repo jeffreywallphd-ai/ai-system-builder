@@ -12521,171 +12521,183 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "455fe02945d95f943385111e118e0b3da92abcf50874d96102c6f80c0f1ff2a4",
-    "bytes": 36766,
+    "sha256": "a94eff0f66dc41d0fb446425aeabaf0564cbfd8bd3deebf80686cbe27f814f59",
+    "bytes": 40750,
     "cases": [
      {
-      "name": "reports a rejected initial read through notifications and can retry",
+      "name": "keeps a focused row and a user preview during a passive saved-state refresh",
       "line": 55
      },
      {
+      "name": "does not remove an expanded page or shift its focus during a passive refresh",
+      "line": 83
+     },
+     {
+      "name": "keeps a focused system when a passive page would push its row out of view",
+      "line": 103
+     },
+     {
+      "name": "reports a rejected initial read through notifications and can retry",
+      "line": 119
+     },
+     {
       "name": "does not append an old workspace page into the new workspace",
-      "line": 65
+      "line": 129
      },
      {
       "name": "admits only one clone command before the busy render",
-      "line": 86
+      "line": 150
      },
      {
       "name": "recovers from a rejected %s request without losing retry",
-      "line": 107
+      "line": 171
      },
      {
       "name": "retries a failed page with its exact cursor and deduplicates returned systems",
-      "line": 137
+      "line": 201
      },
      {
       "name": "rejects a held page after %s replacement",
-      "line": 155
+      "line": 219
      },
      {
       "name": "does not open a former preview after %s replacement",
-      "line": 180
+      "line": 244
      },
      {
       "name": "keeps a late %s acknowledgement out of the replacement workspace",
-      "line": 196
+      "line": 260
      },
      {
       "name": "does not describe a saved clone as failed when the refresh callback throws",
-      "line": 217
+      "line": 281
      },
      {
       "name": "does not let an obsolete page failure clear a newer paging request",
-      "line": 229
+      "line": 293
      },
      {
       "name": "retains an accepted restore across a search change in the same workspace",
-      "line": 255
+      "line": 319
      },
      {
       "name": "keeps the accepted %s confirmation locked before busy state renders",
-      "line": 275
+      "line": 339
      },
      {
       "name": "retires an old mutation at commit before passive cleanup runs",
-      "line": 296
+      "line": 360
      },
      {
       "name": "retires an old preview at query commit before passive effects run",
-      "line": 312
+      "line": 376
      },
      {
       "name": "keeps a committed pending clone when a client replacement render is abandoned",
-      "line": 327
+      "line": 391
      },
      {
       "name": "does not dispatch an initial read after retirement before the first promise turn",
-      "line": 353
+      "line": 417
      },
      {
       "name": "does not dispatch preview reads after retirement before the first promise turn",
-      "line": 364
+      "line": 428
      },
      {
       "name": "contains synchronous and parallel preview failures and permits retry",
-      "line": 372
+      "line": 436
      },
      {
       "name": "preserves an actionable typed revision denial and keeps archive retry available",
-      "line": 386
+      "line": 450
      },
      {
       "name": "lists systems, previews the exact revision, and hands a system to Compose",
-      "line": 400
+      "line": 464
      },
      {
       "name": "duplicates and archive-deletes without discarding immutable history",
-      "line": 439
+      "line": 503
      },
      {
       "name": "restores an archived system from the same management list",
-      "line": 484
+      "line": 548
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "renderWorkspace",
-      "line": 508
+      "line": 572
      },
      {
       "name": "renderScope",
-      "line": 516
-     },
-     {
-      "name": "deferred",
-      "line": 524
-     },
-     {
-      "name": "button",
-      "line": 530
-     },
-     {
-      "name": "dialogContaining",
-      "line": 538
-     },
-     {
-      "name": "managementItem",
-      "line": 548
-     },
-     {
-      "name": "systemRevision",
       "line": 580
      },
      {
+      "name": "deferred",
+      "line": 588
+     },
+     {
+      "name": "button",
+      "line": 594
+     },
+     {
+      "name": "dialogContaining",
+      "line": 602
+     },
+     {
+      "name": "managementItem",
+      "line": 612
+     },
+     {
+      "name": "systemRevision",
+      "line": 644
+     },
+     {
       "name": "managementPage",
-      "line": 606
+      "line": 670
      },
      {
       "name": "systemClient",
-      "line": 621
+      "line": 685
      },
      {
       "name": "systemRecord",
-      "line": 648
+      "line": 712
      },
      {
       "name": "searchFor",
-      "line": 664
+      "line": 728
      },
      {
       "name": "SuspendReplacement",
-      "line": 670
+      "line": 734
      }
     ],
-    "assertionCount": 101,
-    "assertionDigest": "6c0cc688188fb9f10d827b1e5f7013eca4ddb0017bd40566e271e996ea87b2ac",
+    "assertionCount": 115,
+    "assertionDigest": "dfe2eda84d46284eee363f34c640085d359213d0907309aec59e5457549ea3e1",
     "assertionExamples": [
      {
-      "line": 59,
-      "kind": "expect",
-      "sha256": "9e8b43a8a3d5634562824a024a40305a40ba79f7b657c166a9e21e8a10117292"
-     },
-     {
       "line": 60,
-      "kind": "expect",
-      "sha256": "8a9df415c02f3a0d904f8e205e3175ec67ad85544956dfedef0ab14d605f43b7"
-     },
-     {
-      "line": 62,
       "kind": "expect",
       "sha256": "d803dc3a60a748fb9f17fefa75c93a516625695f8a2c61dd6c316e8fe492312a"
      },
      {
-      "line": 79,
+      "line": 68,
       "kind": "expect",
-      "sha256": "1947bce10fa8459e45ec36b637b7ba24898ddc38e4478d4834e91919104aec4d"
+      "sha256": "f6dcb8abd1749b66a12773ccb901f4477a8eedc4494061bef88c11a6eb613bc9"
+     },
+     {
+      "line": 69,
+      "kind": "expect",
+      "sha256": "37ca3b2397de19afb47eee1c7a9a4e13697ab67ad7de2efc6748ae82bd55577f"
+     },
+     {
+      "line": 71,
+      "kind": "expect",
+      "sha256": "2d61159d3dbf454f33652f0f080f90391d5c04fad23e519876cae91ad38b3c26"
      }
     ],
     "modifiers": []
@@ -17426,7 +17438,7 @@
     "Compose",
     "Publish"
    ],
-   "sha256": "18fa6e8023f6e607273455aab60c6a8dd2eab35ad68505d45d074ad61a101216",
+   "sha256": "b45ee0b19c41634bf3d912a950f1f24d699a358823e07470f5cefb910a11e0d0",
    "surface_key": "systemsTabs"
   },
   {

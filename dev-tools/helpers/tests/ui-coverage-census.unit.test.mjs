@@ -796,6 +796,26 @@ const reviewedHeadlessPassiveRefreshCensus = Object.freeze({
 });
 
 function beforeDesktopImageLabelCensus(map, result) {
+  // This page changed how it refreshes, but its tabs and qualifications did not.
+  if (sha(JSON.stringify(map)) === "0e3adf3631d4f9dc03f0021e75685037f343ec8f03fd297753665875e99149d7") {
+    const previous = JSON.parse(historicalSource("507533ef743355842cb5ce4e4038d801926bf5df", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), reviewedHeadlessPassiveRefreshCensus.after);
+    const expected = structuredClone(previous);
+    const row = expected.inventories.find(item => item.source === "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx");
+    assert.equal(row.sha256, "18fa6e8023f6e607273455aab60c6a8dd2eab35ad68505d45d074ad61a101216");
+    row.sha256 = "b45ee0b19c41634bf3d912a950f1f24d699a358823e07470f5cefb910a11e0d0";
+    const path = "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx";
+    const original = expected.sources.find(item => item.path === path);
+    const actual = map.sources.find(item => item.path === path);
+    assert.equal(actual.committed_sha256, original.committed_sha256);
+    assert.equal(actual.facts.sha256, "a94eff0f66dc41d0fb446425aeabaf0564cbfd8bd3deebf80686cbe27f814f59");
+    assert.equal(sha(JSON.stringify(actual.facts)), "199153abe35ff4fbfb5c4568a6f5f10c32ad6e7b9b857a24a7aab2f85f3aca9d");
+    original.facts = structuredClone(actual.facts);
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    map = previous;
+    result = {...result, gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(previous)]};
+  }
   ({map, result} = verifyExactLayoutCensus(map, result, reviewedHeadlessPassiveRefreshCensus));
   ({map, result} = verifyExactLayoutCensus(map, result, reviewedHeadlessDraftCensus));
   if (sha(JSON.stringify(map)) === reviewedBrowserModalCensus.after) {

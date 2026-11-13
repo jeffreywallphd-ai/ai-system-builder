@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   SystemBuilderWorkspace,
   SystemManagementWorkspace,
@@ -12,6 +12,8 @@ import type {
 } from "../../../../../modules/contracts/system-builder";
 import { TabbedPanel } from "../components/ui/TabbedPanel";
 import { createDesktopSystemBuilderClient } from "../features/system-builder/api/desktopSystemBuilderClient";
+import { observeDesktopSavedSystems } from "../features/system-builder/api/observeDesktopSavedSystems";
+import { getDesktopApi } from "../lib/desktopApi";
 import { createDesktopSystemBuildClient } from "../features/system-builder/api/desktopSystemBuildClient";
 import { createDesktopSystemPublishedLifecycleClient } from "../features/system-builder/api/desktopSystemPublishedLifecycleClient";
 import { createDesktopSystemPublishedFormClient } from "../features/system-builder/api/desktopSystemPublishedFormClient";
@@ -34,6 +36,15 @@ export function SystemBuilderPage({
   const [activeTabId, setActiveTabId] = useState("compose");
   const [composeSystemId, setComposeSystemId] = useState<string>();
   const [activeSystemsRevision, setActiveSystemsRevision] = useState(0);
+  useEffect(() => {
+    const api = getDesktopApi();
+    if (activeTabId === "publish" || !api.readSystemBuilderChangeWatermark) return;
+    return observeDesktopSavedSystems({
+      visibility: document,
+      read: () => api.readSystemBuilderChangeWatermark!(workspaceId),
+      changed: () => setActiveSystemsRevision((current) => current + 1),
+    });
+  }, [workspaceId, activeTabId === "publish"]);
   const [buildTarget, setBuildTarget] = useState<{
     readonly system: SystemBuilderRecord;
     readonly revision: SystemBuilderRevision;
@@ -61,6 +72,7 @@ export function SystemBuilderPage({
               <SystemManagementWorkspace
                 workspaceId={workspaceId}
                 client={client}
+                activeSystemsRevision={activeSystemsRevision}
                 onOpenInCompose={(systemId) => {
                   setComposeSystemId(systemId);
                   setActiveTabId("compose");

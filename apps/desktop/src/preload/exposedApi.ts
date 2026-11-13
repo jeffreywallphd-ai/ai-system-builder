@@ -1,5 +1,5 @@
 import { DESKTOP_RUNTIME_READINESS_READ_LATEST_FOR_COMPOSITION_PLAN_REQUEST_CHANNEL, DESKTOP_RUNTIME_READINESS_READ_DETAIL_REQUEST_CHANNEL } from "../../../../modules/contracts/ipc";
-import { DESKTOP_HEADLESS_PAIRING_CHANNELS, readDesktopHeadlessPairingStatus, type DesktopHeadlessClientAccess, type DesktopHeadlessPairingResult, type DesktopHeadlessPairingStatus, type DesktopHeadlessRevokeResult, type DesktopHeadlessStartResult } from "../../../../modules/contracts/headless";
+import { DESKTOP_HEADLESS_PAIRING_CHANNELS, DESKTOP_SYSTEM_CHANGE_POLL_CHANNEL, readDesktopHeadlessPairingStatus, readDesktopSystemChangePoll, readDesktopSystemChangeWatermark, type DesktopHeadlessClientAccess, type DesktopHeadlessPairingResult, type DesktopHeadlessPairingStatus, type DesktopHeadlessRevokeResult, type DesktopHeadlessStartResult, type DesktopSystemChangeWatermark } from "../../../../modules/contracts/headless";
 import { normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary, type ReadWorkspaceSummaryRequest } from "../../../../modules/contracts/workspace";
 import { createDesktopWorkspaceSummaryRequest, DESKTOP_WORKSPACE_SUMMARY_OPERATION, DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, type DesktopWorkspaceSummaryResponse } from "../../../../modules/contracts/ipc";
 import {
@@ -757,6 +757,7 @@ type DesktopSystemDeploymentContextInput = {
 export interface DesktopPreloadApi {
   memoryDiagnosticsEnabled: boolean;
   readHeadlessPairingStatus: () => Promise<DesktopHeadlessPairingStatus>;
+  readSystemBuilderChangeWatermark: (workspaceId: string) => Promise<DesktopSystemChangeWatermark>;
   startHeadlessConnector: () => Promise<DesktopHeadlessStartResult>;
   beginHeadlessPairing: (workspaceId: string, access?: DesktopHeadlessClientAccess) => Promise<DesktopHeadlessPairingResult>;
   revokeHeadlessClient: (clientId: string) => Promise<DesktopHeadlessRevokeResult>;
@@ -2112,6 +2113,10 @@ export function createDesktopPreloadApi(
     memoryDiagnosticsEnabled: dependencies.memoryDiagnosticsEnabled === true,
     async readHeadlessPairingStatus() {
       return readDesktopHeadlessPairingStatus(await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.status, null));
+    },
+    async readSystemBuilderChangeWatermark(workspaceId) {
+      if (!readDesktopSystemChangePoll({ workspaceId })) return { status: "unavailable" };
+      return readDesktopSystemChangeWatermark(await dependencies.ipcRenderer.invoke(DESKTOP_SYSTEM_CHANGE_POLL_CHANNEL, { workspaceId }));
     },
     async startHeadlessConnector() {
       const result = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.start, null);

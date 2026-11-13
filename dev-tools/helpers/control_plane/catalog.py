@@ -104,6 +104,14 @@ HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES = (
     "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
 )
 HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES = HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES + (
+    "apps/desktop/src/renderer/features/system-builder/api/observeDesktopSavedSystems.ts",
+    "apps/desktop/src/renderer/features/system-builder/api/observeDesktopSavedSystems.unit.test.ts",
+    "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+    "modules/contracts/headless/desktop-system-change-poll.ts",
+    "modules/hosts/desktop/composition/registerDesktopSystemChangePoll.ts",
+    "modules/hosts/desktop/composition/tests/desktop-system-change-poll.unit.test.ts",
+    "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
+    "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
     "modules/adapters/persistence/system-builder/createStructuredHeadlessOperationStore.ts",
     "modules/hosts/desktop/composition/composeDesktopHeadlessAuthoring.ts",
     "modules/hosts/desktop/composition/composeDesktopHost.ts",
@@ -605,6 +613,8 @@ def definitions(root: Path) -> list[dict]:
                   "apps/desktop/src/main/tests/desktop-headless-pairing-ipc.unit.test.ts",
                   "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
                   "modules/hosts/desktop/composition/tests/desktop-headless-authoring.unit.test.ts",
+                  "modules/hosts/desktop/composition/tests/desktop-system-change-poll.unit.test.ts",
+                  "apps/desktop/src/renderer/features/system-builder/api/observeDesktopSavedSystems.unit.test.ts",
                   "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
                   "modules/adapters/security/headless/tests/desktop-headless-client-authority.unit.test.ts",
                   "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts"],

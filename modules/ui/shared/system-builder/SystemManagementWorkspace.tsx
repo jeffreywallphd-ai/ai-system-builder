@@ -18,6 +18,7 @@ export interface SystemManagementWorkspaceProps {
   readonly client: SystemBuilderClient;
   readonly onOpenInCompose: (systemId: string) => void;
   readonly onActiveSystemsChanged?: () => void;
+  readonly activeSystemsRevision?: number;
 }
 
 interface PreviewState {
@@ -70,6 +71,7 @@ function SystemManagementSession({
   client,
   onOpenInCompose,
   onActiveSystemsChanged,
+  activeSystemsRevision = 0,
 }: SystemManagementWorkspaceProps) {
   const [items, setItems] = useState<readonly SystemBuilderManagementItem[]>(
     [],
@@ -94,6 +96,10 @@ function SystemManagementSession({
   const cancelDeleteRef = useRef<HTMLButtonElement>(null);
   const cancelCloneRef = useRef<HTMLButtonElement>(null);
   const requestSequence = useRef(0);
+  const lastRequestedOwner = useRef<ManagementQueryOwner>();
+  const renderedOwner = useRef<ManagementQueryOwner>();
+  const expandedOwner = useRef<ManagementQueryOwner>();
+  const tableRegion = useRef<HTMLDivElement>(null);
 
   const mounted = useRef(false);
   const queryOwner = useRef<ManagementQueryOwner>({active: false});
@@ -145,10 +151,17 @@ function SystemManagementSession({
   }, [appliedSearchText, client, refreshToken, sort, view, workspaceId]);
 
   useEffect(() => {
-    const requestId = ++requestSequence.current;
     const owner = queryOwner.current;
+    const passive = lastRequestedOwner.current === owner;
+    // Never collapse a user-expanded slice or interrupt an admitted page read.
+    // The next deliberate search, filter, or Refresh loads current page one.
+    if (passive && (expandedOwner.current === owner || pendingPage.current)) return;
+    const requestId = ++requestSequence.current;
+    const background = passive && renderedOwner.current === owner;
+    lastRequestedOwner.current = owner;
     const current = () => mounted.current && owner.active && queryOwner.current === owner && requestId === requestSequence.current;
-    setError(undefined);
+    if (!background) setError(undefined);
+    if (background) { pendingPage.current = undefined; setLoadingMore(false); }
     void Promise.resolve().then(async () => {
       if (!current()) return;
       const result = await client.listManagement({
@@ -157,20 +170,27 @@ function SystemManagementSession({
     });
       if (!current()) return;
       if (result.ok) {
+        const focusedRow = document.activeElement?.closest<HTMLTableRowElement>("tr[data-saved-system]");
+        const focusedId = focusedRow?.dataset.savedSystem;
+        if (background && focusedRow && tableRegion.current?.contains(focusedRow) && focusedId &&
+            items.some((item) => item.systemId === focusedId) &&
+            !result.value.items.some((item) => item.systemId === focusedId)) return;
+        renderedOwner.current = owner;
         setItems(result.value.items);
         setTotalCount(result.value.totalCount);
         setNextCursor(result.value.nextCursor);
       } else {
+        if (background) return;
         setItems([]); setTotalCount(0); setNextCursor(undefined);
         setError(result.error.message);
       }
     }).catch(() => {
-      if (!current()) return;
+      if (!current() || background) return;
       setItems([]); setTotalCount(0); setNextCursor(undefined);
       setError("Could not load systems. Select Refresh to try again.");
     }).finally(() => {if (current()) setLoading(false);});
     return () => {if (requestSequence.current === requestId) requestSequence.current++;};
-  }, [appliedSearchText, client, refreshToken, sort, view, workspaceId]);
+  }, [activeSystemsRevision, appliedSearchText, client, refreshToken, sort, view, workspaceId]);
 
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -195,6 +215,7 @@ function SystemManagementSession({
       });
       if (!current()) return;
       if (result.ok) {
+        if (result.value.items.length > 0) expandedOwner.current = owner;
         setItems((existing) => {
           const knownIds = new Set(existing.map(item => String(item.systemId)));
           const added = result.value.items.filter(item => {
@@ -369,7 +390,7 @@ function SystemManagementSession({
           </p>
         </div>
       ) : (
-        <div className="system-management__table-region">
+        <div className="system-management__table-region" ref={tableRegion}>
           <table className="ui-table system-management__table">
             <caption>
               Showing {items.length} of {totalCount} matching systems
@@ -388,7 +409,7 @@ function SystemManagementSession({
                 const systemId = String(item.systemId);
                 const busy = Boolean(busySystemId);
                 return (
-                  <tr key={systemId}>
+                  <tr key={systemId} data-saved-system={systemId}>
                     <td data-label="System">
                       <div className="ui-stack ui-stack--xs">
                         <strong>{item.name}</strong>

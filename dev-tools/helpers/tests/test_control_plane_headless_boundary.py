@@ -81,6 +81,10 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         host = "modules/hosts/desktop/composition/composeDesktopHost.ts"
         self.assertIn("focused-tests", self.plan([activation, host]))
         self.assertNotIn("focused-tests", self.plan([activation, host], check))
+        feed = "modules/hosts/desktop/composition/registerDesktopSystemChangePoll.ts"
+        self.assertIn("focused-tests", self.plan([feed]))
+        self.assertNotIn("focused-tests", self.plan([feed], check))
+        self.assertIn("modules/hosts/desktop/composition/tests/desktop-system-change-poll.unit.test.ts", self.plan([feed], check)[check]["argv"])
 
     def test_mcp_checks_are_exact_and_preserve_other_transport_coverage(self):
         mcp = "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts"

@@ -89,9 +89,17 @@ shares the System Builder repository. Its owning SQLite transaction rereads
 the workspace and membership before writing or returning a stored receipt.
 The transaction saves the record, receipt and change together. The connector
 closes before platform persistence.
-The stdio MCP adapter currently forwards its finite read catalog to the running connector, authenticating
+The stdio MCP adapter forwards its finite read catalog and optional authoring tools to the running connector, authenticating
 the endpoint with the certificate fingerprint from desktop Settings. Managed parity
 remains pending.
+
+The visible desktop Systems view polls only its authorized workspace's
+committed change sequence. It refreshes Manage and Compose when the sequence
+changes. It stops polling in hidden views and does not choose a system,
+change focus or send draft data. IPC rechecks workspace and frame authority
+before returning the sequence. A passive update leaves expanded Manage pages
+and a focused row that would disappear in place. The next explicit search
+or refresh loads the current first page.
 
 - Owns server process lifecycle and composition.
 - Uses transport adapters (default: Express) for API exposure.

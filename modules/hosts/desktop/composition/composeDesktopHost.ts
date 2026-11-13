@@ -8,6 +8,7 @@ import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
 import { asyncLazyObject } from "./lazyProxy";
 import { composeDesktopHeadlessReads, type DesktopHeadlessReadHandler } from "./composeDesktopHeadlessReads";
 import { composeDesktopHeadlessAuthoring } from "./composeDesktopHeadlessAuthoring";
+import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
 import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
 import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
 import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
@@ -2167,6 +2168,12 @@ export function composeDesktopHost(
             isOpen: () => !headlessReadAdmissionClosed,
           });
           if (organizationDocuments?.organizationId === identity.organizationId) {
+            registerDesktopSystemChangePoll({
+              ipcMain: registerOptions.ipcMain, senderTrust: registerOptions.senderTrust,
+              workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+              documents: organizationDocuments, organizationId: identity.organizationId,
+              isOpen: () => !headlessReadAdmissionClosed,
+            });
             headlessConnection = composeDesktopHeadlessConnection({
               documents: organizationDocuments,
               identity,

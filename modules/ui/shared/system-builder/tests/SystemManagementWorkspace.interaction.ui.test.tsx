@@ -52,6 +52,70 @@ afterEach(async () => {
 
 describe("SystemManagementWorkspace", () => {
 
+  it("keeps a focused row and a user preview during a passive saved-state refresh", async () => {
+    const item = managementItem();
+    const client = systemClient({ item, revision: systemRevision() });
+    const open = vi.fn();
+    await renderWorkspace(client, open);
+    await vi.waitFor(() => expect(container?.textContent).toContain("Customer portal"));
+    const preview = deferred<Awaited<ReturnType<SystemBuilderClient["readRevision"]>>>();
+    const list = deferred<Awaited<ReturnType<SystemBuilderClient["listManagement"]>>>();
+    vi.mocked(client.readRevision).mockReturnValueOnce(preview.promise);
+    vi.mocked(client.listManagement).mockReturnValueOnce(list.promise);
+    const focus = button(container!, "Open in Compose");
+    focus.focus();
+    await renderScope("workspace-a", client, open, undefined, 1);
+    expect(container!.querySelector("table")).not.toBeNull();
+    expect(document.activeElement).toBe(focus);
+    await act(async () => list.resolve(await managementPage([{ ...item, name: "Updated portal" }])));
+    expect(container?.textContent).toContain("Updated portal");
+    expect(document.activeElement).toBe(focus);
+    const later = deferred<Awaited<ReturnType<SystemBuilderClient["listManagement"]>>>();
+    vi.mocked(client.listManagement).mockReturnValueOnce(later.promise);
+    await act(async () => button(container!, "Preview").click());
+    await renderScope("workspace-a", client, open, undefined, 2);
+    await act(async () => later.resolve(await managementPage([{ ...item, name: "Latest portal" }])));
+    await act(async () => preview.resolve({ ok: true, value: systemRevision() }));
+    await dialogContaining("Updated portal");
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it("does not remove an expanded page or shift its focus during a passive refresh", async () => {
+    const first = managementItem();
+    const second = { ...first, systemId: "system-second" as never, name: "Second page system" };
+    const client = systemClient({ item: first, revision: systemRevision() });
+    vi.mocked(client.listManagement).mockImplementation(async (query) => {
+      const result = await managementPage(query.cursor ? [second] : [first]);
+      return { ...result, value: { ...result.value, totalCount: 2, nextCursor: query.cursor ? undefined : "next-page" } };
+    });
+    await renderWorkspace(client, vi.fn());
+    await act(async () => button(container!, "Load more systems").click());
+    await vi.waitFor(() => expect(container?.textContent).toContain(second.name));
+    const secondRow = Array.from(container!.querySelectorAll("tr")).find((row) => row.textContent?.includes(second.name))!;
+    const focus = button(secondRow, "Open in Compose");
+    focus.focus();
+    await renderScope("workspace-a", client, vi.fn(), undefined, 1);
+    expect(container?.textContent).toContain(second.name);
+    expect(document.activeElement).toBe(focus);
+    expect(client.listManagement).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps a focused system when a passive page would push its row out of view", async () => {
+    const first = managementItem();
+    const replacement = { ...first, systemId: "system-other" as never, name: "New first result" };
+    const client = systemClient({ item: first, revision: systemRevision() });
+    await renderWorkspace(client, vi.fn());
+    const focus = button(container!, "Open in Compose");
+    focus.focus();
+    vi.mocked(client.listManagement).mockImplementation(() => managementPage([replacement]));
+    await renderScope("workspace-a", client, vi.fn(), undefined, 1);
+    await vi.waitFor(() => expect(client.listManagement).toHaveBeenCalledTimes(2));
+    expect(container?.textContent).toContain(first.name);
+    expect(document.activeElement).toBe(focus);
+    await act(async () => button(container!, "Refresh").click());
+    await vi.waitFor(() => expect(container?.textContent).toContain(replacement.name));
+  });
+
   it("reports a rejected initial read through notifications and can retry", async () => {
     const client = systemClient({item: managementItem(), revision: systemRevision()});
     vi.mocked(client.listManagement).mockRejectedValueOnce(new Error("synthetic transport details"));
@@ -514,11 +578,11 @@ async function renderWorkspace(
 }
 
 async function renderScope(workspaceId: string, client: SystemBuilderClient,
-  onOpenInCompose: (systemId: string) => void = () => {}, onActiveSystemsChanged?: () => void) {
+  onOpenInCompose: (systemId: string) => void = () => {}, onActiveSystemsChanged?: () => void, activeSystemsRevision?: number) {
   if (!container) {container = document.createElement("div"); document.body.append(container); root = createRoot(container);}
   await act(async () => root?.render(<NotificationTestHarness><SystemManagementWorkspace
     workspaceId={workspaceId} client={client} onOpenInCompose={onOpenInCompose}
-    onActiveSystemsChanged={onActiveSystemsChanged} /></NotificationTestHarness>));
+    onActiveSystemsChanged={onActiveSystemsChanged} activeSystemsRevision={activeSystemsRevision} /></NotificationTestHarness>));
 }
 
 function deferred<T>() {
