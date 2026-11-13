@@ -23,6 +23,29 @@
         "Focused read decoder and denial cases, TypeScript ES2021, documentation, architecture, agent support"
       ],
       "title": "Set the headless trust and tool boundaries"
+    },
+    {
+      "areas": [
+        "Desktop Settings and consent",
+        "Desktop loopback transport and local MCP"
+      ],
+      "chunkId": "shared-desktop-connector",
+      "completedAt": "2026-11-13T17:51:55Z",
+      "criteriaIds": [
+        "same-host-and-finite-tool-boundary",
+        "security-headless-reviewed"
+      ],
+      "documentation": [
+        "ADR-0047, host model, threat model and transport guides."
+      ],
+      "feedbackAddressed": [],
+      "id": "headless-authoring-and-synchronization-shared-desktop-connector",
+      "incrementId": "headless-authoring-and-synchronization",
+      "summary": "Added native-consented client pairing, current-workspace read authorization, and a pinned local desktop connection for standard MCP clients. Independently accepted checkpoint 3c43ae4245f4429102a97949840a7c4c8551032f, receipt 922cc1214256ff0f4320137d30dad3344f7323cb666c4421f4a1b8c6c67a15ec and review d13dd86293348212f765990fa46e8740301ec8565c7aa01df8f0b64b10790783. Packaged client and latency qualification remain pending.",
+      "tests": [
+        "Seven focused checks passed, including real official stdio, replacement peer denial, activation, and locked dependencies."
+      ],
+      "title": "Connect to the running desktop app"
     }
   ],
   "completion": null,
@@ -382,6 +405,12 @@
       "recordedAt": "2026-11-13T16:03:43Z",
       "sequence": 15,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "dec583c7df7ffb86d22a4762d4e99f31ff0378cea043fe4e680a66a3288d8119",
+      "recordedAt": "2026-11-13T17:51:55Z",
+      "sequence": 16,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -441,7 +470,8 @@
       "allowPendingQualification": true,
       "completedAt": null,
       "completedChunks": [
-        "authority-and-finite-contract"
+        "authority-and-finite-contract",
+        "shared-desktop-connector"
       ],
       "deliverables": [
         "Successor ADR for desktop connector/delegation and shared authority, plus updates to decision readiness, host model, System Builder, persistence, security threat/control guidance and relevant README/context sources.",
@@ -828,5 +858,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-13T16:03:43Z"
+  "updatedAt": "2026-11-13T17:51:55Z"
 }
