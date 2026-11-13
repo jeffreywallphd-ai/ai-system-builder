@@ -1072,6 +1072,7 @@ export function composeDesktopHost(
       const systemBuilder = organizationDocuments
         ? composeSystemBuilder({
             documents: organizationDocuments,
+            journalChanges: organizationDocuments.organizationId !== undefined,
             definitions: {
               async readExactDefinition(reference) {
                 await getAssetFeatures();

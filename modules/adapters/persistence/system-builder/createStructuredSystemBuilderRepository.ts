@@ -11,35 +11,50 @@ import {
   cloneStructuredJson,
   type StructuredDocumentStore,
 } from "../shared";
+import { appendCommittedSystemChange } from "./structuredSystemChangeJournal";
 
 const RECORD_NAMESPACE = "system-builder/records";
 const REVISION_NAMESPACE = "system-builder/revisions";
 
 export function createStructuredSystemBuilderRepository(
   documents: StructuredDocumentStore,
+  options: { readonly journalChanges?: boolean } = {},
 ): SystemBuilderRepositoryPort {
+  async function journal(transaction: StructuredDocumentStore, record: SystemBuilderRecord) {
+    if (!options.journalChanges) return;
+    await appendCommittedSystemChange(transaction, record.targetWorkspaceId, {
+      systemId: record.systemId, recordRevision: record.revision, revisionId: record.currentRevisionId ?? null,
+    });
+  }
   return {
     async createRecordAndRevision(record, revision) {
+      const savedRecord = cloneStructuredJson(record);
+      const savedRevision = cloneStructuredJson(revision);
       return documents.runInTransaction(async (transaction) => {
-        const recordDocumentKey = recordKey(record.targetWorkspaceId, record.systemId);
-        const revisionDocumentKey = revisionKey(revision.targetWorkspaceId, revision.systemId, revision.revisionId);
+        const recordDocumentKey = recordKey(savedRecord.targetWorkspaceId, savedRecord.systemId);
+        const revisionDocumentKey = revisionKey(savedRevision.targetWorkspaceId, savedRevision.systemId, savedRevision.revisionId);
         if (await transaction.readDocument<SystemBuilderRecord>(RECORD_NAMESPACE, recordDocumentKey)) {
           throw new StructuredDocumentConflictError(RECORD_NAMESPACE, recordDocumentKey, 0);
         }
         if (await transaction.readDocument<SystemBuilderRevision>(REVISION_NAMESPACE, revisionDocumentKey)) {
           throw new StructuredDocumentConflictError(REVISION_NAMESPACE, revisionDocumentKey, 0);
         }
-        await transaction.writeDocument(RECORD_NAMESPACE, recordDocumentKey, cloneStructuredJson(record), { expectedRevision: 0 });
-        await transaction.writeDocument(REVISION_NAMESPACE, revisionDocumentKey, cloneStructuredJson(revision), { expectedRevision: 0 });
-        return { record: cloneStructuredJson(record), revision: cloneStructuredJson(revision) };
+        await transaction.writeDocument(RECORD_NAMESPACE, recordDocumentKey, savedRecord, { expectedRevision: 0 });
+        await transaction.writeDocument(REVISION_NAMESPACE, revisionDocumentKey, savedRevision, { expectedRevision: 0 });
+        await journal(transaction, savedRecord);
+        return { record: savedRecord, revision: savedRevision };
       });
     },
     async createRecord(record) {
-      const key = recordKey(record.targetWorkspaceId, record.systemId);
-      const existing = await documents.readDocument<SystemBuilderRecord>(RECORD_NAMESPACE, key);
-      if (existing) throw new StructuredDocumentConflictError(RECORD_NAMESPACE, key, 0);
-      await documents.writeDocument(RECORD_NAMESPACE, key, cloneStructuredJson(record), { expectedRevision: 0 });
-      return cloneStructuredJson(record);
+      const savedRecord = cloneStructuredJson(record);
+      const key = recordKey(savedRecord.targetWorkspaceId, savedRecord.systemId);
+      return documents.runInTransaction(async (transaction) => {
+        const existing = await transaction.readDocument<SystemBuilderRecord>(RECORD_NAMESPACE, key);
+        if (existing) throw new StructuredDocumentConflictError(RECORD_NAMESPACE, key, 0);
+        await transaction.writeDocument(RECORD_NAMESPACE, key, savedRecord, { expectedRevision: 0 });
+        await journal(transaction, savedRecord);
+        return savedRecord;
+      });
     },
     async readRecord(workspaceId, systemId) {
       const document = await documents.readDocument<SystemBuilderRecord>(RECORD_NAMESPACE, recordKey(workspaceId, systemId));
@@ -53,40 +68,46 @@ export function createStructuredSystemBuilderRepository(
         .map(cloneStructuredJson);
     },
     async updateRecord(record, expectedRevision) {
-      const key = recordKey(record.targetWorkspaceId, record.systemId);
+      const savedRecord = cloneStructuredJson(record);
+      const key = recordKey(savedRecord.targetWorkspaceId, savedRecord.systemId);
       return documents.runInTransaction(async (transaction) => {
         const current = await transaction.readDocument<SystemBuilderRecord>(RECORD_NAMESPACE, key);
-        if (!current || current.value.revision !== expectedRevision || record.revision !== expectedRevision + 1) {
+        if (!current || current.value.revision !== expectedRevision || savedRecord.revision !== expectedRevision + 1) {
           throw new StructuredDocumentConflictError(RECORD_NAMESPACE, key, expectedRevision);
         }
-        await transaction.writeDocument(RECORD_NAMESPACE, key, cloneStructuredJson(record), { expectedRevision: current.revision });
-        return cloneStructuredJson(record);
+        await transaction.writeDocument(RECORD_NAMESPACE, key, savedRecord, { expectedRevision: current.revision });
+        await journal(transaction, savedRecord);
+        return savedRecord;
       });
     },
     async saveRevision(revision) {
-      const key = revisionKey(revision.targetWorkspaceId, revision.systemId, revision.revisionId);
+      const savedRevision = cloneStructuredJson(revision);
+      const key = revisionKey(savedRevision.targetWorkspaceId, savedRevision.systemId, savedRevision.revisionId);
       const current = await documents.readDocument<SystemBuilderRevision>(REVISION_NAMESPACE, key);
       if (current) {
-        if (JSON.stringify(current.value) === JSON.stringify(revision)) return cloneStructuredJson(revision);
+        if (JSON.stringify(current.value) === JSON.stringify(savedRevision)) return savedRevision;
         throw new StructuredDocumentConflictError(REVISION_NAMESPACE, key, 0);
       }
-      await documents.writeDocument(REVISION_NAMESPACE, key, cloneStructuredJson(revision), { expectedRevision: 0 });
-      return cloneStructuredJson(revision);
+      await documents.writeDocument(REVISION_NAMESPACE, key, savedRevision, { expectedRevision: 0 });
+      return savedRevision;
     },
     async saveRevisionAndRecord(revision, record, expectedRecordRevision) {
+      const savedRecord = cloneStructuredJson(record);
+      const savedRevision = cloneStructuredJson(revision);
       return documents.runInTransaction(async (transaction) => {
-        const recordDocumentKey = recordKey(record.targetWorkspaceId, record.systemId);
+        const recordDocumentKey = recordKey(savedRecord.targetWorkspaceId, savedRecord.systemId);
         const current = await transaction.readDocument<SystemBuilderRecord>(RECORD_NAMESPACE, recordDocumentKey);
-        if (!current || current.value.revision !== expectedRecordRevision || record.revision !== expectedRecordRevision + 1) {
+        if (!current || current.value.revision !== expectedRecordRevision || savedRecord.revision !== expectedRecordRevision + 1) {
           throw new StructuredDocumentConflictError(RECORD_NAMESPACE, recordDocumentKey, expectedRecordRevision);
         }
-        const revisionDocumentKey = revisionKey(revision.targetWorkspaceId, revision.systemId, revision.revisionId);
+        const revisionDocumentKey = revisionKey(savedRevision.targetWorkspaceId, savedRevision.systemId, savedRevision.revisionId);
         if (await transaction.readDocument<SystemBuilderRevision>(REVISION_NAMESPACE, revisionDocumentKey)) {
           throw new StructuredDocumentConflictError(REVISION_NAMESPACE, revisionDocumentKey, 0);
         }
-        await transaction.writeDocument(REVISION_NAMESPACE, revisionDocumentKey, cloneStructuredJson(revision), { expectedRevision: 0 });
-        await transaction.writeDocument(RECORD_NAMESPACE, recordDocumentKey, cloneStructuredJson(record), { expectedRevision: current.revision });
-        return { revision: cloneStructuredJson(revision), record: cloneStructuredJson(record) };
+        await transaction.writeDocument(REVISION_NAMESPACE, revisionDocumentKey, savedRevision, { expectedRevision: 0 });
+        await transaction.writeDocument(RECORD_NAMESPACE, recordDocumentKey, savedRecord, { expectedRevision: current.revision });
+        await journal(transaction, savedRecord);
+        return { revision: savedRevision, record: savedRecord };
       });
     },
     async readRevision(workspaceId, systemId, revisionId) {

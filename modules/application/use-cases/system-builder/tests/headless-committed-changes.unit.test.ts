@@ -21,7 +21,7 @@ const systemId = normalizeSystemBuilderSystemId("fixture-system");
 const revisionId = normalizeSystemBuilderRevisionId("fixture-system.r2");
 const event: CommittedSystemChange = { systemId, revisionId, recordRevision: 2, sequence: 2 };
 
-function setup() {
+function setup(savedEvent: CommittedSystemChange = event) {
   let current = true;
   let revokedWhileReading = false;
   let reads = 0;
@@ -37,7 +37,7 @@ function setup() {
       async readChanges(_scope, after) {
         reads++;
         if (revokedWhileReading) current = false;
-        return after === 1 ? { kind: "changes", watermark: 2, events: [event] } : { kind: "resync" };
+        return after === 1 ? { kind: "changes", watermark: 2, events: [savedEvent] } : { kind: "resync" };
       },
     },
     digest: (input) => createHmac("sha256", "fixture-cursor-key").update(input).digest("hex"),
@@ -58,6 +58,17 @@ test("captures the watermark before the snapshot and allows safe duplicate commi
   assert.deepEqual(changes.value.events, [event]);
   assert.equal(changes.value.cursor.sequence, 2);
   assert.equal(changes.value.more, false);
+});
+
+test("replays an ordinary saved change without a current composition revision", async () => {
+  const savedEvent = { ...event, revisionId: null };
+  const { service, identity } = setup(savedEvent);
+  const snapshot = await service.snapshot(workspaceId, identity);
+  assert.ok(snapshot.ok);
+  const changes = await service.changes(workspaceId, snapshot.value.cursor, identity);
+  assert.ok(changes.ok && changes.value.kind === "changes");
+  assert.deepEqual(changes.value.events, [savedEvent]);
+  assert.equal(changes.value.cursor.sequence, 2);
 });
 
 test("returns resync before reading for cursor scope, host, or sequence changes", async () => {

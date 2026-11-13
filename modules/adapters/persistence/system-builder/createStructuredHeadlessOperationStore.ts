@@ -1,28 +1,27 @@
 import { createHash } from "node:crypto";
 import {
   HEADLESS_MUTATIONS,
-  type CommittedSystemChange, type HeadlessMutation, type HeadlessMutationReference, type HeadlessOperationOutcome,
+  type HeadlessMutation, type HeadlessMutationReference, type HeadlessOperationOutcome,
   type HeadlessOperationScope, type HeadlessOperationStorePort, type SystemBuilderRepositoryPort,
 } from "../../../application/ports/system-builder";
 import { isDesktopHeadlessClientId } from "../../../contracts/headless";
 import { isOrganizationId } from "../../../contracts/organization";
 import { readStrictPassiveRecord } from "../../../contracts/shared";
-import { isSystemBuilderSystemId, normalizeSystemBuilderRevisionId } from "../../../contracts/system-builder";
+import { isSystemBuilderSystemId } from "../../../contracts/system-builder";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import { cloneStructuredJson, type StructuredDocumentStore } from "../shared";
 import { createStructuredSystemBuilderRepository } from "./createStructuredSystemBuilderRepository";
 
+import { HEADLESS_SYSTEM_CHANGE_PAGE_SIZE, exactReference, readCommittedSystemChanges, safeInteger } from "./structuredSystemChangeJournal";
+export { HEADLESS_RETAINED_SYSTEM_CHANGES, HEADLESS_SYSTEM_CHANGE_PAGE_SIZE } from "./structuredSystemChangeJournal";
+
 const RECEIPTS = "headless/system-builder/receipts";
 const COUNTS = "headless/system-builder/counts";
-const CHANGES = "headless/system-builder/changes";
 export const HEADLESS_RECEIPT_TTL_MS = 24 * 60 * 60 * 1000;
 export const HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE = 2_048;
-export const HEADLESS_RETAINED_SYSTEM_CHANGES = 256;
-export const HEADLESS_SYSTEM_CHANGE_PAGE_SIZE = 64;
 
 type Scope = Pick<HeadlessOperationScope, "organizationId" | "workspaceId">;
 type Receipt = { readonly fingerprint: string; readonly expiresAt: number; readonly reference: HeadlessMutationReference };
-type ChangeLog = { readonly watermark: number; readonly events: readonly CommittedSystemChange[] };
 const digest = (value: readonly string[]) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
 class Rollback extends Error {
@@ -38,10 +37,6 @@ export function createStructuredHeadlessOperationStore(
       operation: HeadlessMutation) => Promise<boolean>;
   },
 ): HeadlessOperationStorePort {
-  const readLog = async (store: StructuredDocumentStore, workspaceId: Scope["workspaceId"]) => {
-    const document = await store.readDocument(CHANGES, workspaceId);
-    return document ? { revision: document.revision, value: exactLog(document.value) } : undefined;
-  };
   return {
     async run(input) {
       const { scope, operation, key, fingerprint, isCurrent, mutate } = input;
@@ -81,11 +76,8 @@ export function createStructuredHeadlessOperationStore(
           const count = await transaction.readDocument(COUNTS, countKey);
           const used = count ? safeInteger(readStrictPassiveRecord(count.value, ["value"]).value, 1) : 0;
           if (used >= HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE) return { kind: "capacity" };
-          const log = await readLog(transaction, workspaceId);
-          const sequence = (log?.value.watermark ?? 0) + 1;
-          if (!Number.isSafeInteger(sequence) || sequence < 1) return { kind: "capacity" };
           if (!isCurrent()) return { kind: "denied" };
-          const { systems, written } = scopeSystemMutation(createStructuredSystemBuilderRepository(transaction), workspaceId, operation);
+          const { systems, written } = scopeSystemMutation(createStructuredSystemBuilderRepository(transaction, { journalChanges: true }), workspaceId, operation);
           const result = await mutate(systems);
           if (!result.ok) throw new Rollback({ kind: "mutation-failed", failure: result });
           const reference = exactReference(result.value);
@@ -100,10 +92,6 @@ export function createStructuredHeadlessOperationStore(
             fingerprint, reference, expiresAt: receiptTime(now()) + HEADLESS_RECEIPT_TTL_MS,
           } satisfies Receipt, { expectedRevision: 0 });
           await transaction.writeDocument(COUNTS, countKey, { value: used + 1 }, { expectedRevision: count?.revision ?? 0 });
-          await transaction.writeDocument(CHANGES, workspaceId, {
-            watermark: sequence,
-            events: [...(log?.value.events ?? []), { ...reference, sequence }].slice(-HEADLESS_RETAINED_SYSTEM_CHANGES),
-          } satisfies ChangeLog, { expectedRevision: log?.revision ?? 0 });
           if (!isCurrent()) throw new Rollback({ kind: "denied" });
           return { kind: "committed", reference };
         }, () => {
@@ -122,13 +110,13 @@ export function createStructuredHeadlessOperationStore(
     },
     async watermark(scope) {
       const { organizationId, workspaceId } = scope;
-      const log = await readLog(scopedStore(documents, { organizationId, workspaceId }), workspaceId);
+      const log = await readCommittedSystemChanges(scopedStore(documents, { organizationId, workspaceId }), workspaceId);
       return log?.value.watermark ?? 0;
     },
     async readChanges(scope, after) {
       if (!Number.isSafeInteger(after) || after < 0) return { kind: "resync" };
       const { organizationId, workspaceId } = scope;
-      const log = (await readLog(scopedStore(documents, { organizationId, workspaceId }), workspaceId))?.value;
+      const log = (await readCommittedSystemChanges(scopedStore(documents, { organizationId, workspaceId }), workspaceId))?.value;
       if (!log) return after === 0 ? { kind: "changes", events: [], watermark: 0 } : { kind: "resync" };
       const earliest = log.events[0]?.sequence;
       if (!earliest || after < earliest - 1 || after > log.watermark) return { kind: "resync" };
@@ -144,20 +132,6 @@ function scopedStore(documents: StructuredDocumentStore, scope: Scope): Structur
   return documents.forOrganization(scope.organizationId);
 }
 
-function exactReference(value: unknown): HeadlessMutationReference {
-  const { systemId, recordRevision, revisionId } = readStrictPassiveRecord(value, ["systemId", "recordRevision", "revisionId"]);
-  if (!isSystemBuilderSystemId(systemId) || typeof revisionId !== "string" ||
-      normalizeSystemBuilderRevisionId(revisionId) !== revisionId)
-    throw new Error("The saved operation reference is invalid.");
-  return { systemId, recordRevision: safeInteger(recordRevision, 1), revisionId: normalizeSystemBuilderRevisionId(revisionId) };
-}
-
-function safeInteger(value: unknown, minimum: number): number {
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum)
-    throw new Error("The stored operation metadata is invalid.");
-  return value;
-}
-
 function receiptTime(value: number) {
   const timestamp = safeInteger(value, 0);
   if (timestamp > Number.MAX_SAFE_INTEGER - HEADLESS_RECEIPT_TTL_MS)
@@ -170,20 +144,6 @@ function exactReceipt(value: unknown): Receipt {
   if (typeof fingerprint !== "string" || fingerprint.length !== 64 || !/^[a-f0-9]{64}$/.test(fingerprint))
     throw new Error("The stored operation fingerprint is invalid.");
   return { fingerprint, expiresAt: safeInteger(expiresAt, HEADLESS_RECEIPT_TTL_MS), reference: exactReference(reference) };
-}
-
-function exactLog(value: unknown): ChangeLog {
-  const { watermark: rawWatermark, events } = readStrictPassiveRecord(value, ["watermark", "events"]);
-  const watermark = safeInteger(rawWatermark, 1);
-  if (!Array.isArray(events) || events.length !== Math.min(watermark, HEADLESS_RETAINED_SYSTEM_CHANGES))
-    throw new Error("The stored change log is invalid.");
-  const result: CommittedSystemChange[] = [];
-  for (let index = 0; index < events.length; index++) {
-    const { sequence, ...reference } = readStrictPassiveRecord(events[index], ["sequence", "systemId", "recordRevision", "revisionId"]);
-    if (sequence !== watermark - events.length + index + 1) throw new Error("The stored change sequence is invalid.");
-    result.push({ sequence, ...exactReference(reference) });
-  }
-  return { watermark, events: result };
 }
 
 /** Permit one System Builder record change under this transaction's verified scope. */

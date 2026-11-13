@@ -19,7 +19,8 @@ export interface HeadlessMutationReference {
   readonly revisionId: SystemBuilderRevisionId;
 }
 
-export interface CommittedSystemChange extends HeadlessMutationReference {
+export interface CommittedSystemChange extends Omit<HeadlessMutationReference, "revisionId"> {
+  readonly revisionId: SystemBuilderRevisionId | null;
   readonly sequence: number;
 }
 

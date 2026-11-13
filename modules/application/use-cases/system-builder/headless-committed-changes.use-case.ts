@@ -115,7 +115,8 @@ function project({ systemId, revision, currentRevisionId, status }: SystemBuilde
 }
 
 function projectEvent({ systemId, recordRevision, revisionId, sequence }: import("../../ports/system-builder").CommittedSystemChange) {
-  if (!isSystemBuilderSystemId(systemId) || hasKnownPassiveCredential(systemId) || !safeRevision(revisionId) ||
+  if (!isSystemBuilderSystemId(systemId) || hasKnownPassiveCredential(systemId) ||
+      (revisionId !== null && !safeRevision(revisionId)) ||
       !Number.isSafeInteger(recordRevision) || recordRevision < 1 || !Number.isSafeInteger(sequence) || sequence < 1)
     throw new Error("The saved event is invalid.");
   return { systemId, recordRevision, revisionId, sequence };

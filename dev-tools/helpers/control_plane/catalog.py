@@ -116,6 +116,9 @@ HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES = HEADLESS_DESKTOP_ACTIVATION_AUTOMAT
     "modules/hosts/desktop/composition/tests/desktop-system-change-poll.unit.test.ts",
     "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
     "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+    "modules/adapters/persistence/system-builder/createStructuredSystemBuilderRepository.ts",
+    "modules/adapters/persistence/system-builder/structuredSystemChangeJournal.ts",
+    "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
     "modules/adapters/persistence/system-builder/createStructuredHeadlessOperationStore.ts",
     "modules/hosts/desktop/composition/composeDesktopHeadlessAuthoring.ts",
     "modules/hosts/desktop/composition/composeDesktopHost.ts",
@@ -159,6 +162,7 @@ PUBLISHED_FORM_CHECKS = {
     },
     "headless-system-builder-semantic-edits": {
         "sources": (
+            "modules/application/ports/system-builder/headless-operation-store.port.ts",
             "modules/application/use-cases/system-builder/headless-system-authoring.use-case.ts",
             "modules/application/use-cases/system-builder/tests/headless-system-authoring.unit.test.ts",
             "modules/hosts/shared/composition/composeSystemBuilder.ts",
@@ -635,6 +639,7 @@ def definitions(root: Path) -> list[dict]:
                   "modules/hosts/desktop/composition/tests/desktop-system-change-poll.unit.test.ts",
                   "apps/desktop/src/renderer/features/system-builder/api/observeDesktopSavedSystems.unit.test.ts",
                   "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+                  "modules/adapters/persistence/system-builder/tests/structured-system-builder-repository.unit.test.ts",
                   "modules/adapters/security/headless/tests/desktop-headless-client-authority.unit.test.ts",
                   "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts"],
          "timeout": 120},

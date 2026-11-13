@@ -139,6 +139,14 @@ consumer compares record revisions before applying it. The host binds each
 cursor to its incarnation, organization, workspace, reader and sequence.
 An invalid or expired cursor requires an authorized resync.
 
+The desktop's shared System Builder repository appends committed changes in
+the same transaction as the saved record. Delegated writes use that same
+writer and add their retry receipt to the transaction. A change to a legacy
+record without a current composition revision carries a null revision ID.
+A revision stored without becoming current does not notify readers. The
+journal contains only saved system and revision metadata. Managed server
+wiring remains pending.
+
 Composer saves and upgrade previews use the record revision and exact
 composition revision captured when the draft was opened or saved. A newer list
 response does not advance that base. The Canvas keeps dirty content and undo

@@ -78,6 +78,86 @@ test("replays the same lost response after reopen without repeating the write or
   assert.deepEqual(await reopened.readChanges(otherWorkspace, 1), { kind: "resync" });
 });
 
+test("ordinary and delegated saves share one ordered journal and a stale save adds no event", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  const scoped = documents.forOrganization(scope.organizationId);
+  const repository = createStructuredSystemBuilderRepository(scoped, { journalChanges: true });
+  const store = createStructuredHeadlessOperationStore(documents);
+  const first = system(1);
+  await repository.createRecordAndRevision(first.record, first.revision);
+  await repository.updateRecord({ ...first.record, name: "Updated", revision: 2 }, 1);
+  await assert.rejects(repository.updateRecord({ ...first.record, name: "Stale", revision: 2 }, 1), /conflict/i);
+  assert.equal((await store.run(request(2))).kind, "committed");
+  assert.equal((await store.run(request(2))).kind, "replayed");
+  const changes = await store.readChanges(scope, 0);
+  assert.deepEqual(changes, {
+    kind: "changes", watermark: 3, events: [
+      { ...first.reference, sequence: 1 },
+      { ...first.reference, recordRevision: 2, sequence: 2 },
+      { ...system(2).reference, sequence: 3 },
+    ],
+  });
+  assert.equal((await scoped.listDocuments("headless/system-builder/receipts")).length, 1);
+});
+
+test("the ordinary journal uses the saved record even when its caller changes scope during persistence", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  const scoped = documents.forOrganization(scope.organizationId);
+  const { record, revision, reference } = system(1);
+  const updated = { ...record, revision: 2 };
+  const otherWorkspace = createWorkspaceId("fixture-other-workspace");
+  let changedAfterSave = false;
+  const wrapped: StructuredDocumentStore = {
+    ...scoped,
+    runInTransaction: (work) => scoped.runInTransaction((transaction) => work({
+      ...transaction,
+      async writeDocument(namespace, documentKey, value, options) {
+        const saved = await transaction.writeDocument(namespace, documentKey, value, options);
+        if (namespace === "system-builder/records" && options?.expectedRevision === 1) {
+          changedAfterSave = true;
+          updated.targetWorkspaceId = otherWorkspace;
+          updated.revision = 99;
+        }
+        return saved;
+      },
+    })),
+  };
+  const repository = createStructuredSystemBuilderRepository(wrapped, { journalChanges: true });
+  await repository.createRecordAndRevision(record, revision);
+  const saved = await repository.updateRecord(updated, 1);
+  assert.equal(changedAfterSave, true);
+  assert.equal(saved.targetWorkspaceId, scope.workspaceId);
+  assert.equal(saved.revision, 2);
+  assert.deepEqual(await repository.readRecord(scope.workspaceId, record.systemId), saved);
+  const store = createStructuredHeadlessOperationStore(documents);
+  assert.deepEqual(await store.readChanges(scope, 0), {
+    kind: "changes", watermark: 2, events: [
+      { ...reference, sequence: 1 }, { ...reference, recordRevision: 2, sequence: 2 },
+    ],
+  });
+  assert.deepEqual(await store.readChanges({ ...scope, workspaceId: otherWorkspace }, 0), {
+    kind: "changes", watermark: 0, events: [],
+  });
+});
+
+test("ordinary changes include revisionless saved records and ignore unselected historical revisions", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  const scoped = documents.forOrganization(scope.organizationId);
+  const repository = createStructuredSystemBuilderRepository(scoped, { journalChanges: true });
+  const { record, revision } = system(1);
+  const legacy = { ...record, currentRevisionId: undefined };
+  await repository.createRecord(legacy);
+  await repository.saveRevision(revision);
+  await repository.updateRecord({ ...legacy, revision: 2, status: "archived" }, 1);
+  const store = createStructuredHeadlessOperationStore(documents);
+  assert.deepEqual(await store.readChanges(scope, 0), {
+    kind: "changes", watermark: 2, events: [
+      { systemId: record.systemId, recordRevision: 1, revisionId: null, sequence: 1 },
+      { systemId: record.systemId, recordRevision: 2, revisionId: null, sequence: 2 },
+    ],
+  });
+});
+
 test("persists the same receipt and committed event across an actual local SQLite reopen", async () => {
   const directory = await realpath(await mkdtemp(path.join(await realpath(tmpdir()), "headless-operation-")));
   const policy = resolveLocalSqliteDatabasePolicy({ dataRootDirectory: directory });
@@ -131,7 +211,7 @@ test("rolls back the saved record, revision, and metadata after failure or a clo
   assert.equal((await store.run(request(1))).kind, "committed");
 });
 
-test("rolls back when the event fails after both the saved revision and receipt were written", async () => {
+test("rolls back the saved revision and event when the delegated receipt write fails", async () => {
   const documents = createInMemoryStructuredDocumentStore();
   let fault = true;
   function wrap(store: StructuredDocumentStore): StructuredDocumentStore {
@@ -143,16 +223,41 @@ test("rolls back when the event fails after both the saved revision and receipt 
         runInOwnedTransaction: (work, beforeCommit) => store.runInOwnedTransaction!((tx) => work(wrap(tx)), beforeCommit),
       } : {}),
       async writeDocument(namespace, identity, value, options) {
-        if (fault && namespace === "headless/system-builder/changes") throw new Error("Fixture outbox failure");
+        if (fault && namespace === "headless/system-builder/receipts") throw new Error("Fixture receipt failure");
         return store.writeDocument(namespace, identity, value, options);
       },
     };
   }
   const store = createStructuredHeadlessOperationStore(wrap(documents));
   await assert.rejects(store.run(request(1)), /saved operation could not be confirmed/i);
+  const repository = createStructuredSystemBuilderRepository(documents.forOrganization(scope.organizationId));
+  const { systemId, revisionId } = system(1).reference;
+  assert.equal(await repository.readRecord(scope.workspaceId, systemId), undefined);
+  assert.equal(await repository.readRevision(scope.workspaceId, systemId, revisionId), undefined);
   assert.equal(await store.watermark(scope), 0);
   fault = false;
   assert.deepEqual(await store.run(request(1)), { kind: "committed", reference: system(1).reference });
+});
+
+test("rolls back an ordinary saved record and revision when its journal write fails", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  const scoped = documents.forOrganization(scope.organizationId);
+  const wrapped: StructuredDocumentStore = {
+    ...scoped,
+    runInTransaction: (work) => scoped.runInTransaction((transaction) => work({
+      ...transaction,
+      async writeDocument(namespace, documentKey, value, options) {
+        if (namespace === "headless/system-builder/changes") throw new Error("Fixture journal failure");
+        return transaction.writeDocument(namespace, documentKey, value, options);
+      },
+    })),
+  };
+  const repository = createStructuredSystemBuilderRepository(wrapped, { journalChanges: true });
+  const { record, revision, reference } = system(1);
+  await assert.rejects(repository.createRecordAndRevision(record, revision), /fixture journal failure/i);
+  assert.equal(await repository.readRecord(scope.workspaceId, reference.systemId), undefined);
+  assert.equal(await repository.readRevision(scope.workspaceId, reference.systemId, reference.revisionId), undefined);
+  assert.equal(await createStructuredHeadlessOperationStore(documents).watermark(scope), 0);
 });
 
 test("the owning transaction rejects revocation at its commit fence", async () => {

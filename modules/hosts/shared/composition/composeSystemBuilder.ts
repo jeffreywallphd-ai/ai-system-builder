@@ -47,6 +47,7 @@ export interface ComposeSystemBuilderOptions {
   >;
   readonly generateSystemId: () => string;
   readonly now?: () => string;
+  readonly journalChanges?: boolean;
 }
 
 /** Reuse one reader on first use without constructing it for passive host discovery. */
@@ -58,7 +59,7 @@ function lazyRead<Args extends unknown[], Result>(
 }
 
 export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
-  const repository = createStructuredSystemBuilderRepository(options.documents);
+  const repository = createStructuredSystemBuilderRepository(options.documents, { journalChanges: options.journalChanges });
   const buildRepository = createStructuredSystemBuildRepository(
     options.documents,
   );

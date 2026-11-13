@@ -45,6 +45,20 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         self.assertIn("modules/application/use-cases/system-builder/tests/headless-committed-changes.unit.test.ts",
                       self.plan([source], check)[check]["argv"])
 
+    def test_journal_check_runs_ordinary_and_delegated_storage_fixtures(self):
+        source = "modules/adapters/persistence/system-builder/structuredSystemChangeJournal.ts"
+        check = "headless-desktop-activation"
+        selected = self.plan([source], check)
+        self.assertNotIn("focused-tests", selected)
+        self.assertIn("modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts", selected[check]["argv"])
+        self.assertIn("modules/adapters/persistence/system-builder/tests/structured-system-builder-repository.unit.test.ts", selected[check]["argv"])
+        port = "modules/application/ports/system-builder/headless-operation-store.port.ts"
+        semantic = "headless-system-builder-semantic-edits"
+        self.assertIn("focused-tests", self.plan([port], check))
+        semantic_plan = self.plan([port], semantic)
+        self.assertNotIn("focused-tests", semantic_plan)
+        self.assertIn("modules/application/use-cases/system-builder/tests/headless-committed-changes.unit.test.ts", semantic_plan[semantic]["argv"])
+
     def test_owned_provider_and_contract_use_the_exact_check(self):
         host_test = "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts"
         checks = self.plan([host_test, "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts"])
