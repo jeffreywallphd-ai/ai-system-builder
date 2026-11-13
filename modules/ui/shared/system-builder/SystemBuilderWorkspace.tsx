@@ -304,7 +304,7 @@ export function SystemBuilderWorkspace({
   const liveDraft = useRef<string | undefined>(undefined);
   liveDraft.current = dirty ? selectedSystemId : undefined;
   const passiveInstallGeneration = useRef(0);
-  const deferPassiveUntilListChange = useRef<SystemBuilderRecord>();
+  const deferPassiveUntilListChange = useRef<SystemBuilderRecord | undefined>(undefined);
   const passiveLoadBlocked = useRef(false);
   passiveLoadBlocked.current = dirty || busy || revisionLoading || foundationUpgradeOpen;
   const selectedEditorState = useRef({ selectedInstanceId, formTarget });

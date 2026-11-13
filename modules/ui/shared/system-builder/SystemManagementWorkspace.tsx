@@ -96,9 +96,9 @@ function SystemManagementSession({
   const cancelDeleteRef = useRef<HTMLButtonElement>(null);
   const cancelCloneRef = useRef<HTMLButtonElement>(null);
   const requestSequence = useRef(0);
-  const lastRequestedOwner = useRef<ManagementQueryOwner>();
-  const renderedOwner = useRef<ManagementQueryOwner>();
-  const expandedOwner = useRef<ManagementQueryOwner>();
+  const lastRequestedOwner = useRef<ManagementQueryOwner | undefined>(undefined);
+  const renderedOwner = useRef<ManagementQueryOwner | undefined>(undefined);
+  const expandedOwner = useRef<ManagementQueryOwner | undefined>(undefined);
   const tableRegion = useRef<HTMLDivElement>(null);
 
   const mounted = useRef(false);
