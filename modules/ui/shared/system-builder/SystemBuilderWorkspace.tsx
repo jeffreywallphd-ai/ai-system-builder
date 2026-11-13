@@ -2048,7 +2048,14 @@ export function SystemBuilderWorkspace({
       </section>
       <ModalDialog
         open={previewOpen && Boolean(selectedSystem && revision)}
-        title={`${selectedSystem?.name ?? "System"} UI preview`}
+        title={
+          <>
+            <span className="ui-visually-hidden">
+              {selectedSystem?.name ?? "System"}{" "}
+            </span>
+            UI preview
+          </>
+        }
         onClose={() => setPreviewOpen(false)}
         closeLabel="Close system UI preview"
         dialogClassName="system-composition-preview-dialog"

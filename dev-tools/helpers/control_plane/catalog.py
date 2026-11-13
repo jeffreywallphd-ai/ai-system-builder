@@ -87,6 +87,7 @@ PUBLISHED_FORM_CHECKS = {
     },
     "published-form-editor-interactions": {
         "sources": (
+            "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
             "modules/ui/shared/system-builder/SystemFormComposerView.tsx",
             "modules/ui/shared/system-builder/SystemComposerClickEditor.tsx",
             "modules/ui/shared/system-builder/tests/SystemFormComposerStyling.interaction.ui.test.tsx",
@@ -107,6 +108,31 @@ PUBLISHED_FORM_CHECKS = {
             "modules/ui/shared/styles/tests/system-builder-style-tokens.unit.test.ts",
         ),
         "command": ("--import", "tsx", "--test", "--", "modules/ui/shared/styles/tests/system-builder-style-tokens.unit.test.ts"),
+    },
+    "system-composition-preview-management-interaction": {
+        "automatic_sources": (
+            "modules/ui/shared/system-builder/SystemCompositionPreview.tsx",
+            "modules/ui/shared/system-builder/tests/SystemCompositionPreview.unit.test.tsx",
+        ),
+        "sources": (
+            "modules/ui/shared/system-builder/SystemCompositionPreview.tsx",
+            "modules/ui/shared/system-builder/tests/SystemCompositionPreview.unit.test.tsx",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+        ),
+    },
+    "system-composition-preview-model": {
+        "companion_to": "system-composition-preview-management-interaction",
+        "sources": (
+            "modules/ui/shared/system-builder/SystemCompositionPreview.tsx",
+            "modules/ui/shared/system-builder/tests/SystemCompositionPreview.unit.test.tsx",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/ui/shared/system-builder/tests/SystemCompositionPreview.unit.test.tsx",
+        ),
     },
     "published-form-browser-client": {
         "sources": (

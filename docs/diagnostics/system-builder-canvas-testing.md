@@ -80,6 +80,11 @@ container. Card metadata uses the stronger secondary text color so the type
 and version stay legible when a result is focused or hovered.
 The draft footer keeps its muted text style on revision history. The
 **Save and validate revision** button keeps the primary button text color.
+The Canvas UI preview uses a short visible title and shows the system name in
+the body. Its accessible dialog name still includes the system name. Preview
+coverage and the rendered surface are named groups. Preview uses the registered
+System Foundation renderers without executing backend logic, activating a
+release, or deploying the system.
 
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown

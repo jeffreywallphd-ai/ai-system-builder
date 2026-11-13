@@ -62,6 +62,9 @@ describe("SystemCompositionPreview", () => {
       />,
     );
     expect(html).toContain('aria-label="Requests current UI preview"');
+    expect(html).toContain("<p>System: Requests</p>");
+    expect(html).toContain('role="group" aria-label="Preview coverage"');
+    expect(html).toContain('role="group" aria-label="Recursive system preview"');
     expect(html).not.toContain(
       "This preview includes unsaved composition changes.",
     );
@@ -69,6 +72,7 @@ describe("SystemCompositionPreview", () => {
     expect(html).toContain("2 unavailable");
     expect(html).toContain("Request form configured");
     expect(html).toContain("does not execute backend logic");
+    expect(html).toContain("does not activate a release or deploy the system");
     expect(html).not.toContain("Denied by default");
   });
 

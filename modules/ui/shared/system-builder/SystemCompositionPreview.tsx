@@ -187,14 +187,12 @@ export function SystemCompositionPreview({
       aria-label={systemName + " current UI preview"}
     >
       <div className="system-composition-preview__summary ui-stack ui-stack--xs">
-        <p>
-          This design-time preview recursively renders the current visual
-          hierarchy using registered, side-effect-free System Foundation
-          renderers. It does not execute backend logic, activate a release, or
-          deploy the system.
-        </p>
+        <p>System: {systemName}</p>
+        <p>This preview does not execute backend logic.</p>
+        <p>It does not activate a release or deploy the system.</p>
         <div
           className="system-composition-preview__counts"
+          role="group"
           aria-label="Preview coverage"
         >
           <span className="ui-badge ui-badge--info">
@@ -296,6 +294,7 @@ export function SystemCompositionPreviewSurface({
     <div
       className="system-composition-preview__surface"
       data-viewport={viewport}
+      role="group"
       aria-label="Recursive system preview"
     >
       {roots.map((node) => (
