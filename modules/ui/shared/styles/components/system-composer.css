@@ -1404,6 +1404,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .system-composer__asset-picker-dialog > .ui-modal-header {
+    padding-inline: var(--space-sm);
+  }
+
   .system-composer__canvas-node-heading {
     align-items: stretch;
     flex-direction: column;

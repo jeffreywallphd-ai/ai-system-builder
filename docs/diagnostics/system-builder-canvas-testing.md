@@ -338,6 +338,10 @@ text expression so the type, separator and version are measured together.
 The picker retains the same text, wrapping and colors. Unresolved samples
 still fail the host check.
 
+At narrow widths the picker uses a smaller header inset to give the title
+and Close button room. Longer headings can still wrap. The dialog keeps the
+full destination in its accessible name.
+
 The standard and native Canvas journeys wait for temporary success
 notifications to dismiss before auditing Canvas. At narrow widths the picker
 can cover part of a notification and leave the document contrast audit
