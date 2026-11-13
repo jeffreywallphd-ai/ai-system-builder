@@ -142,6 +142,21 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-workflow-metadata": {
+        "sources": (
+            "modules/application/use-cases/system-run-workflow/headless-workflow-metadata.use-case.ts",
+            "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
+        ),
+        "automatic_sources": (
+            "modules/application/use-cases/system-run-workflow/headless-workflow-metadata.use-case.ts",
+            "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
+            "modules/application/use-cases/system-run-workflow/tests/system-run-workflow-use-cases.unit.test.ts",
+        ),
+    },
     "headless-system-builder-semantic-edits": {
         "sources": (
             "modules/application/use-cases/system-builder/headless-system-authoring.use-case.ts",

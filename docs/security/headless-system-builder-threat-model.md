@@ -132,3 +132,10 @@ and sequence. A cursor is never authority: snapshot and replay recheck the
 current paired grant and workspace policy before returning data. Cross-scope,
 old-host or retired cursors require a new snapshot. Results are bounded saved
 references and status; the feed never carries draft data, secrets or UI state.
+
+Headless workflow metadata rechecks the same exact workspace before and after
+the existing use cases run. A fixed profile and action allowlist omits
+deployment, mutation and execution. The projection does not relay private
+labels, defaults, transcripts, record values, artifact previews or errors.
+Fields marked sensitive or referring to secrets remove the entire action
+from the projection.

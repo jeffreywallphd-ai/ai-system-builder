@@ -37,6 +37,12 @@ identity. Approved releases use release ID plus release digest. Reviewed
 execution plans use plan ID plus exact revision. A source that changes between
 steps is stale and cannot be invoked.
 
+The Headless metadata use case projects exact source and snapshot identities
+from existing list and prepare use cases. It returns recognized profile names,
+availability, blocker codes and bounded nonsensitive field descriptions. It
+does not use the invocation port, relay runtime output or grant permission to
+run the actions it describes. The host must supply the current scoped reader.
+
 ## Contract primitives
 
 The shared contract permits a finite set of inputs: text, multiline text,
