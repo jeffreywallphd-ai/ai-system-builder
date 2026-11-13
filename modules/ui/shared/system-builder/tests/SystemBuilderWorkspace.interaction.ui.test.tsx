@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeAssetId, normalizeAssetSlotId, type AssetInstance } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
-import { readSystemFormAction, SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY, systemBuilderSuccess } from "../../../../contracts/system-builder";
+import { readSystemFormAction, SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY, systemBuilderFailure, systemBuilderSuccess } from "../../../../contracts/system-builder";
 import type {
   PublishedSystemForm,
   SystemBuilderRecord,
@@ -1352,6 +1352,12 @@ describe("SystemBuilderWorkspace UI preview", () => {
         ],
       },
     }));
+    const layoutReply = Promise.withResolvers<void>();
+    const resolvedLayoutPreview = previewLayoutChange.getMockImplementation()!;
+    previewLayoutChange.mockImplementationOnce(async () => {
+      await layoutReply.promise;
+      return resolvedLayoutPreview();
+    });
     const onBuildAndTest = vi.fn();
     const client = {
       ...clientFor(record, revision),
@@ -1455,9 +1461,20 @@ describe("SystemBuilderWorkspace UI preview", () => {
         initialCanvas.querySelectorAll<HTMLElement>("[data-slot-id]"),
       ).map((slot) => slot.dataset.slotId),
     ).toEqual(["top-bar", "content"]);
-    await act(async () => minimalChoice.click());
+    minimalChoice.focus();
+    await act(async () => {
+      minimalChoice.click();
+      // JSDOM does not move focus when the parent fieldset becomes disabled.
+      container!.tabIndex = -1;
+      container!.focus();
+      container!.blur();
+    });
+    expect(minimalChoice.matches(":disabled")).toBe(true);
+    expect(document.activeElement).toBe(document.body);
+    await act(async () => layoutReply.resolve());
     await vi.waitFor(() => {
       expect(container!.textContent).toContain("Unsaved changes");
+      expect(document.activeElement).toBe(minimalChoice);
       expect(container!.textContent).not.toContain(
         "The Canvas updated automatically",
       );
@@ -1465,6 +1482,33 @@ describe("SystemBuilderWorkspace UI preview", () => {
         "available from Add element on a compatible container",
       );
     });
+    const failedLayout = Promise.withResolvers<void>();
+    previewLayoutChange.mockImplementationOnce(async () => {
+      await failedLayout.promise;
+      return systemBuilderFailure("fixture.layout-unavailable", "The test layout is unavailable.");
+    });
+    const standardChoice = container!.querySelector<HTMLInputElement>('input[value="builtin.layout.application.standard"]')!;
+    standardChoice.focus();
+    await act(async () => {
+      standardChoice.click();
+      container!.focus();
+      container!.blur();
+    });
+    await act(async () => failedLayout.resolve());
+    await vi.waitFor(() => expect(document.activeElement).toBe(minimalChoice));
+    expect(standardChoice.checked).toBe(false);
+
+    const noFocusSteal = Promise.withResolvers<void>();
+    previewLayoutChange.mockImplementationOnce(async () => {
+      await noFocusSteal.promise;
+      return systemBuilderFailure("fixture.layout-unavailable", "The test layout is unavailable.");
+    });
+    await act(async () => standardChoice.click());
+    const outsideEditor = button(container!, "Edit system");
+    outsideEditor.focus();
+    await act(async () => noFocusSteal.resolve());
+    await vi.waitFor(() => expect(standardChoice.matches(":disabled")).toBe(false));
+    expect(document.activeElement).toBe(outsideEditor);
     await act(async () =>
       container
         .querySelector<HTMLButtonElement>(
@@ -1498,7 +1542,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     );
     expect(changedCanvas.textContent).not.toContain("Unassigned visual assets");
     expect(container!.textContent).not.toContain("Asset Palette");
-    expect(previewLayoutChange).toHaveBeenCalledTimes(1);
+    expect(previewLayoutChange).toHaveBeenCalledTimes(3);
     await act(async () => button(container, "Undo").click());
     await vi.waitFor(() => {
       expect(container!.textContent).not.toContain(

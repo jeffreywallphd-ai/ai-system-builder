@@ -268,6 +268,7 @@ export function SystemBuilderWorkspace({
   const [formTarget, setFormTarget] = useState<{ scope: typeof scope; systemId: string; formId: string }>();
   const [restoreFormFocus, setRestoreFormFocus] = useState<string>();
   const editorRegion = useRef<HTMLFieldSetElement>(null);
+  const layoutFocus = useRef<{ scope: typeof scope; systemId: string }>(undefined);
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const currentSystem = useRef(selectedSystemId);
@@ -363,6 +364,22 @@ export function SystemBuilderWorkspace({
     setRestoreFormFocus(undefined);
     trigger?.focus();
   }, [busy, componentsReady, composerMode, restoreFormFocus]);
+
+  useLayoutEffect(() => {
+    const pending = layoutFocus.current;
+    if (!pending) return;
+    if (pending.scope !== scope || pending.systemId !== selectedSystemId || composerMode !== "design") {
+      layoutFocus.current = undefined;
+      return;
+    }
+    if (busy || !componentsReady) return;
+    layoutFocus.current = undefined;
+    const editor = editorRegion.current;
+    if (!editor || editor.ownerDocument.activeElement !== editor.ownerDocument.body) return;
+    // The request can finish before the new layout's definitions are available.
+    const choice = editor.querySelector<HTMLInputElement>('input[type="radio"][name="system-layout"]:checked');
+    choice?.focus();
+  }, [busy, componentsReady, composerMode, scope, selectedSystemId]);
 
   useEffect(() => {
     if (formTarget && (formTarget.scope !== scope || formTarget.systemId !== selectedSystemId ||
@@ -1363,7 +1380,7 @@ export function SystemBuilderWorkspace({
     setError(undefined);
   }
 
-  async function selectLayout(layout: SystemBuilderComposerAsset) {
+  async function selectLayout(layout: SystemBuilderComposerAsset, restoreFocus = false) {
     if (!selectedSystem || !revision) {
       setSelectedLayoutDefinitionId(layout.definitionId);
       return;
@@ -1383,6 +1400,12 @@ export function SystemBuilderWorkspace({
       return;
     }
     return transact(async (isCurrent) => {
+      const editor = editorRegion.current;
+      const active = editor?.ownerDocument.activeElement;
+      if (restoreFocus && editor && active instanceof HTMLInputElement &&
+          editor.contains(active) && active.type === "radio" && active.name === "system-layout") {
+        layoutFocus.current = { scope, systemId: String(selectedSystem.systemId) };
+      }
       setError(undefined);
       setNotice(undefined);
       const result = await client.previewLayoutChange({
@@ -1927,7 +1950,7 @@ export function SystemBuilderWorkspace({
                     canUndo={undoDrafts.length > 0}
                     canRedo={redoDrafts.length > 0}
                     onSelect={setSelectedInstanceId}
-                    onSelectLayout={(layout) => void selectLayout(layout)}
+                    onSelectLayout={(layout) => void selectLayout(layout, true)}
                     loadLayouts={loadLayoutsOnDemand}
                     loadCompatibleAssets={loadCompatibleAssetsOnDemand}
                     onSidebarTabChange={setActiveSidebarTab}
