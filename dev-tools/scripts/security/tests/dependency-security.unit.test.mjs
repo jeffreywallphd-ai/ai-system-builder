@@ -70,6 +70,8 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
     tar: "7.5.22",
     tmp: "0.2.7",
     "@electron/get": { undici: "7.30.1" },
+    "@electron/packager": { "@electron/asar": "4.3.2" },
+    "@electron/universal": { "@electron/asar": "4.3.2" },
   });
   assert.equal(lockfile.packages["node_modules/electron"].version, "42.11.18");
   assert.equal(
@@ -90,6 +92,15 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
         packagePath.endsWith(`node_modules/${packageName}`),
       )
       .map(([, entry]) => entry.version);
+  for (const owner of ["@electron/packager", "@electron/universal"]) {
+    const root = `node_modules/${owner}/node_modules/`;
+    const asar = lockfile.packages[root + "@electron/asar"];
+    assert.equal(asar.version, "4.3.2");
+    assert.equal(asar.integrity, "sha512-2nwyO3OgmLgkYQe6TzB8FmyrBKGgmXzSO51ozoG2BpHOLPTPdQpBt/zD0MdPkhQr4UqVgw3u09y4uYxgZKhmtg==");
+    assert.equal(lockfile.packages[root + "glob"].version, "14.0.6");
+    assert.equal(lockfile.packages[root + "minimatch"].version, "11.0.8");
+  }
+  assert.equal(lockfile.packages["node_modules/@electron/asar"].version, "3.4.1");
   assert.deepEqual(lockfile.packages["node_modules/brace-expansion"], {
     resolved: "dev-tools/vendor/brace-expansion-compat",
     link: true,
