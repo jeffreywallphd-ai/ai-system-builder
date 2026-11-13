@@ -4,7 +4,7 @@ import { _electron as electron, type ElectronApplication } from "playwright";
 import { mkdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
-import { completeBrowseAuthoringJourney, qualifyCanvasLayoutKeyboard } from "./browse-authoring-journey";
+import { completeBrowseAuthoringJourney, qualifyCanvasLayoutKeyboard, qualifyCanvasPageLayouts } from "./browse-authoring-journey";
 import { collectNative400Frame } from "./technical-accessibility";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { completeAssetAuthoringJourney, readDesktopPublishedDefinition } from "./asset-authoring-journey";
@@ -54,6 +54,15 @@ test("packaged desktop changes Canvas layouts with the keyboard at native 400 pe
     });
     await test.info().attach("native-layout-keyboard", {
       body: JSON.stringify({...result, zoom: 400, sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION}),
+      contentType: "application/json",
+    });
+    const pages = await qualifyCanvasPageLayouts(page, "Desktop page layout fixture", async () => {
+      await page.reload();
+      await expect(workspace).toHaveValue(workspaceId);
+      await openSystems();
+    });
+    await test.info().attach("native-page-layouts", {
+      body: JSON.stringify({...pages, zoom: 400, sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION}),
       contentType: "application/json",
     });
   }, () => lifetime.retire());

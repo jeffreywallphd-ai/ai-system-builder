@@ -665,12 +665,44 @@ const reviewedLayoutKeyboardCensus = Object.freeze({
   }
 ].map(Object.freeze)),
 });
-function layoutKeyboardLegacyView(map, result) {
-  if (sha(JSON.stringify(map)) !== reviewedLayoutKeyboardCensus.after) return {map, result};
-  const previous = JSON.parse(historicalSource(reviewedLayoutKeyboardCensus.priorCommit, censusDocument));
-  assert.equal(sha(JSON.stringify(previous)), reviewedLayoutKeyboardCensus.before);
+const reviewedPageLayoutCensus = Object.freeze({
+  priorCommit: "50d49d4ddaddd4e6b9603748ee0df30147289c21",
+  before: "f3c2520dafe477830e1680fedf076f2e3a941ebc8f5b91e2886a7af21ad257a3",
+  after: "0b6169539877044db013b76f713d218ce68022008f8004b1483dc3cf569c5fef",
+  pins: Object.freeze([
+    {
+      "path": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+      "source": "b9e53b60676b5d380dce81ff60c1b23e0929b2c38e7b7e85b9b1c82ff4926012",
+      "facts": "93303688ee04fe05b735155b207e75f3cc377dbf1a2e913623c3919afeaf43aa"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
+      "source": "962b64ab37f1b4f2322d98aa7f4e6f378ade32070dc1bd4f17456bc7ca91c227",
+      "facts": "3344236ca1dbe7c2ec5c4dc2d61f3412a7300de7a1d405291fccd63fe5fe2e64"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-browse.e2e.spec.ts",
+      "source": "a7296d6c7f98aebcabe60985e92930e09c506ce1d0e5acf225d096f2cbd2ddf7",
+      "facts": "91fc394c346daab168c90c8f81abd2a010f5c6f50aad1ee009a933900b789b09"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+      "source": "765ccf69f3cce262e3ff4999b2910fdb88f4520e42c66058847f04e28a71c1b4",
+      "facts": "ae5d551783dea5b5e9cb2c55e0f82284a897e3bfb6775d37625dbfa7c0c020e9"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts",
+      "source": "34e0b1df458f4d336c5a83d4795aa4fb03aa3befb534dacc19d6599eb12527c0",
+      "facts": "6de86da860d9fadda5bcb63bee91b344c73b6e185e2fb03db2166bb460515d52"
+    }
+  ].map(Object.freeze)),
+});
+function verifyExactLayoutCensus(map, result, witness) {
+  if (sha(JSON.stringify(map)) !== witness.after) return {map, result};
+  const previous = JSON.parse(historicalSource(witness.priorCommit, censusDocument));
+  assert.equal(sha(JSON.stringify(previous)), witness.before);
   const expected = structuredClone(previous);
-  for (const pin of reviewedLayoutKeyboardCensus.pins) {
+  for (const pin of witness.pins) {
     const [row] = map.sources.filter(item => item.path === pin.path);
     const original = expected.sources.find(item => item.path === pin.path);
     assert(row && original);
@@ -686,6 +718,15 @@ function layoutKeyboardLegacyView(map, result) {
   return {map: previous, result: {...result, gaps: [
     ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
   ]}};
+}
+
+function pageLayoutLegacyView(map, result) {
+  return verifyExactLayoutCensus(map, result, reviewedPageLayoutCensus);
+}
+
+function layoutKeyboardLegacyView(map, result) {
+  ({map, result} = pageLayoutLegacyView(map, result));
+  return verifyExactLayoutCensus(map, result, reviewedLayoutKeyboardCensus);
 }
 
 function meaningfulDesktopRestartLegacyView(map, result) {
@@ -1856,7 +1897,14 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,26);
+  assert.equal(result.gaps.length,27);
+  const pagePrior = pageLayoutLegacyView(map,result);
+  assert.equal(pagePrior.result.gaps.length,26);
+  assert.equal(sha(JSON.stringify(pagePrior.map)),reviewedPageLayoutCensus.before);
+  for (const pin of reviewedPageLayoutCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
   const layoutPrior = layoutKeyboardLegacyView(map,result);
   assert.equal(layoutPrior.result.gaps.length,26);
   assert.equal(sha(JSON.stringify(layoutPrior.map)),reviewedLayoutKeyboardCensus.before);

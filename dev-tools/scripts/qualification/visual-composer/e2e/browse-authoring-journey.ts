@@ -1,4 +1,8 @@
-import { SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS } from "../../../../../modules/application/services/asset-packs/system-packs";
+import {
+  readSystemFoundationLayoutPreset,
+  SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS,
+  SYSTEM_FOUNDATION_PAGE_LAYOUT_IDS,
+} from "../../../../../modules/application/services/asset-packs/system-packs";
 import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
 import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { collectNative400Frame, composerRegionAdd, qualifyTechnicalAccessibility } from "./technical-accessibility";
@@ -262,4 +266,79 @@ export async function qualifyCanvasLayoutKeyboard(page: Page, name: string, reop
   await expect(picker).toBeHidden();
   await expect(add).toBeFocused();
   return { applicationLayouts: traversal.length, selectedLayout: last };
+}
+
+export async function qualifyCanvasPageLayouts(page: Page, name: string, reopen: () => Promise<void>) {
+  await page.getByLabel("New system name").fill(name);
+  await page.getByRole("button", {name: "Create system", exact: true}).press("Enter");
+  const canvas = page.getByRole("region", {name: "Canvas", exact: true});
+  const shell = canvas.locator("article[data-layout-container=true]").filter({
+    has: page.locator(".system-composer__canvas-node-heading small").filter({hasText: /^builtin\.layout\.application\.minimal@/}),
+  }).last();
+  const picker = page.getByRole("dialog", {name: /^Add an element to /});
+  const assetNode = (id: string) => canvas.locator('article[data-instance-id=' + JSON.stringify(id) + ']');
+
+  async function insert(trigger: Locator, label: string, kind: "page" | "card") {
+    await expect(trigger).toBeEnabled({timeout: 30_000});
+    await trigger.press("Enter");
+    const search = picker.getByLabel("Search compatible elements");
+    await expect(search).toBeFocused();
+    await search.fill(label);
+    const option = picker.getByRole("button").filter({has: page.getByText(label, {exact: true})});
+    await expect(option).toHaveCount(1, {timeout: 15_000});
+    if (kind === "page") {
+      const group = picker.getByRole("region", {name: "Containers and layout", exact: true});
+      await expect(group.getByRole("button").filter({has: page.getByText(label, {exact: true})})).toBeVisible();
+    }
+    await option.press("Enter");
+    await expect(picker).toBeHidden();
+  }
+
+  async function assertRegions(node: Locator, slotIds: string[]) {
+    const slots = node.locator(":scope > .system-composer__slots > [data-slot-id]");
+    await expect(slots).toHaveCount(slotIds.length);
+    expect(await slots.evaluateAll(items => items.map(item => item.getAttribute("data-slot-id")))).toEqual(slotIds);
+    let previousBottom = 0;
+    for (const [index, slotId] of slotIds.entries()) {
+      const slot = slots.nth(index);
+      await expect(slot).toBeVisible();
+      await expect(composerRegionAdd(node, slotId)).toBeVisible();
+      const rect = (await slot.boundingBox())!;
+      if (index) expect(rect.y).toBeGreaterThanOrEqual(previousBottom - 1);
+      previousBottom = rect.y + rect.height;
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  }
+
+  const saved: Array<{id: string; slots: string[]; filledSlots: string[]}> = [];
+  await insert(canvas.getByRole("button", {name: "Add element to Content in Main page", exact: true}), "Card", "card");
+  for (const definitionId of SYSTEM_FOUNDATION_PAGE_LAYOUT_IDS) {
+    const preset = readSystemFoundationLayoutPreset(definitionId)!;
+    await insert(composerRegionAdd(shell, "content"), preset.displayName, "page");
+    const selected = canvas.locator("article[data-selected=true]");
+    await expect(selected.locator(":scope > .system-composer__canvas-node-heading small")).toContainText(definitionId + "@");
+    const id = (await selected.getAttribute("data-instance-id"))!;
+    const node = assetNode(id);
+    const slots = preset.slots.map(slot => String(slot.slotId));
+    await assertRegions(node, slots);
+    const filledSlots = preset.slots.filter(slot => slot.cardinality.minItems > 0).map(slot => String(slot.slotId));
+    for (const slot of filledSlots) await insert(composerRegionAdd(node, slot), "Card", "card");
+    saved.push({id, slots, filledSlots});
+  }
+
+  await page.getByRole("button", {name: "Save and validate revision", exact: true}).press("Enter");
+  await expect(page.getByText("Revision saved and validated.", {exact: true})).toBeVisible({timeout: 30_000});
+  await reopen();
+  await page.getByRole("tab", {name: "Compose", exact: true}).click();
+  await page.getByRole("combobox", {name: "System", exact: true}).selectOption({label: name});
+  await page.getByRole("button", {name: "Edit system", exact: true}).press("Enter");
+  for (const {id, slots, filledSlots} of saved) {
+    const node = assetNode(id);
+    await assertRegions(node, slots);
+    for (const slot of filledSlots) {
+      const region = node.locator(":scope > .system-composer__slots > [data-slot-id=" + JSON.stringify(slot) + "]");
+      await expect(region.getByRole("button", {name: /^Card builtin\./})).toHaveCount(1);
+    }
+  }
+  return {pageLayouts: saved.length};
 }

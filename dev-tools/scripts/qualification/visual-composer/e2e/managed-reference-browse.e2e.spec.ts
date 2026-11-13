@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { completeBrowseAuthoringJourney, qualifyCanvasLayoutKeyboard } from "./browse-authoring-journey";
+import { completeBrowseAuthoringJourney, qualifyCanvasLayoutKeyboard, qualifyCanvasPageLayouts } from "./browse-authoring-journey";
 
 async function openManagedBrowseWorkspace(page: Page) {
   const origin = process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN!;
@@ -47,4 +47,15 @@ test("managed thin client changes Canvas layouts with the keyboard at narrow wid
   const reopen = await openManagedBrowseWorkspace(page);
   await page.setViewportSize({width: 320, height: 900});
   await qualifyCanvasLayoutKeyboard(page, "Managed layout selection", reopen);
+});
+
+test("managed thin client adds and reopens all six Canvas page layouts", async ({page}) => {
+  test.setTimeout(120_000);
+  const reopen = await openManagedBrowseWorkspace(page);
+  await page.setViewportSize({width: 320, height: 900});
+  const result = await qualifyCanvasPageLayouts(page, "Managed page layout fixture", reopen);
+  await test.info().attach("page-layouts", {
+    body: JSON.stringify({...result, viewport: 320, sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION}),
+    contentType: "application/json",
+  });
 });

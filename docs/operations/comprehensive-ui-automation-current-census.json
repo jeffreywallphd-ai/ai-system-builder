@@ -4896,8 +4896,8 @@
   {
    "path": "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
    "facts": {
-    "sha256": "aae3ab02592df4ee2328d3356780b7df1be6efb17a94defdfc76afba7216b42c",
-    "bytes": 25553,
+    "sha256": "b9e53b60676b5d380dce81ff60c1b23e0929b2c38e7b7e85b9b1c82ff4926012",
+    "bytes": 26289,
     "cases": [
      {
       "name": "declared journeys have three useful distinct assets, exact roles and finite phase budgets",
@@ -4973,31 +4973,31 @@
      },
      {
       "name": "desktop metadata probe forwards only the captured public query and clears its deadline",
-      "line": 268
+      "line": 277
      },
      {
       "name": "desktop metadata probe safely refuses missing, failed and oversized replies",
-      "line": 273
+      "line": 282
      },
      {
       "name": "desktop metadata probe has an executable bounded timeout",
-      "line": 278
+      "line": 287
      },
      {
       "name": "browser metadata probe uses the paired same-origin exact GET and bounded chunk decoding",
-      "line": 285
+      "line": 294
      },
      {
       "name": "browser metadata probe refuses missing pairing before any fetch",
-      "line": 295
+      "line": 304
      },
      {
       "name": "browser metadata probe bounds output and hides failed HTTP, malformed and interrupted replies",
-      "line": 299
+      "line": 308
      },
      {
       "name": "browser metadata timeout aborts the owned read and clears the timer",
-      "line": 310
+      "line": 319
      }
     ],
     "dynamicCases": 3,
@@ -5008,15 +5008,15 @@
      },
      {
       "name": "clock",
-      "line": 263
+      "line": 272
      },
      {
       "name": "browserEnvironment",
-      "line": 282
+      "line": 291
      }
     ],
-    "assertionCount": 124,
-    "assertionDigest": "4d9331b75d8e76e7d928aef12e892b4075b5698f8dd296fe8aeb86783783349f",
+    "assertionCount": 129,
+    "assertionDigest": "14196af314d1238d003507e11e7fbc614728be4942d16a2e8c499ea729e0244e",
     "assertionExamples": [
      {
       "line": 30,
@@ -7695,56 +7695,68 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts",
    "facts": {
-    "sha256": "070abb2b7e6a45e134a9d8b06acf759b2763e0b2a9356269ad8c309330db0f14",
-    "bytes": 16841,
+    "sha256": "962b64ab37f1b4f2322d98aa7f4e6f378ade32070dc1bd4f17456bc7ca91c227",
+    "bytes": 21270,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "completeBrowseAuthoringJourney",
-      "line": 8
+      "line": 12
      },
      {
       "name": "openDetails",
-      "line": 24
+      "line": 28
      },
      {
       "name": "insert",
-      "line": 39
+      "line": 43
      },
      {
       "name": "verifyConfirmedRemoval",
-      "line": 151
+      "line": 155
      },
      {
       "name": "verifyKeyboardPlacement",
-      "line": 173
+      "line": 177
      },
      {
       "name": "qualifyCanvasLayoutKeyboard",
-      "line": 209
+      "line": 213
+     },
+     {
+      "name": "qualifyCanvasPageLayouts",
+      "line": 271
+     },
+     {
+      "name": "insert",
+      "line": 281
+     },
+     {
+      "name": "assertRegions",
+      "line": 297
      }
     ],
-    "assertionCount": 80,
-    "assertionDigest": "f93969e2f3dfcbe1ff224491caa52058a468b9d31f5557825834abad414a0a4a",
+    "assertionCount": 94,
+    "assertionDigest": "2cc4fbab6aee0ccd0bbbd462479fdd8c5ef58a8f475fd7c630bed6ce44a4b189",
     "assertionExamples": [
      {
-      "line": 19,
+      "line": 23,
       "kind": "expect",
       "sha256": "acf6689eb0a06f6e324225bd435f6b87d5e73ff3961e264794c3d12758a8c4d3"
      },
      {
-      "line": 22,
+      "line": 26,
       "kind": "expect",
       "sha256": "4f1f54d736ab0396a36a530a66dec0206e71e8c04f83897ce06fc6aa04c43e0d"
      },
      {
-      "line": 29,
+      "line": 33,
       "kind": "expect",
       "sha256": "996d9072b2ab9e201cfc2142242a7879026ad8a8348b2113048b980551eb7d4f"
      },
      {
-      "line": 34,
+      "line": 38,
       "kind": "expect",
       "sha256": "19ac6183a08d703f71a3fc6d3d00e925ab71cba3151d64ba119a8c6d5e0764ac"
      }
@@ -7961,8 +7973,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/managed-reference-browse.e2e.spec.ts",
    "facts": {
-    "sha256": "03d0ea02fad18b159befef4be20747469240f24f7e6186d81bb3a164e8c44de2",
-    "bytes": 3227,
+    "sha256": "a7296d6c7f98aebcabe60985e92930e09c506ce1d0e5acf225d096f2cbd2ddf7",
+    "bytes": 3804,
     "cases": [
      {
       "name": "managed PostgreSQL/OIDC thin client preserves complete browse authoring",
@@ -7975,6 +7987,10 @@
      {
       "name": "managed thin client changes Canvas layouts with the keyboard at narrow width",
       "line": 46
+     },
+     {
+      "name": "managed thin client adds and reopens all six Canvas page layouts",
+      "line": 52
      }
     ],
     "dynamicCases": 0,
@@ -8318,8 +8334,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
    "facts": {
-    "sha256": "e1997dce6738202414d0d00736d01c52a40599b7e080a86f4e67750dc9edcacf",
-    "bytes": 11085,
+    "sha256": "765ccf69f3cce262e3ff4999b2910fdb88f4520e42c66058847f04e28a71c1b4",
+    "bytes": 11556,
     "cases": [
      {
       "name": "packaged desktop changes Canvas layouts with the keyboard at native 400 percent zoom",
@@ -8327,22 +8343,22 @@
      },
      {
       "name": "packaged desktop preserves the complete browse authoring journey",
-      "line": 62
+      "line": 71
      },
      {
       "name": "packaged desktop completes Assets and System editing at native 400 percent zoom",
-      "line": 110
+      "line": 119
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "navigate",
-      "line": 121
+      "line": 130
      }
     ],
-    "assertionCount": 26,
-    "assertionDigest": "725bab7ea7f47c83681055d01680efe0d6910c469167f95cdb356757b5f31117",
+    "assertionCount": 27,
+    "assertionDigest": "ed5bc030371d7fd460c1e9a7658e0b7b997cb3eb9e82e673688c452e9319aa4a",
     "assertionExamples": [
      {
       "line": 29,
@@ -9162,40 +9178,44 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts",
    "facts": {
-    "sha256": "a2448f82bbc5ebb1cea30c700ded20f0cde303b8b8675d8143960e134e792b1f",
-    "bytes": 6150,
+    "sha256": "34e0b1df458f4d336c5a83d4795aa4fb03aa3befb534dacc19d6599eb12527c0",
+    "bytes": 7511,
     "cases": [
      {
       "name": "thin client preserves the complete browse authoring journey",
-      "line": 10
+      "line": 11
+     },
+     {
+      "name": "thin client adds and reopens all six Canvas page layouts",
+      "line": 45
      },
      {
       "name": "thin client completes Assets and System editing at native 400 percent zoom",
-      "line": 44
+      "line": 70
      }
     ],
     "dynamicCases": 0,
     "functions": [],
-    "assertionCount": 19,
-    "assertionDigest": "99265619ee851b27535a25f6fbe58c2c4e36be2c57bc7e855f6a8484dfb0ad95",
+    "assertionCount": 23,
+    "assertionDigest": "1b776e3b055f62a37ac9bc30a4847751a0d5b1c2e203df2a146ec022123728f7",
     "assertionExamples": [
      {
-      "line": 18,
+      "line": 19,
       "kind": "expect",
       "sha256": "7ac0c4516966278c763209cdb9c09d3d4f1e739c8935221c1d2caf901c71b499"
      },
      {
-      "line": 23,
+      "line": 24,
       "kind": "expect",
       "sha256": "37f336940234459d6961c2745a710d52e8fa760fdcfc7767e5cb6e8e754d63b7"
      },
      {
-      "line": 24,
+      "line": 25,
       "kind": "expect",
       "sha256": "286e9be127991bf808412862c4fcb1bb88ff550c7c4e432b6cfec964382d45cb"
      },
      {
-      "line": 25,
+      "line": 26,
       "kind": "expect",
       "sha256": "a90e3039c6f188733099ed5194f1807f4eb8d7b929b9b52e01cf319f3ed582ec"
      }

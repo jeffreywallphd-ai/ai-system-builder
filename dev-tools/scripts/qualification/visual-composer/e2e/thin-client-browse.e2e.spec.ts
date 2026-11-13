@@ -1,7 +1,8 @@
 import { launchOwnedNativeZoomContext } from "../native-browser-zoom.mjs";
 import { operationalStatusUrl } from "../operational-ui-oracles";
 import { expect, test } from "@playwright/test";
-import { completeBrowseAuthoringJourney } from "./browse-authoring-journey";
+import { createFormWorkspace } from "./form-composer-authoring-journey";
+import { completeBrowseAuthoringJourney, qualifyCanvasPageLayouts } from "./browse-authoring-journey";
 import { completeAssetAuthoringJourney, readBrowserPublishedDefinition } from "./asset-authoring-journey";
 import { AUTHORING_PHASE_BUDGET_MS } from "../asset-authoring-oracles";
 
@@ -38,6 +39,31 @@ test("thin client preserves the complete browse authoring journey", async ({page
   await completeAssetAuthoringJourney(page, "thin-chrome", {kind: "document-reload", reload: async () => {
     await page.reload();
   }}, async (input, currentPage) => currentPage.evaluate(readBrowserPublishedDefinition, input), test.info());
+});
+
+
+test("thin client adds and reopens all six Canvas page layouts", async ({page}) => {
+  test.setTimeout(120_000);
+  const origin = process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN!;
+  const token = process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN!;
+  await page.addInitScript(value => localStorage.setItem("ai-system-builder.paired-device-token", value), token);
+  await page.goto(new URL("/", origin).href);
+  const workspace = page.getByLabel("Select current workspace");
+  await expect(workspace).toBeVisible();
+  const previous = await workspace.inputValue();
+  const workspaceId = await createFormWorkspace(page, "Browser page layout fixture");
+  expect(workspaceId).not.toBe(previous);
+  await page.goto(new URL("/systems", origin).href);
+  await expect(workspace).toHaveValue(workspaceId);
+  await page.setViewportSize({width: 320, height: 900});
+  const result = await qualifyCanvasPageLayouts(page, "Browser page layout fixture", async () => {
+    await page.reload();
+    await expect(workspace).toHaveValue(workspaceId);
+  });
+  await test.info().attach("page-layouts", {
+    body: JSON.stringify({...result, viewport: 320, sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION}),
+    contentType: "application/json",
+  });
 });
 
 

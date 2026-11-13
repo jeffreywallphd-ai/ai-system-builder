@@ -201,8 +201,17 @@ test("each standard and native host case awaits the Assets core after its browse
       : ["packaged desktop preserves the complete browse authoring journey", "packaged desktop completes Assets and System editing at native 400 percent zoom"];
     const allCases = named("test");
     const layoutTitle = "packaged desktop changes Canvas layouts with the keyboard at native 400 percent zoom";
+    const pageLayoutTitle = "thin client adds and reopens all six Canvas page layouts";
     const layoutCases = allCases.filter((call) => ts.isStringLiteral(call.arguments[0]!) && call.arguments[0].text === layoutTitle);
+    const pageLayoutCases = allCases.filter((call) => ts.isStringLiteral(call.arguments[0]!) && call.arguments[0].text === pageLayoutTitle);
     assert.equal(layoutCases.length, host === "packaged-desktop" ? 1 : 0);
+    assert.equal(pageLayoutCases.length, host === "thin-chrome" ? 1 : 0);
+    const pageLayouts = named("qualifyCanvasPageLayouts");
+    assert.equal(pageLayouts.length, 1);
+    assert(ts.isAwaitExpression(pageLayouts[0]!.parent));
+    const pageLayoutCase = (layoutCases[0] ?? pageLayoutCases[0])!.arguments[1]!;
+    assert(ts.isArrowFunction(pageLayoutCase));
+    assert(pageLayouts[0]!.pos >= pageLayoutCase.body.pos && pageLayouts[0]!.end <= pageLayoutCase.body.end);
     if (host === "packaged-desktop") {
       const callback = layoutCases[0]!.arguments[1]!;
       assert(ts.isArrowFunction(callback));
@@ -219,7 +228,7 @@ test("each standard and native host case awaits the Assets core after its browse
       assert.equal(local("lifetime.retire").length, 1);
       assert.equal(local("completeAssetAuthoringJourney").length, 0);
     }
-    const cases = allCases.filter((call) => !layoutCases.includes(call));
+    const cases = allCases.filter((call) => !layoutCases.includes(call) && !pageLayoutCases.includes(call));
     assert.equal(cases.length, 2);
     assert.deepEqual(cases.map(call => {assert(ts.isStringLiteral(call.arguments[0]!)); return call.arguments[0].text;}), titles);
     for (const [index, title] of titles.entries()) {
