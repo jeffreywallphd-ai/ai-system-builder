@@ -297,13 +297,16 @@ app.whenReady().then(async () => {
       dialogs: (window) => ({
         async confirm(workspaceLabel, access = "read") {
           const canEdit = access === "author";
+          const canConverse = access === "conversation";
           const { response } = await dialog.showMessageBox(window, {
             type: "question",
             title: "Pair a chat client",
-            message: canEdit ? "Allow a local chat client to edit saved systems?" : "Allow a local chat client to read saved systems?",
+            message: canConverse ? "Allow a local chat client to read saved systems and run approved conversations?"
+              : canEdit ? "Allow a local chat client to edit saved systems?" : "Allow a local chat client to read saved systems?",
             detail: `Workspace: ${workspaceLabel}\n${canEdit
               ? "The new client can create, rename, copy and edit saved systems in this workspace."
-              : "The new client can read saved systems in this workspace."} The local connector also lets previously paired clients reconnect with their existing access. This does not give the client control of this window.`,
+              : canConverse ? "The client can read saved systems in this workspace. It can also send messages to conversation sessions already approved for this workspace. It cannot approve a session or edit saved systems."
+                : "The new client can read saved systems in this workspace."} The local connector also lets previously paired clients reconnect with their existing access. This does not give the client control of this window.`,
             buttons: ["Cancel", "Create pairing code"], defaultId: 0, cancelId: 0, noLink: true,
           });
           return response === 1;

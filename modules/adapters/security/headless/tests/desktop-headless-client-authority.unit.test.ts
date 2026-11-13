@@ -64,6 +64,69 @@ function fixture() {
   };
 }
 
+test("approved conversation registration is separate from both saved-system editing and read-only clients", async () => {
+  const documents = createInMemoryStructuredDocumentStore().forOrganization(identity.organizationId);
+  let enabled = false;
+  const baseOptions = { documents, identity, canReadWorkspace: async () => true, canAuthorWorkspace: async () => true };
+  const options = { ...baseOptions, canRunConversation: async (id: string) => id === workspaceId && enabled };
+  const unwired = createDesktopHeadlessClientAuthority(baseOptions);
+  assert.deepEqual(await unwired.beginPairing(workspaceId, () => true, "conversation"), denied);
+  const authority = createDesktopHeadlessClientAuthority(options);
+  assert.deepEqual(await authority.beginPairing(workspaceId, () => true, "conversation"), denied);
+  enabled = true;
+  const pending = await authority.beginPairing(workspaceId, () => true, "conversation");
+  assert.equal(pending.status, "ready");
+  enabled = false;
+  assert.deepEqual(await authority.completePairing(pending.pairingCode), denied);
+  enabled = true;
+
+  const pair = async (mode: "read" | "author" | "conversation") => {
+    const pending = await authority.beginPairing(workspaceId, () => true, mode);
+    assert.equal(pending.status, "ready");
+    const paired = await authority.completePairing(pending.pairingCode);
+    assert.equal(paired.status, "paired");
+    return paired;
+  };
+  const reader = await pair("read");
+  const editor = await pair("author");
+  const runner = await pair("conversation");
+  assert.equal(await unwired.verifyCredential(runner.credential), undefined);
+  const recovered = createDesktopHeadlessClientAuthority(options);
+  enabled = false;
+  assert.equal(await recovered.verifyCredential(runner.credential), undefined);
+  assert.equal((await recovered.verifyCredential(reader.credential))?.conversation, undefined);
+  const editorGrant = await recovered.verifyCredential(editor.credential);
+  assert.equal(editorGrant?.conversation, undefined);
+  assert.deepEqual(editorGrant?.authoring, DESKTOP_HEADLESS_AUTHORING_OPERATIONS);
+  const unavailablePolicy = createDesktopHeadlessClientAuthority({ ...baseOptions, async canRunConversation() {
+    throw new Error("Synthetic policy failure");
+  } });
+  assert.equal(await unavailablePolicy.verifyCredential(runner.credential), undefined);
+  enabled = true;
+  const grant = await recovered.verifyCredential(runner.credential);
+  assert.equal(grant?.conversation, true);
+  assert.deepEqual(grant?.authoring, []);
+
+  let entered!: () => void;
+  let finish!: (allowed: boolean) => void;
+  const checking = new Promise<void>((resolve) => { entered = resolve; });
+  const checked = new Promise<boolean>((resolve) => { finish = resolve; });
+  const delayed = createDesktopHeadlessClientAuthority({ ...baseOptions, async canRunConversation(id) {
+    assert.equal(id, workspaceId);
+    entered();
+    return checked;
+  } });
+  const verifying = delayed.verifyCredential(runner.credential);
+  assert.equal(await Promise.race([checking.then(() => "checking"), verifying.then(() => "returned")]), "checking");
+  try {
+    assert.equal(await delayed.revokeClient(runner.registeredClientId), true);
+  } finally {
+    finish(true);
+  }
+  assert.equal(await verifying, undefined);
+  assert.equal(await recovered.verifyCredential(runner.credential), undefined);
+});
+
 test("requires current workspace authority, bounds guesses, and consumes the exact code once", async () => {
   const { authority } = fixture();
   assert.deepEqual(await authority.beginPairing(createWorkspaceId("ungranted-fixture")), denied);

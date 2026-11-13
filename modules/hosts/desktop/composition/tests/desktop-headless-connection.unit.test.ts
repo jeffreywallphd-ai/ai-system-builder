@@ -65,7 +65,10 @@ test("starts only on explicit approved workspace pairing or reconnect and closes
   try {
     const before = await first.status();
     assert.ok(before.status === "ready" && !before.running && before.clients.length === 0);
+    assert.equal(before.conversationAvailable, undefined);
     const approved = () => focused;
+    assert.equal(await first.readWorkspaceLabel(workspaceId, "conversation"), undefined);
+    assert.deepEqual(await first.beginPairing(workspaceId, approved, "conversation"), { status: "denied" });
     assert.equal(await first.startExistingClients(approved), "denied");
     assert.deepEqual(await first.beginPairing(createWorkspaceId("outside-fixture"), approved), { status: "denied" });
     loseFocusOn = policyReads + 1;

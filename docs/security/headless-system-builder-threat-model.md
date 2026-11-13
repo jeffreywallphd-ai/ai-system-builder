@@ -150,3 +150,13 @@ invocation owner must enforce the same exact target and live fence. A
 pending reservation cannot dispatch again after a crash or uncertain reply.
 The host-keyed receipt stores no prompt or reply text. A confirmed receipt
 stores only the turn and run identifiers with the fingerprint and expiry.
+
+Approved conversation execution uses a separate native desktop consent. The
+dialog discloses saved-system read access and sending turns to approved sessions.
+Existing read and edit registrations do not gain execution permission. The
+host shows the option only when it supplies the application access callback.
+Issuing, exchanging and verifying conversation credentials requires current
+workspace policy. A missing or unavailable callback denies the credential, and
+revocation during verification invalidates the pending grant. Actual dispatch
+must still recheck the current workspace, client and session approval. This
+change leaves conversation dispatch unwired.

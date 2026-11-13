@@ -16,6 +16,7 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
   let usable = true;
   let confirmed = false;
   let closeOnConfirm = false;
+  let conversationAvailable = false;
   const effects: unknown[] = [];
   const handlers = new Map<string, (event: unknown, payload: unknown) => Promise<unknown>>();
   const ipcMain: IpcMainHandlePort = {
@@ -27,8 +28,11 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
     ipcMain,
     getConnection: () => ({
       async status() {
-        return { status: "ready", running: true, endpoint: address, fingerprint, clients: [{ registeredClientId: clientId,
-          workspaceId: workspace as never, expiresAt: 5_000, internalCode: code }] };
+        const access = conversationAvailable ? { access: "conversation" as const } : {};
+        return { status: "ready", running: true, endpoint: address, fingerprint,
+          ...(conversationAvailable ? { conversationAvailable: true as const } : {}),
+          clients: [{ registeredClientId: clientId, workspaceId: workspace as never,
+            expiresAt: 5_000, internalCode: code, ...access }] };
       },
       async readWorkspaceLabel(id, access) {
         effects.push(["workspace", id, access]);
@@ -78,8 +82,18 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
   confirmed = true;
   assert.equal(await api.beginHeadlessPairing(workspace, "author"), "shown");
   assert.deepEqual(effects.slice(-2), [["begin", workspace, "author"], ["private native dialog", address, fingerprint, code]]);
+  confirmed = false;
+  assert.equal(await api.beginHeadlessPairing(workspace, "conversation"), "canceled");
+  assert.deepEqual(effects.slice(-2), [["workspace", workspace, "conversation"], ["confirm", "Synthetic workspace name (fixture-workspace)", "conversation"]]);
+  confirmed = true;
+  assert.equal(await api.beginHeadlessPairing(workspace, "conversation"), "shown");
+  assert.deepEqual(effects.slice(-2), [["begin", workspace, "conversation"], ["private native dialog", address, fingerprint, code]]);
   assert.deepEqual(await api.readHeadlessPairingStatus(), { status: "ready", running: true, endpoint: address, fingerprint,
     clients: [{ registeredClientId: clientId, workspaceId: workspace, expiresAt: 5_000 }] });
+  conversationAvailable = true;
+  assert.deepEqual(await api.readHeadlessPairingStatus(), { status: "ready", running: true, endpoint: address, fingerprint,
+    conversationAvailable: true,
+    clients: [{ registeredClientId: clientId, workspaceId: workspace, expiresAt: 5_000, access: "conversation" }] });
   assert.equal(await api.startHeadlessConnector(), "started");
   assert.equal(await api.revokeHeadlessClient(clientId + "\n"), "denied");
   assert.equal(await api.revokeHeadlessClient(clientId), "revoked");

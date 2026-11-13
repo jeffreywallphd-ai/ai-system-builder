@@ -129,6 +129,7 @@ HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES = HEADLESS_DESKTOP_ACTIVATION_AUTOMAT
     "apps/desktop/src/renderer/lib/desktopApi.ts",
     "apps/desktop/src/renderer/pages/SettingsPage.tsx",
     "modules/adapters/security/headless/createDesktopHeadlessClientAuthority.ts",
+    "modules/adapters/security/headless/tests/desktop-headless-client-authority.unit.test.ts",
     "modules/adapters/transport/headless-loopback/startDesktopHeadlessLoopback.ts",
     "modules/adapters/transport/headless-loopback/createDesktopPinnedLoopbackAgent.ts",
     "modules/adapters/transport/headless-loopback/index.ts",

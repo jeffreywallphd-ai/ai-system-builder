@@ -77,6 +77,10 @@ export function HeadlessClientSettings() {
           <button type="button" disabled={pending || workspaceStatus !== "ready" || !activeWorkspaceId} onClick={() => void pair("author")}>
             Pair a client that can edit
           </button>
+          {data.conversationAvailable ? <button type="button" disabled={pending || workspaceStatus !== "ready" || !activeWorkspaceId}
+            onClick={() => void pair("conversation")}>
+            Pair a client that can run approved conversations
+          </button> : null}
           <button type="button" disabled={pending} onClick={() => setRefresh((current) => current + 1)}>
             Refresh clients
           </button>
@@ -86,7 +90,8 @@ export function HeadlessClientSettings() {
         </div>
         {data.clients.length ? <ul>
           {data.clients.map((client) => <li key={client.registeredClientId}>
-            <span>{client.workspaceId} · Client {client.registeredClientId.slice(0, 8)} · {client.access === "author" ? "Read and edit" : "Read only"} </span>
+            <span>{client.workspaceId} · Client {client.registeredClientId.slice(0, 8)} · {client.access === "author" ? "Read and edit"
+              : client.access === "conversation" ? "Read and run approved conversations" : "Read only"} </span>
             <button type="button" disabled={pending} onClick={() => void revoke(client.registeredClientId)}
               aria-label={`Remove access for client ${client.registeredClientId.slice(0, 8)}`}>Remove access</button>
           </li>)}

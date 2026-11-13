@@ -2123,7 +2123,7 @@ export function createDesktopPreloadApi(
       return result === "started" || result === "canceled" || result === "denied" ? result : "unavailable";
     },
     async beginHeadlessPairing(workspaceId, access = "read") {
-      if (access !== "read" && access !== "author") return "denied";
+      if (access !== "read" && access !== "author" && access !== "conversation") return "denied";
       const result = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.pair, { workspaceId, access });
       return result === "shown" || result === "canceled" || result === "denied" ? result : "unavailable";
     },

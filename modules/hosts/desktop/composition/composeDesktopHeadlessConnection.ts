@@ -19,6 +19,8 @@ export function composeDesktopHeadlessConnection(dependencies: {
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly read: DesktopHeadlessReadHandler;
   readonly authoring?: ReturnType<typeof composeDesktopHeadlessAuthoring>;
+  /** Present only when the existing application conversation workflow is wired. */
+  readonly canRunConversation?: (workspaceId: WorkspaceId) => Promise<boolean>;
 }) {
   let open = true;
   let start: Promise<DesktopHeadlessLoopback> | undefined;
@@ -36,7 +38,8 @@ export function composeDesktopHeadlessConnection(dependencies: {
   }
 
   async function readWorkspaceLabel(workspaceId: WorkspaceId, access: DesktopHeadlessClientAccess = "read"): Promise<string | undefined> {
-    if (!open || !isWorkspaceId(workspaceId) || (access === "author" && !dependencies.authoring)) return undefined;
+    if (!open || !isWorkspaceId(workspaceId) || (access === "author" && !dependencies.authoring) ||
+        (access === "conversation" && !dependencies.canRunConversation)) return undefined;
     try {
       const workspace = await dependencies.workspaces.readWorkspace(workspaceId);
       if (workspace?.workspaceId !== workspaceId || workspace.organizationId !== dependencies.identity.organizationId ||
@@ -46,6 +49,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
         operation: "headless.pairing.begin", workspace,
         requiredScopes: access === "author" ? ["workspace:read", "asset:read", "asset:write"] : ["workspace:read", "asset:read"],
       });
+      if (access === "conversation" && await dependencies.canRunConversation?.(workspaceId) !== true) return undefined;
       return open ? workspace.displayName : undefined;
     } catch {
       return undefined;
@@ -57,6 +61,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
     identity: dependencies.identity,
     canReadWorkspace: async (id) => (await readWorkspaceLabel(id)) !== undefined,
     canAuthorWorkspace: dependencies.authoring ? async (id) => (await readWorkspaceLabel(id, "author")) !== undefined : undefined,
+    canRunConversation: dependencies.canRunConversation ? async (id) => (await readWorkspaceLabel(id, "conversation")) !== undefined : undefined,
   });
 
   async function startConnector(isStillApproved: () => boolean) {
@@ -96,7 +101,8 @@ export function composeDesktopHeadlessConnection(dependencies: {
       return track<DesktopHeadlessPairingStatus>({ status: "unavailable" }, async () => {
         const value = await registrations.listClients();
         if (value.status !== "ready" || !open) return { status: "unavailable" };
-        return { status: "ready", running: endpoint !== undefined, endpoint, fingerprint, clients: value.clients };
+        return { status: "ready", running: endpoint !== undefined, endpoint, fingerprint, clients: value.clients,
+          ...(dependencies.canRunConversation ? { conversationAvailable: true as const } : {}) };
       });
     },
     async startExistingClients(isStillApproved: () => boolean) {
