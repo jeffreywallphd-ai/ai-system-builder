@@ -32,11 +32,10 @@ export const meaningfulSystemCases: readonly MeaningfulSystemCase[] = [
     ]
   },
   {
-    id: "conversation-interface", name: "Conversation interface", purpose: "Compose a message input, submit control, transcript and response surface; distinguish editable preview behavior from unqualified inference.", elements: [page, card,
+    id: "conversation-interface", name: "Conversation interface", purpose: "Compose a message input, Send control, transcript and response surface; distinguish inert preview behavior from unqualified inference.", elements: [page, card,
       { key: "history", definition: "conversation.message-history-display", parent: "card", slot: "content" },
       { key: "composer", definition: "conversation.message-composer", parent: "card", slot: "content" },
-      { key: "message", definition: "builtin.form.text-area", parent: "composer", slot: "input", properties: { label: "Your question", required: true } },
-      { key: "send", definition: "builtin.form.submit-action", parent: "composer", slot: "actions", properties: { label: "Send question" } },
+      { key: "message", definition: "conversation.user-message-input", parent: "composer", slot: "input", properties: { label: "Your question", accessibilityLabel: "Your question" } },
       { key: "response", definition: "conversation.assistant-response-panel", parent: "card", slot: "content" },
       { key: "error", definition: "builtin.state.error-state", parent: "card", slot: "content" },
     ]
@@ -198,16 +197,15 @@ async function exercisePurpose(dialog: Locator, scenario: MeaningfulSystemCase) 
     await details.locator(":scope > summary").click();
     expect(await details.getAttribute("open") !== null).toBe(wasOpen);
   } else {
-    const message = dialog.getByRole("textbox", { name: /^Your question \*$/ });
-    await expect(message).toHaveAttribute("required", "");
-    await message.fill("Summarize the synthetic request queue.");
-    await expect(message).toHaveValue("Summarize the synthetic request queue.");
+    const message = dialog.getByRole("textbox", { name: "Your question", exact: true });
+    await expect(message).not.toBeEditable();
+    await expect(message).toHaveValue("");
     await expect(dialog.locator('[data-foundation-definition="conversation.message-history-display"]')).toBeVisible();
     await expect(dialog.locator('[data-foundation-definition="conversation.assistant-response-panel"]')).toBeVisible();
-    await dialog.getByRole("button", { name: "Send question", exact: true }).click();
+    await dialog.getByRole("button", { name: "Send", exact: true }).click();
     // This is a nonexecuting preview. Do not fabricate a model response or
     // treat the absence of a qualified runtime as successful inference.
-    await expect(message).toHaveValue("Summarize the synthetic request queue.");
+    await expect(message).toHaveValue("");
   }
 }
 
@@ -372,9 +370,23 @@ async function exerciseEditing(page: Page, scenario: MeaningfulSystemCase, ids: 
   await measurePaint(page, samples, "undo", () => page.getByRole("button", { name: "Undo", exact: true }).click());
   expect(await readCanvasStructure(page)).toEqual(before);
   // Move to a different supported content region, then restore the original tree.
-  await inspector.getByRole("combobox", { name: "Move to region", exact: true }).selectOption(`${ids.get("page")}|content`);
+  const destination = `${ids.get("page")}|content`;
+  const regions = inspector.getByRole("combobox", { name: "Move to region", exact: true });
+  let reparented = id;
+  if (scenario.id === "request-intake") {
+    // Reorder the form field within its own form. It must never move to Page
+    // Shell. Moving the entire form keeps the fields inside their owner.
+    await expect(regions.locator(`option[value=${JSON.stringify(destination)}]`)).toHaveCount(0);
+    reparented = ids.get("form")!;
+    await canvasNode(page, reparented).locator(":scope > .system-composer__canvas-node-heading button").first().click();
+  }
+  await regions.selectOption(destination);
   await measurePaint(page, samples, "move", () => inspector.getByRole("button", { name: "Move selected asset", exact: true }).click());
-  expect((await readCanvasStructure(page)).find(node => node.id === id)).toMatchObject({ parent: ids.get("page"), slot: "content" });
+  const reparentedNodes = await readCanvasStructure(page);
+  expect(reparentedNodes.find(node => node.id === reparented)).toMatchObject({ parent: ids.get("page"), slot: "content" });
+  if (scenario.id === "request-intake") {
+    expect(reparentedNodes.filter(node => node.parent === reparented)).toEqual(before.filter(node => node.parent === reparented));
+  }
   await measurePaint(page, samples, "undo", () => page.getByRole("button", { name: "Undo", exact: true }).click());
   expect(await readCanvasStructure(page)).toEqual(before);
   // Removing a useful container must remove its descendants as one undoable edit.
@@ -470,7 +482,7 @@ export async function revisitMeaningfulSystems(page: Page, expected: readonly Me
     await page.getByRole("button", { name: "Edit system", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Canvas", exact: true })).toBeVisible({ timeout: 30_000 });
     await waitForDraftReady(page);
-    await expect(page.locator(".system-composer__canvas-node")).toHaveCount(scenario.elements.length + 3);
+    await expect(page.locator(".system-composer__canvas-node")).toHaveCount(saved.nodes.length);
     const readyMs = performance.now() - start;
     const ids = new Map<string, string>();
     for (const element of scenario.elements) {

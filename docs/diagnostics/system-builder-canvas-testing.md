@@ -367,11 +367,17 @@ only their own labels and retain exposed keyboard focus after pointer expansion.
 
 ## Exact saved-system observations
 
+The request fixture checks that a field cannot leave its form. It then moves
+the whole form, verifies the children still belong to that form, and undoes
+the move. The conversation fixture uses its own message input and Send
+control. Its read-only preview does not claim inference or launch a model.
+
 The meaningful-system journeys retain the selected workspace and system IDs, every
 observed instance and exact definition version, parent/slot/sibling order, and
 the configured synthetic labels and required fields. Save/reopen and later
-system switches compare the same bounded observations. A matching node count
-alone cannot pass. The comparison rejects duplicate IDs, missing parents, cycles,
+system switches compare the same bounded observations. Revisit uses the exact
+saved node count rather than assuming a fixed number of Foundation nodes. A
+matching node count alone cannot pass. The comparison rejects duplicate IDs, missing parents, cycles,
 extra fields and excessive data without changing the caller's observations.
 
 The browser case builds all three examples in one newly created workspace and

@@ -8120,96 +8120,96 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts",
    "facts": {
-    "sha256": "d1b4c3b03620c8cb2188e020c17c856f8d51d4105ae293fd35575b096e15a254",
-    "bytes": 34378,
+    "sha256": "17ccca24be2abb4fdba4578a9563ae1bd348e1ef5dcd1226f0f3524d0f0e6ddc",
+    "bytes": 34858,
     "cases": [],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "recordMeaningfulJourney",
-      "line": 47
+      "line": 46
      },
      {
       "name": "canvasNode",
-      "line": 59
+      "line": 58
      },
      {
       "name": "observeComposerProtocol",
-      "line": 62
+      "line": 61
      },
      {
       "name": "waitForDraftReady",
-      "line": 123
+      "line": 122
      },
      {
       "name": "property",
-      "line": 131
+      "line": 130
      },
      {
       "name": "insert",
-      "line": 147
+      "line": 146
      },
      {
       "name": "exercisePurpose",
-      "line": 173
+      "line": 172
      },
      {
       "name": "buildMeaningfulSystem",
-      "line": 214
+      "line": 212
      },
      {
       "name": "observeMeaningfulSystem",
-      "line": 326
+      "line": 324
      },
      {
       "name": "readCanvasStructure",
-      "line": 350
+      "line": 348
      },
      {
       "name": "exerciseEditing",
-      "line": 362
+      "line": 360
      },
      {
       "name": "exerciseCheckedBuild",
-      "line": 396
+      "line": 408
      },
      {
       "name": "measurePaint",
-      "line": 421
+      "line": 433
      },
      {
       "name": "startLongTasks",
-      "line": 429
+      "line": 441
      },
      {
       "name": "finishLongTasks",
-      "line": 447
+      "line": 459
      },
      {
       "name": "revisitMeaningfulSystems",
-      "line": 460
+      "line": 472
      }
     ],
-    "assertionCount": 75,
-    "assertionDigest": "06bc9fc36f99cac655b079b3df1a605be36475e4d357462ff8f192a69e64b44c",
+    "assertionCount": 77,
+    "assertionDigest": "e4686efe3e5d3e7cdc396f43cd96f4e931eaa0d0a40529f53477b447d813717a",
     "assertionExamples": [
      {
-      "line": 127,
+      "line": 126,
       "kind": "expect",
       "sha256": "a18914c717eb55722082ea8a53df6400cdb234e9d2d9200fe76b12005e516fc6"
      },
      {
-      "line": 128,
+      "line": 127,
       "kind": "expect",
       "sha256": "a20b8ee8026adf836fb79ec6223314d9692db7f4c43e150669109bc921077438"
      },
      {
-      "line": 152,
+      "line": 151,
       "kind": "expect",
       "sha256": "503826a2018dc807717e939e1ac449de012a3f07e79519957b561495bef07519"
      },
      {
-      "line": 154,
+      "line": 153,
       "kind": "expect",
       "sha256": "3c174d7530295d416646fb2dbee9d3d97a3dc4ba83451dee46227f5da591d868"
      }
