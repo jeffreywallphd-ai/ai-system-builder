@@ -372,6 +372,11 @@ the whole form, verifies the children still belong to that form, and undoes
 the move. The conversation fixture uses its own message input and Send
 control. Its read-only preview does not claim inference or launch a model.
 
+On Desktop, the three-system feature checks that its first app exits before
+the next app opens the same isolated profile. It repeats the exact saved
+comparison after restart and verifies that the second app exits. Worker
+shutdown remains a separate check for tests that start workers.
+
 The meaningful-system journeys retain the selected workspace and system IDs, every
 observed instance and exact definition version, parent/slot/sibling order, and
 the configured synthetic labels and required fields. Save/reopen and later

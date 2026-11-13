@@ -611,7 +611,43 @@ const reviewedMeaningfulFormCensus = Object.freeze({
     }
   ].map(Object.freeze)),
 });
+const reviewedMeaningfulDesktopRestartCensus = Object.freeze({
+  priorCommit: "f4aa86c10f99a7404fa5dff08ede0f3d2caaeb9a",
+  before: "971177e7a71eb16ef68296af18c9b6db272c645f7a8d258dfdfe78a8d4d2a46c",
+  after: "904cc0d0a1848841d4cdc3c33e233948de4274ad81403d01039b3ab9d0749dd9",
+  pins: Object.freeze([
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
+      "source": "93cb6728cd671c92c0555742f052384ae0ab91859eef3ca06a9133aab4b383a0",
+      "facts": "92b214f12fcc279c038f0f4a9f18ae7716930b4a78b8673ac6054256d48ef409"
+    }
+  ].map(Object.freeze)),
+});
+function meaningfulDesktopRestartLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) !== reviewedMeaningfulDesktopRestartCensus.after) return {map, result};
+  const previous = JSON.parse(historicalSource(reviewedMeaningfulDesktopRestartCensus.priorCommit, censusDocument));
+  assert.equal(sha(JSON.stringify(previous)), reviewedMeaningfulDesktopRestartCensus.before);
+  const expected = structuredClone(previous);
+  for (const pin of reviewedMeaningfulDesktopRestartCensus.pins) {
+    const [row] = map.sources.filter(item => item.path === pin.path);
+    const original = expected.sources.find(item => item.path === pin.path);
+    assert(row && original);
+    assert.equal(row.committed_sha256, original.committed_sha256);
+    assert.notEqual(row.facts.sha256, original.facts.sha256);
+    assert.equal(row.facts.sha256, pin.source);
+    assert.equal(sha(JSON.stringify(row.facts)), pin.facts);
+    assert.notEqual(row.facts.sha256, row.committed_sha256);
+    original.facts = structuredClone(row.facts);
+  }
+  assert.deepEqual(map, expected);
+  assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+  return {map: previous, result: {...result, gaps: [
+    ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+  ]}};
+}
+
 function meaningfulFormLegacyView(map, result) {
+  ({map,result}=meaningfulDesktopRestartLegacyView(map,result));
   if (sha(JSON.stringify(map)) !== reviewedMeaningfulFormCensus.after) return {map, result};
   const previous = JSON.parse(historicalSource(reviewedMeaningfulFormCensus.priorCommit, censusDocument));
   assert.equal(sha(JSON.stringify(previous)), reviewedMeaningfulFormCensus.before);
@@ -1754,7 +1790,14 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,25);
+  assert.equal(result.gaps.length,26);
+  const desktopRestartPrior = meaningfulDesktopRestartLegacyView(map,result);
+  assert.equal(desktopRestartPrior.result.gaps.length,25);
+  assert.equal(sha(JSON.stringify(desktopRestartPrior.map)),reviewedMeaningfulDesktopRestartCensus.before);
+  for (const pin of reviewedMeaningfulDesktopRestartCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
   const meaningfulPrior = meaningfulFormLegacyView(map,result);
   assert.equal(meaningfulPrior.result.gaps.length,25);
   assert.equal(sha(JSON.stringify(meaningfulPrior.map)),reviewedMeaningfulFormCensus.before);

@@ -1,23 +1,24 @@
 import { expect, test } from "@playwright/test";
-import { _electron as electron } from "playwright";
+import { _electron as electron, type ElectronApplication } from "playwright";
 import { mkdir, realpath } from "node:fs/promises";
 import path from "node:path";
-import { closeDesktopAndQualifyOwnedWorkers } from "./desktop-task-cleanup";
 import { buildMeaningfulSystem, meaningfulSystemCases, recordMeaningfulJourney, revisitMeaningfulSystems } from "./meaningful-system-journeys";
 import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import { runOwnedRestartPhase } from "../asset-authoring-oracles";
+import { assetApplicationLifetime } from "../asset-experience-oracles";
 import type { MeaningfulSystemObservation } from "../meaningful-system-oracles";
 
 test("packaged desktop builds multiple useful systems from scratch", async () => {
   test.setTimeout(420_000);
   const isolated = prepareIsolatedDesktopCase("meaningful");
+  const lifetime = assetApplicationLifetime<ElectronApplication>();
   const savedSystems: MeaningfulSystemObservation[] = [];
   let originalPid: number | undefined;
   let originalPage: import("@playwright/test").Page | undefined;
   for (const phase of ["before-restart", "after-restart"] as const) {
     const cache = path.join(isolated.dataRoot, `authoring-cache-${phase}`);
     await mkdir(cache, {recursive: false}); expect(await realpath(cache)).toBe(cache);
-    const app = await electron.launch({ executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env: {...isolated.env, HF_HUB_CACHE: cache}, timeout: 60_000 });
+    const app = await lifetime.launch(() => electron.launch({ executablePath: process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE!, args: [`--user-data-dir=${isolated.dataRoot}`, "--disable-gpu"], env: {...isolated.env, HF_HUB_CACHE: cache}, timeout: 60_000 }));
     await runOwnedRestartPhase(async () => {
       const page = await app.firstWindow({ timeout: 60_000 });
       const pid = app.process().pid;
@@ -50,6 +51,8 @@ test("packaged desktop builds multiple useful systems from scratch", async () =>
       }
       await revisitMeaningfulSystems(page, savedSystems, value => recordMeaningfulJourney(test.info(), "revisit", value));
       }
-    }, () => closeDesktopAndQualifyOwnedWorkers(app, cache, test.info(), phase));
+    // This Canvas feature launches no model or Python worker. Require each
+    // owned app to exit successfully before the next phase can start.
+    }, () => lifetime.retire());
   }
 });

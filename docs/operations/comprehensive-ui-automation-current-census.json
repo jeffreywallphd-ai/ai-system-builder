@@ -8527,8 +8527,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
    "facts": {
-    "sha256": "07635eb12fcf000a9960b2f0386c8e76e30201ffdf109dcc051288c4b1ac6135",
-    "bytes": 4132,
+    "sha256": "93cb6728cd671c92c0555742f052384ae0ab91859eef3ca06a9133aab4b383a0",
+    "bytes": 4342,
     "cases": [
      {
       "name": "packaged desktop builds multiple useful systems from scratch",
@@ -8538,25 +8538,25 @@
     "dynamicCases": 0,
     "functions": [],
     "assertionCount": 9,
-    "assertionDigest": "822f1cb0e8b29e089d5a75183d37652eeeeb625a31753d94431cb258516359d3",
+    "assertionDigest": "606024aeec25d33170071f8ba5ea1a94dae3c8c12e3e3df60adb370bcac832e6",
     "assertionExamples": [
      {
-      "line": 19,
+      "line": 20,
       "kind": "expect",
       "sha256": "706f596313c86b07d1a7e12fb1f2e74d877e6f0be455e90aeec365a50993f49d"
      },
      {
-      "line": 24,
+      "line": 25,
       "kind": "expect",
       "sha256": "714a093f33d93c8075421fdc83ac0bea0a65b9f0ae635a8ef89a73040830e48b"
      },
      {
-      "line": 27,
+      "line": 28,
       "kind": "expect",
       "sha256": "e625f2c7035648094859303beed2b30a276150e954ba7267a5c46c4f786365a5"
      },
      {
-      "line": 27,
+      "line": 28,
       "kind": "expect",
       "sha256": "05d873934d8edfb91dcfcb8b23f8d69ad2dfffd0443467b182366db4cb0bbcad"
      }
