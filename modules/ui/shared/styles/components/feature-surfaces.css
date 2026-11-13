@@ -320,6 +320,17 @@
   box-shadow: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .asset-library-detail-dialog,
+  .asset-library-detail-dialog *,
+  .asset-library-detail-dialog *::before,
+  .asset-library-detail-dialog *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 .asset-definition-card {
   inline-size: 100%;
   block-size: 100%;

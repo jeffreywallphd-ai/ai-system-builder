@@ -29,6 +29,30 @@ const repositoryUiSources = (relativeDirectory: string): readonly string[] => {
 };
 
 describe("system builder shared styles", () => {
+  it("disables motion in the portaled Asset details dialog only under reduced motion", () => {
+    const dom = new JSDOM(`<style>
+      ${readStyle("modules/ui/shared/styles/components/feature-surfaces.css")}
+    </style><section class="asset-library-detail-dialog"><button id="details">Close</button></section>
+      <button id="other">Outside the dialog</button>`);
+    try {
+      const { document, CSSMediaRule, CSSStyleRule } = dom.window;
+      const stylesheet = [...document.styleSheets[0]!.cssRules];
+      const targets = ["#details", "#other"].map(selector => document.querySelector(selector)!);
+      const disables = (rule: CSSRule, element: Element) =>
+        rule instanceof CSSStyleRule &&
+        element.matches(rule.selectorText.split(",").filter(selector => !selector.includes("::")).join(",") || ":not(*)") &&
+        rule.style.getPropertyValue("transition").trim() === "none" &&
+        rule.style.getPropertyValue("animation").trim() === "none";
+      const reduced = stylesheet.flatMap(rule =>
+        rule instanceof CSSMediaRule && rule.conditionText === "(prefers-reduced-motion: reduce)" ? [...rule.cssRules] : [],
+      );
+      expect(targets.map(target => reduced.some(rule => disables(rule, target)))).toEqual([true, false]);
+      expect(targets.map(target => stylesheet.some(rule => disables(rule, target)))).toEqual([false, false]);
+    } finally {
+      dom.window.close();
+    }
+  });
+
   it("gives read-only asset source its own themed reading surface", () => {
     const dom = new JSDOM(`<style>
       ${readStyle("modules/ui/shared/styles/components/feature-surfaces.css")}

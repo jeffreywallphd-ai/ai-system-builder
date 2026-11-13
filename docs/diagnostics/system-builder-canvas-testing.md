@@ -94,6 +94,8 @@ when the user chooses Windows high contrast.
 The Assets history test compares the rendered publication row after reload. It
 allows a visible line break between the revision and asset ID while requiring
 the exact name, status, revision, ID, and version.
+Asset details honors reduced motion even though its dialog is rendered
+outside the application shell.
 
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown
