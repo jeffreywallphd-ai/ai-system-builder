@@ -79,6 +79,11 @@ previous selection. At narrow widths and native zoom, the guided lifecycle
 driver uses the application navigation menu and the responsive Canvas panel
 controls. The same contrast and lifecycle checks still apply.
 
+The Build and test dialog opens outside the Canvas. With reduced motion
+enabled, it suppresses decorative transitions and animations. Build status
+and controls remain available. The separate contrast and semantics checks
+still apply.
+
 The managed Assets restart case loads its fixture in the Playwright worker.
 It imports the shared process cleanup helper without loading the visual
 composer command-line entry point. The import regression runs without opening

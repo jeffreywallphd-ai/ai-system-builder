@@ -1067,6 +1067,10 @@
   .system-builder *::before,
   .system-builder *::after,
   .system-composer__asset-picker-dialog *,
+  .system-build-test-modal,
+  .system-build-test-modal *,
+  .system-build-test-modal *::before,
+  .system-build-test-modal *::after,
   .system-composition-preview * {
     animation: none !important;
     transition: none !important;

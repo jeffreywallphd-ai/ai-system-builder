@@ -29,6 +29,32 @@ const repositoryUiSources = (relativeDirectory: string): readonly string[] => {
 };
 
 describe("system builder shared styles", () => {
+  it("removes decorative motion from the Build and test dialog outside the Canvas", () => {
+    const dom = new JSDOM(`<style>${readStyle("modules/ui/shared/styles/components/system-composer.css")}</style>
+      <main class="system-builder"></main>
+      <section class="ui-modal-dialog system-build-test-modal" role="dialog"><button>Build &amp; test</button></section>
+      <button>Outside the dialog</button>`);
+    try {
+      const { document, CSSMediaRule, CSSStyleRule } = dom.window;
+      const stylesheet = [...document.styleSheets[0]!.cssRules];
+      const reduced = stylesheet.flatMap(rule =>
+        rule instanceof CSSMediaRule && rule.conditionText === "(prefers-reduced-motion: reduce)" ? [...rule.cssRules] : [],
+      );
+      const suppresses = (rules: CSSRule[], target: Element) => rules.some(rule =>
+        rule instanceof CSSStyleRule &&
+        target.matches(rule.selectorText.split(",").filter(selector => !selector.includes("::")).join(",") || ":not(*)") &&
+        rule.style.getPropertyValue("transition") === "none" &&
+        rule.style.getPropertyValue("animation") === "none",
+      );
+      const [action, outside] = [...document.querySelectorAll("button")];
+      expect(suppresses(reduced, action!)).toBe(true);
+      expect(suppresses(reduced, outside!)).toBe(false);
+      expect(suppresses(stylesheet, action!)).toBe(false);
+    } finally {
+      dom.window.close();
+    }
+  });
+
   it("disables motion in the portaled Asset details dialog only under reduced motion", () => {
     const dom = new JSDOM(`<style>
       ${readStyle("modules/ui/shared/styles/components/feature-surfaces.css")}
