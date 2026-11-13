@@ -108,6 +108,36 @@ async function click(text: string) {await act(async () => button(text).click());
 function displayNameInput() {return [...container.querySelectorAll("label")].find(label => label.firstChild?.textContent?.trim() === "Display name")?.querySelector("input");}
 
 describe("customization owner and mutation recovery", () => {
+  it("makes read-only source keyboard focusable without adding an editor", async () => {
+    const sourceText = "export const example = 1;\n".repeat(40);
+    const path = "backend/example.js";
+    const editable = detail("Sample asset");
+    const readCustomizationTarget = vi.fn().mockResolvedValue({
+      ok: true,
+      value: {
+        ...editable,
+        backingResources: [...editable.backingResources, {
+          path,
+          role: "backend-logic",
+          mediaType: "text/javascript",
+          content: sourceText,
+          editable: false,
+          sizeCharacters: sourceText.length,
+        }],
+      },
+    });
+    await render("a", selectedClient("Sample asset", {readCustomizationTarget}), preferred);
+    const source = container.querySelector<HTMLElement>(
+      'pre[role="region"][aria-label="Read-only source for backend/example.js"]',
+    );
+    expect(source?.tabIndex).toBe(0);
+    source!.focus();
+    expect(document.activeElement).toBe(source);
+    expect(source!.querySelector("code")?.textContent).toBe(sourceText);
+    expect(container.querySelector(`textarea[aria-label="Content for ${path}"]`)).toBeNull();
+    expect(container.querySelector('textarea[aria-label="Content for frontend/example.css"]')).not.toBeNull();
+  });
+
   it.each([false, true])("keeps the chosen target when a manual search includes the initial preference=%s", async includePreferred => {
     const initial = target("preferred"), chosen = target("chosen");
     const listing = vi.fn().mockResolvedValueOnce(listed(initial, chosen)).mockResolvedValueOnce(listed(...(includePreferred ? [initial, chosen] : [chosen])));

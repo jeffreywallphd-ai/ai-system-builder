@@ -87,6 +87,9 @@ System Foundation renderers without executing backend logic, activating a
 release, or deploying the system.
 The selected Layers row uses its highlight foreground for placement details in
 forced colors. Normal themes and unselected rows keep their existing styles.
+In Assets Customizations, each open read-only source panel has a keyboard
+focus stop. Its accessible name identifies the resource, and the text remains
+read-only.
 
 On Windows, Playwright's launch process is a shell. Bind worker ownership to the
 actual Electron main PID read through its live main IPC context. Shutdown

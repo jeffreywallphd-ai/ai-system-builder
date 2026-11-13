@@ -1255,7 +1255,12 @@ function ResourceEditors({
               </label>
             </>
           ) : (
-            <pre className="asset-customizer__readonly-source">
+            <pre
+              className="asset-customizer__readonly-source"
+              role="region"
+              aria-label={`Read-only source for ${resource.path}`}
+              tabIndex={0}
+            >
               <code>{resource.content}</code>
             </pre>
           )}
