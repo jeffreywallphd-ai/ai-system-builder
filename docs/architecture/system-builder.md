@@ -123,7 +123,15 @@ external writes until durable receipt and change delivery are available.
 The management contract names the exact installed template when creating a
 system. Rename and clone include the saved record and composition revision
 that the client read. All three requests require an idempotency key and explicit
-workspace. The internal decoder adds no write permissions or connector tools.
+workspace. When the host composes the internal authoring service, template
+creation, rename, clone and apply use the existing System Builder use cases.
+Rename preserves the existing description when the client omits it. All
+delegated edits resolve exact definitions through the workspace asset facade.
+Validation stages a single write before the owned transaction. That transaction
+rechecks the saved target and the current host grant, then commits the saved
+change, retry receipt and change notification together. A changed host
+incarnation does not change the saved retry identity. No connector tools
+are granted by the internal service alone.
 
 Composer saves and upgrade previews use the record revision and exact
 composition revision captured when the draft was opened or saved. A newer list

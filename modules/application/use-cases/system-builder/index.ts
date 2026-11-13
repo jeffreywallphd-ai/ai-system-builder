@@ -6,3 +6,4 @@ export * from "./list-system-builder-management.use-case";
 export * from "./preview-system-builder-layout-change.use-case";
 export * from "./upgrade-system-builder-foundation.use-cases";
 export * from "./list-system-builder-model-options.use-case";
+export * from "./headless-system-authoring.use-case";

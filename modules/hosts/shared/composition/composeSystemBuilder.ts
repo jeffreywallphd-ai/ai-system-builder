@@ -1,11 +1,17 @@
 import type { AssetDefinitionVersionReaderPort } from "../../../application/ports/asset-implementation";
 import type { AssetRegistryDefinitionReadPort } from "../../../application/ports/asset";
+import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
+import type { HeadlessOperationStorePort } from "../../../application/ports/system-builder";
+import type { AssetReference } from "../../../contracts/asset";
+import { isOrganizationId } from "../../../contracts/organization";
+import type { WorkspaceId } from "../../../contracts/workspace";
 import type { ModelRegistryPort } from "../../../application/ports/model";
 import {
   ArchiveSystemBuilderSystemUseCase,
   CloneSystemBuilderSystemUseCase,
   CreateSystemBuilderFromTemplateUseCase,
   CreateSystemBuilderSystemUseCase,
+  HeadlessSystemAuthoringUseCase,
   ListSystemBuilderRevisionsUseCase,
   ListSystemBuilderSystemsUseCase,
   ListSystemBuilderTemplatesUseCase,
@@ -78,10 +84,38 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
     generateSystemId: options.generateSystemId,
     now: options.now,
   };
+  const readWorkspaceDefinition = async (workspaceId: WorkspaceId, reference: AssetReference) => {
+    if (reference.kind !== "asset-definition-version" || !reference.version) return undefined;
+    const detail = await options.assetRegistryRead.readDefinitionDetail(reference, {
+      workspaceId, includeConfigurationSchema: true, includePorts: true, includeRequirements: true, includeMetadata: true,
+    });
+    const definition = detail?.definition;
+    return definition?.definitionId === reference.id && definition.version === reference.version ? definition : undefined;
+  };
   return {
     repository,
     validator,
     modelAuthority,
+    composeHeadlessAuthoring(delegation: {
+      readonly access: WorkspaceAssetAccessPort;
+      readonly operations: HeadlessOperationStorePort;
+      readonly digest: (text: string) => string;
+    }) {
+      const { organizationId } = options.documents;
+      if (!isOrganizationId(organizationId)) throw new Error("Headless authoring requires a verified organization store.");
+      return new HeadlessSystemAuthoringUseCase({
+        ...dependencies, ...delegation, organizationId, templates, resolveDefinition: readWorkspaceDefinition,
+        repository: createStructuredSystemBuilderRepository(options.documents.forOrganization(organizationId)),
+        access: { async authorize(...args) {
+          if (options.documents.organizationId !== organizationId) throw new Error("The request organization changed.");
+          await delegation.access.authorize(...args);
+          if (options.documents.organizationId !== organizationId) throw new Error("The request organization changed.");
+        } },
+        validator: (workspaceId) => new ValidateSystemBuilderRevisionService({
+          readExactDefinition: (reference) => readWorkspaceDefinition(workspaceId, reference),
+        }, options.now, modelAuthority),
+      });
+    },
     useCases: {
       create: new CreateSystemBuilderSystemUseCase(dependencies),
       listTemplates: lazyRead(() => new ListSystemBuilderTemplatesUseCase(templates)),

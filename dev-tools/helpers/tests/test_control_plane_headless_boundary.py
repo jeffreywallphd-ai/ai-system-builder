@@ -33,6 +33,9 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         self.assertIn("focused-tests", self.plan([source]))
         self.assertEqual(set(self.plan([source], check)), {"architecture", check})
         self.assertIn("focused-tests", self.plan([source, unrelated], check))
+        shared = "modules/hosts/shared/composition/composeSystemBuilder.ts"
+        self.assertIn("focused-tests", self.plan([shared]))
+        self.assertNotIn("focused-tests", self.plan([shared, source], check))
 
     def test_owned_provider_and_contract_use_the_exact_check(self):
         host_test = "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts"

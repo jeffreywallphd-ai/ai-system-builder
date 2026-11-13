@@ -128,6 +128,9 @@ HEADLESS_MCP_SOURCES = (
 PUBLISHED_FORM_CHECKS = {
     "headless-system-builder-semantic-edits": {
         "sources": (
+            "modules/application/use-cases/system-builder/headless-system-authoring.use-case.ts",
+            "modules/application/use-cases/system-builder/tests/headless-system-authoring.unit.test.ts",
+            "modules/hosts/shared/composition/composeSystemBuilder.ts",
             "modules/application/use-cases/system-builder/headless-semantic-edit-draft.ts",
             "modules/application/use-cases/system-builder/headless-semantic-edit.use-case.ts",
             "modules/application/use-cases/system-builder/index.ts",
@@ -137,7 +140,9 @@ PUBLISHED_FORM_CHECKS = {
         "command": (
             "--import", "tsx", "--test", "--",
             "modules/contracts/headless/tests/headless-semantic-batch.unit.test.ts",
+            "modules/contracts/headless/tests/headless-system-management.unit.test.ts",
             "modules/application/use-cases/system-builder/tests/headless-semantic-edit.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/headless-system-authoring.unit.test.ts",
             "modules/application/use-cases/system-builder/tests/system-builder-use-cases.unit.test.ts",
         ),
     },
