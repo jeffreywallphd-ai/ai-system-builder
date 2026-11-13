@@ -784,7 +784,19 @@ const reviewedHeadlessDraftCensus = Object.freeze({
   })]),
 });
 
+const reviewedHeadlessPassiveRefreshCensus = Object.freeze({
+  priorCommit: "52cdfb540cf922e1a18d23bea6be36edc1e3cdd1",
+  before: reviewedHeadlessDraftCensus.after,
+  after: "8a87cf9b4d77278592d2d5ce2e2bb198ce4b023d067210b4fe7cdadbac7ace5e",
+  pins: Object.freeze([Object.freeze({
+    path: "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+    source: "ed59a408278047f9c6909fb2f33127285ca0a81ffd08d48bcc19ffbf4798ef6a",
+    facts: "ced3e1f7ce9edae9a2234e36ddbf4b7f84524335cc822621ad2f6e4ed294535e",
+  })]),
+});
+
 function beforeDesktopImageLabelCensus(map, result) {
+  ({map, result} = verifyExactLayoutCensus(map, result, reviewedHeadlessPassiveRefreshCensus));
   ({map, result} = verifyExactLayoutCensus(map, result, reviewedHeadlessDraftCensus));
   if (sha(JSON.stringify(map)) === reviewedBrowserModalCensus.after) {
     const previous = JSON.parse(historicalSource(reviewedDesktopImageLabelCensus.priorCommit, censusDocument));

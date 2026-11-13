@@ -146,6 +146,12 @@ state when a newer revision arrives or the saved system leaves the list.
 Discard loads the current listed revision if it changed. A stale write still
 fails through the application and keeps the user's edits.
 
+A clean Composer can install a newer exact saved revision while keeping the
+active route, tab and compatible asset selection. It leaves the current graph
+usable until the reply arrives. Workspace, target, latest record and request
+generation must still match. Editing, undoing into a dirty draft, saving and
+switching workspaces fence outstanding passive replies.
+
 - System Builder records are workspace-owned and require explicit workspace identity at every future contract, client, transport, use-case, repository, and persistence seam.
 - Asset Kernel definitions, instances, bindings, compositions, and references remain canonical component vocabulary.
 - Asset composition planning remains the non-executing compatibility/planning input. A system record may reference a plan but must not mutate the plan or effective asset projections implicitly.

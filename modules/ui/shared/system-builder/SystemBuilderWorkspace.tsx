@@ -303,6 +303,12 @@ export function SystemBuilderWorkspace({
       currentListRecord.revision !== draftBase.current.recordRevision));
   const liveDraft = useRef<string | undefined>(undefined);
   liveDraft.current = dirty ? selectedSystemId : undefined;
+  const passiveInstallGeneration = useRef(0);
+  const deferPassiveUntilListChange = useRef<SystemBuilderRecord>();
+  const passiveLoadBlocked = useRef(false);
+  passiveLoadBlocked.current = dirty || busy || revisionLoading || foundationUpgradeOpen;
+  const selectedEditorState = useRef({ selectedInstanceId, formTarget });
+  selectedEditorState.current = { selectedInstanceId, formTarget };
   const liveList = useRef(systems);
   liveList.current = systems;
   const existingSystemIsLoaded = Boolean(
@@ -621,6 +627,49 @@ export function SystemBuilderWorkspace({
       }).catch(() => { if (isCurrentLoad()) setHistoryError("Revision history is unavailable. Your current Canvas is ready."); });
     return () => { active = false; };
   }, [client, selectedSystemId, workspaceId, loadAttempt]);
+
+  useEffect(() => {
+    const base = draftBase.current;
+    const saved = currentListRecord;
+    if (deferPassiveUntilListChange.current === saved && saved) return;
+    if (passiveLoadBlocked.current || !base || !saved || !selectedSystemId ||
+        base.scope !== scope || base.systemId !== selectedSystemId ||
+        saved.targetWorkspaceId !== workspaceId || saved.status === "archived" ||
+        saved.revision <= base.recordRevision || !saved.currentRevisionId) return;
+    const expectedRevisionId = saved.currentRevisionId;
+    const generation = ++passiveInstallGeneration.current;
+    const isCurrent = () => passiveInstallGeneration.current === generation &&
+      currentScope.current === scope && currentSystem.current === selectedSystemId &&
+      !passiveLoadBlocked.current && !operation.current && draftBase.current === base &&
+      liveList.current.some((record) => record.targetWorkspaceId === workspaceId &&
+        record.systemId === selectedSystemId && record.revision === saved.revision &&
+        record.currentRevisionId === expectedRevisionId && record.status !== "archived");
+    // This path never changes the route, the visible tab or the editor focus.
+    // It leaves the old saved graph usable until an exact newer reply arrives.
+    void Promise.resolve().then(() => isCurrent()
+      ? client.readRevision({ workspaceId, systemId: selectedSystemId, revisionId: expectedRevisionId })
+      : undefined
+    ).then((result) => {
+      if (!isCurrent() || !result?.ok) return;
+      const value = result.value;
+      if (value.systemId !== selectedSystemId || value.targetWorkspaceId !== workspaceId ||
+          value.revisionId !== expectedRevisionId || value.revisionNumber < (revision?.revisionNumber ?? 0)) return;
+      const { selectedInstanceId: selection, formTarget: form } = selectedEditorState.current;
+      draftBase.current = { scope, systemId: selectedSystemId, recordRevision: saved.revision, revisionId: value.revisionId };
+      if (base.revisionId === value.revisionId) return; // A rename need not replace the graph.
+      setRevision(value);
+      setDetachedSystem(saved);
+      installSavedDraft(value);
+      setUndoDrafts([]);
+      setRedoDrafts([]);
+      setRevisions((current) => [value, ...current.filter((item) => item.revisionId !== value.revisionId)]);
+      setSelectedLayoutDefinitionId(value.structure?.layoutPresetRef ? String(value.structure.layoutPresetRef.id) : undefined);
+      if (selection && !value.instances.some((instance) => instance.instanceId === selection)) setSelectedInstanceId(undefined);
+      if (form?.scope === scope && form.systemId === selectedSystemId &&
+          !value.instances.some((instance) => instance.instanceId === form.formId)) setFormTarget(undefined);
+    }).catch(() => { /* A passive read failure leaves the current saved graph usable. */ });
+    return () => { if (passiveInstallGeneration.current === generation) passiveInstallGeneration.current++; };
+  }, [client, scope, workspaceId, selectedSystemId, currentListRecord, revision, dirty, busy, revisionLoading, foundationUpgradeOpen]);
 
   useEffect(() => {
     if (
@@ -984,7 +1033,11 @@ export function SystemBuilderWorkspace({
     );
     setUndoDrafts(history.past);
     setRedoDrafts(history.future);
-    setDirty(!areSystemComposerDraftsEqual(history.present, savedDraft.current));
+    const changed = !areSystemComposerDraftsEqual(history.present, savedDraft.current);
+    // Fence any in-flight result before React renders the next draft state.
+    passiveInstallGeneration.current++;
+    passiveLoadBlocked.current = true;
+    setDirty(changed);
     setError(undefined);
     setNotice(undefined);
   }
@@ -1366,6 +1419,8 @@ export function SystemBuilderWorkspace({
       setSelectedSystemId(undefined);
       setExistingSystemId("");
     } else if (currentListRecord.revision !== draftBase.current?.recordRevision) {
+      passiveInstallGeneration.current++;
+      deferPassiveUntilListChange.current = currentListRecord;
       setLoadAttempt((value) => value + 1);
     }
     setNotice("Unsaved changes discarded.");
