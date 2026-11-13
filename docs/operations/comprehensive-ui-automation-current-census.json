@@ -12119,8 +12119,8 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "bd8517b151ba313cfee36660feea59a717290246368e433470e424bf67e94261",
-    "bytes": 106965,
+    "sha256": "5af135a29d7f7eed4faca5a486dd8a660c55642faaed15f5dcb0e5aa26df8833",
+    "bytes": 106956,
     "cases": [
      {
       "name": "submits a published form only after valid answers and reuses the same request on retry",
@@ -12231,7 +12231,7 @@
      }
     ],
     "assertionCount": 259,
-    "assertionDigest": "eebdf64c05bd368569872f9ec3e21ec353e3f2be2ace647f009ab24c7dbc2ee2",
+    "assertionDigest": "068318e08a65f9049fb373ff631968400fadd5a015095e2ceef0fc1ee67e9cb8",
     "assertionExamples": [
      {
       "line": 66,
@@ -12481,8 +12481,8 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "0f7c243da777a39b5ac8ba6f4fc2cb5c27b68187fd0c026b33d15036c854f00b",
-    "bytes": 36793,
+    "sha256": "455fe02945d95f943385111e118e0b3da92abcf50874d96102c6f80c0f1ff2a4",
+    "bytes": 36766,
     "cases": [
      {
       "name": "reports a rejected initial read through notifications and can retry",
@@ -12625,7 +12625,7 @@
      }
     ],
     "assertionCount": 101,
-    "assertionDigest": "d8700952b9fcba428157f5c25b3af362426c5376a81be6f534d9959361b1b6a6",
+    "assertionDigest": "6c0cc688188fb9f10d827b1e5f7013eca4ddb0017bd40566e271e996ea87b2ac",
     "assertionExamples": [
      {
       "line": 59,

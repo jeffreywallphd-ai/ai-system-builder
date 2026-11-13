@@ -1791,7 +1791,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(dialog.textContent).toContain("Configured requests");
     expect(dialog.textContent).toContain("1 frontend surface");
     expect(dialog.textContent).toContain("1 unavailable");
-    expect(dialog.textContent).toContain("does not execute backend logic");
+    expect(dialog.textContent).toContain("No backend code runs.");
     expect(dialog.textContent).not.toContain("Denied by default");
     const mobileViewport = Array.from(
       dialog.querySelectorAll<HTMLButtonElement>("button"),

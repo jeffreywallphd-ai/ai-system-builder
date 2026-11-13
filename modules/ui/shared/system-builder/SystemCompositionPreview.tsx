@@ -187,26 +187,25 @@ export function SystemCompositionPreview({
       aria-label={systemName + " current UI preview"}
     >
       <div className="system-composition-preview__summary ui-stack ui-stack--xs">
-        <p>System: {systemName}</p>
-        <p>This preview does not execute backend logic.</p>
-        <p>It does not activate a release or deploy the system.</p>
+        <p>{`System: ${systemName}`}</p>
+        <p>No backend code runs.</p>
+        <p>No release or deployment.</p>
         <div
           className="system-composition-preview__counts"
           role="group"
           aria-label="Preview coverage"
         >
           <span className="ui-badge ui-badge--info">
-            {model.items.length} frontend{" "}
-            {model.items.length === 1 ? "surface" : "surfaces"}
+            {`${model.items.length} frontend ${model.items.length === 1 ? "surface" : "surfaces"}`}
           </span>
           {model.unavailableCount ? (
             <span className="ui-badge ui-badge--warning">
-              {model.unavailableCount} unavailable
+              {`${model.unavailableCount} unavailable`}
             </span>
           ) : null}
           {model.unassignedCount ? (
             <span className="ui-badge ui-badge--warning">
-              {model.unassignedCount} unassigned
+              {`${model.unassignedCount} unassigned`}
             </span>
           ) : null}
         </div>

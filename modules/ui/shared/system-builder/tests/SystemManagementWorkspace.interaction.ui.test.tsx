@@ -130,7 +130,7 @@ describe("SystemManagementWorkspace", () => {
     expect(changed).not.toHaveBeenCalled();
     await act(async () => control.click());
     expect(client[method]).toHaveBeenCalledTimes(2);
-    if (action.startsWith("preview")) expect((await dialogContaining("Preview: Customer portal")).textContent).toContain("does not execute backend logic");
+    if (action.startsWith("preview")) expect((await dialogContaining("Preview: Customer portal")).textContent).toContain("No backend code runs.");
     else expect(changed).toHaveBeenCalledTimes(1);
   });
 
@@ -380,7 +380,7 @@ describe("SystemManagementWorkspace", () => {
     expect(readNotificationMessages(container!)).toContain("Could not open the system preview. Select Preview to try again.");
     expect(readNotificationMessages(container!).join(" ")).not.toContain("synthetic");
     await act(async () => button(container!, "Preview").click());
-    expect((await dialogContaining("Preview: Customer portal")).textContent).toContain("does not execute backend logic");
+    expect((await dialogContaining("Preview: Customer portal")).textContent).toContain("No backend code runs.");
   });
 
   it("preserves an actionable typed revision denial and keeps archive retry available", async () => {
@@ -424,7 +424,7 @@ describe("SystemManagementWorkspace", () => {
       revisionId: "revision-2",
     });
     expect(previewDialog.textContent).toContain(
-      "does not execute backend logic",
+      "No backend code runs.",
     );
 
     await act(async () =>

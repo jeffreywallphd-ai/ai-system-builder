@@ -347,6 +347,10 @@ The application heading color can otherwise appear nearly white against
 the default light page canvas. The Preview dialog and nested assets keep
 their own styling.
 
+Preview keeps the execution and deployment notices short enough to read in a
+narrow dialog. The system name and each coverage count render as one label so
+the browser can measure their text together. Long names still wrap.
+
 The standard and native Canvas journeys wait for temporary success
 notifications to dismiss before auditing Canvas. At narrow widths the picker
 can cover part of a notification and leave the document contrast audit

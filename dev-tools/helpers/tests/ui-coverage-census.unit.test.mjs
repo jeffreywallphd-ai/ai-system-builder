@@ -582,7 +582,48 @@ const reviewedSettledCanvasAuditCensus = Object.freeze({
     }
   ].map(Object.freeze)),
 });
+const reviewedCanvasPreviewSummaryCensus = Object.freeze({
+  priorCommit: "0b1893506fe23b72c336d596371669cd3f0f7bbd",
+  before: "7f283029bd5621bb230b3cddee4f92c4072ca469a5d262f39cd95581df728ae5",
+  after: "c59b5c45b668a7983005f106ab1bdbd0da43c0d069f4608fc81d0337d0613ba5",
+  pins: Object.freeze([
+    {
+      "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "source": "5af135a29d7f7eed4faca5a486dd8a660c55642faaed15f5dcb0e5aa26df8833",
+      "facts": "54791c5ceba33e59ed2b1729b5babd8831150212452128363e6b905850c4471b"
+    },
+    {
+      "path": "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+      "source": "455fe02945d95f943385111e118e0b3da92abcf50874d96102c6f80c0f1ff2a4",
+      "facts": "6494a9d8f9734ed4c7c5ada1cdc7daf6cba1a0a7e78d616d9601fa3d324b3b9e"
+    }
+  ].map(Object.freeze)),
+});
+function canvasPreviewSummaryLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) !== reviewedCanvasPreviewSummaryCensus.after) return {map, result};
+  const previous = JSON.parse(historicalSource(reviewedCanvasPreviewSummaryCensus.priorCommit, censusDocument));
+  assert.equal(sha(JSON.stringify(previous)), reviewedCanvasPreviewSummaryCensus.before);
+  const expected = structuredClone(previous);
+  for (const pin of reviewedCanvasPreviewSummaryCensus.pins) {
+    const [row] = map.sources.filter(item => item.path === pin.path);
+    const original = expected.sources.find(item => item.path === pin.path);
+    assert(row && original);
+    assert.equal(row.committed_sha256, original.committed_sha256);
+    assert.notEqual(row.facts.sha256, original.facts.sha256);
+    assert.equal(row.facts.sha256, pin.source);
+    assert.equal(sha(JSON.stringify(row.facts)), pin.facts);
+    assert.notEqual(row.facts.sha256, row.committed_sha256);
+    original.facts = structuredClone(row.facts);
+  }
+  assert.deepEqual(map, expected);
+  assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+  return {map: previous, result: {...result, gaps: [
+    ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+  ]}};
+}
+
 function settledCanvasAuditLegacyView(map, result) {
+  ({map,result}=canvasPreviewSummaryLegacyView(map,result));
   if (sha(JSON.stringify(map)) !== reviewedSettledCanvasAuditCensus.after) return {map, result};
   const previous = JSON.parse(historicalSource(reviewedSettledCanvasAuditCensus.priorCommit, censusDocument));
   assert.equal(sha(JSON.stringify(previous)), reviewedSettledCanvasAuditCensus.before);
@@ -1677,7 +1718,14 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,24);
+  assert.equal(result.gaps.length,25);
+  const summaryPrior = canvasPreviewSummaryLegacyView(map,result);
+  assert.equal(summaryPrior.result.gaps.length,24);
+  assert.equal(sha(JSON.stringify(summaryPrior.map)),reviewedCanvasPreviewSummaryCensus.before);
+  for (const pin of reviewedCanvasPreviewSummaryCensus.pins) {
+    assert(result.gaps.some(row=>row.kind==="unreviewed-source-drift"&&row.source===pin.path));
+    assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>row.source!==pin.path)}));
+  }
   const settledPrior = settledCanvasAuditLegacyView(map,result);
   assert.equal(settledPrior.result.gaps.length,24);
   assert.equal(sha(JSON.stringify(settledPrior.map)),reviewedSettledCanvasAuditCensus.before);

@@ -71,8 +71,8 @@ describe("SystemCompositionPreview", () => {
     expect(html).toContain("2 frontend surfaces");
     expect(html).toContain("2 unavailable");
     expect(html).toContain("Request form configured");
-    expect(html).toContain("does not execute backend logic");
-    expect(html).toContain("does not activate a release or deploy the system");
+    expect(html).toContain("No backend code runs.");
+    expect(html).toContain("No release or deployment.");
     expect(html).not.toContain("Denied by default");
   });
 
