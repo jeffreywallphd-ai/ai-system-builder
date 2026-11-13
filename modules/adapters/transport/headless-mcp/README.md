@@ -28,6 +28,14 @@ Start the connector again in Settings before reconnecting.
 | `aisb_list_systems` | Saved system summaries in one exact workspace |
 | `aisb_read_system` | Name, status and revision of one exact saved system |
 | `aisb_list_templates` | Supported templates in one exact workspace |
+| `aisb_saved_system_snapshot` | Saved IDs, revisions and status with a cursor |
+| `aisb_saved_system_changes` | Next page of saved revision references from a cursor |
+
+Check the running host's operation list before using the snapshot or changes
+tools. Start from a snapshot, replace the cursor after each successful page,
+and take a new snapshot when the result says `resync`. A write that races the
+snapshot can appear in both the snapshot and the feed; merge by system ID and
+record revision. The feed does not read unsaved edits or control a window.
 
 The adapter is read-only by default. A trusted local launcher can set
 `AISB_HEADLESS_ENABLE_AUTHORING=1` after the user pairs a client with editing

@@ -109,6 +109,17 @@ test("uses one actual desktop provider, reads IPC-saved state, and omits private
     assert.deepEqual(description.value.workspaces, [workspaceId]);
     const exactHost = description.value.hostIncarnationId;
     const scoped = { hostIncarnationId: exactHost, workspaceId };
+    assert.ok(description.value.operations.includes("systems.snapshot"));
+    const snapshot = await handler(request("systems.snapshot", scoped), verified);
+    assert.ok(snapshot.ok && snapshot.operation === "systems.snapshot");
+    assert.deepEqual(snapshot.value.systems, []);
+    const poll = request("systems.changes", { ...scoped, cursor: snapshot.value.cursor });
+    assert.deepEqual(await handler(poll, verified), { ok: true, operation: "systems.changes", value: {
+      kind: "changes", events: [], cursor: snapshot.value.cursor, more: false,
+    } });
+    const otherClient = async () => ({ ...await verified(), registeredClientId: "other-client" });
+    assert.deepEqual(await handler(poll, otherClient), { ok: true, operation: "systems.changes", value: { kind: "resync" } });
+    assert.deepEqual(await handler(request("systems.snapshot", { ...scoped, workspaceId: otherWorkspaceId }), verified), forbidden);
     const workspacesResult = await handler(request("workspaces.list", { hostIncarnationId: exactHost }), verified);
     assert.deepEqual(workspacesResult, { ok: true, operation: "workspaces.list", value: [
       { workspaceId, displayName: "Fixture workspace" },
@@ -127,6 +138,11 @@ test("uses one actual desktop provider, reads IPC-saved state, and omits private
     const [record] = after.value;
     assert.equal(record?.name, "Fixture system");
     assert.equal(record?.revision, 1);
+    const savedSnapshot = await handler(request("systems.snapshot", scoped), verified);
+    assert.ok(savedSnapshot.ok && savedSnapshot.operation === "systems.snapshot");
+    assert.deepEqual(savedSnapshot.value.systems, [{
+      systemId: record!.systemId, recordRevision: 1, revisionId: record!.currentRevisionId ?? null, status: record!.status,
+    }]);
     assert.deepEqual(Object.keys(record!).sort(), ["currentRevisionId", "name", "revision", "status", "systemId"]);
     assert.deepEqual(await handler(request("systems.read", { ...scoped, systemId: record!.systemId }), verified), {
       ok: true, operation: "systems.read", value: record,
@@ -142,6 +158,7 @@ test("uses one actual desktop provider, reads IPC-saved state, and omits private
     });
     assert.ok(membership);
     await memberships.saveMembership({ ...membership, status: "suspended" });
+    assert.deepEqual(await handler(poll, verified), forbidden);
     assert.deepEqual(await handler(request("systems.read", { ...scoped, systemId: record!.systemId }), verified), forbidden);
     const afterSuspension = await handler(request("host.describe", {}), verified);
     assert.ok(afterSuspension.ok && afterSuspension.operation === "host.describe");

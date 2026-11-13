@@ -31,17 +31,33 @@ const system = z.strictObject({
   systemId, name: text, status: z.string().refine(isSystemBuilderStatus),
   revision: z.number().int().positive(), currentRevisionId: revisionId.optional(),
 });
+const cursor = z.strictObject({
+  hostIncarnationId: z.string().refine(isHeadlessHostIncarnationId), sequence: z.number().int().nonnegative(),
+  scopeTag: z.string().length(64).regex(/^[a-f0-9]{64}$/),
+});
+const savedReference = { systemId, recordRevision: z.number().int().positive(), revisionId: revisionId.nullable() };
 const resultValue = {
   "host.describe": z.strictObject({
     version: z.literal(HEADLESS_CONTRACT_VERSION),
     hostIncarnationId: z.string().refine(isHeadlessHostIncarnationId),
     workspaces: z.array(workspaceId).max(128),
-    operations: z.array(operation).max(5),
+    operations: z.array(operation).max(HEADLESS_READ_OPERATIONS.length),
   }),
   "workspaces.list": z.array(z.strictObject({ workspaceId, displayName: text })).max(128),
   "systems.list": z.array(system).max(128),
   "systems.read": system,
   "templates.list": z.array(z.strictObject({ templateId, displayName: text })).max(128),
+  "systems.snapshot": z.strictObject({
+    systems: z.array(z.strictObject({ ...savedReference, status: z.string().refine(isSystemBuilderStatus) })).max(128), cursor,
+  }),
+  "systems.changes": z.discriminatedUnion("kind", [
+    z.strictObject({ kind: z.literal("resync") }),
+    z.strictObject({
+      kind: z.literal("changes"),
+      events: z.array(z.strictObject({ ...savedReference, sequence: z.number().int().positive() })).max(64),
+      cursor, more: z.boolean(),
+    }),
+  ]),
 };
 
 type ReadResult = { ok: true; operation: HeadlessReadRequest["operation"]; value: unknown } |
@@ -94,6 +110,20 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
       if (input.operation === "systems.read" &&
           (!parsed.data.value || typeof parsed.data.value !== "object" || !("systemId" in parsed.data.value) ||
             parsed.data.value.systemId !== input.input.systemId)) return unavailable;
+      if (input.operation === "systems.snapshot") {
+        const result = resultValue["systems.snapshot"].safeParse(parsed.data.value);
+        if (!result.success || result.data.cursor.hostIncarnationId !== input.input.hostIncarnationId) return unavailable;
+      }
+      if (input.operation === "systems.changes") {
+        const result = resultValue["systems.changes"].safeParse(parsed.data.value);
+        if (!result.success) return unavailable;
+        if (result.data.kind === "changes") {
+          const { events, cursor: next, more } = result.data;
+          const previous = input.input.cursor.sequence;
+          if (next.hostIncarnationId !== input.input.hostIncarnationId || next.sequence !== previous + events.length ||
+              events.some(({ sequence }, index) => sequence !== previous + index + 1) || (more && events.length === 0)) return unavailable;
+        }
+      }
       return parsed.data;
     } catch {
       return author && input.operation !== "systems.preview-edits" ? unknownWrite : unavailable;

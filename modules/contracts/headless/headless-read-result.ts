@@ -1,7 +1,8 @@
-import type { SystemBuilderRecord, SystemBuilderTemplateId } from "../system-builder";
+import type { SystemBuilderRecord, SystemBuilderRevisionId, SystemBuilderSystemId, SystemBuilderTemplateId } from "../system-builder";
 import type { WorkspaceId } from "../workspace";
 import {
   HEADLESS_CONTRACT_VERSION,
+  type HeadlessChangeCursor,
   type HeadlessHostIncarnationId,
   type HeadlessReadOperation,
   type HeadlessReadRequestParseResult,
@@ -10,6 +11,22 @@ import {
 export type HeadlessSystemSummary = Pick<
   SystemBuilderRecord, "systemId" | "name" | "status" | "revision" | "currentRevisionId"
 >;
+
+type HeadlessSavedReference = {
+  readonly systemId: SystemBuilderSystemId;
+  readonly recordRevision: number;
+  readonly revisionId: SystemBuilderRevisionId | null;
+};
+export type HeadlessSavedSnapshot = {
+  readonly systems: readonly (HeadlessSavedReference & { readonly status: SystemBuilderRecord["status"] })[];
+  readonly cursor: HeadlessChangeCursor;
+};
+export type HeadlessSavedChanges = { readonly kind: "resync" } | {
+  readonly kind: "changes";
+  readonly events: readonly (HeadlessSavedReference & { readonly sequence: number })[];
+  readonly cursor: HeadlessChangeCursor;
+  readonly more: boolean;
+};
 
 export type HeadlessReadResult =
   | {
@@ -27,6 +44,8 @@ export type HeadlessReadResult =
     }[] }
   | { readonly ok: true; readonly operation: "systems.list"; readonly value: readonly HeadlessSystemSummary[] }
   | { readonly ok: true; readonly operation: "systems.read"; readonly value: HeadlessSystemSummary }
+  | { readonly ok: true; readonly operation: "systems.snapshot"; readonly value: HeadlessSavedSnapshot }
+  | { readonly ok: true; readonly operation: "systems.changes"; readonly value: HeadlessSavedChanges }
   | { readonly ok: true; readonly operation: "templates.list"; readonly value: readonly {
       readonly templateId: SystemBuilderTemplateId; readonly displayName: string;
     }[] }

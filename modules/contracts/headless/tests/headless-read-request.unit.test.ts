@@ -5,6 +5,7 @@ import {
   HEADLESS_READ_OPERATIONS,
   isHeadlessHostIncarnationId,
   parseHeadlessReadRequest,
+  parseHeadlessChangeCursor,
 } from "../index";
 
 const host = "914adbca-10b9-4033-85af-7ba9011180a1";
@@ -15,6 +16,7 @@ const scope = { hostIncarnationId: host, workspaceId: "workspace-1" };
 const target = { ...scope, systemId: "system-1" };
 const invalid = { ok: false, code: "headless.invalid-request" };
 const stale = { ok: false, code: "headless.host-changed" };
+const cursor = { hostIncarnationId: host, sequence: 0, scopeTag: "b".repeat(64) };
 
 test("accepts only the declared finite read inputs and returns a detached request", () => {
   const inputs = {
@@ -23,6 +25,8 @@ test("accepts only the declared finite read inputs and returns a detached reques
     "systems.list": scope,
     "systems.read": target,
     "templates.list": scope,
+    "systems.snapshot": scope,
+    "systems.changes": { ...scope, cursor },
   };
   assert.deepEqual([...HEADLESS_READ_OPERATIONS].sort(), Object.keys(inputs).sort());
   for (const operation of HEADLESS_READ_OPERATIONS) {
@@ -33,6 +37,21 @@ test("accepts only the declared finite read inputs and returns a detached reques
       assert.notStrictEqual(result.request, original);
       assert.notStrictEqual(result.request.input, original.input);
     }
+  }
+});
+
+test("detaches cursors and rejects extra authority data or malformed sequences", () => {
+  const parsed = parseHeadlessChangeCursor(cursor);
+  assert.deepEqual(parsed, cursor);
+  assert.notStrictEqual(parsed, cursor);
+  for (const invalidCursor of [
+    { ...cursor, workspaceId: "another" }, { ...cursor, sequence: -1 }, { ...cursor, sequence: Number.MAX_SAFE_INTEGER + 1 },
+    { ...cursor, scopeTag: cursor.scopeTag + "\n" }, { ...cursor, scopeTag: "not-a-tag" },
+    { ...cursor, get sequence() { assert.fail("Getter should not run"); } },
+  ]) {
+    assert.deepEqual(parseHeadlessReadRequest({
+      version, operation: "systems.changes", input: { ...scope, cursor: invalidCursor },
+    }, host), invalid);
   }
 });
 

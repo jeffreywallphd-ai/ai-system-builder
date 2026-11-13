@@ -9,6 +9,8 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "systems.list",
   "systems.read",
   "templates.list",
+  "systems.snapshot",
+  "systems.changes",
 ] as const);
 
 export type HeadlessReadOperation = (typeof HEADLESS_READ_OPERATIONS)[number];
@@ -25,6 +27,11 @@ type WorkspaceTarget = HostTarget & {
   readonly workspaceId: WorkspaceId;
 };
 
+export type HeadlessChangeCursor = HostTarget & {
+  readonly sequence: number;
+  readonly scopeTag: string;
+};
+
 type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
   readonly version: typeof HEADLESS_CONTRACT_VERSION;
   readonly operation: Operation;
@@ -36,6 +43,8 @@ export type HeadlessReadRequest =
   | ReadRequest<"workspaces.list", HostTarget>
   | ReadRequest<"systems.list", WorkspaceTarget>
   | ReadRequest<"templates.list", WorkspaceTarget>
+  | ReadRequest<"systems.snapshot", WorkspaceTarget>
+  | ReadRequest<"systems.changes", WorkspaceTarget & { readonly cursor: HeadlessChangeCursor }>
   | ReadRequest<"systems.read", WorkspaceTarget & { readonly systemId: SystemBuilderSystemId }>;
 
 export type HeadlessReadRequestParseResult =
@@ -81,6 +90,16 @@ function isHeadlessReadOperation(value: unknown): value is HeadlessReadOperation
     HEADLESS_READ_OPERATIONS.some((operation) => operation === value);
 }
 
+export function parseHeadlessChangeCursor(value: unknown): HeadlessChangeCursor | undefined {
+  const cursor = exactDataRecord(value, ["hostIncarnationId", "sequence", "scopeTag"]);
+  if (!cursor) return undefined;
+  const { hostIncarnationId, sequence, scopeTag } = cursor;
+  return isHeadlessHostIncarnationId(hostIncarnationId) && typeof sequence === "number" &&
+    Number.isSafeInteger(sequence) && sequence >= 0 && typeof scopeTag === "string" && scopeTag.length === 64 &&
+    /^[a-f0-9]{64}$/.test(scopeTag)
+    ? { hostIncarnationId, sequence, scopeTag } : undefined;
+}
+
 const invalid = (): HeadlessReadRequestParseResult => ({ ok: false, code: "headless.invalid-request" });
 
 /**
@@ -107,7 +126,8 @@ export function parseHeadlessReadRequest(
 
   const fields = operation === "workspaces.list" ? ["hostIncarnationId"]
     : operation === "systems.read" ? ["hostIncarnationId", "workspaceId", "systemId"]
-      : ["hostIncarnationId", "workspaceId"];
+      : operation === "systems.changes" ? ["hostIncarnationId", "workspaceId", "cursor"]
+        : ["hostIncarnationId", "workspaceId"];
   const input = exactDataRecord(record.input, fields);
   if (!input || !isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalid();
   const { hostIncarnationId, workspaceId, systemId } = input;
@@ -118,6 +138,7 @@ export function parseHeadlessReadRequest(
       break;
     case "systems.list":
     case "templates.list":
+    case "systems.snapshot":
       if (!isWorkspaceId(workspaceId)) return invalid();
       request = { version, operation, input: { hostIncarnationId, workspaceId } };
       break;
@@ -125,6 +146,12 @@ export function parseHeadlessReadRequest(
       if (!isWorkspaceId(workspaceId) || !isSystemBuilderSystemId(systemId)) return invalid();
       request = { version, operation, input: { hostIncarnationId, workspaceId, systemId } };
       break;
+    case "systems.changes": {
+      const cursor = parseHeadlessChangeCursor(input.cursor);
+      if (!isWorkspaceId(workspaceId) || !cursor) return invalid();
+      request = { version, operation, input: { hostIncarnationId, workspaceId, cursor } };
+      break;
+    }
   }
   return hostIncarnationId === currentHost
     ? { ok: true, request }

@@ -9,7 +9,7 @@ import selfsigned from "selfsigned";
 import { createInMemoryStructuredDocumentStore } from "../../../persistence/shared";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
 import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../../headless-loopback";
-import { HEADLESS_CONTRACT_VERSION as version, isHeadlessHostIncarnationId, parseHeadlessReadRequest } from "../../../../contracts/headless";
+import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_READ_OPERATIONS, isHeadlessHostIncarnationId, parseHeadlessReadRequest } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
@@ -20,7 +20,8 @@ const systemId = normalizeSystemBuilderSystemId("mcp-fixture-system");
 const organizationId = createOrganizationId("mcp-fixture-org");
 const hostIncarnationId = "d5ed1db7-f069-4c48-bbc4-815697889c5d";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
-const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_templates", "aisb_list_workspaces", "aisb_read_system"];
+const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_templates", "aisb_list_workspaces",
+  "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_preview_edits", "aisb_rename_system"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
 
@@ -136,6 +137,17 @@ test("official stdio client finds finite read tools and uses the already running
         if (!grant.workspaceIds.includes(parsed.request.input.workspaceId)) return { ok: false, code: "headless.forbidden" };
         return { ok: true, operation: "systems.read", value: { systemId, name: "Fixture system", revision: 4, status: "draft" } };
       }
+      if (parsed.request.operation === "systems.snapshot") {
+        return { ok: true, operation: "systems.snapshot", value: { systems: [],
+          cursor: { hostIncarnationId, sequence: 3, scopeTag: "a".repeat(64) } } };
+      }
+      if (parsed.request.operation === "systems.changes") {
+        const { cursor } = parsed.request.input;
+        return { ok: true, operation: "systems.changes", value: {
+          kind: "changes", events: [{ systemId, recordRevision: 4, revisionId: null, sequence: 4 }],
+          cursor: { ...cursor, sequence: 4, scopeTag: "b".repeat(64) }, more: false,
+        } };
+      }
       return { ok: false, code: "headless.unsupported-operation" };
     },
   });
@@ -164,15 +176,23 @@ test("official stdio client finds finite read tools and uses the already running
         assert.equal(Boolean(described.isError), false);
         assert.deepEqual(resultText(described), {
           ok: true, operation: "host.describe", value: { version, hostIncarnationId, workspaces: [workspaceId],
-            operations: ["host.describe", "workspaces.list", "systems.list", "systems.read", "templates.list"] },
+            operations: HEADLESS_READ_OPERATIONS },
         });
         const read = await client.callTool({ name: "aisb_read_system", arguments: { hostIncarnationId, workspaceId, systemId } });
         assert.deepEqual(resultText(read), { ok: true, operation: "systems.read", value: { systemId, name: "Fixture system", revision: 4, status: "draft" } });
+        const cursor = { hostIncarnationId, sequence: 3, scopeTag: "a".repeat(64) };
+        const snapshot = await client.callTool({ name: "aisb_saved_system_snapshot", arguments: { hostIncarnationId, workspaceId } });
+        assert.deepEqual(resultText(snapshot), { ok: true, operation: "systems.snapshot", value: { systems: [], cursor } });
+        const changes = await client.callTool({ name: "aisb_saved_system_changes", arguments: { hostIncarnationId, workspaceId, cursor } });
+        assert.deepEqual(resultText(changes), { ok: true, operation: "systems.changes", value: {
+          kind: "changes", events: [{ systemId, recordRevision: 4, revisionId: null, sequence: 4 }],
+          cursor: { ...cursor, sequence: 4, scopeTag: "b".repeat(64) }, more: false,
+        } });
         const invalid = await client.callTool({ name: "aisb_read_system", arguments: {
           hostIncarnationId, workspaceId, systemId, endpoint: "http://other.invalid",
         } });
         assert.equal(invalid.isError, true);
-        assert.equal(reads, prior + 2);
+        assert.equal(reads, prior + 4);
       } finally {
         await client.close();
       }

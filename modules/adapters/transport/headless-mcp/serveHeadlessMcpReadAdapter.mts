@@ -114,6 +114,24 @@ serveStdio(() => {
   }, (input, context) => invoke({ version, operation: "templates.list", input: {
     hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
+  server.registerTool("aisb_saved_system_snapshot", {
+    description: "Read saved system references and a replay cursor in one authorized workspace. Does not read or change the UI.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId }), annotations,
+  }, (input, context) => invoke({ version, operation: "systems.snapshot", input: {
+    hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
+  server.registerTool("aisb_saved_system_changes", {
+    description: "Read a bounded page of committed system changes. Use a fresh snapshot when the host says resync.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, cursor: z.strictObject({
+      hostIncarnationId, scopeTag: z.string().length(64).regex(/^[a-f0-9]{64}$/), sequence: z.number().int().nonnegative(),
+    }) }), annotations,
+  }, (input, context) => {
+    const cursor = headless.parseHeadlessChangeCursor(input.cursor);
+    if (!cursor) return invalidAuthoring();
+    return invoke({ version, operation: "systems.changes", input: {
+      hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId, cursor,
+    } }, context.mcpReq.signal);
+  });
   if (enableAuthoring) addAuthoringTools(server);
   return server;
 }, {

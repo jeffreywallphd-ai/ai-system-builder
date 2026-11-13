@@ -2,13 +2,15 @@ export {
   HEADLESS_CONTRACT_VERSION,
   HEADLESS_READ_OPERATIONS,
   isHeadlessHostIncarnationId,
+  parseHeadlessChangeCursor,
   parseHeadlessReadRequest,
+  type HeadlessChangeCursor,
   type HeadlessHostIncarnationId,
   type HeadlessReadOperation,
   type HeadlessReadRequest,
   type HeadlessReadRequestParseResult,
 } from "./headless-read-request";
-export type { HeadlessReadResult, HeadlessSystemSummary } from "./headless-read-result";
+export type { HeadlessReadResult, HeadlessSavedChanges, HeadlessSavedSnapshot, HeadlessSystemSummary } from "./headless-read-result";
 export {
   HEADLESS_MAX_SEMANTIC_EDITS,
   parseHeadlessSemanticBatchRequest,

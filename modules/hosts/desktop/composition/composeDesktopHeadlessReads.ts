@@ -1,5 +1,6 @@
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
+import type { HeadlessCommittedChangesUseCase } from "../../../application/use-cases/system-builder/headless-committed-changes.use-case";
 import {
   HEADLESS_CONTRACT_VERSION,
   HEADLESS_READ_OPERATIONS,
@@ -41,9 +42,10 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly workspaceRepository: Pick<WorkspaceRepository, "readWorkspace">;
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly getUseCases: () => Pick<SystemBuilderCompositionRoot["useCases"], "list" | "read" | "listTemplates">;
+  readonly committedChanges?: Pick<HeadlessCommittedChangesUseCase, "snapshot" | "changes">;
   readonly isOpen: () => boolean;
 }): DesktopHeadlessReadHandler {
-  const { hostIncarnationId, identity, workspaceRepository, authorization, getUseCases, isOpen } = dependencies;
+  const { hostIncarnationId, identity, workspaceRepository, authorization, getUseCases, committedChanges, isOpen } = dependencies;
 
   async function authorizedWorkspace(workspaceId: WorkspaceId, operation: HeadlessReadOperation) {
     const workspace = await workspaceRepository.readWorkspace(workspaceId);
@@ -76,6 +78,8 @@ export function composeDesktopHeadlessReads(dependencies: {
       if (!parsed.ok) return parsed;
       const { operation, input } = parsed.request;
       if (!grant.operations.includes(operation)) return forbidden;
+      const usesFeed = operation === "systems.snapshot" || operation === "systems.changes";
+      if (usesFeed && !committedChanges) return { ok: false, code: "headless.unsupported-operation" };
       const clientId = grant.registeredClientId;
       const currentScopedGrant = async (workspaces: readonly WorkspaceId[]) => {
         const latest = await current();
@@ -100,7 +104,8 @@ export function composeDesktopHeadlessReads(dependencies: {
           ok: true, operation,
           value: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
-            operations: HEADLESS_READ_OPERATIONS.filter((op) => latest.operations.includes(op)),
+            operations: HEADLESS_READ_OPERATIONS.filter((op) => latest.operations.includes(op) &&
+              (committedChanges || (op !== "systems.snapshot" && op !== "systems.changes"))),
           },
         };
         if (!workspaces.every((workspace) => boundedDisplayName(workspace.displayName))) return tooLarge;
@@ -134,6 +139,25 @@ export function composeDesktopHeadlessReads(dependencies: {
           const templates = await useCases.listTemplates.execute();
           response = templates.length > MAX_READ_ROWS || !templates.every(({ displayName }) => boundedDisplayName(displayName))
             ? tooLarge : { ok: true, operation, value: templates.map(({ templateId, displayName }) => ({ templateId, displayName })) };
+          break;
+        }
+        case "systems.snapshot":
+        case "systems.changes": {
+          if (!committedChanges) return unavailable;
+          const reader = {
+            organizationId: identity.organizationId,
+            scopeId: JSON.stringify([identity.principalId, clientId]),
+            canRead: async (id: WorkspaceId) => id === workspaceId && Boolean(await currentScopedGrant([id])),
+          };
+          const failure = (code: string): HeadlessReadResult =>
+            code === forbidden.code ? forbidden : code === tooLarge.code ? tooLarge : unavailable;
+          if (operation === "systems.snapshot") {
+            const result = await committedChanges.snapshot(workspaceId, reader);
+            response = result.ok ? { ok: true, operation, value: result.value } : failure(result.error.code);
+          } else {
+            const result = await committedChanges.changes(workspaceId, input.cursor, reader);
+            response = result.ok ? { ok: true, operation, value: result.value } : failure(result.error.code);
+          }
           break;
         }
       }

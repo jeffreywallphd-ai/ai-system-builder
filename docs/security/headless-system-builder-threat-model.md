@@ -125,3 +125,10 @@ workspace status inside the owning SQLite transaction, using the same
 platform and organization views as the application. This prevents an earlier
 authorization result from surviving a workspace or membership change that
 commits first. The outer admission and response still check live policy.
+
+The read-only saved-system feed authenticates opaque cursor tags with a private
+host-incarnation key. Tags bind the organization, workspace, registered client
+and sequence. A cursor is never authority: snapshot and replay recheck the
+current paired grant and workspace policy before returning data. Cross-scope,
+old-host or retired cursors require a new snapshot. Results are bounded saved
+references and status; the feed never carries draft data, secrets or UI state.

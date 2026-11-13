@@ -18,7 +18,9 @@ import { CountDatasetReviewTargetsUseCase } from "../../../application/use-cases
 import { createStructuredAssetDerivedCustomizationRepository } from "../../../adapters/persistence/asset-authoring/createStructuredAssetDerivedCustomizationRepository";
 import { createStructuredAssetStudioAssetDraftRepository } from "../../../adapters/persistence/asset-studio/createStructuredAssetStudioAssetDraftRepository";
 import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomBytes, randomUUID } from "node:crypto";
+import { createStructuredHeadlessOperationStore } from "../../../adapters/persistence/system-builder";
+import { HeadlessCommittedChangesUseCase } from "../../../application/use-cases/system-builder/headless-committed-changes.use-case";
 import { cpus, freemem, totalmem } from "node:os";
 import path from "node:path";
 import type { LoggingPort } from "../../../application/ports/logging";
@@ -2159,12 +2161,23 @@ export function composeDesktopHost(
       if (!headlessReadAdmissionClosed && !headlessReadHandler && identity && workspaceAuthorization && systemBuilder) {
         const hostIncarnationId = randomUUID();
         if (isHeadlessHostIncarnationId(hostIncarnationId)) {
+          const committedChanges = organizationDocuments?.organizationId === identity.organizationId
+            ? (() => {
+              const cursorKey = randomBytes(32);
+              return new HeadlessCommittedChangesUseCase({
+                hostIncarnationId, organizationId: identity.organizationId, systems: systemBuilder.repository,
+                feed: createStructuredHeadlessOperationStore(organizationDocuments),
+                access: assetWorkspaceAccess,
+                digest: (value) => createHmac("sha256", cursorKey).update(value).digest("hex"),
+              });
+            })() : undefined;
           headlessReadHandler = composeDesktopHeadlessReads({
             hostIncarnationId,
             identity,
             authorization: workspaceAuthorization,
             workspaceRepository: startupWorkspaceShell.workspaceRepository,
             getUseCases: () => systemBuilder.useCases,
+            committedChanges,
             isOpen: () => !headlessReadAdmissionClosed,
           });
           if (organizationDocuments?.organizationId === identity.organizationId) {

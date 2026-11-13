@@ -93,6 +93,13 @@ The stdio MCP adapter forwards its finite read catalog and optional authoring to
 the endpoint with the certificate fingerprint from desktop Settings. Managed parity
 remains pending.
 
+Paired desktop clients can read a saved-system snapshot and replay bounded
+pages of committed changes when the owning host advertises those operations.
+The host binds each cursor to its incarnation, registered client, organization,
+and workspace. A restart, expired cursor, or different scope requires a new
+snapshot. A snapshot reads its watermark first; clients may see a concurrent
+saved revision again in replay and should merge it by system and record revision.
+
 The visible desktop Systems view polls only its authorized workspace's
 committed change sequence. It refreshes Manage and Compose when the sequence
 changes. It stops polling in hidden views and does not choose a system,

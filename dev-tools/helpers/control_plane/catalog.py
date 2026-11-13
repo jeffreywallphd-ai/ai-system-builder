@@ -81,6 +81,8 @@ MANAGED_ASSETS_RESTART_LOADER_FILES = (
 HEADLESS_DESKTOP_READ_SOURCES = (
     "modules/contracts/README.md",
     "modules/contracts/headless/index.ts",
+    "modules/contracts/headless/headless-read-request.ts",
+    "modules/contracts/headless/tests/headless-read-request.unit.test.ts",
     "modules/contracts/headless/headless-read-result.ts",
     "modules/hosts/shared/composition/composeSystemBuilder.ts",
     "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts",
@@ -90,6 +92,8 @@ HEADLESS_DESKTOP_READ_SOURCES = (
 )
 HEADLESS_DESKTOP_READ_CHECK = "headless-desktop-read-provider"
 HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES = (
+    "modules/contracts/headless/headless-read-request.ts",
+    "modules/contracts/headless/tests/headless-read-request.unit.test.ts",
     "modules/contracts/headless/headless-read-result.ts",
     "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts",
     "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
