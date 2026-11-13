@@ -794,10 +794,13 @@
       "roadmap_id": "asset-experience-layered-customization",
       "increment_id": "production-qualification",
       "criterion_id": "security-review",
-      "source_description_sha256": "306335cdd8e394d70906e917cb4aa6f846426102194387f4e39625f9a77cf3ae",
+      "source_description_sha256": "74d86d6f1f0f459b0c9538018b6901e3ab0f350b0a501dbfc8867f30858e3d26",
       "requirements": [
         {
-          "text": "A controlled security review confirms source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority."
+          "text": "Run current automated denial and failure checks and obtain a separate review of Asset Experience."
+        },
+        {
+          "text": "Confirm source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority."
         }
       ]
     },

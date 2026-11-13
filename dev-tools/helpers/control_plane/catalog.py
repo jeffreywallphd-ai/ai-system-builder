@@ -26,11 +26,34 @@ IMAGE_FORM_CHECKS = {
 # Opt in only for scoped work with this existing Dataset Preparation suite.
 # Ordinary edits to the worker driver still receive generic test selection.
 OPT_IN_REGRESSION_CHECKS = {
+    "desktop-image-storage-labels": (
+        "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+        "apps/desktop/src/renderer/features/image-generation/tests/desktop-image-ipc-storage.ui.test.tsx",
+    ),
     "dataset-preparation-core-unit": (
         "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
         "modules/adapters/runtime/python/worker/tests/test_prepare_training_dataset_task.py",
     ),
 }
+
+ASSET_DEFENSIVE_TESTS = (
+    "modules/application/use-cases/asset-package/tests/asset-package-lifecycle.unit.test.ts",
+    "modules/application/use-cases/asset-package/tests/asset-package-workspace-authorization.unit.test.ts",
+    "modules/application/use-cases/asset-studio/tests/asset-studio-workflow.unit.test.ts",
+    "modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts",
+    "modules/application/services/asset/tests/workspace-asset-registry-read-facade.service.unit.test.ts",
+    "modules/adapters/persistence/asset-publication/tests/asset-definition-publication.unit.test.ts",
+    "modules/adapters/transport/api-express/asset-package/tests/asset-package-transport-parity.unit.test.ts",
+    "modules/adapters/transport/api-express/asset-studio/tests/asset-studio-transport-parity.unit.test.ts",
+    "dev-tools/scripts/architecture/tests/asset-system-fitness.unit.test.mjs",
+)
+
+STANDARD_RUNNER_CORE_TEST = "dev-tools/scripts/testing/tests/non-browser-test-runner-core.unit.test.ts"
+STANDARD_RUNNER_SOURCES = (
+    "dev-tools/scripts/testing/run-non-browser-tests.mjs",
+    "dev-tools/scripts/testing/non-browser-test-runner-core.mjs",
+    STANDARD_RUNNER_CORE_TEST,
+)
 
 # Keep Form-specific paths exact so unrelated Desktop and host work still needs evidence.
 FORM_HOST_DEFINITIONS = (
@@ -479,6 +502,11 @@ def definitions(root: Path) -> list[dict]:
            "timeout": 120} for name, (_, test) in OPT_IN_REGRESSION_CHECKS.items()],
         *[{"id": name, "patterns": [], "argv": [node, *check["command"]], "timeout": 120}
           for name, check in PUBLISHED_FORM_CHECKS.items()],
+        {"id": "asset-defensive-acceptance", "patterns": [],
+         "argv": [node, "--import", "tsx", "--test", "--test-concurrency=1", "--", *ASSET_DEFENSIVE_TESTS],
+         "timeout": 180},
+        {"id": "standard-source-fixture-runner", "patterns": [],
+         "argv": [node, "--import", "tsx", "--test", "--", STANDARD_RUNNER_CORE_TEST], "timeout": 120},
         {"id": "documentation", "patterns": ["docs/*", "*.md", "skills/*/*.md", "dev-tools/*/*.md"], "argv": [node, "dev-tools/scripts/docs/check-doc-drift.mjs"], "timeout": 120},
         {"id": "agent-support", "patterns": ["AGENTS.md", "skills/*", "docs/context/*", "dev-tools/agent-evals/*", "dev-tools/helpers/*", "dev-tools/review-site/*"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
         {"id": "control-plane", "patterns": ["dev-tools/helpers/control_plane/*", "dev-tools/helpers/development_control_plane.py", "dev-tools/helpers/run_focused_checks.py", "dev-tools/helpers/requirements-tests.txt", "dev-tools/config/pytest-focused.ini", "dev-tools/config/contributor-check-profiles.json", "dev-tools/helpers/tests/*", "dev-tools/review-site/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py"], "timeout": 600},
@@ -520,7 +548,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                    if any(fnmatch.fnmatchcase(p, pat) for pat in c["patterns"])
                    or (c["id"] in required and (
                        p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()) or
-                       p in PUBLISHED_FORM_CHECKS.get(c["id"], {}).get("sources", ())
+                       p in PUBLISHED_FORM_CHECKS.get(c["id"], {}).get("sources", ()) or
+                       c["id"] == "standard-source-fixture-runner" and p in STANDARD_RUNNER_SOURCES
                    ))]
                for p in paths}
     # The fixed controller config is exercised by controller routing/isolation
@@ -534,6 +563,8 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     declared_sources = {path for check, paths in IMAGE_FORM_CHECKS.items() if check in selected_ids for path in paths}
     declared_sources.update(path for check in required for path in OPT_IN_REGRESSION_CHECKS.get(check, ()))
     declared_sources.update(path for check in required for path in PUBLISHED_FORM_CHECKS.get(check, {}).get("sources", ()))
+    if "standard-source-fixture-runner" in required:
+        declared_sources.update(STANDARD_RUNNER_SOURCES)
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))

@@ -59,7 +59,8 @@ class ArtifactConfirmationProfileTests(unittest.TestCase):
         ])
         self.assertEqual(catalog.QUALIFICATION_PROFILE_PATTERNS[PROFILE], SOURCES[:5] + [GUARD])
         native = "modules/adapters/model/local/tests/windows-model-file-identity.native.integration.test.ts"
-        self.assertIn(native, self.config["profiles"]["functionality-outcomes"]["test_paths"])
+        self.assertIn(native, self.config["profiles"]["windows-file-identity"]["source_paths"])
+        self.assertNotIn(native, self.config["profiles"]["windows-file-identity"]["test_paths"])
         self.assertNotIn(native, TESTS)
         for command in profile_commands(ROOT, PROFILE):
             self.assertFalse(any("native" in part or "playwright" in part or ".ai." in part or "PYTHON" in part for part in command))

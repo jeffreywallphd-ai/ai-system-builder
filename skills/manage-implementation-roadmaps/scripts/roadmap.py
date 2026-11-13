@@ -1434,7 +1434,7 @@ ASSET_SCOPE_TARGET = "production-qualification"
 ASSET_SCOPE_CRITERION = "security-review"
 ASSET_SCOPE_ISSUE = "restricted-legacy-authority-review-pending"
 ASSET_SCOPE_AUTHORITY = "user-limit-asset-acceptance-to-executable-checks"
-ASSET_SECURITY_CHECKS = frozenset({"asset-authoring-ui", "architecture"})
+ASSET_SECURITY_CHECKS = frozenset({"asset-defensive-acceptance", "architecture"})
 ASSET_SCOPE_BASELINE = "9af7b38d2d30692ccddcaba031c4b9f87dcafdd1b529c417b535290a241c8ac5"
 ASSET_SCOPE_PINS = {
     "originalCriterion": "ce2b0d1ca44e5d46af03a7941e1cc9194c2b4b5feed6c4abf0913f9808ae4251",

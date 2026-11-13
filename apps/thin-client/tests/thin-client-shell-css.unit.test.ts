@@ -16,6 +16,7 @@ const thinClientStylesheetPath = resolve("apps/thin-client/src/styles/app.css");
 
 const thinSharedImports = [
   "../../../../modules/ui/shared/styles/application.css",
+  "./feature-overrides.css",
   "../../../../modules/ui/shared/styles/forced-colors.css",
 ];
 
@@ -142,17 +143,18 @@ describe("shared application shell styling", () => {
     expectThinSharedImports(thinSharedImports.map((value) => `@import /* layer */ "${value}" /* end */;`).join("\n"));
   });
 
-  it("rejects missing, duplicate, reordered, local and unknown style layers", () => {
+  it("rejects missing, duplicate, reordered, and unrecognized style layers", () => {
     const css = (imports: string[]) => imports.map((value) => `@import "${value}";`).join("\n");
     for (const imports of [
       thinSharedImports.slice(0, 1),
       thinSharedImports.slice(1),
-      [...thinSharedImports, thinSharedImports[1]!],
+      [...thinSharedImports, thinSharedImports[2]!],
       [...thinSharedImports].reverse(),
       [...thinSharedImports, "./tokens.css"],
       [...thinSharedImports, "../../../../modules/ui/shared/styles/unknown.css"],
       [...thinSharedImports, "https://example.invalid/style.css"],
-      [thinSharedImports[0]!.replace("application.css", "applica/*x*/tion.css"), thinSharedImports[1]!],
+      [thinSharedImports[0]!.replace("application.css", "applica/*x*/tion.css"), ...thinSharedImports.slice(1)],
+      [thinSharedImports[0]!, thinSharedImports[2]!, thinSharedImports[1]!],
     ]) {
       expect(() => expectThinSharedImports(css(imports))).toThrow();
     }

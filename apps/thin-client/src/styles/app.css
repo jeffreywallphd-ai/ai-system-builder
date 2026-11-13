@@ -1,12 +1,5 @@
 @import "../../../../modules/ui/shared/styles/application.css";
 
+@import "./feature-overrides.css";
+
 @import "../../../../modules/ui/shared/styles/forced-colors.css";
-
-.security-status-panel pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.image-generation-workflow > .image-generation-intro {
-  color: var(--color-text-secondary);
-}

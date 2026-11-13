@@ -39,7 +39,8 @@ Current scope:
 - artifact browser list/detail now surfaces minimal artifact-first backing-state cues (`Remote only`, `Localized`, `Published`) and local object availability/localization state
 - artifact-browser published-backing re-check state orchestration uses a shared cross-host hook from `modules/ui/shared`
 - settings page server restart control that calls `POST /api/server/restart`
-- token-first style baseline under `src/styles/`
+- Styles load the shared baseline first, then thin-client feature rules, then the
+  shared forced-colors overrides.
 - Security restart examples preserve whitespace and wrap long commands inside the panel, including at narrow widths.
 - Image Generation fields use labels tied to their controls. The help buttons beside those labels remain separate controls.
 - Data Management tab content uses the shared sectioned panel header style for Data Artifact Ingester and Artifact Browser; panel headers stay title-only, with actions such as Artifact Browser refresh placed in the body.

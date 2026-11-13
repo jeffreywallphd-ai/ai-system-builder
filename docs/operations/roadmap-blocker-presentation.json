@@ -2,27 +2,6 @@
   "schema_version": "roadmap-criterion-blockers-v1",
   "criteria": [
     {
-      "roadmap_id": "asset-experience-layered-customization",
-      "increment_id": "production-qualification",
-      "criterion_id": "security-review",
-      "source_description_sha256": "306335cdd8e394d70906e917cb4aa6f846426102194387f4e39625f9a77cf3ae",
-      "blockers": [
-        {
-          "blocker_id": "restricted-legacy-authority-review-pending",
-          "source_blocker_digest": "e0c76048afaed5a0274879673f365ddfddcf372dbddb1f27a9e1383de146e173",
-          "prevents": "Independent qualification of the existing Assets authority component cannot be completed while its review is restricted.",
-          "plain_language": {
-            "needed": "Automated security checks and a clearly recorded review limit.",
-            "prevents": "The required security qualification has no permitted independent assessment for the legacy Assets access-control change. Existing automated checks remain recorded; this notice does not supply a pass.",
-            "responsible_role": "Coding agent",
-            "user_action": "No action needed. You do not need to conduct or arrange a security review.",
-            "action": "Continue permitted automated checks and fix findings. Keep the restricted assessment unperformed. Do not retry it through another agent, tool or route.",
-            "done_when": "Required automated checks and permitted independent reviews pass on the actual code. Any unavailable assessment remains pending and clearly identified."
-          }
-        }
-      ]
-    },
-    {
       "roadmap_id": "data-management-quality-and-usability",
       "increment_id": "versioned-dataset-lineage-and-publishing",
       "criterion_id": "controlled-provider-publication-is-qualified",

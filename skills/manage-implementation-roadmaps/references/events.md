@@ -526,8 +526,9 @@ other criteria or their outcomes. Failed checks cannot use this exclusion.
 
 Record the authorized revised approval. Complete work with the exact revised
 `security-review` description, authority `asset-scope-qualification-` plus the
-current roadmap fingerprint, and passing `asset-authoring-ui` and `architecture`
-checks. After accepted separate-invocation review, apply
+current roadmap fingerprint, and passing `asset-defensive-acceptance` and
+`architecture` checks. The exact Asset check excludes legacy-assessment cases.
+After accepted separate-invocation review, apply
 `asset-security-review-recorded` with `workId`, `receiptDigest`, `reviewDigest`,
 and a concise `summary`. The CLI resolves the current receipt and actual
 accepted review before recording the pass. An ordinary evidence declaration
