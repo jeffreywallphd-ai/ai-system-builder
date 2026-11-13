@@ -42,6 +42,10 @@ from existing list and prepare use cases. It returns recognized profile names,
 availability, blocker codes and bounded nonsensitive field descriptions. It
 does not use the invocation port, relay runtime output or grant permission to
 run the actions it describes. The host must supply the current scoped reader.
+The paired desktop connector supplies its registered identity and checks
+workspace, asset and runtime read permission. Its read-only task tool checks
+the saved conversation session, turn and run belong to the same workspace,
+plan and turn. It returns their identity and status without loading a worker.
 
 ## Contract primitives
 

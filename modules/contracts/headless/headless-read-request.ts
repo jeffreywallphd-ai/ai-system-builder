@@ -11,6 +11,9 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "templates.list",
   "systems.snapshot",
   "systems.changes",
+  "workflows.list",
+  "workflows.prepare",
+  "conversation-tasks.read",
 ] as const);
 
 export type HeadlessReadOperation = (typeof HEADLESS_READ_OPERATIONS)[number];
@@ -32,6 +35,12 @@ export type HeadlessChangeCursor = HostTarget & {
   readonly scopeTag: string;
 };
 
+export const HEADLESS_WORKFLOW_SOURCE_KINDS = ["approved-release", "reviewed-execution-plan"] as const;
+export type HeadlessWorkflowSourceKind = typeof HEADLESS_WORKFLOW_SOURCE_KINDS[number];
+export type HeadlessWorkflowSource =
+  | { readonly kind: "approved-release"; readonly sourceId: string; readonly sourceDigest: string }
+  | { readonly kind: "reviewed-execution-plan"; readonly sourceId: string; readonly sourceRevision: string };
+
 type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
   readonly version: typeof HEADLESS_CONTRACT_VERSION;
   readonly operation: Operation;
@@ -45,6 +54,9 @@ export type HeadlessReadRequest =
   | ReadRequest<"templates.list", WorkspaceTarget>
   | ReadRequest<"systems.snapshot", WorkspaceTarget>
   | ReadRequest<"systems.changes", WorkspaceTarget & { readonly cursor: HeadlessChangeCursor }>
+  | ReadRequest<"workflows.list", WorkspaceTarget & { readonly sourceKind: HeadlessWorkflowSourceKind }>
+  | ReadRequest<"workflows.prepare", WorkspaceTarget & { readonly profileId: string; readonly source: HeadlessWorkflowSource }>
+  | ReadRequest<"conversation-tasks.read", WorkspaceTarget & { readonly sessionId: string; readonly turnId: string }>
   | ReadRequest<"systems.read", WorkspaceTarget & { readonly systemId: SystemBuilderSystemId }>;
 
 export type HeadlessReadRequestParseResult =
@@ -100,6 +112,22 @@ export function parseHeadlessChangeCursor(value: unknown): HeadlessChangeCursor 
     ? { hostIncarnationId, sequence, scopeTag } : undefined;
 }
 
+export function isHeadlessWorkflowId(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 200 && /^[A-Za-z0-9][A-Za-z0-9._:@-]*$/.test(value) &&
+    !/[\r\n]/.test(value) && !value.includes("..");
+}
+
+function parseWorkflowSource(value: unknown): HeadlessWorkflowSource | undefined {
+  const release = exactDataRecord(value, ["kind", "sourceId", "sourceDigest"]);
+  if (release?.kind === "approved-release" && isHeadlessWorkflowId(release.sourceId) &&
+      typeof release.sourceDigest === "string" && release.sourceDigest.length === 71 && /^sha256:[a-f0-9]{64}$/.test(release.sourceDigest))
+    return { kind: "approved-release", sourceId: release.sourceId, sourceDigest: release.sourceDigest };
+  const plan = exactDataRecord(value, ["kind", "sourceId", "sourceRevision"]);
+  if (plan?.kind === "reviewed-execution-plan" && isHeadlessWorkflowId(plan.sourceId) && isHeadlessWorkflowId(plan.sourceRevision))
+    return { kind: "reviewed-execution-plan", sourceId: plan.sourceId, sourceRevision: plan.sourceRevision };
+  return undefined;
+}
+
 const invalid = (): HeadlessReadRequestParseResult => ({ ok: false, code: "headless.invalid-request" });
 
 /**
@@ -127,6 +155,9 @@ export function parseHeadlessReadRequest(
   const fields = operation === "workspaces.list" ? ["hostIncarnationId"]
     : operation === "systems.read" ? ["hostIncarnationId", "workspaceId", "systemId"]
       : operation === "systems.changes" ? ["hostIncarnationId", "workspaceId", "cursor"]
+        : operation === "workflows.list" ? ["hostIncarnationId", "workspaceId", "sourceKind"]
+        : operation === "workflows.prepare" ? ["hostIncarnationId", "workspaceId", "profileId", "source"]
+        : operation === "conversation-tasks.read" ? ["hostIncarnationId", "workspaceId", "sessionId", "turnId"]
         : ["hostIncarnationId", "workspaceId"];
   const input = exactDataRecord(record.input, fields);
   if (!input || !isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalid();
@@ -150,6 +181,25 @@ export function parseHeadlessReadRequest(
       const cursor = parseHeadlessChangeCursor(input.cursor);
       if (!isWorkspaceId(workspaceId) || !cursor) return invalid();
       request = { version, operation, input: { hostIncarnationId, workspaceId, cursor } };
+      break;
+    }
+    case "workflows.list": {
+      const { sourceKind } = input;
+      if (!isWorkspaceId(workspaceId) || (sourceKind !== "approved-release" && sourceKind !== "reviewed-execution-plan")) return invalid();
+      request = { version, operation, input: { hostIncarnationId, workspaceId, sourceKind } };
+      break;
+    }
+    case "workflows.prepare": {
+      const { profileId } = input;
+      const source = parseWorkflowSource(input.source);
+      if (!isWorkspaceId(workspaceId) || !isHeadlessWorkflowId(profileId) || !source) return invalid();
+      request = { version, operation, input: { hostIncarnationId, workspaceId, profileId, source } };
+      break;
+    }
+    case "conversation-tasks.read": {
+      const { sessionId, turnId } = input;
+      if (!isWorkspaceId(workspaceId) || !isHeadlessWorkflowId(sessionId) || !isHeadlessWorkflowId(turnId)) return invalid();
+      request = { version, operation, input: { hostIncarnationId, workspaceId, sessionId, turnId } };
       break;
     }
   }

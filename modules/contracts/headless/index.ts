@@ -1,7 +1,9 @@
 export {
   HEADLESS_CONTRACT_VERSION,
   HEADLESS_READ_OPERATIONS,
+  HEADLESS_WORKFLOW_SOURCE_KINDS,
   isHeadlessHostIncarnationId,
+  isHeadlessWorkflowId,
   parseHeadlessChangeCursor,
   parseHeadlessReadRequest,
   type HeadlessChangeCursor,
@@ -9,6 +11,8 @@ export {
   type HeadlessReadOperation,
   type HeadlessReadRequest,
   type HeadlessReadRequestParseResult,
+  type HeadlessWorkflowSource,
+  type HeadlessWorkflowSourceKind,
 } from "./headless-read-request";
 export type { HeadlessReadResult, HeadlessSavedChanges, HeadlessSavedSnapshot, HeadlessSystemSummary } from "./headless-read-result";
 export {

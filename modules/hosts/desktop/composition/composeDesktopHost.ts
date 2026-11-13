@@ -21,6 +21,8 @@ import { createStructuredDatasetVersionRepository } from "../../../adapters/pers
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { createStructuredHeadlessOperationStore } from "../../../adapters/persistence/system-builder";
 import { HeadlessCommittedChangesUseCase } from "../../../application/use-cases/system-builder/headless-committed-changes.use-case";
+import { HeadlessConversationStatusUseCase } from "../../../application/use-cases/system-run-workflow/headless-conversation-status.use-case";
+import { HeadlessWorkflowMetadataUseCase } from "../../../application/use-cases/system-run-workflow/headless-workflow-metadata.use-case";
 import { cpus, freemem, totalmem } from "node:os";
 import path from "node:path";
 import type { LoggingPort } from "../../../application/ports/logging";
@@ -2179,6 +2181,21 @@ export function composeDesktopHost(
             workspaceRepository: startupWorkspaceShell.workspaceRepository,
             getUseCases: () => systemBuilder.useCases,
             committedChanges,
+            workflows: new HeadlessWorkflowMetadataUseCase(systemRunWorkflow.useCases),
+            readWorkflowRole: async () => {
+              const platformDocuments = options.persistence?.documents;
+              if (!platformDocuments) return undefined;
+              const { memberships } = createStructuredOrganizationRepositories(platformDocuments);
+              const membership = await memberships.readMembership({
+                organizationId: identity.organizationId, principalId: identity.principalId,
+              });
+              return membership?.status === "active" && membership.organizationId === identity.organizationId &&
+                membership.principalId === identity.principalId ? membership.role : undefined;
+            },
+            conversationStatus: new HeadlessConversationStatusUseCase({
+              sessions: conversationRepositories.conversationSessionRepository, turns: conversationRepositories.conversationTurnRepository,
+              runs: executionRunRepositories.executionRunRepository,
+            }),
             isOpen: () => !headlessReadAdmissionClosed,
           });
           if (organizationDocuments?.organizationId === identity.organizationId) {

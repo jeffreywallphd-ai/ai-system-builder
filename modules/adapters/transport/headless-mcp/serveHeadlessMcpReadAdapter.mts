@@ -13,6 +13,11 @@ import { boundHeadlessMcpStdio } from "./boundHeadlessMcpStdio.mjs";
 const hostIncarnationId = z.string().refine(headless.isHeadlessHostIncarnationId, "Invalid host ID");
 const workspaceId = z.string().refine(workspace.isWorkspaceId, "Invalid workspace ID");
 const systemId = z.string().refine(systemBuilder.isSystemBuilderSystemId, "Invalid system ID");
+const workflowId = z.string().refine(headless.isHeadlessWorkflowId, "Invalid workflow ID");
+const workflowSource = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("approved-release"), sourceId: workflowId, sourceDigest: z.string().length(71).regex(/^sha256:[a-f0-9]{64}$/) }),
+  z.strictObject({ kind: z.literal("reviewed-execution-plan"), sourceId: workflowId, sourceRevision: workflowId }),
+]);
 const version = headless.HEADLESS_CONTRACT_VERSION;
 const enableAuthoring = process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
 const forward = createHeadlessMcpReadForwarder(
@@ -132,6 +137,24 @@ serveStdio(() => {
       hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId, cursor,
     } }, context.mcpReq.signal);
   });
+  server.registerTool("aisb_list_workflows", {
+    description: "Read the supported workflow metadata in the exact workspace; starts no work.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, sourceKind: z.enum(headless.HEADLESS_WORKFLOW_SOURCE_KINDS) }), annotations,
+  }, (input, context) => invoke({ version, operation: "workflows.list", input: {
+    ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
+  server.registerTool("aisb_prepare_workflow", {
+    description: "Read exact source readiness, snapshot revision and approved read-field metadata. Does not invoke any action.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, profileId: workflowId, source: workflowSource }), annotations,
+  }, (input, context) => invoke({ version, operation: "workflows.prepare", input: {
+    ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
+  server.registerTool("aisb_read_conversation_task", {
+    description: "Read the saved status of one exact conversation turn and its run; never starts or cancels it.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, sessionId: workflowId, turnId: workflowId }), annotations,
+  }, (input, context) => invoke({ version, operation: "conversation-tasks.read", input: {
+    ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
   if (enableAuthoring) addAuthoringTools(server);
   return server;
 }, {

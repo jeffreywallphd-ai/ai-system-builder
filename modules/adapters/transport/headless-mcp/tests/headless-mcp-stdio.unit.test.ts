@@ -20,8 +20,8 @@ const systemId = normalizeSystemBuilderSystemId("mcp-fixture-system");
 const organizationId = createOrganizationId("mcp-fixture-org");
 const hostIncarnationId = "d5ed1db7-f069-4c48-bbc4-815697889c5d";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
-const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_templates", "aisb_list_workspaces",
-  "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
+const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_templates", "aisb_list_workflows", "aisb_list_workspaces",
+  "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_preview_edits", "aisb_rename_system"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
 
@@ -148,6 +148,12 @@ test("official stdio client finds finite read tools and uses the already running
           cursor: { ...cursor, sequence: 4, scopeTag: "b".repeat(64) }, more: false,
         } };
       }
+      if (parsed.request.operation === "conversation-tasks.read") {
+        const { sessionId, turnId } = parsed.request.input;
+        return { ok: true, operation: "conversation-tasks.read", value: {
+          sessionId, turnId, turnStatus: "generating", run: { runId: "run.fixture", status: "running" },
+        } };
+      }
       return { ok: false, code: "headless.unsupported-operation" };
     },
   });
@@ -188,11 +194,17 @@ test("official stdio client finds finite read tools and uses the already running
           kind: "changes", events: [{ systemId, recordRevision: 4, revisionId: null, sequence: 4 }],
           cursor: { ...cursor, sequence: 4, scopeTag: "b".repeat(64) }, more: false,
         } });
+        const task = await client.callTool({ name: "aisb_read_conversation_task", arguments: {
+          hostIncarnationId, workspaceId, sessionId: "session.fixture", turnId: "turn.fixture",
+        } });
+        assert.deepEqual(resultText(task), { ok: true, operation: "conversation-tasks.read", value: {
+          sessionId: "session.fixture", turnId: "turn.fixture", turnStatus: "generating", run: { runId: "run.fixture", status: "running" },
+        } });
         const invalid = await client.callTool({ name: "aisb_read_system", arguments: {
           hostIncarnationId, workspaceId, systemId, endpoint: "http://other.invalid",
         } });
         assert.equal(invalid.isError, true);
-        assert.equal(reads, prior + 4);
+        assert.equal(reads, prior + 5);
       } finally {
         await client.close();
       }

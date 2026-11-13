@@ -11,6 +11,7 @@ import type { IpcMainHandlePort } from "../../../../adapters/transport/ipc-elect
 import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_READ_OPERATIONS, isHeadlessHostIncarnationId } from "../../../../contracts/headless";
 import { createDesktopSystemBuilderRequest, DESKTOP_SYSTEM_BUILDER_CHANNELS } from "../../../../contracts/ipc";
 import { createOrganizationId } from "../../../../contracts/organization";
+import type { OrganizationRole } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { composeDesktopHeadlessReads, type DesktopHeadlessReadGrant } from "../composeDesktopHeadlessReads";
 import { composeDesktopHost } from "../composeDesktopHost";
@@ -109,6 +110,16 @@ test("uses one actual desktop provider, reads IPC-saved state, and omits private
     assert.deepEqual(description.value.workspaces, [workspaceId]);
     const exactHost = description.value.hostIncarnationId;
     const scoped = { hostIncarnationId: exactHost, workspaceId };
+    assert.ok(description.value.operations.includes("workflows.list"));
+    assert.ok(description.value.operations.includes("conversation-tasks.read"));
+    assert.deepEqual(await handler(request("workflows.list", { ...scoped, sourceKind: "reviewed-execution-plan" }), verified), {
+      ok: true, operation: "workflows.list", value: [],
+    });
+    const task = request("conversation-tasks.read", { ...scoped, sessionId: "session.fixture", turnId: "turn.fixture" });
+    assert.deepEqual(await handler(task, verified), { ok: false, code: "headless.not-found" });
+    assert.deepEqual(await handler(request("workflows.list", {
+      ...scoped, workspaceId: otherWorkspaceId, sourceKind: "reviewed-execution-plan",
+    }), verified), forbidden);
     assert.ok(description.value.operations.includes("systems.snapshot"));
     const snapshot = await handler(request("systems.snapshot", scoped), verified);
     assert.ok(snapshot.ok && snapshot.operation === "systems.snapshot");
@@ -158,6 +169,7 @@ test("uses one actual desktop provider, reads IPC-saved state, and omits private
     });
     assert.ok(membership);
     await memberships.saveMembership({ ...membership, status: "suspended" });
+    assert.deepEqual(await handler(task, verified), forbidden);
     assert.deepEqual(await handler(poll, verified), forbidden);
     assert.deepEqual(await handler(request("systems.read", { ...scoped, systemId: record!.systemId }), verified), forbidden);
     const afterSuspension = await handler(request("host.describe", {}), verified);
@@ -200,4 +212,35 @@ test("discovery advertises only the grant that remains after the final workspace
   assert.ok(result.ok && result.operation === "host.describe");
   assert.equal(checks, 2);
   assert.deepEqual(result.value.operations, ["host.describe"]);
+});
+
+test("withholds a role-dependent workflow reply if membership changes during the final policy check", async () => {
+  let role: OrganizationRole = "owner";
+  let checks = 0;
+  let described = false;
+  const handler = composeDesktopHeadlessReads({
+    hostIncarnationId, identity: { organizationId, principalId },
+    workspaceRepository: { async readWorkspace(id) {
+      return { organizationId, workspaceId: id, displayName: "Fixture", status: "active", createdAt: at, updatedAt: at };
+    } },
+    authorization: { async authorizeWorkspaceOperation() { if (++checks === 4) role = "member"; } },
+    getUseCases() { assert.fail("The workflow does not need the System Builder."); },
+    readWorkflowRole: async () => role,
+    workflows: {
+      async list(workspace, kind, access) {
+        assert.deepEqual(access.context.roles, ["owner"]);
+        assert.equal(await access.canRead(workspace, kind), true);
+        assert.equal(await access.canRead(workspace, kind), true);
+        described = true;
+        return { ok: true, value: [] };
+      },
+      async prepare() { assert.fail("Only discovery is requested."); },
+    },
+    isOpen: () => true,
+  });
+  assert.deepEqual(await handler(request("workflows.list", {
+    hostIncarnationId, workspaceId, sourceKind: "reviewed-execution-plan",
+  }), async () => grant), forbidden);
+  assert.equal(described, true);
+  assert.equal(role, "member");
 });

@@ -149,6 +149,8 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "modules/application/use-cases/system-run-workflow/headless-workflow-metadata.use-case.ts",
             "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
+            "modules/application/use-cases/system-run-workflow/headless-conversation-status.use-case.ts",
+            "modules/application/use-cases/system-run-workflow/tests/headless-conversation-status.unit.test.ts",
         ),
         "automatic_sources": (
             "modules/application/use-cases/system-run-workflow/headless-workflow-metadata.use-case.ts",
@@ -157,6 +159,7 @@ PUBLISHED_FORM_CHECKS = {
         "command": (
             "--import", "tsx", "--test", "--",
             "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
+            "modules/application/use-cases/system-run-workflow/tests/headless-conversation-status.unit.test.ts",
             "modules/application/use-cases/system-run-workflow/tests/system-run-workflow-use-cases.unit.test.ts",
         ),
     },

@@ -1,6 +1,8 @@
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import type { HeadlessCommittedChangesUseCase } from "../../../application/use-cases/system-builder/headless-committed-changes.use-case";
+import type { HeadlessConversationStatusUseCase } from "../../../application/use-cases/system-run-workflow/headless-conversation-status.use-case";
+import type { HeadlessWorkflowMetadataUseCase } from "../../../application/use-cases/system-run-workflow/headless-workflow-metadata.use-case";
 import {
   HEADLESS_CONTRACT_VERSION,
   HEADLESS_READ_OPERATIONS,
@@ -10,7 +12,7 @@ import {
   type HeadlessReadResult,
   type HeadlessSystemSummary,
 } from "../../../contracts/headless";
-import type { LocalIdentityProfile } from "../../../contracts/organization";
+import type { LocalIdentityProfile, OrganizationRole } from "../../../contracts/organization";
 import { isSystemBuilderStatus, isSystemBuilderSystemId, normalizeSystemBuilderRevisionId, type SystemBuilderRecord } from "../../../contracts/system-builder";
 import type { WorkspaceId, WorkspaceRecord } from "../../../contracts/workspace";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
@@ -43,9 +45,20 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly getUseCases: () => Pick<SystemBuilderCompositionRoot["useCases"], "list" | "read" | "listTemplates">;
   readonly committedChanges?: Pick<HeadlessCommittedChangesUseCase, "snapshot" | "changes">;
+  readonly workflows?: Pick<HeadlessWorkflowMetadataUseCase, "list" | "prepare">;
+  readonly readWorkflowRole?: () => Promise<OrganizationRole | undefined>;
+  readonly conversationStatus?: Pick<HeadlessConversationStatusUseCase, "read">;
   readonly isOpen: () => boolean;
 }): DesktopHeadlessReadHandler {
-  const { hostIncarnationId, identity, workspaceRepository, authorization, getUseCases, committedChanges, isOpen } = dependencies;
+  const { hostIncarnationId, identity, workspaceRepository, authorization, getUseCases, committedChanges,
+    workflows, readWorkflowRole, conversationStatus, isOpen } = dependencies;
+
+  const supports = (operation: HeadlessReadOperation) => {
+    if (operation === "systems.snapshot" || operation === "systems.changes") return Boolean(committedChanges);
+    if (operation === "workflows.list" || operation === "workflows.prepare") return Boolean(workflows && readWorkflowRole);
+    if (operation === "conversation-tasks.read") return Boolean(conversationStatus);
+    return true;
+  };
 
   async function authorizedWorkspace(workspaceId: WorkspaceId, operation: HeadlessReadOperation) {
     const workspace = await workspaceRepository.readWorkspace(workspaceId);
@@ -55,7 +68,9 @@ export function composeDesktopHeadlessReads(dependencies: {
       await authorization.authorizeWorkspaceOperation({
         workspace,
         operation: `headless.${operation}`,
-        requiredScopes: operation === "workspaces.list" ? ["workspace:read"] : ["workspace:read", "asset:read"],
+        requiredScopes: operation === "workspaces.list" ? ["workspace:read"]
+          : operation === "workflows.list" || operation === "workflows.prepare" || operation === "conversation-tasks.read"
+            ? ["workspace:read", "asset:read", "runtime:read"] : ["workspace:read", "asset:read"],
       });
       return workspace;
     } catch {
@@ -78,8 +93,7 @@ export function composeDesktopHeadlessReads(dependencies: {
       if (!parsed.ok) return parsed;
       const { operation, input } = parsed.request;
       if (!grant.operations.includes(operation)) return forbidden;
-      const usesFeed = operation === "systems.snapshot" || operation === "systems.changes";
-      if (usesFeed && !committedChanges) return { ok: false, code: "headless.unsupported-operation" };
+      if (!supports(operation)) return { ok: false, code: "headless.unsupported-operation" };
       const clientId = grant.registeredClientId;
       const currentScopedGrant = async (workspaces: readonly WorkspaceId[]) => {
         const latest = await current();
@@ -104,8 +118,7 @@ export function composeDesktopHeadlessReads(dependencies: {
           ok: true, operation,
           value: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
-            operations: HEADLESS_READ_OPERATIONS.filter((op) => latest.operations.includes(op) &&
-              (committedChanges || (op !== "systems.snapshot" && op !== "systems.changes"))),
+            operations: HEADLESS_READ_OPERATIONS.filter((op) => latest.operations.includes(op) && supports(op)),
           },
         };
         if (!workspaces.every((workspace) => boundedDisplayName(workspace.displayName))) return tooLarge;
@@ -114,11 +127,11 @@ export function composeDesktopHeadlessReads(dependencies: {
       const { workspaceId } = input;
       if (!grant.workspaceIds.includes(workspaceId) || !await authorizedWorkspace(workspaceId, operation) ||
           !await currentScopedGrant([workspaceId])) return forbidden;
-      const useCases = getUseCases();
       let response: HeadlessReadResult;
+      let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
         case "systems.list": {
-          const records = await useCases.list.execute({ workspaceId, includeArchived: false });
+          const records = await getUseCases().list.execute({ workspaceId, includeArchived: false });
           response = records.length > MAX_READ_ROWS ? tooLarge
             : records.some((record) => record.targetWorkspaceId !== workspaceId) ? unavailable
               : records.every(validSystemSummary)
@@ -127,7 +140,7 @@ export function composeDesktopHeadlessReads(dependencies: {
         }
         case "systems.read": {
           const { systemId } = input;
-          const result = await useCases.read.execute({ workspaceId, systemId });
+          const result = await getUseCases().read.execute({ workspaceId, systemId });
           response = !result.ok
             ? result.error.code === "system-builder.not-found" ? { ok: false, code: "headless.not-found" } : unavailable
             : result.value.targetWorkspaceId !== workspaceId || result.value.systemId !== systemId ? unavailable
@@ -136,7 +149,7 @@ export function composeDesktopHeadlessReads(dependencies: {
           break;
         }
         case "templates.list": {
-          const templates = await useCases.listTemplates.execute();
+          const templates = await getUseCases().listTemplates.execute();
           response = templates.length > MAX_READ_ROWS || !templates.every(({ displayName }) => boundedDisplayName(displayName))
             ? tooLarge : { ok: true, operation, value: templates.map(({ templateId, displayName }) => ({ templateId, displayName })) };
           break;
@@ -160,8 +173,37 @@ export function composeDesktopHeadlessReads(dependencies: {
           }
           break;
         }
+        case "workflows.list":
+        case "workflows.prepare": {
+          if (!workflows || !readWorkflowRole) return unavailable;
+          const role = await readWorkflowRole();
+          if (!role) return forbidden;
+          capturedWorkflowRole = role;
+          const workflowAccess = {
+            context: { actorId: identity.principalId, organizationId: identity.organizationId, authenticated: true, roles: [role] },
+            canRead: async (id: WorkspaceId) => id === workspaceId && Boolean(
+              await authorizedWorkspace(id, operation) && await readWorkflowRole() === role && await currentScopedGrant([id])),
+          };
+          if (operation === "workflows.list") {
+            const result = await workflows.list(workspaceId, input.sourceKind, workflowAccess);
+            response = result.ok ? { ok: true, operation, value: result.value } : result;
+          } else {
+            const result = await workflows.prepare(workspaceId, { profileId: input.profileId, source: input.source }, workflowAccess);
+            response = result.ok ? { ok: true, operation, value: result.value } : result;
+          }
+          break;
+        }
+        case "conversation-tasks.read": {
+          if (!conversationStatus) return unavailable;
+          const result = await conversationStatus.read(workspaceId, input.sessionId, input.turnId, async () =>
+            Boolean(await authorizedWorkspace(workspaceId, operation) && await currentScopedGrant([workspaceId])));
+          response = result.ok ? { ok: true, operation, value: result.value } : result;
+          break;
+        }
       }
       if (!await authorizedWorkspace(workspaceId, operation) || !await currentScopedGrant([workspaceId])) return forbidden;
+      if (capturedWorkflowRole && (!readWorkflowRole || await readWorkflowRole() !== capturedWorkflowRole || !isOpen()))
+        return forbidden;
       return response;
     } catch {
       return unavailable;

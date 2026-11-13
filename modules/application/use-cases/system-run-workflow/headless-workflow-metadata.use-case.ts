@@ -61,7 +61,7 @@ export class HeadlessWorkflowMetadataUseCase {
         return unavailable;
       const actions = snapshot.actions.flatMap((action) => {
         const projected = projectAction(profileId, action);
-        return projected ? [projected] : [];
+        return projected ? [{ ...projected, fields: projected.fields }] : [];
       });
       return { ok: true, value: { profile, snapshotRevision: snapshot.snapshotRevision, actions } } as const;
     } catch { return unavailable; }
@@ -129,18 +129,24 @@ function projectAction(profileId: string, action: SystemRunWorkflowAction) {
   const allowed: readonly string[] | undefined = profileCapability(profileId)?.read;
   if (!allowed?.includes(action.actionId) || action.intent !== "read" || action.requiresConfirmation || action.fields.length > 16)
     return undefined;
-  const fields = action.fields.map(projectField);
-  if (fields.some((field) => field === undefined)) return undefined;
+  const fields = action.fields.flatMap((field) => {
+    const projected = projectField(field);
+    return projected ? [projected] : [];
+  });
+  if (fields.length !== action.fields.length) return undefined;
   return { actionId: action.actionId, intent: action.intent, enabled: action.enabled, requiresConfirmation: false as const, fields };
 }
 
 function projectField(field: SystemRunWorkflowField) {
   if (!safeId(field.fieldId) || field.sensitive || field.kind === "secret-reference") return undefined;
+  if ([field.minimum, field.maximum, field.maximumLength].some(value => value !== undefined && !Number.isFinite(value))) return undefined;
+  const options = field.options?.map(({ value }) => value);
+  if (field.kind === "select" && (!options?.length || options.length > 32 || !options.every(safeId))) return undefined;
   return {
     fieldId: field.fieldId, kind: field.kind, required: field.required,
     ...(field.minimum !== undefined ? { minimum: field.minimum } : {}),
     ...(field.maximum !== undefined ? { maximum: field.maximum } : {}),
     ...(field.maximumLength !== undefined ? { maximumLength: field.maximumLength } : {}),
-    ...(field.options ? { options: field.options.map(({ value }) => value).filter(safeId).slice(0, 32) } : {}),
+    ...(options ? { options } : {}),
   };
 }

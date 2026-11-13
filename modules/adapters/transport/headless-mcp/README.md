@@ -30,12 +30,18 @@ Start the connector again in Settings before reconnecting.
 | `aisb_list_templates` | Supported templates in one exact workspace |
 | `aisb_saved_system_snapshot` | Saved IDs, revisions and status with a cursor |
 | `aisb_saved_system_changes` | Next page of saved revision references from a cursor |
+| `aisb_list_workflows` | Supported readiness summaries for one source kind |
+| `aisb_prepare_workflow` | Exact source readiness and bounded read-field metadata |
+| `aisb_read_conversation_task` | Saved status of one exact conversation turn and its run |
 
 Check the running host's operation list before using the snapshot or changes
 tools. Start from a snapshot, replace the cursor after each successful page,
 and take a new snapshot when the result says `resync`. A write that races the
 snapshot can appear in both the snapshot and the feed; merge by system ID and
 record revision. The feed does not read unsaved edits or control a window.
+The workflow tools and task-status tool are read-only. Use exact source,
+session and turn IDs from the owning host; these tools do not start or cancel
+work and do not return prompts, transcripts, record values or credentials.
 
 The adapter is read-only by default. A trusted local launcher can set
 `AISB_HEADLESS_ENABLE_AUTHORING=1` after the user pairs a client with editing

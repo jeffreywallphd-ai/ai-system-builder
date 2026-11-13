@@ -27,6 +27,11 @@ test("accepts only the declared finite read inputs and returns a detached reques
     "templates.list": scope,
     "systems.snapshot": scope,
     "systems.changes": { ...scope, cursor },
+    "workflows.list": { ...scope, sourceKind: "reviewed-execution-plan" },
+    "workflows.prepare": { ...scope, profileId: "workflow.1", source: {
+      kind: "approved-release", sourceId: "release.1", sourceDigest: "sha256:" + "a".repeat(64),
+    } },
+    "conversation-tasks.read": { ...scope, sessionId: "session.1", turnId: "turn.1" },
   };
   assert.deepEqual([...HEADLESS_READ_OPERATIONS].sort(), Object.keys(inputs).sort());
   for (const operation of HEADLESS_READ_OPERATIONS) {

@@ -25,7 +25,7 @@ const templateId = z.enum(SYSTEM_BUILDER_TEMPLATE_IDS);
 const resultError = z.strictObject({ ok: z.literal(false), code: z.enum([
   "headless.invalid-request", "headless.unsupported-version", "headless.unsupported-operation",
   "headless.host-changed", "headless.forbidden", "headless.not-found", "headless.unavailable",
-  "headless.result-too-large",
+  "headless.result-too-large", "headless.stale",
 ]) });
 const system = z.strictObject({
   systemId, name: text, status: z.string().refine(isSystemBuilderStatus),
@@ -36,6 +36,17 @@ const cursor = z.strictObject({
   scopeTag: z.string().length(64).regex(/^[a-f0-9]{64}$/),
 });
 const savedReference = { systemId, recordRevision: z.number().int().positive(), revisionId: revisionId.nullable() };
+const workflowId = z.string().refine(headless.isHeadlessWorkflowId);
+const source = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("approved-release"), sourceId: workflowId, sourceDigest: z.string().length(71).regex(/^sha256:[a-f0-9]{64}$/) }),
+  z.strictObject({ kind: z.literal("reviewed-execution-plan"), sourceId: workflowId, sourceRevision: workflowId }),
+]);
+const workflowProfile = z.strictObject({ profileId: workflowId, source,
+  title: z.enum(["Controlled conversation", "Service request records", "Artifact review"]),
+  availability: z.enum(["available", "blocked"]), blockers: z.array(z.strictObject({ code: workflowId })).max(16) });
+const field = z.strictObject({ fieldId: workflowId, kind: z.enum(["text", "multiline", "integer", "number", "boolean", "select"]),
+  required: z.boolean(), minimum: z.number().optional(), maximum: z.number().optional(),
+  maximumLength: z.number().int().positive().optional(), options: z.array(workflowId).min(1).max(32).optional() });
 const resultValue = {
   "host.describe": z.strictObject({
     version: z.literal(HEADLESS_CONTRACT_VERSION),
@@ -58,6 +69,17 @@ const resultValue = {
       cursor, more: z.boolean(),
     }),
   ]),
+  "workflows.list": z.array(workflowProfile).max(64),
+  "workflows.prepare": z.strictObject({ profile: workflowProfile, snapshotRevision: workflowId, actions: z.array(z.strictObject({
+    actionId: workflowId, intent: z.literal("read"), enabled: z.boolean(), requiresConfirmation: z.literal(false),
+    fields: z.array(field).max(16),
+  })).max(32) }),
+  "conversation-tasks.read": z.strictObject({
+    sessionId: workflowId, turnId: workflowId,
+    turnStatus: z.enum(["draft", "submitted", "generating", "succeeded", "failed", "cancel-requested", "cancelled", "retryable", "blocked", "stale", "invalid"]),
+    run: z.strictObject({ runId: workflowId, status: z.enum(["draft", "awaiting-approval", "approved", "queued", "running", "succeeded",
+      "failed", "cancel-requested", "cancelled", "retryable", "blocked", "stale", "invalid", "archived"]) }).nullable(),
+  }),
 };
 
 type ReadResult = { ok: true; operation: HeadlessReadRequest["operation"]; value: unknown } |
@@ -123,6 +145,24 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
           if (next.hostIncarnationId !== input.input.hostIncarnationId || next.sequence !== previous + events.length ||
               events.some(({ sequence }, index) => sequence !== previous + index + 1) || (more && events.length === 0)) return unavailable;
         }
+      }
+      if (input.operation === "conversation-tasks.read") {
+        const result = resultValue["conversation-tasks.read"].safeParse(parsed.data.value);
+        if (!result.success || result.data.sessionId !== input.input.sessionId || result.data.turnId !== input.input.turnId) return unavailable;
+      }
+      if (input.operation === "workflows.list") {
+        const result = resultValue["workflows.list"].safeParse(parsed.data.value);
+        if (!result.success || result.data.some(row => row.source.kind !== input.input.sourceKind)) return unavailable;
+      }
+      if (input.operation === "workflows.prepare") {
+        const result = resultValue["workflows.prepare"].safeParse(parsed.data.value);
+        const target = input.input.source;
+        if (!result.success || result.data.profile.profileId !== input.input.profileId) return unavailable;
+        const actual = result.data.profile.source;
+        if (actual.sourceId !== target.sourceId || actual.kind !== target.kind ||
+            (actual.kind === "approved-release" && target.kind === "approved-release" && actual.sourceDigest !== target.sourceDigest) ||
+            (actual.kind === "reviewed-execution-plan" && target.kind === "reviewed-execution-plan" && actual.sourceRevision !== target.sourceRevision))
+          return unavailable;
       }
       return parsed.data;
     } catch {
