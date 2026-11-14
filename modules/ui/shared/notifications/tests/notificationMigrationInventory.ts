@@ -100,6 +100,11 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     rationale: "This read-only panel reports loading, absence, and availability for the scoped task list. It does not announce task outcomes or publish notifications.",
   },
   {
+    path: "modules/ui/shared/takeover/WindowTakeoverControls.tsx",
+    classification: "contextual-only",
+    rationale: "The live window control region tells the user who controls the current window and keeps revoke available. Its status is separate from independent chat task outcomes.",
+  },
+  {
     path: "modules/ui/shared/system-builder/SystemFormComposerView.tsx",
     classification: "contextual-only",
     rationale: "A preview readiness error belongs to the current form draft and disappears when that draft changes.",

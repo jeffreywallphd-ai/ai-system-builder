@@ -161,6 +161,49 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-desktop-takeover-controls": {
+        "automatic_sources": (
+            "apps/desktop/src/main/desktopUiControlIpc.ts",
+            "apps/desktop/src/main/tests/desktop-ui-control-ipc.unit.test.ts",
+            "modules/ui/shared/takeover/windowTakeoverController.ts",
+            "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
+        ),
+        "sources": (
+            "apps/desktop/src/main/desktopUiControlIpc.ts",
+            "apps/desktop/src/main/tests/desktop-ui-control-ipc.unit.test.ts",
+            "apps/desktop/src/renderer/App.tsx",
+            "apps/desktop/src/renderer/components/layout/AppShell.tsx",
+            "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+            "apps/desktop/src/renderer/features/workspace/hooks/useActiveWorkspaceTakeover.ts",
+            "modules/hosts/desktop/composition/composeDesktopUiControl.ts",
+            "modules/ui/shared/components/ModalDialog.tsx",
+            "modules/ui/shared/styles/components/shell.css",
+            "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
+            "modules/ui/shared/takeover/windowTakeoverController.ts",
+            "modules/ui/shared/takeover/WindowTakeoverControls.tsx",
+            "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
+            "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/desktop/src/main/tests/desktop-ui-control-ipc.unit.test.ts",
+            "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
+            "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
+            "modules/ui/shared/components/tests/ModalDialog.unit.test.tsx",
+        ),
+    },
+    "headless-desktop-takeover-draft": {
+        "companion_to": "headless-desktop-takeover-controls",
+        "sources": (
+            "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+            "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+        ),
+    },
     "headless-ui-control-authority": {
         "sources": (
             "modules/contracts/headless/ui-control-authority.ts",

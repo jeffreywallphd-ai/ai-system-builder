@@ -11,6 +11,7 @@ import { composeDesktopHeadlessAuthoring } from "./composeDesktopHeadlessAuthori
 import { composeDesktopHeadlessConversation } from "./composeDesktopHeadlessConversation";
 import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
 import { registerDesktopHeadlessTaskList } from "./registerDesktopHeadlessTaskList";
+import { composeDesktopUiControl, type DesktopUiControlOwner } from "./composeDesktopUiControl";
 import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
 import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
 import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
@@ -349,6 +350,7 @@ export interface DesktopHostComposition {
   getHeadlessReadHandler: () => DesktopHeadlessReadHandler | undefined;
   /** Interactive main-process entry point. Never expose the object to a renderer. */
   getHeadlessConnection: () => DesktopHeadlessConnection | undefined;
+  getUiControlOwner: () => DesktopUiControlOwner | undefined;
   registerArtifactUploadIpc: (
     options: RegisterDesktopArtifactUploadIpcOptions,
   ) => void;
@@ -701,6 +703,7 @@ export function composeDesktopHost(
   let headlessReadHandler: DesktopHeadlessReadHandler | undefined;
   let headlessConnection: DesktopHeadlessConnection | undefined;
   let headlessConversation: ReturnType<typeof composeDesktopHeadlessConversation> | undefined;
+  let uiControlOwner: DesktopUiControlOwner | undefined;
   let headlessReadAdmissionClosed = false;
   let closeImageAdmission: (() => void) | undefined;
   let stopOwnedImageRuntime: (() => Promise<void>) | undefined;
@@ -723,6 +726,8 @@ export function composeDesktopHost(
     },
     async shutdownBackgroundTasks() {
       headlessReadAdmissionClosed = true;
+      uiControlOwner?.authority.close();
+      uiControlOwner = undefined;
       headlessReadHandler = undefined;
       headlessConversation?.stopAdmission();
       taskReconciler.stopAccepting();
@@ -783,6 +788,7 @@ export function composeDesktopHost(
     getFeatureLifecycleState: featureLifecycle.getFeatureLifecycleState,
     getHeadlessReadHandler: () => headlessReadHandler,
     getHeadlessConnection: () => headlessConnection,
+    getUiControlOwner: () => uiControlOwner,
     disposeFeature: featureLifecycle.disposeFeature,
     markFeatureIdle: featureLifecycle.markFeatureIdle,
     disposeIdleFeatures: featureLifecycle.disposeIdleFeatures,
@@ -2237,6 +2243,10 @@ export function composeDesktopHost(
             isOpen: () => !headlessReadAdmissionClosed,
           });
           if (organizationDocuments?.organizationId === identity.organizationId) {
+            if (platformDocuments) uiControlOwner = composeDesktopUiControl({
+              hostIncarnationId, identity, documents: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
+              isOpen: () => !headlessReadAdmissionClosed,
+            });
             if (platformDocuments && delegatedTurnAdmission) {
               headlessConversation = composeDesktopHeadlessConversation({
                 hostIncarnationId, identity, platformDocuments, rootDirectory: registerOptions.storageRootDirectory,

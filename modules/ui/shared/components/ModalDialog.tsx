@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
+import { RevokeWindowTakeoverButton, useWindowTakeover } from "../takeover/WindowTakeoverControls";
 
 const focusableSelector = [
   "a[href]",
@@ -75,6 +76,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   ).filter(
     (element) =>
       !element.hidden &&
+      !element.closest("[inert]") &&
       element.getAttribute("aria-hidden") !== "true" &&
       element.tabIndex >= 0,
   );
@@ -85,6 +87,7 @@ function isFocusableElement(element: HTMLElement | null): element is HTMLElement
     element &&
       element.matches(focusableSelector) &&
       !element.hidden &&
+      !element.closest("[inert]") &&
       element.getAttribute("aria-hidden") !== "true" &&
       element.tabIndex >= 0,
   );
@@ -138,6 +141,7 @@ export function ModalDialog({
   dialogClassName,
   bodyClassName,
 }: ModalDialogProps) {
+  const { presentationAttached } = useWindowTakeover();
   const instanceId = useId();
   const dialogRef = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
@@ -326,6 +330,7 @@ export function ModalDialog({
       >
         <header className="ui-modal-header">
           <h2 id={titleId}>{title}</h2>
+          <RevokeWindowTakeoverButton />
           <button
             className="ui-modal-close"
             type="button"
@@ -336,7 +341,13 @@ export function ModalDialog({
             Close
           </button>
         </header>
-        <div className={bodyClasses}>{children}</div>
+        <div className={bodyClasses} inert={presentationAttached || undefined}
+          onClickCapture={event => {
+            if (presentationAttached) { event.preventDefault(); event.stopPropagation(); }
+          }}
+        >
+          {children}
+        </div>
       </section>
     </div>
   );

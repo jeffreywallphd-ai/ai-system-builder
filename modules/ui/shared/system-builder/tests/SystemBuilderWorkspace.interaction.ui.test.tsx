@@ -27,6 +27,9 @@ import { SystemFormJourney } from "../SystemFormPreview";
 import { SystemManagementWorkspace } from "../SystemManagementWorkspace";
 import { SystemPublishedFormDialog } from "../SystemPublishedFormDialog";
 import type { SystemPublishedFormClient } from "../SystemPublishedFormClient";
+import { readUiControlAttempt, type UiControlRequestView } from "../../../../contracts/headless";
+import { WindowTakeoverControls, WindowTakeoverProvider, useWindowTakeover } from "../../takeover/WindowTakeoverControls";
+import { createWindowTakeoverController, type DraftHandoff } from "../../takeover/windowTakeoverController";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -330,7 +333,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
       instances: fixture.slice(0, 3), placements: initial.placements!.slice(0, 2),
     };
     let latest = initial;
-    const saveRevision = vi.fn(async (input: Parameters<SystemBuilderClient["saveRevision"]>[0]) => {
+    const saveRevision = vi.fn<SystemBuilderClient["saveRevision"]>(async (input) => {
       latest = { ...initial, revisionNumber: 2, composition: input.composition, instances: input.instances,
         placements: input.placements, bindings: input.bindings };
       return { ok: true as const, value: latest };
@@ -348,7 +351,32 @@ describe("SystemBuilderWorkspace UI preview", () => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
-    const mount = () => root!.render(<SystemBuilderWorkspace workspaceId="workspace-a" client={client} initialSystemId={String(record.systemId)} />);
+    const id = (i: number) => `e38b2781-e605-4de3-83e1-${String(i).padStart(12, "0")}`;
+    const target = readUiControlAttempt({ hostIncarnationId: id(1), windowId: id(2), uiIncarnationId: id(3),
+      workspaceId: "workspace-a", requestId: id(4), attemptId: id(5) })!;
+    const request: UiControlRequestView = { target, agentSessionId: id(6), taskId: id(7), status: "pending", expiresAt: 5000 };
+    const heldAccept = vi.fn(() => new Promise<undefined>(() => {}));
+    let readDraft: (() => DraftHandoff) | undefined;
+    const controller = createWindowTakeoverController({
+      now: () => 0,
+      readDraft: () => readDraft?.() ?? { status: "busy" },
+      port: { accept: heldAccept, ready: vi.fn(async () => undefined), revoke: vi.fn(async () => true) },
+    });
+    const control = { controller, registerDraft(read: () => DraftHandoff) {
+      readDraft = read;
+      return () => { if (readDraft === read) readDraft = undefined; };
+    } };
+    function FixtureComposer() {
+      const { presentationAttached } = useWindowTakeover();
+      return <SystemBuilderWorkspace workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} takeoverReadOnly={presentationAttached} />;
+    }
+    const mount = () => root!.render(
+      <WindowTakeoverProvider control={control}>
+        <WindowTakeoverControls />
+        <FixtureComposer />
+      </WindowTakeoverProvider>,
+    );
     await act(async () => mount());
     const find = <T extends HTMLElement>(label: string, selector: string) => {
       const group = [...container!.querySelectorAll("label")].find((element) =>
@@ -486,7 +514,44 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(document.activeElement).toBe(button(removalDialog(), "Cancel"));
     await act(async () => button(removalDialog(), "Cancel").click());
     expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    let loseSave!: (result: Awaited<ReturnType<SystemBuilderClient["saveRevision"]>>) => void;
+    saveRevision.mockImplementationOnce(() => new Promise(resolve => { loseSave = resolve; }));
+    await act(async () => controller.update(request));
+    await click("Accept automation takeover");
+    expect(saveRevision).not.toHaveBeenCalled();
     await removeField("Fast path");
+    await act(async () => controller.saveAndAccept());
+    expect(controller.getSnapshot().status).toBe("activating");
+    expect(removalDialog().querySelector(".ui-modal-body")?.hasAttribute("inert")).toBe(true);
+    expect(button(container!, "Discard changes").disabled).toBe(true);
+    await act(async () => button(removalDialog(), "Remove field").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    await act(async () => loseSave(systemBuilderFailure("system-builder.stale-record-revision", "This system changed.")));
+    expect(controller.getSnapshot().status).toBe("manual");
+    expect(heldAccept).not.toHaveBeenCalled();
+    expect(saveRevision).toHaveBeenCalledWith(expect.objectContaining({ expectedRecordRevision: record.revision }));
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    expect(button(container!, "Discard changes").disabled).toBe(false);
+    saveRevision.mockClear();
+    saveRevision.mockImplementationOnce(async input => {
+      latest = { ...initial, revisionId: normalizeSystemBuilderRevisionId("portal.r2"), revisionNumber: 2,
+        composition: input.composition, instances: input.instances, bindings: input.bindings, placements: input.placements,
+        validationIssues: [{ severity: "error", category: "composition", message: "Fixture diagnostic" }] };
+      return systemBuilderSuccess(latest);
+    });
+    await act(async () => controller.update({ ...request, target: { ...target, requestId: id(9), attemptId: id(10) } }));
+    await click("Accept automation takeover");
+    await click("Save changes and accept takeover");
+    expect(controller.getSnapshot().status).toBe("manual");
+    expect(heldAccept).not.toHaveBeenCalled();
+    expect(container!.textContent).toContain("Fixture diagnostic");
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    await click("Discard changes");
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    expect(saveRevision).toHaveBeenCalledTimes(1);
+    saveRevision.mockClear();
+    if (!removalDialog()) await removeField("Fast path");
     await act(async () => button(removalDialog(), "Remove field").click());
     expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).toBeNull();
     expect(document.activeElement).toBe(tab("First step"));

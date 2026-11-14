@@ -644,3 +644,13 @@ must not be treated as deployed or running. See
 ## Manage request ownership and recovery
 
 The Manage view starts a fresh UI session when its workspace or client changes. Late replies cannot populate a former list/dialog, publish a notification or invoke a former active-systems callback. Initial reads and paging recover from transport rejections. Paging and requested preview results belong to the accepting query sequence. Accepted mutations remain owner-scoped across search/filter changes; a view refresh is not mutation cancellation. Synchronous operation tokens precede awaits and only their owner releases busy state. Notifications distinguish failed requests and saved results; raw thrown transport details are not displayed. These UI controls supplement existing exact revision and server/workspace authority. Local rendered fixtures do not qualify physical app/runtime/native or final combined behavior. Owners retire during layout cleanup at commit, before passive effects. An abandoned replacement render does not change the committed session. Confirmation changes are synchronously refused while an action owns them.
+The desktop takeover shell keeps authorization and local presentation state
+separate. Before accepting with a dirty Composer, the user chooses whether to
+save the existing draft. A denied, invalid or conflicting save returns manual
+control and keeps the draft available. The shell and active modal both offer
+immediate revoke while activation is pending or active. Revoke closes the
+window's local gate before IPC. The Composer stays mounted across Systems tabs
+so the handoff sees any pending draft. During attachment, modal body controls are
+inert and keyboard users can still revoke or close the dialog.
+The command catalog and native end-to-end
+qualification are tracked separately in the Headless roadmap.

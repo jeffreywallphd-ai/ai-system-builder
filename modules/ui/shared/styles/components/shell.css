@@ -18,6 +18,16 @@
   box-shadow: 0 0.25rem 1rem rgb(0 0 0 / 14%);
 }
 
+.ui-window-takeover {
+  padding: var(--ui-space-3);
+  overflow-wrap: anywhere;
+}
+
+.ui-window-takeover button {
+  white-space: normal;
+  max-width: 100%;
+}
+
 .ui-shell__header-inner {
   inline-size: 100%;
   block-size: 100%;

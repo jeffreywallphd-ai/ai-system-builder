@@ -1,4 +1,6 @@
 import { readStrictPassiveRecord } from "../shared";
+import { createIpcChannelValue } from "../ipc/ipc-channel";
+import { createTransportOperation } from "../transport";
 import { isWorkspaceId, type WorkspaceId } from "../workspace";
 import { isHeadlessHostIncarnationId, type HeadlessHostIncarnationId } from "./headless-read-request";
 
@@ -49,6 +51,50 @@ export type UiControlLease = {
   readonly context: "resource-identifiers";
   readonly expiresAt: number;
 };
+
+const channel = (operation: string) => createIpcChannelValue(createTransportOperation("window-control", operation), "request");
+export const DESKTOP_UI_CONTROL_CHANNELS = Object.freeze({
+  observe: channel("observe"), accept: channel("accept"), ready: channel("ready"), revoke: channel("revoke"),
+});
+export type UiControlTimedGrant = { readonly target: UiControlLeaseTarget; readonly remainingMs: number };
+export type UiControlObservation =
+  | { readonly status: "ready"; readonly request?: UiControlRequestView }
+  | { readonly status: "busy" | "unavailable" };
+
+export function readUiControlObservation(value: unknown): UiControlObservation | undefined {
+  try {
+    const row = readStrictPassiveRecord(value, ["status", "request"]);
+    if (row.status === "busy" || row.status === "unavailable") {
+      return "request" in row ? undefined : { status: row.status };
+    }
+    if (row.status !== "ready") return;
+    if (!("request" in row)) return { status: "ready" };
+    const request = readUiControlRequestView(row.request);
+    return request && { status: "ready", request };
+  } catch { return undefined; }
+}
+
+export function readUiControlRequestView(value: unknown): UiControlRequestView | undefined {
+  try {
+    const { target, agentSessionId, taskId, status, expiresAt } = readStrictPassiveRecord(
+      value, ["target", "agentSessionId", "taskId", "status", "expiresAt"],
+    );
+    const exactTarget = readUiControlAttempt(target);
+    if (!exactTarget || !isUiControlId(agentSessionId) || !isUiControlId(taskId) ||
+        (status !== "pending" && status !== "awaiting-readiness" && status !== "active" && status !== "ended") ||
+        typeof expiresAt !== "number" || !Number.isFinite(expiresAt) || expiresAt <= 0) return;
+    return { target: exactTarget, agentSessionId, taskId, status, expiresAt };
+  } catch { return undefined; }
+}
+export function readUiControlTimedGrant(value: unknown): UiControlTimedGrant | undefined {
+  try {
+    const { target, remainingMs } = readStrictPassiveRecord(value, ["target", "remainingMs"]);
+    const exactTarget = readUiControlLeaseTarget(target);
+    if (!exactTarget || typeof remainingMs !== "number" || !Number.isFinite(remainingMs) ||
+        remainingMs <= 0 || remainingMs > 15_000) return;
+    return { target: exactTarget, remainingMs };
+  } catch { return undefined; }
+}
 
 const windowFields = ["hostIncarnationId", "windowId", "uiIncarnationId", "workspaceId"];
 const attemptFields = [...windowFields, "requestId", "attemptId"];

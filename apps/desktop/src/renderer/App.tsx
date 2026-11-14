@@ -1,4 +1,6 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { WindowTakeoverProvider } from "../../../../modules/ui/shared/takeover/WindowTakeoverControls";
+import { useDesktopWindowTakeover } from "./features/workspace/hooks/useActiveWorkspaceTakeover";
 import {
   ContextTaskNotificationBridge,
   ModelDownloadNotificationBridge,
@@ -93,6 +95,11 @@ export function WorkspaceAwareDesktopApp({
   const [artifactDetailIntent, setArtifactDetailIntent] = useState<string>();
   const notificationWorkspaceId =
     workspace.status === "ready" ? workspace.activeWorkspace?.id : undefined;
+  const takeover = useDesktopWindowTakeover(notificationWorkspaceId, activePage === "systems");
+  const navigateByUser = (page: DesktopPageKey) => {
+    const status = takeover.controller.getSnapshot().status;
+    if (status !== "active" && status !== "activating") setActivePage(page);
+  };
 
   useEffect(() => {
     setNotificationWorkspace(notificationWorkspaceId);
@@ -142,7 +149,7 @@ export function WorkspaceAwareDesktopApp({
             onConvertToRag={(artifactId) => {
               setContextLaunchArtifactId(artifactId);
               setArtifactDetailIntent(undefined);
-              setActivePage("context");
+              navigateByUser("context");
             }}
             onUploaded={() => {
               setArtifactRefreshToken((current) => current + 1);
@@ -164,7 +171,7 @@ export function WorkspaceAwareDesktopApp({
             onViewSource={(artifactId) => {
               setArtifactDetailIntent(artifactId);
               setContextLaunchArtifactId(undefined);
-              setActivePage("artifacts");
+              navigateByUser("artifacts");
             }}
           />
         );
@@ -219,7 +226,7 @@ export function WorkspaceAwareDesktopApp({
         return (
           <HomePage
             __lazyLoadContext={lazyLoadContext}
-            onNavigate={setActivePage}
+            onNavigate={navigateByUser}
           />
         );
       }
@@ -277,13 +284,16 @@ export function WorkspaceAwareDesktopApp({
         client={desktopContextNotificationClient}
         workspaceId={notificationWorkspaceId}
       />
-      <AppShell
-        activePage={routeBoundary.visibleActivePage}
-        onNavigate={setActivePage}
-        pages={desktopPageDefinitions}
-      >
-        <Suspense fallback={lazyPageFallback}>{content}</Suspense>
-      </AppShell>
+      <WindowTakeoverProvider control={takeover}>
+        <AppShell
+          activePage={routeBoundary.visibleActivePage}
+          onNavigate={navigateByUser}
+          pages={desktopPageDefinitions}
+          takeoverWorkspaceLabel={workspace.activeWorkspace?.displayName}
+        >
+          <Suspense fallback={lazyPageFallback}>{content}</Suspense>
+        </AppShell>
+      </WindowTakeoverProvider>
     </>
   );
 }

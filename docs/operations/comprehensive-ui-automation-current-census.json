@@ -12155,137 +12155,141 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "ed59a408278047f9c6909fb2f33127285ca0a81ffd08d48bcc19ffbf4798ef6a",
-    "bytes": 118759,
+    "sha256": "8e359ed1b5d7759cdeb178241becea39c6eacf97d111d8359aa701c56bccb568",
+    "bytes": 123037,
     "cases": [
      {
       "name": "submits a published form only after valid answers and reuses the same request on retry",
-      "line": 47
+      "line": 50
      },
      {
       "name": "clears a previous release and rejects malformed form data before rendering controls",
-      "line": 87
+      "line": 90
      },
      {
       "name": "keeps oversized answers editable and allows closing after sending",
-      "line": 129
+      "line": 132
      },
      {
       "name": "keeps radio labels and required-error focus distinct from similar field IDs",
-      "line": 158
+      "line": 161
      },
      {
       "name": "does not offer submission mapping for an ambiguous Create Record setup",
-      "line": 185
+      "line": 188
      },
      {
       "name": "edits the exact selected form when two forms share a Canvas page",
-      "line": 212
+      "line": 215
      },
      {
       "name": "reopens the saved empty first form from Manage without adding a field or saving",
-      "line": 698
+      "line": 763
      },
      {
       "name": "defers the layout catalog until Create system is submitted and then shows the loading wheel",
-      "line": 796
+      "line": 861
      },
      {
       "name": "requests active systems and defensively omits archived records from Compose",
-      "line": 839
+      "line": 904
      },
      {
       "name": "refreshes the active picker after a Manage lifecycle change",
-      "line": 935
+      "line": 1000
      },
      {
       "name": "creates a named system with the implicit Minimal layout",
-      "line": 996
+      "line": 1061
      },
      {
       "name": "requires a name and uses the primary action when creating from a template",
-      "line": 1048
+      "line": 1113
      },
      {
       "name": "prefers the nested page content region over an already-full application content region",
-      "line": 1104
+      "line": 1169
      },
      {
       "name": "loads layouts on demand, applies one to the Canvas, exposes unassigned assets in the scoped modal, and undoes",
-      "line": 1193
+      "line": 1258
      },
      {
       "name": "requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system",
-      "line": 1564
+      "line": 1629
      },
      {
       "name": "opens and closes a modal for the current safe frontend composition",
-      "line": 1767
+      "line": 1832
      },
      {
       "name": "previews a v2 Foundation upgrade before explicit confirmation",
-      "line": 1887
+      "line": 1952
      },
      {
       "name": "preserves canonical structure and placements when saving configuration",
-      "line": 2014
+      "line": 2079
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
+      "name": "FixtureComposer",
+      "line": 369
+     },
+     {
       "name": "Systems",
-      "line": 754
+      "line": 819
      },
      {
       "name": "instance",
-      "line": 2510
+      "line": 2575
      },
      {
       "name": "composerDefinition",
-      "line": 2530
+      "line": 2595
      },
      {
       "name": "layoutDefinition",
-      "line": 2602
+      "line": 2667
      },
      {
       "name": "withoutComposerDetail",
-      "line": 2620
+      "line": 2685
      },
      {
       "name": "button",
-      "line": 2631
+      "line": 2696
      },
      {
       "name": "setInputValue",
-      "line": 2638
+      "line": 2703
      },
      {
       "name": "clientFor",
-      "line": 2645
+      "line": 2710
      }
     ],
-    "assertionCount": 300,
-    "assertionDigest": "fc5f17e7afcc05b47d6614d6de830babd23ff5518a4a7571056586f6d9ba5d52",
+    "assertionCount": 317,
+    "assertionDigest": "570812aa5ec8c142d76c76f498d3c4ec272dcc47a58002265fe5db3f3f06516a",
     "assertionExamples": [
      {
-      "line": 66,
+      "line": 69,
       "kind": "expect",
       "sha256": "8ebc59f30d97d5099fb07687a63fa2063bd319aaf9aa59813944f8d7ac459b67"
      },
      {
-      "line": 68,
+      "line": 71,
       "kind": "expect",
       "sha256": "b8516f67d7716b8f35d1f5e631cf0b36f9e9b0ce0797bc82ef2421e46b3a6867"
      },
      {
-      "line": 69,
+      "line": 72,
       "kind": "expect",
       "sha256": "a570fc51e01e9dd237fc13d5987d0431fa8b071fd0e9246421b626feddcdf981"
      },
      {
-      "line": 71,
+      "line": 74,
       "kind": "expect",
       "sha256": "7209b01251cf906c324cb4589aa6176cac8c8a32efd97228cc62c42bc5bcb2a8"
      }
@@ -17520,7 +17524,7 @@
     "Compose",
     "Publish"
    ],
-   "sha256": "b45ee0b19c41634bf3d912a950f1f24d699a358823e07470f5cefb910a11e0d0",
+   "sha256": "386ed64832e05e9ed43e0182e8c2447bea798a893d70b4c1c731177d8817591e",
    "surface_key": "systemsTabs"
   },
   {

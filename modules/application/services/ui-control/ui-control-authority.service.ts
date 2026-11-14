@@ -236,6 +236,12 @@ export function createUiControlAuthority(dependencies: {
     },
     accept: (raw: unknown, owner: UiControlInteractiveOwner) => interactive(raw, owner, false),
     ready: (raw: unknown, owner: UiControlInteractiveOwner) => interactive(raw, owner, true),
+    /** Final synchronous check before publishing a grant to its interactive frame. */
+    readInteractiveLease(target: UiControlLeaseTarget, owner: UiControlInteractiveOwner): UiControlLease | undefined {
+      sweep();
+      const entry = interactiveEntry(target, owner);
+      if (entry && entry.slot.request === entry && entry.lease && sameLease(entry.lease, target)) return lease(entry);
+    },
     revoke(raw: unknown, owner: UiControlInteractiveOwner): UiControlDecision<undefined> {
       const target = readUiControlRevoke(raw);
       if (!target) return denied;

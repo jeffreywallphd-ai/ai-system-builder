@@ -16,6 +16,7 @@ import {
 } from "../../../../modules/adapters/security/local-identity";
 import { isTrustedIpcSender } from "./trustedIpcSender";
 import { captureDesktopHeadlessPairingWindow, registerDesktopHeadlessPairingIpc } from "./desktopHeadlessPairingIpc";
+import { registerDesktopUiControlIpc } from "./desktopUiControlIpc";
 import { createRevealModelPath } from "./revealModelPath";
 import {
   createSystemRuntimeWindowManager,
@@ -30,6 +31,7 @@ recordDesktopMemorySnapshot({
 });
 
 const openWindows = new Set<BrowserWindow>();
+let retireUiControlWindow: ((window: BrowserWindow) => void) | undefined;
 
 async function createMainWindow(): Promise<void> {
   recordDesktopMemorySnapshot({
@@ -54,7 +56,14 @@ async function createMainWindow(): Promise<void> {
     component: "desktop-main",
   });
   openWindows.add(mainWindow);
-  mainWindow.on("closed", () => { openWindows.delete(mainWindow); });
+  mainWindow.on("closed", () => {
+    retireUiControlWindow?.(mainWindow);
+    openWindows.delete(mainWindow);
+  });
+  mainWindow.webContents.on("did-start-navigation", (event) => {
+    if (event.isMainFrame && !event.isSameDocument) retireUiControlWindow?.(mainWindow);
+  });
+  mainWindow.webContents.on("render-process-gone", () => retireUiControlWindow?.(mainWindow));
 
   let hasBeenShown = false;
   let visibleCueAttempt = 0;
@@ -288,6 +297,20 @@ app.whenReady().then(async () => {
     systemRuntimeWindows,
     revealModelPath: createRevealModelPath(shell),
   });
+  retireUiControlWindow = registerDesktopUiControlIpc({
+    ipcMain, getOwner: desktopHost.getUiControlOwner,
+    resolve(event) {
+      for (const window of openWindows) {
+        if (!isTrustedIpcSender(event, [window]) || window.webContents.isLoadingMainFrame()) continue;
+        const frame = window.webContents.mainFrame;
+        return {
+          window, frame,
+          isCurrent: () => openWindows.has(window) && isTrustedIpcSender(event, [window]) &&
+            window.webContents.mainFrame === frame && !window.webContents.isLoadingMainFrame(),
+        };
+      }
+    },
+  }).retire;
   registerDesktopHeadlessPairingIpc({
     ipcMain,
     getConnection: desktopHost.getHeadlessConnection,

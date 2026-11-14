@@ -40,8 +40,13 @@ own publication fence. Saved-system reads and independently owned tasks retain
 their existing authorization and lifetime. Only finite metadata leaves the
 application boundary. The interactive transport must independently recheck
 current workspace permission before returning even pending task and session
-identifiers. This initial reservation implementation adds no API, IPC,
-MCP, renderer effects or deployed authority by itself.
+identifiers. Desktop checks workspace and membership in one local transaction.
+It checks the exact live reservation again before returning acceptance or
+readiness to the owning frame. The renderer discards poll results from earlier
+local states. A busy poll leaves the current state intact. A denied poll
+returns the window to manual control. Each exact revoke has at most one
+outstanding IPC call, with up to 32 held calls and a 60-second local retry
+record. A held call does not delay another attempt's revoke.
 
 ## Rollback
 

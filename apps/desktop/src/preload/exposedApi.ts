@@ -3,6 +3,10 @@ import { DESKTOP_HEADLESS_CHAT_TASKS_CHANNEL, DESKTOP_HEADLESS_CHAT_TASKS_UNAVAI
   readDesktopHeadlessChatTaskRequest, readDesktopHeadlessChatTasks, type DesktopHeadlessChatTasks,
 } from "../../../../modules/contracts/headless/desktop-headless-chat-tasks";
 import { DESKTOP_HEADLESS_PAIRING_CHANNELS, DESKTOP_SYSTEM_CHANGE_POLL_CHANNEL, readDesktopHeadlessPairingStatus, readDesktopSystemChangePoll, readDesktopSystemChangeWatermark, type DesktopHeadlessClientAccess, type DesktopHeadlessPairingResult, type DesktopHeadlessPairingStatus, type DesktopHeadlessRevokeResult, type DesktopHeadlessStartResult, type DesktopSystemChangeWatermark } from "../../../../modules/contracts/headless";
+import {
+  DESKTOP_UI_CONTROL_CHANNELS, readUiControlAttempt, readUiControlLeaseTarget, readUiControlObservation,
+  readUiControlRevoke, readUiControlTimedGrant, type UiControlObservation, type UiControlTimedGrant,
+} from "../../../../modules/contracts/headless";
 import { normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary, type ReadWorkspaceSummaryRequest } from "../../../../modules/contracts/workspace";
 import { createDesktopWorkspaceSummaryRequest, DESKTOP_WORKSPACE_SUMMARY_OPERATION, DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, type DesktopWorkspaceSummaryResponse } from "../../../../modules/contracts/ipc";
 import {
@@ -759,6 +763,10 @@ type DesktopSystemDeploymentContextInput = {
 
 export interface DesktopPreloadApi {
   memoryDiagnosticsEnabled: boolean;
+  readWindowTakeover: (workspaceId: string | null) => Promise<UiControlObservation>;
+  acceptWindowTakeover: (target: unknown) => Promise<UiControlTimedGrant | undefined>;
+  readyWindowTakeover: (target: unknown) => Promise<UiControlTimedGrant | undefined>;
+  revokeWindowTakeover: (target: unknown) => Promise<boolean>;
   readHeadlessPairingStatus: () => Promise<DesktopHeadlessPairingStatus>;
   readRecentHeadlessChatTasks: (workspaceId: string) => Promise<DesktopHeadlessChatTasks>;
   readSystemBuilderChangeWatermark: (workspaceId: string) => Promise<DesktopSystemChangeWatermark>;
@@ -2115,6 +2123,34 @@ export function createDesktopPreloadApi(
 
   return {
     memoryDiagnosticsEnabled: dependencies.memoryDiagnosticsEnabled === true,
+    async readWindowTakeover(workspaceId) {
+      try {
+        const reply = readUiControlObservation(await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.observe, workspaceId));
+        if (reply && (reply.status !== "ready" || !reply.request || reply.request.target.workspaceId === workspaceId)) return reply;
+      } catch { /* Malformed or disconnected bridge cannot preserve local control. */ }
+      return { status: "unavailable" };
+    },
+    async acceptWindowTakeover(value) {
+      const target = readUiControlAttempt(value);
+      if (!target) return;
+      try {
+        return readUiControlTimedGrant(await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.accept, target));
+      } catch { return undefined; }
+    },
+    async readyWindowTakeover(value) {
+      const target = readUiControlLeaseTarget(value);
+      if (!target) return;
+      try {
+        return readUiControlTimedGrant(await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.ready, target));
+      } catch { return undefined; }
+    },
+    async revokeWindowTakeover(value) {
+      const target = readUiControlRevoke(value);
+      if (!target) return false;
+      try {
+        return await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.revoke, target) === true;
+      } catch { return false; }
+    },
     async readHeadlessPairingStatus() {
       return readDesktopHeadlessPairingStatus(await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.status, null));
     },

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useWindowTakeover } from "../takeover/WindowTakeoverControls";
+import type { DraftHandoff } from "../takeover/windowTakeoverController";
 import {
   normalizeAssetId,
   MAX_ASSET_PLACEMENTS_PER_COMPOSITION,
@@ -187,11 +189,13 @@ export function SystemBuilderWorkspace({
   initialSystemId,
   activeSystemsRevision = 0,
   onBuildAndTest,
+  takeoverReadOnly = false,
 }: {
   readonly workspaceId: string;
   readonly client: SystemBuilderClient;
   readonly initialSystemId?: string;
   readonly activeSystemsRevision?: number;
+  readonly takeoverReadOnly?: boolean;
   readonly onBuildAndTest?: (input: {
     readonly system: SystemBuilderRecord;
     readonly revision: SystemBuilderRevision;
@@ -283,6 +287,10 @@ export function SystemBuilderWorkspace({
   const operation = useRef<object | undefined>(undefined);
   const [definitionReader] = useState(createSystemComposerDefinitionReader);
   const [dirty, setDirty] = useState(false);
+  const { controller, registerDraft } = useWindowTakeover();
+  const currentDraftHandoff = useRef<() => DraftHandoff>(() => ({ status: "busy" }));
+  const handoffSave = useRef<(() => Promise<boolean>) | undefined>(undefined);
+  const handoffSavedBase = useRef<typeof draftBase.current>(undefined);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const contextualNotice = Boolean(
@@ -847,9 +855,17 @@ export function SystemBuilderWorkspace({
     });
   }
 
-  function installSavedDraft(value: SystemBuilderRevision) {
-    const checkpoint = createSystemComposerDraftHistory({ instances: value.instances, bindings: value.bindings, placements: value.placements ?? [], structure: value.structure }).present;
+  function rememberSavedDraft(value: SystemBuilderRevision) {
+    const checkpoint = createSystemComposerDraftHistory({
+      instances: value.instances, bindings: value.bindings,
+      placements: value.placements ?? [], structure: value.structure,
+    }).present;
     savedDraft.current = checkpoint;
+    return checkpoint;
+  }
+
+  function installSavedDraft(value: SystemBuilderRevision) {
+    const checkpoint = rememberSavedDraft(value);
     setInstances(checkpoint.instances);
     setBindings(checkpoint.bindings);
     setPlacements(checkpoint.placements);
@@ -870,8 +886,14 @@ export function SystemBuilderWorkspace({
     } : record);
   }
 
-  async function transact(action: (isCurrent: () => boolean) => Promise<void>) {
+  function userOwnsDraft() {
+    const controlState = controller?.getSnapshot().status;
+    return controlState !== "activating" && controlState !== "active";
+  }
+
+  async function transact(action: (isCurrent: () => boolean) => Promise<void>, explicitHandoffSave = false) {
     if (operation.current) return;
+    if (!userOwnsDraft() && (!explicitHandoffSave || controller?.getSnapshot().status !== "activating")) return;
     const token = {};
     const targetSystem = selectedSystemId;
     operation.current = token;
@@ -893,7 +915,7 @@ export function SystemBuilderWorkspace({
   }
 
   function editExistingSystem() {
-    if (!existingSystemId || operation.current) return;
+    if (!existingSystemId || operation.current || !userOwnsDraft()) return;
     if (dirty && existingSystemId !== selectedSystemId) {
       setError("Save or discard unsaved changes before switching systems.");
       return;
@@ -1043,7 +1065,7 @@ export function SystemBuilderWorkspace({
   }
 
   function commitDraft(next: SystemComposerDraft) {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     applyDraftHistory(
       commitSystemComposerDraft(
         { past: undoDrafts, present: draft, future: redoDrafts },
@@ -1053,7 +1075,7 @@ export function SystemBuilderWorkspace({
   }
 
   function undoDraft() {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     applyDraftHistory(
       undoSystemComposerDraft({
         past: undoDrafts,
@@ -1064,7 +1086,7 @@ export function SystemBuilderWorkspace({
   }
 
   function redoDraft() {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     applyDraftHistory(
       redoSystemComposerDraft({
         past: undoDrafts,
@@ -1110,13 +1132,14 @@ export function SystemBuilderWorkspace({
   }
 
   function editForm(instanceId: string) {
-    if (!selectedSystemId || !revision || String(revision.systemId) !== selectedSystemId ||
+    if (!userOwnsDraft() || !selectedSystemId || !revision || String(revision.systemId) !== selectedSystemId ||
         String(revision.targetWorkspaceId) !== workspaceId || busy || !editableFormIds.has(instanceId)) return;
     setSelectedInstanceId(instanceId);
     setFormTarget({ scope, systemId: selectedSystemId, formId: instanceId });
   }
 
   function backToCanvas() {
+    if (!userOwnsDraft()) return;
     if (activeForm) {
       const instanceId = String(activeForm.form.instanceId);
       setRestoreFormFocus(instanceId);
@@ -1325,7 +1348,7 @@ export function SystemBuilderWorkspace({
   }
 
   function removeAsset(instanceId: string) {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     const parentId = placements.find(
       (placement) => String(placement.childInstanceRef.id) === instanceId,
     )?.parentInstanceRef.id;
@@ -1343,7 +1366,7 @@ export function SystemBuilderWorkspace({
   }
 
   function removeFormElement(instanceId: string): boolean {
-    if (!activeForm || operation.current) return false;
+    if (!activeForm || operation.current || !userOwnsDraft()) return false;
     const role = formDraftMembership(instanceId);
     if (!role || (role === "step" && activeForm.steps[0]?.instanceId === instanceId)) return false;
     const result = removeSystemComposerSubtree(draft, instanceId, protectedInstanceIds);
@@ -1373,6 +1396,7 @@ export function SystemBuilderWorkspace({
   }
 
   function placeAsset(instanceId: string, target: SystemComposerTargetSlot) {
+    if (operation.current || !userOwnsDraft()) return;
     const hasPlacement = draft.placements.some(
       (placement) => String(placement.childInstanceRef.id) === instanceId,
     );
@@ -1395,7 +1419,7 @@ export function SystemBuilderWorkspace({
     setSelectedInstanceId(instanceId);
   }
   function discardDraft() {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     if (!revision) return;
     const checkpoint = savedDraft.current;
     if (!checkpoint) return;
@@ -1547,11 +1571,12 @@ export function SystemBuilderWorkspace({
     });
   }
 
-  async function save() {
-    if (!revision || !selectedSystem) return;
+  async function save(requireValid = false): Promise<boolean> {
+    if (!revision || !selectedSystem) return false;
     const base = captureDraftBase();
-    if (!base) return;
-    return transact(async (isCurrent) => {
+    if (!base || operation.current) return false;
+    let saved = false;
+    await transact(async (isCurrent) => {
       setError(undefined);
       setNotice(undefined);
       const saveCatalog: SystemBuilderComposerAsset[] = [
@@ -1641,14 +1666,23 @@ export function SystemBuilderWorkspace({
       if (result.ok) {
         recordSavedBase(result.value, base);
         setRevision(result.value);
-        installSavedDraft(result.value);
-        setUndoDrafts([]);
-        setRedoDrafts([]);
-        setRevisions((current) => [result.value, ...current]);
-        setDirty(false);
         const invalid = result.value.validationIssues.filter(
           (issue) => issue.severity === "error",
         ).length;
+        if (!requireValid || invalid === 0) {
+          installSavedDraft(result.value);
+          setUndoDrafts([]);
+          setRedoDrafts([]);
+          setDirty(false);
+        } else {
+          // Ordinary saves can commit with blocking diagnostics. Keep the
+          // editable draft and its history, but align Discard with that commit.
+          rememberSavedDraft(result.value);
+          setDirty(true);
+        }
+        setRevisions((current) => [result.value, ...current]);
+        saved = !requireValid || invalid === 0;
+        if (requireValid && saved) handoffSavedBase.current = draftBase.current;
         setSystems((current) =>
           current.map((item) =>
             String(item.systemId) === selectedSystemId && item.revision <= base.recordRevision
@@ -1672,8 +1706,26 @@ export function SystemBuilderWorkspace({
             : "Revision saved and validated.",
         );
       } else setError(result.error.message);
-    });
+    }, requireValid);
+    return saved;
   }
+
+  useLayoutEffect(() => {
+    currentDraftHandoff.current = () => {
+      if (handoffSave.current || operation.current || revisionLoading) return { status: "busy" };
+      const state = controller?.getSnapshot().status;
+      if (state !== "activating") handoffSavedBase.current = undefined;
+      if (handoffSavedBase.current && handoffSavedBase.current === draftBase.current) return { status: "clean" };
+      if (!dirty) return { status: "clean" };
+      return { status: "dirty", async save() {
+        const pending = async () => save(true);
+        handoffSave.current = pending;
+        try { return await pending(); }
+        finally { if (handoffSave.current === pending) handoffSave.current = undefined; }
+      } };
+    };
+  });
+  useLayoutEffect(() => registerDraft?.(() => currentDraftHandoff.current()), [registerDraft]);
 
   async function previewFoundationUpgrade() {
     if (!revision || !selectedSystem || dirty) return;
@@ -1798,6 +1850,7 @@ export function SystemBuilderWorkspace({
           </p>
           <div
             className="system-builder__entry-options"
+            inert={takeoverReadOnly || undefined}
             role="group"
             aria-label="Composer entry options"
             aria-describedby="system-builder-entry-instructions"
@@ -1955,8 +2008,8 @@ export function SystemBuilderWorkspace({
               <button
                 type="button"
                 className="ui-button ui-button--outline"
-                onClick={() => setPreviewOpen(true)}
-                disabled={busy || !componentsReady || instances.length === 0}
+                  onClick={() => { if (userOwnsDraft()) setPreviewOpen(true); }}
+                  disabled={takeoverReadOnly || busy || !componentsReady || instances.length === 0}
                 aria-haspopup="dialog"
               >
                 <ApplicationIcon name="play" />
@@ -2002,6 +2055,7 @@ export function SystemBuilderWorkspace({
                 aria-label="Composer mode"
                 aria-orientation="horizontal"
                 onKeyDown={(event) => {
+                  if (!userOwnsDraft()) return;
                   const tab = event.target;
                   if (!(tab instanceof HTMLButtonElement) || tab.parentElement !== event.currentTarget) return;
                   const mode = event.key === "Home" ? "design" : event.key === "End" ? "connections"
@@ -2023,8 +2077,9 @@ export function SystemBuilderWorkspace({
                     aria-selected={composerMode === mode}
                     aria-controls={composerModeId + "-" + mode + "-panel"}
                     tabIndex={composerMode === mode ? 0 : -1}
+                    disabled={takeoverReadOnly}
                     className="system-composer__flat-control"
-                    onClick={() => setComposerMode(mode)}
+                    onClick={() => { if (userOwnsDraft()) setComposerMode(mode); }}
                   >
                     {mode === "design" ? "Design" : "Connections"}
                   </button>
@@ -2043,7 +2098,7 @@ export function SystemBuilderWorkspace({
                 aria-labelledby={!activeForm ? composerModeId + "-" + composerMode + "-tab" : undefined}
                 tabIndex={!activeForm ? 0 : undefined}
               >
-              <fieldset ref={editorRegion} disabled={busy || !componentsReady} aria-busy={!componentsReady && !catalogError} aria-label="System draft editor" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+              <fieldset ref={editorRegion} disabled={takeoverReadOnly || busy || !componentsReady} aria-busy={!componentsReady && !catalogError} aria-label="System draft editor" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                 {composerMode === "design" ? (
                   <SystemComposerStructureEditor
                     browseScopeKey={workspaceId}
@@ -2105,11 +2160,11 @@ export function SystemBuilderWorkspace({
                     catalogError={catalogError}
                     canUndo={undoDrafts.length > 0}
                     canRedo={redoDrafts.length > 0}
-                    onSelect={setSelectedInstanceId}
+                    onSelect={(id) => { if (userOwnsDraft()) setSelectedInstanceId(id); }}
                     onSelectLayout={(layout) => void selectLayout(layout, true)}
                     loadLayouts={loadLayoutsOnDemand}
                     loadCompatibleAssets={loadCompatibleAssetsOnDemand}
-                    onSidebarTabChange={setActiveSidebarTab}
+                    onSidebarTabChange={(id) => { if (userOwnsDraft()) setActiveSidebarTab(id); }}
                     onAdd={addAsset}
                     onPlace={placeAsset}
                     onRemove={removeAsset}
@@ -2201,7 +2256,7 @@ export function SystemBuilderWorkspace({
                       type="button"
                       className="ui-button ui-button--outline"
                       onClick={discardDraft}
-                      disabled={busy}
+                      disabled={takeoverReadOnly || busy}
                     >
                       Discard changes
                     </button>
@@ -2210,7 +2265,7 @@ export function SystemBuilderWorkspace({
                     type="button"
                     onClick={() => void save()}
                     disabled={
-                      busy ||
+                      takeoverReadOnly || busy ||
                       (!dirty &&
                         selectedSystem.status !== "blocked" &&
                         !canRepairConversationInteraction) ||

@@ -594,6 +594,10 @@ export interface DesktopPythonRuntimeApi {
 interface DesktopApiBridge {
   readRecentHeadlessChatTasks?: (workspaceId: string) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-chat-tasks").DesktopHeadlessChatTasks>;
   readHeadlessPairingStatus?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingStatus>;
+  readWindowTakeover?: (workspaceId: string | null) => Promise<import("../../../../../modules/contracts/headless").UiControlObservation>;
+  acceptWindowTakeover?: (target: unknown) => Promise<import("../../../../../modules/contracts/headless").UiControlTimedGrant | undefined>;
+  readyWindowTakeover?: (target: unknown) => Promise<import("../../../../../modules/contracts/headless").UiControlTimedGrant | undefined>;
+  revokeWindowTakeover?: (target: unknown) => Promise<boolean>;
   readSystemBuilderChangeWatermark?: (workspaceId: string) => Promise<import("../../../../../modules/contracts/headless").DesktopSystemChangeWatermark>;
   startHeadlessConnector?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessStartResult>;
   beginHeadlessPairing?: (workspaceId: string, access?: import("../../../../../modules/contracts/headless").DesktopHeadlessClientAccess) => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingResult>;

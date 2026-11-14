@@ -1096,6 +1096,23 @@ function navigationCensusLegacyView(map,result){
 let committedCensusWitness;
 const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
 function headlessPackagedCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) === "d87c96feb11029c8e7f0f646d2fdf20ec704bc7658952a9ca99b6aeb110c0edd") {
+    // The shell checkpoint changes the Composer witness and the declared desktop
+    // Systems tab source. Preserve the previously recorded facts and all gaps.
+    const saved = JSON.parse(historicalSource("0baea36a22df6de28d8759755ef77d69a38e92d3", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "5e9727914522e563808c3953caef4009d15f2e0ca6c69d73ee0ecfbd2220e1aa");
+    const expected = structuredClone(saved);
+    const path = "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx";
+    const facts = map.sources.find(row => row.path === path).facts;
+    assert.equal(facts.sha256, "8e359ed1b5d7759cdeb178241becea39c6eacf97d111d8359aa701c56bccb568");
+    assert.equal(sha(JSON.stringify(facts)), "5b202bf97c51129092c27bb7ddfcfc789a40fa8b797e81581232ba5f02478feb");
+    expected.sources.find(row => row.path === path).facts = facts;
+    expected.inventories.find(row => row.source === "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx").sha256 =
+      "386ed64832e05e9ed43e0182e8c2447bea798a893d70b4c1c731177d8817591e";
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, result);
+  }
   const source = map.sources.find(row => row.path === headlessPackagedSpec);
   if (!source) return {map, result};
   if (sha(JSON.stringify(map)) === "5e9727914522e563808c3953caef4009d15f2e0ca6c69d73ee0ecfbd2220e1aa") {
