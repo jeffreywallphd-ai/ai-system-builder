@@ -9667,6 +9667,36 @@
   "support": [
     {
       "kind": "support-scope",
+      "source_text_sha256": "0009702cc6eca9cf39bf0f29c52804f0c652047d46a668755d0b1b06152960cc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Control requests open in the standard app dialog. The page stays in place and you can take back control from the window."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f450bfd7aad6da839b6b19d1ba992752a3626c152fa738c240bc90d36b30366f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent verified keyboard dismissal, focus, draft safeguards and stable window layout."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4fdc9f55e096bbe9741a86559c78507f4264c0f837297efc40f3b286e9fb6f97",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to test revocation during loading and connection loss, and finish the audit checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
       "source_text_sha256": "9e20d91c2da06f5195f1f190caf7e61718a5f1f3a8a917fc5f11c74bf8e58118",
       "user_description": {
         "owner": "agent",

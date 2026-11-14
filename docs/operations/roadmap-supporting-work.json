@@ -49,6 +49,22 @@
     {
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "dirty-handoff-and-reachable-controls",
+      "work_id": "headless-desktop-takeover-consent-dialog",
+      "work_criteria": [
+        "dirty-handoff-and-reachable-controls"
+      ],
+      "receipt_digest": "e9c6f9290b5c3948f8524875fec27e992ecb8374084ed7585d0e01c1b52c77de",
+      "review_digest": "1a6373d498e3b02e8ef54ad8c6ebed6759cc8d77b97bac5fdc400090beb4e431",
+      "scope": "The reviewed Windows takeover dialog, fixed revoke control, and unchanged page layout in commit 4bfa28a7c.",
+      "limitations": [
+        "The consent and draft tests cover Escape, close, exact local approval, nested dialogs, and restored scrollbar space.",
+        "The packaged Windows tests cover revocation from a normal window or system preview and checking saved work after restart. Loading, connection loss, and complete audit verification still need evidence."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
       "criterion_id": "presentation-effect-fencing",
       "work_id": "headless-desktop-presentation-checkpoint",
       "work_criteria": [
