@@ -1,4 +1,5 @@
 import { Agent, request } from "node:https";
+import { randomUUID } from "node:crypto";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
 import type { HeadlessApprovedTurnRequest, HeadlessApprovedTurnResult, HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessWindowRequest, HeadlessWindowResult } from "../../../contracts/headless/index.js";
@@ -6,6 +7,7 @@ import systemBuilder from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
 import organization from "../../../contracts/organization/index.js";
 import loopback from "../headless-loopback/index.js";
+import managedWindow from "../../../contracts/headless/managed-headless-window.js";
 
 const { HEADLESS_CONTRACT_VERSION, HEADLESS_READ_OPERATIONS, isDesktopHeadlessEndpoint, isDesktopHeadlessFingerprint, isHeadlessHostIncarnationId } = headless;
 const { SYSTEM_BUILDER_TEMPLATE_IDS, isSystemBuilderSystemId, isSystemBuilderStatus, normalizeSystemBuilderRevisionId } = systemBuilder;
@@ -101,7 +103,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly credential?: string;
   readonly organizationId?: string;
   readonly workspaceId?: string;
-}, enableAuthoring = false) {
+}, enableAuthoring = false, enablePresentation = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
@@ -112,23 +114,33 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   if (origin.protocol !== "https:" || origin.origin !== httpsOrigin) return undefined;
   const address = new URL("/api/headless/agent/read", origin);
   const authoringAddress = new URL("/api/headless/agent/author", origin);
+  const presentationAddress = new URL(managedWindow.MANAGED_HEADLESS_AGENT_WINDOW_PATH, origin);
   const headers = {"x-organization-id": organizationId};
+  const presentationSession = randomUUID();
+  const presentationHeaders = {...headers, [managedWindow.MANAGED_HEADLESS_AGENT_SESSION_HEADER]: presentationSession};
   // Native Node TLS verifies the exact configured name against trusted CAs.
   // Each fixed POST independently prevents proxying and redirect following.
   const agent = new Agent({rejectUnauthorized: true, keepAlive: false, maxSockets: MAX_ACTIVE});
-  const guard = (input: ForwardRequest) =>
-    input.version === HEADLESS_CONTRACT_VERSION &&
+  const guard = (input: ForwardRequest) => {
+    if (input.version === headless.UI_CONTROL_VERSION) {
+      const target = "target" in input.input ? input.input.target : input.input;
+      return enablePresentation && target.workspaceId === workspaceId && managedWindow.isManagedConsentWindowOperation(input.operation);
+    }
+    return input.version === HEADLESS_CONTRACT_VERSION &&
     (input.operation === "host.describe" ||
       ("workspaceId" in input.input && input.input.workspaceId === workspaceId &&
         (isAuthoring(input) || MANAGED_HEADLESS_READS.some(operation => operation === input.operation))));
-  const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress: address,
-    agent, authorization: `Bearer ${credential}`, enableAuthoring, enableConversation: false, enablePresentation: false, headers});
+  };
+  const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
+    agent, authorization: `Bearer ${credential}`, enableAuthoring, enableConversation: false, enablePresentation, headers, presentationHeaders});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
     if (!guard(input)) return {ok: false, code: "headless.forbidden"};
     const result = await forward(input, signal);
     if (!result.ok) return result;
-    if (JSON.stringify(result).includes(credential))
+    const serialized = JSON.stringify(result);
+    if (serialized.includes(credential) || serialized.toLowerCase().includes(presentationSession))
       return isAuthoring(input) && input.operation !== "systems.preview-edits" ? unknownWrite : unavailable;
+    if (input.version === headless.UI_CONTROL_VERSION) return managedWindow.readManagedConsentWindowResult(result, input);
     if (resultHasOperation(result, "host.describe")) {
       const described = resultValue["host.describe"].safeParse(result.value);
       if (!described.success || described.data.workspaces.some(id => id !== workspaceId) ||
@@ -162,10 +174,11 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
 function createForwarder(options: {
   address: URL; authoringAddress: URL; conversationAddress: URL; presentationAddress: URL;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
+  presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
 }) {
   const {address, authoringAddress, conversationAddress, presentationAddress,
-    agent, authorization, headers, enableAuthoring, enableConversation, enablePresentation} = options;
+    agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
     if (input.version === headless.UI_CONTROL_VERSION) {
@@ -173,7 +186,7 @@ function createForwarder(options: {
       if (!headless.readHeadlessWindowRequest(input) || active >= MAX_ACTIVE || signal?.aborted) return unavailable;
       active++;
       try {
-        const { status, raw } = await sendRead(presentationAddress, agent, authorization, input, signal);
+        const { status, raw } = await sendRead(presentationAddress, agent, authorization, input, signal, presentationHeaders);
         const result = headless.readHeadlessWindowResult(raw);
         return (status === 200) === result.ok ? result : unavailable;
       } catch { return unavailable; }

@@ -39,6 +39,8 @@ browser consent. Enable the managed agent registrations and saved-state feed
 first. Leave the setting unset where browser consent is unavailable. A path,
 trailing slash, plain HTTP origin or unverified client configuration prevents
 startup with this setting. Use browsers that send `Sec-Fetch-Site`.
+The separate agent window route accepts requests only from the verified
+agent registration. Consent and revoke belong to the browser document.
 
 Use `GET /health/live` for process liveness and `GET /health/ready` for sanitized
 PostgreSQL plus artifact-storage readiness. SIGINT/SIGTERM stop the listener and

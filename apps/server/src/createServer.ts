@@ -1,6 +1,6 @@
 import { constants as fsConstants, existsSync, readFileSync } from "node:fs";
 import { access, statfs } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 import path from "node:path";
@@ -26,6 +26,7 @@ import { registerManagedSavedStateRoutes } from "../../../modules/adapters/trans
 import { registerManagedHeadlessAgentRoutes } from "../../../modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes";
 import { registerManagedBrowserConsentRoute } from "../../../modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute";
 import { resolveManagedHeadlessClientPolicy } from "../../../modules/hosts/server/security/resolveManagedHeadlessClientPolicy";
+import type { ManagedHeadlessAuthoringRegistration } from "../../../modules/hosts/server/composition/composeManagedHeadlessAuthoring";
 import { resolveServerOidcBearerConfig } from "../../../modules/hosts/server/security/resolveServerOidcBearerConfig";
 import type { LoggingPort } from "../../../modules/application/ports/logging";
 import type { StructuredLogSink } from "../../../modules/adapters/observability/logging";
@@ -457,8 +458,10 @@ export async function createServer(
       );
     }
     const retireManagedSavedState = registerManagedSavedStateRoutes(app, () => serverHost.getManagedSavedState());
-    const retireManagedHeadlessAgent = registerManagedHeadlessAgentRoutes(app, () => {
+    const browserPresentationKey = browserOrigin ? randomBytes(32) : undefined;
+    const retireManagedHeadlessAgent = registerManagedHeadlessAgentRoutes<ManagedHeadlessAuthoringRegistration>(app, () => {
       const handlers = serverHost.getManagedHeadlessAgent();
+      const consent = serverHost.getManagedBrowserConsent();
       return clientPolicy && handlers ? {
         ...handlers,
         identify: (input) => {
@@ -466,6 +469,10 @@ export async function createServer(
           return admitted?.purpose === "agent" ? {...admitted, purpose: "agent" as const} : undefined;
         },
         isCurrent: (admitted) => admitted.isCurrent(),
+        ...(consent && browserPresentationKey ? {window: {
+          execute: (input, agent, session, current) => consent.execute(input, browserPresentationAgent(agent, session, browserPresentationKey), current),
+          canPublish: (input, result, agent, session) => consent.canPublish(input, result, browserPresentationAgent(agent, session, browserPresentationKey)),
+        }} : {}),
       } : undefined;
     });
     const retireManagedBrowserConsent = registerManagedBrowserConsentRoute(app, browserOrigin, () => {
@@ -558,6 +565,14 @@ export async function createServer(
       await postgresDatabase?.close();
     }
   }
+}
+
+function browserPresentationAgent<T extends {readonly registeredClientId: string}>(agent: T, session: string, key: Buffer) {
+  // The process owns authorization. The session header distinguishes logical
+  // MCP clients and is never itself returned to the interactive document.
+  const hash = createHmac("sha256", key).update(JSON.stringify([agent.registeredClientId, session])).digest("hex");
+  const agentSessionId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+  return {...agent, agentSessionId};
 }
 
 function isExactHttpsOrigin(value: string) {

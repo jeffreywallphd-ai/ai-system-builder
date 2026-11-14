@@ -3,10 +3,15 @@ import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import test from "node:test";
 import express from "express";
+import { Client } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import path from "node:path";
 
-import { HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
+import { HEADLESS_CONTRACT_VERSION, UI_CONTROL_VERSION, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
+import { MANAGED_HEADLESS_AGENT_SESSION_HEADER } from "../../../../../contracts/headless/managed-headless-window";
 import { createOrganizationId } from "../../../../../contracts/organization";
 import { type AuthContext, createSecurityApplicationError } from "../../../../../contracts/security";
+import { createWorkspaceId } from "../../../../../contracts/workspace";
 import { MANAGED_HEADLESS_AGENT_PATHS, resolveApiRoutePolicy } from "../../security/apiRouteSecurityPolicy";
 import { createExpressSecurityMiddleware } from "../../security/createExpressSecurityMiddleware";
 import { registerManagedHeadlessAgentRoutes, type ManagedAgentRouteHandlers } from "../registerManagedHeadlessAgentRoutes";
@@ -18,6 +23,29 @@ test("managed agent routes stay exact in the central deny-by-default API", () =>
       assert.equal(resolveApiRoutePolicy(method, path).deny, true);
     for (const variant of [path + "/", path.toUpperCase(), path.replace("agent", "%61gent"), path + "/other"])
       assert.equal(resolveApiRoutePolicy("POST", variant).deny, true);
+  }
+});
+
+test("managed stdio discovers exactly the four browser consent tools only when explicitly enabled", async () => {
+  for (const enabled of [false, true]) {
+    const client = new Client({name: "consent-catalog-fixture", version: "1.0.0"});
+    try {
+      await client.connect(new StdioClientTransport({command: process.execPath, args: ["--import", "tsx",
+        path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts")], stderr: "ignore", env: {
+        AISB_HEADLESS_MODE: "managed", AISB_HEADLESS_ENABLE_MANAGED_CONSENT: enabled ? "1" : "0",
+        AISB_HEADLESS_MANAGED_ORIGIN: "https://127.0.0.1:1", AISB_HEADLESS_MANAGED_CREDENTIAL: "unused-fixture-value",
+        AISB_HEADLESS_MANAGED_ORGANIZATION_ID: "fixture-organization", AISB_HEADLESS_MANAGED_WORKSPACE_ID: "fixture-workspace",
+      }}));
+      const names = (await client.listTools()).tools.map(tool => tool.name).sort();
+      const expected = ["aisb_host_describe", "aisb_list_templates", "aisb_read_system",
+        ...(enabled ? ["aisb_list_windows", "aisb_release_window", "aisb_request_window", "aisb_window_status"] : [])].sort();
+      assert.deepEqual(names, expected);
+      if (enabled) {
+        const denied = await client.callTool({name: "aisb_list_windows", arguments: {hostIncarnationId: randomUUID(), workspaceId: "other-workspace"}});
+        assert.equal(denied.isError, true);
+        assert.deepEqual(denied.content, [{type: "text", text: '{"ok":false,"code":"headless.forbidden"}'}]);
+      }
+    } finally { await client.close(); }
   }
 });
 
@@ -44,12 +72,27 @@ test("exact managed requests respect authentication, framing, authority lifetime
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
+  const session = randomUUID();
+  const tab = {hostIncarnationId, workspaceId: createWorkspaceId("fixture-workspace"), windowId: randomUUID(), uiIncarnationId: randomUUID()};
+  let windowOutcome = tab;
+  let windowCalls = 0;
+  let windowAvailable = true;
   const handlers: ManagedAgentRouteHandlers<typeof agent> = {
     hostIncarnationId,
     identify: ({auth, organization, organizationHeader}) =>
       auth?.oidcAccessTokenClientId === "fixture-agent" && organization?.organizationId === org &&
       organizationHeader === org ? agent : undefined,
     isCurrent: held => held === agent && !retired,
+    window: {
+      async execute(_input, identity, suppliedSession, current) {
+        windowCalls += 1;
+        assert.equal(identity, agent);
+        assert.equal(suppliedSession, session);
+        assert.equal(current(), true);
+        return {ok: true, value: {kind: "windows", windows: [windowOutcome]}};
+      },
+      canPublish() { return windowAvailable; },
+    },
     async read(input) {
       count += 1;
       if (input.operation === "systems.read") {
@@ -82,9 +125,10 @@ test("exact managed requests respect authentication, framing, authority lifetime
     const address = server.address();
     assert.ok(address && typeof address !== "string");
     const { port } = address;
-    async function send(relative: string, body: object | string, token = "fixture-agent", contentType = "application/json") {
+    async function send(relative: string, body: object | string, token = "fixture-agent", contentType = "application/json", connection?: string) {
       const response = await fetch(`http://127.0.0.1:${port}${relative}`, { method: "POST",
-        headers: {...(token ? {authorization: `Bearer ${token}`} : {}), "x-organization-id": org, "content-type": contentType},
+        headers: {...(token ? {authorization: `Bearer ${token}`} : {}), "x-organization-id": org, "content-type": contentType,
+          ...(connection ? {[MANAGED_HEADLESS_AGENT_SESSION_HEADER]: connection} : {})},
         body: typeof body === "string" ? body : JSON.stringify(body),
       });
       return {status: response.status, cache: response.headers.get("Cache-Control"), body: await response.json()};
@@ -112,6 +156,22 @@ test("exact managed requests respect authentication, framing, authority lifetime
     wrongRecord = true;
     assert.deepEqual((await send(read, systemRead)).body, {ok: false, code: "headless.unavailable"});
     assert.equal(generalParser, 0);
+    const windowPath = MANAGED_HEADLESS_AGENT_PATHS.window;
+    const listTabs = {version: UI_CONTROL_VERSION, operation: "window.list", input: {hostIncarnationId, workspaceId: tab.workspaceId}};
+    const invalidContext = {version: UI_CONTROL_VERSION, operation: "window.context", input: {target: {...tab,
+      requestId: randomUUID(), attemptId: randomUUID(), leaseId: randomUUID(), generation: 1}}};
+    assert.equal((await send(windowPath, listTabs)).status, 400);
+    assert.equal((await send(windowPath, listTabs, "fixture-browser", "application/json", session)).status, 403);
+    assert.equal((await send(windowPath, invalidContext, "fixture-agent", "application/json", session)).status, 400);
+    assert.equal(windowCalls, 0);
+    assert.deepEqual((await send(windowPath, listTabs, "fixture-agent", "application/json", session)).body,
+      {ok: true, value: {kind: "windows", windows: [tab]}});
+    windowOutcome = {...tab, workspaceId: createWorkspaceId("different-workspace")};
+    assert.deepEqual((await send(windowPath, listTabs, "fixture-agent", "application/json", session)).body,
+      {ok: false, code: "headless.unavailable"});
+    windowAvailable = false;
+    assert.deepEqual((await send(windowPath, listTabs, "fixture-agent", "application/json", session)).body,
+      {ok: false, code: "headless.forbidden"});
     const request = {version: HEADLESS_CONTRACT_VERSION, operation: "systems.create",
       input: {hostIncarnationId, workspaceId: "fixture-workspace", name: "Synthetic", idempotencyKey: randomUUID(),
         templateId: "reference.secured-data-review@1.0.0"}};

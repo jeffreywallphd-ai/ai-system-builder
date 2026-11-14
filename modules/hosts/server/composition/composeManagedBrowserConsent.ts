@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { createUiControlAuthority, type UiControlAgent } from "../../../application/services/ui-control/ui-control-authority.service";
 import {
-  UI_CONTROL_VERSION, isUiControlId, readUiControlAttempt, readUiControlLeaseTarget, readUiControlRevoke,
+  UI_CONTROL_VERSION, isUiControlId, readUiControlAttempt, readUiControlLeaseTarget, readUiControlRevoke, sameUiControlLease,
   type HeadlessHostIncarnationId, type HeadlessWindowRequest, type HeadlessWindowResult, type HeadlessWindowValue,
   type UiControlLease, type UiControlObservation, type UiControlTimedGrant,
 } from "../../../contracts/headless";
@@ -60,8 +60,14 @@ export function composeManagedBrowserConsent(options: {
     if (!agent) return false;
     if (!result.ok || result.value.kind === "ended" || result.value.kind === "released") return true;
     if (result.value.kind === "request") {
-      const latest = authority.readAgentRequest(result.value.request.target, agent);
-      return latest?.status === result.value.request.status;
+      const {request: supplied, lease} = result.value;
+      const latest = authority.readAgentRequest(supplied.target, agent);
+      if (!latest || latest.status !== supplied.status || latest.taskId !== supplied.taskId ||
+          latest.agentSessionId !== supplied.agentSessionId || latest.expiresAt !== supplied.expiresAt) return false;
+      if (!lease) return request.operation !== "window.status" || latest.status !== "active";
+      if (request.operation !== "window.status") return false;
+      const current = authority.readAgentLease(supplied.target, agent);
+      return !!current && sameUiControlLease(current.target, lease);
     }
     if (result.value.kind !== "windows" || request.operation !== "window.list") return false;
     const latest = authority.readWindows(request.input.workspaceId, agent);

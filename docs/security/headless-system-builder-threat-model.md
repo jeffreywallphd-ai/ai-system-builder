@@ -232,6 +232,17 @@ Temporary registration capacity is reported separately from access denial.
 The browser retries transient responses with one outstanding registration and
 capped backoff. A dormant document remains detached until the page returns.
 
+The managed stdio consent tools use a distinct opt-in and a fixed agent route
+with the same OIDC and current workspace policy. Each connector process sends
+one random session reference. The server derives the prompt's public session
+ID from a private, process-local key so the prompt cannot disclose the request
+reference. Browser credentials cannot initiate requests. The agent cannot
+accept consent. Each successful reply must match the exact requested host,
+workspace and window or attempt. The host checks the current public session,
+task and exact lease. The connector suppresses any response that echoes its
+private session reference. Listing and requesting grant no right to
+deliver content.
+
 The controlled delivery test uses two independent loopback HTTPS servers
 with the same disposable PostgreSQL database and a nonowner role without
 `BYPASSRLS`. It sends synthetic changes through the ordinary authenticated

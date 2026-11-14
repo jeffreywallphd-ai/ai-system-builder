@@ -40,6 +40,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let redirect = false;
   let displacedDiscovery = false;
   let echoCredential = false;
+  let echoPrivateWindowSession = false;
   const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
     let body = "";
     request.on("data", (chunk: Buffer) => {body += chunk.toString();});
@@ -49,6 +50,17 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
         authHeader: request.headers.authorization === "Bearer synthetic-managed-bearer"});
       if (redirect) {
         response.writeHead(307, {Location: "/forbidden-destination", "Content-Length": 0}).end();
+        return;
+      }
+      if (input.operation === "window.request") {
+        const session = request.headers["x-aisb-headless-session"];
+        const descriptor = {ok:true, value:{kind:"request", request:{
+          target:{...input.input.target, requestId:"0df554b7-1843-4e33-933d-8071e2a4e49f", attemptId:"4924715a-f22f-4c50-9b35-883af79407bb"},
+          taskId: input.input.taskId, agentSessionId: echoPrivateWindowSession ? session : "693fe179-d578-47ce-9df3-75378ad1d90d",
+          status:"pending", expiresAt:50_000,
+        }}};
+        const payload = JSON.stringify(descriptor);
+        response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
         return;
       }
       const value = input.operation === "host.describe"
@@ -112,6 +124,14 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     assert.deepEqual(await discover(client), {ok: false, code: "headless.unavailable"});
     assert.equal(requests.length, 5);
     assert.ok(requests.slice(2).every(row => row.url === "/api/headless/agent/read"));
+    redirect = false;
+    const consentClient = await connect({NODE_EXTRA_CA_CERTS: ca, AISB_HEADLESS_ENABLE_MANAGED_CONSENT: "1"});
+    const windowArgs = {target:{hostIncarnationId, workspaceId, windowId:"ec6853b7-7693-4173-ab60-255d29af31ab",
+      uiIncarnationId:"20484653-3425-4848-b2c9-52dd6b837069"}, taskId:"4514b5f9-ab96-4eb6-81ea-5f50afcfc575", requestKey:"84df8879-dc37-42b0-a3c5-ca5e17339d47"};
+    const ask = async () => resultText(await consentClient.callTool({name:"aisb_request_window", arguments:windowArgs}));
+    assert.equal((await ask()).ok, true);
+    echoPrivateWindowSession = true;
+    assert.deepEqual(await ask(), {ok:false, code:"headless.unavailable"});
   } finally {
     await Promise.allSettled(clients.map(client => client.close()));
     listener.closeAllConnections();

@@ -100,6 +100,10 @@ environment to provide its managed access token as
 The managed catalog supports host discovery, template discovery and saved
 system reads. Set `AISB_HEADLESS_ENABLE_AUTHORING=1` to include the finite
 saved authoring tools. Tool discovery never connects to the server.
+Set `AISB_HEADLESS_ENABLE_MANAGED_CONSENT=1` to add the managed browser tab
+list, request, status and release tools. The server must enable browser
+consent. The browser user accepts from the exact tab. The connector cannot
+grant consent or act on the tab through these tools.
 Requests use standard TLS verification and a fixed path for each operation
 family. URLs with embedded credentials, paths, query strings or fragments
 are rejected. The adapter does not follow redirects.

@@ -23,13 +23,14 @@ const requestedMode = process.env.AISB_HEADLESS_MODE;
 const managed = requestedMode === "managed";
 const enableAuthoring = process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
 const enableConversation = process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
-const enablePresentation = process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
+const enablePresentation = managed ? process.env.AISB_HEADLESS_ENABLE_MANAGED_CONSENT === "1" :
+  process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
 const forward = managed ? createManagedHeadlessMcpReadForwarder({
   httpsOrigin: process.env.AISB_HEADLESS_MANAGED_ORIGIN,
   credential: process.env.AISB_HEADLESS_MANAGED_CREDENTIAL,
   organizationId: process.env.AISB_HEADLESS_MANAGED_ORGANIZATION_ID,
   workspaceId: process.env.AISB_HEADLESS_MANAGED_WORKSPACE_ID,
-}, enableAuthoring) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
+}, enableAuthoring, enablePresentation) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
   process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL,
   enableAuthoring, enableConversation, enablePresentation,
 ) : undefined;
@@ -67,7 +68,7 @@ function addPresentationTools(server: McpServer) {
     return request ? invoke(request, signal) : invalidAuthoring();
   };
   server.registerTool("aisb_list_windows", {
-    description: "List current application window identities in the paired workspace.",
+    description: "List current application window identities in the authorized workspace.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId }), annotations: read,
   }, (input, context) => call("window.list", input, context.mcpReq.signal));
   server.registerTool("aisb_request_window", {
@@ -78,14 +79,15 @@ function addPresentationTools(server: McpServer) {
     description: "Read the exact request status. Only an active request has a lease. Ended requests require fresh user direction.",
     inputSchema: z.strictObject({ target: z.strictObject(attempt) }), annotations: read,
   }, (input, context) => call("window.status", input, context.mcpReq.signal));
-  server.registerTool("aisb_renew_window", {
-    description: "Keep the same active lease current. Failed and ended leases stay detached.",
-    inputSchema: z.strictObject({ target: lease }), annotations: { ...action, idempotentHint: false },
-  }, (input, context) => call("window.renew", input, context.mcpReq.signal));
   server.registerTool("aisb_release_window", {
     description: "Dismiss the exact attempt or release its exact lease. Independent chat work continues.",
     inputSchema: z.strictObject({ target: z.union([lease, z.strictObject(attempt)]) }), annotations: action,
   }, (input, context) => call("window.release", input, context.mcpReq.signal));
+  if (managed) return;
+  server.registerTool("aisb_renew_window", {
+    description: "Keep the same active lease current. Failed and ended leases stay detached.",
+    inputSchema: z.strictObject({ target: lease }), annotations: { ...action, idempotentHint: false },
+  }, (input, context) => call("window.renew", input, context.mcpReq.signal));
   server.registerTool("aisb_present_in_window", {
     description: "Show one exact saved resource in the active window. Retry the same command ID and target to read the outcome without repeating the effect.",
     inputSchema: z.strictObject({ target: lease, commandId: id, intent }), annotations: action,
@@ -221,7 +223,7 @@ serveStdio(() => {
     ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
   if (enableAuthoring) addAuthoringTools(server);
-  if (!managed && enablePresentation) addPresentationTools(server);
+  if (enablePresentation) addPresentationTools(server);
   if (!managed && enableConversation) server.registerTool("aisb_send_approved_turn", {
     description: "Send one message to an already approved conversation at its exact saved revisions. An uncertain reply never authorizes a new key; reconcile before retrying the same request.",
     inputSchema: z.strictObject({

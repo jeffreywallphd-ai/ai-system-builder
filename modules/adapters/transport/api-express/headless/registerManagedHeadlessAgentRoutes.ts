@@ -3,8 +3,11 @@ import { raw, type Application, type Request, type Response } from "express";
 import {
   HEADLESS_CONTRACT_VERSION, parseHeadlessReadRequest, parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest,
   readHeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadOperation,
+  isUiControlId, readHeadlessWindowRequest, type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
 } from "../../../../contracts/headless";
+import { isManagedConsentWindowOperation, MANAGED_HEADLESS_AGENT_SESSION_HEADER,
+  readManagedConsentWindowResult } from "../../../../contracts/headless/managed-headless-window";
 import { hasKnownPassiveCredential, readStrictPassiveRecord } from "../../../../contracts/shared";
 import { SYSTEM_BUILDER_TEMPLATE_IDS, isSystemBuilderStatus, isSystemBuilderSystemId, normalizeSystemBuilderRevisionId } from "../../../../contracts/system-builder";
 import { isWorkspaceId } from "../../../../contracts/workspace";
@@ -35,6 +38,10 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly isCurrent: (agent: Agent) => boolean;
   readonly read: (input: HeadlessReadRequest, agent: Agent, current: () => boolean) => Promise<HeadlessReadResult>;
   readonly author: (input: Authoring, agent: Agent, current: () => boolean) => Promise<unknown>;
+  readonly window?: {
+    readonly execute: (input: HeadlessWindowRequest, agent: Agent, session: string, current: () => boolean) => Promise<HeadlessWindowResult>;
+    readonly canPublish: (input: HeadlessWindowRequest, result: HeadlessWindowResult, agent: Agent, session: string) => boolean;
+  };
 };
 
 export function registerManagedHeadlessAgentRoutes<Agent extends object>(
@@ -50,6 +57,7 @@ export function registerManagedHeadlessAgentRoutes<Agent extends object>(
       if (request.method !== "POST" || request.originalUrl !== path) return failure(response, 400, "headless.invalid-request");
       const handlers = getHandlers();
       if (!open || !handlers) return failure(response, 404, "headless.unavailable");
+      if (kind === "window" && !handlers.window) return failure(response, 404, "headless.unavailable");
       const agent = handlers.identify({
         auth: getExpressAuthContext(request), organization: getExpressOrganizationContext(request),
         organizationHeader: request.headers["x-organization-id"],
@@ -69,7 +77,7 @@ export function registerManagedHeadlessAgentRoutes<Agent extends object>(
         response.removeListener("close", retireBody);
         const result = error
           ? Promise.resolve(failure(response, error.status === 413 ? 413 : 400, "headless.invalid-request"))
-          : respond(kind === "read", request.body, response, handlers, agent, current);
+          : respond(kind as keyof typeof MANAGED_HEADLESS_AGENT_PATHS, request, response, handlers, agent, current);
         void result.catch(() => failure(response, 503, "headless.unavailable")).finally(() => {
           clearTimeout(timer);
           active.delete(response);
@@ -84,13 +92,26 @@ export function registerManagedHeadlessAgentRoutes<Agent extends object>(
 }
 
 async function respond<Agent>(
-  read: boolean, body: unknown, response: Response, handlers: ManagedAgentRouteHandlers<Agent>, agent: Agent,
+  kind: keyof typeof MANAGED_HEADLESS_AGENT_PATHS, incoming: Request, response: Response, handlers: ManagedAgentRouteHandlers<Agent>, agent: Agent,
   current: () => boolean,
 ) {
   if (!current()) return failure(response, 403, "headless.forbidden");
-  const value = parseBody(body);
+  const value = parseBody(incoming.body);
   if (!value) return failure(response, 400, "headless.invalid-request");
-  if (read) {
+  if (kind === "window") {
+    const session = incoming.headers[MANAGED_HEADLESS_AGENT_SESSION_HEADER];
+    const input = readHeadlessWindowRequest(value);
+    const window = handlers.window;
+    if (!input || !isUiControlId(session) || !isManagedConsentWindowOperation(input.operation))
+      return failure(response, 400, "headless.invalid-request");
+    if (!window) return failure(response, 404, "headless.unavailable");
+    const raw = await window.execute(input, agent, session, current);
+    if (!current() || !window.canPublish(input, raw, agent, session)) return failure(response, 403, "headless.forbidden");
+    const result = readManagedConsentWindowResult(raw, input);
+    if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
+    return send(response, result);
+  }
+  if (kind === "read") {
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     if (!availableReads.includes(parsed.request.operation))

@@ -254,6 +254,31 @@ PUBLISHED_FORM_CHECKS = {
             "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
         ),
     },
+    "managed-headless-agent-window": {
+        "automatic_sources": (
+            "modules/contracts/headless/managed-headless-window.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/managed-headless-window.ts",
+            "modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+            "modules/adapters/transport/headless-mcp/createHeadlessMcpReadForwarder.mts",
+            "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
+            "modules/adapters/transport/headless-mcp/README.md",
+            "apps/server/src/createServer.ts",
+            "apps/server/README.md",
+            "modules/hosts/server/composition/composeManagedBrowserConsent.ts",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+            "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+        ),
+    },
     "managed-headless-agent-server": {
         "automatic_sources": (
             "modules/hosts/server/composition/composeManagedAgentReads.ts",

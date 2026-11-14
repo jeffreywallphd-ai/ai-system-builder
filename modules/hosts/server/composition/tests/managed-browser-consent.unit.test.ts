@@ -54,6 +54,12 @@ test("the agent requests, the exact browser consents and confirms readiness, and
     assert.ok(live.ok && live.value.kind === "request" && live.value.request.status === "active");
     assert.deepEqual(live.value.lease, ready.target);
     assert.equal(service.canPublish(status, live, agent), true);
+    for (const descriptor of [{agentSessionId: randomUUID()}, {taskId: randomUUID()}, {expiresAt: live.value.request.expiresAt + 5}]) {
+      assert.equal(service.canPublish(status, {ok:true, value:{...live.value, request:{...live.value.request, ...descriptor}}}, agent), false);
+    }
+    assert.equal(service.canPublish(status, {ok:true, value:{kind:"request", request:live.value.request, lease:{...ready.target, leaseId:randomUUID()}}}, agent), false);
+    assert.equal(service.canPublish(status, {ok:true, value:{kind:"request", request:live.value.request, lease:{...ready.target, generation:ready.target.generation + 1}}}, agent), false);
+    assert.equal(service.canPublish(status, {ok:true, value:{kind:"request", request:live.value.request}}, agent), false);
     assert.equal(await service.revoke(tabB, ready.target, active), false);
     assert.equal(await service.revoke(tabA, {...ready.target, generation: ready.target.generation + 1}, active), false);
     assert.equal(await service.revoke(tabA, ready.target, active), true);
