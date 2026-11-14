@@ -300,6 +300,21 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
         ),
     },
+    "managed-headless-browser-presentation": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/createManagedBrowserPresentation.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/composition/createManagedBrowserPresentation.ts",
+            "modules/hosts/server/composition/tests/managed-browser-presentation.unit.test.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-browser-presentation.unit.test.ts",
+            "modules/application/services/ui-control/tests/ui-control-delivery.unit.test.ts",
+        ),
+    },
     "managed-headless-agent-server": {
         "automatic_sources": (
             "modules/hosts/server/composition/composeManagedAgentReads.ts",

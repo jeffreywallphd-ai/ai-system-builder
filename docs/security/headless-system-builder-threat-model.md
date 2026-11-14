@@ -246,6 +246,15 @@ task and exact lease. The connector suppresses any response that echoes its
 private session reference. Listing and requesting grant no right to
 deliver content.
 
+Managed presentation uses the existing 32-command, 256-receipt lease queue.
+The command lane verifies the live lease and current resource authorization
+before returning display metadata. It bounds concurrent policy and resource
+reads and allows one pending lookup per queue position. Command receipts cover
+presentation outcomes. A separate one-use context challenge lasts up to 750
+milliseconds and shares the exact lease generation and original request
+lifetime. It carries only saved-resource identifiers and view state. Closing a
+lease discards queued work and pending context.
+
 The controlled delivery test uses two independent loopback HTTPS servers
 with the same disposable PostgreSQL database and a nonowner role without
 `BYPASSRLS`. It sends synthetic changes through the ordinary authenticated

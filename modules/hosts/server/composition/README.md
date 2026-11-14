@@ -39,6 +39,11 @@ request, consent, readiness and revoke. An application policy read and a
 live browser document are required. A separate fence prevents a closed
 request from creating a prompt or granting consent after a held policy read.
 
+Browser presentation reuses the bounded delivery queue after the caller
+proves its exact lease. The queue tracks a saved-resource command and its
+separate receipt. A browser can provide current context only in response to
+a short-lived, single-use challenge for the same lease.
+
 Current composition includes:
 
 - artifact-object storage via filesystem adapter,
