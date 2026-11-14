@@ -9667,6 +9667,36 @@
   "support": [
     {
       "kind": "support-scope",
+      "source_text_sha256": "23e9277f1e9b4893843e71fc075f3f89650f7419142057ed0426a7200597a6bc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The desktop records control requests, revokes and presentation outcomes separately from work that continues in chat."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ee76e0814b5edb07493f6de6b850ba63bc5b159d0e6481c2dcc7bd994026a927",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent checked that audit entries stay in the right workspace, keep a fixed size, and leave controls usable if saving fails."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ec2ad52c8c439cba60f8f2f749fca63533f7f49ba19110ecb88a5b7abefc7135",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to verify audit entries and a safe rollback in the packaged Windows app."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
       "source_text_sha256": "0009702cc6eca9cf39bf0f29c52804f0c652047d46a668755d0b1b06152960cc",
       "user_description": {
         "owner": "agent",

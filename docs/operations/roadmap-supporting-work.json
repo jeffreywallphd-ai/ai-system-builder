@@ -49,6 +49,22 @@
     {
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "security-ui-control-reviewed",
+      "work_id": "headless-desktop-window-audit",
+      "work_criteria": [
+        "security-ui-control-reviewed"
+      ],
+      "receipt_digest": "26a6dc9fbdf9562e72907a6ba74fa6902cd45e39cc6b05e0ff1600d49889a2b8",
+      "review_digest": "f30b9e4417e60bbe06f1be7cbae966f79956319cb70bd9c01830378a25af0e14",
+      "scope": "The reviewed bounded local audit in commit f238010b4 records window authority and backend outcomes separately.",
+      "limitations": [
+        "Automated tests verified fixed audit fields, denied foreign scope, a persisted entry cap, and safe handling of a slow or failed writer.",
+        "The focused receipt uses an in-memory store. Packaged Windows audit and rollback evidence remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
       "criterion_id": "dirty-handoff-and-reachable-controls",
       "work_id": "headless-desktop-takeover-consent-dialog",
       "work_criteria": [
