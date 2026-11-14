@@ -73,6 +73,12 @@ user revoked control. Chrome later read the complete response body and
 sent zero context publications. The pending read and a new read both
 returned no context. This run did not measure the timeout.
 
+The [matched Windows and Chrome report](headless-matched-host-qualification.json)
+records four packaged Windows tests and three separate Chrome runs on
+the same source. It includes sample counts, timing, queue and save
+outcomes. The report retains earlier failed fixture attempts and
+lists the checks outside the matched run.
+
 ## Architectural invariants
 
 | Source | Owning increment | Criterion | Required assertion |
