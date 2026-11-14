@@ -70,6 +70,7 @@ import { LinkUserLibraryAssetToWorkspaceUseCase } from "../../../application/use
 import type { LoggingPort } from "../../../application/ports/logging";
 import type { SystemRuntimeDatabaseLifecyclePort } from "../../../application/ports/system-deployment";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
+import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import {
   AuthorizeApplicationSettingMutationService,
   AuthorizeProviderRepositoryCreationService,
@@ -384,7 +385,7 @@ export interface ComposeServerHostOptions {
     readonly listActiveSystems: Parameters<typeof composeManagedSavedState>[0]["listActiveSystems"];
     readonly authorize: Pick<AuthorizeOperationService, "execute">;
   };
-  managedHeadlessAgent?: { readonly placement: TenantPlacementConfig; readonly browserConsent?: boolean };
+  managedHeadlessAgent?: { readonly placement: TenantPlacementConfig; readonly browserObservationAuthorizer?: AuthorizeOperationService };
   env?: NodeJS.ProcessEnv;
   logging?: ComposeServerHostLoggingOptions;
   logSink?: StructuredLogSink;
@@ -1682,8 +1683,10 @@ export function composeServerHost(
           rootDirectory: registerOptions.storageRootDirectory, placement: options.managedHeadlessAgent.placement, systems: systemBuilder});
         managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases})};
-        if (options.managedHeadlessAgent.browserConsent) {
-          const browserConsent = composeManagedBrowserConsent({hostIncarnationId, async authorize(principal, workspaceId) {
+        if (options.managedHeadlessAgent.browserObservationAuthorizer) {
+          const observation = new AuthorizeWorkspaceOperationService({organizationContext: contexts,
+            authorizer: options.managedHeadlessAgent.browserObservationAuthorizer});
+          const authorize = (policy: WorkspaceOperationAuthorizationPort): Parameters<typeof composeManagedBrowserConsent>[0]["authorize"] => async (principal, workspaceId) => {
             const current = () => {
               const active = contexts.getCurrentOrganizationContext();
               return active?.organizationId === principal.organizationId && active.principalId === principal.principalId;
@@ -1691,10 +1694,12 @@ export function composeServerHost(
             if (!current()) return false;
             const workspace = await workspaces.readWorkspace(workspaceId);
             if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== principal.organizationId || workspace.status !== "active") return false;
-            await workspaceAuthorization.authorizeWorkspaceOperation({workspace, operation: "headless.window.observe",
+            await policy.authorizeWorkspaceOperation({workspace, operation: "headless.window.observe",
               requiredScopes: ["workspace:read", "asset:read"]});
             return current();
-          }});
+          };
+          const browserConsent = composeManagedBrowserConsent({hostIncarnationId, authorize:authorize(workspaceAuthorization),
+            authorizeObservation:authorize(observation)});
           managedBrowserConsent = { ...browserConsent, hostIncarnationId };
         }
       }

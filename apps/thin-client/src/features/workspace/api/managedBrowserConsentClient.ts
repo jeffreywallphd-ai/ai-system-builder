@@ -1,4 +1,4 @@
-import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, parseManagedBrowserRegistration } from "../../../../../../modules/contracts/headless/managed-browser-consent";
+import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, parseManagedBrowserRegistration } from "../../../../../../modules/contracts/headless/managed-browser-consent";
 import { readUiControlObservation, readUiControlTimedGrant, type UiControlAttempt, type UiControlLeaseTarget } from "../../../../../../modules/contracts/headless/ui-control-authority";
 import { secureFetch } from "../../../security/secureFetch";
 
@@ -15,7 +15,8 @@ export function createManagedBrowserConsentClient(organizationId: string, fetch 
     if (options.proof) headers[MANAGED_BROWSER_DOCUMENT_HEADER] = options.proof;
     const timeout = AbortSignal.timeout(4_000);
     const signal = options.signal ? AbortSignal.any([timeout, options.signal]) : timeout;
-    const response = await fetch(MANAGED_BROWSER_CONSENT_PATH, {
+    const path = request.operation === "observe" ? MANAGED_BROWSER_OBSERVE_PATH : MANAGED_BROWSER_CONSENT_PATH;
+    const response = await fetch(path, {
       method: "POST", body: JSON.stringify(request), headers, credentials: "same-origin", mode: "same-origin",
       cache: "no-store", redirect: "error", signal, keepalive: options.keepalive,
     });

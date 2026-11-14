@@ -383,6 +383,9 @@ export async function createServer(
     const passiveSavedStateAuthorizer = organizationPolicy ? new AuthorizeOperationService(organizationPolicy, {
       ...auditOptions, audit: createManagedSavedStateAuthorizationAudit(audit),
     }) : undefined;
+    const passiveBrowserObserveAuthorizer = browserOrigin && organizationPolicy ? new AuthorizeOperationService(organizationPolicy, {
+      ...auditOptions, audit: createManagedSavedStateAuthorizationAudit(audit, undefined, "headless.window.observe"),
+    }) : undefined;
     const listActiveSystems = postgresDatabase?.listActiveSystemSummaries;
     if (clientPolicy && (!listActiveSystems || !postgresDatabase?.documents.runInOwnedTransaction ||
         postgresDatabase.documents.organizationId !== undefined))
@@ -402,7 +405,8 @@ export async function createServer(
       organizationAuthorizer,
       managedSavedState: env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE === "1" && passiveSavedStateAuthorizer && listActiveSystems
         ? { listActiveSystems, authorize: passiveSavedStateAuthorizer } : undefined,
-      managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement, browserConsent: !!browserOrigin} : undefined,
+      managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement,
+        browserObservationAuthorizer: passiveBrowserObserveAuthorizer} : undefined,
       runtimeDatabases: options.runtimeDatabases,
       pythonRuntimeEnvironmentPreparer,
       ...(persistenceDocuments
@@ -454,6 +458,7 @@ export async function createServer(
         createExpressOrganizationAuthorizationMiddleware({
           authorizer: organizationAuthorizer,
           passiveSavedStateAuthorizer,
+          passiveBrowserObserveAuthorizer,
         }),
       );
     }

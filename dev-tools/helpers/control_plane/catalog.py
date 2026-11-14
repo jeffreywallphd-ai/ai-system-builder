@@ -242,12 +242,18 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/server/composition/composeServerHost.ts",
             "apps/server/src/createServer.ts",
             "apps/server/README.md",
+            "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.ts",
+            "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.unit.test.ts",
+            "modules/hosts/server/security/createManagedSavedStateAuthorizationAudit.ts",
+            "modules/hosts/server/security/tests/managed-saved-state-authorization-audit.unit.test.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--",
             "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
             "modules/adapters/transport/api-express/security/security-enforcement.unit.test.ts",
             "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.unit.test.ts",
+            "modules/hosts/server/security/tests/managed-saved-state-authorization-audit.unit.test.ts",
         ),
     },
     "managed-headless-browser-consent-ui": {

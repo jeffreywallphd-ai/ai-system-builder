@@ -4,7 +4,7 @@ import { once } from "node:events";
 import test from "node:test";
 import express from "express";
 
-import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
+import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
 import { createOrganizationId } from "../../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../../contracts/workspace";
 import { resolveApiRoutePolicy } from "../../security/apiRouteSecurityPolicy";
@@ -22,6 +22,7 @@ const proof = "a".repeat(43);
 
 test("only the exact POST has a central non-public policy", () => {
   assert.deepEqual(resolveApiRoutePolicy("POST", MANAGED_BROWSER_CONSENT_PATH), {public: false, scopes: ["workspace:read", "asset:read"]});
+  assert.deepEqual(resolveApiRoutePolicy("POST", MANAGED_BROWSER_OBSERVE_PATH), {public: false, scopes: ["workspace:read", "asset:read"]});
   for (const [method, path] of [["GET", MANAGED_BROWSER_CONSENT_PATH], ["POST", `${MANAGED_BROWSER_CONSENT_PATH}/`],
     ["POST", MANAGED_BROWSER_CONSENT_PATH.toUpperCase()], ["OPTIONS", MANAGED_BROWSER_CONSENT_PATH]] as const) {
     assert.equal(resolveApiRoutePolicy(method, path).deny, true);
@@ -73,8 +74,9 @@ test("exact browser origin, purposeful authentication, framing and live request 
     await once(server, "listening");
     const address = server.address();
     assert.ok(address && typeof address !== "string");
-    const url = `http://127.0.0.1:${address.port}${MANAGED_BROWSER_CONSENT_PATH}`;
-    const post = (body: unknown, headers: Record<string, string> = {}, query = "") => fetch(url + query, {method: "POST", headers: {
+    const url = `http://127.0.0.1:${address.port}`;
+    const post = (body: unknown, headers: Record<string, string> = {}, query = "",
+      route = typeof body === "object" && body && "operation" in body && body.operation === "observe" ? MANAGED_BROWSER_OBSERVE_PATH : MANAGED_BROWSER_CONSENT_PATH) => fetch(url + route + query, {method: "POST", headers: {
       origin: configuredOrigin, "sec-fetch-site": "same-origin", authorization: "fixture-browser",
       "x-organization-id": organizationId, "content-type": "application/json", ...headers,
     }, body: typeof body === "string" ? body : JSON.stringify(body)});
@@ -102,6 +104,8 @@ test("exact browser origin, purposeful authentication, framing and live request 
     assert.equal(registration.headers.get("cache-control"), "no-store");
     assert.equal(registration.headers.get("access-control-allow-origin"), null);
     assert.deepEqual(await registration.json(), {target, proof});
+    assert.equal((await post(register, {}, "", MANAGED_BROWSER_OBSERVE_PATH)).status, 400);
+    assert.equal((await post({operation: "observe", document: target}, {[MANAGED_BROWSER_DOCUMENT_HEADER]: proof}, "", MANAGED_BROWSER_CONSENT_PATH)).status, 400);
     assert.equal((await post({operation: "observe", document: target})).status, 403);
     assert.equal((await post({operation: "accept", document: target, target: {...attempt, uiIncarnationId: randomUUID()}},
       {[MANAGED_BROWSER_DOCUMENT_HEADER]: proof})).status, 400);
@@ -110,6 +114,7 @@ test("exact browser origin, purposeful authentication, framing and live request 
     assert.equal(observed, 1);
     const descriptor = {target: attempt, agentSessionId: randomUUID(), taskId: randomUUID(), expiresAt: 50_000};
     const proofHeader = {[MANAGED_BROWSER_DOCUMENT_HEADER]: proof};
+    assert.equal((await post({operation: "revoke", document: target, target: attempt}, proofHeader, "", MANAGED_BROWSER_OBSERVE_PATH)).status, 400);
     observeReply = {status: "ready", request: {...descriptor, status: "pending", target: {...attempt, windowId: randomUUID()}}};
     assert.equal((await post({operation: "observe", document: target}, proofHeader)).status, 503);
     observeReply = {status: "ready", request: {...descriptor, status: "active"}, lease: grant, contextChallenge: randomUUID()};

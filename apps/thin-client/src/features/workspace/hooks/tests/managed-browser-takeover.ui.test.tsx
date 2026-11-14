@@ -91,9 +91,9 @@ it("uses the existing modal and fences revoke before the server reply", async ()
   const held = Promise.withResolvers<Response>();
   const fetch = vi.fn(async (input: string, options: RequestInit) => {
     const headers = new Headers(options.headers);
-    expect(input).toBe("/api/headless/browser/consent");
     expect(options.mode).toBe("same-origin");
     const request = JSON.parse(String(options.body));
+    expect(input).toBe(request.operation === "observe" ? "/api/headless/browser/observe" : "/api/headless/browser/consent");
     expect(headers.get("x-organization-id")).toBe("fixture-org");
     if (request.operation === "register") {
       expect(headers.has("x-aisb-headless-document")).toBe(false);

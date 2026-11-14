@@ -5,6 +5,7 @@ const DENIAL_SAMPLE_INTERVAL_MS = 60_000;
 /** Passive checks use the same policy with bounded, content-free denial diagnostics. */
 export function createManagedSavedStateAuthorizationAudit(
   sink: SecurityAuditLogPort, clock: () => number = () => performance.now(),
+  operation: "headless.saved-state" | "headless.window.observe" = "headless.saved-state",
 ): SecurityAuditLogPort {
   let lastSample = -DENIAL_SAMPLE_INTERVAL_MS;
   let pending = false;
@@ -21,7 +22,7 @@ export function createManagedSavedStateAuthorizationAudit(
       lastSample = at;
       try {
         await sink.recordSecurityEvent({ eventId: event.eventId, occurredAt: event.occurredAt, kind: "authz.denied",
-          operation: "headless.saved-state", outcome: "denied", details: { deniedChecks: count } });
+          operation, outcome: "denied", details: { deniedChecks: count } });
       } catch {
         denials = Math.min(Number.MAX_SAFE_INTEGER, denials + count);
       } finally { pending = false; }

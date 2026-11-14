@@ -18,6 +18,13 @@ test("passive membership checks do not append success rows and sample bounded, c
   await audit.recordSecurityEvent({ ...input, kind: "authz.denied", outcome: "denied" });
   assert.deepEqual(entries.map((entry) => entry.details), [{ deniedChecks: 1 }, { deniedChecks: 15 }]);
   assert.doesNotMatch(JSON.stringify(entries), /fixture-private|not-audited|ignored/);
+  const observations: SecurityEvent[] = [];
+  const browser = createManagedSavedStateAuthorizationAudit({async recordSecurityEvent(event) {observations.push(event);}}, () => clock, "headless.window.observe");
+  await browser.recordSecurityEvent({...input, kind:"authz.allowed", outcome:"allowed"});
+  assert.deepEqual(observations, []);
+  await browser.recordSecurityEvent({...input, kind:"authz.denied", outcome:"denied"});
+  assert.equal(observations[0]?.operation,"headless.window.observe");
+  assert.doesNotMatch(JSON.stringify(observations), /fixture-private|not-audited|ignored/);
 });
 
 test("one pending audit write does not queue further denial writes", async () => {

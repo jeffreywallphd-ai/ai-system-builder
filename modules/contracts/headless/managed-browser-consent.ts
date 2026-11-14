@@ -4,6 +4,7 @@ import { readUiControlAttempt, readUiControlLeaseTarget, readUiControlRevoke, re
   type UiControlAttempt, type UiControlLeaseTarget, type UiControlWindowTarget } from "./ui-control-authority";
 
 export const MANAGED_BROWSER_CONSENT_PATH = "/api/headless/browser/consent";
+export const MANAGED_BROWSER_OBSERVE_PATH = "/api/headless/browser/observe";
 export const MANAGED_BROWSER_DOCUMENT_HEADER = "x-aisb-headless-document";
 
 export function isManagedBrowserDocumentProof(value: unknown): value is string {

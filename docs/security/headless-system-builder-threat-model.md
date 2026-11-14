@@ -231,6 +231,9 @@ best-effort retirement using the original credential when it remains current.
 Temporary registration capacity is reported separately from access denial.
 The browser retries transient responses with one outstanding registration and
 capped backoff. A dormant document remains detached until the page returns.
+Passive observations go through a separate exact route and the same membership
+and workspace policies. Only that read-only route uses the bounded denial
+sampler and omits successful audit records. Consent changes keep standard audit.
 
 The managed stdio consent tools use a distinct opt-in and a fixed agent route
 with the same OIDC and current workspace policy. Each connector process sends

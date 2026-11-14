@@ -1,8 +1,8 @@
-import { raw, type Application, type Request, type Response } from "express";
+import { raw, type Application, type Request, type RequestHandler, type Response } from "express";
 
 import { readUiControlObservation, readUiControlTimedGrant, sameUiControlLease,
   type HeadlessHostIncarnationId, type UiControlObservation, type UiControlTimedGrant } from "../../../../contracts/headless";
-import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, isManagedBrowserDocumentProof,
+import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, isManagedBrowserDocumentProof,
   parseManagedBrowserConsent, parseManagedBrowserRegistration, sameManagedBrowserAttempt,
   sameManagedBrowserDocument } from "../../../../contracts/headless/managed-browser-consent";
 import type { WorkspaceId } from "../../../../contracts/workspace";
@@ -10,7 +10,6 @@ import { readStrictPassiveRecord } from "../../../../contracts/shared";
 import { getExpressAuthContext } from "../security/expressAuthContext";
 import { getExpressOrganizationContext } from "../security/expressOrganizationContext";
 
-const ROOT = MANAGED_BROWSER_CONSENT_PATH;
 const MAX_BODY = 4_096;
 const MAX_CALLS = 32;
 const CALL_MS = 5_000;
@@ -35,9 +34,9 @@ export function registerManagedBrowserConsentRoute<Identity>(app: Pick<Applicati
   const parse = raw({ limit: MAX_BODY, type: () => true, inflate: false });
   const slots = new Set<Response>();
   let open = true;
-  app.post(ROOT, (request, response) => {
+  const attach = (path: string): RequestHandler => (request, response) => {
     response.set({"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"});
-    if (request.method !== "POST" || request.originalUrl !== ROOT) return error(response, 400);
+    if (request.method !== "POST" || request.originalUrl !== path) return error(response, 400);
     const handlers = open && origin && getHandlers();
     if (!handlers) return error(response, 404);
     if (request.headers.origin !== origin || request.headers["sec-fetch-site"] !== "same-origin") return error(response, 403);
@@ -56,9 +55,11 @@ export function registerManagedBrowserConsentRoute<Identity>(app: Pick<Applicati
     parse(request, response, (failure?: {status?: number}) => {
       response.removeListener("close", release);
       if (failure) { release(); return error(response, failure.status === 413 ? 413 : 400); }
-      void respond(request, response, handlers, identity, current).catch(() => error(response, 503)).finally(release);
+      void respond(request, response, handlers, identity, current, path === MANAGED_BROWSER_OBSERVE_PATH).catch(() => error(response, 503)).finally(release);
     });
-  });
+  };
+  app.post(MANAGED_BROWSER_CONSENT_PATH, attach(MANAGED_BROWSER_CONSENT_PATH));
+  app.post(MANAGED_BROWSER_OBSERVE_PATH, attach(MANAGED_BROWSER_OBSERVE_PATH));
   return () => {
     open = false;
     for (const response of slots) response.destroy();
@@ -75,10 +76,10 @@ function readBody(body: unknown) {
 }
 
 async function respond<Identity>(request: Request, response: Response, handlers: ManagedBrowserConsentHandlers<Identity>,
-  identity: Identity, current: Current) {
+  identity: Identity, current: Current, observeOnly: boolean) {
   if (!current()) return error(response, 403);
   const input = readBody(request.body);
-  if (!input) return error(response, 400);
+  if (!input || observeOnly !== (input.operation === "observe")) return error(response, 400);
   const proof = request.headers[MANAGED_BROWSER_DOCUMENT_HEADER];
   if (input.operation === "register") {
     if (proof !== undefined) return error(response, 400);

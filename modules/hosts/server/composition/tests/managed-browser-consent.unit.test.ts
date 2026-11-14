@@ -18,6 +18,32 @@ const agent = {purpose: "agent" as const, organizationId, principalId, registere
   isCurrent: () => true, agentSessionId: randomUUID()};
 const active = () => true;
 
+test("only observations use the passive workspace authorizer and its denial retires the document", async () => {
+  let normalReads = 0;
+  let passiveReads = 0;
+  let observePermitted = true;
+  const service = composeManagedBrowserConsent({hostIncarnationId, async authorize() {normalReads++; return true;},
+    async authorizeObservation() {passiveReads++; return observePermitted;}});
+  try {
+    const registered = await service.register(browser, workspaceId, active);
+    assert.ok(registered && "target" in registered);
+    const document = {...registered, identity:browser};
+    assert.deepEqual(await service.observe(document, active), {status:"ready"});
+    assert.deepEqual([normalReads, passiveReads], [1,1]);
+    const request = {version:UI_CONTROL_VERSION, operation:"window.request",
+      input:{target:registered.target,taskId:randomUUID(),requestKey:randomUUID()}} as const;
+    const result = await service.execute(request, agent, active);
+    assert.ok(result.ok && result.value.kind === "request");
+    assert.ok(await service.consent(document, result.value.request.target, "accept", active));
+    assert.ok(normalReads > 1);
+    assert.equal(passiveReads, 1);
+    observePermitted = false;
+    assert.deepEqual(await service.observe(document, active), {status:"unavailable"});
+    assert.equal(passiveReads, 2);
+    assert.equal(await service.consent(document, result.value.request.target, "accept", active), undefined);
+  } finally {service.close();}
+});
+
 test("the agent requests, the exact browser consents and confirms readiness, and revoke returns to manual", async () => {
   const service = composeManagedBrowserConsent({hostIncarnationId, async authorize(principal, id) {
     return principal.organizationId === organizationId && id === workspaceId;

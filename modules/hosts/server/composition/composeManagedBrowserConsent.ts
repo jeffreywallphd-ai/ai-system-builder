@@ -27,6 +27,7 @@ const samePrincipal = (left: Principal, right: Principal) =>
 export function composeManagedBrowserConsent(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
   readonly authorize: (principal: Principal, workspaceId: WorkspaceId) => Promise<boolean>;
+  readonly authorizeObservation?: (principal: Principal, workspaceId: WorkspaceId) => Promise<boolean>;
   readonly now?: () => number;
 }) {
   const {hostIncarnationId, authorize, now = () => performance.now()} = options;
@@ -43,9 +44,10 @@ export function composeManagedBrowserConsent(options: {
     const remainingMs = lease && lease.expiresAt - now();
     if (lease && remainingMs && remainingMs > 0 && remainingMs <= 15_000) return {target: lease.target, remainingMs};
   };
-  async function authenticate(document: AuthenticatedDocument, requestIsCurrent: () => boolean) {
+  async function authenticate(document: AuthenticatedDocument, requestIsCurrent: () => boolean, passive = false) {
     if (!open || !requestIsCurrent()) return;
-    const tab = await documents.authenticate(document.identity, document.target, document.proof, requestIsCurrent);
+    const tab = await documents.authenticate(document.identity, document.target, document.proof, requestIsCurrent,
+      passive ? options.authorizeObservation : undefined);
     return tab?.isCurrent() && requestIsCurrent() ? tab : undefined;
   }
   function asAgent(identity: AgentRegistration): UiControlAgent | undefined {
@@ -86,7 +88,7 @@ export function composeManagedBrowserConsent(options: {
       return registered;
     },
     async observe(document: AuthenticatedDocument, requestIsCurrent: () => boolean): Promise<UiControlObservation> {
-      const tab = await authenticate(document, requestIsCurrent);
+      const tab = await authenticate(document, requestIsCurrent, true);
       if (!tab?.isCurrent() || !requestIsCurrent()) return noDocument;
       const state = authority.observeInteractive(tab.target, tab.owner);
       if (!state) return {status: "ready"};

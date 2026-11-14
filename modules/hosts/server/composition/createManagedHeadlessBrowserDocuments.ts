@@ -48,12 +48,12 @@ export function createManagedHeadlessBrowserDocuments(options: {
       typeof browser.credentialBinding?.sameCredential === "function" && browser.isCurrent();}
     catch {return false;}
   }
-  async function permitted(browser: BrowserIdentity, workspaceId: WorkspaceId) {
+  async function permitted(browser: BrowserIdentity, workspaceId: WorkspaceId, authorize = options.authorize) {
     if (!live(browser)) return "denied";
     if (activeChecks >= MAX_AUTHORIZATIONS) return "busy";
     activeChecks++;
     try {
-      const allowed = await options.authorize(browser, workspaceId);
+      const allowed = await authorize(browser, workspaceId);
       return allowed === true && live(browser) ? "allowed" : "denied";
     } catch {return "denied";}
     finally {activeChecks--;}
@@ -91,12 +91,13 @@ export function createManagedHeadlessBrowserDocuments(options: {
       if (!options.register(target, owner)) {documents.delete(target.windowId); return {status: "busy"} as const;}
       return {target, proof};
     },
-    async authenticate(browser: BrowserIdentity, raw: unknown, proof: unknown, requestIsCurrent = () => true) {
+    async authenticate(browser: BrowserIdentity, raw: unknown, proof: unknown, requestIsCurrent = () => true,
+      authorize = options.authorize) {
       if (!requestIsCurrent()) return;
       sweep();
       const entry = proofEntry(browser, raw, proof);
       if (!entry || !entry.owner.isCurrent()) return;
-      const admission = await permitted(browser, entry.target.workspaceId);
+      const admission = await permitted(browser, entry.target.workspaceId, authorize);
       if (!requestIsCurrent()) return;
       if (admission !== "allowed") {
         if (admission === "denied") remove(entry);
