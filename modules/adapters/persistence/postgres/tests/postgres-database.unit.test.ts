@@ -16,6 +16,7 @@ import {
   openPostgresDatabase,
   POSTGRES_MIGRATION_0001,
   POSTGRES_MIGRATION_0002,
+  POSTGRES_MIGRATION_0003,
   POSTGRES_MIGRATION_LOCK_KEY,
   createPostgresStructuredDocumentStore,
 } from "../postgres-database";
@@ -66,6 +67,13 @@ test("checked-in organization PostgreSQL migration matches forced-RLS runtime mi
   const checkedIn = await readFile(path.resolve("migrations", "postgres", "0002-create-organization-document-store-with-rls.sql"), "utf8");
   assert.equal(normalizeSql(checkedIn), normalizeSql(POSTGRES_MIGRATION_0002));
   assert.match(POSTGRES_MIGRATION_0002, /current_setting\('app\.organization_id', true\)/);
+});
+
+test("checked-in workspace saved-state index matches runtime migration", async () => {
+  const checkedIn = await readFile(path.resolve("migrations", "postgres", "0003-index-workspace-saved-state.sql"), "utf8");
+  assert.equal(normalizeSql(checkedIn), normalizeSql(POSTGRES_MIGRATION_0003));
+  assert.match(POSTGRES_MIGRATION_0003, /document_key COLLATE "C"/);
+  assert.match(POSTGRES_MIGRATION_0003, /payload_json->>'status' <> 'archived'/);
 });
 
 test("startup failure releases the checked-out client before draining the pool", async () => {

@@ -361,6 +361,31 @@ test("live PostgreSQL atomic headless persistence replays across restricted runt
     assert.deepEqual(await replay.run(fixture), { kind: "denied" });
     assert.deepEqual(await replay.run(stopped), { kind: "denied" });
     assert.equal(await replay.watermark(scope), 1);
+
+    const summaries = pools[1].listActiveSystemSummaries!;
+    const adjacentWorkspace = createWorkspaceId(`${scope.workspaceId}0`);
+    const foreign = await summaries(other.organizationId, scope.workspaceId);
+    assert.deepEqual(foreign, []);
+    const inScope = await summaries(scope.organizationId, scope.workspaceId);
+    assert.deepEqual(inScope, [{ systemId: first.reference.systemId, revision: 1,
+      currentRevisionId: first.reference.revisionId, status: "draft", targetWorkspaceId: scope.workspaceId }]);
+    await scoped.runInTransaction(async (transaction) => {
+      await transaction.writeDocument("system-builder/records", `${adjacentWorkspace}/near`, {
+        ...first.record, systemId: "near", targetWorkspaceId: adjacentWorkspace,
+      });
+      for (let index = 0; index < 150; index += 1) {
+        const systemId = `a${index.toString().padStart(3, "0")}`;
+        await transaction.writeDocument("system-builder/records", `${scope.workspaceId}/${systemId}`, {
+          ...first.record, systemId, status: index < 10 ? "archived" : "draft", description: "x".repeat(2_048),
+        });
+      }
+    });
+    const bounded = await summaries(scope.organizationId, scope.workspaceId);
+    assert.equal(bounded.length, 129);
+    assert.equal(bounded[0]?.systemId, "a010");
+    assert.equal(bounded.at(-1)?.systemId, "a138");
+    assert.equal(bounded.every((row) => row.status === "draft" && row.targetWorkspaceId === scope.workspaceId), true);
+    assert.doesNotMatch(JSON.stringify(bounded), /description|near|Fixture/);
   } finally {
     try {
       await Promise.all(pools.map((database) => database.close()));

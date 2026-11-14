@@ -104,6 +104,11 @@ connection material enter only through secret/environment configuration at the
 composition boundary. Application/domain modules must not receive connection
 strings, pools, transactions, SQL, or driver errors.
 
+The managed System Builder snapshot selects only saved identifiers, revision,
+status and workspace from a single organization/workspace key range. Schema v3
+indexes active records in that range. The SQL returns at most 129 rows so the
+application can identify a result over its 128-system cap before projection.
+
 Backup method, recovery objective, replication, failover, tenant layout, and
 retention vary by managed environment and require explicit operational decisions.
 Selecting PostgreSQL does not claim those capabilities are already implemented.

@@ -145,6 +145,20 @@ current paired grant and workspace policy before returning data. Cross-scope,
 old-host or retired cursors require a new snapshot. Results are bounded saved
 references and status; the feed never carries draft data, secrets or UI state.
 
+The managed saved-state polling routes require the current OIDC bearer and
+verified organization context. They use existing workspace authorization before
+and after reading saved data, check token lifetime again before the response,
+and bind signed cursors to the current principal, organization, workspace and
+worker. The two exact routes accept up to 1 KiB of compact JSON and at most 16
+active requests per worker after authentication. Responses are at most 128 KiB
+and must not be cached. The transport has no authority to request window
+context or send presentation actions. Streaming and cross-worker delivery
+qualification remain separate.
+The snapshot reads only indexed active summaries scoped to one workspace and
+applies a 129-row SQL cap. Passive route and workspace checks retain the same
+policy. Success adds no audit row. Failed authorization uses one content-free
+count sample per minute per worker, with one pending log write at most.
+
 Headless workflow metadata rechecks the same exact workspace before and after
 the existing use cases run. A fixed profile and action allowlist omits
 deployment, mutation and execution. The projection does not relay private

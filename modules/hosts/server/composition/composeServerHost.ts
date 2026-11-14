@@ -248,6 +248,7 @@ import { composeAssetPackageLifecycle } from "../../shared/composition/composeAs
 import { composeAssetStudioWorkflow } from "../../shared/composition/composeAssetStudioWorkflow";
 import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
+import { composeManagedSavedState } from "./composeManagedSavedState";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
 import { composeSystemData, createManagedSystemDataPrincipal } from "../../shared/composition/composeSystemData";
 import { composePublishedSystemForms } from "../../shared/composition/composePublishedSystemForms";
@@ -374,6 +375,10 @@ export interface ComposeServerHostOptions {
   };
   organizationContextProvider?: OrganizationRequestContextProviderPort;
   organizationAuthorizer?: Pick<AuthorizeOperationService, "execute">;
+  managedSavedState?: {
+    readonly listActiveSystems: Parameters<typeof composeManagedSavedState>[0]["listActiveSystems"];
+    readonly authorize: Pick<AuthorizeOperationService, "execute">;
+  };
   env?: NodeJS.ProcessEnv;
   logging?: ComposeServerHostLoggingOptions;
   logSink?: StructuredLogSink;
@@ -635,6 +640,7 @@ export interface ServerHostComposition {
   clearHuggingFaceToken: () => Promise<ProviderCredentialStatus>;
   registerApi: (options: RegisterServerApiOptions) => void;
   waitForAssetFoundation: () => Promise<void>;
+  getManagedSavedState: () => ReturnType<typeof composeManagedSavedState> | undefined;
   closeRuntimeDatabases: () => Promise<void>;
   shutdownBackgroundTasks: () => Promise<void>;
   getInternalAssetRegistry: () => InternalAssetRegistryComposition | undefined;
@@ -734,6 +740,7 @@ export function composeServerHost(
 
   let internalAssetRegistry: InternalAssetRegistryComposition | undefined;
   let assetFoundationReady: Promise<void> = Promise.resolve();
+  let managedSavedState: ReturnType<typeof composeManagedSavedState> | undefined;
   let systemRuntimeDatabases = options.runtimeDatabases;
 
   let shutdownBackgroundTasks: (() => Promise<void>) | undefined;
@@ -756,6 +763,7 @@ export function composeServerHost(
     waitForAssetFoundation() {
       return assetFoundationReady;
     },
+    getManagedSavedState: () => managedSavedState,
     async closeRuntimeDatabases() {
       await shutdownBackgroundTasks?.();
       await systemRuntimeDatabases?.closeAll();
@@ -766,6 +774,11 @@ export function composeServerHost(
       const organizationDocuments =
         options.persistence?.organizationDocuments ??
         options.persistence?.documents;
+      const managed = options.managedSavedState;
+      const contexts = options.organizationContextProvider;
+      const managedDocuments = managed && contexts && options.persistence?.organizationDocuments &&
+        options.persistence.documents.runInOwnedTransaction && options.persistence.documents.organizationId === undefined
+        ? options.persistence.documents : undefined;
       const defaultRuntimeRootDirectory = joinHostPath(
         dirname(registerOptions.storageRootDirectory),
         "server-runtime",
@@ -1636,8 +1649,14 @@ export function composeServerHost(
             modelRegistry,
             generateSystemId: () => `system.${randomUUID()}`,
             now: options.now,
+            journalChanges: managedDocuments !== undefined,
           })
         : undefined;
+      if (managed && managedDocuments && systemBuilder && contexts) {
+        managedSavedState = composeManagedSavedState({ documents: managedDocuments, listActiveSystems: managed.listActiveSystems,
+          workspaces: workspaceFoundation.workspaceRepositories.workspaceRepository, contexts,
+          authorization: new AuthorizeWorkspaceOperationService({ organizationContext: contexts, authorizer: managed.authorize }) });
+      }
       const systemBuildArtifacts = createSystemBuildArtifactAdapter(storage);
       const systemDeploymentProfile = resolveServerSystemDeploymentProfile(env);
       const systemBuild =

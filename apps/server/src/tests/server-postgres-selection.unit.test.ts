@@ -41,6 +41,7 @@ test("operational health routes expose sanitized PostgreSQL readiness", async ()
   const created = await createServer({
     env: {
       DEPLOYMENT_SHAPE: "campus-server",
+      AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE: "1",
       SERVER_STORAGE_ROOT: path.join(root, "storage"),
       SERVER_RUNTIME_ROOT: path.join(root, "runtime"),
     },
@@ -65,6 +66,12 @@ test("operational health routes expose sanitized PostgreSQL readiness", async ()
     const body = JSON.stringify(await ready.json());
     assert.match(body, /not-ready/);
     assert.doesNotMatch(body, /top-secret|db\.example/);
+
+    const disabledSavedState = await fetch(`http://127.0.0.1:${address.port}/api/headless/system-builder/snapshot`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: '{"workspaceId":"fixture-workspace"}',
+    });
+    assert.equal(disabledSavedState.status, 404);
+    assert.deepEqual(await disabledSavedState.json(), { ok: false, code: "headless.unavailable" });
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     await created.closePersistence();

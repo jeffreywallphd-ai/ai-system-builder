@@ -132,6 +132,13 @@ The plan shows changed paths, per-path coverage, selected/deferred checks and
 digests. Every acceptance criterion references registered check IDs. The current
 catalog includes documentation, agent-support, control-plane, roadmap,
 architecture, source-owned focused tests, dependency security and evaluation.
+The managed saved-state index migration selects the exact PostgreSQL migration
+parity tests. Run the isolated live PostgreSQL checks for index behavior,
+workspace isolation and the active summary cap.
+The managed saved-state replay check runs the exact API, passive audit,
+repository, and PostgreSQL tests for the scoped snapshot and replay routes.
+It leaves broader source changes and aggregate completion tests to their own
+gates. The PostgreSQL integration tests need an isolated database URL to run.
 Unknown impact needs a bounded catalog rule and regression test; do not replace
 it with arbitrary shell text or an early aggregate run.
 The `thin-image-form-ui` and `desktop-image-form-ui` checks each run the exact

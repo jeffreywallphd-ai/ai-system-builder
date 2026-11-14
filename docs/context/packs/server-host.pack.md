@@ -52,6 +52,9 @@
 - Approved Asset Library mutation wrappers are narrow: register resource-backed view, finalize generated output, import external repository object, and localize external repository object.
 - Workspace-aware server APIs accept explicit workspace context and must not fall back to global records for workspace-scoped resources.
 - Thin-client workspace create/select/switch behavior is server-authoritative; the thin-client must not derive authoritative workspace ids from display names.
+- Opt-in managed System Builder saved-state polling uses the existing OIDC,
+  organization and workspace authorization checks and the bounded PostgreSQL
+  journal. A cursor from a different worker requires a fresh scoped snapshot.
 
 ## Key Constraints
 

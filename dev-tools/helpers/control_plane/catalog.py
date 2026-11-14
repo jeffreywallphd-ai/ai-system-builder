@@ -162,6 +162,43 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "managed-saved-state-replay": {
+        "automatic_sources": (
+            "modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes.ts",
+            "modules/hosts/server/composition/composeManagedSavedState.ts",
+            "modules/hosts/server/security/createManagedSavedStateAuthorizationAudit.ts",
+        ),
+        "sources": (
+            "apps/server/src/createServer.ts",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+            "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.ts",
+            "modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-saved-state-routes.integration.test.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/composeManagedSavedState.ts",
+            "modules/hosts/server/composition/README.md",
+            "modules/hosts/server/security/createManagedSavedStateAuthorizationAudit.ts",
+            "modules/hosts/server/security/tests/managed-saved-state-authorization-audit.unit.test.ts",
+            "modules/adapters/persistence/postgres/postgres-database.ts",
+            "modules/adapters/persistence/postgres/tests/postgres-database.unit.test.ts",
+            "modules/adapters/persistence/postgres/tests/postgres-database.live.integration.test.ts",
+            "modules/adapters/persistence/postgres/README.md",
+            "modules/adapters/persistence/system-builder/createStructuredSystemBuilderRepository.ts",
+            "modules/application/use-cases/system-builder/headless-committed-changes.use-case.ts",
+            "dev-tools/helpers/tests/test_control_plane.py",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-saved-state-routes.integration.test.ts",
+            "modules/hosts/server/security/tests/managed-saved-state-authorization-audit.unit.test.ts",
+            "modules/adapters/persistence/postgres/tests/postgres-database.unit.test.ts",
+            "modules/adapters/persistence/postgres/tests/postgres-database.live.integration.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-system-builder-repository.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/headless-committed-changes.unit.test.ts",
+        ),
+    },
     "headless-desktop-window-renderer": {
         "companion_to": "headless-desktop-takeover-controls",
         "sources": (
@@ -832,6 +869,9 @@ def definitions(root: Path) -> list[dict]:
         {"id": "dependencies", "patterns": ["package.json", "package-lock.json", "apps/*/package.json", ".github/workflows/*", "deployments/*", "dev-tools/vendor/*", "dev-tools/helpers/requirements-tests.txt", "*webpack*", "*tsconfig*", "dev-tools/scripts/native/build_windows_ocr.py", "dev-tools/scripts/native/build_windows_ocr.cjs", "dev-tools/scripts/native/build_windows_model_file_identity.py", "apps/desktop/forge.config.js"], "argv": [node, "dev-tools/scripts/security/check-dependency-security.mjs"], "timeout": 300},
         {"id": "evaluation", "patterns": ["dev-tools/agent-evals/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_evaluations.py"], "timeout": 120},
         {"id": "repository-policy", "patterns": [".gitignore", ".gitattributes", "dev-tools/helpers/*.json"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
+        {"id": "managed-saved-state-postgres-migration", "patterns": ["migrations/postgres/0003-index-workspace-saved-state.sql"],
+         "argv": [node, "--import", "tsx", "--test", "--", "modules/adapters/persistence/postgres/tests/postgres-database.unit.test.ts"],
+         "timeout": 120},
     ]
 
 

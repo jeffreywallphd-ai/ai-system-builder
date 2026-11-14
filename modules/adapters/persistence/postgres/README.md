@@ -17,6 +17,11 @@ retry. A missing commit acknowledgment or unconfirmed rollback discards the
 client. Headless authoring can reconcile an uncertain reply with the same
 operation identity and key.
 
+Schema version 3 adds a partial index over active System Builder records by
+organization and workspace key range. The managed snapshot query projects only
+saved identifiers, revision and status, returning at most 129 summaries. The
+extra row identifies an over-limit snapshot without loading remaining records.
+
 The pool installs an idle-client error listener so an EventEmitter `error` does
 not become an unhandled process failure. Only a counter and timestamp enter
 health; raw driver error content remains private.

@@ -70,7 +70,7 @@
 - Deployment-target config maps local to SQLite and campus/corporate/cloud to
   PostgreSQL. Desktop composition actively selects the Electron SQLite runtime;
   explicit managed server shapes actively select the PostgreSQL runtime.
-- Both engines provide schema-version-2 migrations, transactions, revisions, health,
+- Both engines provide versioned migrations, transactions, revisions, health,
   and portable exports. SQLite adds online backup/validated restore. Managed
   PostgreSQL backup/restore remains an operator/platform responsibility.
 - Database-backed collection mutations use bounded revision compare-and-swap;
@@ -79,6 +79,8 @@
   Owned PostgreSQL transactions pin policy reads and scoped writes, close
   transaction views before the final synchronous check, and retire clients
   when commit or rollback cannot be confirmed.
+  PostgreSQL schema v3 indexes active System Builder records for an exact
+  bounded managed snapshot. SQLite retains its versioned local schema.
 - In-memory roots and SQLite connections serialize all structured operations
   across their organization wrappers. Outside reads wait for committed state;
   unrelated acknowledged writes survive another transaction's failure. Use the

@@ -10,6 +10,7 @@ import { isWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
 import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
 
 const MAX_SYSTEMS = 128;
+type SavedSystemSummary = Pick<SystemBuilderRecord, "systemId" | "revision" | "currentRevisionId" | "status" | "targetWorkspaceId">;
 const unavailable = () => systemBuilderFailure("headless.unavailable", "The change feed is unavailable.");
 const forbidden = () => systemBuilderFailure("headless.forbidden", "Workspace access is unavailable.");
 const snapshotTooLarge = () => systemBuilderFailure("headless.result-too-large", "Too many systems to read in one snapshot.");
@@ -26,7 +27,9 @@ export class HeadlessCommittedChangesUseCase {
   public constructor(private readonly dependencies: {
     readonly organizationId: OrganizationId;
     readonly hostIncarnationId: HeadlessHostIncarnationId;
-    readonly systems: Pick<SystemBuilderRepositoryPort, "listRecords">;
+    readonly systems: { readonly listRecords: (
+      ...input: Parameters<SystemBuilderRepositoryPort["listRecords"]>
+    ) => Promise<readonly SavedSystemSummary[]> };
     readonly feed: Pick<HeadlessOperationStorePort, "watermark" | "readChanges">;
     readonly access: WorkspaceAssetAccessPort;
     /** Bind the caller, workspace and host with a private host key. */
@@ -107,7 +110,7 @@ function readCursor(value: unknown): Cursor | undefined {
   } catch { return undefined; }
 }
 
-function project({ systemId, revision, currentRevisionId, status }: SystemBuilderRecord) {
+function project({ systemId, revision, currentRevisionId, status }: SavedSystemSummary) {
   if (!isSystemBuilderSystemId(systemId) || hasKnownPassiveCredential(systemId) ||
       !Number.isSafeInteger(revision) || revision < 1 || !isSystemBuilderStatus(status) ||
       (currentRevisionId !== undefined && !safeRevision(currentRevisionId))) throw new Error("The system summary is invalid.");

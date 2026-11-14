@@ -4,11 +4,12 @@ import type { AuthorizeOperationService } from "../../../../application/services
 import { getExpressAuthContext } from "./expressAuthContext";
 import { getExpressOrganizationContext } from "./expressOrganizationContext";
 import { createSecurityApiFailure, mapSecurityFailure } from "./createSecurityApiFailure";
-import { resolveApiRoutePolicy } from "./apiRouteSecurityPolicy";
+import { isManagedSavedStatePath, resolveApiRoutePolicy } from "./apiRouteSecurityPolicy";
 
 /** Managed-host membership gate. Resource-specific policy remains in protected use cases. */
 export function createExpressOrganizationAuthorizationMiddleware(deps: {
   authorizer: AuthorizeOperationService;
+  passiveSavedStateAuthorizer?: AuthorizeOperationService;
 }) {
   return async (request: Request, response: Response, next: NextFunction) => {
     const policy = resolveApiRoutePolicy(request.method, request.path);
@@ -23,7 +24,9 @@ export function createExpressOrganizationAuthorizationMiddleware(deps: {
       }));
     }
     try {
-      await deps.authorizer.execute({
+      const authorizer = deps.passiveSavedStateAuthorizer && isManagedSavedStatePath(request.method, request.path)
+        ? deps.passiveSavedStateAuthorizer : deps.authorizer;
+      await authorizer.execute({
         authContext,
         organizationId: organizationContext.organizationId,
         requestId: organizationContext.requestId,

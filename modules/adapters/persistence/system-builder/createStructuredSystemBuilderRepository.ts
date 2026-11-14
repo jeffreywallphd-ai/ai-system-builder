@@ -13,7 +13,8 @@ import {
 } from "../shared";
 import { appendCommittedSystemChange } from "./structuredSystemChangeJournal";
 
-const RECORD_NAMESPACE = "system-builder/records";
+export const SYSTEM_BUILDER_RECORD_NAMESPACE = "system-builder/records";
+const RECORD_NAMESPACE = SYSTEM_BUILDER_RECORD_NAMESPACE;
 const REVISION_NAMESPACE = "system-builder/revisions";
 
 export function createStructuredSystemBuilderRepository(

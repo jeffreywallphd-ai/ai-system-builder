@@ -21,6 +21,8 @@ import {
   registerSecurityRoutes,
 } from "../../../modules/adapters/transport/api-express/security";
 import { composeServerSecurity } from "../../../modules/hosts/server/security/composeServerSecurity";
+import { createManagedSavedStateAuthorizationAudit } from "../../../modules/hosts/server/security/createManagedSavedStateAuthorizationAudit";
+import { registerManagedSavedStateRoutes } from "../../../modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes";
 import type { LoggingPort } from "../../../modules/application/ports/logging";
 import type { StructuredLogSink } from "../../../modules/adapters/observability/logging";
 import {
@@ -357,28 +359,19 @@ export async function createServer(
           security.organizationContextScope,
         )
       : options.structuredDocuments;
-    const organizationAuthorizer =
+    const organizationPolicy =
       postgresDatabase && security.config.mode === "oidc-bearer"
-        ? new AuthorizeOperationService(
-            createOrganizationAuthorizationPolicy({
-              ...createStructuredOrganizationRepositories(
-                postgresDatabase.documents,
-              ),
-              tenantPlacement: security.config.tenantPlacement,
-            }),
-            {
-              audit: createJsonlSecurityAuditLogAdapter(
-                path.join(
-                  config.runtimeRootDirectory,
-                  "security",
-                  "authorization-audit.jsonl",
-                ),
-              ),
-              createEventId: () => `evt-${randomUUID()}`,
-              now: options.now,
-            },
-          )
-        : undefined;
+        ? createOrganizationAuthorizationPolicy({
+            ...createStructuredOrganizationRepositories(postgresDatabase.documents),
+            tenantPlacement: security.config.tenantPlacement,
+          }) : undefined;
+    const audit = createJsonlSecurityAuditLogAdapter(path.join(config.runtimeRootDirectory, "security", "authorization-audit.jsonl"));
+    const auditOptions = { createEventId: () => `evt-${randomUUID()}`, now: options.now };
+    const organizationAuthorizer = organizationPolicy ? new AuthorizeOperationService(organizationPolicy, { ...auditOptions, audit }) : undefined;
+    const passiveSavedStateAuthorizer = organizationPolicy ? new AuthorizeOperationService(organizationPolicy, {
+      ...auditOptions, audit: createManagedSavedStateAuthorizationAudit(audit),
+    }) : undefined;
+    const listActiveSystems = postgresDatabase?.listActiveSystemSummaries;
     const serverHost = composeServerHost({
       env: options.env,
       logging: {
@@ -392,6 +385,8 @@ export async function createServer(
         ? security.organizationContextScope
         : undefined,
       organizationAuthorizer,
+      managedSavedState: env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE === "1" && passiveSavedStateAuthorizer && listActiveSystems
+        ? { listActiveSystems, authorize: passiveSavedStateAuthorizer } : undefined,
       runtimeDatabases: options.runtimeDatabases,
       pythonRuntimeEnvironmentPreparer,
       ...(persistenceDocuments
@@ -442,9 +437,11 @@ export async function createServer(
       app.use(
         createExpressOrganizationAuthorizationMiddleware({
           authorizer: organizationAuthorizer,
+          passiveSavedStateAuthorizer,
         }),
       );
     }
+    const retireManagedSavedState = registerManagedSavedStateRoutes(app, () => serverHost.getManagedSavedState());
     app.use(express.json({ limit: "5mb" }));
     app.use(createExpressJsonBodyErrorMiddleware());
     registerSecurityRoutes(app, {
@@ -502,9 +499,13 @@ export async function createServer(
       app,
       config,
       loggingPort: serverHost.loggingPort,
-      shutdownBackgroundTasks: () => serverHost.shutdownBackgroundTasks(),
+      shutdownBackgroundTasks: () => {
+        retireManagedSavedState();
+        return serverHost.shutdownBackgroundTasks();
+      },
       async closePersistence() {
         if (persistenceClosed) return;
+        retireManagedSavedState();
         await serverHost.closeRuntimeDatabases();
         await postgresDatabase?.close();
         persistenceClosed = true;

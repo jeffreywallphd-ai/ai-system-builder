@@ -49,6 +49,16 @@ Route composition now includes:
 
 Current artifact-repo provider registration is Hugging Face only.
 
+## Managed saved-state replay
+
+`AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE=1` enables the bounded System Builder
+snapshot and replay routes on PostgreSQL hosts with OIDC and organization
+authorization. Existing editing paths in that composition write journal events in
+the same transaction as the saved system. Each read uses current workspace policy
+and the verified bearer lifetime. Omit the setting and restart to retire the routes
+while preserving saved records and their journal. This slice supports scoped
+polling. Browser streaming and window controls have separate qualification.
+
 ## Hugging Face token configuration
 
 - Managed server composition resolves Hugging Face credentials through the

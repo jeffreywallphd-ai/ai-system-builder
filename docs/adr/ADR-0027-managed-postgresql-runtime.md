@@ -56,6 +56,9 @@ database-specific lifecycle and SQL stay behind the PostgreSQL adapter boundary.
   committed change journal can share the same pinned client. Each retry gets
   fresh transaction views and must re-evaluate policy. Uncertain commit or
   rollback discards the client and requires reconciliation before any new effect.
+- The managed saved-state snapshot uses a schema-version-3 partial index and
+  an exact organization/workspace key range. PostgreSQL returns at most 129
+  active summaries, including one sentinel row for a snapshot exceeding 128.
 - Portable export enumerates adapter-internal documents under transactionally
   consistent isolation. Disaster-recovery backup/restore remains owned by the PostgreSQL
   platform and its approved operator runbook.

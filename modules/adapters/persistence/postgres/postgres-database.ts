@@ -1,6 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import type { OrganizationId } from "../../../contracts/organization";
+import { isOrganizationId, type OrganizationId } from "../../../contracts/organization";
+import type { SystemBuilderRecord } from "../../../contracts/system-builder";
+import { isWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
+import { SYSTEM_BUILDER_RECORD_NAMESPACE } from "../system-builder/createStructuredSystemBuilderRepository";
 import {
   StructuredDocumentConflictError,
   cloneStructuredJson,
@@ -15,7 +18,7 @@ import {
   type ResolvedPostgresPoolConfig,
 } from "./client/createPostgresPool";
 
-export const POSTGRES_SCHEMA_VERSION = 2;
+export const POSTGRES_SCHEMA_VERSION = 3;
 export const POSTGRES_MIGRATION_LOCK_KEY = 6_517_390_241;
 export const POSTGRES_MIGRATION_0001 = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -59,6 +62,12 @@ CREATE POLICY organization_documents_isolation ON organization_documents
   WITH CHECK (organization_id = current_setting('app.organization_id', true));
 `;
 
+export const POSTGRES_MIGRATION_0003 = `
+CREATE INDEX organization_documents_system_builder_workspace_idx
+  ON organization_documents (organization_id, document_key COLLATE "C")
+  WHERE namespace = 'system-builder/records' AND payload_json->>'status' <> 'archived';
+`;
+
 export interface PostgresHealthReport {
   readonly healthy: boolean;
   readonly schemaVersion: number;
@@ -75,9 +84,12 @@ export interface PostgresHealthReport {
 
 export interface OpenedPostgresDatabase {
   readonly documents: StructuredDocumentStore;
+  readonly listActiveSystemSummaries?: (organizationId: OrganizationId, workspaceId: WorkspaceId) => Promise<readonly PostgresActiveSystemSummary[]>;
   checkHealth(): Promise<PostgresHealthReport>;
   close(): Promise<void>;
 }
+
+export type PostgresActiveSystemSummary = Pick<SystemBuilderRecord, "systemId" | "revision" | "currentRevisionId" | "status" | "targetWorkspaceId">;
 
 export interface OpenPostgresDatabaseOptions {
   readonly config: ResolvedPostgresPoolConfig;
@@ -116,6 +128,7 @@ export async function openPostgresDatabase(options: OpenPostgresDatabaseOptions)
   let closed = false;
   return {
     documents: createPostgresStructuredDocumentStore(pool, now),
+    listActiveSystemSummaries: (organizationId, workspaceId) => listActiveSystemSummaries(pool, organizationId, workspaceId),
     async checkHealth() {
       const startedAt = performance.now();
       const result = await pool.query<{ schema_version: number }>(
@@ -193,6 +206,13 @@ export async function migratePostgresDatabase(
         [2, "create-organization-document-store-with-rls", now()],
       );
     }
+    if (version < 3) {
+      await client.query(POSTGRES_MIGRATION_0003);
+      await client.query(
+        "INSERT INTO schema_migrations (version, name, applied_at) VALUES ($1, $2, $3)",
+        [3, "index-workspace-saved-state", now()],
+      );
+    }
     await client.query("COMMIT");
   } catch (error) {
     try {
@@ -201,6 +221,51 @@ export async function migratePostgresDatabase(
       // Preserve the migration failure.
     }
     throw error;
+  }
+}
+
+async function listActiveSystemSummaries(pool: PostgresPoolLike, organizationId: OrganizationId, workspaceId: WorkspaceId) {
+  if (!isOrganizationId(organizationId) || !isWorkspaceId(workspaceId) || transactionContext(pool).getStore())
+    throw new Error("The saved-state scope is unavailable.");
+  // Workspace IDs are ASCII. '/' ends the prefix and '0' is the next byte.
+  // The partial index excludes archived records before applying the row cap.
+  return executeOrganizationTransaction(pool, organizationId, async (client) => {
+    const result = await client.query(`
+      SELECT LEFT(payload_json->>'systemId', 97) AS system_id,
+        CASE WHEN jsonb_typeof(payload_json->'revision') = 'number' THEN LEFT(payload_json->>'revision', 24) END AS record_revision,
+        LEFT(payload_json->>'currentRevisionId', 161) AS revision_id, LEFT(payload_json->>'status', 17) AS status,
+        LEFT(payload_json->>'targetWorkspaceId', 97) AS workspace_id
+      FROM organization_documents
+      WHERE organization_id = $1 AND namespace = '${SYSTEM_BUILDER_RECORD_NAMESPACE}'
+        AND document_key COLLATE "C" >= $2 AND document_key COLLATE "C" < $3
+        AND payload_json->>'status' <> 'archived'
+      ORDER BY document_key COLLATE "C" LIMIT 129
+    `, [organizationId, `${workspaceId}/`, `${workspaceId}0`]);
+    return result.rows.map((row) => ({
+      systemId: row.system_id as PostgresActiveSystemSummary["systemId"],
+      revision: typeof row.record_revision === "string" && /^\d{1,16}$/.test(row.record_revision) ? Number(row.record_revision) : NaN,
+      currentRevisionId: (row.revision_id === null ? undefined : row.revision_id) as PostgresActiveSystemSummary["currentRevisionId"],
+      status: row.status as PostgresActiveSystemSummary["status"],
+      targetWorkspaceId: row.workspace_id as WorkspaceId,
+    }));
+  });
+}
+
+async function executeOrganizationTransaction<T>(pool: PostgresPoolLike, organizationId: OrganizationId,
+  work: (client: PostgresQueryable) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  let discardClient = false;
+  try {
+    await client.query("BEGIN");
+    await bindPostgresOrganizationContext(client, organizationId);
+    const result = await work(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    try { await client.query("ROLLBACK"); } catch { discardClient = true; }
+    throw error;
+  } finally {
+    client.release(discardClient);
   }
 }
 
@@ -268,23 +333,7 @@ function createStore(
     }
     if (organizationId === undefined) return work(pool);
 
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      await bindPostgresOrganizationContext(client, organizationId);
-      const result = await work(client);
-      await client.query("COMMIT");
-      return result;
-    } catch (error) {
-      try {
-        await client.query("ROLLBACK");
-      } catch {
-        // Preserve the scoped operation failure.
-      }
-      throw error;
-    } finally {
-      client.release();
-    }
+    return executeOrganizationTransaction(pool, organizationId, work);
   };
 
   return {
