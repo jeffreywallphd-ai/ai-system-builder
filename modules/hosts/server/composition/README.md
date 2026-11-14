@@ -60,6 +60,10 @@ while preserving saved records and their journal. This slice supports scoped
 polling and a header-authenticated server event stream. The window controls have
 separate qualification.
 
+The current OIDC verifier can expose the signed client ID of a typed access
+token internally. This does not change ordinary authentication or activate
+agent and interactive access.
+
 ## Hugging Face token configuration
 
 - Managed server composition resolves Hugging Face credentials through the

@@ -164,6 +164,13 @@ applies a 129-row SQL cap. Passive route and workspace checks retain the same
 policy. Success adds no audit row. Failed authorization uses one content-free
 count sample per minute per worker, with one pending log write at most.
 
+The managed OIDC verifier supplies the optional access-token client identifier
+only after verifying the signed issuer, audience and typed access token. It
+checks the credential's exact lifetime and accepts a bounded claim. A caller's
+headers, payload and scope names cannot supply this identity. The identifier
+stays in server authorization context. It grants no feature permission by
+itself, and browser document ownership requires separate evidence.
+
 Headless workflow metadata rechecks the same exact workspace before and after
 the existing use cases run. A fixed profile and action allowlist omits
 deployment, mutation and execution. The projection does not relay private

@@ -6,6 +6,10 @@ export const OIDC_ASYMMETRIC_SIGNING_ALGORITHMS = [
 export type OidcAsymmetricSigningAlgorithm =
   (typeof OIDC_ASYMMETRIC_SIGNING_ALGORITHMS)[number];
 
+export function isOidcAccessTokenClientId(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._:@-]{0,127}$/.test(value) && value.trim() === value;
+}
+
 export interface OidcBearerConfig {
   readonly issuer: string;
   readonly audience: string;

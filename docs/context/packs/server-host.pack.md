@@ -55,6 +55,8 @@
 - Opt-in managed System Builder saved-state polling uses the existing OIDC,
   organization and workspace authorization checks and the bounded PostgreSQL
   journal. A cursor from a different worker requires a fresh scoped snapshot.
+- The existing managed verifier may expose a typed access token's signed client
+  ID internally. The identifier gives no scopes or browser document authority.
 
 ## Key Constraints
 

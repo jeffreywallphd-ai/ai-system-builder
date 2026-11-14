@@ -4,10 +4,12 @@ import type { TokenVerifierPort } from "../../../application/ports/security";
 import {
   createExternalSubjectIdentity,
   createSecurityApplicationError,
+  isOidcAccessTokenClientId,
   type AuthContext,
   type OidcBearerConfig,
   type SecurityScope,
 } from "../../../contracts/security";
+import type { JWTVerifyResult } from "jose";
 
 /** OIDC proves identity only. Managed capabilities come from trusted organization membership. */
 export const MANAGED_IDENTITY_SCOPES: readonly SecurityScope[] = [];
@@ -19,6 +21,17 @@ interface VerifiedJwtPayload {
   readonly exp?: number;
 }
 
+type VerifiedJwt = VerifiedJwtPayload & { readonly accessTokenClientId?: string };
+
+/** Project only the signed fields from the existing verifier's result. */
+export function projectVerifiedOidcIdentity(result: JWTVerifyResult): VerifiedJwt {
+  const { iss, sub, iat, exp, client_id: client } = result.payload;
+  const { typ } = result.protectedHeader;
+  const type = typeof typ === "string" ? typ.toLowerCase() : undefined;
+  return { iss, sub, iat, exp, accessTokenClientId: (type === "at+jwt" || type === "application/at+jwt") &&
+    isOidcAccessTokenClientId(client) ? client : undefined };
+}
+
 export interface OidcJwtVerifier {
   verify(input: {
     token: string;
@@ -26,7 +39,7 @@ export interface OidcJwtVerifier {
     audience: string;
     jwksUri: string;
     algorithms: readonly string[];
-  }): Promise<VerifiedJwtPayload>;
+  }): Promise<VerifiedJwt>;
 }
 
 export function createOidcBearerTokenVerifierAdapter(input: {
@@ -37,7 +50,7 @@ export function createOidcBearerTokenVerifierAdapter(input: {
   const verifier = input.jwtVerifier ?? createJoseRemoteJwksVerifier();
   const scopes = [...(input.applicationScopes ?? MANAGED_IDENTITY_SCOPES)];
   return {
-    async verifyToken({ token }): Promise<AuthContext> {
+    async verifyToken({ token, now }): Promise<AuthContext> {
       try {
         const payload = await verifier.verify({
           token,
@@ -50,6 +63,9 @@ export function createOidcBearerTokenVerifierAdapter(input: {
           issuer: payload.iss ?? "",
           subject: payload.sub ?? "",
         });
+        const hasTypedClient = payload.iss === input.config.issuer &&
+          isOidcAccessTokenClientId(payload.accessTokenClientId) &&
+          typeof payload.exp === "number" && Number.isSafeInteger(payload.exp) && payload.exp * 1_000 > now.getTime();
         return {
           authenticated: true,
           authMethod: "oidc-bearer",
@@ -66,6 +82,7 @@ export function createOidcBearerTokenVerifierAdapter(input: {
           expiresAt: payload.exp === undefined
             ? undefined
             : new Date(payload.exp * 1000).toISOString(),
+          ...(hasTypedClient ? { oidcAccessTokenClientId: payload.accessTokenClientId } : {}),
         };
       } catch {
         throw createSecurityApplicationError(
@@ -105,7 +122,7 @@ function createJoseRemoteJwksVerifier(): OidcJwtVerifier {
         audience: input.audience,
         algorithms: [...input.algorithms],
       });
-      return result.payload;
+      return projectVerifiedOidcIdentity(result);
     },
   };
 }

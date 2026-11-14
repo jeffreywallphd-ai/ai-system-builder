@@ -87,6 +87,13 @@ requires a fresh scoped snapshot. Polling and the short-lived authenticated
 application stream return saved metadata and do not grant agent editing or
 interactive browser authority.
 
+Managed admission can distinguish registered OIDC clients through the issuer's
+signed `client_id` claim on a typed access token. The existing verifier first
+checks signature, issuer, audience and expiry. The optional client identifier
+grants no application permission. Existing ordinary OIDC calls keep their
+current behavior. Interactive document ownership needs its own proof.
+See [RFC 9068](https://www.rfc-editor.org/rfc/rfc9068.html).
+
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay
 state and a separate window-control lifecycle. Roll back by disabling the new
