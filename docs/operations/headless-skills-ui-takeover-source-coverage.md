@@ -48,6 +48,16 @@ registered identity repeated the same request key and received the original
 result. The scoped journal held one change for that request. The server
 restart and same-source host checks remain separate.
 
+A separate Chrome journey observed managed authorization before revoke.
+The user switched workspaces before the save committed. PostgreSQL then
+recorded one revision in the original workspace. Returning to that
+workspace showed the saved field and left the takeover panel closed.
+
+Another managed Chrome test held an older real list reply, rendered a
+newer saved name, and let the app read the old reply. The Manage table
+kept the newer name. Shared tests exercise dirty drafts and retired
+saved-state connections separately.
+
 ## Architectural invariants
 
 | Source | Owning increment | Criterion | Required assertion |

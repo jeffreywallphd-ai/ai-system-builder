@@ -180,6 +180,84 @@
           "conflicts": 1
         }
       }
+    },
+    {
+      "run_id": "2026-11-14t21-47-34-488z-1e8de8b4",
+      "source_revision": "source.06a55597212044e1e31d3feb21c820bd11bb08abb54980c0ce1207c543846800",
+      "evidence_file_sha256": "0b4caff95b3f02ed8c7cb57af4de5ee34c2c0a63f68da129488f7dc937ffc18a",
+      "timing_file_sha256": "4fa314084bd29e86d8e6426accd65a05db4bc7ab8b5bc7de08703df2bc79610b",
+      "queue_file_sha256": "aca450ff9aa31d2cf912ce03e3e1a91a885f24e2c546a5643189644724c68f2a",
+      "background_file_sha256": "198bbfb2156f3455ca5f76bceb79eb24624cde156e1387d5a43ce04f83cc26c5",
+      "receipt_digest": "7421eb9ecbdea14f1df81fd46ffeadaece8cd9c2d2d9aad5149fe162d02400a4",
+      "review_digest": "1fc179738c62e9a4035d768cfd1013f6b48e3ce191f53bb47b053e2cef427b80",
+      "status": "passed",
+      "scope": [
+        "Four packaged Windows journeys passed during the census checkpoint.",
+        "The run measured warm presentation, ordinary and dialog revoke, native hide and the exact queue audit."
+      ],
+      "environment": {
+        "electron": "42.11.18",
+        "chrome": "148.0.7778.280",
+        "os_release": "10.0.26200",
+        "logical_cpus": 20,
+        "ram_gib": 16,
+        "visible_document": true
+      },
+      "warm_present_ms": {
+        "count": 100,
+        "p50Ms": 133.9806999999564,
+        "p95Ms": 145.40909999998985,
+        "maxMs": 153.8391999999876
+      },
+      "revoke_ms": {
+        "count": 105,
+        "p50Ms": 1.899999976158142,
+        "p95Ms": 7.600000023841858,
+        "maxMs": 11.5
+      },
+      "preview_dialog_revoke_ms": {
+        "count": 20,
+        "p50Ms": 6.399999976158142,
+        "p95Ms": 11,
+        "maxMs": 11.5
+      },
+      "loading_revoke_ms": {
+        "count": 5,
+        "p50Ms": 0.8999999761581421,
+        "p95Ms": 1,
+        "maxMs": 1
+      },
+      "background_timer": {
+        "foreground": {
+          "count": 7,
+          "p50Ms": 47.60000002384186,
+          "p95Ms": 61.69999998807907,
+          "maxMs": 61.69999998807907
+        },
+        "background": {
+          "count": 5,
+          "p50Ms": 999.6999999880791,
+          "p95Ms": 1010,
+          "maxMs": 1010
+        },
+        "scope": "native hide",
+        "nativeThrottling": true,
+        "hideToLeaseRetiredMs": 18.33149999997113
+      },
+      "queue": {
+        "queuePeak": 32,
+        "capacityRejections": 1,
+        "duplicates": 1,
+        "conflicts": 1,
+        "staleEffects": 0,
+        "audit": {
+          "delivered": 1,
+          "applied": 0,
+          "discarded": 31,
+          "unconfirmed": 1,
+          "conflicts": 1
+        }
+      }
     }
   ],
   "previous_follow_up": [

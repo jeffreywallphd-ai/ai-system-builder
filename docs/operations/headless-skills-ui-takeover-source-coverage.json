@@ -322,9 +322,10 @@
       "executableWitnesses": [
         "desktop-task",
         "permission",
-        "browser-resume"
+        "browser-resume",
+        "managed-live-save-after-workspace-switch"
       ],
-      "knownRemainingEvidence": "The desktop task stays bound to its saved workspace. The real managed journey has not yet changed workspace during an independent running operation."
+      "knownRemainingEvidence": "Chrome switched workspaces after revoke, before the admitted save committed. The write stayed in its original workspace."
     },
     {
       "sourceId": "INV-15",
@@ -742,9 +743,10 @@
       "executableWitnesses": [
         "desktop-held-save",
         "desktop-window",
-        "browser-revoke"
+        "browser-revoke",
+        "managed-live-save-after-workspace-switch"
       ],
-      "knownRemainingEvidence": "The Desktop connector and SQLite integration holds an admitted save, revokes window control, then verifies its commit and exact receipt replay. The managed browser verified a new save after revoke. A managed save held across revoke still needs its own witness."
+      "knownRemainingEvidence": "Desktop connector and SQLite and built Chrome and PostgreSQL both verified a save admitted before revoke, one later commit and exact replay."
     },
     {
       "sourceId": "AT-16",
@@ -851,9 +853,10 @@
       "evidenceStatus": "mapped-source-not-finally-qualified",
       "executableWitnesses": [
         "desktop-task",
-        "permission"
+        "permission",
+        "managed-live-save-after-workspace-switch"
       ],
-      "knownRemainingEvidence": "The managed authorizer verifies explicit workspace scope. A real managed operation has not yet been held across a human workspace switch."
+      "knownRemainingEvidence": "Chrome confirmed the other workspace stayed separate and the new value appeared when it returned to the original workspace. The stale presentation did not return."
     },
     {
       "sourceId": "AT-21",
@@ -1248,9 +1251,10 @@
       "evidenceStatus": "mapped-source-not-finally-qualified",
       "executableWitnesses": [
         "browser-reverse",
-        "browser-draft"
+        "browser-draft",
+        "managed-live-reverse-refetch"
       ],
-      "knownRemainingEvidence": "The shared UI test deliberately reverses completion order. The real browser network intervention still needs a witness."
+      "knownRemainingEvidence": "Chrome consumed a held older list reply after the newer saved name appeared. The Manage table kept that name. Shared tests separately cover a dirty base and a retired saved-state connection."
     },
     {
       "sourceId": "AT-38",
@@ -1773,6 +1777,16 @@
       "host": "authenticated-server-local-chrome",
       "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
       "testOrStage": "lost-committed-create-reply"
+    },
+    "managed-live-save-after-workspace-switch": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "in-flight-edit-original-workspace-save"
+    },
+    "managed-live-reverse-refetch": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "reverse-refetch-release-old-live-reply"
     }
   }
 }
