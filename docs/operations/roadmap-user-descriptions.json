@@ -9667,6 +9667,46 @@
   "support": [
     {
       "kind": "support-scope",
+      "source_text_sha256": "acc6631816d9c967832c1a17d5421ac44cf60ed07766fca1045454582bd2e9bd",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Four packaged Windows journeys passed. Across 100 attempts, controls returned within 6.2 milliseconds in at least 95 percent of revokes. The slowest took 6.5 milliseconds. The audit and separate window checks also passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "83bf464c9237df8d722d362db841f45b3258ac53e352bec819f331e014f1b298",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The desktop host ends control for a window when you hide or minimize it. Automation needs fresh consent after you restore that window."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6faf37b6b9edefc6cb1eb79e94c82b4b52c89b62c86310bd4aed09125937560c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to check what happens when Windows slows a hidden window, when a context reply is delayed, and when window control is turned off."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1b2df8db29a880d4f4e7d12d0e2206d0650266fc92a4db669da424d20fbade05",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The desktop host stops accepting old requests when Windows hides or minimizes the window. Testing how the window discards a reply already on its way is separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
       "source_text_sha256": "ee33ac2fe42da050e78bcff2c2bde9a04a5faa3d0003147e0bcfab73a8c2866c",
       "user_description": {
         "owner": "agent",

@@ -59,11 +59,23 @@
       "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 11.3, "max": 13.7},
       "preview_dialog_revoke_ms": {"samples": 20, "p50": 9.2, "p95": 13.3, "max": 13.7},
       "loading_revoke_ms": {"samples": 5, "p50": 0.9, "p95": 1, "max": 1}
+    },
+    {
+      "run_id": "2026-11-14t14-41-50-892z-894a4c97",
+      "source_revision": "source.3ed966e14922bba5b39115e9bcd3586ba750ee03206b3b76d54539b70f9a40b1",
+      "evidence_file_sha256": "22208d92c85dee520a7caa4f374e9503450dc73d877ef3c1172b88207d463865",
+      "status": "passed",
+      "scope": ["Four packaged Windows journeys including two separately controlled windows", "75 ordinary, 20 dialog, five loading revokes", "One held real presentation reply released after local revoke with no preview observed through manual navigation", "SQLite audit fields, count and entry sizes validated after app exit", "Both controlled worker phases reported zero remaining owned workers"],
+      "warm_present_ms": {"samples": 95, "p50": 131.78, "p95": 151.29, "max": 157.28},
+      "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 6.2, "max": 6.5},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 6, "p95": 6.4, "max": 6.5},
+      "loading_revoke_ms": {"samples": 5, "p50": 0.9, "p95": 1, "max": 1},
+      "environment": {"os": "Windows 10.0.26200", "electron": "42.11.18", "chromium": "148.0.7778.280", "ram_gib": 16, "logical_cpus": 20, "visible_document": true}
     }
   ],
   "pending": [
     "Measure expiry and liveness while the renderer is genuinely throttled. A minimized test window did not produce the expected renderer visibility transition. The separately attempted page lifecycle fixture still allowed renewal, so this requirement remains open.",
-    "Verify packaged rollback and qualify the held-reply and persisted audit tests on this candidate.",
+    "Verify packaged rollback and a held context producer with the current native lifecycle behavior.",
     "Bind the complete increment requirements to the final candidate."
   ]
 }

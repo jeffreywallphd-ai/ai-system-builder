@@ -50,6 +50,72 @@
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "revocable-desktop-presentation",
       "criterion_id": "desktop-takeover-real-host",
+      "work_id": "headless-win32-window-lifecycle-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "a11c53613951d675494b61d120264bc94023c8c53933d54ed06cf1140206d64d",
+      "review_digest": "e31130762c072036bb24cabf185ee79aff7171d71a06111dc6f173c109a96aeb",
+      "scope": "Four packaged Windows journeys passed. Across 100 revokes during normal use, loading and dialogs, p95 was 6.2 ms and maximum was 6.5 ms. The saved audit entries and independent windows passed their checks.",
+      "limitations": [
+        "The remaining Windows work covers native background expiry, held context responses and a complete rollback test."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "revocation-and-delivery-targets",
+      "work_id": "headless-win32-window-lifecycle-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "a11c53613951d675494b61d120264bc94023c8c53933d54ed06cf1140206d64d",
+      "review_digest": "e31130762c072036bb24cabf185ee79aff7171d71a06111dc6f173c109a96aeb",
+      "scope": "Four packaged Windows journeys passed. Across 100 revokes during normal use, loading and dialogs, p95 was 6.2 ms and maximum was 6.5 ms. The saved audit entries and independent windows passed their checks.",
+      "limitations": [
+        "The remaining Windows work covers native background expiry, held context responses and a complete rollback test."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "backend-continuity-and-lifecycle-isolation",
+      "work_id": "headless-win32-window-lifecycle-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "a11c53613951d675494b61d120264bc94023c8c53933d54ed06cf1140206d64d",
+      "review_digest": "e31130762c072036bb24cabf185ee79aff7171d71a06111dc6f173c109a96aeb",
+      "scope": "Four packaged Windows journeys passed. Across 100 revokes during normal use, loading and dialogs, p95 was 6.2 ms and maximum was 6.5 ms. The saved audit entries and independent windows passed their checks.",
+      "limitations": [
+        "The remaining Windows work covers native background expiry, held context responses and a complete rollback test."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "backend-continuity-and-lifecycle-isolation",
+      "work_id": "headless-native-window-visibility-fence",
+      "work_criteria": [
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "cb3fd9bd4b91cc8940906d137a31106fc7af84cf64c0f3228f5c783961151936",
+      "review_digest": "c7b88f4890a03fbb5218da5d72d60ad8db8d9bcdec63bb3350983c22accca392",
+      "scope": "Commit 9e5da225b retires the exact main-frame takeover on native hide or minimize and requires a fresh window registration on restore.",
+      "limitations": [
+        "This focused receipt verifies main-process retirement. Renderer cancellation of responses already in transit and packaged timing are separate checks."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "desktop-takeover-real-host",
       "work_id": "headless-win32-takeover-native-witnesses",
       "work_criteria": [
         "desktop-takeover-real-host",
