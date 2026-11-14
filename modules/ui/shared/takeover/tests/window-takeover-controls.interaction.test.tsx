@@ -19,9 +19,13 @@ test("stacks an out-of-flow consent dialog over an ordinary dialog and restores 
   assert.ok(target);
   const grant = { target: { ...target, leaseId: id(8), generation: 1 }, remainingMs: 2_000 };
   const rescinded: unknown[] = [];
+  let finishReady!: (value: typeof grant) => void;
+  const readiness = new Promise<typeof grant>(resolve => {finishReady = resolve;});
+  let submits = 0;
+  let clicks = 0;
   const controller = createWindowTakeoverController({
     now: () => 0, readDraft: () => ({ status: "clean" }),
-    port: { async accept() { return grant; }, async ready() { return grant; },
+    port: { async accept() { return grant; }, async ready() { return readiness; },
       async revoke(value) { rescinded.push(value); return false; } },
   });
   const control = { controller, registerDraft: () => () => {} };
@@ -31,7 +35,10 @@ test("stacks an out-of-flow consent dialog over an ordinary dialog and restores 
     <WindowTakeoverProvider control={control}>
       <WindowTakeoverControls workspaceLabel="Fixture workspace" />
       <ModalDialog open={open} title="Ordinary dialog" onClose={() => {}}>
-        <button type="button">Read details</button>
+        <form onSubmit={event => {event.preventDefault(); submits++;}}>
+          <button type="button" onClick={() => {clicks++;}}>Read details</button>
+          <button type="submit">Save changes</button>
+        </form>
       </ModalDialog>
     </WindowTakeoverProvider>
   );
@@ -47,10 +54,24 @@ test("stacks an out-of-flow consent dialog over an ordinary dialog and restores 
     assert.equal(document.activeElement?.textContent, "Decline");
     const accept = [...consent.querySelectorAll("button")].find(button => button.textContent === "Accept automation takeover");
     assert.ok(accept);
-    await act(async () => accept.click());
+    const form = dialog.querySelector("form")!;
+    const readDetails = form.querySelector<HTMLButtonElement>("button[type='button']")!;
+    function attemptBodyActions() {
+      form.dispatchEvent(new dom.window.Event("submit", {bubbles: true, cancelable: true}));
+      readDetails.click();
+    }
+    await act(async () => {
+      accept.click();
+      assert.equal(controller.getSnapshot().status, "activating");
+      attemptBodyActions();
+      assert.deepEqual([submits, clicks], [0, 0]);
+    });
+    await act(async () => finishReady(grant));
     assert.equal(controller.getSnapshot().status, "active");
     assert.equal(consent.isConnected, false);
     assert.ok(dialog.querySelector(".ui-modal-body")?.hasAttribute("inert"));
+    attemptBodyActions();
+    assert.deepEqual([submits, clicks], [0, 0]);
     const revoke = [...dialog.querySelectorAll("button")].find(button => button.textContent?.trim() === "Revoke automation takeover");
     assert.ok(revoke);
     revoke.focus();
@@ -61,8 +82,11 @@ test("stacks an out-of-flow consent dialog over an ordinary dialog and restores 
     assert.equal(document.querySelector("[role='dialog']"), dialog);
     assert.equal(dialog.querySelector(".ui-modal-body")?.hasAttribute("inert"), false);
     assert.equal(document.activeElement, dialog.querySelector("button.ui-modal-close"));
+    attemptBodyActions();
+    assert.deepEqual([submits, clicks], [1, 1]);
     assert.match(app.textContent!, /Chat tasks can continue/);
   } finally {
+    finishReady(grant);
     await act(async () => root.unmount());
     controller.close();
   }

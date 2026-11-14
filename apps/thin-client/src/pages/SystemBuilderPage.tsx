@@ -19,6 +19,7 @@ import { createThinClientSystemPublishedFormClient } from "../features/system-bu
 import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
 import { observeManagedSavedSystems } from "../features/system-builder/api/observeManagedSavedSystems";
 import { pairedDeviceTokenStore } from "../security/pairedDeviceTokenStore";
+import { useWindowTakeover } from "../../../../modules/ui/shared/takeover/WindowTakeoverContext";
 export interface SystemBuilderPageProps {
   readonly workspaceId: string;
   readonly workspaceName: string;
@@ -35,6 +36,11 @@ export function SystemBuilderPage({
   );
   const publishedFormsClient = useMemo(createThinClientSystemPublishedFormClient, []);
   const [activeTabId, setActiveTabId] = useState("compose");
+  const { controller, presentationAttached } = useWindowTakeover();
+  const userOwnsView = () => {
+    const status = controller?.getSnapshot().status;
+    return status !== "active" && status !== "activating";
+  };
   const [composeSystemId, setComposeSystemId] = useState<string>();
   const [activeSystemsRevision, setActiveSystemsRevision] = useState(0);
   const [managedSavedRefresh, setManagedSavedRefresh] = useState<SavedSystemsRefresh>();
@@ -62,7 +68,7 @@ export function SystemBuilderPage({
       />
       <TabbedPanel
         activeTabId={activeTabId}
-        onTabChange={setActiveTabId}
+        onTabChange={(id) => { if (userOwnsView()) setActiveTabId(id); }}
         defaultTabId="compose"
         tabListAriaLabel="System Builder sections"
         tabs={[
@@ -70,6 +76,7 @@ export function SystemBuilderPage({
             id: "manage",
             label: "Manage",
             content: (
+              <fieldset disabled={presentationAttached} style={{minWidth:0,border:0,padding:0,margin:0}}>
               <SystemManagementWorkspace
                 workspaceId={workspaceId}
                 client={client}
@@ -77,6 +84,7 @@ export function SystemBuilderPage({
                 managedSavedRefresh={managedSavedRefresh}
                 captureSavedRead={pairedDeviceTokenStore.captureToken}
                 onOpenInCompose={(systemId) => {
+                  if (!userOwnsView()) return;
                   setComposeSystemId(systemId);
                   setActiveTabId("compose");
                 }}
@@ -84,6 +92,7 @@ export function SystemBuilderPage({
                   setActiveSystemsRevision((current) => current + 1)
                 }
               />
+              </fieldset>
             ),
           },
           {
@@ -98,7 +107,8 @@ export function SystemBuilderPage({
                 activeSystemsRevision={activeSystemsRevision}
                 managedSavedRefresh={managedSavedRefresh}
                 captureSavedRead={pairedDeviceTokenStore.captureToken}
-                onBuildAndTest={setBuildTarget}
+                onBuildAndTest={(target) => { if (userOwnsView()) setBuildTarget(target); }}
+                takeoverReadOnly={presentationAttached}
               />
             ),
           },
@@ -106,12 +116,14 @@ export function SystemBuilderPage({
             id: "publish",
             label: "Publish",
             content: (
+              <fieldset disabled={presentationAttached} style={{minWidth:0,border:0,padding:0,margin:0}}>
               <SystemPublishWorkspace
                 workspaceId={workspaceId}
                 buildClient={buildClient}
                 lifecycleClient={lifecycleClient}
                 publishedFormsClient={publishedFormsClient}
               />
+              </fieldset>
             ),
           },
         ]}

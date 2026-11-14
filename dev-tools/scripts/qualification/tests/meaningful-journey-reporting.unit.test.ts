@@ -118,6 +118,9 @@ const publishedFormHostSources=new Set([
 const packagedHeadlessSource="dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
 const packagedHeadlessOriginalCommit="6ce8b3255a935f3a02e65f902a2989b31a417bf6";
 const packagedHeadlessLatestBaseline="a1894a3a13a013bfb25d12ddae1c074923216b34";
+const packagedTakeoverSource="dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
+const packagedTakeoverOriginalCommit="29524bbbf70785f0323a37d1f6af633517c19ad0";
+const packagedTakeoverVersions=[packagedTakeoverOriginalCommit,"888a58bbcaf2062e8f73ce54abd7dd4f50d8ebce","01b007c569e2c7a5bf819677b5c505734cdf59e4"];
 const reviewReferenceSources=[
   "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
   "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
@@ -183,9 +186,16 @@ async function censusBundle() {
 }
 type CensusBundle=Awaited<ReturnType<typeof censusBundle>>;
 function originalCensusRows(bundle:CensusBundle,map:CensusMap) {
-  // These two host definitions arrived after the retained baseline. Authenticate
-  // their exact later source while keeping their baseline drift visible.
+  // Later host definitions retain their exact Git witnesses and remain visible
+  // as drift against the original baseline.
   return map.sources.filter(row=>{
+    if(map.source_baseline===originalDefinitionBaseline && row.path===packagedTakeoverSource) {
+      if(row.committed_sha256!=="0".repeat(64)||!packagedTakeoverVersions.some(commit=>
+        jsonSha(row.facts)===jsonSha(bundle.api.sourceFacts(row.path,gitSource(commit,row.path))))) {
+        throw new Error("UI definition Git pin does not match its reviewed Desktop takeover source version.");
+      }
+      return false;
+    }
     if(map.source_baseline===originalDefinitionBaseline && row.path===packagedHeadlessSource) {
       const original=bundle.api.sourceFacts(row.path,gitSource(packagedHeadlessOriginalCommit,row.path));
       const historical=JSON.parse(gitSource(packagedHeadlessLatestBaseline,censusPath).toString("utf8")) as CensusMap;
@@ -193,7 +203,8 @@ function originalCensusRows(bundle:CensusBundle,map:CensusMap) {
       if(prior?.committed_sha256!==original.sha256||row.committed_sha256!==original.sha256||
           !["4af822bfed55376be4f7f81dd3924dd1ecc848726842ac8ce1ef0aa8582f8c93",
             "205d01b56f5e64bfecd6d77f0efb5b8a5d4cea232522a3e587dfdd43de7d4ae9",
-            "e0bf28e6f84706bcf55d47457174fdc31946f415e5938ad852143556b38658de"].includes(jsonSha(row.facts))) {
+            "e0bf28e6f84706bcf55d47457174fdc31946f415e5938ad852143556b38658de",
+            jsonSha(bundle.api.sourceFacts(row.path,gitSource(packagedTakeoverOriginalCommit,row.path)))].includes(jsonSha(row.facts))) {
         throw new Error("UI definition Git pin does not match its reviewed Headless source version.");
       }
       return false;
@@ -426,7 +437,7 @@ function historicalWorkspaceSwitchMap() {
 }
 it("keeps current coverage definitions bound to real source and preserves unrun qualification",async()=>{
   const bundle=await censusBundle(),result=checkedCensus(bundle,bundle.map);
-  expect(result).toMatchObject({scenario_count:39,behavior_links:131,source_files:184,current_host_spec_files:32,inventory_groups:16,
+  expect(result).toMatchObject({scenario_count:39,behavior_links:131,source_files:185,current_host_spec_files:33,inventory_groups:16,
     definition_map_valid:true,executed_tests:0,actual_host_pass:false,parent_qualification_granted:false,full_testing_status:"deferred-by-user"});
   expect(result.gaps.filter(gap=>gap.kind === "actual-host-not-run-by-census")).toHaveLength(39);
   expect(result.gaps.some(gap=>gap.kind === "declared-test-modifier")).toBe(true);

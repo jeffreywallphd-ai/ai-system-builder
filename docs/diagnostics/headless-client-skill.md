@@ -21,7 +21,9 @@ enable conversation in the launcher. The flags control tool discovery.
 The desktop checks pairing, workspace permission and the existing exact
 conversation approval when it receives a request. Presentation tools can ask to
 attach an exact app window. The user accepts or declines in that window and can
-revoke from the shell or an open dialog. If the desktop does not
+revoke from the shell or an open dialog. While control is starting or active,
+open dialogs pause their body actions, including form submissions. The dialog
+header keeps Revoke available. If the desktop does not
 offer conversation access, leave that feature unavailable. Installing the skill
 grants none of these permissions.
 

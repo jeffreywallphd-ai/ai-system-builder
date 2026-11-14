@@ -16,6 +16,8 @@ When the server enables browser takeover, the shared confirmation dialog
 lets you accept or decline a request. Revoke returns the tab to your control
 without waiting for the server. The tab can neither keep nor reuse its
 document proof after a page exit, workspace change or sign-in change.
+While an accepted takeover is active, browser navigation, workspace switching
+and conflicting Systems controls are unavailable. Revoke restores them locally.
 On hosts with presentation enabled, an accepted chat session can show saved
 system, component, validation, run or artifact information in the shared
 resource panel. The tab keeps the user's route and draft. Local revoke hides

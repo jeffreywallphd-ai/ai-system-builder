@@ -2,6 +2,7 @@ import {
   useEffect,
   useId,
   useRef,
+  type FormEvent,
   type MouseEvent,
   type ReactNode,
   type RefObject,
@@ -157,7 +158,7 @@ export function ModalDialog({
   dialogClassName,
   bodyClassName,
 }: ModalDialogProps) {
-  const { presentationAttached } = useWindowTakeover();
+  const { controller, presentationAttached } = useWindowTakeover();
   const layer: ModalLayer = windowConsent ? "window-consent" : stacked ? "stacked" : "default";
   const instanceId = useId();
   const dialogRef = useRef<HTMLElement>(null);
@@ -339,6 +340,13 @@ export function ModalDialog({
     }
   };
 
+  function fenceBodyAction(event: MouseEvent<HTMLDivElement> | FormEvent<HTMLDivElement>) {
+    const status = controller?.getSnapshot().status;
+    if (status !== "activating" && status !== "active") return;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   const dialog = (
     <div
       className={overlayClasses}
@@ -368,9 +376,8 @@ export function ModalDialog({
           </button>
         </header>
         <div className={bodyClasses} inert={presentationAttached || undefined}
-          onClickCapture={event => {
-            if (presentationAttached) { event.preventDefault(); event.stopPropagation(); }
-          }}
+          onClickCapture={fenceBodyAction}
+          onSubmitCapture={fenceBodyAction}
         >
           {children}
         </div>

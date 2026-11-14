@@ -4476,79 +4476,83 @@
   {
    "path": "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
    "facts": {
-    "sha256": "ee7ac136609383765406bf8cb6ee15cf52cdb573ccc2285880cad00689d938bb",
-    "bytes": 9122,
+    "sha256": "7bdcaef1c6a2859e1d518d5cf71d4e5c39e306e37f6c08830bbc48908ac8eb03",
+    "bytes": 11651,
     "cases": [
      {
+      "name": "enables browser navigation again before the exact revoke request returns",
+      "line": 58
+     },
+     {
       "name": "opens from the trigger and moves to the first item by keyboard",
-      "line": 65
+      "line": 111
      },
      {
       "name": "closes on Escape and returns focus from a menu item",
-      "line": 71
+      "line": 117
      },
      {
       "name": "wraps arrows and supports Home End and a label key without changing the current page",
-      "line": 76
+      "line": 122
      },
      {
       "name": "opens at the last enabled item with Arrow Up and toggles from the trigger with Space",
-      "line": 87
+      "line": 133
      },
      {
       "name": "closes on Tab without canceling native traversal (shift %s)",
-      "line": 93
+      "line": 139
      },
      {
       "name": "activates exactly the selected route once and returns focus",
-      "line": 98
+      "line": 144
      },
      {
       "name": "retains the native %s default-action contract without premature navigation",
-      "line": 102
+      "line": 148
      },
      {
       "name": "outside %s closes without taking focus or navigating",
-      "line": 109
+      "line": 155
      },
      {
       "name": "removes owned document dismissal listeners on unmount",
-      "line": 113
+      "line": 159
      },
      {
       "name": "does not mark a pending workspace-required route active while setup is visible",
-      "line": 123
+      "line": 169
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "mountedMenu",
-      "line": 54
+      "line": 100
      }
     ],
-    "assertionCount": 48,
-    "assertionDigest": "34f6ddc2aae3536ee81527214fd65a86017537192482d34e92a67fc9d558e1e4",
+    "assertionCount": 56,
+    "assertionDigest": "a2a2d3d20fd4a4db7756c792baf90435a086fcd3e0df2419e66283e3092d8ef2",
     "assertionExamples": [
      {
-      "line": 67,
+      "line": 79,
       "kind": "expect",
-      "sha256": "e5edf7c9c85966a7662c352c8fee0d621a1de70f1f410dc7b0a846c05ba82ea6"
+      "sha256": "de928746624800f1d4dc638d745ec24385c8d604f15cdf63c2de9663ffdc5e65"
      },
      {
-      "line": 67,
+      "line": 84,
       "kind": "expect",
-      "sha256": "ef24c307f2916942d4bbec618ea549810b31c5bfc79aa4b8e85efab1ad2ba00a"
+      "sha256": "c3b660dd932ab3fb208363a9eef336073cdb2e85643c9283532f4fbd559ee355"
      },
      {
-      "line": 68,
+      "line": 85,
       "kind": "expect",
-      "sha256": "62443ce1e51b198693fa01819e8a3258d617f935ed38e448bbb046ebd5b34029"
+      "sha256": "179b3da9720869d2a03df1d555f238ae33ad72845fe283bf1d36e8f36e94872c"
      },
      {
-      "line": 69,
+      "line": 87,
       "kind": "expect",
-      "sha256": "24b71b66d1772036b3ba23c696a6c2bcc0c78b009a69aa198bf53259682e200c"
+      "sha256": "87b00bdd8d4336953f0e00d7cbf519ca986e7754c0b3fba8b5608033e9a85360"
      }
     ],
     "modifiers": []
@@ -17626,7 +17630,7 @@
     "Compose",
     "Publish"
    ],
-   "sha256": "ab5aaf109db3c782222634f06645f92e0c5c2fcc2d3c01f8330e3866d0db162d",
+   "sha256": "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
    "surface_key": "systemsTabs"
   },
   {

@@ -1095,7 +1095,33 @@ function navigationCensusLegacyView(map,result){
 }
 let committedCensusWitness;
 const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
+const browserTakeoverCensus = {
+  priorCommit: "f98e3f25d31f386598dcf0f761f72f600cf6e2a2",
+  before: "0e1e0993aded066e4061ffbdbf7f4ccfa490b12f68f7416a4505a9a8a0e7377b",
+  after: "e2a4827c41f146e11a5ebbd5f5409a1dd74fc49aa6ef7de3e43e0ec54bbef3a9",
+  test: "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+  facts: "6e948152c97208843b71a8789efabf5dc3991ff5289f19ba755d24b5aec85acb",
+  view: "apps/thin-client/src/pages/SystemBuilderPage.tsx",
+  inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
+};
+function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) !== browserTakeoverCensus.after) return {map,result};
+  const {priorCommit,before,test,facts,view,inventory} = browserTakeoverCensus;
+  const saved = JSON.parse(historicalSource(priorCommit,censusDocument));
+  assert.equal(sha(JSON.stringify(saved)),before);
+  const expected = structuredClone(saved);
+  const source = map.sources.find(row => row.path === test);
+  assert.equal(sha(JSON.stringify(source.facts)),facts);
+  expected.sources.find(row => row.path === test).facts = source.facts;
+  expected.inventories.find(row => row.source === view).sha256 = inventory;
+  assert.deepEqual(map,expected);
+  assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"),sourceDrift(expected));
+  return {map:saved,result:{...result,gaps:[
+    ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved),
+  ]}};
+}
 function headlessPackagedCensusLegacyView(map, result) {
+  ({map,result}=browserTakeoverCensusLegacyView(map,result));
   if (sha(JSON.stringify(map)) === "0e1e0993aded066e4061ffbdbf7f4ccfa490b12f68f7416a4505a9a8a0e7377b") {
     // Preserve the previous definition witness and record newly changed test definitions as drift.
     const commit = "d27ed7bacd55d3dd0578216de7f044899b906b00";
@@ -2205,7 +2231,9 @@ test("pending notification definitions preserve raw gaps and every earlier sourc
 });
 
 test("current published form checkpoint preserves its complete source gaps and original notification witness",()=>{
-  const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
+  const published=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
+  const publishedResult={gaps:sourceDrift(published)};
+  const {map}=browserTakeoverCensusLegacyView(published,publishedResult);
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
   assert.equal(result.gaps.length,35);
@@ -2315,4 +2343,16 @@ test("current published form checkpoint preserves its complete source gaps and o
   const [pin]=publishedFormTabInventory;
   stale.inventories.find(row=>row.source===pin.source&&row.property==="label").sha256=pin.before;
   assert.throws(()=>assertCompleteCurrentSourceDrift(stale,result));
+});
+
+test("the browser controls checkpoint retains its unqualified source drift and exact prior census",()=>{
+  const current=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
+  const result={gaps:sourceDrift(current)};
+  const candidate=browserTakeoverCensusLegacyView(current,result);
+  assert.equal(sha(JSON.stringify(candidate.map)),browserTakeoverCensus.before);
+  assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(current,result));
+  assert.throws(()=>assertCompleteCurrentSourceDrift(current,{gaps:result.gaps.filter(row=>row.source!==browserTakeoverCensus.test)}));
+  const forged=structuredClone(current);
+  forged.inventories.find(row=>row.source===browserTakeoverCensus.view).values.reverse();
+  assert.throws(()=>assertCompleteCurrentSourceDrift(forged,result));
 });

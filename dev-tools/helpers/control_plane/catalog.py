@@ -263,6 +263,9 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "apps/thin-client/src/App.tsx",
+            "apps/thin-client/src/components/layout/AppShell.tsx",
+            "apps/thin-client/src/pages/SystemBuilderPage.tsx",
+            "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
             "apps/thin-client/src/features/workspace/hooks/useActiveWorkspace.tsx",
             "apps/thin-client/src/features/workspace/hooks/useManagedBrowserTakeover.ts",
             "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
