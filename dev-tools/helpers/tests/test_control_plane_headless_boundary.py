@@ -12,6 +12,15 @@ class HeadlessReadRoutingTests(unittest.TestCase):
     def plan(self, paths, *required):
         return {row["id"]: row for row in catalog.plan(HELPERS.parents[1], paths, ["architecture", *required], "a" * 64)["selected"]}
 
+    def test_window_authority_check_covers_the_exact_core_and_keeps_neighbor_fallback(self):
+        check = "headless-ui-control-authority"
+        source = "modules/application/services/ui-control/ui-control-authority.service.ts"
+        selected = self.plan([source])
+        self.assertEqual(set(selected), {"architecture", check})
+        self.assertIn("modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts", selected[check]["argv"])
+        other = "modules/application/services/ui-control/other-service.ts"
+        self.assertIn("focused-tests", self.plan([source, other]))
+
     def test_composer_witness_routing_is_opt_in_and_exact(self):
         check = "headless-composer-draft-witnesses"
         inventory = "modules/ui/shared/notifications/tests/notificationMigrationInventory.ts"

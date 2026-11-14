@@ -161,6 +161,26 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-ui-control-authority": {
+        "sources": (
+            "modules/contracts/headless/ui-control-authority.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/contracts/headless/tests/ui-control-authority-contract.unit.test.ts",
+            "modules/application/services/ui-control/ui-control-authority.service.ts",
+            "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+        ),
+        "automatic_sources": (
+            "modules/contracts/headless/ui-control-authority.ts",
+            "modules/contracts/headless/tests/ui-control-authority-contract.unit.test.ts",
+            "modules/application/services/ui-control/ui-control-authority.service.ts",
+            "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/ui-control-authority-contract.unit.test.ts",
+            "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+        ),
+    },
     "desktop-headless-chat-task-settings": {
         "sources": (
             "apps/desktop/src/renderer/features/settings/components/RecentHeadlessChatTasks.tsx",

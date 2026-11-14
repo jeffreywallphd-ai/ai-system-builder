@@ -43,3 +43,4 @@ export * from "./headless-system-management";
 export * from "./desktop-system-change-poll";
 export { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } from "./headless-authoring-result";
 export * from "./headless-approved-turn";
+export * from "./ui-control-authority";

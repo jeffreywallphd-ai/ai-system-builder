@@ -5,6 +5,15 @@ Scope: the approved desktop connector, shared authoring and receipt boundaries,
 revocable window presentation, and later managed parity. This is a design
 review; the first contract alone does not qualify any live host.
 
+The [presentation authority decision](../adr/ADR-0048-revocable-window-presentation-authority.md)
+defines the new in-memory reservation, exact retry, and runtime bounds. Reject
+agent self-acceptance, another interactive document, replaced workspaces,
+incomplete revoke targets, expired leases and changed retry input. Recheck
+current policy and document ownership after a held asynchronous check. The
+reservation service owns only presentation state. It stores finite identifiers
+and starts no runtime or provider. Actual renderer, transport, and native
+window evidence still need their own checks.
+
 | Protected asset | Failure to prevent | Owning control and required evidence |
 | --- | --- | --- |
 | Workspace identity and saved systems | A tool claims a foreign principal, client or workspace; membership changes after pairing. | Host-derived identity and current application checks on every operation, including reads and replay. Test missing, expired, revoked and wrong-scope grants with synthetic records. |
