@@ -146,6 +146,31 @@
         "Current ten-criterion control-plane receipt passed. Both actual packaged cases passed."
       ],
       "title": "Package the skill and qualify real desktop authoring"
+    },
+    {
+      "areas": [
+        "Headless contracts and presentation authority service"
+      ],
+      "chunkId": "exact-window-authority",
+      "completedAt": "2026-11-14T11:40:48Z",
+      "criteriaIds": [
+        "exact-window-acceptance-and-reservation",
+        "immediate-local-revocation-and-exact-retry",
+        "backend-continuity-and-lifecycle-isolation",
+        "security-ui-control-reviewed"
+      ],
+      "documentation": [
+        "ADR-0048 and Headless System Builder threat model"
+      ],
+      "feedbackAddressed": [],
+      "id": "revocable-desktop-presentation-exact-window-authority",
+      "incrementId": "revocable-desktop-presentation",
+      "summary": "Added strict finite window, request, attempt and lease contracts and one bounded presentation-only authority per host. Current receipt 1b7c23d91ed7ef7be5af177862dfe6c0c13433fd294e9de5a1740d8fd8d0a6b0 and accepted separate review bbbc30d6c5ffe92e50f5f512130ddfd8935651fd7a77ea31cd7e179f6ab1013f.",
+      "tests": [
+        "Nine deterministic tests cover concurrent acceptance, exact retry, readiness, revoke or expiry while pending, multi-window scope, replaced documents and unavailable policy.",
+        "Five current candidate checks passed. Electron wiring and full increment qualification are pending."
+      ],
+      "title": "Reserve and activate exact authority"
     }
   ],
   "completion": null,
@@ -842,6 +867,12 @@
       "recordedAt": "2026-11-14T11:24:42Z",
       "sequence": 40,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "a1b3d509406114020a70f446a0760491035d016bf2d75315e5c896facdff5c70",
+      "recordedAt": "2026-11-14T11:40:48Z",
+      "sequence": 41,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1137,7 +1168,9 @@
       ],
       "allowPendingQualification": true,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "exact-window-authority"
+      ],
       "deliverables": [
         "Successor ADR and current architecture/threat-model guidance defining UI authority independent of backend grants, exact targeting, terminal revocation, delivery queues, minimal context, draft handoff and lifecycle recovery.",
         "Framework-neutral UI-control contracts/ports/application state machine, finite IPC/preload surfaces, bounded host authority/delivery stores and exact owned-window registration.",
@@ -1883,5 +1916,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-14T11:24:42Z"
+  "updatedAt": "2026-11-14T11:40:48Z"
 }
