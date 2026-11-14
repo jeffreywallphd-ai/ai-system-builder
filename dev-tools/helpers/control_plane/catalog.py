@@ -162,6 +162,21 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "managed-headless-browser-live-fixture": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
+        ),
+    },
     "managed-headless-live-fixture": {
         "automatic_sources": (
             "dev-tools/scripts/qualification/visual-composer/managed-headless-agent.ts",

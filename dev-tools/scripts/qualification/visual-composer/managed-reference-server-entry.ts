@@ -1,3 +1,6 @@
+import express from "express";
+import path from "node:path";
+import { lstat, realpath } from "node:fs/promises";
 import { createServer, createServerListener } from "../../../../apps/server/src/createServer";
 import { openPostgresDatabase, resolvePostgresPoolConfig } from "../../../../modules/adapters/persistence/postgres";
 import { createControlledRuntimeEnvironmentPreparer } from "./controlled-runtime-preparation.mjs";
@@ -9,7 +12,22 @@ async function main() {
   const owned = await openManagedReferenceListener({
     openDatabase:()=>openPostgresDatabase({config: resolvePostgresPoolConfig(process.env), migrate:false}),
     prepareEnvironment:()=>createControlledRuntimeEnvironmentPreparer({repoRoot:process.cwd(),runRoot:process.env.SERVER_RUNTIME_ROOT!,environment:process.env}),
-    createHost:(database:Awaited<ReturnType<typeof openPostgresDatabase>>,preparer:ReturnType<typeof createControlledRuntimeEnvironmentPreparer>)=>createServer({env:process.env,postgresDatabase:database,pythonRuntimeEnvironmentPreparer:preparer}),
+    async createHost(database:Awaited<ReturnType<typeof openPostgresDatabase>>,preparer:ReturnType<typeof createControlledRuntimeEnvironmentPreparer>) {
+      const serveBrowser = process.env.MANAGED_REFERENCE_SERVE_BUILT_BROWSER === "1";
+      const directory = path.resolve("apps/thin-client/dist");
+      if (serveBrowser) {
+        const index = path.join(directory, "index.html");
+        if (process.env.NODE_ENV !== "test" || !/^https:\/\/127\.0\.0\.1:[1-9][0-9]{0,4}$/.test(process.env.AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN ?? "") ||
+            await realpath(directory) !== directory || await realpath(index) !== index || !(await lstat(index)).isFile())
+          throw new Error("The managed browser test requires its exact built thin client and local test origin.");
+      }
+      const host = await createServer({env:process.env,postgresDatabase:database,pythonRuntimeEnvironmentPreparer:preparer});
+      if (serveBrowser) {
+        host.app.use("/assets", express.static(path.join(directory, "assets"), {dotfiles:"deny", index:false, redirect:false}));
+        host.app.get(["/", "/systems"], (_request, response) => response.sendFile("index.html", {root: directory}));
+      }
+      return host;
+    },
     createListener:createServerListener,
   });
   process.send?.({type: "ready"});

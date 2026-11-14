@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID, X509Certificate } from "node:crypto";
 import { execFileSync, fork, spawn, type ChildProcess } from "node:child_process";
 import { mkdir, readFile, realpath, lstat, readdir, writeFile } from "node:fs/promises";
 import https from "node:https";
@@ -70,7 +70,8 @@ async function interruptOwnedDeliveryProcess(child: ChildProcess, allowExited = 
 }
 
 export async function startManagedReferenceHost(databaseReference: string,
-  options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean } = {}) {
+  options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean; readonly headlessBrowser?: boolean } = {}) {
+  assert.ok(!options.headlessBrowser || options.headlessAgent && !options.headlessDelivery);
   const root = path.resolve(process.cwd());
   const id = randomUUID().replaceAll("-", "");
   const runRoot = path.join(root, "artifacts/qualification/visual-composer/d", `managed-${id}`);
@@ -224,6 +225,10 @@ export async function startManagedReferenceHost(databaseReference: string,
       AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID: agentClient,
       AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID: browserClient,
     });
+    if (options.headlessBrowser) Object.assign(environment, {
+      AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN: `https://127.0.0.1:${serverPort}`,
+      MANAGED_REFERENCE_SERVE_BUILT_BROWSER: "1",
+    });
     async function launchServer(env: typeof environment = environment, delivery = false) {
       const child = fork(path.join(root, "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts"), [], {execArgv: ["--import", "tsx"], env, silent: true, windowsHide: true});
       if (delivery) deliveryServer = child;
@@ -364,6 +369,13 @@ export async function startManagedReferenceHost(databaseReference: string,
     const agent = options.headlessAgent ? {
       workspaceId: delivery.workspaceId, caFile: ca, access: await accessToken(agentClient), browser: await accessToken(browserClient),
     } : undefined;
+    if (options.headlessBrowser) {
+      const spki = new X509Certificate(material.certPem).publicKey.export({type: "spki", format: "der"});
+      const browserPin = createHash("sha256").update(spki).digest("base64");
+      report.status = "ready";
+      await persist();
+      return {...common, delivery, agent, frontendOrigin: serverOrigin, browserPin};
+    }
     if (options.headlessDelivery || options.headlessAgent) {
       report.status = "ready"; await persist();
       return {...common, delivery, agent, frontendOrigin: ""};

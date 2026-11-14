@@ -156,6 +156,17 @@ credentials. It verifies distinct browser and agent credentials, then
 creates, reads and retries the same saved system. The browser's authorized
 feed observes one committed change. The test keeps result facts without
 storing the request payload or credentials.
+
+The managed browser consent qualification uses the built thin client, local
+Chrome, an official stdio client and the fixture's HTTPS, OIDC and PostgreSQL
+server. Run `npm run build:thin-client` and use the existing isolated
+PostgreSQL fixture. Set its `MANAGED_REFERENCE_DATABASE` reference before
+running
+`node --import tsx dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts`.
+Retire the database with the same fixture operator. The journey records bounded
+observations for request, dialog, consent, revoke and reload. Presentation
+delivery and whole-increment qualification use separate evidence.
+
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
 The related managed saved-state browser check runs the exact observer and model
