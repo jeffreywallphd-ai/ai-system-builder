@@ -252,6 +252,20 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/system-builder/tests/headless-committed-changes.unit.test.ts",
         ),
     },
+    "managed-headless-delivery-fixture": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-delivery.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-delivery.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+        ),
+        "command": (
+            "--test", "--",
+            "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+            "dev-tools/scripts/qualification/tests/managed-assets-restart-loader.unit.test.mjs",
+        ),
+    },
     "headless-desktop-window-renderer": {
         "companion_to": "headless-desktop-takeover-controls",
         "sources": (

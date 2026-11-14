@@ -185,6 +185,15 @@ and expired bindings. Client classification only identifies the credential's
 purpose. Operations still require current application policy, and the
 target document must hold separate user consent before it can show agent work.
 
+The controlled delivery test uses two independent loopback HTTPS servers
+with the same disposable PostgreSQL database and a nonowner role without
+`BYPASSRLS`. It sends synthetic changes through the ordinary authenticated
+API, interrupts only its owned subscriber process, and verifies that new
+workers require a fresh scoped snapshot. Test evidence keeps timings and
+outcomes without storing credentials, cursors or record content. This
+check covers committed saved-state recovery, with production topology
+and full browser takeover qualified separately.
+
 Headless workflow metadata rechecks the same exact workspace before and after
 the existing use cases run. A fixed profile and action allowlist omits
 deployment, mutation and execution. The projection does not relay private

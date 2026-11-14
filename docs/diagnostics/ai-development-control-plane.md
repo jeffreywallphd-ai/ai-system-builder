@@ -137,6 +137,15 @@ parity tests. Run the isolated live PostgreSQL checks for index behavior,
 workspace isolation and the active summary cap.
 The managed saved-state replay check runs the exact API, passive audit,
 repository, and PostgreSQL tests for the scoped snapshot and replay routes.
+
+For the controlled two-worker replay check, set `MANAGED_REFERENCE_DATABASE`
+to the reference for the existing isolated, pinned PostgreSQL fixture. Run
+`node --import tsx dev-tools/scripts/qualification/visual-composer/managed-headless-delivery.ts`
+from the repository. It opens two temporary loopback HTTPS servers, saves
+synthetic systems, interrupts an owned subscriber process and verifies replay
+and resync. Its report contains bounded timings and outcomes. Stop the
+disposable database with the same fixture operator after the check. Built
+browser presentation and production ingress are separate qualifications.
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
 The related managed saved-state browser check runs the exact observer and model
