@@ -13576,6 +13576,39 @@
     {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "security-managed-parity-reviewed", "work_id": "headless-managed-chrome-membership-loss", "work_criteria": ["managed-real-revoked-member-cannot-read-replay-write-or-control"], "receipt_digest": "d6fe5a5642299148596702c287671d0fc6fcf74428ad1f6cee3850ce50759a2f", "review_digest": "5a80f0fe555c2a06ced811227525a9dfacf5ab3df95b7a65505f3213a353b851", "scope": "When the test account lost access, Chrome returned control to the user. The server denied saved-state reads, new changes and retries. Restoring access kept the original save and did not restore takeover.", "limitations": ["The test used a synthetic account on the local server. The test did not verify signing in again after access was restored."]},
     {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-chrome-save-before-accept-conflict", "work_criteria": ["managed-conflicting-save-keeps-control-and-never-grants"], "receipt_digest": "911f77c2320e1d051d1d78394213809622d8ff855a30d93b43850a980a1e374d", "review_digest": "a5bce34d0a9dc6f3695e152e367a4d5f824055d2ffa4e462f2923636a5d19a18", "scope": "Chrome tried to save a stale draft from the takeover popup. The unsaved field stayed intact. Manual controls returned when the request ended. The newer saved revision stayed intact, and the browser sent no request to grant takeover.", "limitations": ["This run covered a save conflict. The timeout check for a hidden window remains open."]},
     {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-live-context-reply-after-revoke", "work_criteria": ["managed-held-context-response-sends-nothing-after-revoke"], "receipt_digest": "ac15cf74523cccf06f33a71bc5d887b165ad8a24386292b6e3b336fc14e7f607", "review_digest": "5442ca8dd9088e218653b18a8066cc39fb7edf2ad00211704759f2ce7a5e3e2a", "scope": "Chrome finished reading a delayed server reply after the user selected Revoke. The browser sent no context, and neither agent request returned context.", "limitations": ["This run checked a held reply. It did not measure the context deadline."]},
-    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-exact-source-matched-windows-and-chrome-evidence", "work_criteria": ["matched-host-windows-and-chrome-source-evidence"], "receipt_digest": "f7ff6b028e53626f465598e93c1b68d880c71302b8628f1f2b14a387ac72c115", "review_digest": "1cff849981bf36ab415da8893012d64cb3124081b6bf7eebd8051008d8b8642b", "scope": "Four packaged Windows tests and three Chrome runs passed on the same source. The Chrome runs covered timing, tab isolation, and save behavior. The report records counts, timing, and the exact file hashes.", "limitations": ["Chrome used a local managed server. Both hosts used synthetic data. Background deadlines and final roadmap qualification have separate checks."]}
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-exact-source-matched-windows-and-chrome-evidence", "work_criteria": ["matched-host-windows-and-chrome-source-evidence"], "receipt_digest": "f7ff6b028e53626f465598e93c1b68d880c71302b8628f1f2b14a387ac72c115", "review_digest": "1cff849981bf36ab415da8893012d64cb3124081b6bf7eebd8051008d8b8642b", "scope": "Four packaged Windows tests and three Chrome runs passed on the same source. The Chrome runs covered timing, tab isolation, and save behavior. The report records counts, timing, and the exact file hashes.", "limitations": ["Chrome used a local managed server. Both hosts used synthetic data. Background deadlines and final roadmap qualification have separate checks."]},
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "authenticated-browser-stream-and-refresh",
+      "work_id": "headless-managed-recovery-combined",
+      "work_criteria": ["managed-reconnect-and-rollback-coexist"],
+      "receipt_digest": "084710215f902fff5781aa21369374c34991ac38dd8f965229540834627b02dc",
+      "review_digest": "936fd2ba4cc7db347895b763dc80a8c8dcd8c3a402ba616b338a0cf701b8f9a2",
+      "scope": "After an interruption, Chrome received the exact saved change, displayed the new revision, and restored the connection in 1.35 seconds.",
+      "limitations": ["The test used the local managed server and a disposable database."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "browser-real-host-and-parity",
+      "work_id": "headless-managed-recovery-combined",
+      "work_criteria": ["managed-reconnect-and-rollback-coexist"],
+      "receipt_digest": "084710215f902fff5781aa21369374c34991ac38dd8f965229540834627b02dc",
+      "review_digest": "936fd2ba4cc7db347895b763dc80a8c8dcd8c3a402ba616b338a0cf701b8f9a2",
+      "scope": "Chrome received a delayed reply after Revoke. The takeover panel stayed closed, and Chrome kept the user's focus and current page.",
+      "limitations": ["The current combined run tested Chrome. The packaged Windows test uses its own run."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "security-managed-parity-reviewed",
+      "work_id": "headless-managed-recovery-combined",
+      "work_criteria": ["managed-reconnect-and-rollback-coexist"],
+      "receipt_digest": "084710215f902fff5781aa21369374c34991ac38dd8f965229540834627b02dc",
+      "review_digest": "936fd2ba4cc7db347895b763dc80a8c8dcd8c3a402ba616b338a0cf701b8f9a2",
+      "scope": "Rollback disabled all 12 optional routes and returned control to the user. The saved system, open draft, audit history, and record of the original save survived.",
+      "limitations": ["The test covered already-open Chrome pages. Opening a new page during rollback remains unverified."]
+    }
   ]
 }
