@@ -9667,6 +9667,36 @@
   "support": [
     {
       "kind": "support-scope",
+      "source_text_sha256": "f41d2fb9b38d25ec325e26bc14ddfaf8de28eabcdb40e76ddf38759287a2546b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The desktop asks before giving automation control. It keeps your draft and lets you take back control from the app or a dialog."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "18f47815a673839fd5f0f9fe5a54f14cddff8921a0e83a92dc4ca4f7d024c3b3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Focused desktop tests checked draft handling, keyboard focus and the window's workspace."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8b7abf17cb9acf28586e13d70eb77c47c2526d061ecfd010c9b04acb64336806",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to test live commands and measure response times in the packaged Windows app. No action needed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
       "source_text_sha256": "1b0d607cf5c170bccc56603ec054788a3ad12745e8d1ab827267134d69b4c19b",
       "user_description": {
         "owner": "agent",
