@@ -171,6 +171,33 @@
         "Five current candidate checks passed. Electron wiring and full increment qualification are pending."
       ],
       "title": "Reserve and activate exact authority"
+    },
+    {
+      "areas": [
+        "Desktop host and main frame bridge",
+        "Application shell and dialog",
+        "System Composer draft"
+      ],
+      "chunkId": "shell-gate-and-handoff",
+      "completedAt": "2026-11-14T12:24:04Z",
+      "criteriaIds": [
+        "dirty-handoff-and-reachable-controls",
+        "immediate-local-revocation-and-exact-retry",
+        "security-ui-control-reviewed"
+      ],
+      "documentation": [
+        "ADR-0048, System Builder architecture and current UI assertions census"
+      ],
+      "feedbackAddressed": [],
+      "id": "revocable-desktop-presentation-shell-gate-and-handoff",
+      "incrementId": "revocable-desktop-presentation",
+      "summary": "Desktop commit ac41444fc adds exact interactive acceptance, observable draft-safe save or cancel, and immediate local revoke from shell or dialog. Eight candidate-bound checks passed under receipt 3446919b14a707804102e38a4a60e9dd4b83ee13ec28c454fd62eb49c4199d32 and independent review 39681b169e4285698e985f89427fd0d2d213cd81b3546734253cfcfd38d0be3c. Presentation delivery, audit and packaged host qualification are still pending.",
+      "tests": [
+        "12 focused takeover, SQLite policy, and modal tests",
+        "18 Composer UI interactions",
+        "Fixed desktop activation, documentation, agent support, contributor workflow, and architecture checks"
+      ],
+      "title": "Control the window and preserve human work"
     }
   ],
   "completion": null,
@@ -873,6 +900,12 @@
       "recordedAt": "2026-11-14T11:40:48Z",
       "sequence": 41,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "90bc1645df857619120bebe65ee0825cf03e518847dcd1bfec7348898284b7fe",
+      "recordedAt": "2026-11-14T12:24:04Z",
+      "sequence": 42,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1169,7 +1202,8 @@
       "allowPendingQualification": true,
       "completedAt": null,
       "completedChunks": [
-        "exact-window-authority"
+        "exact-window-authority",
+        "shell-gate-and-handoff"
       ],
       "deliverables": [
         "Successor ADR and current architecture/threat-model guidance defining UI authority independent of backend grants, exact targeting, terminal revocation, delivery queues, minimal context, draft handoff and lifecycle recovery.",
@@ -1916,5 +1950,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-14T11:40:48Z"
+  "updatedAt": "2026-11-14T12:24:04Z"
 }

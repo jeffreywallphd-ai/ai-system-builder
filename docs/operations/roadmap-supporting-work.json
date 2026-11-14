@@ -8,7 +8,8 @@
     "data-management-quality-and-usability",
     "optional-constrained-json-generation",
     "optional-low-memory-inference",
-    "comprehensive-ui-automation"
+    "comprehensive-ui-automation",
+    "headless-skills-ui-takeover"
   ],
   "criterion_labels": [
     {
@@ -45,6 +46,23 @@
     }
   ],
   "links": [
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "dirty-handoff-and-reachable-controls",
+      "work_id": "headless-desktop-window-handoff-reviewed",
+      "work_criteria": [
+        "dirty-handoff-and-reachable-controls",
+        "immediate-local-revocation-and-exact-retry"
+      ],
+      "receipt_digest": "3446919b14a707804102e38a4a60e9dd4b83ee13ec28c454fd62eb49c4199d32",
+      "review_digest": "39681b169e4285698e985f89427fd0d2d213cd81b3546734253cfcfd38d0be3c",
+      "scope": "Desktop consent, draft handling, and revoke controls in commit ac41444fc",
+      "limitations": [
+        "The focused tests cover local draft handling, dialog focus, and exact frame and workspace checks.",
+        "Live command delivery, native timing, and full host qualification are pending. The receipts are stored with the isolated verification checkout."
+      ]
+    },
     {
       "roadmap_id": "security-findings-refresh",
       "increment_id": "file-and-workspace-authority",
