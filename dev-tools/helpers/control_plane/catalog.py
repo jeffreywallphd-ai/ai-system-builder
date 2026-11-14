@@ -183,6 +183,21 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
         ),
     },
+    "managed-headless-browser-documents": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/createManagedHeadlessBrowserDocuments.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/composition/createManagedHeadlessBrowserDocuments.ts",
+            "modules/hosts/server/composition/tests/managed-headless-browser-documents.unit.test.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-headless-browser-documents.unit.test.ts",
+            "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+        ),
+    },
     "managed-headless-agent-server": {
         "automatic_sources": (
             "modules/hosts/server/composition/composeManagedAgentReads.ts",

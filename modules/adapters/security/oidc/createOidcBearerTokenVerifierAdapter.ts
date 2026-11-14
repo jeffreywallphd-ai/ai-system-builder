@@ -23,6 +23,29 @@ interface VerifiedJwtPayload {
 
 type VerifiedJwt = VerifiedJwtPayload & { readonly accessTokenClientId?: string };
 
+export interface VerifiedOidcCredentialBinding {
+  sameCredential(other: VerifiedOidcCredentialBinding): boolean;
+}
+
+const verifiedBindings = new WeakMap<AuthContext, VerifiedOidcCredentialBinding>();
+const bindingDigests = new WeakMap<VerifiedOidcCredentialBinding, Buffer>();
+
+/** Separately checked identity for the same verified bearer within one verifier lifetime. */
+export function getVerifiedOidcCredentialBinding(context: AuthContext): VerifiedOidcCredentialBinding | undefined {
+  return verifiedBindings.get(context);
+}
+
+function bindVerifiedCredential(context: AuthContext, digest: Buffer) {
+  const binding: VerifiedOidcCredentialBinding = Object.freeze({
+    sameCredential(other: VerifiedOidcCredentialBinding) {
+      const compared = bindingDigests.get(other);
+      return !!compared && crypto.timingSafeEqual(compared, digest);
+    },
+  });
+  bindingDigests.set(binding, digest);
+  verifiedBindings.set(context, binding);
+}
+
 /** Project only the signed fields from the existing verifier's result. */
 export function projectVerifiedOidcIdentity(result: JWTVerifyResult): VerifiedJwt {
   const { iss, sub, iat, exp, client_id: client } = result.payload;
@@ -49,6 +72,7 @@ export function createOidcBearerTokenVerifierAdapter(input: {
 }): TokenVerifierPort {
   const verifier = input.jwtVerifier ?? createJoseRemoteJwksVerifier();
   const scopes = [...(input.applicationScopes ?? MANAGED_IDENTITY_SCOPES)];
+  const bindingKey = crypto.randomBytes(32);
   return {
     async verifyToken({ token, now }): Promise<AuthContext> {
       try {
@@ -66,7 +90,7 @@ export function createOidcBearerTokenVerifierAdapter(input: {
         const hasTypedClient = payload.iss === input.config.issuer &&
           isOidcAccessTokenClientId(payload.accessTokenClientId) &&
           typeof payload.exp === "number" && Number.isSafeInteger(payload.exp) && payload.exp * 1_000 > now.getTime();
-        return {
+        const context: AuthContext = {
           authenticated: true,
           authMethod: "oidc-bearer",
           principal: {
@@ -84,6 +108,8 @@ export function createOidcBearerTokenVerifierAdapter(input: {
             : new Date(payload.exp * 1000).toISOString(),
           ...(hasTypedClient ? { oidcAccessTokenClientId: payload.accessTokenClientId } : {}),
         };
+        if (hasTypedClient) bindVerifiedCredential(context, crypto.createHmac("sha256", bindingKey).update(token).digest());
+        return context;
       } catch {
         throw createSecurityApplicationError(
           "security.invalid-token",

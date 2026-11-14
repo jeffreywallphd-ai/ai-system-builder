@@ -192,6 +192,16 @@ redirects and retains the request and result bounds. It treats a missing
 reply from a write as unconfirmed. Desktop certificate pinning still applies
 when the adapter runs in desktop mode.
 
+The browser document registry binds the exact host, workspace, authenticated
+principal, verified browser bearer and random document proof. The verifier
+compares per-verifier keyed digests in constant time. It keeps the comparison
+private to the server and excludes the digest from the authentication context
+that downstream code can serialize. A second valid bearer from the same client
+cannot renew or retire the document. The registry bounds document slots and
+policy reads. Expiry, loss of workspace access and explicit retirement end the
+document's authority. A replacement worker requires a fresh registration and
+consent.
+
 The controlled delivery test uses two independent loopback HTTPS servers
 with the same disposable PostgreSQL database and a nonowner role without
 `BYPASSRLS`. It sends synthetic changes through the ordinary authenticated

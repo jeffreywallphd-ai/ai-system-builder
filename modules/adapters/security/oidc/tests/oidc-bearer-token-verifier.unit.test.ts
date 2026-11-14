@@ -6,6 +6,7 @@ import { createOidcBearerConfig } from "../../../../contracts/security";
 import {
   createInternalPrincipalId,
   createOidcBearerTokenVerifierAdapter,
+  getVerifiedOidcCredentialBinding,
   projectVerifiedOidcIdentity,
 } from "../createOidcBearerTokenVerifierAdapter";
 
@@ -41,6 +42,7 @@ describe("OIDC bearer token verifier", () => {
     });
     assert.equal(context.authMethod, "oidc-bearer");
     assert.equal(context.oidcAccessTokenClientId, undefined);
+    assert.equal(getVerifiedOidcCredentialBinding(context), undefined);
     assert.equal(context.principal.kind, "user");
     assert.deepEqual(context.principal.scopes, []);
     assert.deepEqual(context.principal.externalIdentity, {
@@ -97,6 +99,28 @@ describe("OIDC bearer token verifier", () => {
     assert.equal((await verifier.verifyToken({ token: await token("at+jwt", ["agent"]), now })).oidcAccessTokenClientId, undefined);
     await assert.rejects(async () => verifier.verifyToken({ token: await token("at+jwt", "agent", "wrong-audience"), now }),
       { message: "Invalid bearer token." });
+  });
+
+  it("binds only verified typed bearers, with no binding material in serialized context", async () => {
+    const now = new Date("2026-11-14T00:00:00.000Z");
+    const jwtVerifier = {async verify() {
+      return { iss: config.issuer, sub: "fixture", exp: now.getTime() / 1000 + 60, accessTokenClientId: "browser.fixture" };
+    }};
+    const verifier = createOidcBearerTokenVerifierAdapter({ config, jwtVerifier });
+    const verify = (token: string) => verifier.verifyToken({token, now});
+    const firstContext = await verify("fixture-first-verified-token");
+    const first = getVerifiedOidcCredentialBinding(firstContext)!;
+    const retry = getVerifiedOidcCredentialBinding(await verify("fixture-first-verified-token"))!;
+    const replacement = getVerifiedOidcCredentialBinding(await verify("fixture-replacement-verified-token"))!;
+    const otherVerifier = createOidcBearerTokenVerifierAdapter({config, jwtVerifier});
+    const otherInstance = getVerifiedOidcCredentialBinding(await otherVerifier.verifyToken({token: "fixture-first-verified-token", now}))!;
+    assert.ok(first && retry && replacement && otherInstance);
+    assert.equal(first.sameCredential(retry), true);
+    assert.equal(first.sameCredential(replacement), false);
+    assert.equal(first.sameCredential(otherInstance), false);
+    assert.equal(getVerifiedOidcCredentialBinding({...firstContext}), undefined);
+    assert.equal(JSON.stringify(firstContext).includes("fixture-first-verified-token"), false);
+    assert.equal(JSON.stringify(first), "{}");
   });
 
   it("maps signature, claims, and malformed identity failures to one safe error", async () => {

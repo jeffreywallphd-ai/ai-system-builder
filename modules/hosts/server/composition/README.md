@@ -29,6 +29,11 @@ and its durable retry receipt. It rechecks access before returning a
 successful result. The service accepts only an already verified agent
 registration. A transport route is a separate composition step.
 
+Each managed browser tab registers a short-lived proof. A different bearer
+for the same user and registered browser client cannot reuse that proof.
+Workspace policy governs registration. The existing takeover authority
+still requires separate user consent for presentation.
+
 Current composition includes:
 
 - artifact-object storage via filesystem adapter,

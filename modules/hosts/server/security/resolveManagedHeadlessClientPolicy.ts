@@ -1,16 +1,21 @@
 import { createHash } from "node:crypto";
 
+import { getVerifiedOidcCredentialBinding, type VerifiedOidcCredentialBinding } from "../../../adapters/security/oidc/createOidcBearerTokenVerifierAdapter";
 import { isOrganizationId, type OrganizationRequestContext } from "../../../contracts/organization";
 import { isOidcAccessTokenClientId, type AuthContext } from "../../../contracts/security";
 
 type Purpose = "agent" | "browser";
-type Registration = {
-  readonly purpose: Purpose;
+type RegistrationIdentity = {
   readonly organizationId: OrganizationRequestContext["organizationId"];
   readonly principalId: string;
   readonly registeredClientId: string;
   readonly isCurrent: () => boolean;
 };
+export type ManagedHeadlessBrowserIdentity = RegistrationIdentity & {
+  readonly purpose: "browser";
+  readonly credentialBinding: VerifiedOidcCredentialBinding;
+};
+type Registration = (RegistrationIdentity & {readonly purpose: "agent"}) | ManagedHeadlessBrowserIdentity;
 
 /** An issuer-verified client binding distinguishes callers. Application policy still grants access. */
 export function resolveManagedHeadlessClientPolicy(options: {
@@ -44,12 +49,15 @@ export function resolveManagedHeadlessClientPolicy(options: {
           !organization || !isOrganizationId(organizationHeader) || organizationHeader !== organization.organizationId ||
           auth.principal.principalId !== organization.principalId || !nowBefore(now, expiry)) return undefined;
       let retired = false;
-      return Object.freeze({ purpose, organizationId: organization.organizationId, principalId: organization.principalId,
+      const identity: RegistrationIdentity = {organizationId: organization.organizationId, principalId: organization.principalId,
         registeredClientId: client.id, isCurrent() {
           if (!retired && !nowBefore(now, expiry)) retired = true;
           return !retired;
         },
-      });
+      };
+      if (purpose === "agent") return Object.freeze({...identity, purpose});
+      const credentialBinding = getVerifiedOidcCredentialBinding(auth);
+      if (credentialBinding) return Object.freeze({...identity, purpose, credentialBinding});
     },
   });
 }
