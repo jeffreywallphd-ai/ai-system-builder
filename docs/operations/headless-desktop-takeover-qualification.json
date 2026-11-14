@@ -1,0 +1,42 @@
+{
+  "schema_version": "headless-desktop-takeover-qualification-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "revocable-desktop-presentation",
+  "status": "technical-check-pending",
+  "windows_observations": [
+    {
+      "run_id": "2026-11-14t13-46-43-890z-f9952d6e",
+      "source_revision": "source.ae538b9a1f2255f185d5961a0e270225e91bdf30c782c3dcfc13a6520834f841",
+      "evidence_digest": "10cba3dc298dfc7e1797538b9a4be080287d19111b3ab0b1e3b523cc03d41511",
+      "status": "passed",
+      "scope": ["Stock app dialog over an existing preview", "Unchanged main page geometry", "Reload and restart", "Second client does not replace the active client", "Subsequent saved work"],
+      "warm_present_ms": {"samples": 100, "p50": 133.33, "p95": 150.91, "max": 161.61},
+      "revoke_ms": {"samples": 100, "p50": 1.9, "p95": 6.4, "max": 9.4},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 5.9, "p95": 9, "max": 9.4},
+      "environment": {"os": "Windows 10.0.26200", "electron": "42.11.18", "chromium": "148.0.7778.280", "ram_gib": 16, "logical_cpus": 20, "visible_document": true}
+    },
+    {
+      "run_id": "2026-11-14t13-53-26-537z-eca7199c",
+      "source_revision": "source.f65a5f21dc6a590d20fd0806776c33caf77dec850fa1af64752ed99eff6cea4d",
+      "evidence_digest": "5d29ca7befb764f2f7c4443eff3143ee513b156fb73fe767e7b74d8b3d9e0344",
+      "status": "passed",
+      "scope": ["A running approved conversation survives window revoke", "No fresh window context after revoke", "The user can navigate while the task runs", "Reconnect recovers the same completed task", "Both owned runtime workers confirmed exited"]
+    },
+    {
+      "run_id": "2026-11-14t13-59-08-968z-c95da7bc",
+      "source_revision": "source.4688a7814d6e29ce43c672ae390e327aae9c407f58f05437f6036453c524a054",
+      "evidence_digest": "6813400a456d651a9eaf25219d8b91e6192dc2a5f519c3e20a2f3d6ea0eb1ddd",
+      "status": "passed",
+      "scope": ["Three packaged scenarios passed on one candidate", "Read-only inspection confirmed the isolated SQLite audit stored only fixed lifecycle and backend fields", "Revoke from one foreground window during the fixture"],
+      "warm_present_ms": {"samples": 100, "p50": 129.99, "p95": 141.71, "max": 154.24},
+      "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 6.5, "max": 6.9},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 6.2, "p95": 6.8, "max": 6.9}
+    }
+  ],
+  "pending": [
+    "Measure revoke during app loading and after loss of the host response.",
+    "Exercise multiple live app windows, timing under background throttling, and intentionally held presentation replies.",
+    "Verify packaged rollback and automate the persisted audit check.",
+    "Bind the complete increment requirements to the final candidate."
+  ]
+}

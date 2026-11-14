@@ -338,6 +338,7 @@ test("packaged Desktop observes a running approved turn from a separately paired
   const launch = () => electron.launch({ executablePath: profile.executablePath, env: profile.env,
     args: [`--user-data-dir=${profile.dataRoot}`, "--disable-gpu"], timeout: 60_000 });
   let client: Client | undefined;
+  let presentationClient: Client | undefined;
   let activeApp: ElectronApplication | undefined;
   let phase: "before-restart" | "after-restart" = "before-restart";
   let runtimeStarted = false;
@@ -410,6 +411,10 @@ test("packaged Desktop observes a running approved turn from a separately paired
     const { address, fingerprint } = await runningAddress(region);
     const credential = await exchangePairing(address, fingerprint, await takePairingCode(app));
     client = await connectMcp(address, fingerprint, credential, undefined, "conversation");
+    await installPairingDialogDriver(app, true, "presentation");
+    await region.getByRole("button", { name: "Pair a client that can request window control", exact: true }).click();
+    const presentationCredential = await exchangePairing(address, fingerprint, await takePairingCode(app));
+    presentationClient = await connectMcp(address, fingerprint, presentationCredential, undefined, "presentation");
     expect((await client.listTools()).tools.some(tool => tool.name === "aisb_create_system")).toBe(false);
     const hostIncarnationId = await hostId(client);
     const workspace = { hostIncarnationId, workspaceId };
@@ -425,6 +430,22 @@ test("packaged Desktop observes a running approved turn from a separately paired
       sessionId, snapshotRevision: prepared!.snapshotRevision, key: randomUUID(), text: "Synthetic approved chat request" };
     const refused = await call(client, "aisb_send_approved_turn", { ...input, snapshotRevision: "wrong-revision" });
     expect(refused.ok).toBe(false);
+    const windows = await call(presentationClient, "aisb_list_windows", workspace);
+    const window = (windows.value as { windows?: unknown[] } | undefined)?.windows?.[0];
+    if (!windows.ok || !window) throw new Error("The conversation fixture did not have an owned window.");
+    const requested = await call(presentationClient, "aisb_request_window", {
+      target: window, requestKey: randomUUID(), taskId: randomUUID(),
+    });
+    const attempt = (requested.value as { request?: { target: unknown } } | undefined)?.request?.target;
+    if (!requested.ok || !attempt) throw new Error("The conversation fixture could not request its own window.");
+    await page.getByRole("dialog", { name: "Automation takeover request", exact: true })
+      .getByRole("button", { name: "Accept automation takeover", exact: true }).click();
+    let lease: unknown;
+    await expect.poll(async () => {
+      const result = await call(presentationClient!, "aisb_window_status", { target: attempt });
+      lease = (result.value as { lease?: unknown } | undefined)?.lease;
+      return result.ok && !!lease;
+    }).toBe(true);
     const admitted = await call(client, "aisb_send_approved_turn", input);
     const handle = admitted.value as { turnId: string; runId: string } | undefined;
     if (!admitted.ok || !handle?.turnId || !handle.runId) throw new Error("No durable task handle was returned.");
@@ -435,6 +456,13 @@ test("packaged Desktop observes a running approved turn from a separately paired
     const activity = region.getByRole("region", { name: "Recent chat tasks", exact: true });
     const row = activity.getByRole("listitem").filter({ hasText: handle.runId });
     await expect(row).toContainText("Running");
+    await page.getByRole("button", { name: "Revoke automation takeover", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Settings", exact: true, description: "Settings" })).toBeEnabled();
+    expect(await call(presentationClient, "aisb_window_context", { target: lease }))
+      .toEqual({ ok: false, code: "headless.forbidden" });
+    expect(await read()).toMatchObject({ ok: true, value: { turnStatus: "generating", run: { status: "running" } } });
+    await page.getByRole("button", { name: "Systems", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Systems", exact: true })).toBeVisible();
     // A separate stdio process recovers the same handle while the worker continues.
     await client.close();
     client = await connectMcp(address, fingerprint, credential, undefined, "conversation");
@@ -443,13 +471,16 @@ test("packaged Desktop observes a running approved turn from a separately paired
       ok: true, operation: "conversation-tasks.read",
       value: { sessionId, turnId: handle.turnId, turnStatus: "succeeded", run: { runId: handle.runId, status: "succeeded" } },
     });
+    await expect(page.getByRole("heading", { name: "Systems", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Settings", exact: true, description: "Settings" }).click();
+    await page.getByRole("button", { name: "Local chat clients", exact: true }).click();
     await expect(row).toHaveCount(1);
     await expect(row).toContainText("Completed");
     await expect(activity.getByText(input.text, { exact: false })).toHaveCount(0);
     expect(await call(client, "aisb_send_approved_turn", { ...input, text: "Different synthetic request" }))
       .toEqual({ ok: false, code: "headless.idempotency-conflict" });
   } finally {
-    try { await client?.close(); }
+    try { await Promise.all([client?.close(), presentationClient?.close()]); }
     finally { await retire(); }
   }
 });

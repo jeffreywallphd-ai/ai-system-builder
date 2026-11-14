@@ -1096,6 +1096,29 @@ function navigationCensusLegacyView(map,result){
 let committedCensusWitness;
 const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
 function headlessPackagedCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) === "501a499558e742b246095d9ec0c63a474d1bd3a48a94a9f727ae224c5118d291") {
+    // Inventory the real Desktop takeover journey without granting a census pass.
+    const saved = JSON.parse(historicalSource("9621eb610466530fd7911b135bf8cc8208b2a9e3", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "77554fccca0bac50e567ff948714215df3ca0e9bc16873d040fe980479650b16");
+    const expected = structuredClone(saved);
+    const before = expected.sources.find(row => row.path === headlessPackagedSpec);
+    const changed = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(changed.facts.sha256, "060f2f1fe8075a1dcf46e71356206e902aba6729f724d8040b953aa1a4ed1984");
+    assert.equal(sha(JSON.stringify(changed.facts)), "a6a93b5871630e0744715950c37d3701c6e40bb29dfcaa17000344b3c089efea");
+    before.facts = changed.facts;
+    const newPath = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
+    const added = map.sources.find(row => row.path === newPath);
+    assert.equal(added.facts.sha256, "0187949b6bece23f8f036fc0beed178ef07fc147cf42fd6e2cda0a24d51b6887");
+    assert.equal(added.committed_sha256, "0".repeat(64));
+    assert.equal(sha(JSON.stringify(added.facts)), "55415c9ad75ec7a5dece5b391d2b2188d88c5a4cf271c8ba41b00944148494dd");
+    expected.sources.splice(expected.sources.indexOf(before) + 1, 0, added);
+    expected.host_spec_files = [...expected.host_spec_files, newPath].sort();
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
   if (sha(JSON.stringify(map)) === "77554fccca0bac50e567ff948714215df3ca0e9bc16873d040fe980479650b16") {
     // The draft test uses the actual consent portal. Keep all earlier witnesses.
     const saved = JSON.parse(historicalSource("b1ecfb1323e0fddfd47769e450507a2c4bf374a8", censusDocument));
@@ -1399,7 +1422,7 @@ test("checks the current repository map against original scope and actual source
   const result=validateCensus({mapText:read("docs/operations/comprehensive-ui-automation-current-census.json").toString(),
     ledgerText:read("docs/operations/comprehensive-ui-automation-coverage.json").toString(),
     discoveryText:read("docs/operations/comprehensive-ui-automation-discovery.json").toString(),readSource:read,hostSpecPaths});
-  assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,32);
+  assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,33);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
   const committedHistory=committedCensusLegacyView(map,result);
@@ -1640,7 +1663,7 @@ test("preserves exact historical versions without inheriting their current cover
   const ledger=JSON.parse(read("docs/operations/comprehensive-ui-automation-coverage.json"));
   assert.equal(ledger.current_definition_census.historical_source_archive,"docs/operations/comprehensive-ui-automation-census-source-history.json");
   assert.equal(ledger.full_testing_status,"deferred-by-user");assert(ledger.scenarios.every(s=>s.actual_host_qualification==="pending"));
-  assert.equal(CENSUS_LIMITS.files,195);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
+  assert.equal(CENSUS_LIMITS.files,196);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
 });
 
 test("reintroduced oracle coverage refuses old, missing, duplicate, future or unrelated versions",()=>{
@@ -2117,7 +2140,11 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,33);
+  assert.equal(result.gaps.length,34);
+  const isNewTakeoverSpec = row => row.kind === "unreviewed-source-drift" &&
+    row.source === "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
+  assert.equal(result.gaps.filter(isNewTakeoverSpec).length, 1);
+  assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>!isNewTakeoverSpec(row))}));
   const isPendingDesktopStartup = row => row.kind === "unreviewed-source-drift" &&
     row.source === "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts";
   assert.equal(result.gaps.filter(isPendingDesktopStartup).length, 1);

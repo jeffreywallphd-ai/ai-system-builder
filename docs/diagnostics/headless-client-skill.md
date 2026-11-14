@@ -50,3 +50,11 @@ The Windows qualification fixture
 Playwright profile and a separate official MCP client process. It uses
 synthetic data, drives the native pairing response only in the test process,
 and retains no trace, screenshot, video, pairing code, or credential.
+
+The same packaged check runs `packaged-desktop-ui-takeover.e2e.spec.ts`.
+It measures the shell before and after opening consent, checks focus over
+an open Composer preview, and tests ordered presentation and explicit revoke.
+It writes a bounded observation with Windows version, sample counts and
+latency distributions. The approved conversation fixture checks that an
+already running operation continues after window revoke and that its owned
+worker exits. The fixture uses a deterministic local runtime.

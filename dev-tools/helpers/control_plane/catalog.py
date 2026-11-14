@@ -146,6 +146,7 @@ HEADLESS_PACKAGED_CHECK = "headless-packaged-desktop-journey"
 HEADLESS_PACKAGED_SOURCES = (
     "dev-tools/scripts/qualification/visual-composer/e2e/headless-desktop-fixture.ts",
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
     "dev-tools/scripts/qualification/visual-composer/headless-approved-conversation-seed.ts",
     "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs",
 )
@@ -809,8 +810,8 @@ def definitions(root: Path) -> list[dict]:
         {"id": HEADLESS_PACKAGED_CHECK, "patterns": [],
          "argv": [node, "node_modules/@playwright/test/cli.js", "test",
                   "--config=dev-tools/config/playwright.visual-composer.config.ts", "--project=packaged-desktop",
-                  "packaged-desktop-headless.e2e.spec.ts"],
-         "timeout": 540},
+                  "packaged-desktop-headless.e2e.spec.ts", "packaged-desktop-ui-takeover.e2e.spec.ts"],
+         "timeout": 720},
         {"id": "asset-defensive-acceptance", "patterns": [],
          "argv": [node, "--import", "tsx", "--test", "--test-concurrency=1", "--", *ASSET_DEFENSIVE_TESTS],
          "timeout": 180},

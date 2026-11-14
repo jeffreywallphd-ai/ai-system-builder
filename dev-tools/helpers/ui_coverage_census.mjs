@@ -5,8 +5,8 @@ import {fileURLToPath} from "node:url";
 import {createHash} from "node:crypto";
 import ts from "typescript";
 
-// Count the two Form Composer specs and the exact Headless packaged spec.
-export const CENSUS_LIMITS = Object.freeze({documentBytes: 512 * 1024, sourceBytes: 512 * 1024, files: 195, totalBytes: 32 * 1024 * 1024});
+// Fixed input inventory includes the desktop takeover spec.
+export const CENSUS_LIMITS = Object.freeze({documentBytes: 512 * 1024, sourceBytes: 512 * 1024, files: 196, totalBytes: 32 * 1024 * 1024});
 export const REQUIRED_CENSUS_INVENTORIES = Object.freeze([
   ["apps/desktop/src/renderer/routes/desktopPages.ts", "DesktopPageKey", null, "desktopRouteKeys"],
   ["apps/thin-client/src/routes/thinClientPages.ts", "ThinClientPageKey", null, "thinClientRouteKeys"],

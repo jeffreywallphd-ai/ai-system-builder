@@ -125,7 +125,8 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         self.assertNotIn(check, self.plan([fixture]))
         selected = self.plan([fixture], check)
         self.assertNotIn("focused-tests", selected)
-        self.assertEqual(selected[check]["argv"][-2:], [
+        self.assertEqual(selected[check]["argv"][-3:], [
             "--project=packaged-desktop", "packaged-desktop-headless.e2e.spec.ts",
+            "packaged-desktop-ui-takeover.e2e.spec.ts",
         ])
         self.assertIn("focused-tests", self.plan([fixture, unrelated], check))

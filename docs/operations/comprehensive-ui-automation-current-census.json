@@ -15171,8 +15171,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
    "facts": {
-    "sha256": "79c74599ccba86000973045e9b4f7cd89eb7e3e1381378b0a8f278c3d2be1f8a",
-    "bytes": 29941,
+    "sha256": "060f2f1fe8075a1dcf46e71356206e902aba6729f724d8040b953aa1a4ed1984",
+    "bytes": 32489,
     "cases": [
      {
       "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart",
@@ -15222,8 +15222,8 @@
       "line": 128
      }
     ],
-    "assertionCount": 58,
-    "assertionDigest": "2327d4f47a5889559c96d4e86e864d6291eade2ac6d2328ea289134b63cd5c11",
+    "assertionCount": 62,
+    "assertionDigest": "8b32493ca49be79f26bc4d1e2568c2419de8927470513f279b4b3f2f73c5ac87",
     "assertionExamples": [
      {
       "line": 38,
@@ -15249,6 +15249,64 @@
     "modifiers": []
    },
    "committed_sha256": "798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+   "facts": {
+    "sha256": "0187949b6bece23f8f036fc0beed178ef07fc147cf42fd6e2cda0a24d51b6887",
+    "bytes": 20062,
+    "cases": [
+     {
+      "name": "a real paired client presents a saved Windows resource and the user revokes before continuing saved work",
+      "line": 73
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "call",
+      "line": 17
+     },
+     {
+      "name": "distribution",
+      "line": 26
+     },
+     {
+      "name": "saveTimingObservation",
+      "line": 32
+     },
+     {
+      "name": "measureRevocation",
+      "line": 49
+     }
+    ],
+    "assertionCount": 45,
+    "assertionDigest": "c6ea153db065d144e078a6a9ff54d69df034d2944b4fee00b6bd3be85e5bea59",
+    "assertionExamples": [
+     {
+      "line": 85,
+      "kind": "expect",
+      "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+     },
+     {
+      "line": 99,
+      "kind": "expect",
+      "sha256": "a87aa5bf68c449f0b73ff11276bba51d709c2ac0791ce24e93881355cb9bdb3f"
+     },
+     {
+      "line": 111,
+      "kind": "expect",
+      "sha256": "9007cee21b389bf32245a405c9c984ac80e6a1b0dde82a8ea894f96f570e0a67"
+     },
+     {
+      "line": 116,
+      "kind": "expect",
+      "sha256": "c840011eba2ec973b8967b8b95b7e39271bfe4a83b1f72cb2bc184a212eedc84"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
   }
  ],
  "scenarios": [
@@ -17639,6 +17697,7 @@
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-pdf-preview.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-reference-performance.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
+  "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-worker-recovery.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts",
