@@ -34,6 +34,11 @@ window and host identities. A workspace switch or main-frame reload
 retires the corresponding document. After user revoke, any new request must
 come from a fresh user instruction.
 
+Desktop users can open a second main window with File > New Window.
+The same owned startup and current-frame checks apply to both. Only the host
+menu can request this window, with at most two live main windows. Published
+runtime windows have no authority to use this menu action.
+
 Window control grants the finite saved-resource presentation actions and
 identifier-only context defined by the roadmap. Window context uses its
 own publication fence. Saved-system reads and independently owned tasks retain

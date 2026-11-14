@@ -1,7 +1,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, MenuItem, shell } from "electron";
 
 import { composeDesktopHost } from "../../../../modules/hosts/desktop";
 import { recordDesktopMemorySnapshot } from "../../../../modules/hosts/desktop/diagnostics";
@@ -17,6 +17,7 @@ import {
 import { isTrustedIpcSender } from "./trustedIpcSender";
 import { captureDesktopHeadlessPairingWindow, registerDesktopHeadlessPairingIpc } from "./desktopHeadlessPairingIpc";
 import { registerDesktopUiControlIpc } from "./desktopUiControlIpc";
+import { installDesktopMainWindowMenu } from "./desktopMainWindowMenu";
 import { createRevealModelPath } from "./revealModelPath";
 import {
   createSystemRuntimeWindowManager,
@@ -366,8 +367,19 @@ app.whenReady().then(async () => {
 
   await createMainWindow();
 
+  let shutdownStarted = false;
+  let shutdownComplete = false;
+  const menu = Menu.getApplicationMenu();
+  if (installDesktopMainWindowMenu(menu, (options) => new MenuItem(options),
+    source => !shutdownStarted && openWindows.size < 2 && [...openWindows].some(
+      window => window === source && !window.isDestroyed(),
+    ),
+    () => { void createMainWindow().catch(() => dialog.showErrorBox(
+      "AI System Builder could not open", "The new window could not open. Try again from the File menu.",
+    )); })) Menu.setApplicationMenu(menu);
+
   app.on("activate", async () => {
-    if (openWindows.size === 0) {
+    if (!shutdownStarted && openWindows.size === 0) {
       recordDesktopMemorySnapshot({
         milestone: "desktop.activate.window-create.before",
         component: "desktop-main",
@@ -380,8 +392,6 @@ app.whenReady().then(async () => {
     }
   });
 
-  let shutdownStarted = false;
-  let shutdownComplete = false;
   app.on("before-quit", (event) => {
     recordDesktopMemorySnapshot({
       milestone: "desktop.before-quit",

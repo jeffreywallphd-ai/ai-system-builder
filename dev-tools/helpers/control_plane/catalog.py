@@ -215,10 +215,13 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
             "apps/desktop/src/main/index.ts",
+            "apps/desktop/src/main/desktopMainWindowMenu.ts",
+            "apps/desktop/src/main/tests/desktop-main-window-menu.unit.test.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--",
             "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
+            "apps/desktop/src/main/tests/desktop-main-window-menu.unit.test.ts",
         ),
     },
     "headless-desktop-takeover-draft": {
