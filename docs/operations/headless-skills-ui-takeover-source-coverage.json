@@ -22,7 +22,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "managed-stdio",
+        "browser-save"
+      ]
     },
     {
       "sourceId": "INV-02",
@@ -40,7 +45,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-task",
+        "browser-revoke",
+        "authority"
+      ]
     },
     {
       "sourceId": "INV-03",
@@ -58,7 +68,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "authority",
+        "browser-transport",
+        "browser-peer"
+      ]
     },
     {
       "sourceId": "INV-04",
@@ -75,7 +90,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "authority",
+        "browser-transport",
+        "browser-credential"
+      ]
     },
     {
       "sourceId": "INV-05",
@@ -92,7 +112,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "authority",
+        "authority-races",
+        "desktop-native"
+      ]
     },
     {
       "sourceId": "INV-06",
@@ -109,7 +134,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "revoke",
+        "desktop-window",
+        "browser-revoke"
+      ]
     },
     {
       "sourceId": "INV-07",
@@ -127,7 +157,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "renderer-late",
+        "renderer-timed",
+        "desktop-native",
+        "browser-late"
+      ]
     },
     {
       "sourceId": "INV-08",
@@ -145,7 +181,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-task",
+        "browser-revoke"
+      ],
+      "knownRemainingEvidence": "The packaged desktop journey observed the same running task. Managed Chrome shows independent saves, but an in-flight managed task witness is pending."
     },
     {
       "sourceId": "INV-09",
@@ -162,7 +203,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "browser-save",
+        "browser-resume"
+      ]
     },
     {
       "sourceId": "INV-10",
@@ -181,7 +227,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "context",
+        "browser-context",
+        "desktop-native"
+      ]
     },
     {
       "sourceId": "INV-11",
@@ -198,7 +249,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "revoke-retry",
+        "browser-reload",
+        "desktop-window"
+      ]
     },
     {
       "sourceId": "INV-12",
@@ -215,7 +271,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "revoke",
+        "authority-races",
+        "revoke-retry"
+      ]
     },
     {
       "sourceId": "INV-13",
@@ -233,7 +294,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "browser-draft",
+        "browser-reverse"
+      ],
+      "knownRemainingEvidence": "Desktop has a real dirty revision conflict. The managed browser result is presently a shared editor test, pending a real Chrome conflict."
     },
     {
       "sourceId": "INV-14",
@@ -250,7 +317,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-task",
+        "permission",
+        "browser-resume"
+      ],
+      "knownRemainingEvidence": "The desktop task stays bound to its saved workspace. The real managed journey has not yet changed workspace during an independent running operation."
     },
     {
       "sourceId": "INV-15",
@@ -267,7 +340,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-window",
+        "browser-revoke",
+        "catalog"
+      ]
     },
     {
       "sourceId": "INV-16",
@@ -285,7 +363,14 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "replay",
+        "delivery",
+        "desktop-native",
+        "managed-stdio",
+        "browser-queue"
+      ]
     },
     {
       "sourceId": "INV-17",
@@ -303,7 +388,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "approval",
+        "agent-transport",
+        "browser-transport"
+      ]
     },
     {
       "sourceId": "INV-18",
@@ -321,7 +411,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "authority-races",
+        "desktop-native",
+        "browser-reload",
+        "browser-resume"
+      ]
     }
   ],
   "acceptanceScenarios": [
@@ -340,7 +436,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "managed-stdio"
+      ]
     },
     {
       "sourceId": "AT-02",
@@ -357,7 +457,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "managed-stdio",
+        "browser-save"
+      ]
     },
     {
       "sourceId": "AT-03",
@@ -374,7 +479,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "authority",
+        "browser-transport"
+      ]
     },
     {
       "sourceId": "AT-04",
@@ -390,7 +499,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "authority",
+        "browser-transport",
+        "agent-transport"
+      ]
     },
     {
       "sourceId": "AT-05",
@@ -407,7 +521,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-window",
+        "browser-consent",
+        "browser-window"
+      ]
     },
     {
       "sourceId": "AT-06",
@@ -424,7 +543,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "authority",
+        "desktop-window"
+      ]
     },
     {
       "sourceId": "AT-07",
@@ -441,7 +564,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "revoke",
+        "desktop-window",
+        "browser-revoke"
+      ]
     },
     {
       "sourceId": "AT-08",
@@ -459,7 +587,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "revoke",
+        "desktop-native"
+      ]
     },
     {
       "sourceId": "AT-09",
@@ -476,7 +608,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "revoke",
+        "authority-races"
+      ]
     },
     {
       "sourceId": "AT-10",
@@ -493,7 +629,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "revoke-retry",
+        "authority-races",
+        "desktop-window"
+      ]
     },
     {
       "sourceId": "AT-11",
@@ -510,7 +651,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "revoke-retry",
+        "authority-races"
+      ]
     },
     {
       "sourceId": "AT-12",
@@ -527,7 +672,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "renderer-late",
+        "desktop-native",
+        "browser-late"
+      ]
     },
     {
       "sourceId": "AT-13",
@@ -544,7 +694,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "renderer-late",
+        "desktop-native",
+        "browser-late"
+      ]
     },
     {
       "sourceId": "AT-14",
@@ -560,7 +715,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "renderer-timed",
+        "browser-context"
+      ]
     },
     {
       "sourceId": "AT-15",
@@ -578,7 +737,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-held-save",
+        "desktop-window",
+        "browser-revoke"
+      ],
+      "knownRemainingEvidence": "The Desktop connector and SQLite integration holds an admitted save, revokes window control, then verifies its commit and exact receipt replay. The managed browser verified a new save after revoke. A managed save held across revoke still needs its own witness."
     },
     {
       "sourceId": "AT-16",
@@ -596,7 +761,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-task"
+      ],
+      "knownRemainingEvidence": "The packaged desktop runtime and MCP status pass. The managed MCP adapter currently exposes no conversation task tool. A suitable supported managed operation still needs a real Chrome witness."
     },
     {
       "sourceId": "AT-17",
@@ -613,7 +782,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-window",
+        "browser-revoke"
+      ]
     },
     {
       "sourceId": "AT-18",
@@ -630,7 +803,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "context",
+        "browser-context",
+        "desktop-native"
+      ]
     },
     {
       "sourceId": "AT-19",
@@ -647,7 +825,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "browser-revoke",
+        "browser-resume"
+      ]
     },
     {
       "sourceId": "AT-20",
@@ -664,7 +847,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-task",
+        "permission"
+      ],
+      "knownRemainingEvidence": "The managed authorizer verifies explicit workspace scope. A real managed operation has not yet been held across a human workspace switch."
     },
     {
       "sourceId": "AT-21",
@@ -682,7 +870,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "browser-draft"
+      ],
+      "knownRemainingEvidence": "A dirty Chrome editor has not yet been exercised with an actual saved update from another client."
     },
     {
       "sourceId": "AT-22",
@@ -699,7 +892,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "browser-draft"
+      ],
+      "knownRemainingEvidence": "The tested packaged Desktop based its conflict on the original revision. The real Chrome conflict is pending."
     },
     {
       "sourceId": "AT-23",
@@ -717,7 +915,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "handoff",
+        "browser-draft"
+      ],
+      "knownRemainingEvidence": "The shared controller and editor check failed save-before-accept. The condition has not been repeated on the actual Chrome host."
     },
     {
       "sourceId": "AT-24",
@@ -735,7 +938,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "replay",
+        "managed-stdio"
+      ],
+      "knownRemainingEvidence": "Desktop actually drops a response before retry. Managed stdio replays the committed operation, with intentional loss still pending."
     },
     {
       "sourceId": "AT-25",
@@ -752,7 +961,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "managed-stdio"
+      ]
     },
     {
       "sourceId": "AT-26",
@@ -771,7 +984,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "delivery",
+        "renderer-timed",
+        "desktop-native",
+        "browser-queue"
+      ]
     },
     {
       "sourceId": "AT-27",
@@ -788,7 +1007,14 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "delivery",
+        "renderer-late",
+        "desktop-native",
+        "browser-late"
+      ],
+      "knownRemainingEvidence": "The live checks prove old activity cannot apply after revoke; replacement-generation ordering is established by the focused delivery tests."
     },
     {
       "sourceId": "AT-28",
@@ -806,7 +1032,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-window",
+        "desktop-native",
+        "browser-reload"
+      ]
     },
     {
       "sourceId": "AT-29",
@@ -824,7 +1055,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "authority-races",
+        "desktop-native",
+        "browser-resume"
+      ],
+      "knownRemainingEvidence": "Native lease retirement is measured. The browser resume check covered a real hidden tab, but the managed timeout under throttling is pending."
     },
     {
       "sourceId": "AT-30",
@@ -841,7 +1078,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-native",
+        "browser-peer"
+      ],
+      "knownRemainingEvidence": "The Windows case held two active controllers in separate windows. Ordinary managed browser attachment follows tab visibility. A hidden peer registered through direct HTTP with its own proof and was denied the other tab’s consent. Two concurrent active managed leases remain untested."
     },
     {
       "sourceId": "AT-31",
@@ -858,7 +1100,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "agent-transport",
+        "browser-transport",
+        "browser-peer",
+        "managed-two-workers"
+      ]
     },
     {
       "sourceId": "AT-32",
@@ -876,7 +1124,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "saved-resume",
+        "browser-resume",
+        "managed-two-workers"
+      ]
     },
     {
       "sourceId": "AT-33",
@@ -894,7 +1148,11 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "managed-two-workers",
+        "replay"
+      ]
     },
     {
       "sourceId": "AT-34",
@@ -911,7 +1169,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-window",
+        "browser-revoke",
+        "catalog"
+      ],
+      "knownRemainingEvidence": "Current real journeys verify successful authoring survives revoke. The separate denied-reveal result is covered locally and still needs the matched managed result witness."
     },
     {
       "sourceId": "AT-35",
@@ -929,7 +1193,14 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "permission",
+        "data-permission",
+        "browser-credential",
+        "saved-transport"
+      ],
+      "knownRemainingEvidence": "Direct route and service tests cover changed permission. Same-candidate real membership loss is pending."
     },
     {
       "sourceId": "AT-36",
@@ -947,7 +1218,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-window",
+        "browser-modal",
+        "browser-revoke"
+      ]
     },
     {
       "sourceId": "AT-37",
@@ -965,7 +1241,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "browser-reverse",
+        "browser-draft"
+      ],
+      "knownRemainingEvidence": "The shared UI test deliberately reverses completion order. The real browser network intervention still needs a witness."
     },
     {
       "sourceId": "AT-38",
@@ -982,7 +1263,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "authority-races",
+        "revoke"
+      ],
+      "knownRemainingEvidence": "Deterministic event-order tests explicitly hold the readiness reply and the retained state. No actual host with that scheduler interruption is claimed."
     },
     {
       "sourceId": "AT-39",
@@ -1000,7 +1286,13 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-native",
+        "context",
+        "browser-context"
+      ],
+      "knownRemainingEvidence": "The native case delays context, and the Chrome interaction test delays a managed response. The built Chrome case has not yet held that context reply."
     },
     {
       "sourceId": "AT-40",
@@ -1018,7 +1310,15 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "desktop-authoring",
+        "replay",
+        "permission",
+        "managed-stdio",
+        "saved-transport"
+      ],
+      "knownRemainingEvidence": "The managed authority test covers current permission and the live fixture covers same-key replay. A combined live sample after a permission change is pending."
     },
     {
       "sourceId": "AT-41",
@@ -1036,7 +1336,12 @@
         "authenticated-server-local-chrome"
       ],
       "serverParityCriterion": "browser-real-host-and-parity",
-      "evidenceStatus": "planned-not-run"
+      "evidenceStatus": "mapped-source-not-finally-qualified",
+      "executableWitnesses": [
+        "renderer-timed",
+        "delivery"
+      ],
+      "knownRemainingEvidence": "The bounded deterministic clock covers the late presentation callback. No real-host timing assertion is claimed for that programmed sequence."
     }
   ],
   "sections": [
@@ -1256,6 +1561,204 @@
     "Use an existing supported observable backend operation with a bounded deterministic test runtime where needed. Substitution does not prove native model accuracy, external-provider effects or new crash recovery.",
     "Human product acceptance and revoke are simulated by UI tests. No human acceptance/study task is part of technical closure.",
     "The original plan did not run tests. Current checkpoint evidence is tracked separately from prospective ownership in this crosswalk.",
-    "The user later authorized implementation. Preserve unrelated changes, roadmap history and real pending qualification."
-  ]
+    "The user later authorized implementation. Preserve unrelated changes, roadmap history and real pending qualification.",
+    "The executable witness catalog maps current files and selectors. Original planned owners remain as history. Mapping a test makes no current candidate, equivalent-host or full qualification claim."
+  ],
+  "executableWitnessCatalog": {
+    "desktop-authoring": {
+      "host": "packaged-windows-desktop",
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+      "testOrStage": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart"
+    },
+    "desktop-task": {
+      "host": "packaged-windows-desktop",
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+      "testOrStage": "packaged Desktop observes a running approved turn from a separately paired MCP client"
+    },
+    "desktop-window": {
+      "host": "packaged-windows-desktop",
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "testOrStage": "a real paired client presents a saved Windows resource and the user revokes before continuing saved work"
+    },
+    "desktop-native": {
+      "host": "packaged-windows-desktop",
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+      "testOrStage": "the native File menu opens a separately controlled window"
+    },
+    "browser-window": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "saved-presentation"
+    },
+    "browser-consent": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "const modal ="
+    },
+    "browser-save": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "agent-rename-replay"
+    },
+    "browser-revoke": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "revoke_ends_presentation_only"
+    },
+    "browser-reload": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "reload_requires_fresh_document"
+    },
+    "browser-peer": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "browser_cross_tab_consent_status"
+    },
+    "browser-queue": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "queue-duplicate-and-conflict"
+    },
+    "browser-late": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "browser_stale_panel_appearances"
+    },
+    "browser-resume": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "hidden_tab_shows_current_save_with_fresh_registration"
+    },
+    "managed-stdio": {
+      "host": "managed-https-postgresql-stdio",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-agent.ts",
+      "testOrStage": "durable_receipt_replay"
+    },
+    "managed-two-workers": {
+      "host": "managed-https-postgresql-two-workers",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-delivery.ts",
+      "testOrStage": "successor_recovered_both_commits"
+    },
+    "authority": {
+      "host": "shared-in-process",
+      "path": "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+      "testOrStage": "only the current interactive owner can reserve and activate an exact displayed request"
+    },
+    "authority-races": {
+      "host": "shared-in-process",
+      "path": "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+      "testOrStage": "delayed readiness, old full revoke, other windows, reload and liveness are isolated"
+    },
+    "revoke": {
+      "host": "shared-in-process",
+      "path": "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
+      "testOrStage": "revoke immediately restores manual state before sending exact cancel and suppresses a later grant"
+    },
+    "revoke-retry": {
+      "host": "shared-in-process",
+      "path": "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
+      "testOrStage": "a held revoke for A does not delay B and its retry never substitutes B"
+    },
+    "handoff": {
+      "host": "shared-in-process",
+      "path": "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
+      "testOrStage": "dirty work requires a separate explicit save and a failed save keeps manual control"
+    },
+    "renderer-late": {
+      "host": "shared-in-process",
+      "path": "modules/ui/shared/takeover/tests/presentation-queue.unit.test.ts",
+      "testOrStage": "a late read after revoke never presents or publishes acknowledgment"
+    },
+    "renderer-timed": {
+      "host": "shared-in-process",
+      "path": "modules/ui/shared/takeover/tests/presentation-queue.unit.test.ts",
+      "testOrStage": "a timed out command cannot override a later successful action under the same lease"
+    },
+    "delivery": {
+      "host": "shared-in-process",
+      "path": "modules/application/services/ui-control/tests/ui-control-delivery.unit.test.ts",
+      "testOrStage": "places each exact ID once, serializes delivery and preserves original terminal outcomes"
+    },
+    "context": {
+      "host": "managed-composition-test",
+      "path": "modules/hosts/server/composition/tests/managed-browser-presentation.unit.test.ts",
+      "testOrStage": "context must answer the current exact challenge once and is discarded after revoke or expiry"
+    },
+    "browser-credential": {
+      "host": "thin-client-interaction-test",
+      "path": "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
+      "testOrStage": "cannot present a delayed observation after the browser credential is replaced"
+    },
+    "browser-draft": {
+      "host": "shared-interaction-test",
+      "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "testOrStage": "A newer saved version exists."
+    },
+    "browser-reverse": {
+      "host": "shared-interaction-test",
+      "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "testOrStage": "Older saved title"
+    },
+    "browser-modal": {
+      "host": "shared-interaction-test",
+      "path": "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
+      "testOrStage": "stacks an out-of-flow consent dialog over an ordinary dialog and restores its control on revoke"
+    },
+    "browser-context": {
+      "host": "thin-client-interaction-test",
+      "path": "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
+      "testOrStage": "shows the first saved command and withholds a held command and context after local revoke"
+    },
+    "browser-transport": {
+      "host": "synthetic-http-routes",
+      "path": "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
+      "testOrStage": "exact browser origin, purposeful authentication, framing and live request are required for consent"
+    },
+    "agent-transport": {
+      "host": "synthetic-http-routes",
+      "path": "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+      "testOrStage": "exact managed requests respect authentication, framing, authority lifetime and safe results"
+    },
+    "saved-transport": {
+      "host": "synthetic-http-routes",
+      "path": "modules/adapters/transport/api-express/headless/tests/managed-saved-state-routes.integration.test.ts",
+      "testOrStage": "authenticated managed snapshot and replay retain scope, durable metadata and current access"
+    },
+    "permission": {
+      "host": "managed-composition-test",
+      "path": "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
+      "testOrStage": "managed edits and retry receipts require current workspace permission within the owned transaction"
+    },
+    "data-permission": {
+      "host": "shared-in-process",
+      "path": "modules/application/use-cases/system-builder/tests/headless-committed-changes.unit.test.ts",
+      "testOrStage": "withholds results if access changes while the stored page is read"
+    },
+    "replay": {
+      "host": "sqlite-application-integration",
+      "path": "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+      "testOrStage": "persists the same receipt and committed event across an actual local SQLite reopen"
+    },
+    "saved-resume": {
+      "host": "thin-client-in-process",
+      "path": "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.unit.test.ts",
+      "testOrStage": "a failed stream reconnect uses the same cursor for replay"
+    },
+    "catalog": {
+      "host": "mcp-adapter-integration",
+      "path": "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+      "testOrStage": "official stdio opt-in lists only finite authoring tools and forwards without retries"
+    },
+    "approval": {
+      "host": "mcp-adapter-integration",
+      "path": "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+      "testOrStage": "the opt-in stdio tool requires a separately granted, exact approved turn"
+    },
+    "desktop-held-save": {
+      "host": "desktop-pinned-connector-sqlite-integration",
+      "path": "modules/hosts/desktop/composition/tests/desktop-headless-authoring.unit.test.ts",
+      "testOrStage": "a paired writer saves through the real pinned connector and SQLite after the independent window revokes"
+    }
+  }
 }

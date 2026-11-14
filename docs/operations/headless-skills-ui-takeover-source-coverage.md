@@ -2,13 +2,21 @@
 
 - Status: implementation in progress. See the roadmap and review site for qualification status.
 - Roadmap: [Headless Skills and Revocable UI Takeover](../headless-skills-ui-takeover-implementation-roadmap.md)
-- Complete executable owners and host scope: [coverage JSON](headless-skills-ui-takeover-source-coverage.json)
+- Executable test paths, case names and host scope: [coverage JSON](headless-skills-ui-takeover-source-coverage.json)
 
 The approved order is desktop, then server and browser. This crosswalk summarizes
 the supplied design without publishing the private source document. Every
 invariant and acceptance scenario has an owning criterion. Server/browser
 parity repeats the applicable checks against the same server authority; it
 does not synchronize desktop and server data.
+
+The JSON record links all 18 invariants and 41 acceptance scenarios to current
+test files and named cases or fixture stages. Each link names its environment.
+The original test-owner wording remains in the record for history. The live
+Windows, Chrome and two-server results apply to their reviewed runs. The shared
+tests exercise races by controlling reply order and time. Their results apply
+to those controlled conditions. Where a scenario still needs evidence from a
+real host, the JSON record describes the missing test.
 
 The packaged Windows run `2026-11-13t20-36-57-540z-e399ba3f` passed on the
 authoring checkpoint in commit `a1894a3a1`. A separate MCP client paired,
