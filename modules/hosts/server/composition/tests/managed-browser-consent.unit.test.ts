@@ -44,6 +44,72 @@ test("only observations use the passive workspace authorizer and its denial reti
   } finally {service.close();}
 });
 
+test("only the active managed lease receives saved presentation and one fresh minimal context", async () => {
+  const intent = {action:"open-system", systemId:"fixture.saved", revisionId:"revision-1"} as const;
+  const service = composeManagedBrowserConsent({hostIncarnationId, authorize:async () => true,
+    async resolvePresentation(principal, workspace, input) {
+      assert.equal(principal.organizationId, organizationId);
+      assert.equal(principal.principalId, principalId);
+      assert.equal(workspace, workspaceId);
+      return input.action === "open-system" && input.systemId === intent.systemId ? {title:"Saved metadata"} : undefined;
+    }});
+  try {
+    const registered = await service.register(browser, workspaceId, active);
+    const foreign = await service.register(browser, workspaceId, active);
+    assert.ok(registered && "target" in registered && foreign && "target" in foreign);
+    const tab = {...registered, identity:browser};
+    const request = await service.execute({version:UI_CONTROL_VERSION, operation:"window.request", input:{target:registered.target,
+      taskId:randomUUID(),requestKey:randomUUID()}}, agent, active);
+    assert.ok(request.ok && request.value.kind === "request");
+    const reserved = await service.consent(tab, request.value.request.target,"accept",active);
+    assert.ok(reserved);
+    const {target} = reserved;
+    const present = {version:UI_CONTROL_VERSION,operation:"window.present",input:{target,intent,commandId:randomUUID()}} as const;
+    assert.deepEqual(await service.execute(present,agent,active),{ok:false,code:"headless.forbidden"});
+    assert.ok(await service.consent(tab,target,"ready",active));
+    const queued = await service.execute(present,agent,active);
+    assert.ok(queued.ok && queued.value.kind === "command" && queued.value.receipt.status === "accepted");
+    assert.equal(service.canPublish(present,queued,agent),true);
+    const pull = {target,sequence:1};
+    assert.deepEqual(await service.pullPresentation({...foreign,identity:browser},pull,active),{status:"unavailable"});
+    const delivered = await service.pullPresentation(tab,pull,active);
+    assert.ok(delivered.status === "command" && delivered.detail.title === "Saved metadata");
+    assert.equal(await service.acknowledgePresentation(tab,{target,receipt:{...queued.value.receipt,status:"applied"}},active),true);
+    const read = {version:UI_CONTROL_VERSION,operation:"window.context",input:{target}} as const;
+    const openContext = service.execute(read,agent,active);
+    const challenge = await service.readContextChallenge(tab,target,active);
+    assert.ok(challenge);
+    const context = {view:"system",ready:true,dirtyNavigationBlocked:false,selection:intent};
+    assert.equal(await service.publishContext(tab,{target,challenge,context},active),true);
+    const response = await openContext;
+    assert.deepEqual(response,{ok:true,value:{kind:"context",context}});
+    assert.equal(service.canPublish(read,response,agent),true);
+    const pending = service.execute(read,agent,active);
+    assert.ok(await service.readContextChallenge(tab,target,active));
+    assert.equal(await service.revoke(tab,target,active),true);
+    assert.deepEqual(await pending,{ok:false,code:"headless.unavailable"});
+    assert.equal(service.canPublish(read,response,agent),false);
+    assert.deepEqual(await service.pullPresentation(tab,pull,active),{status:"unavailable"});
+
+    const replacement = await service.execute({version:UI_CONTROL_VERSION, operation:"window.request",
+      input:{target:registered.target, taskId:randomUUID(), requestKey:randomUUID()}}, agent, active);
+    assert.ok(replacement.ok && replacement.value.kind === "request");
+    const next = await service.consent(tab, replacement.value.request.target, "accept", active);
+    assert.ok(next && await service.consent(tab, next.target, "ready", active));
+    const nextCommand = {...present, input:{target:next.target, intent, commandId:randomUUID()}};
+    const nextReceipt = await service.execute(nextCommand, agent, active);
+    assert.ok(nextReceipt.ok && nextReceipt.value.kind === "command");
+    const nextRead = service.execute({...read, input:{target:next.target}}, agent, active);
+    const nextChallenge = await service.readContextChallenge(tab, next.target, active);
+    assert.ok(nextChallenge);
+    assert.equal(await service.revoke(tab, request.value.request.target, active), true);
+    const nextDelivery = await service.pullPresentation(tab, {target:next.target, sequence:1}, active);
+    assert.ok(nextDelivery.status === "command" && nextDelivery.command.commandId === nextCommand.input.commandId);
+    assert.equal(await service.publishContext(tab, {target:next.target, challenge:nextChallenge, context}, active), true);
+    assert.deepEqual(await nextRead, {ok:true,value:{kind:"context",context}});
+  } finally {service.close();}
+});
+
 test("the agent requests, the exact browser consents and confirms readiness, and revoke returns to manual", async () => {
   const service = composeManagedBrowserConsent({hostIncarnationId, async authorize(principal, id) {
     return principal.organizationId === organizationId && id === workspaceId;

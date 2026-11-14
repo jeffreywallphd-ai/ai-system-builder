@@ -184,7 +184,7 @@ import {
   deleteContainedFile,
   writeContainedFile,
 } from "../../../adapters/filesystem-security";
-import type { ProviderCredentialStatus } from "../../../contracts/security";
+import type { ProviderCredentialStatus, SecurityScope } from "../../../contracts/security";
 import { composeServerProviderCredentials } from "./composeServerProviderCredentials";
 import { createRuntimePreparedModelCheckpointResolver } from "../../shared/createRuntimePreparedModelCheckpointResolver";
 import {
@@ -252,6 +252,7 @@ import { composeSystemBuilder } from "../../shared/composition/composeSystemBuil
 import { composeManagedSavedState } from "./composeManagedSavedState";
 import { composeManagedAgentReads } from "./composeManagedAgentReads";
 import { composeManagedBrowserConsent } from "./composeManagedBrowserConsent";
+import { composeManagedBrowserPresentationResources } from "./composeManagedBrowserPresentationResources";
 import { composeManagedHeadlessAuthoring } from "./composeManagedHeadlessAuthoring";
 import type { HeadlessHostIncarnationId } from "../../../contracts/headless";
 import type { TenantPlacementConfig } from "../../../contracts/config";
@@ -1686,7 +1687,8 @@ export function composeServerHost(
         if (options.managedHeadlessAgent.browserObservationAuthorizer) {
           const observation = new AuthorizeWorkspaceOperationService({organizationContext: contexts,
             authorizer: options.managedHeadlessAgent.browserObservationAuthorizer});
-          const authorize = (policy: WorkspaceOperationAuthorizationPort): Parameters<typeof composeManagedBrowserConsent>[0]["authorize"] => async (principal, workspaceId) => {
+          const readScopes = ["workspace:read", "asset:read"] as const;
+          const authorize = (policy: WorkspaceOperationAuthorizationPort, requiredScopes: readonly SecurityScope[] = readScopes): Parameters<typeof composeManagedBrowserConsent>[0]["authorize"] => async (principal, workspaceId) => {
             const current = () => {
               const active = contexts.getCurrentOrganizationContext();
               return active?.organizationId === principal.organizationId && active.principalId === principal.principalId;
@@ -1694,12 +1696,24 @@ export function composeServerHost(
             if (!current()) return false;
             const workspace = await workspaces.readWorkspace(workspaceId);
             if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== principal.organizationId || workspace.status !== "active") return false;
-            await policy.authorizeWorkspaceOperation({workspace, operation: "headless.window.observe",
-              requiredScopes: ["workspace:read", "asset:read"]});
+            await policy.authorizeWorkspaceOperation({workspace, operation: "headless.window.observe", requiredScopes});
             return current();
           };
-          const browserConsent = composeManagedBrowserConsent({hostIncarnationId, authorize:authorize(workspaceAuthorization),
-            authorizeObservation:authorize(observation)});
+          const runs = createLocalExecutionRunRepositoryAdapters({rootDir:registerOptions.storageRootDirectory,
+            now:options.now, documents:organizationDocuments});
+          const presentation = composeManagedBrowserPresentationResources({systems:systemBuilder.repository,
+            artifacts:artifactCatalog, runs:runs.executionRunRepository});
+          const browserConsent = composeManagedBrowserConsent({hostIncarnationId,
+            authorize: authorize(workspaceAuthorization),
+            authorizeObservation: authorize(observation),
+            async resolvePresentation(principal, workspaceId, intent) {
+              const scopes = intent.action === "show-run" ? [...readScopes, "runtime:read"] as const :
+                intent.action === "show-artifact" ? [...readScopes, "artifact:read"] as const : readScopes;
+              const mayRead = authorize(workspaceAuthorization, scopes);
+              if (!await mayRead(principal, workspaceId)) return;
+              const value = await presentation(workspaceId, intent);
+              if (value && await mayRead(principal, workspaceId)) return value;
+            }});
           managedBrowserConsent = { ...browserConsent, hostIncarnationId };
         }
       }

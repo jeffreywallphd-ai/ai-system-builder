@@ -315,6 +315,23 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/services/ui-control/tests/ui-control-delivery.unit.test.ts",
         ),
     },
+    "managed-headless-browser-presentation-host": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/composeManagedBrowserPresentationResources.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/composition/composeManagedBrowserPresentationResources.ts",
+            "modules/hosts/server/composition/composeManagedBrowserConsent.ts",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+        ),
+    },
     "managed-headless-agent-server": {
         "automatic_sources": (
             "modules/hosts/server/composition/composeManagedAgentReads.ts",

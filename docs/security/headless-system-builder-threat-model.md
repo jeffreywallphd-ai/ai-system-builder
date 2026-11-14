@@ -260,6 +260,12 @@ milliseconds and shares the exact lease generation and original request
 lifetime. It carries only saved-resource identifiers and view state. Closing a
 lease discards queued work and pending context.
 
+The server presentation composition rechecks workspace policy for each saved
+resource and requires runtime or artifact read access where applicable. It
+compares the revision against the currently saved system before returning
+display metadata. The lease gates separate command, acknowledgment and context
+operations. The browser can never return fresh context for a retired lease.
+
 The controlled delivery test uses two independent loopback HTTPS servers
 with the same disposable PostgreSQL database and a nonowner role without
 `BYPASSRLS`. It sends synthetic changes through the ordinary authenticated

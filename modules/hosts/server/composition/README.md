@@ -44,6 +44,12 @@ proves its exact lease. The queue tracks a saved-resource command and its
 separate receipt. A browser can provide current context only in response to
 a short-lived, single-use challenge for the same lease.
 
+Managed browser presentation resolves saved system revisions, components,
+validation, run status and artifact catalog metadata through the existing
+workspace repositories. A live matching lease gates delivery, receipts and
+fresh context. Runs and artifacts require their existing read scopes. These
+operations do not change saved resources or stop independent tasks.
+
 Current composition includes:
 
 - artifact-object storage via filesystem adapter,

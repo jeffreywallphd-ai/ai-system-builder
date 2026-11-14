@@ -3,13 +3,16 @@ import { randomUUID } from "node:crypto";
 import { createUiControlAuthority, type UiControlAgent } from "../../../application/services/ui-control/ui-control-authority.service";
 import {
   UI_CONTROL_VERSION, isUiControlId, readUiControlAttempt, readUiControlLeaseTarget, readUiControlRevoke, sameUiControlLease,
+  readUiPresentationAcknowledgment, readUiPresentationDetail, readUiPresentationPublication, readUiPresentationPull,
   type HeadlessHostIncarnationId, type HeadlessWindowRequest, type HeadlessWindowResult, type HeadlessWindowValue,
-  type UiControlLease, type UiControlObservation, type UiControlTimedGrant,
+  type UiControlLease, type UiControlLeaseTarget, type UiControlObservation, type UiControlTimedGrant, type UiPresentationIntent,
 } from "../../../contracts/headless";
+import { sameManagedBrowserAttempt } from "../../../contracts/headless/managed-browser-consent";
 import type { OrganizationRequestContext } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { ManagedHeadlessBrowserIdentity } from "../security/resolveManagedHeadlessClientPolicy";
 import { createManagedHeadlessBrowserDocuments } from "./createManagedHeadlessBrowserDocuments";
+import {createManagedBrowserPresentation} from "./createManagedBrowserPresentation";
 import type { ManagedHeadlessAuthoringRegistration } from "./composeManagedHeadlessAuthoring";
 
 type Principal = Pick<OrganizationRequestContext, "organizationId" | "principalId">;
@@ -28,10 +31,13 @@ export function composeManagedBrowserConsent(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
   readonly authorize: (principal: Principal, workspaceId: WorkspaceId) => Promise<boolean>;
   readonly authorizeObservation?: (principal: Principal, workspaceId: WorkspaceId) => Promise<boolean>;
+  readonly resolvePresentation?: (principal: Principal, workspaceId: WorkspaceId, intent: UiPresentationIntent) => Promise<unknown>;
   readonly now?: () => number;
 }) {
   const {hostIncarnationId, authorize, now = () => performance.now()} = options;
   let open = true;
+  const presentation = createManagedBrowserPresentation({now});
+  const contextDeadlines = new WeakMap<object, number>();
   async function permitted(principal: Principal, workspaceId: WorkspaceId) {
     try { return open && await authorize(principal, workspaceId) === true && open; }
     catch { return false; }
@@ -57,17 +63,39 @@ export function composeManagedBrowserConsent(options: {
     }
   }
 
+  async function detail(principal: Principal, target: UiControlLeaseTarget, intent: UiPresentationIntent) {
+    try {
+      return readUiPresentationDetail(await options.resolvePresentation?.(principal, target.workspaceId, intent));
+    } catch { return undefined; }
+  }
+
+  const exactAgentLease = (target: UiControlLeaseTarget, agent: UiControlAgent) => {
+    const lease = authority.readAgentLease(target, agent);
+    return !!lease && sameUiControlLease(lease.target, target);
+  };
+
+  async function browserLease(document: AuthenticatedDocument, target: UiControlLeaseTarget, requestIsCurrent: () => boolean) {
+    const tab = await authenticate(document, requestIsCurrent);
+    const live = () => !!tab?.isCurrent() && requestIsCurrent() && !!authority.readInteractiveLease(target, tab.owner, true);
+    return live() ? live : undefined;
+  }
+
   function canPublish(request: HeadlessWindowRequest, result: HeadlessWindowResult, identity: AgentRegistration) {
     const agent = asAgent(identity);
     if (!agent) return false;
     if (!result.ok || result.value.kind === "ended" || result.value.kind === "released") return true;
+    if (request.operation === "window.present" && result.value.kind === "command")
+      return exactAgentLease(request.input.target, agent) && result.value.receipt.commandId === request.input.commandId;
+    if (request.operation === "window.context" && result.value.kind === "context")
+      return exactAgentLease(request.input.target, agent) && now() < (contextDeadlines.get(result.value) ?? 0);
     if (result.value.kind === "request") {
       const {request: supplied, lease} = result.value;
       const latest = authority.readAgentRequest(supplied.target, agent);
       if (!latest || latest.status !== supplied.status || latest.taskId !== supplied.taskId ||
           latest.agentSessionId !== supplied.agentSessionId || latest.expiresAt !== supplied.expiresAt) return false;
-      if (!lease) return request.operation !== "window.status" || latest.status !== "active";
-      if (request.operation !== "window.status") return false;
+      const readLease = request.operation === "window.status" || request.operation === "window.renew";
+      if (!lease) return !readLease || latest.status !== "active";
+      if (!readLease) return false;
       const current = authority.readAgentLease(supplied.target, agent);
       return !!current && sameUiControlLease(current.target, lease);
     }
@@ -93,6 +121,7 @@ export function composeManagedBrowserConsent(options: {
       const state = authority.observeInteractive(tab.target, tab.owner);
       if (!state) return {status: "ready"};
       const lease = timed(state.active);
+      // This fixed consent observation stays separate from the context channel.
       return {status: "ready", request: state.request, ...(lease ? {lease} : {})};
     },
     async consent(document: AuthenticatedDocument, raw: unknown, phase: "accept" | "ready", requestIsCurrent: () => boolean) {
@@ -109,10 +138,41 @@ export function composeManagedBrowserConsent(options: {
       const target = readUiControlRevoke(raw);
       if (!target) return false;
       const tab = await authenticate(document, requestIsCurrent);
-      return !!tab?.isCurrent() && requestIsCurrent() && authority.revoke(target, tab.owner).status === "ok";
+      if (!tab?.isCurrent() || !requestIsCurrent()) return false;
+      const lease = authority.observeInteractive(tab.target, tab.owner)?.active;
+      const revoked = authority.revoke(target, tab.owner).status === "ok";
+      if (revoked && lease && ("leaseId" in target ?
+        sameUiControlLease(lease.target, target) : sameManagedBrowserAttempt(lease.target, target))) {
+        presentation.retireLease(lease.target);
+      }
+      return revoked;
     },
     disconnect(document: AuthenticatedDocument) {
       return documents.retire(document.identity, document.target, document.proof);
+    },
+    async pullPresentation(document: AuthenticatedDocument, raw: unknown, requestIsCurrent: () => boolean) {
+      const input = readUiPresentationPull(raw);
+      if (!input) return {status:"unavailable"} as const;
+      const live = await browserLease(document, input.target, requestIsCurrent);
+      return live ? presentation.pull(input, live, intent => detail(document.identity, input.target, intent)) : {status:"unavailable"} as const;
+    },
+    async acknowledgePresentation(document: AuthenticatedDocument, raw: unknown, requestIsCurrent: () => boolean) {
+      const input = readUiPresentationAcknowledgment(raw);
+      if (!input) return false;
+      const live = await browserLease(document, input.target, requestIsCurrent);
+      return !!live && presentation.acknowledge(input, live);
+    },
+    async readContextChallenge(document: AuthenticatedDocument, raw: unknown, requestIsCurrent: () => boolean) {
+      const target = readUiControlLeaseTarget(raw);
+      if (!target) return;
+      const live = await browserLease(document, target, requestIsCurrent);
+      return live ? presentation.contextChallenge(target, live) : undefined;
+    },
+    async publishContext(document: AuthenticatedDocument, raw: unknown, requestIsCurrent: () => boolean) {
+      const input = readUiPresentationPublication(raw);
+      if (!input) return false;
+      const live = await browserLease(document, input.target, requestIsCurrent);
+      return !!live && presentation.publishContext(input, live);
     },
     async execute(request: HeadlessWindowRequest, identity: AgentRegistration, requestIsCurrent: () => boolean): Promise<HeadlessWindowResult> {
       const input = request.input;
@@ -133,8 +193,14 @@ export function composeManagedBrowserConsent(options: {
           }
           return response.status === "ended" ? success({kind: "ended"}) : response.status === "busy" ? busy : denied;
         }
-        case "window.status": {
-          const response = await authority.agentStatus(request.input.target, agent, false, undefined, current);
+        case "window.status":
+        case "window.renew": {
+          const exact = request.input.target;
+          const renew = request.operation === "window.renew";
+          const fresh = renew && "leaseId" in exact ? await presentation.readFreshContext(exact,
+            () => current() && exactAgentLease(exact, agent)) : undefined;
+          if (renew && !fresh) return unavailable;
+          const response = await authority.agentStatus(exact, agent, renew, fresh ? () => now() < fresh.deadline : undefined, current);
           if (!current()) return denied;
           if (response.status === "ok") {
             const latest = authority.readAgentRequest(response.value.target, agent);
@@ -144,8 +210,33 @@ export function composeManagedBrowserConsent(options: {
           }
           return response.status === "ended" ? success({kind: "ended"}) : response.status === "busy" ? busy : denied;
         }
-        case "window.release":
-          return authority.release(request.input.target, agent).status === "ok" ? success({kind: "released"}) : denied;
+        case "window.release": {
+          const lease = authority.readAgentLease(request.input.target, agent);
+          if (authority.release(request.input.target, agent).status !== "ok") return denied;
+          if (lease) presentation.retireLease(lease.target);
+          return success({kind: "released"});
+        }
+        case "window.present": {
+          if (!options.resolvePresentation) return unavailable;
+          const exact = request.input.target;
+          const result = await presentation.submit(request.input, () => exactAgentLease(exact, agent), current,
+            async intent => !!await detail(agent, exact, intent));
+          if (!current() || !exactAgentLease(exact, agent) || result.status === "denied") return denied;
+          if (result.status === "conflict") return {ok:false, code:"headless.idempotency-conflict"};
+          if (result.status === "busy") return busy;
+          return success({kind:"command",receipt:result.receipt,duplicate:result.status === "duplicate"});
+        }
+        case "window.context": {
+          const exact = request.input.target;
+          const live = () => current() && exactAgentLease(exact, agent);
+          const context = await presentation.readFreshContext(exact, live);
+          if (!context || !live()) return unavailable;
+          if (context.snapshot.selection && !await detail(agent, exact, context.snapshot.selection)) return denied;
+          if (!live() || now() >= context.deadline) return unavailable;
+          const projection = {kind:"context", context:context.snapshot} as const;
+          contextDeadlines.set(projection, context.deadline);
+          return success(projection);
+        }
         default:
           return unavailable;
       }
@@ -155,6 +246,7 @@ export function composeManagedBrowserConsent(options: {
       open = false;
       documents.close();
       authority.close();
+      presentation.close();
     },
   };
 }
