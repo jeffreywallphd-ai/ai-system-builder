@@ -70,8 +70,10 @@ async function interruptOwnedDeliveryProcess(child: ChildProcess, allowExited = 
 }
 
 export async function startManagedReferenceHost(databaseReference: string,
-  options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean; readonly headlessBrowser?: boolean } = {}) {
+  options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean; readonly headlessBrowser?: boolean;
+    readonly headlessBrowserPresentation?: boolean } = {}) {
   assert.ok(!options.headlessBrowser || options.headlessAgent && !options.headlessDelivery);
+  assert.ok(!options.headlessBrowserPresentation || options.headlessBrowser);
   const root = path.resolve(process.cwd());
   const id = randomUUID().replaceAll("-", "");
   const runRoot = path.join(root, "artifacts/qualification/visual-composer/d", `managed-${id}`);
@@ -216,7 +218,8 @@ export async function startManagedReferenceHost(databaseReference: string,
     const ca = path.join(runRoot, "tls/local-dev-ca.pem");
     const runtimeRoot = path.join(runRoot, "runtime");
     const base = {...process.env, NODE_EXTRA_CA_CERTS: ca};
-    for (const key of ["HF_TOKEN", "HUGGING_FACE_TOKEN", "HUGGINGFACE_HUB_TOKEN", "NODE_TLS_REJECT_UNAUTHORIZED"]) delete base[key];
+    for (const key of ["HF_TOKEN", "HUGGING_FACE_TOKEN", "HUGGINGFACE_HUB_TOKEN", "NODE_TLS_REJECT_UNAUTHORIZED",
+      "AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION"]) delete base[key];
     const environment = {...base, NODE_ENV: "test", DEPLOYMENT_SHAPE: "campus-server", DATABASE_URL: runtimeUrl, POSTGRES_SSL_MODE: "disable", PORT: String(serverPort), SERVER_STORAGE_ROOT: path.join(runRoot, "storage"), SERVER_RUNTIME_ROOT: runtimeRoot,
       AI_SYSTEM_BUILDER_SECURITY_MODE: "oidc-bearer", AI_SYSTEM_BUILDER_HTTPS_ENABLED: "true", AI_SYSTEM_BUILDER_TLS_CERT_MODE: "manual", AI_SYSTEM_BUILDER_TLS_CERT_PATH: material.certificatePath!, AI_SYSTEM_BUILDER_TLS_KEY_PATH: material.keyPath!, AI_SYSTEM_BUILDER_OIDC_ISSUER: issuerOrigin, AI_SYSTEM_BUILDER_OIDC_AUDIENCE: "aisb-controlled-qualification", AI_SYSTEM_BUILDER_OIDC_JWKS_URI: `${issuerOrigin}/jwks`, AI_SYSTEM_BUILDER_OIDC_ALGORITHMS: "RS256", AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE: "dedicated", AI_SYSTEM_BUILDER_DEDICATED_ORGANIZATION_ID: organizationId,
       PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: String(workerPort), PYTHON_RUNTIME_BASE_URL: `http://127.0.0.1:${workerPort}`, PYTHON_RUNTIME_COMMAND: process.execPath, PYTHON_RUNTIME_ARGS: "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs", PYTHON_RUNTIME_WORKER_DIR: root, PYTHON_RUNTIME_STARTUP_TIMEOUT_MS: "15000", HF_HUB_CACHE: path.join(runtimeRoot, "controlled-model-cache")};
@@ -229,6 +232,7 @@ export async function startManagedReferenceHost(databaseReference: string,
       AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN: `https://127.0.0.1:${serverPort}`,
       MANAGED_REFERENCE_SERVE_BUILT_BROWSER: "1",
     });
+    if (options.headlessBrowserPresentation) Object.assign(environment, {AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION: "1"});
     async function launchServer(env: typeof environment = environment, delivery = false) {
       const child = fork(path.join(root, "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts"), [], {execArgv: ["--import", "tsx"], env, silent: true, windowsHide: true});
       if (delivery) deliveryServer = child;

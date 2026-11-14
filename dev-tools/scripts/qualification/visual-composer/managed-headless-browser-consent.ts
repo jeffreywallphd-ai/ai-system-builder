@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
-import { arch, platform, release, totalmem } from "node:os";
+import { arch, availableParallelism, platform, release, totalmem } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import { chromium, type Browser } from "@playwright/test";
+import { chromium, type Browser, type Page } from "@playwright/test";
 
 import { MANAGED_BROWSER_CONSENT_PATH } from "../../../../modules/contracts/headless/managed-browser-consent";
+import { readHeadlessWindowResult, type UiControlLeaseTarget } from "../../../../modules/contracts/headless";
 import { startManagedReferenceHost } from "./managed-reference-host";
 
 async function until<T>(observe: () => Promise<T | undefined>, attempts = 30) {
@@ -20,11 +21,49 @@ async function until<T>(observe: () => Promise<T | undefined>, attempts = 30) {
   throw new Error("The expected state did not become visible.");
 }
 
+async function measureBrowserRevoke(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const scope = document.querySelector('[aria-label="Automation takeover"]');
+    const revoke = [...(scope?.querySelectorAll("button") ?? [])]
+      .find(button => button.textContent?.trim() === "Revoke automation takeover");
+    const action = document.querySelector<HTMLButtonElement>('button[aria-label="Settings"]');
+    if (!revoke || !action?.disabled) throw new Error("The fixture did not enter attached mode.");
+    return new Promise<number>((resolve, reject) => {
+      let started: number | undefined;
+      const observer = new MutationObserver(() => {
+        if (started === undefined || action.disabled || revoke.isConnected) return;
+        observer.disconnect();
+        clearTimeout(deadline);
+        resolve(performance.now() - started);
+      });
+      const deadline = setTimeout(() => {
+        observer.disconnect();
+        reject(new Error("The browser did not restore manual controls."));
+      }, 2_000);
+      observer.observe(document.body, {subtree:true, childList:true, attributes:true, attributeFilter:["disabled"]});
+      revoke.addEventListener("click", () => {started = performance.now();}, {capture:true, once:true});
+      revoke.click();
+    });
+  });
+}
+
+function measurements(values: number[]) {
+  assert.ok(values.length > 0 && values.every(value => Number.isFinite(value) && value >= 0));
+  const sorted = [...values].sort((left, right) => left - right);
+  const at = (ratio: number) => sorted[Math.ceil(sorted.length * ratio) - 1]!;
+  return {samples:sorted.length, p50:at(.5), p95:at(.95), max:at(1)};
+}
+
 async function main() {
-  const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "", {headlessAgent:true, headlessBrowser:true});
+  const presentation = process.env.MANAGED_HEADLESS_PRESENTATION_TEST === "1";
+  const measure = process.env.MANAGED_HEADLESS_BROWSER_MEASURE === "1";
+  assert.ok(!measure || presentation);
+  const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
+    {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
-  const evidence: Record<string, boolean | number | string> = {
+  const evidence: Record<string, boolean | number | string | ReturnType<typeof measurements>> = {
     os: platform(), architecture: arch(), os_release: release(), ram_gib: Math.round(totalmem() / 2**30),
+    logical_cpus:availableParallelism(),
   };
   let browser: Browser | undefined;
   let passed = false;
@@ -43,7 +82,8 @@ async function main() {
       args: ["--import", "tsx", path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts")],
       env: {AISB_HEADLESS_MODE: "managed", AISB_HEADLESS_MANAGED_ORIGIN: serverOrigin, AISB_HEADLESS_MANAGED_CREDENTIAL: access,
         AISB_HEADLESS_MANAGED_ORGANIZATION_ID: organizationId, AISB_HEADLESS_MANAGED_WORKSPACE_ID: activeWorkspaceId,
-        AISB_HEADLESS_ENABLE_MANAGED_CONSENT: "1", NODE_EXTRA_CA_CERTS: caFile, TSX_DISABLE_CACHE: "1"},
+        AISB_HEADLESS_ENABLE_MANAGED_CONSENT: "1", AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION: presentation ? "1" : "0",
+        AISB_HEADLESS_ENABLE_AUTHORING: presentation ? "1" : "0", NODE_EXTRA_CA_CERTS: caFile, TSX_DISABLE_CACHE: "1"},
       stderr: "ignore", maxBufferSize: 256 * 1024,
     }));
     const call = async (name: string, args: Record<string, unknown> = {}) => {
@@ -65,10 +105,23 @@ async function main() {
     evidence.chrome = browser.version();
     evidence.node = process.versions.node;
     const page = await context.newPage();
+    evidence.initial_document_visible = await page.evaluate(() => document.visibilityState === "visible");
+    if (presentation) page.on("response", response => {
+      const responsePath = new URL(response.url()).pathname;
+      if (responsePath === "/api/headless/system-builder/snapshot") evidence.saved_state_snapshot_status = response.status();
+      if (responsePath === "/api/headless/system-builder/stream") evidence.saved_state_stream_status = response.status();
+      if (responsePath === "/api/systems/manage") {
+        evidence.saved_manage_status = response.status();
+        evidence.saved_manage_requests = Number(evidence.saved_manage_requests ?? 0) + 1;
+      }
+    });
     await page.goto(`${trusted}/systems`, {waitUntil:"domcontentloaded"});
     const systems = page.getByRole("heading", {name: "Systems", exact: true});
     await systems.waitFor({timeout: 20_000});
     await page.getByRole("tab", {name: "Compose", exact: true}).waitFor({timeout: 20_000});
+    const manage = page.getByRole("tab", {name:"Manage", exact:true});
+    const management = page.getByRole("region", {name:"Manage systems", exact:true});
+    const panel = page.getByRole("region", {name:"Resource shown by automation", exact:true});
     stage = "identify-tab";
     const getTab = () => until(async () => {
       const result = await call("aisb_list_windows", scope);
@@ -87,6 +140,52 @@ async function main() {
     assert.equal(routeDenied, 400);
     evidence.noncanonical_browser_route_denied = true;
 
+    const templateId = "reference.secured-data-review@1.0.0";
+    let saved: {systemId:string; revisionId:string; recordRevision:number} | undefined;
+    if (presentation) {
+      stage = "saved-authoring";
+      const templates = await call("aisb_list_templates", scope);
+      assert.equal(templates.ok, true);
+      assert.ok(templates.value.some((template: {templateId:string}) => template.templateId === templateId));
+      evidence.expected_template_discovered = true;
+      stage = "open-management";
+      await manage.click();
+      const initialName = "Synthetic presentation start";
+      const create = {...scope, templateId, name:initialName, idempotencyKey:randomUUID()};
+      stage = "agent-create";
+      const created = await call("aisb_create_system", create);
+      assert.ok(created.ok && created.value.kind === "committed");
+      evidence.agent_create_committed = true;
+      stage = "see-created-system";
+      const snapshot = await fixture.request("/api/headless/system-builder/snapshot", {method:"POST",
+        token:browserBearer, organizationId, body:{workspaceId:activeWorkspaceId}});
+      assert.equal(snapshot.status, 200);
+      evidence.created_in_authorized_snapshot = snapshot.body.value.systems.some((system: {systemId:string}) =>
+        system.systemId === created.value.reference.systemId);
+      assert.equal(evidence.created_in_authorized_snapshot, true);
+      const managedList = await fixture.request(`/api/systems/manage?workspaceId=${encodeURIComponent(activeWorkspaceId)}&view=active&sort=updated-desc&limit=25`,
+        {token:browserBearer, organizationId});
+      evidence.created_in_ordinary_listing = managedList.status === 200 && managedList.body.value.items
+        .some((system: {systemId:string;name:string}) => system.systemId === created.value.reference.systemId && system.name === initialName);
+      evidence.management_view_visible = await management.isVisible();
+      await management.getByRole("cell", {name:new RegExp(initialName)}).waitFor({timeout:10_000});
+      const original = created.value.reference;
+      const rename = {...scope, systemId:original.systemId, baseRevisionId:original.revisionId,
+        baseRecordRevision:original.recordRevision, name:"Synthetic saved presentation", idempotencyKey:randomUUID()};
+      stage = "agent-rename";
+      const committed = await call("aisb_rename_system", rename);
+      assert.ok(committed.ok && committed.value.kind === "committed");
+      saved = committed.value.reference;
+      assert.ok(saved && saved.systemId === original.systemId && saved.recordRevision === original.recordRevision + 1);
+      evidence.agent_rename_committed = true;
+      stage = "see-renamed-system";
+      await management.getByRole("cell", {name:new RegExp(rename.name)}).waitFor({timeout:10_000});
+      stage = "agent-rename-replay";
+      const replay = await call("aisb_rename_system", rename);
+      assert.deepEqual(replay, {ok:true,value:{kind:"replayed",reference:saved}});
+      evidence.managed_create_edit_refresh_and_retry = true;
+    }
+
     stage = "consent";
     const before = await systems.boundingBox();
     assert.ok(before);
@@ -102,12 +201,41 @@ async function main() {
     await modal.getByRole("button", {name: "Accept automation takeover", exact:true}).click();
     const revoke = page.getByRole("button", {name: "Revoke automation takeover", exact:true});
     await revoke.waitFor({timeout: 10_000});
-    await until(async () => {
-      const status = await call("aisb_window_status", {target:attempt});
-      return status.ok && status.value.request?.status === "active" && status.value.lease ? true : undefined;
+    const lease = await until<UiControlLeaseTarget>(async () => {
+      const status = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+      return status.ok && status.value.kind === "request" && status.value.request.status === "active" ? status.value.lease : undefined;
     });
     evidence.exact_document_active = true;
 
+    const presentationRequest = saved ? {target:lease, commandId:randomUUID(),
+      intent:{action:"open-system", systemId:saved.systemId, revisionId:saved.revisionId}} : undefined;
+    if (presentationRequest) {
+      stage = "saved-presentation";
+      const beganAt = performance.now();
+      const queued = readHeadlessWindowResult(await call("aisb_present_in_window", presentationRequest));
+      assert.ok(queued.ok && queued.value.kind === "command" && !queued.value.duplicate &&
+        queued.value.receipt.status === "accepted");
+      evidence.command_accepted = true;
+      stage = "panel-visible";
+      await panel.waitFor({timeout:3_000});
+      await panel.getByRole("heading", {name:"Synthetic presentation start", exact:true}).waitFor({timeout:3_000});
+      assert.equal(await panel.locator("code").textContent(), presentationRequest.intent.systemId);
+      evidence.first_visible_presentation_ms = performance.now() - beganAt;
+      stage = "command-acknowledged";
+      await until(async () => {
+        const repeated = readHeadlessWindowResult(await call("aisb_present_in_window", presentationRequest));
+        return repeated.ok && repeated.value.kind === "command" && repeated.value.duplicate && repeated.value.receipt.status === "applied" ? true : undefined;
+      });
+      assert.equal(await panel.count(), 1);
+      stage = "fresh-context";
+      const current = readHeadlessWindowResult(await call("aisb_window_context", {target:lease}));
+      assert.deepEqual(current, {ok:true,value:{kind:"context",context:{view:"system", ready:true,
+        dirtyNavigationBlocked:false, selection:presentationRequest.intent}}});
+      const renewed = readHeadlessWindowResult(await call("aisb_renew_window", {target:lease}));
+      assert.ok(renewed.ok && renewed.value.kind === "request" && renewed.value.lease);
+      assert.deepEqual(renewed.value.lease, lease);
+      evidence.command_confirmed_and_fresh_context_renewed = true;
+    }
     stage = "revoke";
     await revoke.click();
     await revoke.waitFor({state:"detached", timeout:5_000});
@@ -117,6 +245,91 @@ async function main() {
     });
     assert.deepEqual(await call("aisb_request_window", ask), {ok:true, value:{kind:"ended"}});
     evidence.revoke_disables_retry = true;
+    if (presentationRequest) {
+      await panel.waitFor({state:"hidden", timeout:3_000});
+      const late = readHeadlessWindowResult(await call("aisb_window_context", {target:lease}));
+      assert.ok(!late.ok);
+      assert.ok(!readHeadlessWindowResult(await call("aisb_present_in_window", presentationRequest)).ok);
+      const name = "Synthetic saved after revoke";
+      const committed = await call("aisb_create_system", {...scope, templateId, name, idempotencyKey:randomUUID()});
+      assert.ok(committed.ok && committed.value.kind === "committed");
+      await management.getByRole("cell", {name:new RegExp(name)}).waitFor({timeout:10_000});
+      assert.equal(await panel.count(), 0);
+      evidence.revoke_ends_presentation_only = true;
+    }
+
+    if (measure && saved && presentationRequest) {
+      stage = "browser-timing";
+      const dispatchTimes: number[] = [];
+      const replyTimes: number[] = [];
+      const revealTimes: number[] = [];
+      const revokeTimes: number[] = [];
+      const settings = page.locator("button.ui-shell__settings-button");
+      assert.equal(await settings.isEnabled(), true);
+      let current = saved;
+      for (let index = 0; index < 100; index++) {
+        // The shared controller retains 32 local revokes for 60 seconds.
+        if (index > 0 && index % 30 === 0) await sleep(61_000);
+        const name = `Synthetic warm system ${index + 1}`;
+        stage = "timed-commit";
+        assert.equal(await page.evaluate(() => document.visibilityState), "visible");
+        const dispatchedAt = performance.now();
+        const change = await call("aisb_rename_system", {...scope, systemId:current.systemId,
+          baseRevisionId:current.revisionId, baseRecordRevision:current.recordRevision, name, idempotencyKey:randomUUID()});
+        const replyAt = performance.now();
+        assert.ok(change.ok && change.value.kind === "committed");
+        current = change.value.reference;
+        stage = "timed-visible-save";
+        const timedRow = management.getByRole("cell", {name:new RegExp(`^${name}\\b`)});
+        await timedRow.waitFor({timeout:5_000});
+        assert.ok((await timedRow.textContent())?.includes(`Revision ${current.recordRevision}`));
+        const visibleAt = performance.now();
+        dispatchTimes.push(visibleAt - dispatchedAt);
+        replyTimes.push(visibleAt - replyAt);
+
+        stage = "timed-consent";
+        const request = readHeadlessWindowResult(await call("aisb_request_window", {target:tab, taskId:randomUUID(), requestKey:randomUUID()}));
+        assert.ok(request.ok && request.value.kind === "request");
+        await modal.getByRole("button", {name:"Accept automation takeover", exact:true}).click({timeout:5_000});
+        await revoke.waitFor({timeout:5_000});
+        const attempt = request.value.request.target;
+        const active = await until<UiControlLeaseTarget>(async () => {
+          const status = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+          return status.ok && status.value.kind === "request" ? status.value.lease : undefined;
+        });
+        assert.equal(await panel.count(), 0);
+        const command = {target:active, commandId:randomUUID(),
+          intent:{action:"open-system", systemId:current.systemId, revisionId:current.revisionId}};
+        stage = "timed-reveal";
+        const beganAt = performance.now();
+        const accepted = readHeadlessWindowResult(await call("aisb_present_in_window", command));
+        assert.ok(accepted.ok && accepted.value.kind === "command" && !accepted.value.duplicate &&
+          accepted.value.receipt.commandId === command.commandId && accepted.value.receipt.status === "accepted");
+        await panel.getByRole("heading", {name:"Synthetic presentation start", exact:true}).waitFor({timeout:3_000});
+        assert.equal(await panel.locator("code").textContent(), current.systemId);
+        assert.match((await panel.locator("p").textContent()) ?? "", /^Saved revision \d+ · \d+ components$/u);
+        revealTimes.push(performance.now() - beganAt);
+        stage = "timed-revoke";
+        revokeTimes.push(await measureBrowserRevoke(page));
+        evidence.completed_timing_samples = revokeTimes.length;
+        assert.equal(await panel.count(), 0);
+        assert.equal(await page.evaluate(() => document.visibilityState), "visible");
+        await until(async () => {
+          const status = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+          return status.ok && status.value.kind === "ended" ? true : undefined;
+        });
+      }
+      const observed = {
+        dispatch_to_visible_ms:measurements(dispatchTimes),
+        mcp_reply_to_visible_ms:measurements(replyTimes),
+        warm_presentation_ms:measurements(revealTimes),
+        local_revoke_ms:measurements(revokeTimes),
+      };
+      Object.assign(evidence, observed);
+      assert.ok(observed.dispatch_to_visible_ms.p95 <= 2_000);
+      assert.ok(observed.warm_presentation_ms.p95 <= 1_000);
+      assert.ok(observed.local_revoke_ms.p95 <= 100 && observed.local_revoke_ms.max <= 250);
+    }
 
     stage = "reload";
     await page.reload({waitUntil:"domcontentloaded"});
@@ -131,8 +344,9 @@ async function main() {
     await browser?.close().catch(() => {passed = false;});
     await client.close().catch(() => {passed = false;});
     await fixture.stop().catch(() => {passed = false;});
-    await writeFile(path.join(fixture.runRoot, "managed-headless-browser-consent-evidence.json"), JSON.stringify({
-      schema_version:"managed-headless-browser-consent-v1", source_revision:fixture.sourceRevision, status:passed ? "passed" : "failed", stage, evidence,
+    const kind = presentation ? "managed-headless-browser-presentation" : "managed-headless-browser-consent";
+    await writeFile(path.join(fixture.runRoot, `${kind}-evidence.json`), JSON.stringify({
+      schema_version:`${kind}-v1`, source_revision:fixture.sourceRevision, status:passed ? "passed" : "failed", stage, evidence,
     }, null, 2) + "\n", {flag:"wx"});
   }
   assert.equal(passed, true);

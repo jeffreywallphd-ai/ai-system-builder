@@ -163,9 +163,20 @@ server. Run `npm run build:thin-client` and use the existing isolated
 PostgreSQL fixture. Set its `MANAGED_REFERENCE_DATABASE` reference before
 running
 `node --import tsx dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts`.
-Retire the database with the same fixture operator. The journey records bounded
-observations for request, dialog, consent, revoke and reload. Presentation
-delivery and whole-increment qualification use separate evidence.
+Retire the database with the same fixture operator. The default journey records
+bounded observations for request, dialog, consent, revoke and reload. Set
+`MANAGED_HEADLESS_PRESENTATION_TEST=1` to run the extended journey and save its
+separate report. That journey checks saved work appears through the real browser,
+presented metadata is acknowledged exactly once, context and renewal use the
+active lease, and revoke preserves subsequent authoring. Full timing, dirty-draft,
+background and cross-host qualification have separate evidence requirements.
+Add `MANAGED_HEADLESS_BROWSER_MEASURE=1` to collect 100 samples with the
+test document visible in headless Chrome. Saved-state timing starts before
+the MCP request to give an upper bound on time after commit. The report
+also records the separate MCP-reply-to-visible interval. The test respects
+the existing revoke retention window and applies targets to unrounded timings.
+The timing report does not cover hidden tabs, live queue depth or a production
+network.
 
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
