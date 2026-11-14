@@ -21,6 +21,17 @@ trusted definition snapshot as desktop. Repeated calls revalidate persisted trus
 only overlapping owner/store initialization is joined. Internal Foundation failure
 attribution is allowlisted and bounded while public error messages remain generic.
 
+## Managed headless client identity
+
+The managed headless identity policy uses two distinct registrations from
+the existing OIDC issuer. It reads `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID`
+and `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID` only from host
+configuration. With both unset, the policy is disabled. It rejects partial
+or duplicate bindings. A matched client requires a signed typed access
+token and an explicit organization selection. The identity policy grants no
+workspace access or browser control. Feature route registration, workspace
+authorization and interactive consent are separate.
+
 ## Organization context for file imports
 
 Ingestion requires both organization-scoped document storage and an authoritative

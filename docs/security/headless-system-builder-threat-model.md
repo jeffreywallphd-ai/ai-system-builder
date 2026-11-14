@@ -178,6 +178,13 @@ Late results after hide, detachment, resync or replacement do not update
 the view. An authoritative list that omits an open system preserves the
 existing on-screen copy and does not enable saves or builds against it.
 
+The managed headless client policy requires distinct configured registrations
+for agent and interactive browser requests. It refuses caller-declared
+roles, missing or ambiguous organization selection, mismatched principals
+and expired bindings. Client classification only identifies the credential's
+purpose. Operations still require current application policy, and the
+target document must hold separate user consent before it can show agent work.
+
 Headless workflow metadata rechecks the same exact workspace before and after
 the existing use cases run. A fixed profile and action allowlist omits
 deployment, mutation and execution. The projection does not relay private

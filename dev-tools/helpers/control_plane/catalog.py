@@ -200,6 +200,21 @@ PUBLISHED_FORM_CHECKS = {
             "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
         ),
     },
+    "managed-headless-client-policy": {
+        "automatic_sources": (
+            "modules/hosts/server/security/resolveManagedHeadlessClientPolicy.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/security/resolveManagedHeadlessClientPolicy.ts",
+            "modules/hosts/server/security/tests/managed-headless-client-policy.unit.test.ts",
+            "modules/hosts/server/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/security/tests/managed-headless-client-policy.unit.test.ts",
+            "modules/adapters/security/oidc/tests/oidc-bearer-token-verifier.unit.test.ts",
+        ),
+    },
     "managed-saved-state-replay": {
         "automatic_sources": (
             "modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes.ts",

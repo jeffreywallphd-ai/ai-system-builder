@@ -100,6 +100,13 @@ and connection. Hide, disconnect, credential replacement and resync retire
 that ownership. Refresh leaves an open Composer visible if its saved
 system is archived elsewhere, and disables saving or building it.
 
+The managed host can resolve separate agent and browser registrations from
+its trusted issuer configuration. Partial or identical registrations fail
+closed. The request supplies an explicit organization selection that must
+match the authenticated organization context. The host derives a stable
+registration identifier from the issuer and configured client for receipt
+scoping. A match classifies the request for later policy checks.
+
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay
 state and a separate window-control lifecycle. Roll back by disabling the new
