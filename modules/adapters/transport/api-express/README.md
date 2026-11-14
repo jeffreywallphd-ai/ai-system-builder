@@ -1,5 +1,12 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The managed headless agent adapter declares exact POST read and author routes
+under the existing organization API policy. The host must provide active
+handlers before the routes accept an agent. A distinct verified client,
+explicit organization, compact JSON and a current request are required.
+The adapter bounds input, response size, active requests and time. The
+shared application service owns write scopes and the saved-result receipt.
+
 Dataset preparation exposes authenticated asynchronous lifecycle routes:
 
 - `POST /api/dataset-preparation/start`

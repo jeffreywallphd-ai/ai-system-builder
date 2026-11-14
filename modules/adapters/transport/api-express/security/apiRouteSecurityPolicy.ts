@@ -14,6 +14,10 @@ export const MANAGED_SAVED_STATE_PATHS = {
   changes: "/api/headless/system-builder/changes",
   stream: "/api/headless/system-builder/stream",
 } as const;
+export const MANAGED_HEADLESS_AGENT_PATHS = {
+  read: "/api/headless/agent/read",
+  author: "/api/headless/agent/author",
+} as const;
 export function isManagedSavedStatePath(method: string, path: string): boolean {
   return method === "POST" && Object.values(MANAGED_SAVED_STATE_PATHS).some((route) => route === path);
 }
@@ -22,6 +26,9 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   string,
   ApiRoutePolicy
 >([
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS.read}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  // The authoring use case requires the write scope for mutations. Preview is a read.
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS.author}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_SAVED_STATE_PATHS.snapshot}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_SAVED_STATE_PATHS.changes}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_SAVED_STATE_PATHS.stream}`, { public: false, scopes: ["workspace:read", "asset:read"] }],

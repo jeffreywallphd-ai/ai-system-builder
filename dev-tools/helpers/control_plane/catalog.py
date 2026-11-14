@@ -231,6 +231,22 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
         ),
     },
+    "managed-headless-agent-routes": {
+        "automatic_sources": (
+            "modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes.ts",
+        ),
+        "sources": (
+            "modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+            "modules/adapters/transport/api-express/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/security/security-enforcement.unit.test.ts",
+        ),
+    },
     "managed-saved-state-replay": {
         "automatic_sources": (
             "modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes.ts",

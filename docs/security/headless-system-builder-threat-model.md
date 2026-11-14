@@ -201,6 +201,14 @@ entry. The pre-commit fence checks the bound request lifetime. Before
 returning a successful result, the service rechecks current workspace access
 and returns a bounded result with no policy details or raw errors.
 
+The managed agent transport declares only the exact read and author POST
+routes. Authentication and organization policy run before route admission.
+Configured host handlers verify agent identity and current authorization.
+Every request has a bounded body, fixed operation parser, request deadline
+and response projection. A browser registration cannot dispatch agent work.
+Disabled or retired routing denies new work, and abandoned requests cannot
+publish a late response.
+
 Headless workflow metadata rechecks the same exact workspace before and after
 the existing use cases run. A fixed profile and action allowlist omits
 deployment, mutation and execution. The projection does not relay private
