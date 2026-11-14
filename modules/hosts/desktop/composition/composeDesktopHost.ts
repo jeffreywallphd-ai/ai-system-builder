@@ -354,6 +354,7 @@ export interface DesktopHostComposition {
   /** Interactive main-process entry point. Never expose the object to a renderer. */
   getHeadlessConnection: () => DesktopHeadlessConnection | undefined;
   getUiControlOwner: () => DesktopUiControlOwner | undefined;
+  disableWindowTakeover: () => void;
   registerArtifactUploadIpc: (
     options: RegisterDesktopArtifactUploadIpcOptions,
   ) => void;
@@ -795,6 +796,11 @@ export function composeDesktopHost(
     getHeadlessReadHandler: () => headlessReadHandler,
     getHeadlessConnection: () => headlessConnection,
     getUiControlOwner: () => uiControlOwner,
+    disableWindowTakeover() {
+      headlessConnection?.stopPresentationAdmission();
+      uiControlOwner?.close();
+      uiControlOwner = undefined;
+    },
     disposeFeature: featureLifecycle.disposeFeature,
     markFeatureIdle: featureLifecycle.markFeatureIdle,
     disposeIdleFeatures: featureLifecycle.disposeIdleFeatures,

@@ -114,6 +114,14 @@ entries. The audit writer never delays the local fence.
 
 ## Rollback
 
+An owned focused desktop window can choose **File > Turn Off Window Takeover
+for This Session**. The main process retires all its document attempts, then
+closes only the presentation owner and admission. A previously issued pairing
+code cannot activate presentation after this. A paired client retains only its
+existing independent read, edit or conversation access under current policy.
+The next application launch has a fresh host incarnation and requires new
+window consent.
+
 Stop admitting new presentation requests and retire exact open reservations.
 The local revoke gate restores manual control before transport work. Keep
 ordinary saved state updates, current application permission checks and

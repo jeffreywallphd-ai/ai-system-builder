@@ -208,7 +208,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       }
       const currentGrant = await dependencies.registrations.verifyCredential(pairing.credential);
       if (!admitting() || response.destroyed) return;
-      if (currentGrant?.registeredClientId !== pairing.registeredClientId || !grantIsCurrent(currentGrant)) {
+      if (currentGrant?.registeredClientId !== pairing.registeredClientId || !grantIsCurrent(currentGrant) ||
+          (pairing.access === "presentation" && !presentationIsCurrent(currentGrant))) {
         fail(response, 403, "headless.forbidden");
         return;
       }
@@ -244,19 +245,21 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       return current;
     };
     if (request.url === HEADLESS_WINDOW_CONTROL_PATH && dependencies.presentation) {
-      if (initialGrant.presentation !== true) { fail(response, 403, "headless.forbidden"); return; }
+      if (!presentationIsCurrent(initialGrant)) { fail(response, 403, "headless.forbidden"); return; }
       const decoded = readHeadlessWindowRequest(body);
       if (!decoded) { fail(response, 400, "headless.invalid-request"); return; }
       const verified = await currentGrant();
-      if (verified?.presentation !== true) { fail(response, 403, "headless.forbidden"); return; }
+      if (!verified || !presentationIsCurrent(verified)) { fail(response, 403, "headless.forbidden"); return; }
       // A dedicated connector pairing represents one verified client session.
       // Request data cannot select or impersonate a different session.
       const sessionId = verified.registeredClientId;
       const result = await dependencies.presentation.execute(decoded, verified, sessionId);
       const finalGrant = await currentGrant();
-      const allowed = finalGrant?.presentation === true && await dependencies.presentation.authorizePublication(decoded, result);
+      const allowed = finalGrant && presentationIsCurrent(finalGrant) &&
+        await dependencies.presentation.authorizePublication(decoded, result);
       if (!admitting() || response.destroyed) return;
-      if (!allowed || !finalGrant || !dependencies.presentation.canPublish(decoded, result, finalGrant, sessionId)) {
+      if (!allowed || !finalGrant || !presentationIsCurrent(finalGrant) ||
+          !dependencies.presentation.canPublish(decoded, result, finalGrant, sessionId)) {
         fail(response, 403, "headless.forbidden");
         return;
       }
@@ -382,6 +385,10 @@ function errorStatus(code: Extract<HeadlessReadResult | HeadlessAuthoringWireRes
 
 function grantIsCurrent(grant: DesktopHeadlessAuthoringWireGrant, required = false): boolean {
   return grant.isCurrent?.() ?? !required;
+}
+
+function presentationIsCurrent(grant: DesktopHeadlessAuthoringWireGrant): boolean {
+  return grant.presentation === true && grant.isPresentationCurrent?.() === true;
 }
 
 function fail(response: ServerResponse, status: number, code: string): void {

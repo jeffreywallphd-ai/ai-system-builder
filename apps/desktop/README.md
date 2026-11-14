@@ -183,6 +183,11 @@ Renderer constraints for this slice:
 
 ## Renderer Shell And Workspace UI
 
+Choose **File > Turn Off Window Takeover for This Session** to end automation
+control in every desktop window. The desktop refuses new window-control
+requests until the app restarts. Authorized editing and chat tasks can continue.
+On the next launch, each window still asks for consent before accepting control.
+
 - Shared mini dashboards replace decorative page-header artwork. Home shows the
   larger workspace summary for published systems, active datasets, trained models,
   and active custom assets. Systems, Data, Assets, Models, Image Generation,

@@ -384,13 +384,20 @@ app.whenReady().then(async () => {
   let shutdownStarted = false;
   let shutdownComplete = false;
   const menu = Menu.getApplicationMenu();
+  const ownsWindow = (source: Electron.BaseWindow | undefined) => [...openWindows].some(
+    window => window === source && !window.isDestroyed(),
+  );
   if (installDesktopMainWindowMenu(menu, (options) => new MenuItem(options),
-    source => !shutdownStarted && openWindows.size < 2 && [...openWindows].some(
-      window => window === source && !window.isDestroyed(),
-    ),
+    source => !shutdownStarted && openWindows.size < 2 && ownsWindow(source),
     () => { void createMainWindow().catch(() => dialog.showErrorBox(
       "AI System Builder could not open", "The new window could not open. Try again from the File menu.",
-    )); })) Menu.setApplicationMenu(menu);
+    )); }, desktopHost.getUiControlOwner() ? {
+      mayStop: source => !shutdownStarted && source === BrowserWindow.getFocusedWindow() && ownsWindow(source),
+      stop() {
+        for (const window of openWindows) retireUiControlWindow?.(window);
+        desktopHost.disableWindowTakeover();
+      },
+    } : undefined)) Menu.setApplicationMenu(menu);
 
   app.on("activate", async () => {
     if (!shutdownStarted && openWindows.size === 0) {

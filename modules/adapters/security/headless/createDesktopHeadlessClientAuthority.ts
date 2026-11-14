@@ -134,7 +134,8 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
             !clients.some((entry) => entry.registeredClientId === client.registeredClientId &&
               entry.credentialDigest === client.credentialDigest && entry.principalId === principalId &&
               entry.workspaceId === selected.workspaceId && entry.access === client.access && entry.expiresAt > now())) return denied;
-        return { status: "paired", credential, registeredClientId: client.registeredClientId, expiresAt: client.expiresAt } as const;
+        return { status: "paired", credential, registeredClientId: client.registeredClientId,
+          expiresAt: client.expiresAt, access: selected.access } as const;
       } catch {
         return unavailable;
       } finally {

@@ -29,6 +29,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   let start: Promise<DesktopHeadlessLoopback> | undefined;
   let endpoint: string | undefined;
   let fingerprint: string | undefined;
+  let presentationOpen = dependencies.presentation !== undefined;
   const operations = new Set<Promise<unknown>>();
   const canRunConversation = dependencies.conversation?.canRunConversation ?? dependencies.canRunConversation;
 
@@ -44,7 +45,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   async function readWorkspaceLabel(workspaceId: WorkspaceId, access: DesktopHeadlessClientAccess = "read"): Promise<string | undefined> {
     if (!open || !isWorkspaceId(workspaceId) || (access === "author" && !dependencies.authoring) ||
         (access === "conversation" && !canRunConversation) ||
-        (access === "presentation" && !dependencies.presentation)) return undefined;
+        (access === "presentation" && !presentationOpen)) return undefined;
     try {
       const workspace = await dependencies.workspaces.readWorkspace(workspaceId);
       if (workspace?.workspaceId !== workspaceId || workspace.organizationId !== dependencies.identity.organizationId ||
@@ -55,7 +56,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
         requiredScopes: access === "author" ? ["workspace:read", "asset:read", "asset:write"] : ["workspace:read", "asset:read"],
       });
       if (access === "conversation" && await canRunConversation?.(workspaceId) !== true) return undefined;
-      return open ? workspace.displayName : undefined;
+      return open && (access !== "presentation" || presentationOpen) ? workspace.displayName : undefined;
     } catch {
       return undefined;
     }
@@ -75,7 +76,14 @@ export function composeDesktopHeadlessConnection(dependencies: {
     if (endpoint && fingerprint) return { endpoint, fingerprint };
     if (start) return undefined;
     const socket = start = startDesktopHeadlessLoopback({
-      registrations, read: dependencies.read, authoring: dependencies.authoring, conversation: dependencies.conversation,
+      registrations: {
+        completePairing: registrations.completePairing,
+        async verifyCredential(credential) {
+          const grant = await registrations.verifyCredential(credential);
+          if (!grant?.presentation) return grant;
+          return { ...grant, isPresentationCurrent: () => presentationOpen && grant.isPresentationCurrent?.() === true };
+        },
+      }, read: dependencies.read, authoring: dependencies.authoring, conversation: dependencies.conversation,
       presentation: dependencies.presentation,
       isAdmitted: () => open && endpoint !== undefined,
     });
@@ -111,7 +119,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
         if (value.status !== "ready" || !open) return { status: "unavailable" };
         return { status: "ready", running: endpoint !== undefined, endpoint, fingerprint, clients: value.clients,
           ...(canRunConversation ? { conversationAvailable: true as const } : {}),
-          ...(dependencies.presentation ? { presentationAvailable: true as const } : {}) };
+          ...(presentationOpen ? { presentationAvailable: true as const } : {}) };
       });
     },
     async startExistingClients(isStillApproved: () => boolean) {
@@ -146,6 +154,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
     async revoke(clientId: string) {
       return open && await track(false, () => registrations.revokeClient(clientId));
     },
+    stopPresentationAdmission() { presentationOpen = false; },
     async close() {
       open = false;
       endpoint = undefined;

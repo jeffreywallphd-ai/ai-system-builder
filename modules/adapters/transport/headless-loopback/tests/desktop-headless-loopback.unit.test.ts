@@ -4,7 +4,8 @@ import { connect } from "node:net";
 import { test } from "node:test";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
-import { HEADLESS_APPROVED_TURN_OPERATION, HEADLESS_APPROVED_TURN_PATH, HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId } from "../../../../contracts/headless";
+import { HEADLESS_APPROVED_TURN_OPERATION, HEADLESS_APPROVED_TURN_PATH, HEADLESS_CONTRACT_VERSION,
+  HEADLESS_WINDOW_CONTROL_PATH, UI_CONTROL_VERSION, isHeadlessHostIncarnationId } from "../../../../contracts/headless";
 import { createInMemoryStructuredDocumentStore } from "../../../persistence/shared";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
 import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../index";
@@ -55,6 +56,71 @@ function registrations() {
     canReadWorkspace: async (id) => id === workspaceId,
   });
 }
+
+test("presentation rollback fences pending pairing and window replies without ending existing reads", { timeout: 8_000 }, async () => {
+  let presentationOpen = true;
+  let holdPairingPublication = false;
+  const pairingAdmitted = Promise.withResolvers<void>();
+  const releasePairing = Promise.withResolvers<void>();
+  const windowAdmitted = Promise.withResolvers<void>();
+  const releaseWindow = Promise.withResolvers<void>();
+  const registry = createDesktopHeadlessClientAuthority({
+    documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId), identity,
+    canReadWorkspace: async (id) => id === workspaceId,
+    canPresent: async (id) => id === workspaceId && presentationOpen,
+  });
+  const code = await registry.beginPairing(workspaceId, () => true, "presentation");
+  assert.equal(code.status, "ready");
+  const paired = await registry.completePairing(code.pairingCode);
+  assert.equal(paired.status, "paired");
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: {
+      completePairing: registry.completePairing,
+      async verifyCredential(value) {
+        const grant = await registry.verifyCredential(value);
+        if (!grant?.presentation) return grant;
+        if (holdPairingPublication && value !== paired.credential) {
+          pairingAdmitted.resolve();
+          await releasePairing.promise;
+        }
+        return { ...grant, isPresentationCurrent: () => presentationOpen && grant.isPresentationCurrent?.() === true };
+      },
+    },
+    async read() { return { ok: true, operation: "host.describe", value: {
+      version: HEADLESS_CONTRACT_VERSION, hostIncarnationId: incarnation, workspaces: [workspaceId], operations: ["host.describe"],
+    } }; },
+    presentation: {
+      async execute() { return { ok: true, value: { kind: "windows", windows: [] } }; },
+      async authorizePublication() { windowAdmitted.resolve(); await releaseWindow.promise; return true; },
+      canPublish: () => true,
+    },
+  });
+  const authorization = { Authorization: "Bearer " + paired.credential };
+  try {
+    const pendingCode = await registry.beginPairing(workspaceId, () => true, "presentation");
+    assert.equal(pendingCode.status, "ready");
+    holdPairingPublication = true;
+    const pendingPair = post(connector, pairPath, JSON.stringify({ pairingCode: pendingCode.pairingCode }));
+    const pendingWindow = post(connector, HEADLESS_WINDOW_CONTROL_PATH, JSON.stringify({ version: UI_CONTROL_VERSION,
+      operation: "window.list", input: { hostIncarnationId: incarnation, workspaceId },
+    }), authorization);
+    await Promise.all([pairingAdmitted.promise, windowAdmitted.promise]);
+    presentationOpen = false;
+    releasePairing.resolve();
+    releaseWindow.resolve();
+    for (const reply of await Promise.all([pendingPair, pendingWindow])) {
+      assert.equal(reply.status, 403);
+      assert.deepEqual(reply.json, { ok: false, code: "headless.forbidden" });
+    }
+    const existingRead = await post(connector, readPath, describe, authorization);
+    assert.equal(existingRead.status, 200);
+    assert.equal(existingRead.json.ok, true);
+  } finally {
+    releasePairing.resolve();
+    releaseWindow.resolve();
+    await connector.close();
+  }
+});
 
 test("disconnect does not revoke an admitted conversation task but live registration revocation does", { timeout: 8_000 }, async () => {
   const registry = registrations();

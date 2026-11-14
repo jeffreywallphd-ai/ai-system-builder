@@ -151,6 +151,16 @@ test("pinned paired agents can request and present only with an exact interactiv
     assert.equal((await dispatch("window.context", { target })).status, 403);
     assert.deepEqual(await dispatch("window.renew", { target }), { status: 200, body: { ok: true, value: { kind: "ended" } } });
     assert.equal(queue?.next(target, 1).status, "denied");
+    const pendingPairing = await connector.beginPairing(workspaceId, () => true, "presentation");
+    assert.equal(pendingPairing.status, "ready");
+    connector.stopPresentationAdmission();
+    control.close();
+    const availability = await connector.status();
+    assert.equal(availability.status === "ready" && availability.presentationAvailable, undefined);
+    assert.equal((await connector.beginPairing(workspaceId, () => true, "presentation")).status, "denied");
+    assert.equal((await call(pendingPairing, "pair", { pairingCode: pendingPairing.pairingCode })).status, 403);
+    assert.equal((await dispatch("window.list", { hostIncarnationId, workspaceId })).status, 403);
+    assert.equal((await connector.beginPairing(workspaceId, () => true, "read")).status, "ready");
   } finally { await connector.close(); }
 });
 
