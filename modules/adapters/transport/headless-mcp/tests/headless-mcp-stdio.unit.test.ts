@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createServer, request } from "node:https";
@@ -41,6 +42,9 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let displacedDiscovery = false;
   let echoCredential = false;
   let echoPrivateWindowSession = false;
+  let wrongCommandReceipt = false;
+  let repeatedCommand = false;
+  let commandApplied = false;
   const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
     let body = "";
     request.on("data", (chunk: Buffer) => {body += chunk.toString();});
@@ -61,6 +65,13 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
         }}};
         const payload = JSON.stringify(descriptor);
         response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "window.present") {
+        const payload = JSON.stringify({ok: true, value: {kind: "command", duplicate: repeatedCommand,
+          receipt: {sequence: 1, commandId: wrongCommandReceipt ? randomUUID() : input.input.commandId,
+            status: commandApplied ? "applied" : "accepted"}}});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
       const value = input.operation === "host.describe"
@@ -132,6 +143,30 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     assert.equal((await ask()).ok, true);
     echoPrivateWindowSession = true;
     assert.deepEqual(await ask(), {ok:false, code:"headless.unavailable"});
+    const presentationClient = await connect({NODE_EXTRA_CA_CERTS: ca, AISB_HEADLESS_ENABLE_MANAGED_CONSENT: "1",
+      AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION: "1"});
+    const delivery = {target: {...windowArgs.target, requestId: randomUUID(), attemptId: randomUUID(), leaseId: randomUUID(),
+      generation: 1}, commandId: randomUUID(), intent: {action: "open-system", systemId, revisionId: "revision-1"}};
+    const present = async (input = delivery) => resultText(await presentationClient.callTool({
+      name: "aisb_present_in_window", arguments: input,
+    }));
+    const callsBeforeDenied = requests.length;
+    assert.deepEqual(await present({...delivery, target: {...delivery.target, workspaceId: createWorkspaceId("different-workspace")}}),
+      {ok:false, code:"headless.forbidden"});
+    assert.equal(requests.length, callsBeforeDenied);
+    assert.deepEqual(await present(), {ok:true, value:{kind:"command", receipt:{
+      sequence:1, commandId:delivery.commandId, status:"accepted",
+    }, duplicate:false}});
+    wrongCommandReceipt = true;
+    assert.deepEqual(await present(), {ok:false, code:"headless.unavailable"});
+    wrongCommandReceipt = false;
+    commandApplied = true;
+    assert.deepEqual(await present({...delivery, commandId: randomUUID()}), {ok:false, code:"headless.unavailable"});
+    repeatedCommand = true;
+    assert.deepEqual(await present(), {ok:true, value:{kind:"command", receipt:{
+      sequence:1, commandId:delivery.commandId, status:"applied",
+    }, duplicate:true}});
+    assert.ok(requests.slice(callsBeforeDenied).every(row => row.url === "/api/headless/agent/window"));
   } finally {
     await Promise.allSettled(clients.map(client => client.close()));
     listener.closeAllConnections();

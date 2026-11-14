@@ -1,17 +1,27 @@
 import { readHeadlessWindowResult, type HeadlessWindowRequest } from "./ui-control-connector";
-import {sameManagedBrowserAttempt, sameManagedBrowserDocument} from "./managed-browser-consent";
+import { sameManagedBrowserAttempt, sameManagedBrowserDocument } from "./managed-browser-consent";
+import { sameUiControlLease } from "./ui-control-authority";
 
 export const MANAGED_HEADLESS_AGENT_WINDOW_PATH = "/api/headless/agent/window";
 export const MANAGED_HEADLESS_AGENT_SESSION_HEADER = "x-aisb-headless-session";
 const unavailable = {ok: false, code: "headless.unavailable"} as const;
 
-export function isManagedConsentWindowOperation(operation: HeadlessWindowRequest["operation"]): boolean {
-  return operation === "window.list" || operation === "window.request" ||
-    operation === "window.status" || operation === "window.release";
+export function isManagedWindowOperation(operation: HeadlessWindowRequest["operation"], enableDelivery: boolean): boolean {
+  switch (operation) {
+    case "window.list":
+    case "window.request":
+    case "window.status":
+    case "window.release":
+      return true;
+    case "window.renew":
+    case "window.context":
+    case "window.present":
+      return enableDelivery;
+  }
 }
 
 /** Restrict response fields to the exact operation and admitted resource scope. */
-export function readManagedConsentWindowResult(raw: unknown, request: HeadlessWindowRequest) {
+export function readManagedWindowResult(raw: unknown, request: HeadlessWindowRequest) {
   const result = readHeadlessWindowResult(raw);
   if (!result.ok) return result;
   const value = result.value;
@@ -29,6 +39,17 @@ export function readManagedConsentWindowResult(raw: unknown, request: HeadlessWi
       break;
     case "window.release":
       if (value.kind === "released") return result;
+      break;
+    case "window.renew":
+      if (value.kind === "ended" || value.kind === "request" && value.lease &&
+          sameUiControlLease(value.lease, request.input.target)) return result;
+      break;
+    case "window.context":
+      if (value.kind === "context" && value.context?.ready) return result;
+      break;
+    case "window.present":
+      if (value.kind === "command" && value.receipt.commandId === request.input.commandId &&
+          (value.duplicate || value.receipt.status === "accepted")) return result;
       break;
   }
   return unavailable;

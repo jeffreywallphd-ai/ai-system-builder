@@ -104,6 +104,11 @@ Set `AISB_HEADLESS_ENABLE_MANAGED_CONSENT=1` to add the managed browser tab
 list, request, status and release tools. The server must enable browser
 consent. The browser user accepts from the exact tab. The connector cannot
 grant consent or act on the tab through these tools.
+When the managed server enables presentation, set both
+`AISB_HEADLESS_ENABLE_MANAGED_CONSENT=1` and
+`AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION=1` to add saved-resource
+presentation, fresh context and renewal. Those tools require the exact active
+lease. Enabling the tools does not grant window consent.
 Requests use standard TLS verification and a fixed path for each operation
 family. URLs with embedded credentials, paths, query strings or fragments
 are rejected. The adapter does not follow redirects.

@@ -103,7 +103,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly credential?: string;
   readonly organizationId?: string;
   readonly workspaceId?: string;
-}, enableAuthoring = false, enablePresentation = false) {
+}, enableAuthoring = false, enableConsent = false, enableDelivery = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
@@ -124,7 +124,8 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   const guard = (input: ForwardRequest) => {
     if (input.version === headless.UI_CONTROL_VERSION) {
       const target = "target" in input.input ? input.input.target : input.input;
-      return enablePresentation && target.workspaceId === workspaceId && managedWindow.isManagedConsentWindowOperation(input.operation);
+      return enableConsent && target.workspaceId === workspaceId &&
+        managedWindow.isManagedWindowOperation(input.operation, enableDelivery);
     }
     return input.version === HEADLESS_CONTRACT_VERSION &&
     (input.operation === "host.describe" ||
@@ -132,7 +133,8 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
         (isAuthoring(input) || MANAGED_HEADLESS_READS.some(operation => operation === input.operation))));
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
-    agent, authorization: `Bearer ${credential}`, enableAuthoring, enableConversation: false, enablePresentation, headers, presentationHeaders});
+    agent, authorization: `Bearer ${credential}`, enableAuthoring, enableConversation: false, enablePresentation: enableConsent,
+    headers, presentationHeaders});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
     if (!guard(input)) return {ok: false, code: "headless.forbidden"};
     const result = await forward(input, signal);
@@ -140,7 +142,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
     const serialized = JSON.stringify(result);
     if (serialized.includes(credential) || serialized.toLowerCase().includes(presentationSession))
       return isAuthoring(input) && input.operation !== "systems.preview-edits" ? unknownWrite : unavailable;
-    if (input.version === headless.UI_CONTROL_VERSION) return managedWindow.readManagedConsentWindowResult(result, input);
+    if (input.version === headless.UI_CONTROL_VERSION) return managedWindow.readManagedWindowResult(result, input);
     if (resultHasOperation(result, "host.describe")) {
       const described = resultValue["host.describe"].safeParse(result.value);
       if (!described.success || described.data.workspaces.some(id => id !== workspaceId) ||

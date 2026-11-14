@@ -246,6 +246,11 @@ task and exact lease. The connector suppresses any response that echoes its
 private session reference. Listing and requesting grant no right to
 deliver content.
 
+Optional managed presentation discovery also requires a separate local connector
+setting. The server must enable delivery for the verified agent route. Renew
+responses must match the submitted lease, presentation receipts must match
+the command ID, and fresh context has a final current-lease check on the server.
+
 Managed presentation uses the existing 32-command, 256-receipt lease queue.
 The command lane verifies the live lease and current resource authorization
 before returning display metadata. It bounds concurrent policy and resource

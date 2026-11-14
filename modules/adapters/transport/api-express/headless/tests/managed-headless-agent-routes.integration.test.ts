@@ -26,21 +26,23 @@ test("managed agent routes stay exact in the central deny-by-default API", () =>
   }
 });
 
-test("managed stdio discovers exactly the four browser consent tools only when explicitly enabled", async () => {
-  for (const enabled of [false, true]) {
+test("managed stdio exposes presentation only when both managed options are enabled", async () => {
+  for (const [consent, presentation] of [[false, false], [false, true], [true, false], [true, true]]) {
     const client = new Client({name: "consent-catalog-fixture", version: "1.0.0"});
     try {
       await client.connect(new StdioClientTransport({command: process.execPath, args: ["--import", "tsx",
         path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts")], stderr: "ignore", env: {
-        AISB_HEADLESS_MODE: "managed", AISB_HEADLESS_ENABLE_MANAGED_CONSENT: enabled ? "1" : "0",
+        AISB_HEADLESS_MODE: "managed", AISB_HEADLESS_ENABLE_MANAGED_CONSENT: consent ? "1" : "0",
+        AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION: presentation ? "1" : "0",
         AISB_HEADLESS_MANAGED_ORIGIN: "https://127.0.0.1:1", AISB_HEADLESS_MANAGED_CREDENTIAL: "unused-fixture-value",
         AISB_HEADLESS_MANAGED_ORGANIZATION_ID: "fixture-organization", AISB_HEADLESS_MANAGED_WORKSPACE_ID: "fixture-workspace",
       }}));
       const names = (await client.listTools()).tools.map(tool => tool.name).sort();
       const expected = ["aisb_host_describe", "aisb_list_templates", "aisb_read_system",
-        ...(enabled ? ["aisb_list_windows", "aisb_release_window", "aisb_request_window", "aisb_window_status"] : [])].sort();
+        ...(consent ? ["aisb_list_windows", "aisb_release_window", "aisb_request_window", "aisb_window_status"] : []),
+        ...(consent && presentation ? ["aisb_present_in_window", "aisb_renew_window", "aisb_window_context"] : [])].sort();
       assert.deepEqual(names, expected);
-      if (enabled) {
+      if (consent) {
         const denied = await client.callTool({name: "aisb_list_windows", arguments: {hostIncarnationId: randomUUID(), workspaceId: "other-workspace"}});
         assert.equal(denied.isError, true);
         assert.deepEqual(denied.content, [{type: "text", text: '{"ok":false,"code":"headless.forbidden"}'}]);
@@ -77,6 +79,8 @@ test("exact managed requests respect authentication, framing, authority lifetime
   let windowOutcome = tab;
   let windowCalls = 0;
   let windowAvailable = true;
+  let deliveryEnabled = false;
+  let wrongCommandReceipt = false;
   const handlers: ManagedAgentRouteHandlers<typeof agent> = {
     hostIncarnationId,
     identify: ({auth, organization, organizationHeader}) =>
@@ -84,11 +88,16 @@ test("exact managed requests respect authentication, framing, authority lifetime
       organizationHeader === org ? agent : undefined,
     isCurrent: held => held === agent && !retired,
     window: {
-      async execute(_input, identity, suppliedSession, current) {
+      get deliveryEnabled() { return deliveryEnabled; },
+      async execute(input, identity, suppliedSession, current) {
         windowCalls += 1;
         assert.equal(identity, agent);
         assert.equal(suppliedSession, session);
         assert.equal(current(), true);
+        if (input.operation === "window.present") return {ok: true, value: {kind: "command", duplicate: false,
+          receipt: {commandId: wrongCommandReceipt ? randomUUID() : input.input.commandId, sequence: 1, status: "accepted"}}};
+        if (input.operation === "window.context") return {ok: true, value: {kind: "context",
+          context: {view: "other", ready: true, dirtyNavigationBlocked: false}}};
         return {ok: true, value: {kind: "windows", windows: [windowOutcome]}};
       },
       canPublish() { return windowAvailable; },
@@ -169,7 +178,20 @@ test("exact managed requests respect authentication, framing, authority lifetime
     windowOutcome = {...tab, workspaceId: createWorkspaceId("different-workspace")};
     assert.deepEqual((await send(windowPath, listTabs, "fixture-agent", "application/json", session)).body,
       {ok: false, code: "headless.unavailable"});
+    deliveryEnabled = true;
+    const present = {version: UI_CONTROL_VERSION, operation: "window.present", input: {
+      target: invalidContext.input.target, commandId: randomUUID(),
+      intent: {action: "open-system", systemId: "fixture.system", revisionId: "revision-1"},
+    }};
+    assert.equal((await send(windowPath, present, "fixture-agent", "application/json", session)).body.value.receipt.commandId,
+      present.input.commandId);
+    assert.equal((await send(windowPath, invalidContext, "fixture-agent", "application/json", session)).body.value.context.ready, true);
+    wrongCommandReceipt = true;
+    assert.deepEqual((await send(windowPath, present, "fixture-agent", "application/json", session)).body,
+      {ok: false, code: "headless.unavailable"});
     windowAvailable = false;
+    assert.deepEqual((await send(windowPath, invalidContext, "fixture-agent", "application/json", session)).body,
+      {ok: false, code: "headless.forbidden"});
     assert.deepEqual((await send(windowPath, listTabs, "fixture-agent", "application/json", session)).body,
       {ok: false, code: "headless.forbidden"});
     const request = {version: HEADLESS_CONTRACT_VERSION, operation: "systems.create",

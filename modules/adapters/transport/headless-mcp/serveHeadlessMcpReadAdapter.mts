@@ -23,14 +23,15 @@ const requestedMode = process.env.AISB_HEADLESS_MODE;
 const managed = requestedMode === "managed";
 const enableAuthoring = process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
 const enableConversation = process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
-const enablePresentation = managed ? process.env.AISB_HEADLESS_ENABLE_MANAGED_CONSENT === "1" :
-  process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
+const enableManagedConsent = managed && process.env.AISB_HEADLESS_ENABLE_MANAGED_CONSENT === "1";
+const enableManagedDelivery = enableManagedConsent && process.env.AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION === "1";
+const enablePresentation = managed ? enableManagedConsent : process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
 const forward = managed ? createManagedHeadlessMcpReadForwarder({
   httpsOrigin: process.env.AISB_HEADLESS_MANAGED_ORIGIN,
   credential: process.env.AISB_HEADLESS_MANAGED_CREDENTIAL,
   organizationId: process.env.AISB_HEADLESS_MANAGED_ORGANIZATION_ID,
   workspaceId: process.env.AISB_HEADLESS_MANAGED_WORKSPACE_ID,
-}, enableAuthoring, enablePresentation) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
+}, enableAuthoring, enableManagedConsent, enableManagedDelivery) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
   process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL,
   enableAuthoring, enableConversation, enablePresentation,
 ) : undefined;
@@ -83,7 +84,7 @@ function addPresentationTools(server: McpServer) {
     description: "Dismiss the exact attempt or release its exact lease. Independent chat work continues.",
     inputSchema: z.strictObject({ target: z.union([lease, z.strictObject(attempt)]) }), annotations: action,
   }, (input, context) => call("window.release", input, context.mcpReq.signal));
-  if (managed) return;
+  if (managed && !enableManagedDelivery) return;
   server.registerTool("aisb_renew_window", {
     description: "Keep the same active lease current. Failed and ended leases stay detached.",
     inputSchema: z.strictObject({ target: lease }), annotations: { ...action, idempotentHint: false },
