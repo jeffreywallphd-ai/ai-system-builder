@@ -225,12 +225,39 @@
         "A separate packaged Windows run verified normal-window presentation and revocation across 100 warm samples"
       ],
       "title": "Fence every presentation and observation"
+    },
+    {
+      "areas": [
+        "Packaged Electron and local MCP",
+        "Authorized backend saves and approved chat tasks"
+      ],
+      "chunkId": "race-lifecycle-and-host-journeys",
+      "completedAt": "2026-11-14T15:36:39Z",
+      "criteriaIds": [
+        "backend-continuity-and-lifecycle-isolation",
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "security-ui-control-reviewed"
+      ],
+      "documentation": [
+        "Desktop takeover qualification observations and ADR-0048"
+      ],
+      "feedbackAddressed": [],
+      "id": "revocable-desktop-presentation-race-lifecycle-and-host-journeys",
+      "incrementId": "revocable-desktop-presentation",
+      "summary": "Packaged Windows verified loading, late responses, separate real windows, native minimize and restore, session rollback, current application edits and approved-task continuity. Real host expiry passed with a held context fixture. Natural OS timer throttling and complete queue-health measurements remain pending as controlled qualification.",
+      "tests": [
+        "Four isolated Windows journeys passed on reviewed source",
+        "Standalone scoped SQLite save regression passed",
+        "Foreground measurements recorded for 100 revokes and 95 warm reveals"
+      ],
+      "title": "Prove revocation and continuity"
     }
   ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": "revocable-desktop-presentation",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -635,6 +662,116 @@
       "outcome": "passed",
       "recordedAt": "2026-11-14T11:22:28Z",
       "summary": "Independent review confirmed current scoped authorization, exact window consent, bounded wire and storage, approved execution, redacted statuses, fail-closed denial, and owned cleanup. No external or production scope is qualified."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Control-plane check headless-packaged-desktop-journey",
+      "criterionId": "revocation-and-delivery-targets",
+      "id": "evidence-11",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-14T15:29:33Z",
+      "summary": "Windows passed 100 foreground revokes, including loading and dialogs. Simulated loss of context replies proved the real host lease expires. Actual renderer background timer throttling and complete queue-health measurements remain pending."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Control-plane check headless-packaged-desktop-journey",
+      "criterionId": "desktop-takeover-real-host",
+      "id": "evidence-12",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T15:34:52Z",
+      "summary": "The combined Windows candidate passed the real MCP and two-window journeys with loading, dialogs, held presentation, lost revoke, saved-system visibility, task continuation, restart, and verified owned worker exit."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Control-plane checks headless-packaged-desktop-journey and headless-desktop-pinned-mcp",
+      "criterionId": "security-ui-control-reviewed",
+      "id": "evidence-13",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T15:35:21Z",
+      "summary": "Independent review verified exact native ownership, bounded audit, private context and fail-closed authority. The packaged session-wide rollback restored manual controls, denied held and future window requests, and preserved an independent edit and normal saved-state updates."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Focused control-plane checks for desktop takeover and headless authority",
+      "criterionId": "exact-window-acceptance-and-reservation",
+      "id": "evidence-14",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T15:35:57Z",
+      "summary": "Tests verified separate agent and interactive authority, exact target and trusted current frame, one reservation, readiness, stale attempts, workspace scope and denial of a second agent."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Focused control-plane checks for desktop takeover and headless authority",
+      "criterionId": "dirty-handoff-and-reachable-controls",
+      "id": "evidence-15",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "summary": "The shared modal kept the shell geometry fixed. Focus and Escape were verified. The focused draft tests cover saving, declining, and retaining the draft if save fails. The packaged app kept Revoke reachable during loading and ordinary dialogs."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Focused control-plane checks for desktop takeover and headless authority",
+      "criterionId": "immediate-local-revocation-and-exact-retry",
+      "id": "evidence-16",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "summary": "The local fence closes before IPC. Exact retry, held acceptance, delayed readiness and native retirement passed. A delayed event for another attempt does not cancel newer consent."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Focused control-plane checks for desktop takeover and headless authority",
+      "criterionId": "presentation-effect-fencing",
+      "id": "evidence-17",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "summary": "Finite saved-resource commands recheck authority before applying a visible effect. Deterministic and packaged held-reply checks showed no stale preview through manual navigation."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Focused control-plane checks for desktop takeover and headless authority",
+      "criterionId": "serial-delivery-and-independent-deduplication",
+      "id": "evidence-18",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "summary": "The serial delivery and renderer queue tests verified ordered work, duplicate receipts, conflicting payload denial, gap handling, expiry, and stale completion suppression."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Focused control-plane checks for desktop takeover and headless authority",
+      "criterionId": "context-minimization-and-revoke-fence",
+      "id": "evidence-19",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "summary": "The context tests require a fresh exact challenge with identifier-only fields. Held or expired publication and revoked context are denied, including when the host never receives the interactive revoke."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Control-plane checks headless-desktop-activation and headless-packaged-desktop-journey",
+      "criterionId": "backend-continuity-and-lifecycle-isolation",
+      "id": "evidence-20",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T15:36:39Z",
+      "summary": "Real local SQLite committed a held save after exact window revoke. Replay recovered the result and a new save succeeded. Packaged tests covered native window isolation, approved task continuity, expiry, restart and fresh consent."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -939,6 +1076,78 @@
       "recordedAt": "2026-11-14T13:17:31Z",
       "sequence": 43,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "623bbf06f00881c101ae2ba4eb734cd1b802f0f4a4ae1142947e5df758ea5be0",
+      "recordedAt": "2026-11-14T15:29:33Z",
+      "sequence": 44,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d6af52cc4e01c7dcde89ba406a14476b45d43027b7cb685c64c59023e265ccd2",
+      "recordedAt": "2026-11-14T15:34:52Z",
+      "sequence": 45,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "cd583082a31157a9e2d05e9ce579b9b2fd28b072316831e034a34fa63e86258a",
+      "recordedAt": "2026-11-14T15:35:21Z",
+      "sequence": 46,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "abf817322f59f577fa1356bde95c28fd744c9e36ede7367fa537a9efcc170101",
+      "recordedAt": "2026-11-14T15:35:57Z",
+      "sequence": 47,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c5db79b4062a1af701c2334d8428c8ed6d583357c8094ddbeb48844b4ad631a2",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "sequence": 48,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "40054f52b92f0e6f96bb00e07c8ea1cbb17e6741b6059f0ebe536686a277ee05",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "sequence": 49,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "07ddd57c7171db24970ec89c4f8ac39e7a39c3dd000adb71a5f70f01ee7bfd26",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "sequence": 50,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6fad56ec6ead21b2d4ad15113bafd9cc1e4a4e1a9b2e59117bc80ffa17facca9",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "sequence": 51,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "751a477e19132631feb8e3108079c66e277cfbbb1c82c6e0542073ea6b41b2fc",
+      "recordedAt": "2026-11-14T15:35:58Z",
+      "sequence": 52,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7be70fa0b862d9fb2d6f25ae2185078727d5aa879305639afe3bac979aa7523d",
+      "recordedAt": "2026-11-14T15:36:39Z",
+      "sequence": 53,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "176c1216394152301d4ed3a73a24929b21b92ed62391e4fe1fbf1851d586f477",
+      "recordedAt": "2026-11-14T15:36:39Z",
+      "sequence": 54,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "a788f520edc0e564a28229884e502f9fd1fe7a8b2b2886a57690bad0cc132ffd",
+      "recordedAt": "2026-11-14T15:48:01Z",
+      "sequence": 55,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -1233,12 +1442,14 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": null,
+      "completedAt": "2026-11-14T15:48:01Z",
       "completedChunks": [
         "exact-window-authority",
         "shell-gate-and-handoff",
-        "presentation-context-and-delivery"
+        "presentation-context-and-delivery",
+        "race-lifecycle-and-host-journeys"
       ],
+      "completionSummary": "The desktop feature and its reviewed implementation checks are complete. Native background timing and full queue-health qualification remain pending.",
       "deliverables": [
         "Successor ADR and current architecture/threat-model guidance defining UI authority independent of backend grants, exact targeting, terminal revocation, delivery queues, minimal context, draft handoff and lifecycle recovery.",
         "Framework-neutral UI-control contracts/ports/application state machine, finite IPC/preload surfaces, bounded host authority/delivery stores and exact owned-window registration.",
@@ -1257,6 +1468,9 @@
       "id": "revocable-desktop-presentation",
       "number": 2,
       "objective": "Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue.",
+      "pendingCriteria": [
+        "revocation-and-delivery-targets"
+      ],
       "plan": {
         "assumptions": [
           "The approved topology uses the current desktop host and already-authenticated pairing. An interactive handle is registered through trusted IPC for the current main frame and selected workspace. Server and browser support belongs to the next increment.",
@@ -1371,7 +1585,7 @@
       ],
       "rollback": "Disable new takeover requests, synchronously close all local presentation/context gates and restore manual controls, then exactly terminate pending/active reservations and stop delivery. Preserve headless connector authorization and independent tasks from increment1, ordinary data subscriptions, immutable revisions and drafts. Retain terminal authority records for stale retry refusal; never reuse generations or reenable a prior lease after rollback.",
       "startedAt": "2026-11-14T11:24:42Z",
-      "status": "implementing",
+      "status": "implemented-pending-qualification",
       "title": "Accept and revoke automation control of one desktop window",
       "verification": [
         "Use fake clocks and held promises for AT09/10/11/12/13/14/26/27/38/39/41: grant/cancel/ready/revoke permutations and same-lease timeout races.",
@@ -1983,6 +2197,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "executing",
-  "updatedAt": "2026-11-14T13:17:31Z"
+  "status": "ready",
+  "updatedAt": "2026-11-14T15:48:01Z"
 }
