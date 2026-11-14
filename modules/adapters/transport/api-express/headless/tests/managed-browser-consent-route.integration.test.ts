@@ -86,6 +86,10 @@ test("exact browser origin, purposeful authentication, framing and live request 
     assert.equal((await post(register, {[MANAGED_BROWSER_DOCUMENT_HEADER]: proof})).status, 400);
     assert.equal((await post(` {"operation":"register","workspaceId":"${workspaceId}"}`)).status, 400);
     assert.equal((await post({operation: "register", workspaceId, extra: "x".repeat(5_000)})).status, 413);
+    registerReply = {status: "busy"};
+    assert.equal((await post(register)).status, 503);
+    registerReply = undefined;
+    assert.equal((await post(register)).status, 403);
     for (const foreign of [{...target, hostIncarnationId: randomUUID()}, {...target, workspaceId: "foreign-workspace"}]) {
       registerReply = {target: foreign, proof};
       const refused = await post(register);

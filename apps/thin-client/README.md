@@ -12,6 +12,11 @@ the Composer keeps that view open and disables saving and building. Updates
 pause while the tab is hidden, and delayed replies from a previous connection
 cannot change the saved view.
 
+When the server enables browser takeover, the shared confirmation dialog
+lets you accept or decline a request. Revoke returns the tab to your control
+without waiting for the server. The tab can neither keep nor reuse its
+document proof after a page exit, workspace change or sign-in change.
+
 Current scope:
 
 - minimal React bootstrap (`src/main.tsx`, `src/App.tsx`)

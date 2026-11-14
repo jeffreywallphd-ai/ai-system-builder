@@ -222,6 +222,16 @@ requested workspace or browser document, and requested attempt or lease.
 Desktop context challenges are excluded from this consent-only path. The server retires the route and
 its document authority before draining its persistence.
 
+The thin client keeps the short-lived document proof in one page instance.
+It sends the proof only to the fixed same-origin consent route and keeps it
+out of durable storage and the URL. The local controller retires consent
+before waiting for a revoke response. Credential changes, page exit, tab
+visibility and workspace selection fence late responses. The UI sends a
+best-effort retirement using the original credential when it remains current.
+Temporary registration capacity is reported separately from access denial.
+The browser retries transient responses with one outstanding registration and
+capped backoff. A dormant document remains detached until the page returns.
+
 The controlled delivery test uses two independent loopback HTTPS servers
 with the same disposable PostgreSQL database and a nonowner role without
 `BYPASSRLS`. It sends synthetic changes through the ordinary authenticated

@@ -71,10 +71,13 @@ export function createManagedHeadlessBrowserDocuments(options: {
   }
   return {
     async register(browser: BrowserIdentity, workspaceId: WorkspaceId, requestIsCurrent = () => true) {
-      if (!isWorkspaceId(workspaceId) || !requestIsCurrent() ||
-          await permitted(browser, workspaceId) !== "allowed" || !requestIsCurrent() || !live(browser)) return;
+      if (!isWorkspaceId(workspaceId) || !requestIsCurrent()) return;
+      const admission = await permitted(browser, workspaceId);
+      if (!requestIsCurrent() || !live(browser)) return;
+      if (admission === "busy") return {status: "busy"} as const;
+      if (admission !== "allowed") return;
       sweep();
-      if (documents.size >= MAX_DOCUMENTS) return;
+      if (documents.size >= MAX_DOCUMENTS) return {status: "busy"} as const;
       const target = Object.freeze({hostIncarnationId: options.hostIncarnationId,
         windowId: randomUUID(), uiIncarnationId: randomUUID(), workspaceId});
       if (documents.has(target.windowId)) return;
@@ -85,7 +88,7 @@ export function createManagedHeadlessBrowserDocuments(options: {
       };
       const entry = {target, browser, owner, key: digest(proof), expiresAt: now() + LIVE_MS};
       documents.set(target.windowId, entry);
-      if (!options.register(target, owner)) {documents.delete(target.windowId); return;}
+      if (!options.register(target, owner)) {documents.delete(target.windowId); return {status: "busy"} as const;}
       return {target, proof};
     },
     async authenticate(browser: BrowserIdentity, raw: unknown, proof: unknown, requestIsCurrent = () => true) {

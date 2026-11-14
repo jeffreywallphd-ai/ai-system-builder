@@ -235,6 +235,25 @@ PUBLISHED_FORM_CHECKS = {
             "apps/server/src/tests/server-postgres-selection.unit.test.ts",
         ),
     },
+    "managed-headless-browser-consent-ui": {
+        "automatic_sources": (
+            "apps/thin-client/src/features/workspace/hooks/useManagedBrowserTakeover.ts",
+        ),
+        "sources": (
+            "apps/thin-client/src/App.tsx",
+            "apps/thin-client/src/features/workspace/hooks/useActiveWorkspace.tsx",
+            "apps/thin-client/src/features/workspace/hooks/useManagedBrowserTakeover.ts",
+            "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
+            "apps/thin-client/src/features/workspace/api/managedBrowserConsentClient.ts",
+            "apps/thin-client/README.md",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
+            "apps/thin-client/src/features/workspace/tests/workspace-gate.unit.test.tsx",
+            "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+        ),
+    },
     "managed-headless-agent-server": {
         "automatic_sources": (
             "modules/hosts/server/composition/composeManagedAgentReads.ts",

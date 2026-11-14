@@ -74,7 +74,7 @@ export function composeManagedBrowserConsent(options: {
       if (!open || !requestIsCurrent()) return;
       const registered = await documents.register(identity, workspaceId, requestIsCurrent);
       if (registered && (!open || !requestIsCurrent())) {
-        documents.retire(identity, registered.target, registered.proof);
+        if ("target" in registered) documents.retire(identity, registered.target, registered.proof);
         return;
       }
       return registered;

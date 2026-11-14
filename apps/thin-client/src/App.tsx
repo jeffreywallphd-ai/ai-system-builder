@@ -5,6 +5,7 @@ import {
   NotificationProvider,
   useNotificationCenter,
 } from "../../../modules/ui/shared";
+import { WindowTakeoverControls, WindowTakeoverProvider } from "../../../modules/ui/shared/takeover/WindowTakeoverControls";
 
 import { AppShell } from "./components/layout/AppShell";
 import { AssetLibraryPage } from "./pages/AssetLibraryPage";
@@ -32,6 +33,7 @@ import {
 import { resolveThinClientWorkspaceRouteBoundary } from "./routes/workspaceRouteBoundary";
 import { createApiModelManagementClient } from "./features/model-management/api/apiModelManagementClient";
 import { createContextManagementPageClient } from "./features/context-management/api/contextManagementPageClient";
+import { useManagedBrowserTakeover } from "./features/workspace/hooks/useManagedBrowserTakeover";
 
 type ThinClientWorkspacePageKey = Extract<
   ThinClientPageKey,
@@ -88,6 +90,7 @@ function WorkspaceAwareThinClientApp() {
   const [artifactDetailIntent, setArtifactDetailIntent] = useState<string>();
   const notificationWorkspaceId =
     workspace.status === "ready" ? workspace.activeWorkspace?.id : undefined;
+  const takeover = useManagedBrowserTakeover(notificationWorkspaceId, workspace.activeWorkspace?.organizationId, activePage === "systems");
   useEffect(() => {
     setNotificationWorkspace(notificationWorkspaceId);
     setContextLaunchArtifactId(undefined);
@@ -213,13 +216,16 @@ function WorkspaceAwareThinClientApp() {
         client={thinClientContextNotificationClient}
         workspaceId={notificationWorkspaceId}
       />
-      <AppShell
-        activePage={routeBoundary.visibleActivePage}
-        pages={thinClientPageDefinitions}
-        onNavigate={setRoute}
-      >
-        {content}
-      </AppShell>
+      <WindowTakeoverProvider control={takeover}>
+        <AppShell
+          activePage={routeBoundary.visibleActivePage}
+          pages={thinClientPageDefinitions}
+          onNavigate={setRoute}
+        >
+          {content}
+          <WindowTakeoverControls workspaceLabel={workspace.activeWorkspace?.displayName} />
+        </AppShell>
+      </WindowTakeoverProvider>
     </>
   );
 }

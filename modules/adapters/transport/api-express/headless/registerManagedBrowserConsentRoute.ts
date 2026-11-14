@@ -6,6 +6,7 @@ import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, isManage
   parseManagedBrowserConsent, parseManagedBrowserRegistration, sameManagedBrowserAttempt,
   sameManagedBrowserDocument } from "../../../../contracts/headless/managed-browser-consent";
 import type { WorkspaceId } from "../../../../contracts/workspace";
+import { readStrictPassiveRecord } from "../../../../contracts/shared";
 import { getExpressAuthContext } from "../security/expressAuthContext";
 import { getExpressOrganizationContext } from "../security/expressOrganizationContext";
 
@@ -81,7 +82,9 @@ async function respond<Identity>(request: Request, response: Response, handlers:
   const proof = request.headers[MANAGED_BROWSER_DOCUMENT_HEADER];
   if (input.operation === "register") {
     if (proof !== undefined) return error(response, 400);
-    const result = parseManagedBrowserRegistration(await handlers.register(identity, input.workspaceId, current));
+    const outcome = await handlers.register(identity, input.workspaceId, current);
+    if (registrationIsBusy(outcome)) return error(response, current() ? 503 : 403);
+    const result = parseManagedBrowserRegistration(outcome);
     if (!result) return error(response, 403);
     if (result.target.hostIncarnationId !== handlers.hostIncarnationId || result.target.workspaceId !== input.workspaceId)
       return error(response, 503);
@@ -113,6 +116,11 @@ async function respond<Identity>(request: Request, response: Response, handlers:
     sameManagedBrowserAttempt(grant.target, input.target);
   if (!exact) return error(response, 503);
   return response.json(grant);
+}
+
+function registrationIsBusy(value: unknown) {
+  try { return readStrictPassiveRecord(value, ["status"]).status === "busy"; }
+  catch { return false; }
 }
 
 function error(response: Response, status: number) {

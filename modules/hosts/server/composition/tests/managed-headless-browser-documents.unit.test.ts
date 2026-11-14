@@ -42,7 +42,7 @@ test("browser control consent requires the same live document even when two tabs
     assert.equal(await documents.register({...browser, purpose: "agent" as "browser"}, workspaceId), undefined);
     const first = await documents.register(browser, workspaceId);
     const second = await documents.register(browser, workspaceId);
-    assert.ok(first && second && first.proof !== second.proof);
+    assert.ok(first && "target" in first && second && "target" in second && first.proof !== second.proof);
     const sameClientWithDifferentToken = {...browser, credentialBinding: differentBinding, isCurrent: () => true};
     const observedPolicyReads = policyReads;
     assert.equal(await documents.authenticate(sameClientWithDifferentToken, first.target, first.proof), undefined);
@@ -84,7 +84,7 @@ test("browser control consent requires the same live document even when two tabs
     assert.equal(other.isCurrent(), false);
     hold = false;
     const replacement = await documents.register(browser, workspaceId);
-    assert.ok(replacement);
+    assert.ok(replacement && "target" in replacement);
     assert.notEqual(replacement.target.uiIncarnationId, second.target.uiIncarnationId);
     permitted = false;
     assert.equal(await documents.authenticate(browser, replacement.target, replacement.proof), undefined);
@@ -95,4 +95,28 @@ test("browser control consent requires the same live document even when two tabs
     documents.close();
     authority.close();
   }
+});
+
+test("real document slots become available again without changing the browser credential", async () => {
+  const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
+  const organizationId = createOrganizationId("fixture-org");
+  const workspaceId = createWorkspaceId("fixture-workspace");
+  const binding = {sameCredential(other: unknown) { return binding === other; }};
+  const browser = {purpose: "browser" as const, organizationId, principalId: "fixture-user",
+    registeredClientId: randomUUID(), credentialBinding: binding, isCurrent: () => true};
+  const documents = createManagedHeadlessBrowserDocuments({hostIncarnationId, now: () => 5_000,
+    authorize: async () => true, register: () => true, retire: () => true});
+  try {
+    const first = await documents.register(browser, workspaceId);
+    assert.ok(first && "target" in first);
+    for (let index = 1; index < 32; index++) {
+      const tab = await documents.register(browser, workspaceId);
+      assert.ok(tab && "target" in tab);
+    }
+    assert.deepEqual(await documents.register(browser, workspaceId), {status: "busy"});
+    assert.equal(documents.retire(browser, first.target, first.proof), true);
+    const retried = await documents.register(browser, workspaceId);
+    assert.ok(retried && "target" in retried);
+    assert.ok(await documents.authenticate(browser, retried.target, retried.proof));
+  } finally {documents.close();}
 });
