@@ -6,7 +6,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import { chromium, type Browser, type Page } from "@playwright/test";
+import { chromium, type Browser, type Page, type Request as BrowserRequest } from "@playwright/test";
 
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER } from "../../../../modules/contracts/headless/managed-browser-consent";
 import { MANAGED_BROWSER_DELIVERY_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
@@ -765,6 +765,49 @@ async function main() {
       assert.equal(await title.inputValue(), "Synthetic human draft, unsaved");
       assert.deepEqual(await authoritative(), {baseRevisionId:winner.revisionId, baseRecordRevision:winner.recordRevision});
       evidence.dirty_user_values_and_winning_revision_preserved = true;
+
+      stage = "dirty-canvas-takeover-request";
+      const request = readHeadlessWindowResult(await call("aisb_request_window", {
+        target:await getTab(), taskId:randomUUID(), requestKey:randomUUID(),
+      }));
+      assert.ok(request.ok && request.value.kind === "request");
+      const attempt = request.value.request.target;
+      let saveRequests = 0;
+      let grantRequests = 0;
+      const observe = (outgoing: BrowserRequest) => {
+        if (outgoing.method() !== "POST") return;
+        const url = new URL(outgoing.url());
+        if (url.origin !== trusted) return;
+        if (url.pathname === "/api/systems/revisions/save") saveRequests++;
+        if (url.pathname === MANAGED_BROWSER_CONSENT_PATH) {
+          const operation = outgoing.postDataJSON()?.operation;
+          if (operation === "accept" || operation === "ready") grantRequests++;
+        }
+      };
+      page.on("request", observe);
+      try {
+        await modal.getByRole("button", {name:"Accept automation takeover", exact:true}).click();
+        const confirm = modal.getByRole("button", {name:"Save changes and accept takeover", exact:true});
+        await confirm.waitFor({timeout:5_000});
+        assert.equal(saveRequests, 0);
+        assert.equal(grantRequests, 0);
+        stage = "dirty-canvas-takeover-declines-stale-save";
+        await confirm.click();
+        await until(async () => {
+          const result = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+          return result.ok && result.value.kind === "ended" ? true : undefined;
+        }, 50);
+        await revoke.waitFor({state:"detached",timeout:5_000});
+        assert.equal(await panel.count(), 0);
+        assert.equal(saveRequests, 1);
+        assert.equal(grantRequests, 0);
+        assert.equal(await title.inputValue(), "Synthetic human draft, unsaved");
+        assert.equal(await save.isEnabled(), true);
+        assert.deepEqual(await authoritative(), {baseRevisionId:winner.revisionId, baseRecordRevision:winner.recordRevision});
+        evidence.stale_save_before_accept_keeps_draft_without_host_grant = true;
+      } finally {
+        page.off("request", observe);
+      }
     }
 
     if (loseReply) {

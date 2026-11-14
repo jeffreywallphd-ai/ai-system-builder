@@ -189,6 +189,9 @@ Set `MANAGED_HEADLESS_BROWSER_DRAFT=1` with the extended journey to check how
 Chrome handles a saved change while a user edits a system. The test uses the
 Canvas and Notification Center. It checks that the user keeps their draft,
 receives a conflict on save, and cannot overwrite the newer saved version.
+It also tries saving from the takeover request. A stale draft must return
+control to the user, preserve the unsaved value, and send no grant or
+readiness request.
 
 Set `MANAGED_HEADLESS_BROWSER_LOST_REPLY=1` with the extended journey to
 drop one committed tool reply before the test client receives it. Chrome
