@@ -6,7 +6,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import { chromium, type Browser, type Page, type Request as BrowserRequest, type Route } from "@playwright/test";
+import { chromium, type Browser, type Frame, type Page, type Request as BrowserRequest, type Route } from "@playwright/test";
 
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER } from "../../../../modules/contracts/headless/managed-browser-consent";
 import { MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH, MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
@@ -79,7 +79,8 @@ async function main() {
   const membershipLoss = process.env.MANAGED_HEADLESS_BROWSER_MEMBERSHIP_LOSS === "1";
   const heldContext = process.env.MANAGED_HEADLESS_BROWSER_HELD_CONTEXT === "1";
   const leaseRaces = process.env.MANAGED_HEADLESS_BROWSER_LEASE_RACES === "1";
-  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss || heldContext || leaseRaces) || presentation);
+  const reconnect = process.env.MANAGED_HEADLESS_BROWSER_RECONNECT === "1";
+  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss || heldContext || leaseRaces || reconnect) || presentation);
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
     {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation, headlessMembershipLoss:membershipLoss});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
@@ -641,6 +642,120 @@ async function main() {
       }
     }
 
+    if (reconnect && saved) {
+      stage = "scoped-reconnect-prepare";
+      const {systemId} = saved;
+      const current = await call("aisb_read_system", {...scope, systemId});
+      assert.ok(current.ok && typeof current.value?.name === "string");
+      const publish = page.getByRole("tab", {name:"Publish", exact:true});
+      await publish.click({timeout:5_000});
+      assert.equal(await publish.getAttribute("aria-selected"), "true");
+      const stream = await page.evaluateHandle(({workspaceId}) => {
+        const original = window.fetch;
+        const releaseReplay = Promise.withResolvers<void>();
+        const deadline = setTimeout(releaseReplay.resolve, 10_000);
+        const first = new AbortController();
+        type Cursor = {hostIncarnationId:string; sequence:number; scopeTag:string};
+        type Save = {systemId:string; recordRevision:number; revisionId:string};
+        type Change = Save & {sequence:number};
+        const cursorIdentity = {
+          key(cursor:Cursor) {return JSON.stringify([cursor.hostIncarnationId, cursor.sequence, cursor.scopeTag]);},
+        };
+        let firstCursor: Cursor | undefined;
+        let shouldInterrupt = false;
+        let replayWaiting = false;
+        let replayedSameCursor = false;
+        let replayCursor: Cursor | undefined;
+        let replayEvent: Change | undefined;
+        let healthyStreams = 0;
+        let successorCursor: Cursor | undefined;
+        const proxy = {async run(input:RequestInfo | URL, init?:RequestInit) {
+          const base = new URL(input instanceof Request ? input.url : input, location.href);
+          if (base.origin !== location.origin || init?.method !== "POST" || typeof init.body !== "string" ||
+              !["/api/headless/system-builder/stream", "/api/headless/system-builder/changes"].includes(base.pathname))
+            return original.call(window, input, init);
+          const request = JSON.parse(init.body);
+          if (request.workspaceId !== workspaceId) return original.call(window, input, init);
+          const cursor: Cursor = request.cursor;
+          if (base.pathname.endsWith("/stream")) {
+            const initial = firstCursor === undefined;
+            if (initial) firstCursor = cursor;
+            const signal = initial && init.signal ? AbortSignal.any([init.signal, first.signal]) : init.signal;
+            const response = await original.call(window, input, {...init, signal});
+            if (response.ok && response.headers.get("content-type")?.startsWith("text/event-stream")) {
+              healthyStreams++;
+              if (shouldInterrupt && !initial) successorCursor = cursor;
+            }
+            return response;
+          }
+          if (!shouldInterrupt || replayWaiting) return original.call(window, input, init);
+          replayWaiting = true;
+          replayedSameCursor = firstCursor !== undefined && cursorIdentity.key(cursor) === cursorIdentity.key(firstCursor);
+          await releaseReplay.promise;
+          const response = await original.call(window, input, init);
+          const size = Number(response.headers.get("content-length"));
+          if (response.ok && size > 0 && size <= 128 * 1024) {
+            const reply = await response.clone().json();
+            if (reply.ok === true && reply.value?.kind === "changes" && reply.value.more === false &&
+                Array.isArray(reply.value.events) && reply.value.events.length === 1) {
+              replayCursor = reply.value.cursor;
+              replayEvent = reply.value.events[0];
+            }
+          }
+          return response;
+        }};
+        window.fetch = proxy.run;
+        return {state() {return {healthyStreams,replayWaiting};},
+          verifiedReplay(save: Save) {
+            return Boolean(replayedSameCursor && firstCursor && replayCursor && replayEvent && successorCursor &&
+              replayCursor.hostIncarnationId === firstCursor.hostIncarnationId &&
+              replayCursor.sequence === firstCursor.sequence + 1 && replayEvent.sequence === replayCursor.sequence &&
+              replayEvent.systemId === save.systemId && replayEvent.recordRevision === save.recordRevision &&
+              replayEvent.revisionId === save.revisionId && cursorIdentity.key(successorCursor) === cursorIdentity.key(replayCursor));
+          },
+          interrupt() {shouldInterrupt = true; first.abort();},
+          continueReplay() {clearTimeout(deadline); releaseReplay.resolve();},
+          restore() {
+            clearTimeout(deadline);
+            releaseReplay.resolve();
+            if (window.fetch === proxy.run) window.fetch = original;
+          }};
+      }, {workspaceId:activeWorkspaceId});
+      try {
+        stage = "scoped-reconnect-open-management";
+        await manage.click({timeout:5_000});
+        const row = management.locator(`tr[data-saved-system="${systemId}"]`);
+        await row.getByText(current.value.name, {exact:true}).waitFor({timeout:5_000});
+        stage = "scoped-reconnect-initial-stream";
+        await page.waitForFunction(value => value.state().healthyStreams === 1, stream, {timeout:5_000});
+        stage = "scoped-reconnect-interrupt-and-commit";
+        const began = performance.now();
+        await stream.evaluate(value => value.interrupt());
+        await page.waitForFunction(value => value.state().replayWaiting, stream, {timeout:2_000});
+        const name = "Synthetic save recovered after stream interruption";
+        const result = readHeadlessAuthoringWireResult(await call("aisb_rename_system", {...scope, systemId,
+          baseRevisionId:current.value.currentRevisionId, baseRecordRevision:current.value.revision, name, idempotencyKey:randomUUID()}));
+        assert.ok(result.ok && result.value.kind === "committed");
+        stage = "scoped-reconnect-read-and-resume";
+        await stream.evaluate(value => value.continueReplay());
+        await row.getByText(name, {exact:true}).waitFor({timeout:5_000});
+        assert.ok((await row.textContent())?.includes(`Revision ${result.value.reference.recordRevision}`));
+        await page.waitForFunction(value => value.state().healthyStreams >= 2, stream, {timeout:5_000});
+        evidence.managed_browser_reconnect_ms = performance.now() - began;
+        assert.ok(result.value.reference.revisionId);
+        assert.ok(await stream.evaluate((value, save) => value.verifiedReplay(save), {
+          systemId, recordRevision:result.value.reference.recordRevision, revisionId:result.value.reference.revisionId,
+        }));
+        assert.ok(evidence.managed_browser_reconnect_ms <= 5_000);
+        assert.equal(await panel.count(), 0);
+        saved = result.value.reference;
+        evidence.managed_browser_reconnect_replayed_exact_cursor = true;
+      } finally {
+        await stream.evaluate(value => value.restore());
+        await stream.dispose();
+      }
+    }
+
     if (measure && saved && presentationRequest) {
       stage = "browser-timing";
       const timedTab = await getTab();
@@ -750,21 +865,37 @@ async function main() {
           window.fetch = testFetch.run;
           const selector = 'section[aria-label="Resource shown by automation"]';
           let staleAppearances = 0;
+          let baselineFocus:Element | null = null;
+          let baselineLocation = "";
+          let focusEvents = 0;
+          const focus = {record() {focusEvents++;}};
           const watcher = new MutationObserver(records => {
             for (const {addedNodes} of records) for (const node of addedNodes)
               if (node instanceof Element && (node.matches(selector) || node.querySelector(selector))) staleAppearances++;
           });
           return {held() {return held && !finished;}, finished() {return finished;}, release:hold.resolve,
             observePanel() {watcher.observe(document.body, {childList:true, subtree:true});},
+            observeManualControls() {
+              baselineFocus = document.activeElement;
+              baselineLocation = location.href;
+              document.addEventListener("focusin", focus.record, true);
+            },
+            readManualControls() {
+              return {focusEvents, focusPreserved:document.activeElement === baselineFocus,
+                routePreserved:location.href === baselineLocation};
+            },
             staleAppearances() {return staleAppearances;},
             restore() {
               watcher.disconnect();
+              document.removeEventListener("focusin", focus.record, true);
               clearTimeout(deadline);
               hold.resolve();
               if (window.fetch === testFetch.run) window.fetch = original;
             }};
         }, {deliveryPath});
         let active: UiControlLeaseTarget;
+        let navigations = 0;
+        const monitorNavigation = (frame: Frame) => {if(frame === page.mainFrame()) navigations++;};
         try {
           stage = "queue-exact-tab-consent";
           const request = readHeadlessWindowResult(await call("aisb_request_window", {target:visibleTab,
@@ -838,6 +969,9 @@ async function main() {
           stage = "queue-revoke-before-release";
           await revoke.click();
           await revoke.waitFor({state:"detached", timeout:3_000});
+          await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+          await gate.evaluate(probe => probe.observeManualControls());
+          page.on("framenavigated", monitorNavigation);
           await gate.evaluate(probe => probe.release());
           await until(async () => await gate.evaluate(probe => probe.finished()) ? true : undefined);
           await until(async () => {
@@ -848,10 +982,16 @@ async function main() {
           assert.equal(await panel.count(), 0);
           const staleAppearances = await gate.evaluate(probe => probe.staleAppearances());
           assert.equal(staleAppearances, 0);
+          assert.equal(navigations, 0);
+          assert.deepEqual(await gate.evaluate(probe => probe.readManualControls()), {
+            focusEvents:0, focusPreserved:true, routePreserved:true,
+          });
+          evidence.browser_revoked_held_response_no_focus_or_navigation = true;
           evidence.browser_stale_panel_appearances = staleAppearances;
           evidence.browser_exact_duplicate_and_conflict = true;
           evidence.browser_revoked_held_response_no_display = true;
         } finally {
+          page.off("framenavigated", monitorNavigation);
           try {await gate.evaluate(probe => probe.restore());}
           finally {await gate.dispose();}
         }

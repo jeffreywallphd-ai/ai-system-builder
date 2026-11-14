@@ -184,8 +184,16 @@ Set `MANAGED_HEADLESS_BROWSER_ISOLATION=1` with the extended journey to test
 two real tabs without Playwright's background-throttling overrides. The test
 holds one presentation reply on the exact originating tab. It checks the queue
 limit, retry and conflict behavior, revoke, and saved state after the tab is
-visible again. This reference fixture uses synthetic records and does not
-qualify production network latency.
+visible again. When the late reply arrives, the current focus and route must
+stay in place and no presentation may appear. This reference fixture uses
+synthetic records. Production network latency has a separate qualification.
+
+Set `MANAGED_HEADLESS_BROWSER_RECONNECT=1` with the extended journey to
+interrupt the live saved-state stream in the test browser. The test makes
+one saved change before allowing replay. It verifies the same cursor on
+replay, the latest revision in the Manage table, and a new stream that
+uses the newer cursor. Both the visible result and the reopened stream
+must arrive within five seconds of the interruption.
 
 Set `MANAGED_HEADLESS_BROWSER_DRAFT=1` with the extended journey to check how
 Chrome handles a saved change while a user edits a system. The test uses the
