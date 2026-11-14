@@ -268,12 +268,15 @@ PUBLISHED_FORM_CHECKS = {
             "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
             "apps/thin-client/src/features/workspace/api/managedBrowserConsentClient.ts",
             "apps/thin-client/README.md",
+            "apps/desktop/src/renderer/App.tsx",
+            "modules/ui/shared/takeover/PresentedWindowResource.tsx",
         ),
         "command": (
             "dev-tools/helpers/run_vitest_checks.mjs", "--",
             "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
             "apps/thin-client/src/features/workspace/tests/workspace-gate.unit.test.tsx",
             "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+            "apps/desktop/src/renderer/tests/desktop-window-takeover.ui.test.tsx",
         ),
     },
     "managed-headless-agent-window": {

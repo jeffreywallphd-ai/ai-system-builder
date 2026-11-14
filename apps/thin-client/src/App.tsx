@@ -6,6 +6,7 @@ import {
   useNotificationCenter,
 } from "../../../modules/ui/shared";
 import { WindowTakeoverControls, WindowTakeoverProvider } from "../../../modules/ui/shared/takeover/WindowTakeoverControls";
+import { PresentedWindowResource } from "../../../modules/ui/shared/takeover/PresentedWindowResource";
 
 import { AppShell } from "./components/layout/AppShell";
 import { AssetLibraryPage } from "./pages/AssetLibraryPage";
@@ -106,6 +107,8 @@ function WorkspaceAwareThinClientApp() {
   );
 
   const setRoute = (nextPage: ThinClientPageKey) => {
+    const status = takeover.controller.getSnapshot().status;
+    if (status === "active" || status === "activating") return;
     navigateToPage(nextPage);
     setActivePage(nextPage);
   };
@@ -222,6 +225,10 @@ function WorkspaceAwareThinClientApp() {
           pages={thinClientPageDefinitions}
           onNavigate={setRoute}
         >
+          {takeover.presented ? (
+            <PresentedWindowResource intent={takeover.presented.intent} detail={takeover.presented.detail}
+              elementRef={takeover.presentedElement} />
+          ) : null}
           {content}
           <WindowTakeoverControls workspaceLabel={workspace.activeWorkspace?.displayName} />
         </AppShell>

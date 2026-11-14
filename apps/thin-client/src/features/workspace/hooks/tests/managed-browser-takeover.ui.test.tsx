@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { WindowTakeoverControls, WindowTakeoverProvider } from "../../../../../../../modules/ui/shared/takeover/WindowTakeoverControls";
+import { PresentedWindowResource } from "../../../../../../../modules/ui/shared/takeover/PresentedWindowResource";
 import { pairedDeviceTokenStore } from "../../../../security/pairedDeviceTokenStore";
 import { useManagedBrowserTakeover } from "../useManagedBrowserTakeover";
 
@@ -13,7 +14,9 @@ const attempt = {...target, requestId: id(4), attemptId: id(5)};
 const grant = {target: {...attempt, leaseId: id(7), generation: 1}, remainingMs: 10_000};
 const pending = {target: attempt, status: "pending", agentSessionId: id(8), taskId: id(9), expiresAt: 50_000};
 const proof = "a".repeat(43);
-const reply = (value: unknown) => new Response(JSON.stringify(value), {headers: {"content-type": "application/json"}});
+const reply = (value: unknown, presentation = false) => new Response(JSON.stringify(value), {
+  headers: {"content-type": "application/json", ...(presentation ? {"x-aisb-headless-presentation": "1"} : {})},
+});
 const click = (label: string) => {
   const node = [...document.querySelectorAll("button")].find(button => button.textContent?.trim() === label);
   expect(node?.isConnected).toBe(true);
@@ -196,6 +199,88 @@ it("cannot present a delayed observation after the browser credential is replace
     expect(calls).toEqual(["register", "observe", "register"]);
   } finally {
     held.resolve(reply({status: "ready"}));
+    await act(async () => {root.unmount();});
+    container.remove();
+  }
+});
+
+it("shows the first saved command and withholds a held command and context after local revoke", async () => {
+  vi.useFakeTimers();
+  hide(false);
+  pairedDeviceTokenStore.setToken("fixture-browser-token");
+  const lateCommand = Promise.withResolvers<Response>();
+  const lateContext = Promise.withResolvers<Response>();
+  const intent = {action:"open-system", systemId:"fixture.system", revisionId:"revision-1"};
+  const command = {target:grant.target, commandId:id(11), intent, sequence:1, remainingMs:1_000};
+  const acknowledged: unknown[] = [];
+  const published: unknown[] = [];
+  let accepted = false;
+  let waitingToPull = false;
+  let challengeCalls = 0;
+  let revokeCalls = 0;
+  let discardFirstAckReply = true;
+  vi.stubGlobal("fetch", async (_input: string, options: RequestInit) => {
+    const request = JSON.parse(String(options.body));
+    switch (request.operation) {
+      case "register": return reply({target, proof});
+      case "observe": return accepted ? reply({status:"ready", request:{...pending, status:"active"}, lease:grant}, true)
+        : reply({status:"ready", request:pending}, true);
+      case "accept": return reply(grant);
+      case "ready": accepted = true; return reply(grant);
+      case "challenge": return ++challengeCalls === 1 ? reply({challenge:id(12)}) : lateContext.promise;
+      case "publish": published.push(request.input); return reply({ok:true});
+      case "acknowledge":
+        acknowledged.push(request.input.receipt);
+        if (discardFirstAckReply) {
+          discardFirstAckReply = false;
+          throw new TypeError("The acknowledgment reply was lost after application.");
+        }
+        return reply({ok:true});
+      case "pull":
+        if (request.input.sequence === 1) return reply({status:"command", command, detail:{title:"Saved metadata"}});
+        waitingToPull = true;
+        return lateCommand.promise;
+      case "revoke": revokeCalls++; return reply({ok:true});
+      default: return reply({ok:true});
+    }
+  });
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  function Fixture() {
+    const control = useManagedBrowserTakeover(target.workspaceId, "fixture-org", false);
+    return <WindowTakeoverProvider control={control}>
+      <h1>Existing view</h1>
+      {control.presented && <PresentedWindowResource {...control.presented} elementRef={control.presentedElement} />}
+      <WindowTakeoverControls />
+    </WindowTakeoverProvider>;
+  }
+  try {
+    await act(async () => {root.render(<Fixture />);});
+    await act(async () => {click("Accept automation takeover");});
+    expect(container.querySelector('[aria-label="Resource shown by automation"]')?.textContent).toContain("Saved metadata");
+    await act(async () => vi.advanceTimersByTimeAsync(650));
+    const receipt = {sequence:1, commandId:id(11), status:"applied"};
+    expect(acknowledged).toEqual([receipt,receipt]);
+    expect(waitingToPull).toBe(true);
+    expect(challengeCalls).toBe(2);
+    expect(published).toEqual([{target:grant.target, challenge:id(12),
+      context:{view:"system", ready:true, dirtyNavigationBlocked:false, selection:intent}}]);
+    await act(async () => {click("Revoke automation takeover");});
+    expect(revokeCalls).toBe(1);
+    expect(container.querySelector('[aria-label="Resource shown by automation"]')).toBeNull();
+    await act(async () => {
+      lateCommand.resolve(reply({status:"command", command:{...command, commandId:id(13), sequence:2},
+        detail:{title:"Late saved data"}}));
+      lateContext.resolve(reply({challenge:id(14)}));
+    });
+    expect(acknowledged).toHaveLength(2);
+    expect(published).toHaveLength(1);
+    expect(container.querySelector("h1")?.textContent).toBe("Existing view");
+    expect(container.textContent).not.toContain("Late saved data");
+  } finally {
+    lateCommand.resolve(reply({status:"empty"}));
+    lateContext.resolve(reply({}));
     await act(async () => {root.unmount();});
     container.remove();
   }

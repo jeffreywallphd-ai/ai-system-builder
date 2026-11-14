@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { WindowTakeoverProvider } from "../../../../modules/ui/shared/takeover/WindowTakeoverControls";
+import { PresentedWindowResource } from "../../../../modules/ui/shared/takeover/PresentedWindowResource";
 import { useDesktopWindowTakeover } from "./features/workspace/hooks/useActiveWorkspaceTakeover";
 import {
   ContextTaskNotificationBridge,
@@ -292,12 +293,8 @@ export function WorkspaceAwareDesktopApp({
           takeoverWorkspaceLabel={workspace.activeWorkspace?.displayName}
         >
           {takeover.presented ? (
-            <section ref={takeover.presentedElement} className="ui-panel ui-panel--compact" aria-label="Resource shown by automation">
-              <h2>{takeover.presented.detail.title}</h2>
-              {takeover.presented.detail.summary ? <p>{takeover.presented.detail.summary}</p> : null}
-              <code>{"systemId" in takeover.presented.intent ? takeover.presented.intent.systemId :
-                "runId" in takeover.presented.intent ? takeover.presented.intent.runId : takeover.presented.intent.artifactId}</code>
-            </section>
+            <PresentedWindowResource intent={takeover.presented.intent} detail={takeover.presented.detail}
+              elementRef={takeover.presentedElement} />
           ) : null}
           <Suspense fallback={lazyPageFallback}>{content}</Suspense>
         </AppShell>

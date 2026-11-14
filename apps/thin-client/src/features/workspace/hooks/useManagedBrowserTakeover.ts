@@ -1,17 +1,27 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { createWindowTakeoverController, type DraftHandoff } from "../../../../../../modules/ui/shared/takeover/windowTakeoverController";
+import { createPresentationQueue } from "../../../../../../modules/ui/shared/takeover/presentationQueue";
+import { UI_PRESENTATION_LIMITS, type UiPresentationContext, type UiPresentationDetail,
+  type UiPresentationIntent, type UiPresentationReceipt } from "../../../../../../modules/contracts/headless";
 import { isWorkspaceId } from "../../../../../../modules/contracts/workspace/workspace-id";
 import { isOrganizationId } from "../../../../../../modules/contracts/organization/organization-id";
 import { pairedDeviceTokenStore } from "../../../security/pairedDeviceTokenStore";
 import { createManagedBrowserConsentClient } from "../api/managedBrowserConsentClient";
 
 const POLL_MS = 300;
+const DELIVERY_POLL_MS = 150;
 const RETRY_MS = 1_500;
 const MAX_RETRY_MS = 12_000;
 type Client = ReturnType<typeof createManagedBrowserConsentClient>;
 type Tab = Extract<Awaited<ReturnType<Client["register"]>>, {status: "registered"}>["tab"];
 type Scope = {readonly client: Client; readonly tab: Tab;
-  readonly signal: AbortSignal; readonly isCurrent: () => boolean; readonly sameBearer: () => boolean};
+  readonly signal: AbortSignal; readonly isCurrent: () => boolean; readonly sameBearer: () => boolean;
+  delivery: boolean};
+const presentationViews = {
+  "open-system": "system", "select-component": "component",
+  "show-validation": "validation", "show-run": "run", "show-artifact": "artifact",
+} as const;
 
 /** Holds one volatile tab proof per visible, currently authenticated workspace. */
 export function useManagedBrowserTakeover(workspaceId: string | undefined, organizationId: string | undefined, isSystemsPage: boolean) {
@@ -19,6 +29,10 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
   const draft = useRef<(() => DraftHandoff) | undefined>(undefined);
   const systems = useRef(isSystemsPage);
   const pageActive = useRef(true);
+  const [presented, setPresented] = useState<{readonly intent: UiPresentationIntent; readonly detail: UiPresentationDetail;
+    readonly isCurrent: () => boolean}>();
+  const presentedElement = useRef<HTMLElement | null>(null);
+  const selection = useRef<UiPresentationIntent | undefined>(undefined);
   useLayoutEffect(() => {
     const hide = () => {pageActive.current = false;};
     const show = () => {pageActive.current = true;};
@@ -97,12 +111,31 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
             if (!valid()) return;
             if (result.status === "retry") {retry(); return;}
             if (result.status !== "registered") return;
-            scope = currentTab.current = {client, tab: result.tab, signal: lease.signal, isCurrent: valid, sameBearer: bearer.isCurrent};
+            scope = currentTab.current = {client, tab: result.tab, signal: lease.signal, isCurrent: valid,
+              sameBearer: bearer.isCurrent, delivery: false};
           }
           const apply = controller.beginObservation();
           const state = await client.observe(scope.tab, lease.signal);
           if (!valid() || currentTab.current !== scope) return;
-          if (state?.status === "ready") { retryDelay = RETRY_MS; apply(state.request, state.lease); }
+          if (state?.status === "ready") {
+            retryDelay = RETRY_MS;
+            const deliveryWasEnabled = scope.delivery;
+            scope.delivery = state.delivery;
+            if (deliveryWasEnabled && !scope.delivery) controller.revoke();
+            apply(state.request, state.lease);
+            if (state.lease && scope.delivery) {
+              const target = state.lease.target;
+              const fence = controller.fence();
+              if (!controller.permits(target, fence)) return;
+              const challenge = await client.challenge(scope.tab, target, lease.signal);
+              if (!challenge || !valid() || currentTab.current !== scope || !controller.permits(target, fence)) return;
+              const intent = selection.current;
+              const context: UiPresentationContext = {view: intent ? presentationViews[intent.action] : "other",
+                ready: true, dirtyNavigationBlocked: systems.current && draft.current?.().status !== "clean",
+                ...(intent ? {selection: intent} : {})};
+              await client.publish(scope.tab, target, challenge, context, lease.signal);
+            }
+          }
           else if (state?.status !== "busy") { apply(undefined); retry(); }
         } catch {
           if (valid()) retry();
@@ -130,5 +163,88 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
       window.removeEventListener("pageshow", attach);
     };
   }, [control, organizationId, workspaceId]);
-  return control;
+
+  useLayoutEffect(() => {
+    const controller = control.controller;
+    let closeDelivery: (() => void) | undefined;
+    const unsubscribe = controller.subscribe(() => {
+      closeDelivery?.();
+      closeDelivery = undefined;
+      const state = controller.getSnapshot();
+      const activeScope = currentTab.current;
+      if (state.status !== "active" || !activeScope?.delivery || state.grant.target.workspaceId !== workspaceId) return;
+      const scope = activeScope;
+      const target = state.grant.target;
+      const fence = controller.fence();
+      const abort = new AbortController();
+      const current = () => !abort.signal.aborted && scope.isCurrent() && currentTab.current === scope &&
+        scope.delivery && controller.permits(target, fence);
+      let sequence = 1;
+      let pendingAcknowledgment: UiPresentationReceipt | undefined;
+      let prepared: UiPresentationDetail | undefined;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const queue = createPresentationQueue({
+        target, now: () => performance.now(), isCurrent: current,
+        async prepare(intent) {
+          const detail = prepared;
+          return () => {
+            if (!detail || !current() || systems.current && draft.current?.().status !== "clean") return false;
+            flushSync(() => setPresented({intent, detail, isCurrent: current}));
+            if (!current() || !presentedElement.current?.isConnected) return false;
+            presentedElement.current.hidden = false;
+            selection.current = intent;
+            return true;
+          };
+        },
+        acknowledge(command, status) {
+          if (current() && sequence === command.sequence)
+            pendingAcknowledgment = {sequence, commandId: command.commandId, status};
+        },
+        requestMissing: controller.revoke,
+        detach: controller.revoke,
+      });
+      async function pollDelivery() {
+        if (!current()) return;
+        try {
+          const receipt = pendingAcknowledgment;
+          if (receipt) {
+            const acknowledged = await scope.client.acknowledge(scope.tab, target, receipt, abort.signal);
+            if (!current() || acknowledged === "retry") return;
+            if (acknowledged !== "acknowledged" || receipt !== pendingAcknowledgment) {controller.revoke(); return;}
+            pendingAcknowledgment = undefined;
+            sequence++;
+          }
+          if (sequence > UI_PRESENTATION_LIMITS.receipts) return;
+          const beganAt = performance.now();
+          const response = await scope.client.pull(scope.tab, target, sequence, abort.signal);
+          if (!current()) return;
+          if (response.status === "command") {
+            prepared = response.detail;
+            if (queue.receive(response.command, beganAt) === "denied") controller.revoke();
+          } else if (response.status === "terminal") {
+            const terminal = response.receipt;
+            if ((terminal.status !== "rejected" && terminal.status !== "discarded") ||
+                !queue.skip(target, sequence, terminal.commandId, terminal.status)) {controller.revoke(); return;}
+            sequence++;
+          } else if (response.status === "unavailable") controller.revoke();
+        } catch {
+          if (current()) controller.revoke();
+        } finally {
+          if (current() && sequence <= UI_PRESENTATION_LIMITS.receipts) timer = setTimeout(() => void pollDelivery(), DELIVERY_POLL_MS);
+        }
+      }
+      closeDelivery = () => {
+        abort.abort();
+        clearTimeout(timer);
+        queue.close();
+        selection.current = undefined;
+        if (presentedElement.current) presentedElement.current.hidden = true;
+        setPresented(undefined);
+      };
+      void pollDelivery();
+    });
+    return () => {unsubscribe(); closeDelivery?.();};
+  }, [control, workspaceId]);
+
+  return {...control, presented: presented?.isCurrent() ? presented : undefined, presentedElement};
 }
