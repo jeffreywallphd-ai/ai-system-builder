@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { createServer, request } from "node:https";
 import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
@@ -27,6 +28,97 @@ const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_sy
 const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_release_window", "aisb_renew_window",
   "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
+
+test("managed stdio binds one verified TLS origin and exact organization and workspace", { timeout: 20_000 }, async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "managed-mcp-"));
+  const certificate = await selfsigned.generate([{name: "commonName", value: "127.0.0.1"}], {
+    keySize: 2048, extensions: [{name: "subjectAltName", altNames: [{type: 7, ip: "127.0.0.1"}]}],
+  });
+  const ca = path.join(directory, "synthetic-ca.pem");
+  await writeFile(ca, certificate.cert, {flag: "wx"});
+  const requests: {url?: string; workspace?: string; organization?: string; authHeader: boolean}[] = [];
+  let redirect = false;
+  let displacedDiscovery = false;
+  let echoCredential = false;
+  const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
+    let body = "";
+    request.on("data", (chunk: Buffer) => {body += chunk.toString();});
+    request.on("end", () => {
+      const input = JSON.parse(body);
+      requests.push({url: request.url, workspace: input.input.workspaceId, organization: String(request.headers["x-organization-id"]),
+        authHeader: request.headers.authorization === "Bearer synthetic-managed-bearer"});
+      if (redirect) {
+        response.writeHead(307, {Location: "/forbidden-destination", "Content-Length": 0}).end();
+        return;
+      }
+      const value = input.operation === "host.describe"
+        ? {ok: true, operation: "host.describe", value: {version, hostIncarnationId,
+          workspaces: displacedDiscovery ? [workspaceId, "foreign-workspace"] : [],
+          operations: displacedDiscovery ? ["host.describe", "workspaces.list"] : ["host.describe", "templates.list", "systems.read"]}}
+        : input.operation === "templates.list"
+          ? {ok: true, operation: "templates.list", value: [{templateId: "reference.secured-data-review@1.0.0",
+            displayName: echoCredential ? "Synthetic synthetic-managed-bearer" : "Synthetic"}]}
+        : {ok: true, value: {kind: "committed", reference: {systemId, recordRevision: 1, revisionId: "revision-1"}}};
+      const payload = JSON.stringify(value);
+      response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+    });
+  });
+  const clients: Client[] = [];
+  try {
+    await new Promise<void>((resolve, reject) => {
+      listener.once("error", reject);
+      listener.listen(0, "127.0.0.1", resolve);
+    });
+    const address = listener.address();
+    assert.ok(address && typeof address !== "string");
+    const env = {AISB_HEADLESS_MODE: "managed", AISB_HEADLESS_MANAGED_ORIGIN: `https://127.0.0.1:${address.port}`,
+      AISB_HEADLESS_MANAGED_CREDENTIAL: "synthetic-managed-bearer", AISB_HEADLESS_MANAGED_ORGANIZATION_ID: organizationId,
+      AISB_HEADLESS_MANAGED_WORKSPACE_ID: workspaceId, AISB_HEADLESS_ENABLE_AUTHORING: "1",
+      AISB_HEADLESS_ENABLE_PRESENTATION: "1", AISB_HEADLESS_ENABLE_CONVERSATION: "1", TSX_DISABLE_CACHE: "1"};
+    async function connect(overrides: Record<string, string> = {}) {
+      const client = new Client({name: "managed-fixture", version: "1.0.0"});
+      clients.push(client);
+      await client.connect(new StdioClientTransport({command: process.execPath, args: ["--import", "tsx", entrypoint],
+        env: {...env, ...overrides}, stderr: "ignore", maxBufferSize: 256 * 1024}));
+      return client;
+    }
+    const client = await connect({NODE_EXTRA_CA_CERTS: ca});
+    assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(),
+      ["aisb_host_describe", "aisb_list_templates", "aisb_read_system", ...authoringTools].sort());
+    assert.equal(requests.length, 0);
+    const discover = async (connection: Client) => resultText(await connection.callTool({name: "aisb_host_describe", arguments: {}}));
+    assert.equal((await discover(client)).ok, true);
+    const args = {hostIncarnationId, workspaceId, templateId: "reference.secured-data-review@1.0.0",
+      idempotencyKey: "a6f56324-2051-462c-b45b-d9b49bf6dd4a", name: "Synthetic"};
+    const author = async (input: Record<string, unknown>) => resultText(await client.callTool({name: "aisb_create_system", arguments: input}));
+    assert.deepEqual(await author({...args, workspaceId: "foreign-workspace"}), {ok: false, code: "headless.forbidden"});
+    assert.equal((await author(args)).ok, true);
+    assert.deepEqual(requests, [
+      {url: "/api/headless/agent/read", workspace: undefined, organization: organizationId, authHeader: true},
+      {url: "/api/headless/agent/author", workspace: workspaceId, organization: organizationId, authHeader: true},
+    ]);
+    const untrusted = await connect({NODE_TLS_REJECT_UNAUTHORIZED: "0"});
+    assert.deepEqual(await discover(untrusted), {ok: false, code: "headless.unavailable"});
+    const invalidOrigin = await connect({NODE_EXTRA_CA_CERTS: ca, AISB_HEADLESS_MANAGED_ORIGIN: `${env.AISB_HEADLESS_MANAGED_ORIGIN}/private`});
+    assert.deepEqual(await discover(invalidOrigin), {ok: false, code: "headless.unavailable"});
+    assert.equal(requests.length, 2);
+    displacedDiscovery = true;
+    assert.deepEqual(await discover(client), {ok: false, code: "headless.unavailable"});
+    displacedDiscovery = false;
+    echoCredential = true;
+    const echo = resultText(await client.callTool({name: "aisb_list_templates", arguments: {hostIncarnationId, workspaceId}}));
+    assert.deepEqual(echo, {ok: false, code: "headless.unavailable"});
+    redirect = true;
+    assert.deepEqual(await discover(client), {ok: false, code: "headless.unavailable"});
+    assert.equal(requests.length, 5);
+    assert.ok(requests.slice(2).every(row => row.url === "/api/headless/agent/read"));
+  } finally {
+    await Promise.allSettled(clients.map(client => client.close()));
+    listener.closeAllConnections();
+    await new Promise<void>((resolve) => listener.close(() => resolve()));
+    await rm(directory, {recursive: true, force: true});
+  }
+});
 
 test("the portable reference matches the exact credential-free SDK discovery catalog", { timeout: 45_000 }, async () => {
   const { collectHeadlessMcpToolReference } = await import("../generateHeadlessMcpToolReference.mjs");

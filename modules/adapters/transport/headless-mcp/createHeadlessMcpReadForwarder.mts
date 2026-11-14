@@ -1,9 +1,10 @@
-import { request, type Agent } from "node:https";
+import { Agent, request } from "node:https";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
 import type { HeadlessApprovedTurnRequest, HeadlessApprovedTurnResult, HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessWindowRequest, HeadlessWindowResult } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
+import organization from "../../../contracts/organization/index.js";
 import loopback from "../headless-loopback/index.js";
 
 const { HEADLESS_CONTRACT_VERSION, HEADLESS_READ_OPERATIONS, isDesktopHeadlessEndpoint, isDesktopHeadlessFingerprint, isHeadlessHostIncarnationId } = headless;
@@ -92,6 +93,56 @@ type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementR
 type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest;
 const unknownWrite: HeadlessAuthoringWireResult = { ok: false, code: "headless.operation-unconfirmed" };
 const unknownTurn = { ok: false, code: "headless.operation-unconfirmed" } as const;
+export const MANAGED_HEADLESS_READS = ["host.describe", "templates.list", "systems.read"] as const;
+type ForwardResult = ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult;
+
+export function createManagedHeadlessMcpReadForwarder(configuration: {
+  readonly httpsOrigin?: string;
+  readonly credential?: string;
+  readonly organizationId?: string;
+  readonly workspaceId?: string;
+}, enableAuthoring = false) {
+  const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
+  if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
+      typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
+      !/^[A-Za-z0-9._~+/=-]+$/.test(credential) ||
+      !organization.isOrganizationId(organizationId) || !isWorkspaceId(workspaceId)) return undefined;
+  let origin: URL;
+  try { origin = new URL(httpsOrigin); } catch { return undefined; }
+  if (origin.protocol !== "https:" || origin.origin !== httpsOrigin) return undefined;
+  const address = new URL("/api/headless/agent/read", origin);
+  const authoringAddress = new URL("/api/headless/agent/author", origin);
+  const headers = {"x-organization-id": organizationId};
+  // Native Node TLS verifies the exact configured name against trusted CAs.
+  // Each fixed POST independently prevents proxying and redirect following.
+  const agent = new Agent({rejectUnauthorized: true, keepAlive: false, maxSockets: MAX_ACTIVE});
+  const guard = (input: ForwardRequest) =>
+    input.version === HEADLESS_CONTRACT_VERSION &&
+    (input.operation === "host.describe" ||
+      ("workspaceId" in input.input && input.input.workspaceId === workspaceId &&
+        (isAuthoring(input) || MANAGED_HEADLESS_READS.some(operation => operation === input.operation))));
+  const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress: address,
+    agent, authorization: `Bearer ${credential}`, enableAuthoring, enableConversation: false, enablePresentation: false, headers});
+  return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
+    if (!guard(input)) return {ok: false, code: "headless.forbidden"};
+    const result = await forward(input, signal);
+    if (!result.ok) return result;
+    if (JSON.stringify(result).includes(credential))
+      return isAuthoring(input) && input.operation !== "systems.preview-edits" ? unknownWrite : unavailable;
+    if (resultHasOperation(result, "host.describe")) {
+      const described = resultValue["host.describe"].safeParse(result.value);
+      if (!described.success || described.data.workspaces.some(id => id !== workspaceId) ||
+          described.data.operations.some(operation => !MANAGED_HEADLESS_READS.some(allowed => allowed === operation)))
+        return unavailable;
+    }
+    return result;
+  };
+}
+
+function resultHasOperation(result: ForwardResult, operation: HeadlessReadRequest["operation"]): result is ReadResult & { ok: true } {
+  return result.ok && "operation" in result && result.operation === operation;
+}
+
 export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: unknown, credential: unknown,
   enableAuthoring = false, enableConversation = false, enablePresentation = false) {
   if (!isDesktopHeadlessEndpoint(endpoint) || !isDesktopHeadlessFingerprint(fingerprint) || typeof credential !== "string" ||
@@ -104,8 +155,19 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const presentationAddress = new URL(headless.HEADLESS_WINDOW_CONTROL_PATH, endpoint);
   const agent = loopback.createDesktopPinnedLoopbackAgent(endpoint, fingerprint);
   const authorization = `Bearer ${credential}`;
+  return createForwarder({address, authoringAddress, conversationAddress, presentationAddress,
+    agent, authorization, enableAuthoring, enableConversation, enablePresentation});
+}
+
+function createForwarder(options: {
+  address: URL; authoringAddress: URL; conversationAddress: URL; presentationAddress: URL;
+  agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
+  enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
+}) {
+  const {address, authoringAddress, conversationAddress, presentationAddress,
+    agent, authorization, headers, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
-  return async (input: ForwardRequest, signal?: AbortSignal): Promise<ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult> => {
+  return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
     if (input.version === headless.UI_CONTROL_VERSION) {
       if (!enablePresentation) return { ok: false, code: "headless.forbidden" };
       if (!headless.readHeadlessWindowRequest(input) || active >= MAX_ACTIVE || signal?.aborted) return unavailable;
@@ -123,7 +185,7 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
     if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
     active++;
     try {
-      const { status, raw } = await sendRead(converse ? conversationAddress : author ? authoringAddress : address, agent, authorization, input, signal);
+      const { status, raw } = await sendRead(converse ? conversationAddress : author ? authoringAddress : address, agent, authorization, input, signal, headers);
       if (converse) {
         const result = headless.readHeadlessApprovedTurnResult(raw);
         if (status === 200 && result.ok) return result;
@@ -211,7 +273,8 @@ function isAuthoring(input: ForwardRequest): input is AuthoringRequest {
     input.operation === "systems.create" || input.operation === "systems.rename" || input.operation === "systems.clone";
 }
 
-function sendRead(address: URL, agent: Agent, authorization: string, input: ForwardRequest, signal?: AbortSignal) {
+function sendRead(address: URL, agent: Agent | undefined, authorization: string, input: ForwardRequest, signal?: AbortSignal,
+  headers?: Readonly<Record<string, string>>) {
   const body = JSON.stringify(input);
   if (Buffer.byteLength(body) > 8 * 1024) return Promise.reject(new Error("The local request is too large."));
   return new Promise<{ status: number; raw: unknown }>((resolve, reject) => {
@@ -219,9 +282,9 @@ function sendRead(address: URL, agent: Agent, authorization: string, input: Forw
       method: "POST",
       agent,
       signal,
-      headers: { Authorization: authorization, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+      headers: { ...headers, Authorization: authorization, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
     }, (response) => {
-      if (response.headers["content-type"] !== "application/json" || response.headers["content-encoding"] ||
+      if (!/^application\/json(?:;\s*charset=utf-8)?$/i.test(response.headers["content-type"] ?? "") || response.headers["content-encoding"] ||
           response.statusCode === undefined || !response.headers["content-length"] ||
           !/^[1-9][0-9]{0,5}$/.test(response.headers["content-length"])) {
         client.destroy(new Error("Invalid connector response."));

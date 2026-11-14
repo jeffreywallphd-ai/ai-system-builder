@@ -7,7 +7,7 @@ import systemBuilder from "../../../contracts/system-builder/index.js";
 import type { SystemBuilderSystemId } from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
 import type { WorkspaceId } from "../../../contracts/workspace/index.js";
-import { createHeadlessMcpReadForwarder } from "./createHeadlessMcpReadForwarder.mjs";
+import { createHeadlessMcpReadForwarder, createManagedHeadlessMcpReadForwarder } from "./createHeadlessMcpReadForwarder.mjs";
 import { boundHeadlessMcpStdio } from "./boundHeadlessMcpStdio.mjs";
 
 const hostIncarnationId = z.string().refine(headless.isHeadlessHostIncarnationId, "Invalid host ID");
@@ -19,14 +19,22 @@ const workflowSource = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("reviewed-execution-plan"), sourceId: workflowId, sourceRevision: workflowId }),
 ]);
 const version = headless.HEADLESS_CONTRACT_VERSION;
+const requestedMode = process.env.AISB_HEADLESS_MODE;
+const managed = requestedMode === "managed";
 const enableAuthoring = process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
 const enableConversation = process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
 const enablePresentation = process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
-const forward = createHeadlessMcpReadForwarder(
+const forward = managed ? createManagedHeadlessMcpReadForwarder({
+  httpsOrigin: process.env.AISB_HEADLESS_MANAGED_ORIGIN,
+  credential: process.env.AISB_HEADLESS_MANAGED_CREDENTIAL,
+  organizationId: process.env.AISB_HEADLESS_MANAGED_ORGANIZATION_ID,
+  workspaceId: process.env.AISB_HEADLESS_MANAGED_WORKSPACE_ID,
+}, enableAuthoring) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
   process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL,
   enableAuthoring, enableConversation, enablePresentation,
-);
+) : undefined;
 delete process.env.AISB_HEADLESS_CREDENTIAL;
+delete process.env.AISB_HEADLESS_MANAGED_CREDENTIAL;
 
 async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest, signal?: AbortSignal) {
   const result = await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" };
@@ -142,19 +150,22 @@ function addAuthoringTools(server: McpServer) {
 }
 
 serveStdio(() => {
-  const server = new McpServer({ name: enableAuthoring ? "ai-system-builder-desktop-authoring" : "ai-system-builder-desktop-read", version: "1.0.0" }, { capabilities: { tools: {} } });
+  const host = managed ? "managed" : "desktop";
+  const mode = enableAuthoring ? "authoring" : "read";
+  const server = new McpServer({ name: `ai-system-builder-${host}-${mode}`, version: "1.0.0" }, { capabilities: { tools: {} } });
   const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
   server.registerTool("aisb_host_describe", {
-    description: "Read the connected desktop host's version, current ID, and granted operations.",
+    description: managed ? "Read the configured managed server's version, current ID, and granted operations."
+      : "Read the connected desktop host's version, current ID, and granted operations.",
     inputSchema: z.strictObject({}), annotations,
   }, (_input, context) => invoke({ version, operation: "host.describe", input: {} }, context.mcpReq.signal));
-  server.registerTool("aisb_list_workspaces", {
+  if (!managed) server.registerTool("aisb_list_workspaces", {
     description: "List the workspaces this paired client can read.",
     inputSchema: z.strictObject({ hostIncarnationId }), annotations,
   }, (input, context) => invoke({ version, operation: "workspaces.list", input: {
     hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId,
   } }, context.mcpReq.signal));
-  server.registerTool("aisb_list_systems", {
+  if (!managed) server.registerTool("aisb_list_systems", {
     description: "List saved systems in one authorized workspace.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId }), annotations,
   }, (input, context) => invoke({ version, operation: "systems.list", input: {
@@ -173,13 +184,13 @@ serveStdio(() => {
   }, (input, context) => invoke({ version, operation: "templates.list", input: {
     hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
-  server.registerTool("aisb_saved_system_snapshot", {
+  if (!managed) server.registerTool("aisb_saved_system_snapshot", {
     description: "Read saved system references and a replay cursor in one authorized workspace. Does not read or change the UI.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId }), annotations,
   }, (input, context) => invoke({ version, operation: "systems.snapshot", input: {
     hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
-  server.registerTool("aisb_saved_system_changes", {
+  if (!managed) server.registerTool("aisb_saved_system_changes", {
     description: "Read a bounded page of committed system changes. Use a fresh snapshot when the host says resync.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId, cursor: z.strictObject({
       hostIncarnationId, scopeTag: z.string().length(64).regex(/^[a-f0-9]{64}$/), sequence: z.number().int().nonnegative(),
@@ -191,27 +202,27 @@ serveStdio(() => {
       hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId, cursor,
     } }, context.mcpReq.signal);
   });
-  server.registerTool("aisb_list_workflows", {
+  if (!managed) server.registerTool("aisb_list_workflows", {
     description: "Read the supported workflow metadata in the exact workspace; starts no work.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId, sourceKind: z.enum(headless.HEADLESS_WORKFLOW_SOURCE_KINDS) }), annotations,
   }, (input, context) => invoke({ version, operation: "workflows.list", input: {
     ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
-  server.registerTool("aisb_prepare_workflow", {
+  if (!managed) server.registerTool("aisb_prepare_workflow", {
     description: "Read exact source readiness, snapshot revision and approved read-field metadata. Does not invoke any action.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId, profileId: workflowId, source: workflowSource }), annotations,
   }, (input, context) => invoke({ version, operation: "workflows.prepare", input: {
     ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
-  server.registerTool("aisb_read_conversation_task", {
+  if (!managed) server.registerTool("aisb_read_conversation_task", {
     description: "Read the saved status of one exact conversation turn and its run; never starts or cancels it.",
     inputSchema: z.strictObject({ hostIncarnationId, workspaceId, sessionId: workflowId, turnId: workflowId }), annotations,
   }, (input, context) => invoke({ version, operation: "conversation-tasks.read", input: {
     ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
   if (enableAuthoring) addAuthoringTools(server);
-  if (enablePresentation) addPresentationTools(server);
-  if (enableConversation) server.registerTool("aisb_send_approved_turn", {
+  if (!managed && enablePresentation) addPresentationTools(server);
+  if (!managed && enableConversation) server.registerTool("aisb_send_approved_turn", {
     description: "Send one message to an already approved conversation at its exact saved revisions. An uncertain reply never authorizes a new key; reconcile before retrying the same request.",
     inputSchema: z.strictObject({
       hostIncarnationId, workspaceId, planId: workflowId, planRevision: workflowId, sessionId: workflowId,

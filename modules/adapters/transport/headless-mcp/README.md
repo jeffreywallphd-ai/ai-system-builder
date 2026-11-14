@@ -88,3 +88,18 @@ session that needs to request window control. The app identifies the caller
 from the registration. The request names one window and must be accepted there.
 Presentation shows saved resource details inside the app and has its own
 receipts, expiry, and release. It adds no saved-data or runtime permissions.
+## Managed server connection
+
+Select managed mode with `AISB_HEADLESS_MODE=managed`. At launch, configure
+`AISB_HEADLESS_MANAGED_ORIGIN` with the exact HTTPS origin and specify the
+organization and workspace with `AISB_HEADLESS_MANAGED_ORGANIZATION_ID` and
+`AISB_HEADLESS_MANAGED_WORKSPACE_ID`. Use the client process's secure
+environment to provide its managed access token as
+`AISB_HEADLESS_MANAGED_CREDENTIAL`.
+
+The managed catalog supports host discovery, template discovery and saved
+system reads. Set `AISB_HEADLESS_ENABLE_AUTHORING=1` to include the finite
+saved authoring tools. Tool discovery never connects to the server.
+Requests use standard TLS verification and a fixed path for each operation
+family. URLs with embedded credentials, paths, query strings or fragments
+are rejected. The adapter does not follow redirects.

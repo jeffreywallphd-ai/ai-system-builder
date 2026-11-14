@@ -58,3 +58,10 @@ It writes a bounded observation with Windows version, sample counts and
 latency distributions. The approved conversation fixture checks that an
 already running operation continues after window revoke and that its owned
 worker exits. The fixture uses a deterministic local runtime.
+## Managed server
+
+The same stdio adapter supports an explicitly configured HTTPS managed
+host. Select the managed mode and provide its access token, organization
+and workspace at launch through the supported private configuration. The
+tool schemas still require the exact host and workspace identifiers. See
+[managed connector configuration](../../modules/adapters/transport/headless-mcp/README.md#managed-server-connection).

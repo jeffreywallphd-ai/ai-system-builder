@@ -185,6 +185,13 @@ and expired bindings. Client classification only identifies the credential's
 purpose. Operations still require current application policy, and the
 target document must hold separate user consent before it can show agent work.
 
+The managed stdio adapter uses the configured exact HTTPS origin, organization
+and workspace. A tool cannot choose its own destination or credentials.
+The adapter verifies the server certificate, uses fixed paths, refuses
+redirects and retains the request and result bounds. It treats a missing
+reply from a write as unconfirmed. Desktop certificate pinning still applies
+when the adapter runs in desktop mode.
+
 The controlled delivery test uses two independent loopback HTTPS servers
 with the same disposable PostgreSQL database and a nonowner role without
 `BYPASSRLS`. It sends synthetic changes through the ordinary authenticated
