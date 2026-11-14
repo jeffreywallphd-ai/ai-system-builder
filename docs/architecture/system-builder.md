@@ -160,6 +160,10 @@ usable until the reply arrives. Workspace, target, latest record and request
 generation must still match. Editing, undoing into a dirty draft, saving and
 switching workspaces fence outstanding passive replies.
 
+Desktop chat control requests use the shared modal dialog. A pending or
+dirty-draft request leaves the Canvas and its layout in place. The user can
+revoke from the fixed shell controls or from an open dialog.
+
 - System Builder records are workspace-owned and require explicit workspace identity at every future contract, client, transport, use-case, repository, and persistence seam.
 - Asset Kernel definitions, instances, bindings, compositions, and references remain canonical component vocabulary.
 - Asset composition planning remains the non-executing compatibility/planning input. A system record may reference a plan but must not mutate the plan or effective asset projections implicitly.

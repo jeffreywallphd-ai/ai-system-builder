@@ -1096,6 +1096,22 @@ function navigationCensusLegacyView(map,result){
 let committedCensusWitness;
 const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
 function headlessPackagedCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) === "77554fccca0bac50e567ff948714215df3ca0e9bc16873d040fe980479650b16") {
+    // The draft test uses the actual consent portal. Keep all earlier witnesses.
+    const saved = JSON.parse(historicalSource("b1ecfb1323e0fddfd47769e450507a2c4bf374a8", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "9ffbb7fd0b0a331e63a3e7294219d5b97a9fcfc68e7e6e414b804ca0109e14bb");
+    const expected = structuredClone(saved);
+    const path = "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx";
+    const facts = map.sources.find(row => row.path === path).facts;
+    assert.equal(facts.sha256, "edca9539380a3e3c52de448862eb3b5d56fca637900735f04fa8d3384010e5ce");
+    assert.equal(sha(JSON.stringify(facts)), "be9ef37a87f7ad7b0ef8a417a97e418379ee57952f0006043f9cd5ebea675326");
+    expected.sources.find(row => row.path === path).facts = facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
   if (sha(JSON.stringify(map)) === "9ffbb7fd0b0a331e63a3e7294219d5b97a9fcfc68e7e6e414b804ca0109e14bb") {
     // The existing startup fixture now verifies that closing its window
     // retires the exact takeover owner.

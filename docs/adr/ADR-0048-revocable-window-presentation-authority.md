@@ -48,6 +48,13 @@ returns the window to manual control. Each exact revoke has at most one
 outstanding IPC call, with up to 32 held calls and a 60-second local retry
 record. A held call does not delay another attempt's revoke.
 
+The desktop opens consent in the shared, portaled dialog, above any existing
+dialog. The user can decline with Escape, the close button, or the initial
+focused action. A dirty draft adds a save decision in the same dialog.
+Once accepted, the shell keeps a fixed revoke control and ordinary dialogs
+keep their own reachable revoke control. Consent and revoke status do not
+add a row to the shell layout.
+
 The presentation queue admits five fixed saved-resource intents. Every
 command has a lease-scoped ID, increasing sequence and five-second deadline.
 The host retains up to 256 command outcomes and up to 32 unfinished commands.

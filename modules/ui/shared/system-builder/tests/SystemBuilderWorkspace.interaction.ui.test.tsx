@@ -517,10 +517,12 @@ describe("SystemBuilderWorkspace UI preview", () => {
     let loseSave!: (result: Awaited<ReturnType<SystemBuilderClient["saveRevision"]>>) => void;
     saveRevision.mockImplementationOnce(() => new Promise(resolve => { loseSave = resolve; }));
     await act(async () => controller.update(request));
-    await click("Accept automation takeover");
+    const clickConsent = (name: string) => act(async () =>
+      button(document.querySelector(".ui-window-takeover-consent-overlay [role='dialog']")!, name).click());
+    await clickConsent("Accept automation takeover");
     expect(saveRevision).not.toHaveBeenCalled();
     await removeField("Fast path");
-    await act(async () => controller.saveAndAccept());
+    await clickConsent("Save changes and accept takeover");
     expect(controller.getSnapshot().status).toBe("activating");
     expect(removalDialog().querySelector(".ui-modal-body")?.hasAttribute("inert")).toBe(true);
     expect(button(container!, "Discard changes").disabled).toBe(true);
@@ -540,8 +542,8 @@ describe("SystemBuilderWorkspace UI preview", () => {
       return systemBuilderSuccess(latest);
     });
     await act(async () => controller.update({ ...request, target: { ...target, requestId: id(9), attemptId: id(10) } }));
-    await click("Accept automation takeover");
-    await click("Save changes and accept takeover");
+    await clickConsent("Accept automation takeover");
+    await clickConsent("Save changes and accept takeover");
     expect(controller.getSnapshot().status).toBe("manual");
     expect(heldAccept).not.toHaveBeenCalled();
     expect(container!.textContent).toContain("Fixture diagnostic");

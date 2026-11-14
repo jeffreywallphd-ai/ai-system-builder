@@ -18,12 +18,36 @@
   box-shadow: 0 0.25rem 1rem rgb(0 0 0 / 14%);
 }
 
-.ui-window-takeover {
-  padding: var(--ui-space-3);
+.ui-window-takeover-consent-overlay {
+  --ui-modal-z-index: calc(var(--z-modal-stacked) + 1);
+}
+
+.ui-window-takeover-consent {
+  padding: var(--space-lg);
   overflow-wrap: anywhere;
 }
 
-.ui-window-takeover button {
+.ui-window-takeover-controls {
+  position: fixed;
+  inset-inline-start: var(--space-md);
+  inset-block-end: var(--space-md);
+  z-index: var(--z-overlay);
+  max-inline-size: calc(100% - 2 * var(--space-md));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  box-shadow: var(--shadow-md);
+  overflow-wrap: anywhere;
+}
+
+.ui-window-takeover-controls p {
+  margin: 0;
+}
+
+.ui-window-takeover-controls button,
+.ui-window-takeover-consent button {
   white-space: normal;
   max-width: 100%;
 }

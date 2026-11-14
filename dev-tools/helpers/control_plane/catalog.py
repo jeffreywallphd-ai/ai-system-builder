@@ -193,6 +193,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
             "modules/ui/shared/takeover/windowTakeoverController.ts",
             "modules/ui/shared/takeover/WindowTakeoverControls.tsx",
+            "modules/ui/shared/takeover/WindowTakeoverContext.tsx",
             "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
             "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
         ),
