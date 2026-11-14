@@ -13460,6 +13460,31 @@
       "limitations": [
         "The contrast checks and overall browser qualification remain open."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "revocation-and-delivery-targets",
+      "work_id": "headless-desktop-increment-implementation-qualification",
+      "work_criteria": [
+        "exact-window-acceptance-and-reservation",
+        "dirty-handoff-and-reachable-controls",
+        "immediate-local-revocation-and-exact-retry",
+        "presentation-effect-fencing",
+        "serial-delivery-and-independent-deduplication",
+        "context-minimization-and-revoke-fence",
+        "backend-continuity-and-lifecycle-isolation",
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "security-ui-control-reviewed"
+      ],
+      "receipt_digest": "b6e4201cd41bd455cf0b9870cb12e7dcca746531f757c7e4dfc016523e2acf29",
+      "review_digest": "4aab46f88222758a526c3317f52e9608aa67c4df47cbd459bf9271e3d51f528c",
+      "scope": "The combined packaged Windows run passed all four journeys. In 100 foreground revokes, 95 percent restored control within 6.3 ms. The slowest took 8 ms.",
+      "limitations": [
+        "The tests used held replies to verify that an unresponsive window loses its lease. Timing under natural Windows background throttling and complete queue measurements are still pending.",
+        "In separate phases, the test held a display reply and a context reply. The native menu test then disabled takeover and confirmed that a separately paired editor could still save."
+      ]
     }
   ]
 }

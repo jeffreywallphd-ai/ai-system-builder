@@ -19686,6 +19686,36 @@
           "The contrast checks and overall browser qualification remain open."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fd9b21a1bd5f894a93aa3f964a5c256023bca985268f5334604d9a2de6a578ee",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The combined packaged Windows run passed all four journeys. In 100 foreground revokes, 95 percent restored control within 6.3 ms. The slowest took 8 ms."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4b8300dc2d1b12c01ed3ee2d0d27da0687ff97f6f718df162cbcfc52dec24d03",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used held replies to verify that an unresponsive window loses its lease. Timing under natural Windows background throttling and complete queue measurements are still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5336778cf2b5839be030078988083f06ec88b3db268c742dae70edc17328458e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In separate phases, the test held a display reply and a context reply. The native menu test then disabled takeover and confirmed that a separately paired editor could still save."
+        ]
+      }
     }
   ]
 }

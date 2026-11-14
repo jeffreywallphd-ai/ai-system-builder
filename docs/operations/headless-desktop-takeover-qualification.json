@@ -85,11 +85,26 @@
       "evidence_file_sha256": "4ae1b5e4ea91c7403ab47f5e75bce5b1a007f972847fdac7c7b182de9c897c74",
       "status": "passed",
       "scope": ["The packaged native menu disables session-wide takeover", "Manual controls return and old window context and fresh requests are denied", "A separate paired editor creates a system that appears in the app", "Settings offers editing access and removes the control pairing option"]
+    },
+    {
+      "run_id": "2026-11-14t15-38-46-598z-9359a051",
+      "source_revision": "source.ad405cee0ff7d1b5272f3715e1709440d97840315cf811fabb70112caefdcfaa",
+      "evidence_file_sha256": "99469e3a21c30a4e185ede7661abcf31c8c405e6d3acae6e0b1023a92dca1b7",
+      "timing_file_sha256": "42ddee20e8293c5b69196c3539dc9cfb3eaadb152635d68f405bb764e40875f0",
+      "receipt_digest": "b6e4201cd41bd455cf0b9870cb12e7dcca746531f757c7e4dfc016523e2acf29",
+      "review_digest": "4aab46f88222758a526c3317f52e9608aa67c4df47cbd459bf9271e3d51f528c",
+      "status": "passed",
+      "scope": ["Four packaged Windows journeys passed on one source", "75 ordinary, 20 dialog, and five loading revokes", "Held application presentation and context replies remained fenced in separate phases", "The native session rollback retired old window control, rejected future requests and preserved independent editing", "Withheld context replies exercised the real host expiry clock", "Both controlled worker phases ended with no live owned processes"],
+      "warm_present_ms": {"samples": 95, "p50": 132.35, "p95": 148.89, "max": 155.21},
+      "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 6.3, "max": 8},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 6, "p95": 7, "max": 8},
+      "loading_revoke_ms": {"samples": 5, "p50": 0.8, "p95": 1.7, "max": 1.7},
+      "environment": {"os": "Windows 10.0.26200", "electron": "42.11.18", "chromium": "148.0.7778.280", "ram_gib": 16, "logical_cpus": 20, "visible_document": true}
     }
   ],
   "pending": [
     "Measure expiry and liveness while the renderer is genuinely throttled. A minimized test window did not produce the expected renderer visibility transition. The separately attempted page lifecycle fixture still allowed renewal, so this requirement remains open.",
-    "Bind the combined expiry and rollback scenarios to one candidate and independently review the results.",
-    "Bind the complete increment requirements to the final candidate."
+    "Measure complete delivery-queue health, including peak depth and dropped and stale counts, in the live fixture.",
+    "Bind the remaining checks and complete increment requirements to the final candidate."
   ]
 }
