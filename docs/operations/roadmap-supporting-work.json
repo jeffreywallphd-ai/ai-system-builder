@@ -13531,6 +13531,28 @@
       "limitations": [
         "A local HTTP test verified access loss and connection limits. Browser refresh, browser takeover and recovery across separate servers still need qualification."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "authenticated-browser-stream-and-refresh",
+      "work_id": "headless-browser-saved-refresh-with-read-ownership-current",
+      "work_criteria": ["thin-client-saved-state-fences"],
+      "receipt_digest": "47b6592fa0e2fe838157c11cda0053c0ae205b1d6f031ee5e2018491e9a917da",
+      "review_digest": "3f0c989156fd5644f7baef09fdd3b33d78e79e316674e8f61113d73b36e93220",
+      "scope": "Browser refresh keeps an open Composer and its focus if another client archives the system. A delayed reply cannot update the view after the browser connection changes.",
+      "limitations": ["The browser feature tests passed. The complete journey with the built browser app, authenticated server and chat adapter is still pending."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "same-server-authority-and-route-parity",
+      "work_id": "headless-managed-client-purpose-admission-current",
+      "work_criteria": ["managed-client-purpose-distinct"],
+      "receipt_digest": "41c605da02318b2385f221c5bc83024b5570386490e6abe2ad714f753aa94927",
+      "review_digest": "25d52a3b3ec95f2e3d9d7c7a1e5e16256725feaa7b4690cafa0fae85a68415f6",
+      "scope": "Focused tests confirmed that the server can tell the registered chat client and browser apart and reject a request with the wrong credentials.",
+      "limitations": ["This check covers client identity. The shared server routes and browser consent still need qualification."]
     }
   ]
 }
