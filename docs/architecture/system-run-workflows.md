@@ -54,6 +54,18 @@ read an existing handle. Only the dispatch policy can reserve a new key.
 The app can return a saved turn and run handle before generation finishes.
 The host tracks at most two delegated turns and one turn per session.
 A lost reply or transport disconnect cannot authorize another turn.
+
+Desktop Settings shows up to ten recent chat tasks for the selected workspace.
+The application marks delegated conversation runs when saving them. The local
+reader checks the saved run, turn and session match before returning their
+identifiers and run status. A trusted desktop frame and current workspace read
+policy are required. A visible Settings panel reads saved status once per
+second after the previous read settles. Hidden panels pause. Workspace changes
+retire old responses, and manual refresh uses the same single-read guard.
+The passive read uses current organization policy without per-poll audit writes.
+Pairing and action authorization keep their existing audit behavior. The list
+can only observe saved records. Older runs lack the provenance marker.
+
 The existing conversation use case supports an internal optional delegated
 fence. It checks the exact saved approval and plan revision before allocating
 a turn. The owning SQLite transaction rechecks the saved session and approval.

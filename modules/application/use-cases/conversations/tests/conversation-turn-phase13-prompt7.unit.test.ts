@@ -214,7 +214,8 @@ test("the delegated post-commit callback sees the durable handles and can preven
     async onAdmitted({ turnId, runId }) {
       assert.equal(admitted, true);
       assert.equal(m.stores.turns.get(turnId).executionRunId, runId);
-      assert.ok(m.stores.runs.has(runId));
+      assert.ok(m.stores.runs.get(runId)?.provenance.some((entry: { kind: string; actorId: string }) =>
+        entry.kind === "execution-run-delegated-conversation" && entry.actorId === "application"));
       return false;
     },
   });
@@ -320,6 +321,8 @@ test("submit turn persists lifecycle and response, with idempotent operation key
   assert.equal(m.stores.msgs.size, 1);
   assert.equal(m.stores.turns.size, 1);
   assert.equal(m.stores.runs.size, 1);
+  assert.ok([...m.stores.runs.values()].every((run) =>
+    run.provenance.every((entry: { kind: string }) => entry.kind !== "execution-run-delegated-conversation")));
   assert.equal(m.stores.responses.size, 1);
   assert.equal(m.stores.results.size, 1);
 });

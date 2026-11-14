@@ -592,6 +592,7 @@ export interface DesktopPythonRuntimeApi {
 }
 
 interface DesktopApiBridge {
+  readRecentHeadlessChatTasks?: (workspaceId: string) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-chat-tasks").DesktopHeadlessChatTasks>;
   readHeadlessPairingStatus?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingStatus>;
   readSystemBuilderChangeWatermark?: (workspaceId: string) => Promise<import("../../../../../modules/contracts/headless").DesktopSystemChangeWatermark>;
   startHeadlessConnector?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessStartResult>;

@@ -459,6 +459,7 @@ export class SubmitConversationTurnUseCase {
             kind: "execution-run-start-requested",
             actorId: "application",
           },
+          ...(delegated ? [{ at: now, kind: "execution-run-delegated-conversation", actorId: "application" } as const] : []),
         ],
         createdAt: now,
         updatedAt: now,

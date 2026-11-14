@@ -122,6 +122,9 @@ HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES = HEADLESS_DESKTOP_ACTIVATION_AUTOMAT
     "modules/adapters/persistence/system-builder/createStructuredHeadlessOperationStore.ts",
     "modules/hosts/desktop/composition/composeDesktopHeadlessAuthoring.ts",
     "modules/hosts/desktop/composition/composeDesktopHost.ts",
+    "modules/hosts/desktop/composition/registerDesktopHeadlessTaskList.ts",
+    "modules/hosts/desktop/composition/tests/desktop-headless-task-list.unit.test.ts",
+    "modules/contracts/headless/desktop-headless-chat-tasks.ts",
     "modules/hosts/desktop/composition/tests/desktop-headless-authoring.unit.test.ts",
     "modules/hosts/desktop/composition/composeDesktopHeadlessConversation.ts",
     "modules/hosts/desktop/composition/tests/desktop-headless-conversation.unit.test.ts",
@@ -156,6 +159,18 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "desktop-headless-chat-task-settings": {
+        "sources": (
+            "apps/desktop/src/renderer/features/settings/components/RecentHeadlessChatTasks.tsx",
+            "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx",
+        ),
+        "automatic_sources": (
+            "apps/desktop/src/renderer/features/settings/components/RecentHeadlessChatTasks.tsx",
+            "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx",
+        ),
+        "command": ("dev-tools/helpers/run_vitest_checks.mjs", "--",
+                    "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx"),
+    },
     "headless-workflow-metadata": {
         "sources": (
             "modules/application/services/system-run-workflow/conversation-workflow-handler.service.ts",
@@ -165,6 +180,10 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/persistence/system-builder/createStructuredHeadlessTurnReservation.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-turn-reservation.unit.test.ts",
             "modules/application/ports/conversations/conversation-operation-repository.port.ts",
+            "modules/application/ports/execution-runs/execution-run-repository.port.ts",
+            "modules/adapters/persistence/execution-runs/createLocalExecutionRunRepositoryAdapters.ts",
+            "modules/contracts/execution-runs/execution-run-normalization.ts",
+            "modules/contracts/execution-runs/execution-run-provenance.ts",
             "modules/application/ports/conversations/delegated-conversation-turn-admission.port.ts",
             "modules/application/ports/conversations/conversation-session-repository.port.ts",
             "modules/application/ports/conversational-execution/conversation-turn-invocation.port.ts",
@@ -679,6 +698,7 @@ def definitions(root: Path) -> list[dict]:
          "argv": [node, "--import", "tsx", "--test", "--",
                   "apps/desktop/src/main/tests/desktop-headless-pairing-ipc.unit.test.ts",
                   "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+                  "modules/hosts/desktop/composition/tests/desktop-headless-task-list.unit.test.ts",
                   "modules/hosts/desktop/composition/tests/desktop-headless-authoring.unit.test.ts",
                   "modules/hosts/desktop/composition/tests/desktop-headless-conversation.unit.test.ts",
                   "modules/hosts/desktop/composition/tests/desktop-system-change-poll.unit.test.ts",

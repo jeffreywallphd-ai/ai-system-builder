@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { DesktopHeadlessClientAccess, DesktopHeadlessPairingStatus } from "../../../../../../../modules/contracts/headless";
+import { isWorkspaceId } from "../../../../../../../modules/contracts/workspace";
 import { getDesktopApi } from "../../../lib/desktopApi";
 import { useActiveWorkspace } from "../../workspace";
+import { RecentHeadlessChatTasks } from "./RecentHeadlessChatTasks";
 
 export function HeadlessClientSettings() {
   const { activeWorkspace, activeWorkspaceId, status: workspaceStatus } = useActiveWorkspace();
@@ -98,6 +100,8 @@ export function HeadlessClientSettings() {
         </ul> : <p>No paired clients.</p>}
       </> : <p>{data ? "Local chat pairing is unavailable." : "Checking local chat pairing…"}</p>}
       <p role="status">{message}</p>
+      {workspaceStatus === "ready" && isWorkspaceId(activeWorkspaceId)
+        ? <RecentHeadlessChatTasks key={activeWorkspaceId} workspaceId={activeWorkspaceId} /> : null}
     </section>
   );
 }

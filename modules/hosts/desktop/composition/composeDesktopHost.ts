@@ -10,6 +10,7 @@ import { composeDesktopHeadlessReads, type DesktopHeadlessReadHandler } from "./
 import { composeDesktopHeadlessAuthoring } from "./composeDesktopHeadlessAuthoring";
 import { composeDesktopHeadlessConversation } from "./composeDesktopHeadlessConversation";
 import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
+import { registerDesktopHeadlessTaskList } from "./registerDesktopHeadlessTaskList";
 import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
 import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
 import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
@@ -2244,6 +2245,13 @@ export function composeDesktopHost(
                 submit: conversationExecutionServices.submitTurn, isOpen: () => !headlessReadAdmissionClosed,
               });
             }
+            if (platformDocuments) registerDesktopHeadlessTaskList({
+              ipcMain: registerOptions.ipcMain, senderTrust: registerOptions.senderTrust,
+              workspaces: startupWorkspaceShell.workspaceRepository, documents: platformDocuments, identity,
+              isOpen: () => !headlessReadAdmissionClosed,
+              sessions: conversationRepositories.conversationSessionRepository,
+              turns: conversationRepositories.conversationTurnRepository, runs: executionRunRepositories.executionRunRepository,
+            });
             registerDesktopSystemChangePoll({
               ipcMain: registerOptions.ipcMain, senderTrust: registerOptions.senderTrust,
               workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
