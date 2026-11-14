@@ -252,12 +252,40 @@
         "Foreground measurements recorded for 100 revokes and 95 warm reveals"
       ],
       "title": "Prove revocation and continuity"
+    },
+    {
+      "areas": [
+        "Managed PostgreSQL transactions and bounded replay",
+        "Scoped committed changes, independent delivery workers and restart recovery"
+      ],
+      "chunkId": "postgres-replay-and-workers",
+      "completedAt": "2026-11-14T19:29:53Z",
+      "criteriaIds": [
+        "postgres-atomicity-and-worker-delivery",
+        "authenticated-browser-stream-and-refresh",
+        "security-managed-parity-reviewed"
+      ],
+      "documentation": [
+        "docs/adr/ADR-0027-managed-postgresql-runtime.md",
+        "docs/security/headless-system-builder-threat-model.md",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "server-browser-and-delivery-qualification-postgres-replay-and-workers",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "summary": "Completed the scoped PostgreSQL transaction, retained journal replay and two-server delivery work. Both workers received the first committed change. A fresh worker independently recovered both committed saves after the second subscriber process was interrupted. Browser presentation and whole-increment qualification remain open.",
+      "tests": [
+        "Two managed servers with one PostgreSQL database, nonowner role and real authenticated HTTPS: both streams received the commit; the interrupted subscriber closed without delivery; the fresh worker resynced and a surviving worker replayed both saves.",
+        "Two-worker receipt b5d39209b78696975c844b182e5152d9472ae55e76fdd8d4f6d416c76d81ec4a, independent review ac4a8075a57861ac308123a0f5ed92ba2831fff1c8ef17e661791a0d00d8441e, commit c51547d76.",
+        "Official managed stdio MCP confirmed repeat-save receipt replay, conflicting-key rejection and one journal event on real PostgreSQL. Receipt 358aa8a4c4d47a211657852fcce0ef513f3f9a2ed58f196cd9a8257690d0b9fb, independent review 9f82f7326cde75164fcaa5df4faa1a70c272bd025f1f7721969fe0e15a531775, commit 6b8ef106d."
+      ],
+      "title": "Recover and deliver committed state"
     }
   ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "server-browser-and-delivery-qualification",
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -1148,6 +1176,30 @@
       "recordedAt": "2026-11-14T15:48:01Z",
       "sequence": 55,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "823cfefa8ed2b76ce94003be0f58a623d26f47fc428974cd93dbdc767bd21389",
+      "recordedAt": "2026-11-14T15:48:34Z",
+      "sequence": 56,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "6b001872815d7ba698f73304a885f48ee87b22d82f688b10b5f496f6c0ee0bc1",
+      "recordedAt": "2026-11-14T15:48:34Z",
+      "sequence": 57,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "789d93d5dcdd0df4d045de3845f27c6548c2ce47c53c32fcc371e65f4b0c4a1a",
+      "recordedAt": "2026-11-14T15:48:34Z",
+      "sequence": 58,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "30948d5d22034702b42f5dacf8a34f04dae5b5c7283e1633fe2c33b25b1c95d9",
+      "recordedAt": "2026-11-14T19:29:53Z",
+      "sequence": 59,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1655,7 +1707,9 @@
       ],
       "allowPendingQualification": true,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "postgres-replay-and-workers"
+      ],
       "deliverables": [
         "Server/browser ADR and host/API/identity/persistence/threat-model updates for the same-server topology, interactive UI credential separation, authenticated streaming, outbox ownership and worker coordination; deployment defaults remain single replica.",
         "Finite explicit API route-policy entries, principal-aware managed connector/tool forwarding, shared browser shell/gate/context integration and scoped authenticated stream with bounded polling fallback.",
@@ -1674,11 +1728,105 @@
       "id": "server-browser-and-delivery-qualification",
       "number": 3,
       "objective": "Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "The controlled fixture owns synthetic credentials and data, with no external publication or managed production authority.",
+          "Continue approved implementation with real production-specific qualifications pending until their own tests pass."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "postgres-atomicity-and-worker-delivery",
+              "authenticated-browser-stream-and-refresh",
+              "security-managed-parity-reviewed"
+            ],
+            "id": "postgres-replay-and-workers",
+            "outcome": "Use scoped atomic PostgreSQL commits for authorized writes, receipts and retained changes. Verify conflict retry, rollback, two-worker delivery and crash recovery.",
+            "title": "Recover and deliver committed state"
+          },
+          {
+            "criteriaIds": [
+              "same-server-authority-and-route-parity",
+              "authenticated-browser-stream-and-refresh",
+              "security-managed-parity-reviewed"
+            ],
+            "id": "managed-api-and-browser",
+            "outcome": "Stdio and browser use the same server and application. Finite routes use existing managed identity and grants, and only the intended browser can accept.",
+            "title": "Use the existing managed authority"
+          },
+          {
+            "criteriaIds": [
+              "browser-real-host-and-parity",
+              "host-specific-targets-and-bounds",
+              "complete-contract-and-final-qualification",
+              "security-managed-parity-reviewed"
+            ],
+            "id": "parity-and-final-evidence",
+            "outcome": "Built Chrome and packaged Windows exercise the current candidate with retained metrics, isolated browser and server lifetimes and a complete source crosswalk.",
+            "title": "Prove both real interfaces"
+          }
+        ],
+        "completionTests": [
+          "Automate built Chrome, stdio tool and exact user consent over a real test server with PostgreSQL, plus independent restart and two-worker delivery evidence.",
+          "Repeat the packaged Windows journey on the same source. Run the relevant server and thin-client builds plus architectural, documentation and platform checks."
+        ],
+        "documentation": [
+          "Managed host README, Headless ADR and threat model, generated MCP reference, and complete source-to-test coverage"
+        ],
+        "fingerprint": "9b46521ba242b8daf6b3ead3c617557626918b608858ad99c4b3972a1dffcd21",
+        "focusedTests": [
+          "Check PostgreSQL owner scope, before-commit denial, full callback retry, unknown commit and failed rollback, RLS, role revocation and durable replay.",
+          "Test exact known routes, official tool shapes, managed identity and membership, separate interactive authority, stale frame and workspace scopes, and prompt/data exclusion.",
+          "Check duplicate, cut-off cursor, disconnect, authorization failure, stale reload, delayed effects and replay fallback independently of the full host journey."
+        ],
+        "recordedAt": "2026-11-14T15:48:34Z",
+        "rollback": "Disable the additive managed admission and authentication bindings, retire view leases and streams, and keep saved records, receipts, journal and ordinary secure reads.",
+        "steps": [
+          "Implement the owned Serializable transaction seam and prove scoped resource, receipt and journal atomicity under RLS.",
+          "Register the finite managed tool, stream and separate interactive API surfaces. Reuse workspace and membership authorization and shared takeover behavior, with fixed, scoped browser interaction separate from agent authority.",
+          "Use the committed journal for bounded replay and a restart-safe worker dispatch with authenticated browser refresh. Verify duplicate, stale-cursor and permission-loss handling.",
+          "Run isolated real Chrome, PostgreSQL two-worker and same-source packaged desktop tests. Complete the coverage crosswalk and record limits and controlled deployment facts."
+        ],
+        "summary": "Serve the approved finite headless workflow through the same OIDC-secured managed host and verify browser takeover, PostgreSQL replay and local real-host parity."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-14T15:48:34Z",
+          "risks": [
+            "Security relevant. Protect organization and workspace records, authorization, private responses and capabilities. Derive subject and organization from verified OIDC and current application membership. Reject absent, revoked, stale, malformed, or foreign authority on every write, replay, stream and context reply.",
+            "Separate admitted agent registration from browser interaction. An organization header, request body, tab ID or ordinary bearer alone cannot prove window consent. Keep accepted presentation scope finite and independently revocable.",
+            "Every transaction uses one checked-out client, current organization RLS and exact scoped authority. Fence before commit, discard failed transaction attempts, and keep retried callbacks restricted to database work under the same owner. Treat unknown commit outcome as uncertain.",
+            "Use an authenticated response stream with bounded replay and recheck every publication, with scoped polling recovery. Duplicates are expected and no caller can select a foreign cursor or preserve a revoked subscription.",
+            "Controlled local HTTPS, OIDC, Chrome and two PostgreSQL workers cannot establish qualification for deployed ingress, WAN, or scaling. Rollback closes new admission and leaves ordinary secure APIs and committed data intact."
+          ],
+          "sources": [
+            {
+              "title": "Approved delegated workflow and identity boundaries",
+              "url": "docs/adr/ADR-0047-headless-system-builder-delegation.md"
+            },
+            {
+              "title": "Existing managed authentication and membership gate",
+              "url": "modules/hosts/server/security/composeServerSecurity.ts"
+            },
+            {
+              "title": "Current PostgreSQL RLS and bounded retry",
+              "url": "modules/adapters/persistence/postgres/README.md"
+            },
+            {
+              "title": "Node Postgres transaction ownership",
+              "url": "https://node-postgres.com/features/transactions"
+            },
+            {
+              "title": "PostgreSQL serialization failure handling",
+              "url": "https://www.postgresql.org/docs/current/mvcc-serialization-failure-handling.html"
+            }
+          ],
+          "summary": "The managed host already authenticates an explicit organization and uses scoped application providers backed by PostgreSQL. Add finite managed headless routes on that boundary. Reuse the atomic change journal and add a root-owned transaction adapter with scoped RLS and confirmed rollback. Keep agent request authority separate from owning browser consent, and learn from the controlled Windows fixture without making desktop a dependency for managed operation."
+        }
+      ],
       "rollback": "Disable new agent/control/change-stream route admission and revoke affected delegated credentials and leases; close browser gates locally and end exact host reservations. Stop outbox dispatch/worker claims safely without deleting committed records, receipts, terminal lease state or audit. Fall back to existing authorized UI/API reads and scoped resync, preserve RLS and draft bases, and roll back only compatible additive schema/application changes. Never restore insecure dev/no-auth modes, broad cancellation or implicit lease reacquisition.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-11-14T15:48:34Z",
+      "status": "implementing",
       "title": "Deliver the same workflow through the authenticated server and browser",
       "verification": [
         "Run focused managed API/route-policy/workflow parity, organization/RLS, authenticated stream and PostgreSQL receipt/outbox denial/recovery tests.",
@@ -2197,6 +2345,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "ready",
-  "updatedAt": "2026-11-14T15:48:01Z"
+  "status": "executing",
+  "updatedAt": "2026-11-14T19:29:53Z"
 }
