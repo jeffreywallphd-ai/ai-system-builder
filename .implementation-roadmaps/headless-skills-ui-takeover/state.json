@@ -903,6 +903,28 @@
       "outcome": "pending",
       "recordedAt": "2026-11-14T22:18:57Z",
       "summary": "Local Chrome and Windows runs recorded warm performance and queue results. Finish the current candidate timing, reconnect and timeout checks while the renderer is throttled."
+    },
+    {
+      "artifact": "docs/operations/headless-managed-increment-three-qualification.json",
+      "command": "Exact candidate feature checks and local managed host fixtures",
+      "criterionId": "same-server-authority-and-route-parity",
+      "id": "evidence-25",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T23:31:18Z",
+      "summary": "Chrome and the agent used the same local server. Focused checks passed for signed identity, workspace access, separate browser and agent permissions, and route and operation mapping."
+    },
+    {
+      "artifact": "docs/operations/headless-managed-increment-three-qualification.json",
+      "command": "Exact candidate feature checks and local managed host fixtures",
+      "criterionId": "postgres-atomicity-and-worker-delivery",
+      "id": "evidence-26",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T23:31:18Z",
+      "summary": "Both local workers received a committed change. After one worker stopped, its replacement and the surviving worker recovered the saved changes. Both live restricted-role database tests passed."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1339,6 +1361,18 @@
       "recordedAt": "2026-11-14T23:03:25Z",
       "sequence": 65,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "702e301b5212985214e0087085412f4676602e68afe9e51a3a15728a286fa76c",
+      "recordedAt": "2026-11-14T23:31:18Z",
+      "sequence": 66,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ae8fa9f6de357c5cf4d3a43870ca669622c19999b3d4cd73924584c3d54ba7fc",
+      "recordedAt": "2026-11-14T23:31:18Z",
+      "sequence": 67,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -2487,5 +2521,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-14T23:03:25Z"
+  "updatedAt": "2026-11-14T23:31:18Z"
 }

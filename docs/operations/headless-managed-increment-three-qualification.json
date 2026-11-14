@@ -1,0 +1,36 @@
+{
+  "schema_version": "headless-managed-increment-three-qualification-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "server-browser-and-delivery-qualification",
+  "source_commit": "7f6dcc2fb",
+  "source_revision": "source.c36deb33c157452022dbc3060617120c4dfbc3df1c67ac198e99e8f4d9889e15",
+  "feature_checks": {
+    "passed": 19,
+    "receipt_sha256": "9051e60ed593cf2c884dd613228e98cb1010bd978c49d8cb7e9b9ab69cc992b8"
+  },
+  "criteria": {
+    "same-server-authority-and-route-parity": {
+      "outcome": "passed",
+      "summary": "Chrome and the agent used the same local server. Focused checks passed for signed identity, workspace access, separate browser and agent permissions, and route and operation mapping.",
+      "browser_run": "managed-197f5efd9b154952a31c778461c37c42",
+      "browser_evidence_sha256": "47db2c0db84f85b8604e92ed43ee09d983ddb4cfd463925cf8fbc86c46c4360f",
+      "host_evidence_sha256": "606dcffd055c44fca0be9c0b9c77b46fd9c560f57c76a188cc3f64c1321cfdee"
+    },
+    "postgres-atomicity-and-worker-delivery": {
+      "outcome": "passed",
+      "summary": "Both local workers received a committed change. After one worker stopped, its replacement and the surviving worker recovered the saved changes. Both live restricted-role database tests passed.",
+      "delivery_run": "managed-cdf9fa7583234f8db4f337dfb3568ed6",
+      "delivery_evidence_sha256": "a37566ffac5e29e258dc154f64e1e9e770dc13dfa575c81f9756e0c9076b8ae5",
+      "host_evidence_sha256": "e2df35813b8e60fa3f4e91d33f87eaa83f216adce7d56679dbe9d37768d90ac9",
+      "workers_receiving_committed_event": 2,
+      "interrupted_worker_replaced": true,
+      "successor_recovered_both_commits": true,
+      "survivor_replayed_both_commits": true,
+      "commit_to_recovered_snapshot_ms": 3927.2393,
+      "restricted_role_tests_passed": 2,
+      "restricted_role_tests_skipped": 0,
+      "restricted_role_output_sha256": "933bfd802fa8c5f57a751705ca48b63c0dd2405184b6ee2fbcc154db129f2392"
+    }
+  },
+  "scope": "These independently reviewed results apply to the local managed server and its isolated test database. Production deployment and scaling have separate qualification. Increment qualification remains open."
+}
