@@ -83,8 +83,9 @@ The opt-in managed saved-state routes reuse the same bounded journal and
 application replay use case through existing OIDC and organization authorization.
 The host pairs each cursor with the verified principal and organization,
 workspace and current worker incarnation. A different worker or a restart
-requires a fresh scoped snapshot. Polling returns saved metadata and does not
-grant agent editing or interactive browser authority.
+requires a fresh scoped snapshot. Polling and the short-lived authenticated
+application stream return saved metadata and do not grant agent editing or
+interactive browser authority.
 
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay

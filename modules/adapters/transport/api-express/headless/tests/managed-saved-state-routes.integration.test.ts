@@ -137,8 +137,39 @@ test("authenticated managed snapshot and replay retain scope, durable metadata a
     await organizations.memberships.saveMembership(membership);
     afterRead = async () => { throw new Error("private database detail"); };
     assert.deepEqual((await send(snapshotPath, { workspaceId })).body, { ok: false, code: "headless.unavailable" });
-    afterRead = async () => { retire(); };
-    assert.deepEqual((await send(snapshotPath, { workspaceId })).body, { ok: false, code: "headless.forbidden" });
+    afterRead = undefined;
+    const signal = new AbortController();
+    const changesStream = await connectStream(cursor, tokens.writer, signal.signal);
+    assert.equal(changesStream.status, 200);
+    assert.match(changesStream.headers.get("Content-Type") ?? "", /^text\/event-stream/);
+    const reader = changesStream.body!.getReader();
+    const decoder = new TextDecoder();
+    const firstEvent = await reader.read();
+    assert.match(decoder.decode(firstEvent.value), /event: changes\ndata: .*"sequence":1/);
+    await organizations.memberships.saveMembership({ ...membership, status: "suspended" });
+    assert.equal((await reader.read()).done, true);
+    await organizations.memberships.saveMembership(membership);
+
+    const otherViewer = await connectStream(cursor, tokens.other);
+    assert.equal(await otherViewer.text(), 'event: resync\ndata: {}\n\n');
+    const heldConnections = Array.from({ length: 8 }, () => new AbortController());
+    try {
+      const readers = await Promise.all(heldConnections.map(async (entry) => {
+        const connection = await connectStream(replay.body.value.cursor, tokens.writer, entry.signal);
+        assert.equal(connection.status, 200);
+        const feed = connection.body!.getReader();
+        assert.match(decoder.decode((await feed.read()).value), /: ready/);
+        return feed;
+      }));
+      assert.equal((await connectStream(cursor, tokens.writer)).status, 503);
+      assert.equal((await send(snapshotPath, { workspaceId })).status, 200);
+      retire();
+      const closedReaders = await Promise.allSettled(readers.map((item) => item.read()));
+      assert.ok(closedReaders.every((item) => item.status === "rejected" || item.value.done));
+    } finally {
+      for (const connection of heldConnections) connection.abort();
+      signal.abort();
+    }
     assert.equal((await send(snapshotPath, { workspaceId })).status, 404);
   } finally {
     retire();
@@ -156,5 +187,15 @@ test("authenticated managed snapshot and replay retain scope, durable metadata a
       body: typeof input === "string" ? input : JSON.stringify(input),
     });
     return { status: response.status, cache: response.headers.get("Cache-Control"), body: await response.json() };
+  }
+
+  async function connectStream(cursor: unknown, token: string, signal = AbortSignal.timeout(4_000)) {
+    const address = server.address();
+    assert.ok(address && typeof address !== "string");
+    return fetch(`http://127.0.0.1:${address.port}${MANAGED_SAVED_STATE_PATHS.stream}`, {
+      method: "POST", redirect: "error", signal,
+      headers: { "Content-Type": "application/json", "X-Organization-Id": orgA, Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ workspaceId, cursor }),
+    });
   }
 });

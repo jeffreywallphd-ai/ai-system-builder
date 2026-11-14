@@ -57,7 +57,8 @@ authorization. Existing editing paths in that composition write journal events i
 the same transaction as the saved system. Each read uses current workspace policy
 and the verified bearer lifetime. Omit the setting and restart to retire the routes
 while preserving saved records and their journal. This slice supports scoped
-polling. Browser streaming and window controls have separate qualification.
+polling and a header-authenticated server event stream. The window controls have
+separate qualification.
 
 ## Hugging Face token configuration
 

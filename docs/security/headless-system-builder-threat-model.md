@@ -149,11 +149,16 @@ The managed saved-state polling routes require the current OIDC bearer and
 verified organization context. They use existing workspace authorization before
 and after reading saved data, check token lifetime again before the response,
 and bind signed cursors to the current principal, organization, workspace and
-worker. The two exact routes accept up to 1 KiB of compact JSON and at most 16
-active requests per worker after authentication. Responses are at most 128 KiB
+worker. The exact routes accept up to 1 KiB of compact JSON and at most 16
+active requests per worker after authentication. Request-body reads have a
+five-second limit. Responses are at most 128 KiB
 and must not be cached. The transport has no authority to request window
-context or send presentation actions. Streaming and cross-worker delivery
-qualification remain separate.
+context or send presentation actions. The stream uses the same authorized replay
+read for each page, one read at a time. It closes after 15 seconds, any loss of
+authority, disconnect, shutdown, or backpressure. Up to eight streams share the
+16-request cap. Events are bounded to 32 KiB and sent at most every 500 ms.
+An out-of-scope cursor returns a fixed resynchronization event and ends the stream.
+Browser and cross-worker delivery qualification remain separate.
 The snapshot reads only indexed active summaries scoped to one workspace and
 applies a 129-row SQL cap. Passive route and workspace checks retain the same
 policy. Success adds no audit row. Failed authorization uses one content-free
