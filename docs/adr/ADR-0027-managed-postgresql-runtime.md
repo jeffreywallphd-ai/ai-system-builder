@@ -51,6 +51,11 @@ database-specific lifecycle and SQL stay behind the PostgreSQL adapter boundary.
 - Application transactions use Serializable isolation and retry the complete
   callback for bounded serialization/deadlock failures. Whole-document writes
   use revision compare-and-swap as specified by ADR-0028.
+- Root-owned transactions allow a synchronous final admission check for
+  authorized operations. Authorization reads, scoped writes, receipts and the
+  committed change journal can share the same pinned client. Each retry gets
+  fresh transaction views and must re-evaluate policy. Uncertain commit or
+  rollback discards the client and requires reconciliation before any new effect.
 - Portable export enumerates adapter-internal documents under transactionally
   consistent isolation. Disaster-recovery backup/restore remains owned by the PostgreSQL
   platform and its approved operator runbook.

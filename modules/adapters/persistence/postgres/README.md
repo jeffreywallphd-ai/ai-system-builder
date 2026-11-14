@@ -10,6 +10,13 @@ security with transaction-local tenant binding, optimistic revisions, Serializab
 retry, transactionally consistent portable export, sanitized health/readiness data, and graceful drain behind existing
 application ports.
 
+An owned transaction pins authorization reads and writes to one Serializable
+client through a synchronous check immediately before commit. It orders each
+organization binding with its query and fences old transaction views at exit or
+retry. A missing commit acknowledgment or unconfirmed rollback discards the
+client. Headless authoring can reconcile an uncertain reply with the same
+operation identity and key.
+
 The pool installs an idle-client error listener so an EventEmitter `error` does
 not become an unhandled process failure. Only a counter and timestamp enter
 health; raw driver error content remains private.

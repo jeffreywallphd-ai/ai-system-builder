@@ -1,4 +1,4 @@
-import type { PoolClient } from "pg";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { OrganizationId } from "../../../contracts/organization";
 import {
@@ -208,22 +208,65 @@ export function createPostgresStructuredDocumentStore(
   pool: PostgresPoolLike,
   now: () => string = () => new Date().toISOString(),
 ): StructuredDocumentStore {
-  return createStore(pool, pool, now, false);
+  return createStore(pool, now);
+}
+
+interface PostgresTransactionOwner {
+  readonly client: PostgresQueryable;
+  readonly guarded: boolean;
+  active: boolean;
+  pending: number;
+  tail: Promise<void>;
+}
+
+type PostgresTransactionPhase = "work" | "admission" | "commit" | "rolled-back";
+
+const transactionContexts = new WeakMap<PostgresPoolLike, AsyncLocalStorage<PostgresTransactionOwner>>();
+
+function transactionContext(pool: PostgresPoolLike): AsyncLocalStorage<PostgresTransactionOwner> {
+  let context = transactionContexts.get(pool);
+  if (!context) {
+    context = new AsyncLocalStorage<PostgresTransactionOwner>();
+    transactionContexts.set(pool, context);
+  }
+  return context;
 }
 
 function createStore(
   pool: PostgresPoolLike,
-  queryable: PostgresQueryable,
   now: () => string,
-  insideTransaction: boolean,
+  owner?: PostgresTransactionOwner,
   organizationId?: OrganizationId,
 ): StructuredDocumentStore {
-  const executeScoped = async <T>(work: (active: PostgresQueryable) => Promise<T>): Promise<T> => {
-    if (organizationId === undefined) return work(queryable);
-    if (insideTransaction) {
-      await bindPostgresOrganizationContext(queryable, organizationId);
-      return work(queryable);
+  const context = transactionContext(pool);
+  function assertOwner() {
+    const current = context.getStore();
+    if (owner && (!owner.active || current !== owner)) {
+      throw new Error("PostgreSQL transaction owner is not active in this context.");
     }
+    if (!owner && current?.guarded) {
+      throw new Error("Use the supplied PostgreSQL transaction store for owned operations.");
+    }
+  }
+
+  const executeScoped = async <T>(work: (active: PostgresQueryable) => Promise<T>): Promise<T> => {
+    assertOwner();
+    if (owner) {
+      owner.pending += 1;
+      // Bind and query as one unit so concurrent derived views cannot replace
+      // the transaction-local organization setting between the two statements.
+      const result = owner.tail.then(async () => {
+        assertOwner();
+        if (organizationId !== undefined) {
+          await bindPostgresOrganizationContext(owner.client, organizationId);
+          assertOwner();
+        }
+        return work(owner.client);
+      }).finally(() => { owner.pending -= 1; });
+      owner.tail = result.then(() => undefined, () => undefined);
+      return result;
+    }
+    if (organizationId === undefined) return work(pool);
 
     const client = await pool.connect();
     try {
@@ -246,9 +289,15 @@ function createStore(
 
   return {
     organizationId,
+    ...(!owner ? {
+      runInOwnedTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit: () => void) {
+        return transact(work, beforeCommit);
+      },
+    } : {}),
     forOrganization(requestedOrganizationId) {
+      assertOwner();
       assertOrganizationScope(organizationId, requestedOrganizationId);
-      return createStore(pool, queryable, now, insideTransaction, requestedOrganizationId);
+      return createStore(pool, now, owner, requestedOrganizationId);
     },
     async readDocument<T>(namespace: string, key: string) {
       const result = await executeScoped((active) => organizationId === undefined
@@ -289,11 +338,12 @@ function createStore(
       return result.rows.map((row) => mapDocument<T>(row));
     },
     async writeDocument<T>(namespace: string, key: string, value: T, options: StructuredDocumentWriteOptions = {}) {
+      const { expectedRevision } = options;
       const updatedAt = options.updatedAt ?? now();
       const payload = cloneStructuredJson(value);
       const result = await executeScoped(async (active) => {
         if (organizationId !== undefined) {
-          return options.expectedRevision === undefined
+          return expectedRevision === undefined
             ? active.query(`
                 INSERT INTO organization_documents (organization_id, namespace, document_key, payload_json, revision, updated_at)
                 VALUES ($1, $2, $3, $4::jsonb, 1, $5::timestamptz)
@@ -303,7 +353,7 @@ function createStore(
                   updated_at = EXCLUDED.updated_at
                 RETURNING namespace, document_key, payload_json, revision, updated_at
               `, [organizationId, namespace, key, JSON.stringify(payload), updatedAt])
-            : options.expectedRevision === 0
+            : expectedRevision === 0
               ? active.query(`
                   INSERT INTO organization_documents (organization_id, namespace, document_key, payload_json, revision, updated_at)
                   VALUES ($1, $2, $3, $4::jsonb, 1, $5::timestamptz)
@@ -315,9 +365,9 @@ function createStore(
                   SET payload_json = $4::jsonb, revision = revision + 1, updated_at = $5::timestamptz
                   WHERE organization_id = $1 AND namespace = $2 AND document_key = $3 AND revision = $6
                   RETURNING namespace, document_key, payload_json, revision, updated_at
-                `, [organizationId, namespace, key, JSON.stringify(payload), updatedAt, options.expectedRevision]);
+                `, [organizationId, namespace, key, JSON.stringify(payload), updatedAt, expectedRevision]);
         }
-        return options.expectedRevision === undefined
+        return expectedRevision === undefined
         ? active.query(`
             INSERT INTO structured_documents (namespace, document_key, payload_json, revision, updated_at)
             VALUES ($1, $2, $3::jsonb, 1, $4::timestamptz)
@@ -327,7 +377,7 @@ function createStore(
               updated_at = EXCLUDED.updated_at
             RETURNING namespace, document_key, payload_json, revision, updated_at
           `, [namespace, key, JSON.stringify(payload), updatedAt])
-        : options.expectedRevision === 0
+        : expectedRevision === 0
           ? active.query(`
               INSERT INTO structured_documents (namespace, document_key, payload_json, revision, updated_at)
               VALUES ($1, $2, $3::jsonb, 1, $4::timestamptz)
@@ -339,10 +389,10 @@ function createStore(
             SET payload_json = $3::jsonb, revision = revision + 1, updated_at = $4::timestamptz
             WHERE namespace = $1 AND document_key = $2 AND revision = $5
             RETURNING namespace, document_key, payload_json, revision, updated_at
-          `, [namespace, key, JSON.stringify(payload), updatedAt, options.expectedRevision]);
+          `, [namespace, key, JSON.stringify(payload), updatedAt, expectedRevision]);
       });
       if (!result.rows[0]) {
-        throw new StructuredDocumentConflictError(namespace, key, options.expectedRevision ?? 0);
+        throw new StructuredDocumentConflictError(namespace, key, expectedRevision ?? 0);
       }
       return mapDocument<T>(result.rows[0]);
     },
@@ -360,29 +410,74 @@ function createStore(
       return (result.rowCount ?? 0) === 1;
     },
     async runInTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>) {
-      if (insideTransaction) return work(this);
-      for (let attempt = 1; attempt <= 4; attempt += 1) {
-        const client = await pool.connect();
-        try {
-          await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
-          if (organizationId !== undefined) await bindPostgresOrganizationContext(client, organizationId);
-          const result = await work(createStore(pool, client, now, true, organizationId));
-          await client.query("COMMIT");
-          return result;
-        } catch (error) {
-          try {
-            await client.query("ROLLBACK");
-          } catch {
-            // Preserve the work failure.
-          }
-          if (!isRetryablePostgresTransactionError(error) || attempt === 4) throw error;
-        } finally {
-          (client as PoolClient).release();
-        }
+      assertOwner();
+      if (!owner) return transact(work);
+      owner.pending += 1;
+      try {
+        return await work(this);
+      } finally {
+        owner.pending -= 1;
       }
-      throw new Error("PostgreSQL transaction retry loop ended unexpectedly.");
     },
   };
+
+  async function transact<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit?: () => void): Promise<T> {
+    assertOwner();
+    if (beforeCommit && context.getStore()) throw new Error("An owned PostgreSQL transaction must start at the root.");
+
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      const client = await pool.connect();
+      const transaction = { client, guarded: beforeCommit !== undefined, active: true, pending: 0, tail: Promise.resolve() };
+      let began = false;
+      const transactionStatus: { phase: PostgresTransactionPhase } = { phase: "work" };
+      let discardClient = false;
+      try {
+        await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+        began = true;
+        if (organizationId !== undefined) await bindPostgresOrganizationContext(client, organizationId);
+        return await context.run(transaction, async () => {
+          const result = await work(createStore(pool, now, transaction, organizationId));
+          transaction.active = false;
+          if (transaction.pending) throw new Error("Unfinished PostgreSQL transaction operations.");
+          transactionStatus.phase = "admission";
+          const admission: unknown = beforeCommit?.();
+          if (admission !== undefined) {
+            if (admission instanceof Promise) void admission.catch(() => undefined);
+            throw new Error("The PostgreSQL before-commit check must be synchronous.");
+          }
+          transactionStatus.phase = "commit";
+          const commit = await client.query("COMMIT");
+          if (commit.command !== "COMMIT") {
+            if (commit.command === "ROLLBACK") transactionStatus.phase = "rolled-back";
+            throw new Error("PostgreSQL did not commit the transaction.");
+          }
+          return result;
+        });
+      } catch (error) {
+        transaction.active = false;
+        await transaction.tail;
+        const failed = transactionStatus.phase;
+        const retryable = (failed === "work" || failed === "commit") && isRetryablePostgresTransactionError(error);
+        discardClient = !began || (failed === "commit" && !retryable);
+        if (began && failed !== "rolled-back") {
+          try {
+            const rollback = await client.query("ROLLBACK");
+            if (rollback.command !== "ROLLBACK") throw new Error("PostgreSQL did not acknowledge rollback.");
+          } catch {
+            discardClient = true;
+            if (beforeCommit) throw new Error("The owned PostgreSQL transaction rollback could not be confirmed.");
+            throw error;
+          }
+        }
+        if (failed === "commit" && !retryable) throw new Error("The PostgreSQL transaction commit could not be confirmed.");
+        if (!retryable || attempt === 4) throw error;
+      } finally {
+        transaction.active = false;
+        client.release(discardClient);
+      }
+    }
+    throw new Error("PostgreSQL transaction retry loop ended unexpectedly.");
+  }
 }
 
 export async function bindPostgresOrganizationContext(

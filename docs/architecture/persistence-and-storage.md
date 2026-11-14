@@ -21,7 +21,12 @@ derived transaction stores are valid only in their owning async context and expi
 on exit; nested work uses that same supplied store. Root reentry from the callback
 denies explicitly. Transaction callbacks must not perform I/O through captured root
 repositories. PostgreSQL retains its separate-client Serializable transaction and
-bounded retry policy; live managed qualification remains separate.
+bounded retry policy. Its owned transactions keep platform policy reads and
+organization document operations on a single client and require a synchronous
+admission check before commit. Scoped operations pair each organization binding
+with its query. Transaction views expire when the callback ends. A missing
+commit acknowledgment or unconfirmed rollback retires that checked-out client.
+Live managed qualification remains separate.
 If SQLite rollback cannot be confirmed, all wrappers and queued operations on
 that connection deny further access. The original callback error is preserved;
 no automatic reset can admit work into the unfinished transaction.

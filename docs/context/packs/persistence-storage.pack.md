@@ -76,6 +76,9 @@
 - Database-backed collection mutations use bounded revision compare-and-swap;
   PostgreSQL transactions use bounded full-callback retries at Serializable
   isolation. Mutation callbacks must remain pure because they may run again.
+  Owned PostgreSQL transactions pin policy reads and scoped writes, close
+  transaction views before the final synchronous check, and retire clients
+  when commit or rollback cannot be confirmed.
 - In-memory roots and SQLite connections serialize all structured operations
   across their organization wrappers. Outside reads wait for committed state;
   unrelated acknowledged writes survive another transaction's failure. Use the

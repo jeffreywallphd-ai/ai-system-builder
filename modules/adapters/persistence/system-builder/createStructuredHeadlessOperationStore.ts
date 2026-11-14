@@ -53,7 +53,7 @@ export function createStructuredHeadlessOperationStore(
       const countKey = digest(identity);
       const receiptKey = digest([...identity, operation, key]);
       try {
-        // Desktop authorization needs the platform directory and the exact
+        // Authorization can need the platform directory and the exact
         // organization partition within one underlying transaction owner.
         const store = policy ? documents : documents.forOrganization(organizationId);
         if (policy && documents.organizationId !== undefined) throw new Error("The platform owner is unavailable.");
@@ -61,6 +61,8 @@ export function createStructuredHeadlessOperationStore(
         let mustCommit = false;
         let replayExpiry: number | undefined;
         const outcome = await store.runInOwnedTransaction<HeadlessOperationOutcome>(async (owner) => {
+          mustCommit = false;
+          replayExpiry = undefined;
           if (policy && !await policy.authorize(owner, boundScope, operation)) return { kind: "denied" };
           const transaction = policy ? owner.forOrganization(organizationId) : owner;
           if (!isCurrent()) return { kind: "denied" };

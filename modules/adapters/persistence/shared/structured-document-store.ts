@@ -41,6 +41,9 @@ export interface StructuredDocumentStore {
    * Optional root-owned transaction with a synchronous check immediately before
    * commit. Transaction views must omit it. Never reports a callback error as
    * confirmed when rollback itself was not confirmed.
+   * A Serializable implementation can retry the complete callback and check.
+   * Keep each attempt's state local and use only the supplied transaction for
+   * database access. Await every operation and defer external effects until commit.
    */
   runInOwnedTransaction?<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit: () => void): Promise<T>;
 }
