@@ -49,6 +49,23 @@
     {
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "presentation-effect-fencing",
+      "work_id": "headless-desktop-presentation-checkpoint",
+      "work_criteria": [
+        "presentation-effect-fencing",
+        "context-minimization-and-revoke-fence"
+      ],
+      "receipt_digest": "2c1ded9f2a65bff243c1d32df51d2e983d09b67d3453c05852e4e7de95ddf6d2",
+      "review_digest": "c13868f81d829563467c724ed46217db811c9fda3a1cc8dda9fa1208d25a23ee",
+      "scope": "Paired desktop window presentation and fresh context in commit e1423a8e3",
+      "limitations": [
+        "The tests and review cover approved window requests, ordered resource display, and stopping new context after revoke.",
+        "An isolated Windows test passed for 100 revokes in a normal window. Revoke during loading or a dialog, restart, and security audit still need separate evidence."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
       "criterion_id": "dirty-handoff-and-reachable-controls",
       "work_id": "headless-desktop-window-handoff-reviewed",
       "work_criteria": [

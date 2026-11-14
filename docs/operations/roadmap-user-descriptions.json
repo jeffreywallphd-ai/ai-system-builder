@@ -9667,6 +9667,39 @@
   "support": [
     {
       "kind": "support-scope",
+      "source_text_sha256": "9e20d91c2da06f5195f1f190caf7e61718a5f1f3a8a917fc5f11c74bf8e58118",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Display saved resources and permitted context in the exact approved desktop window.",
+          "The connector and window tests and independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9b20b54feea633da48a1eadd4ddbd5452a70543e429179445f3d2879bfab3920",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Verify window approval, resource display order, and loss of new context when the user takes back control.",
+          "The current verification and independent review record these three behaviors."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c59463fbbe0dd973a864b22b95c12e7f37019e3674712213f2e1fec61603a407",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Test revocation during loading and a dialog. Also test restart and check the security audit.",
+          "The normal Windows scenario passed 100 times. The remaining scenarios still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
       "source_text_sha256": "f41d2fb9b38d25ec325e26bc14ddfaf8de28eabcdb40e76ddf38759287a2546b",
       "user_description": {
         "owner": "agent",

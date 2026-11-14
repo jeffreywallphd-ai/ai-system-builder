@@ -198,6 +198,33 @@
         "Fixed desktop activation, documentation, agent support, contributor workflow, and architecture checks"
       ],
       "title": "Control the window and preserve human work"
+    },
+    {
+      "areas": [
+        "Pinned desktop connector and MCP",
+        "Desktop window IPC",
+        "Ordered presentation and context"
+      ],
+      "chunkId": "presentation-context-and-delivery",
+      "completedAt": "2026-11-14T13:17:31Z",
+      "criteriaIds": [
+        "presentation-effect-fencing",
+        "serial-delivery-and-independent-deduplication",
+        "context-minimization-and-revoke-fence",
+        "security-ui-control-reviewed"
+      ],
+      "documentation": [
+        "ADR-0048, headless threat model, client skill, generated tool reference, and contributor routing"
+      ],
+      "feedbackAddressed": [],
+      "id": "revocable-desktop-presentation-presentation-context-and-delivery",
+      "incrementId": "revocable-desktop-presentation",
+      "summary": "Desktop commit e1423a8e3 connects approved paired clients to exact window requests, ordered semantic resource presentation, and a fresh owner-confirmed context response. The narrow candidate passed nine checks under receipt 2c1ded9f2a65bff243c1d32df51d2e983d09b67d3453c05852e4e7de95ddf6d2 and independent review c13868f81d829563467c724ed46217db811c9fda3a1cc8dda9fa1208d25a23ee. Full Windows lifecycle coverage, audit, and increment qualification remain pending.",
+      "tests": [
+        "Nine focused connector, renderer, startup, activation and repository checks passed",
+        "A separate packaged Windows run verified normal-window presentation and revocation across 100 warm samples"
+      ],
+      "title": "Fence every presentation and observation"
     }
   ],
   "completion": null,
@@ -906,6 +933,12 @@
       "recordedAt": "2026-11-14T12:24:04Z",
       "sequence": 42,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f23bdff8ef46f464a65d9cdf887cd0470fc81c441363656dce9fb97eedfb9d30",
+      "recordedAt": "2026-11-14T13:17:31Z",
+      "sequence": 43,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1203,7 +1236,8 @@
       "completedAt": null,
       "completedChunks": [
         "exact-window-authority",
-        "shell-gate-and-handoff"
+        "shell-gate-and-handoff",
+        "presentation-context-and-delivery"
       ],
       "deliverables": [
         "Successor ADR and current architecture/threat-model guidance defining UI authority independent of backend grants, exact targeting, terminal revocation, delivery queues, minimal context, draft handoff and lifecycle recovery.",
@@ -1950,5 +1984,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-14T12:24:04Z"
+  "updatedAt": "2026-11-14T13:17:31Z"
 }
