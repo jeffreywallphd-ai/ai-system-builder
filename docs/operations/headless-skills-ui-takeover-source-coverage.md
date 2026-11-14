@@ -64,6 +64,15 @@ and the account could no longer read, write, or replay saved results.
 Restoring membership kept the earlier save and left the old lease
 closed. The test did not check signing in again after access returned.
 
+The real managed takeover popup sent one stale save. Chrome kept the
+unsaved value and sent no grant or readiness request. Manual controls
+returned when the request ended. The newer saved revision stayed intact.
+
+A separate managed browser test held an authorized response while the
+user revoked control. Chrome later read the complete response body and
+sent zero context publications. The pending read and a new read both
+returned no context. This run did not measure the timeout.
+
 ## Architectural invariants
 
 | Source | Owning increment | Criterion | Required assertion |

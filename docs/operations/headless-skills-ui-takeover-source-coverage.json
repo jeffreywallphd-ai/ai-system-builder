@@ -924,9 +924,10 @@
       "evidenceStatus": "mapped-source-not-finally-qualified",
       "executableWitnesses": [
         "handoff",
-        "browser-draft"
+        "browser-draft",
+        "managed-live-dirty-handoff-conflict"
       ],
-      "knownRemainingEvidence": "The shared controller and editor check failed save-before-accept. The condition has not been repeated on the actual Chrome host."
+      "knownRemainingEvidence": "Built Chrome sent one real save and no grant or readiness messages. The draft and the newer saved revision stayed intact. Manual controls returned when the request ended."
     },
     {
       "sourceId": "AT-24",
@@ -1299,9 +1300,10 @@
       "executableWitnesses": [
         "desktop-native",
         "context",
-        "browser-context"
+        "browser-context",
+        "managed-live-late-context"
       ],
-      "knownRemainingEvidence": "The native case delays context, and the Chrome interaction test delays a managed response. The built Chrome case has not yet held that context reply."
+      "knownRemainingEvidence": "Built Chrome read the held authorized reply body to the end after Revoke. The browser sent no context and the agent received no context on either read. The check does not measure the challenge deadline."
     },
     {
       "sourceId": "AT-40",
@@ -1794,6 +1796,16 @@
       "host": "authenticated-server-local-chrome",
       "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
       "testOrStage": "membership-loss-denies-existing-credentials"
+    },
+    "managed-live-dirty-handoff-conflict": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "dirty-canvas-takeover-declines-stale-save"
+    },
+    "managed-live-late-context": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "held-context-revoke-and-release"
     }
   }
 }
