@@ -49,6 +49,60 @@
     {
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "desktop-takeover-real-host",
+      "work_id": "headless-win32-takeover-native-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "5e6ecd01a6eb9f665255df9ec0bd54c6deede3c95f0e4e37a8932e05380b08dc",
+      "review_digest": "4cd61d5f307ee4c007e54ef511e6efad3484783b4ada346c69261dbbf3d93f88",
+      "scope": "Three packaged Windows journeys in commit 29524bbbf. The user can revoke window control while an approved chat task continues.",
+      "limitations": [
+        "The foreground run measured 80 ordinary and 20 preview-dialog revokes. Warm presentation p95 was 142.9 ms. Revoke p95 was 6.2 ms and maximum was 6.8 ms.",
+        "This receipt covers one window and the controlled local worker. Further desktop lifecycle, loading and rollback checks are pending."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "revocation-and-delivery-targets",
+      "work_id": "headless-win32-takeover-native-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "5e6ecd01a6eb9f665255df9ec0bd54c6deede3c95f0e4e37a8932e05380b08dc",
+      "review_digest": "4cd61d5f307ee4c007e54ef511e6efad3484783b4ada346c69261dbbf3d93f88",
+      "scope": "Three packaged Windows journeys in commit 29524bbbf. The user can revoke window control while an approved chat task continues.",
+      "limitations": [
+        "The foreground run measured 80 ordinary and 20 preview-dialog revokes. Warm presentation p95 was 142.9 ms. Revoke p95 was 6.2 ms and maximum was 6.8 ms.",
+        "This receipt covers one window and the controlled local worker. Further desktop lifecycle, loading and rollback checks are pending."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "backend-continuity-and-lifecycle-isolation",
+      "work_id": "headless-win32-takeover-native-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "5e6ecd01a6eb9f665255df9ec0bd54c6deede3c95f0e4e37a8932e05380b08dc",
+      "review_digest": "4cd61d5f307ee4c007e54ef511e6efad3484783b4ada346c69261dbbf3d93f88",
+      "scope": "Three packaged Windows journeys in commit 29524bbbf. The user can revoke window control while an approved chat task continues.",
+      "limitations": [
+        "The foreground run measured 80 ordinary and 20 preview-dialog revokes. Warm presentation p95 was 142.9 ms. Revoke p95 was 6.2 ms and maximum was 6.8 ms.",
+        "This receipt covers one window and the controlled local worker. Further desktop lifecycle, loading and rollback checks are pending."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
       "criterion_id": "security-ui-control-reviewed",
       "work_id": "headless-desktop-window-audit",
       "work_criteria": [

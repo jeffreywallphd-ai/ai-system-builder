@@ -9667,6 +9667,36 @@
   "support": [
     {
       "kind": "support-scope",
+      "source_text_sha256": "ee33ac2fe42da050e78bcff2c2bde9a04a5faa3d0003147e0bcfab73a8c2866c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Three packaged Windows journeys passed. An approved chat task finished after the user took back control."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "cec4dfa1458fffb82d0d0a042ef2baac107b0835089bd2942283f61952dde334",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent measured 100 revokes, including 20 inside the preview dialog. The 95th percentile was 6.2 milliseconds."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "db04eac642303ddd59e572b0e005aeb2ed5399fd4d590e39ad6bdabc08d1fc81",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to check loading, other window lifecycle cases and rollback."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
       "source_text_sha256": "23e9277f1e9b4893843e71fc075f3f89650f7419142057ed0426a7200597a6bc",
       "user_description": {
         "owner": "agent",
