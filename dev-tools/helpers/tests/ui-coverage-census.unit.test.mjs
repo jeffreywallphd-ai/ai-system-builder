@@ -1098,6 +1098,17 @@ const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2
 function headlessPackagedCensusLegacyView(map, result) {
   const source = map.sources.find(row => row.path === headlessPackagedSpec);
   if (!source) return {map, result};
+  if (sha(JSON.stringify(map)) === "5e9727914522e563808c3953caef4009d15f2e0ca6c69d73ee0ecfbd2220e1aa") {
+    const saved = JSON.parse(historicalSource("a1894a3a13a013bfb25d12ddae1c074923216b34", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "e20baf59bdd2461036c73745b83bcad0566fae507541c9d9cd313b57c5962bc9");
+    const expected = structuredClone(saved);
+    expected.sources[expected.sources.findIndex(row => row.path === headlessPackagedSpec)].facts = source.facts;
+    assert.equal(source.facts.sha256, "79c74599ccba86000973045e9b4f7cd89eb7e3e1381378b0a8f278c3d2be1f8a");
+    assert.equal(sha(JSON.stringify(source.facts)), "e0bf28e6f84706bcf55d47457174fdc31946f415e5938ad852143556b38658de");
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, result);
+  }
   if (sha(JSON.stringify(map)) === "e20baf59bdd2461036c73745b83bcad0566fae507541c9d9cd313b57c5962bc9") {
     const commit = "6ce8b3255a935f3a02e65f902a2989b31a417bf6";
     const saved = JSON.parse(historicalSource(commit, censusDocument));

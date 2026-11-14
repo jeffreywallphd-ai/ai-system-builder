@@ -146,6 +146,8 @@ HEADLESS_PACKAGED_CHECK = "headless-packaged-desktop-journey"
 HEADLESS_PACKAGED_SOURCES = (
     "dev-tools/scripts/qualification/visual-composer/e2e/headless-desktop-fixture.ts",
     "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/headless-approved-conversation-seed.ts",
+    "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs",
 )
 HEADLESS_MCP_SOURCES = (
     "modules/contracts/headless/headless-approved-turn.ts",

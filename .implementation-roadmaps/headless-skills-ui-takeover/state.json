@@ -98,12 +98,60 @@
         "Windows run 2026-11-13t20-36-57-540z-e399ba3f: p95 858 ms, reconnect recovery 677 ms, 100 of 100 delivered"
       ],
       "title": "Retry safely and replay committed changes"
+    },
+    {
+      "areas": [
+        "Application authoring and conversation",
+        "Desktop Settings task status"
+      ],
+      "chunkId": "semantic-authoring-and-tasks",
+      "completedAt": "2026-11-14T11:22:26Z",
+      "criteriaIds": [
+        "revision-safe-semantic-authoring",
+        "workflow-and-task-truth"
+      ],
+      "documentation": [
+        "System run workflow architecture and headless client skill"
+      ],
+      "feedbackAddressed": [],
+      "id": "headless-authoring-and-synchronization-semantic-authoring-and-tasks",
+      "incrementId": "headless-authoring-and-synchronization",
+      "summary": "Added validated revision-safe semantic editing, exact confirmed approved turns, durable task handles and live scoped desktop observations.",
+      "tests": [
+        "Focused authoring, workflow, storage, authorization and packaged task checks passed."
+      ],
+      "title": "Edit saved systems with explicit revisions"
+    },
+    {
+      "areas": [
+        "Portable Headless skill",
+        "Native desktop automated qualification"
+      ],
+      "chunkId": "portable-skill-and-desktop-proof",
+      "completedAt": "2026-11-14T11:22:26Z",
+      "criteriaIds": [
+        "portable-skill-and-result-contract",
+        "desktop-headless-real-host",
+        "headless-observation-targets"
+      ],
+      "documentation": [
+        "docs/operations/headless-desktop-increment-qualification.json",
+        "Headless client skill"
+      ],
+      "feedbackAddressed": [],
+      "id": "headless-authoring-and-synchronization-portable-skill-and-desktop-proof",
+      "incrementId": "headless-authoring-and-synchronization",
+      "summary": "Verified the exact portable MCP catalog and qualified both current packaged Windows journeys. Execution receipt d6a7e60b0bf500e3c6ea3043a6e6b0c53a57c64d38597a829bdfbcc5eb2ed6b7 and independent review c1126a6277925975aa35094742a25f77d53114d478d3a31556682e51dca6231a.",
+      "tests": [
+        "Current ten-criterion control-plane receipt passed. Both actual packaged cases passed."
+      ],
+      "title": "Package the skill and qualify real desktop authoring"
     }
   ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": "headless-authoring-and-synchronization",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -342,7 +390,118 @@
     ],
     "summary": "Read the entire supplied 1.0 design (18 invariants and 41 acceptance scenarios). Its reviewed commit 3f35f581 is historical. Initial discovery used b873a49f; publication was reconciled on rebuild at 3272dc4d54a0247aa9bf8544330a60efb83bb70e, source37dba8a596abcffe5191f70b7d4a7141f18c242cdf740022780b7c2d67a0923b, with unrelated dirty work preserved. The intervening checkpoint changes four support/guidance documents, not the inspected product seams. Shared System Builder use cases, revision-safe persistence and API/IPC parity exist. Desktop builds these providers inside registerDesktopIpc; Composer drafts remain separate from selectedSystem.revision, which is used as the save expectation. No general durable committed-change feed, universal operation receipt store, external builder MCP adapter or takeover authority was found in inspected owning seams. Existing runtime-workflow contracts are useful headlessly, but their advanced UI is not currently a Systems tab. This preparation changes no product code and asserts no executed product qualification."
   },
-  "evidence": [],
+  "evidence": [
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "same-host-and-finite-tool-boundary",
+      "id": "evidence-1",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:26Z",
+      "summary": "Desktop IPC and real MCP use the same workspace and owning application providers. Fixed tool discovery and current grant tests passed."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "revision-safe-semantic-authoring",
+      "id": "evidence-2",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "summary": "Exact template creation, rename, clone and finite revision-bound edits passed. Stale and invalid input cannot partially commit."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "durable-retries-and-current-authority",
+      "id": "evidence-3",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "summary": "A dropped committed create reply and retained original retry key returned one saved system after restart. Scoped denial, expiry and atomic rollback tests passed."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "committed-change-delivery",
+      "id": "evidence-4",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "summary": "Packaged restart retained the recognized journal watermark. A new authenticated cursor delivered the exact next edit. The current reader reconciles old cursors and live access."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "draft-base-and-refetch-ownership",
+      "id": "evidence-5",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "summary": "External edits refreshed the clean Canvas. A dirty Canvas kept its original base and text while the expected stale write conflicted. Focused generation guards passed."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "workflow-and-task-truth",
+      "id": "evidence-6",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "summary": "An exact approved conversation produced one saved run that Desktop Settings and MCP both observed running and completed. A lost connection and exact retry recovered the same handle. Native cleanup observed zero remaining workers."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "portable-skill-and-result-contract",
+      "id": "evidence-7",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "summary": "Real official SDK tool discovery matches the generated portable catalog. The scoped skill and exact failure and recovery contracts passed independent review."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "desktop-headless-real-host",
+      "id": "evidence-8",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "summary": "Both current packaged Windows journeys passed with the actual desktop app and stdio MCP. Restart recovered the saved receipt and journal. Dirty draft, wrong snapshot and exact restart assertions passed."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "headless-observation-targets",
+      "id": "evidence-9",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "summary": "Foreground packaged Windows delivered 100 of 100 sequential edits. Measured p50 850.4 ms, p95 882.4 ms, max 896.0 ms; replay recovery 851.7 ms. Machine, fixture and sampled process memory are in the report."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-11-14t11-09-36-623z-5003557d/evidence.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify headless-desktop-closure-with-census-parity",
+      "criterionId": "security-headless-reviewed",
+      "id": "evidence-10",
+      "incrementId": "headless-authoring-and-synchronization",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-14T11:22:28Z",
+      "summary": "Independent review confirmed current scoped authorization, exact window consent, bounded wire and storage, approved execution, redacted statuses, fail-closed denial, and owned cleanup. No external or production scope is qualified."
+    }
+  ],
   "evidencePolicy": "control-plane-v1",
   "feedback": [
     {
@@ -364,6 +523,16 @@
       "recordedAt": "2026-11-10T13:38:24Z",
       "summary": "The current roadmap is approved. The user explicitly instructed that it must not be implemented yet. Earlier discovery text about pending roadmap approval is historical preparation context.",
       "targetIncrementId": null
+    },
+    {
+      "category": "scope",
+      "disposition": "deferred",
+      "id": "merge-at-current-headless-increment-boundary",
+      "impact": "later-increment",
+      "nextAction": "Close the active qualified desktop authoring increment. Merge the expanded draft into the approved roadmap's pending suffix through the roadmap revision event and verify the one resulting review-site record.",
+      "recordedAt": "2026-11-14T11:22:26Z",
+      "summary": "The user requested one Headless roadmap. The expanded draft covers the written request through release workflow, with both approval choices and both authorized channels.",
+      "targetIncrementId": "revocable-desktop-presentation"
     }
   ],
   "finalApproval": null,
@@ -475,6 +644,90 @@
       "recordedAt": "2026-11-13T20:53:35Z",
       "sequence": 18,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "146c8277ad3bfd1ddf7e8f6fc4f9eee381cd496cc28b5695ad7f38f1f91de2c7",
+      "recordedAt": "2026-11-14T11:22:26Z",
+      "sequence": 19,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "dd165f39e4f35d9a3a30f795712557acc89c269aa16048b93808fadad79542b0",
+      "recordedAt": "2026-11-14T11:22:26Z",
+      "sequence": 20,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "31067294d734182ae0987c279daa07c7d22e3619cd742a537e08322853980db4",
+      "recordedAt": "2026-11-14T11:22:26Z",
+      "sequence": 21,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "fb9ebf4615aca396f1a87eeb5224c49d9d779362488f8ef938cba3a0650b1fcb",
+      "recordedAt": "2026-11-14T11:22:26Z",
+      "sequence": 22,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c34701ad63fced55c81c8d7f6f6068b572a26d072bc0e61f945dab237389a290",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "sequence": 23,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f3ea98d802b69a3ea030ad9dace6b584d929499e27cda3b39d7b3a1708d5efcb",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "sequence": 24,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "dfa54316d986011a9ff8568f149aa47341a2b8b2f66d44809deefe922d4a6e39",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "sequence": 25,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9efc2b8339acd6a85ccd2ba570680dab1a772822c23b51f3613c684e0c6bc4a2",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "sequence": 26,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d1d5fd83f678f4013cbe6c6ea1e73d2ab3ba10328d91eecdab2b745c0f69be8d",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "sequence": 27,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "476bd34cd0dfcfe672e715227d2b2b99382b85f4023313bca9d4cc2bbdc4bb52",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "sequence": 28,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "750f960e468102e697486b71fde03458548a49936ba2a17deabc811321c0579e",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3fea16a5674f73e4f4ac68f7a7b8abb9da3d10f3332139c2951e3dacab3836c8",
+      "recordedAt": "2026-11-14T11:22:27Z",
+      "sequence": 30,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a4c4fc89caf5a6cdf861cae3a08dc5ab7a133914306c93b83d8bb309471eaafd",
+      "recordedAt": "2026-11-14T11:22:28Z",
+      "sequence": 31,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1ac32317a6e80cd8ab4411c6fab46d505333379c32b39c6c64f89b7cc9b31c0e",
+      "recordedAt": "2026-11-14T11:22:44Z",
+      "sequence": 32,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -532,13 +785,16 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": null,
+      "completedAt": "2026-11-14T11:22:44Z",
       "completedChunks": [
         "authority-and-finite-contract",
         "shared-desktop-connector",
         "composer-draft-refresh",
-        "durable-retry-and-change-feed"
+        "durable-retry-and-change-feed",
+        "semantic-authoring-and-tasks",
+        "portable-skill-and-desktop-proof"
       ],
+      "completionSummary": "Completed all six desktop Headless chunks. Ten criteria passed at the current candidate with independent review, including actual packaged Windows, authoring replay/latency, and approved-task UI.",
       "deliverables": [
         "Successor ADR for desktop connector/delegation and shared authority, plus updates to decision readiness, host model, System Builder, persistence, security threat/control guidance and relevant README/context sources.",
         "Narrow host provider seam, authenticated loopback connector, versioned contract families and runtime validation, official SDK-backed stdio MCP adapter with an evidenced client/SDK protocol matrix.",
@@ -556,6 +812,7 @@
       "id": "headless-authoring-and-synchronization",
       "number": 1,
       "objective": "Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "The desktop host is already running and owns one local data root; no new identity issuer or process continuity is implied.",
@@ -681,7 +938,7 @@
       ],
       "rollback": "Disable connector discovery/admission, revoke its delegated client credentials and stop its listeners/adapter processes; restore existing IPC-only composition without opening a second database. Retain immutable revisions, business receipts and outbox/audit records under their access policy. Stop dispatch safely and resynchronize ordinary UI from saved records. Apply only compatible additive-schema rollback; never delete newer data or restore unauthenticated/permissive access.",
       "startedAt": "2026-11-13T15:55:15Z",
-      "status": "implementing",
+      "status": "completed",
       "title": "Use chat tools to author systems and keep saved data synchronized",
       "verification": [
         "Extend System Builder use-case/repository/API-IPC parity and Composer tests; add fixed-router connector/MCP, semantic, receipt/outbox and denial cases.",
@@ -923,6 +1180,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "executing",
-  "updatedAt": "2026-11-13T20:53:35Z"
+  "status": "ready",
+  "updatedAt": "2026-11-14T11:22:44Z"
 }

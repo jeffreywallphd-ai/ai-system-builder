@@ -95,6 +95,11 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     rationale: "Pairing and client access outcomes tell the user whether to retry, enter the one-time code, or check the current client list. Code and credential material are never part of the status.",
   },
   {
+    path: "apps/desktop/src/renderer/features/settings/components/RecentHeadlessChatTasks.tsx",
+    classification: "contextual-only",
+    rationale: "This read-only panel reports loading, absence, and availability for the scoped task list. It does not announce task outcomes or publish notifications.",
+  },
+  {
     path: "modules/ui/shared/system-builder/SystemFormComposerView.tsx",
     classification: "contextual-only",
     rationale: "A preview readiness error belongs to the current form draft and disappears when that draft changes.",

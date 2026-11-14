@@ -15167,69 +15167,77 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
    "facts": {
-    "sha256": "8f78b003b93d10cd55fa7a26045d9e9e7f1d64901e946fabbe22cc4e01634e38",
-    "bytes": 17821,
+    "sha256": "79c74599ccba86000973045e9b4f7cd89eb7e3e1381378b0a8f278c3d2be1f8a",
+    "bytes": 29941,
     "cases": [
      {
       "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart",
-      "line": 122
+      "line": 144
+     },
+     {
+      "name": "packaged Desktop observes a running approved turn from a separately paired MCP client",
+      "line": 335
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "call",
-      "line": 15
+      "line": 17
      },
      {
       "name": "connectorSettings",
-      "line": 22
+      "line": 24
      },
      {
       "name": "runningAddress",
-      "line": 28
+      "line": 37
      },
      {
       "name": "hostId",
-      "line": 35
+      "line": 44
+     },
+     {
+      "name": "readVisibleSystemFeed",
+      "line": 51
      },
      {
       "name": "canvasCompetition",
-      "line": 42
+      "line": 60
      },
      {
       "name": "apply",
-      "line": 72
+      "line": 90
      },
      {
       "name": "timings",
-      "line": 100
+      "line": 122
      },
      {
       "name": "saveObservation",
-      "line": 106
+      "line": 128
      }
     ],
-    "assertionCount": 41,
-    "assertionDigest": "a3324c4c8ade869dd845ee9436ba03a56399e59b040b461a2d63b8fc8dc186df",
+    "assertionCount": 58,
+    "assertionDigest": "2327d4f47a5889559c96d4e86e864d6291eade2ac6d2328ea289134b63cd5c11",
     "assertionExamples": [
      {
-      "line": 29,
+      "line": 38,
       "kind": "expect",
       "sha256": "ddda5a711b2e3497f1be9c2fb51362ed5af24f23da2f4a8170002f7525f86f86"
      },
      {
-      "line": 56,
+      "line": 74,
       "kind": "expect",
       "sha256": "a18914c717eb55722082ea8a53df6400cdb234e9d2d9200fe76b12005e516fc6"
      },
      {
-      "line": 57,
+      "line": 75,
       "kind": "expect",
       "sha256": "a20b8ee8026adf836fb79ec6223314d9692db7f4c43e150669109bc921077438"
      },
      {
-      "line": 61,
+      "line": 79,
       "kind": "expect",
       "sha256": "cbeeb56369e8307a64536d5180a185cb2bbf00645e6a47d365fbb6c9adcf1627"
      }
