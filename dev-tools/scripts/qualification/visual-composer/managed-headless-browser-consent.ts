@@ -8,7 +8,8 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { chromium, type Browser, type Page } from "@playwright/test";
 
-import { MANAGED_BROWSER_CONSENT_PATH } from "../../../../modules/contracts/headless/managed-browser-consent";
+import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER } from "../../../../modules/contracts/headless/managed-browser-consent";
+import { MANAGED_BROWSER_DELIVERY_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
 import { readHeadlessWindowResult, type UiControlLeaseTarget } from "../../../../modules/contracts/headless";
 import { startManagedReferenceHost } from "./managed-reference-host";
 
@@ -57,7 +58,8 @@ function measurements(values: number[]) {
 async function main() {
   const presentation = process.env.MANAGED_HEADLESS_PRESENTATION_TEST === "1";
   const measure = process.env.MANAGED_HEADLESS_BROWSER_MEASURE === "1";
-  assert.ok(!measure || presentation);
+  const isolation = process.env.MANAGED_HEADLESS_BROWSER_ISOLATION === "1";
+  assert.ok(!(measure || isolation) || presentation);
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
     {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
@@ -95,6 +97,8 @@ async function main() {
     assert.equal(described.ok, true);
     const scope = {hostIncarnationId: described.value.hostIncarnationId, workspaceId: activeWorkspaceId};
     browser = await chromium.launch({channel: "chrome", headless: true,
+      ...(isolation ? {ignoreDefaultArgs:["--disable-background-timer-throttling", "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding"]} : {}),
       args: [`--ignore-certificate-errors-spki-list=${fixture.browserPin}`]});
     const context = await browser.newContext({viewport: {width: 1280, height: 900}, acceptDownloads: false, serviceWorkers: "block"});
     const trusted = new URL(serverOrigin).origin;
@@ -331,6 +335,179 @@ async function main() {
       assert.ok(observed.local_revoke_ms.p95 <= 100 && observed.local_revoke_ms.max <= 250);
     }
 
+    if (isolation && saved && presentationRequest) {
+      stage = "second-tab";
+      const peer = await context.newPage();
+      const restoreNativeFocus = async (target: Page) => {
+        // On the pinned driver, only the primary session owns the focus override.
+        const {_connection} = target as unknown as {_connection: {toImpl?(tab:Page): {delegate?: {_mainFrameSession?: {
+          _client?: {send(method:"Emulation.setFocusEmulationEnabled", input:{enabled:boolean}):Promise<unknown>};
+        }}} | undefined}};
+        const driver = _connection.toImpl?.(target)?.delegate?._mainFrameSession?._client;
+        assert.ok(driver, "The fixture cannot restore the Chrome focus policy.");
+        await driver.send("Emulation.setFocusEmulationEnabled", {enabled:false});
+      };
+      await restoreNativeFocus(page);
+      await restoreNativeFocus(peer);
+      try {
+        await peer.goto(`${trusted}/systems`, {waitUntil:"domcontentloaded"});
+        await peer.getByRole("heading", {name:"Systems", exact:true}).waitFor({timeout:20_000});
+        await page.bringToFront();
+        await until(async () => await page.evaluate(() => !document.hidden) ? true : undefined);
+        const visibleTab = await getTab();
+        stage = "held-delivery-and-capacity";
+        const deliveryPath = `${trusted}${MANAGED_BROWSER_DELIVERY_PATH}`;
+        const gate = await page.evaluateHandle(({deliveryPath}) => {
+          const original = window.fetch;
+          let held = false;
+          let finished = false;
+          const hold = Promise.withResolvers<void>();
+          const deadline = setTimeout(hold.resolve, 8_000);
+          const testFetch: {run:typeof fetch} = {async run(input, init) {
+            const response = await original.call(window, input, init);
+            if (held || !response.ok || response.url !== deliveryPath || init?.method !== "POST") return response;
+            const entry = await response.clone().json() as {status?:string};
+            if (entry.status !== "command" || held) return response;
+            held = true;
+            await hold.promise;
+            finished = true;
+            return response;
+          }};
+          window.fetch = testFetch.run;
+          const selector = 'section[aria-label="Resource shown by automation"]';
+          let staleAppearances = 0;
+          const watcher = new MutationObserver(records => {
+            for (const {addedNodes} of records) for (const node of addedNodes)
+              if (node instanceof Element && (node.matches(selector) || node.querySelector(selector))) staleAppearances++;
+          });
+          return {held() {return held && !finished;}, finished() {return finished;}, release:hold.resolve,
+            observePanel() {watcher.observe(document.body, {childList:true, subtree:true});},
+            staleAppearances() {return staleAppearances;},
+            restore() {
+              watcher.disconnect();
+              clearTimeout(deadline);
+              hold.resolve();
+              if (window.fetch === testFetch.run) window.fetch = original;
+            }};
+        }, {deliveryPath});
+        let active: UiControlLeaseTarget;
+        try {
+          stage = "queue-exact-tab-consent";
+          const request = readHeadlessWindowResult(await call("aisb_request_window", {target:visibleTab,
+            taskId:randomUUID(), requestKey:randomUUID()}));
+          assert.ok(request.ok && request.value.kind === "request");
+          assert.equal(await peer.getByRole("dialog", {name:"Automation takeover request"}).count(), 0);
+          const attempt = request.value.request.target;
+          const peerDenial = await peer.evaluate(async ({path, proofHeader, workspaceId, organizationId, attempt}) => {
+            const bearer = localStorage.getItem("ai-system-builder.paired-device-token");
+            const headers = {"Content-Type":"application/json", Authorization:`Bearer ${bearer}`,
+              "X-Organization-Id":organizationId, "X-Client-Source":"thin-client"};
+            const registration = await fetch(path, {method:"POST", headers, signal:AbortSignal.timeout(3_000),
+              body:JSON.stringify({operation:"register", workspaceId})});
+            if (!registration.ok) return {registration:registration.status, denial:0, disconnect:0};
+            const {target,proof} = await registration.json();
+            const scoped = {...headers,[proofHeader]:proof};
+            let denial = 0;
+            let disconnect = 0;
+            try {
+              const response = await fetch(path, {method:"POST", headers:scoped, signal:AbortSignal.timeout(3_000),
+                body:JSON.stringify({operation:"accept", document:{hostIncarnationId:attempt.hostIncarnationId,
+                  windowId:attempt.windowId, uiIncarnationId:attempt.uiIncarnationId, workspaceId:attempt.workspaceId}, target:attempt})});
+              denial = response.status;
+              await response.body?.cancel();
+            } finally {
+              const response = await fetch(path, {method:"POST", headers:scoped, signal:AbortSignal.timeout(3_000),
+                body:JSON.stringify({operation:"disconnect", document:target})});
+              disconnect = response.status;
+              await response.body?.cancel();
+            }
+            return {registration:registration.status, denial, disconnect};
+          }, {path:MANAGED_BROWSER_CONSENT_PATH, proofHeader:MANAGED_BROWSER_DOCUMENT_HEADER, workspaceId:activeWorkspaceId,
+            organizationId, attempt});
+          assert.deepEqual(peerDenial, {registration:200, denial:403, disconnect:200});
+          evidence.browser_cross_tab_consent_status = peerDenial.denial;
+          await modal.getByRole("button", {name:"Accept automation takeover", exact:true}).click({timeout:8_000});
+          await revoke.waitFor({timeout:5_000});
+          active = await until<UiControlLeaseTarget>(async () => {
+            const status = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+            return status.ok && status.value.kind === "request" ? status.value.lease : undefined;
+          });
+          const command = {...presentationRequest, target:active, commandId:randomUUID()};
+          const present = async (args: typeof command) => readHeadlessWindowResult(await call("aisb_present_in_window", args));
+          stage = "queue-first-admission";
+          const first = await present(command);
+          assert.ok(first.ok && first.value.kind === "command" && first.value.receipt.sequence === 1);
+          stage = "queue-hold-observed";
+          await until(async () => await gate.evaluate(probe => probe.held()) ? true : undefined, 15);
+          stage = "queue-capacity";
+          let accepted = 1;
+          let denied = 0;
+          for (let index = 0; index < 32; index += 2) {
+            const pair = await Promise.all([present({...command, commandId:randomUUID()}), present({...command, commandId:randomUUID()})]);
+            for (const result of pair) {
+              if (result.ok && result.value.kind === "command" && result.value.receipt.status === "accepted") accepted++;
+              if (!result.ok && result.code === "headless.operation-capacity") denied++;
+            }
+          }
+          evidence.browser_queue_peak = accepted;
+          evidence.browser_queue_capacity_denials = denied;
+          assert.equal(accepted, 32);
+          assert.equal(denied, 1);
+          assert.equal(await gate.evaluate(probe => probe.held()), true);
+          stage = "queue-duplicate-and-conflict";
+          const replay = await present(command);
+          assert.ok(replay.ok && replay.value.kind === "command" && replay.value.duplicate && replay.value.receipt.sequence === 1);
+          assert.deepEqual(await present({...command, intent:{...command.intent, action:"show-validation"}}),
+            {ok:false, code:"headless.idempotency-conflict"});
+          assert.equal(await panel.count(), 0);
+          await gate.evaluate(probe => probe.observePanel());
+          stage = "queue-revoke-before-release";
+          await revoke.click();
+          await revoke.waitFor({state:"detached", timeout:3_000});
+          await gate.evaluate(probe => probe.release());
+          await until(async () => await gate.evaluate(probe => probe.finished()) ? true : undefined);
+          await until(async () => {
+            const status = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+            return status.ok && status.value.kind === "ended" ? true : undefined;
+          });
+          assert.ok(!(await present(command)).ok);
+          assert.equal(await panel.count(), 0);
+          const staleAppearances = await gate.evaluate(probe => probe.staleAppearances());
+          assert.equal(staleAppearances, 0);
+          evidence.browser_stale_panel_appearances = staleAppearances;
+          evidence.browser_exact_duplicate_and_conflict = true;
+          evidence.browser_revoked_held_response_no_display = true;
+        } finally {
+          try {await gate.evaluate(probe => probe.restore());}
+          finally {await gate.dispose();}
+        }
+
+        stage = "actual-background-and-resume";
+        await peer.bringToFront();
+        await until(async () => await page.evaluate(() => document.hidden) ? true : undefined);
+        assert.equal(await peer.evaluate(() => document.hidden), false);
+        const peerTab = await getTab();
+        assert.notEqual(peerTab.uiIncarnationId, visibleTab.uiIncarnationId);
+        const name = "Synthetic saved while first tab is hidden";
+        const changed = await call("aisb_create_system", {...scope, templateId, name, idempotencyKey:randomUUID()});
+        assert.ok(changed.ok && changed.value.kind === "committed");
+        assert.ok(!readHeadlessWindowResult(await call("aisb_request_window", {target:visibleTab,
+          taskId:randomUUID(), requestKey:randomUUID()})).ok);
+        await page.bringToFront();
+        await until(async () => await page.evaluate(() => !document.hidden) ? true : undefined);
+        await management.getByRole("cell", {name:new RegExp(name)}).waitFor({timeout:10_000});
+        const refreshed = await getTab();
+        assert.notEqual(refreshed.uiIncarnationId, visibleTab.uiIncarnationId);
+        assert.notEqual(refreshed.uiIncarnationId, peerTab.uiIncarnationId);
+        assert.equal(await panel.count(), 0);
+        assert.equal(await modal.count(), 0);
+        evidence.browser_second_tab_cannot_accept = true;
+        evidence.hidden_tab_shows_current_save_with_fresh_registration = true;
+      } finally {
+        await peer.close();
+      }
+    }
+
     stage = "reload";
     await page.reload({waitUntil:"domcontentloaded"});
     await systems.waitFor({timeout: 20_000});
@@ -339,6 +516,11 @@ async function main() {
     assert.equal(await modal.count(), 0);
     evidence.reload_requires_fresh_document = true;
     passed = true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    evidence.failure_category = /__name is not defined/.test(message) ? "driver-function-serialization" :
+      /timeout|did not become visible/i.test(message) ? "fixture-timeout" :
+      /closed|destroyed/i.test(message) ? "fixture-closed" : "fixture-assertion-or-infrastructure";
   } finally {
     if (passed) stage = "cleanup";
     await browser?.close().catch(() => {passed = false;});

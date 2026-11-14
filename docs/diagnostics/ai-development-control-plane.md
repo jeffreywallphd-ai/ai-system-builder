@@ -178,6 +178,13 @@ the existing revoke retention window and applies targets to unrounded timings.
 The timing report does not cover hidden tabs, live queue depth or a production
 network.
 
+Set `MANAGED_HEADLESS_BROWSER_ISOLATION=1` with the extended journey to test
+two real tabs without Playwright's background-throttling overrides. The test
+holds one presentation reply on the exact originating tab. It checks the queue
+limit, retry and conflict behavior, revoke, and saved state after the tab is
+visible again. This reference fixture uses synthetic records and does not
+qualify production network latency.
+
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
 The related managed saved-state browser check runs the exact observer and model
