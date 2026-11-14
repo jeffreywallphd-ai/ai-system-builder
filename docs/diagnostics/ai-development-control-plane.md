@@ -203,6 +203,13 @@ The original workspace must receive one saved revision and the other
 workspace must stay separate. Returning to the original workspace must
 show the saved field without bringing back the takeover panel.
 
+The packaged Desktop test measures warm presentation and revoke, including
+when an ordinary dialog is open or a page is loading. The native hide test
+restores the browser's timer policy in the owned test window, measures the
+timer slowdown, and checks that the old lease is retired. After shutdown,
+the test matches each of 32 admitted command IDs and sequences to its
+expected SQLite audit events. The report contains only counts and timings.
+
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
 The related managed saved-state browser check runs the exact observer and model

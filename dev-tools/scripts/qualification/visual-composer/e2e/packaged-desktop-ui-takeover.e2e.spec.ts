@@ -32,7 +32,8 @@ function distribution(samples: readonly number[]) {
     p95Ms: sorted[Math.ceil(sorted.length * 0.95) - 1], maxMs: sorted.at(-1) };
 }
 
-async function saveTimingObservation(value: object) {
+async function saveTimingObservation(value: object, file: "headless-window-timing.json" |
+  "headless-window-native-background.json" | "headless-window-native-queue.json" = "headless-window-timing.json") {
   const run = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID;
   const source = process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION;
   if (!run || !/^[a-z0-9-]{20,80}$/.test(run) || !source || !/^source\.[a-f0-9]{64}$/.test(source)) {
@@ -46,10 +47,12 @@ async function saveTimingObservation(value: object) {
   }
   const body = JSON.stringify({ schema: "headless-desktop-takeover-observation-v1", run, source, value }) + "\n";
   if (Buffer.byteLength(body) > 4096) throw new Error("The observation exceeds its bound.");
-  await writeFile(path.join(directory, "headless-window-timing.json"), body, { flag: "wx" });
+  await writeFile(path.join(directory, file), body, { flag: "wx" });
 }
 
-async function checkStoredAudit(profileRoot: string) {
+type QueuedAudit = {attemptId:string; commandBySequence:ReadonlyMap<number,string>};
+
+async function checkStoredAudit(profileRoot: string, queuedAttempt?: QueuedAudit) {
   const { databaseFilePath } = resolveLocalSqliteDatabasePolicy({ dataRootDirectory: profileRoot });
   if (!path.relative(profileRoot, databaseFilePath).startsWith(`persistence${path.sep}`) ||
       await realpath(databaseFilePath) !== databaseFilePath || !(await lstat(databaseFilePath)).isFile()) {
@@ -68,6 +71,8 @@ async function checkStoredAudit(profileRoot: string) {
       throw new Error("The isolated audit count is invalid.");
     }
     const operations = new Map<string, number>();
+    const queue = { delivered: 0, applied: 0, discarded: 0, unconfirmed: 0, conflicts: 0 };
+    const seen = new Set<string>();
     const identifier = /^[a-z0-9][a-z0-9._:-]{0,127}$/i;
     const uuid = /^[a-f0-9-]{36}$/;
     const windowOperations = new Map([
@@ -99,6 +104,19 @@ async function checkStoredAudit(profileRoot: string) {
             (generation !== undefined && (!Number.isSafeInteger(generation) || generation < 1)) ||
             (name.startsWith("command-") ? !uuid.test(actionId) || !Number.isSafeInteger(sequence) || sequence < 1 || sequence > 256 :
               actionId !== undefined || sequence !== undefined)) invalid();
+        if (queuedAttempt && correlationId === queuedAttempt.attemptId && name.startsWith("command-")) {
+          const expected = sequence === 1 ? ["command-delivered", "command-unconfirmed", "command-conflict"] : ["command-discarded"];
+          const position = `${sequence}:${name}`;
+          if (queuedAttempt.commandBySequence.get(sequence) !== actionId || !expected.includes(name) || seen.has(position)) {
+            throw new Error("The held queue produced an unexpected command audit event.");
+          }
+          seen.add(position);
+          if (name === "command-delivered") queue.delivered++;
+          if (name === "command-applied") queue.applied++;
+          if (name === "command-discarded") queue.discarded++;
+          if (name === "command-unconfirmed") queue.unconfirmed++;
+          if (name === "command-conflict") queue.conflicts++;
+        }
       } else if (kind === "headless.backend") {
         const name = /^headless\.(system-authoring|approved-conversation)\.([a-z-]+)$/.exec(operation)?.[2];
         if (resource.kind !== "workspace" || Object.keys(resource).length !== 3 ||
@@ -108,6 +126,11 @@ async function checkStoredAudit(profileRoot: string) {
         throw new Error("The isolated audit contains an out-of-policy field.");
       }
       operations.set(operation, (operations.get(operation) ?? 0) + 1);
+    }
+    if (queuedAttempt) {
+      expect(queuedAttempt.commandBySequence.size).toBe(32);
+      expect(seen.size).toBe(34);
+      return queue;
     }
     for (const required of ["window.requested", "window.accepted", "window.activated", "window.local-revoke-received",
       "window.host-revoke-applied", "window.command-delivered", "window.command-applied", "window.command-conflict",
@@ -333,7 +356,7 @@ test("a real paired client presents a saved Windows resource and the user revoke
         await page.getByRole("button", { name: "Preview UI", exact: true }).click();
         await expect(preview).toBeVisible();
       }
-      const preRequestLayout = [0, 5, 80].includes(index) ? await mainLayout() : undefined;
+      const preRequestLayout = [0, 5, 85].includes(index) ? await mainLayout() : undefined;
       const next = readHeadlessWindowResult(await call(agent, "aisb_request_window", {
         target: windowTarget, requestKey: randomUUID(), taskId: randomUUID(),
       }));
@@ -385,20 +408,20 @@ test("a real paired client presents a saved Windows resource and the user revoke
     await page.getByRole("combobox", { name: "System", exact: true }).selectOption({ label: "Saved before takeover" });
     await page.getByRole("button", { name: "Edit system", exact: true }).click();
     await expect(page.getByRole("button", { name: "Preview UI", exact: true })).toBeEnabled();
-    for (let index = 5; index < 100; index++) await sample(index, index < 80 ? "normal" : "dialog");
+    for (let index = 5; index < 105; index++) await sample(index, index < 85 ? "normal" : "dialog");
 
     const delivery = distribution(revealTimes);
     const release = distribution(revokeTimes);
     await saveTimingObservation({ delivery, release, dialogRelease: distribution(modalRevokeTimes),
       loadingDelivery: distribution(loadingRevealTimes), loadingRelease: distribution(loadingRevokeTimes),
-      ordinaryRevokes: 75, windows: 1, warm: true,
+      ordinaryRevokes: 80, windows: 1, warm: true,
       osRelease: osRelease(), cpuThreads: cpus().length, ramGiB: Math.round(totalmem() / 1024 ** 3),
       desktop: await app.evaluate(() => ({ electron: process.versions.electron, chrome: process.versions.chrome })),
       visible: await page.evaluate(() => document.visibilityState === "visible"),
     });
-    expect(delivery.count).toBe(95);
+    expect(delivery.count).toBe(100);
     expect(delivery.p95Ms).toBeLessThanOrEqual(500);
-    expect(release.count).toBe(100);
+    expect(release.count).toBe(105);
     expect(modalRevokeTimes.length).toBe(20);
     expect(loadingRevokeTimes.length).toBe(5);
     expect(release.p95Ms).toBeLessThanOrEqual(100);
@@ -474,8 +497,9 @@ test("the native File menu opens a separately controlled window", async () => {
   let firstAgent: Client | undefined;
   let secondAgent: Client | undefined;
   let reader: Client | undefined;
+  const profile = prepareHeadlessDesktopProfile("window-isolation");
+  let queueWitness: {owner:QueuedAudit; counts:Record<string,number>} | undefined;
   try {
-    const profile = prepareHeadlessDesktopProfile("window-isolation");
     const app = await lifetime.launch(() => electron.launch({
       executablePath: profile.executablePath, env: profile.env,
       args: [`--user-data-dir=${profile.dataRoot}`, "--disable-gpu"], timeout: 60_000,
@@ -599,11 +623,52 @@ test("the native File menu opens a separately controlled window", async () => {
         observer.observe(document.body, { childList: true, subtree: true });
         return { appearances: () => appearances, stop: () => observer.disconnect() };
       });
+      let queuedCount = 0;
+      let capacityRejections = 0;
+      let duplicateCount = 0;
+      let conflictCount = 0;
+      let staleEffects = 0;
+      const commandBySequence = new Map<number,string>();
       try {
-        const queued = await call(agent, "aisb_present_in_window", { target: active.value.lease, commandId: randomUUID(),
-          intent: { action: "open-system", systemId: saved.systemId, revisionId: saved.revisionId } });
-        expect(readHeadlessWindowResult(queued).ok).toBe(true);
+        const pending = {target:active.value.lease, commandId:randomUUID(),
+          intent:{action:"open-system", systemId:saved.systemId, revisionId:saved.revisionId}};
+        const queued = readHeadlessWindowResult(await call(agent, "aisb_present_in_window", pending));
+        expect(queued.ok).toBe(true);
+        if (!queued.ok || queued.value.kind !== "command") throw new Error("No first queue receipt.");
+        expect(queued.value.receipt.sequence).toBe(1);
+        expect(queued.value.receipt.commandId).toBe(pending.commandId);
+        commandBySequence.set(1, pending.commandId);
+        queuedCount++;
         await expect.poll(() => transportGate.evaluate(gate => gate.held())).toBe(true);
+        for (let offset = 0; offset < 32; offset += 2) {
+          const pair = await Promise.all(Array.from({length:2}, async () => {
+            const commandId = randomUUID();
+            const result = readHeadlessWindowResult(await call(agent, "aisb_present_in_window", {...pending, commandId}));
+            if (result.ok && result.value.kind === "command") expect(result.value.receipt.commandId).toBe(commandId);
+            return result;
+          }));
+          for (const item of pair) {
+            if (item.ok && item.value.kind === "command" && item.value.receipt.status === "accepted") {
+              const {sequence,commandId} = item.value.receipt;
+              expect(sequence).toBeGreaterThan(1);
+              expect(sequence).toBeLessThanOrEqual(32);
+              expect(commandBySequence.has(sequence)).toBe(false);
+              commandBySequence.set(sequence, commandId);
+              queuedCount++;
+            }
+            if (!item.ok && item.code === "headless.operation-capacity") capacityRejections++;
+          }
+        }
+        expect(queuedCount).toBe(32);
+        expect(capacityRejections).toBe(1);
+        expect(await transportGate.evaluate(gate => gate.held())).toBe(true);
+        const replay = readHeadlessWindowResult(await call(agent, "aisb_present_in_window", pending));
+        if (replay.ok && replay.value.kind === "command" && replay.value.duplicate && replay.value.receipt.sequence === 1) duplicateCount++;
+        const conflict = readHeadlessWindowResult(await call(agent, "aisb_present_in_window", {...pending,
+          intent:{...pending.intent, action:"show-validation"}}));
+        if (!conflict.ok && conflict.code === "headless.idempotency-conflict") conflictCount++;
+        expect(duplicateCount).toBe(1);
+        expect(conflictCount).toBe(1);
         await first.getByRole("region", { name: "Automation takeover", exact: true })
           .getByRole("button", { name: "Revoke automation takeover", exact: true }).click();
         await expect(first.getByRole("button", { name: "Settings", exact: true, description: "Settings" })).toBeEnabled();
@@ -614,7 +679,8 @@ test("the native File menu opens a separately controlled window", async () => {
         await expect(first.getByRole("region", { name: "Resource shown by automation", exact: true })).toHaveCount(0);
         await first.getByRole("button", { name: "Systems", exact: true }).click();
         await expect(first.getByRole("tab", { name: "Manage", exact: true })).toBeVisible();
-        expect(await latePresentation.evaluate(probe => probe.appearances())).toBe(0);
+        staleEffects = await latePresentation.evaluate(probe => probe.appearances());
+        expect(staleEffects).toBe(0);
       } finally {
         try { await latePresentation.evaluate(probe => probe.stop()); }
         finally {
@@ -629,17 +695,63 @@ test("the native File menu opens a separately controlled window", async () => {
       const current = await secondStatus();
       expect(current.ok && current.value.kind === "request" && current.value.request.status).toBe("active");
       await expect(second.getByRole("button", { name: "Revoke automation takeover", exact: true })).toBeVisible();
+      queueWitness = {owner:{attemptId: active.value.lease.attemptId, commandBySequence}, counts:{queuePeak:queuedCount, capacityRejections,
+        duplicates:duplicateCount, conflicts:conflictCount, staleEffects}};
       const nativeStatus = await attach(first, agent, await requestWindow(agent, firstTarget));
       const beforeMinimize = await nativeStatus();
       if (!beforeMinimize.ok || beforeMinimize.value.kind !== "request" || !beforeMinimize.value.lease) {
         throw new Error("The first window did not attach before native minimize.");
       }
-      await original.evaluate(window => window.minimize());
-      await expect.poll(() => original.evaluate(window => window.isMinimized())).toBe(true);
-      await expect.poll(async () => (await list()).some(row => row.windowId === firstTarget.windowId)).toBe(false);
-      expect(await nativeStatus()).toMatchObject({ ok: true, value: { kind: "ended" } });
-      expect(readHeadlessWindowResult(await call(agent, "aisb_window_context", { target: beforeMinimize.value.lease })))
-        .toEqual({ ok: false, code: "headless.forbidden" });
+      // Playwright forces focus on its primary Electron CDP connection. A new
+      // connection cannot undo it. Remove that fixture override on the original
+      // connection; this never changes Chromium's native background policy.
+      const { _connection } = first as unknown as {
+        _connection: { toImpl?(page: Page): { delegate?: { _mainFrameSession?: {
+          _client?: { send(method: "Emulation.setFocusEmulationEnabled", input: {enabled:boolean}): Promise<unknown> };
+        } } } | undefined };
+      };
+      const cdp = _connection.toImpl?.(first)?.delegate?._mainFrameSession?._client;
+      if (!cdp) throw new Error("The pinned Playwright Electron focus session is unavailable.");
+      await cdp.send("Emulation.setFocusEmulationEnabled", {enabled:false});
+      const timing = await first.evaluateHandle(() => {
+        const ticks: number[] = [];
+        const foreground: number[] = [];
+        let last = performance.now();
+        let startedHidden = false;
+        const interval = setInterval(() => {
+          const now = performance.now();
+          const group = document.hidden ? ticks : foreground;
+          if (document.hidden && !startedHidden) startedHidden = true;
+          if (group.length < 100) group.push(now - last);
+          last = now;
+        }, 50);
+        return {read:() => ({ticks,foreground,hidden:document.hidden,startedHidden}), stop:() => clearInterval(interval)};
+      });
+      try {
+        await expect.poll(() => timing.evaluate(probe => probe.read().foreground.length)).toBeGreaterThanOrEqual(5);
+        const nativeThrottling = await original.evaluate(window => window.webContents.getBackgroundThrottling());
+        expect(nativeThrottling).toBe(true);
+        const hideStarted = performance.now();
+        await original.evaluate(window => window.hide());
+        await expect.poll(() => original.evaluate(window => window.isVisible())).toBe(false);
+        await expect.poll(async () => (await list()).some(row => row.windowId === firstTarget.windowId)).toBe(false);
+        expect(await nativeStatus()).toMatchObject({ ok: true, value: { kind: "ended" } });
+        const hideToLeaseRetiredMs = performance.now() - hideStarted;
+        expect(readHeadlessWindowResult(await call(agent, "aisb_window_context", { target: beforeMinimize.value.lease })))
+          .toEqual({ ok: false, code: "headless.forbidden" });
+        await expect.poll(() => timing.evaluate(probe => probe.read()), {timeout:5_000}).toMatchObject({hidden:true, startedHidden:true});
+        await expect.poll(() => timing.evaluate(probe => probe.read().ticks.length), {timeout:10_000}).toBeGreaterThanOrEqual(6);
+        const observed = await timing.evaluate(probe => probe.read());
+        const foreground = distribution(observed.foreground);
+        const background = distribution(observed.ticks.slice(1)); // first sample can straddle the transition
+        expect(background.p50Ms).toBeGreaterThanOrEqual(250);
+        expect(background.p50Ms).toBeGreaterThanOrEqual(3 * foreground.p50Ms);
+        await saveTimingObservation({foreground,background,scope:"native hide",nativeThrottling,hideToLeaseRetiredMs},
+          "headless-window-native-background.json");
+      } finally {
+        try {await timing.evaluate(probe => probe.stop());}
+        finally {await timing.dispose();}
+      }
       const ownWindow = await app.browserWindow(second);
       try {
         const id = await ownWindow.evaluate(window => window.id);
@@ -653,7 +765,7 @@ test("the native File menu opens a separately controlled window", async () => {
         }, id)).toEqual([2, 2]);
       } finally { await ownWindow.dispose(); }
       await expect.poll(async () => (await list()).some(row => row.windowId === secondTarget?.windowId)).toBe(true);
-      await original.evaluate(window => { window.restore(); window.focus(); });
+      await original.evaluate(window => { window.show(); window.restore(); window.focus(); });
       await expect(first.getByRole("button", { name: "Settings", exact: true, description: "Settings" })).toBeEnabled();
       await expect.poll(async () => (await list()).some(row => row.windowId === firstTarget.windowId &&
         row.uiIncarnationId !== firstTarget.uiIncarnationId)).toBe(true);
@@ -787,4 +899,8 @@ test("the native File menu opens a separately controlled window", async () => {
     try { await Promise.all([firstAgent?.close(), secondAgent?.close(), reader?.close()]); }
     finally { await lifetime.retire(); }
   }
+  if (!queueWitness) throw new Error("The native fixture did not record the held queue attempt.");
+  const audit = await checkStoredAudit(profile.dataRoot, queueWitness.owner);
+  expect(audit).toEqual({delivered:1, applied:0, discarded:31, unconfirmed:1, conflicts:1});
+  await saveTimingObservation({...queueWitness.counts, audit}, "headless-window-native-queue.json");
 });

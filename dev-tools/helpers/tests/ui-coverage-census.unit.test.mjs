@@ -1105,6 +1105,20 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "84a405091b232742ef6ceba41e1663b9c988fd9d61df2eb0d3bc033a2a68c7bb") {
+    const source = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
+    const previous = JSON.parse(historicalSource("8a783d664ada27cf55d363e87d29817e08c0665e", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), browserTakeoverCensus.after);
+    const expected = structuredClone(previous);
+    const facts = map.sources.find(row => row.path === source).facts;
+    assert.equal(sha(JSON.stringify(facts)), "88ce3a00face14e426dcaa5636ecce61dd69f7a0bcab244ab15eff86af62e863");
+    expected.sources.find(row => row.path === source).facts = facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous,{...result,gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
   if (sha(JSON.stringify(map)) !== browserTakeoverCensus.after) return {map,result};
   const {priorCommit,before,test,facts,view,inventory} = browserTakeoverCensus;
   const saved = JSON.parse(historicalSource(priorCommit,censusDocument));

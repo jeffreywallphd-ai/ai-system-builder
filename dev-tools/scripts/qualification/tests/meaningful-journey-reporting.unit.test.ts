@@ -120,7 +120,7 @@ const packagedHeadlessOriginalCommit="6ce8b3255a935f3a02e65f902a2989b31a417bf6";
 const packagedHeadlessLatestBaseline="a1894a3a13a013bfb25d12ddae1c074923216b34";
 const packagedTakeoverSource="dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
 const packagedTakeoverOriginalCommit="29524bbbf70785f0323a37d1f6af633517c19ad0";
-const packagedTakeoverVersions=[packagedTakeoverOriginalCommit,"888a58bbcaf2062e8f73ce54abd7dd4f50d8ebce","01b007c569e2c7a5bf819677b5c505734cdf59e4"];
+const packagedTakeoverVersions=[packagedTakeoverOriginalCommit,"888a58bbcaf2062e8f73ce54abd7dd4f50d8ebce","01b007c569e2c7a5bf819677b5c505734cdf59e4","a954b586b3c8372f45acb51dd4ddbebfd7014c97"];
 const reviewReferenceSources=[
   "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
   "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",

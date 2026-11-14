@@ -15269,16 +15269,16 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
    "facts": {
-    "sha256": "b3e4b436caf4189fbbfe29d5a5c4d4ce81de0f91e599d8fafbf41581aff2c07e",
-    "bytes": 50763,
+    "sha256": "a6c99d76111f916fa871cf05786ef73e24972a77395ecd67d86670973a37b8bd",
+    "bytes": 58025,
     "cases": [
      {
       "name": "a real paired client presents a saved Windows resource and the user revokes before continuing saved work",
-      "line": 212
+      "line": 235
      },
      {
       "name": "the native File menu opens a separately controlled window",
-      "line": 471
+      "line": 494
      }
     ],
     "dynamicCases": 0,
@@ -15297,47 +15297,47 @@
      },
      {
       "name": "checkStoredAudit",
-      "line": 52
+      "line": 55
      },
      {
       "name": "measureRevocation",
-      "line": 120
+      "line": 143
      },
      {
       "name": "withModelsPageLoading",
-      "line": 144
+      "line": 167
      },
      {
       "name": "suppressFixtureRevoke",
-      "line": 189
+      "line": 212
      },
      {
       "name": "sample",
-      "line": 325
+      "line": 348
      }
     ],
-    "assertionCount": 89,
-    "assertionDigest": "059e0ca019d8257509868624e560c02e6889a424e826c544d678de5215a5fbb3",
+    "assertionCount": 106,
+    "assertionDigest": "54941a21070612ded664231500ad8d39a88db8e370bf53d789bc0fc3c0491f49",
     "assertionExamples": [
      {
-      "line": 115,
+      "line": 131,
+      "kind": "expect",
+      "sha256": "2f47d3c091fad6759fa7f2c7598f0c0ab834d018baa92c6bd73ff878b8535e85"
+     },
+     {
+      "line": 132,
+      "kind": "expect",
+      "sha256": "392b564c10994f4459b92e5cba0accff36acd1cb664f4d92f9be297d90e31149"
+     },
+     {
+      "line": 138,
       "kind": "expect",
       "sha256": "e94ce9a28f3faddb50b82270466ab17a2a137708ab612459b2a6a41d4a365050"
      },
      {
-      "line": 178,
+      "line": 201,
       "kind": "expect",
       "sha256": "a7c6f9ef99e25321ee116a37f5bcf865575c60b022698354bc872321473f358a"
-     },
-     {
-      "line": 180,
-      "kind": "expect",
-      "sha256": "ff8fe2eb9d95c34b3e7c8b9e914954a919f82726ffc567e610c70ba03e1b5f63"
-     },
-     {
-      "line": 185,
-      "kind": "expect",
-      "sha256": "3db707efad1a3e7227bf110a065bab1abd2b294af40b4edefd43a505316e5acc"
      }
     ],
     "modifiers": []
