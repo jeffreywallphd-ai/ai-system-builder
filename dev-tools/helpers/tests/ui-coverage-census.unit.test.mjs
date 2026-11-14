@@ -1096,6 +1096,29 @@ function navigationCensusLegacyView(map,result){
 let committedCensusWitness;
 const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
 function headlessPackagedCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) === "ea3adbe2ef7dbcaff5dba0cf18952c0472c35047784ae6b5c7b70190c4501a68") {
+    const saved = JSON.parse(historicalSource("888a58bbcaf2062e8f73ce54abd7dd4f50d8ebce", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "28ab82bf208625907ad018011ef3e145bb6ca418d478d36f67773e1c46d67962");
+    const expected = structuredClone(saved);
+    for (const [path, candidate, digest] of [
+      ["apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
+        "3430093b56e7419b9f7108c462daead18068bb83f4287adc19d2a810cea37165",
+        "ee3ca78cc599714c75f8a658cf9deb85696f53dd01a190f1af78cfc029b2e84f"],
+      ["dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+        "b3e4b436caf4189fbbfe29d5a5c4d4ce81de0f91e599d8fafbf41581aff2c07e",
+        "2c513ad04c6c79e887e0c2b735c5c647a8f2f1f8b1e064ebb28525a58dc7f553"],
+    ]) {
+      const changed = map.sources.find(row => row.path === path);
+      assert.equal(changed.facts.sha256, candidate);
+      assert.equal(sha(JSON.stringify(changed.facts)), digest);
+      expected.sources.find(row => row.path === path).facts = changed.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
   if (sha(JSON.stringify(map)) === "28ab82bf208625907ad018011ef3e145bb6ca418d478d36f67773e1c46d67962") {
     // Replace the packaged test inventory while retaining its unreviewed drift.
     const saved = JSON.parse(historicalSource("29524bbbf70785f0323a37d1f6af633517c19ad0", censusDocument));

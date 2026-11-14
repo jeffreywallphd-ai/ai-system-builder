@@ -7,6 +7,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { _electron as electron, type ElectronApplication } from "playwright";
 import { DESKTOP_UI_CONTROL_CHANNELS, readHeadlessWindowResult } from "../../../../../modules/contracts/headless";
 import { resolveLocalSqliteDatabasePolicy } from "../../../../../modules/adapters/persistence/sqlite/local-sqlite-database-policy";
+import { DESKTOP_DISABLE_TAKEOVER_MENU_ID } from "../../../../../apps/desktop/src/main/desktopMainWindowMenu";
 import { assetApplicationLifetime } from "../asset-experience-oracles";
 import { createFormWorkspace } from "./form-composer-authoring-journey";
 import {
@@ -518,6 +519,7 @@ test("the native File menu opens a separately controlled window", async () => {
       };
       await expect.poll(async () => (await list()).length).toBe(1);
       const [firstTarget] = await list();
+      if (!firstTarget) throw new Error("The first owned window was not registered.");
       const nextWindow = app.waitForEvent("window");
       await app.evaluate(({ Menu, BrowserWindow }) => {
         const focused = BrowserWindow.getFocusedWindow();
@@ -627,8 +629,17 @@ test("the native File menu opens a separately controlled window", async () => {
       const current = await secondStatus();
       expect(current.ok && current.value.kind === "request" && current.value.request.status).toBe("active");
       await expect(second.getByRole("button", { name: "Revoke automation takeover", exact: true })).toBeVisible();
+      const nativeStatus = await attach(first, agent, await requestWindow(agent, firstTarget));
+      const beforeMinimize = await nativeStatus();
+      if (!beforeMinimize.ok || beforeMinimize.value.kind !== "request" || !beforeMinimize.value.lease) {
+        throw new Error("The first window did not attach before native minimize.");
+      }
       await original.evaluate(window => window.minimize());
       await expect.poll(() => original.evaluate(window => window.isMinimized())).toBe(true);
+      await expect.poll(async () => (await list()).some(row => row.windowId === firstTarget.windowId)).toBe(false);
+      expect(await nativeStatus()).toMatchObject({ ok: true, value: { kind: "ended" } });
+      expect(readHeadlessWindowResult(await call(agent, "aisb_window_context", { target: beforeMinimize.value.lease })))
+        .toEqual({ ok: false, code: "headless.forbidden" });
       const ownWindow = await app.browserWindow(second);
       try {
         const id = await ownWindow.evaluate(window => window.id);
@@ -644,6 +655,9 @@ test("the native File menu opens a separately controlled window", async () => {
       await expect.poll(async () => (await list()).some(row => row.windowId === secondTarget?.windowId)).toBe(true);
       await original.evaluate(window => { window.restore(); window.focus(); });
       await expect(first.getByRole("button", { name: "Settings", exact: true, description: "Settings" })).toBeEnabled();
+      await expect.poll(async () => (await list()).some(row => row.windowId === firstTarget.windowId &&
+        row.uiIncarnationId !== firstTarget.uiIncarnationId)).toBe(true);
+      expect(await requestWindow(agent, firstTarget)).toEqual({ ok: false, code: "headless.forbidden" });
       const stillCurrent = await secondStatus();
       expect(stillCurrent.ok && stillCurrent.value.kind === "request" && stillCurrent.value.request.status).toBe("active");
       const fault = await suppressFixtureRevoke(app, second);
@@ -667,6 +681,107 @@ test("the native File menu opens a separately controlled window", async () => {
       await original.evaluate(window => window.focus());
       await expect(first.getByRole("button", { name: "Settings", exact: true, description: "Settings" })).toBeEnabled();
       await expect(first.getByRole("region", { name: "Resource shown by automation", exact: true })).toHaveCount(0);
+
+      const currentTarget = (await list()).find(row => row.windowId === firstTarget.windowId);
+      if (!currentTarget) throw new Error("The restored native window did not register again.");
+      const expiringStatus = await attach(first, agent, await requestWindow(agent, currentTarget));
+      const expiring = await expiringStatus();
+      if (!expiring.ok || expiring.value.kind !== "request" || !expiring.value.lease) {
+        throw new Error("The expiry test requires an active native grant.");
+      }
+      const hostRemaining = expiring.value.request.expiresAt - await app.evaluate(() => performance.now());
+      expect(hostRemaining).toBeGreaterThan(13_000);
+      expect(hostRemaining).toBeLessThanOrEqual(15_000);
+      const expiryFault = await suppressFixtureRevoke(app, first);
+      const contextProbe = await app.evaluateHandle(({ ipcMain }, { channel, contentsId }) => {
+        type Handler = (event: Electron.IpcMainInvokeEvent, input: unknown) => Promise<boolean>;
+        const handler = (ipcMain as unknown as { _invokeHandlers?: Map<string, Handler> })._invokeHandlers?.get(channel);
+        if (typeof handler !== "function") throw new Error("The packaged context handler is unavailable to the fixture.");
+        let publications = 0;
+        let firstPublicationHeld = false;
+        let expiredPublication: boolean | undefined;
+        let release!: () => void;
+        const hold = new Promise<void>(resolve => { release = resolve; });
+        const timeout = setTimeout(release, 4000);
+        ipcMain.removeHandler(channel);
+        ipcMain.handle(channel, async (event, input) => {
+          if (event.sender.id !== contentsId) return handler(event, input);
+          publications++;
+          if (publications === 1) {
+            firstPublicationHeld = true;
+            await hold;
+            firstPublicationHeld = false;
+            expiredPublication = await handler(event, input);
+            return expiredPublication;
+          }
+          // Model an unresponsive renderer at the transport seam while
+          // keeping the real host clock, membership and lease policy active.
+          return false;
+        });
+        return {
+          held: () => firstPublicationHeld,
+          expiredPublication: () => expiredPublication,
+          release() { clearTimeout(timeout); release(); },
+          restore() { clearTimeout(timeout); release(); ipcMain.removeHandler(channel); ipcMain.handle(channel, handler); },
+        };
+      }, { channel: DESKTOP_UI_CONTROL_CHANNELS.context, contentsId });
+      try {
+        const target = expiring.value.lease;
+        const context = call(agent, "aisb_window_context", { target }).then(readHeadlessWindowResult);
+        await expect.poll(() => contextProbe.evaluate(probe => probe.held()), { intervals: [20, 40, 80] }).toBe(true);
+        expect(await context).toEqual({ ok: false, code: "headless.unavailable" });
+        await contextProbe.evaluate(probe => probe.release());
+        await expect.poll(() => contextProbe.evaluate(probe => probe.expiredPublication())).toBe(false);
+        expect(readHeadlessWindowResult(await call(agent, "aisb_renew_window", { target })))
+          .toEqual({ ok: false, code: "headless.unavailable" });
+        await expect.poll(async () => {
+          const state = await expiringStatus();
+          return state.ok && state.value.kind;
+        }, { timeout: 17_000, intervals: [100, 200, 250] }).toBe("ended");
+        const afterDeadline = await app.evaluate(() => performance.now()) - expiring.value.request.expiresAt;
+        expect(afterDeadline).toBeGreaterThanOrEqual(0);
+        expect(afterDeadline).toBeLessThanOrEqual(2_000);
+        expect(readHeadlessWindowResult(await call(agent, "aisb_renew_window", { target })))
+          .toMatchObject({ ok: true, value: { kind: "ended" } });
+      } finally {
+        try { await contextProbe.evaluate(probe => probe.restore()); }
+        finally {
+          try { await expiryFault.evaluate(probe => probe.restore()); }
+          finally { await Promise.all([contextProbe.dispose(), expiryFault.dispose()]); }
+        }
+      }
+      await expect(first.getByRole("button", { name: "Settings", exact: true, description: "Settings" })).toBeEnabled();
+      const restoredTarget = (await list()).find(row => row.windowId === firstTarget.windowId);
+      if (!restoredTarget) throw new Error("The rollback fixture has no current window.");
+      const rollbackStatus = await attach(first, agent, await requestWindow(agent, restoredTarget));
+      const granted = await rollbackStatus();
+      if (!granted.ok || granted.value.kind !== "request" || !granted.value.lease) {
+        throw new Error("The packaged rollback requires an active exact lease.");
+      }
+      expect(await app.evaluate(({ Menu, BrowserWindow }, menuId) => {
+        const window = BrowserWindow.getFocusedWindow();
+        const item = Menu.getApplicationMenu()?.getMenuItemById(menuId);
+        if (!window || !item?.enabled) throw new Error("The native rollback action is unavailable.");
+        item.click(item, window, {});
+        return item.enabled;
+      }, DESKTOP_DISABLE_TAKEOVER_MENU_ID)).toBe(false);
+      await expect(first.getByRole("button", { name: "Settings", exact: true, description: "Settings" })).toBeEnabled();
+      await expect(first.getByRole("button", { name: "Revoke automation takeover", exact: true })).toHaveCount(0);
+      const denied = { ok: false, code: "headless.forbidden" };
+      expect(await requestWindow(agent, restoredTarget)).toEqual(denied);
+      const oldRead = await call(agent, "aisb_window_context", { target: granted.value.lease });
+      expect(readHeadlessWindowResult(oldRead)).toEqual(denied);
+      const independent = await call(reader, "aisb_create_system", { ...base, name: "Saved after turning off takeover",
+        idempotencyKey: randomUUID(), templateId: "reference.secured-data-review@1.0.0" });
+      expect(independent).toMatchObject({ ok: true });
+      await first.getByRole("button", { name: "Systems", exact: true }).click();
+      await first.getByRole("tab", { name: "Manage", exact: true }).click();
+      await expect(first.getByRole("region", { name: "Manage systems", exact: true })
+        .getByText("Saved after turning off takeover", { exact: true })).toBeVisible();
+      await first.getByRole("button", { name: "Settings", exact: true, description: "Settings" }).click();
+      await first.getByRole("button", { name: "Local chat clients", exact: true }).click();
+      await expect(settings.getByRole("button", { name: "Pair a client that can request window control", exact: true })).toHaveCount(0);
+      await expect(settings.getByRole("button", { name: "Pair a client that can edit", exact: true })).toBeEnabled();
     } finally { await original.dispose(); }
   } finally {
     try { await Promise.all([firstAgent?.close(), secondAgent?.close(), reader?.close()]); }

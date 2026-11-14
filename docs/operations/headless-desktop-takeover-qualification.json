@@ -71,11 +71,25 @@
       "preview_dialog_revoke_ms": {"samples": 20, "p50": 6, "p95": 6.4, "max": 6.5},
       "loading_revoke_ms": {"samples": 5, "p50": 0.9, "p95": 1, "max": 1},
       "environment": {"os": "Windows 10.0.26200", "electron": "42.11.18", "chromium": "148.0.7778.280", "ram_gib": 16, "logical_cpus": 20, "visible_document": true}
+    },
+    {
+      "run_id": "2026-11-14t15-06-45-762z-b5eb7e7e",
+      "source_revision": "source.7362b773737846decad634e34c986dc03aa3cc3c9c79c014c4a35af8b190b5d6",
+      "evidence_file_sha256": "577eeb4c8cdebd56d890ee37f0081ccccaae58b964dc883510937c607e910049",
+      "status": "passed",
+      "scope": ["All four packaged cases were recorded as passed", "Native minimize retired an active first window and refused its former target after restore", "A held context publication exceeded its challenge deadline and could not renew the grant", "Real host deadline ended the unresponsive lease", "Removing individual presentation clients retained a separate editor registration"]
+    },
+    {
+      "run_id": "2026-11-14t15-18-44-983z-b6efef9b",
+      "source_revision": "source.4b86e140855df3f7c3c02bbbfaf068ba93e6d0abe5a89688e54588b5b9640cd2",
+      "evidence_file_sha256": "4ae1b5e4ea91c7403ab47f5e75bce5b1a007f972847fdac7c7b182de9c897c74",
+      "status": "passed",
+      "scope": ["The packaged native menu disables session-wide takeover", "Manual controls return and old window context and fresh requests are denied", "A separate paired editor creates a system that appears in the app", "Settings offers editing access and removes the control pairing option"]
     }
   ],
   "pending": [
     "Measure expiry and liveness while the renderer is genuinely throttled. A minimized test window did not produce the expected renderer visibility transition. The separately attempted page lifecycle fixture still allowed renewal, so this requirement remains open.",
-    "Verify packaged rollback and a held context producer with the current native lifecycle behavior.",
+    "Bind the combined expiry and rollback scenarios to one candidate and independently review the results.",
     "Bind the complete increment requirements to the final candidate."
   ]
 }

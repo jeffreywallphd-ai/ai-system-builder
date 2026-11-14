@@ -2701,8 +2701,8 @@
   {
    "path": "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
    "facts": {
-    "sha256": "56407da8dcc0bf336e33fe19069a50e0fb933aa6f5a58002cb0f929f767fa642",
-    "bytes": 24646,
+    "sha256": "3430093b56e7419b9f7108c462daead18068bb83f4287adc19d2a810cea37165",
+    "bytes": 25047,
     "cases": [
      {
       "name": "desktop packaging includes the complete managed Python worker resource",
@@ -2745,20 +2745,24 @@
       "line": 353
      },
      {
-      "name": "visible documents receive only the fixed presentation cue, including a minimized menu reload",
+      "name": "native hide and minimize retire the same owned window without affecting startup",
       "line": 361
      },
      {
+      "name": "visible documents receive only the fixed presentation cue, including a minimized menu reload",
+      "line": 371
+     },
+     {
       "name": "a live document's failed presentation cue shows fixed recovery and retires its unusable window",
-      "line": 375
+      "line": 385
      },
      {
       "name": "a superseded loading document can reject its cue and replay it after the new load",
-      "line": 383
+      "line": 393
      },
      {
       "name": "production Vite rewrites the real startup document, styles and controller to local packaged assets",
-      "line": 393
+      "line": 403
      }
     ],
     "dynamicCases": 2,
@@ -2772,8 +2776,8 @@
       "line": 245
      }
     ],
-    "assertionCount": 111,
-    "assertionDigest": "21fa85751fa726c9830eadc19427834eb51812f32a8fa9a0f825986065d463f5",
+    "assertionCount": 114,
+    "assertionDigest": "47ae8d6c3eeb59d1f373b3dfcba37396df90b37ae6ba6ef7f3e866fee4fcebc1",
     "assertionExamples": [
      {
       "line": 14,
@@ -15253,73 +15257,73 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
    "facts": {
-    "sha256": "2c5759d24f918a9cd53cec1792aef58de1a699fc67aef3a8793674f41e7f4bf5",
-    "bytes": 42785,
+    "sha256": "b3e4b436caf4189fbbfe29d5a5c4d4ce81de0f91e599d8fafbf41581aff2c07e",
+    "bytes": 50763,
     "cases": [
      {
       "name": "a real paired client presents a saved Windows resource and the user revokes before continuing saved work",
-      "line": 211
+      "line": 212
      },
      {
       "name": "the native File menu opens a separately controlled window",
-      "line": 470
+      "line": 471
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "call",
-      "line": 19
+      "line": 20
      },
      {
       "name": "distribution",
-      "line": 28
+      "line": 29
      },
      {
       "name": "saveTimingObservation",
-      "line": 34
+      "line": 35
      },
      {
       "name": "checkStoredAudit",
-      "line": 51
+      "line": 52
      },
      {
       "name": "measureRevocation",
-      "line": 119
+      "line": 120
      },
      {
       "name": "withModelsPageLoading",
-      "line": 143
+      "line": 144
      },
      {
       "name": "suppressFixtureRevoke",
-      "line": 188
+      "line": 189
      },
      {
       "name": "sample",
-      "line": 324
+      "line": 325
      }
     ],
-    "assertionCount": 72,
-    "assertionDigest": "e5bb8a048863d864ca6e434cf890fa0824249c9e8cc916e3ff535d05cb9c8868",
+    "assertionCount": 89,
+    "assertionDigest": "059e0ca019d8257509868624e560c02e6889a424e826c544d678de5215a5fbb3",
     "assertionExamples": [
      {
-      "line": 114,
+      "line": 115,
       "kind": "expect",
       "sha256": "e94ce9a28f3faddb50b82270466ab17a2a137708ab612459b2a6a41d4a365050"
      },
      {
-      "line": 177,
+      "line": 178,
       "kind": "expect",
       "sha256": "a7c6f9ef99e25321ee116a37f5bcf865575c60b022698354bc872321473f358a"
      },
      {
-      "line": 179,
+      "line": 180,
       "kind": "expect",
       "sha256": "ff8fe2eb9d95c34b3e7c8b9e914954a919f82726ffc567e610c70ba03e1b5f63"
      },
      {
-      "line": 184,
+      "line": 185,
       "kind": "expect",
       "sha256": "3db707efad1a3e7227bf110a065bab1abd2b294af40b4edefd43a505316e5acc"
      }
