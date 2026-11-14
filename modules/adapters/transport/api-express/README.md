@@ -7,6 +7,12 @@ explicit organization, compact JSON and a current request are required.
 The adapter bounds input, response size, active requests and time. The
 shared application service owns write scopes and the saved-result receipt.
 
+Managed browser consent uses a separate exact POST route. It requires the
+configured HTTPS browser origin, same-origin fetch metadata, the verified
+browser registration and current workspace access. After registration, a
+private tab proof in a header identifies the exact document. Responses
+are uncached and the route cannot grant access to other application data.
+
 Dataset preparation exposes authenticated asynchronous lifecycle routes:
 
 - `POST /api/dataset-preparation/start`

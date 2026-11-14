@@ -1,4 +1,5 @@
 import type { OrganizationRole } from "../../../../contracts/organization";
+import { MANAGED_BROWSER_CONSENT_PATH } from "../../../../contracts/headless/managed-browser-consent";
 import type { SecurityScope } from "../../../../contracts/security";
 
 export interface ApiRoutePolicy {
@@ -26,6 +27,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   string,
   ApiRoutePolicy
 >([
+  [`POST ${MANAGED_BROWSER_CONSENT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_HEADLESS_AGENT_PATHS.read}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   // The authoring use case requires the write scope for mutations. Preview is a read.
   [`POST ${MANAGED_HEADLESS_AGENT_PATHS.author}`, { public: false, scopes: ["workspace:read", "asset:read"] }],

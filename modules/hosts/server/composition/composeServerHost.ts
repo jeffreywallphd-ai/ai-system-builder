@@ -250,6 +250,7 @@ import { composeAssetDerivedCustomization } from "../../shared/composition/compo
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
 import { composeManagedSavedState } from "./composeManagedSavedState";
 import { composeManagedAgentReads } from "./composeManagedAgentReads";
+import { composeManagedBrowserConsent } from "./composeManagedBrowserConsent";
 import { composeManagedHeadlessAuthoring } from "./composeManagedHeadlessAuthoring";
 import type { HeadlessHostIncarnationId } from "../../../contracts/headless";
 import type { TenantPlacementConfig } from "../../../contracts/config";
@@ -383,7 +384,7 @@ export interface ComposeServerHostOptions {
     readonly listActiveSystems: Parameters<typeof composeManagedSavedState>[0]["listActiveSystems"];
     readonly authorize: Pick<AuthorizeOperationService, "execute">;
   };
-  managedHeadlessAgent?: { readonly placement: TenantPlacementConfig };
+  managedHeadlessAgent?: { readonly placement: TenantPlacementConfig; readonly browserConsent?: boolean };
   env?: NodeJS.ProcessEnv;
   logging?: ComposeServerHostLoggingOptions;
   logSink?: StructuredLogSink;
@@ -646,6 +647,7 @@ export interface ServerHostComposition {
   registerApi: (options: RegisterServerApiOptions) => void;
   waitForAssetFoundation: () => Promise<void>;
   getManagedSavedState: () => ReturnType<typeof composeManagedSavedState> | undefined;
+  getManagedBrowserConsent: () => (ReturnType<typeof composeManagedBrowserConsent> & {readonly hostIncarnationId: HeadlessHostIncarnationId}) | undefined;
   getManagedHeadlessAgent: () => {
     readonly hostIncarnationId: HeadlessHostIncarnationId;
     readonly read: ReturnType<typeof composeManagedAgentReads>;
@@ -751,6 +753,7 @@ export function composeServerHost(
   let internalAssetRegistry: InternalAssetRegistryComposition | undefined;
   let assetFoundationReady: Promise<void> = Promise.resolve();
   let managedSavedState: ReturnType<typeof composeManagedSavedState> | undefined;
+  let managedBrowserConsent: ReturnType<ServerHostComposition["getManagedBrowserConsent"]>;
   let managedHeadlessAgent: ReturnType<ServerHostComposition["getManagedHeadlessAgent"]>;
   const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
   let systemRuntimeDatabases = options.runtimeDatabases;
@@ -776,12 +779,14 @@ export function composeServerHost(
       return assetFoundationReady;
     },
     getManagedSavedState: () => managedSavedState,
+    getManagedBrowserConsent: () => managedBrowserConsent,
     getManagedHeadlessAgent: () => managedHeadlessAgent,
     async closeRuntimeDatabases() {
+      managedBrowserConsent?.close();
       await shutdownBackgroundTasks?.();
       await systemRuntimeDatabases?.closeAll();
     },
-    async shutdownBackgroundTasks() { await shutdownBackgroundTasks?.(); },
+    async shutdownBackgroundTasks() { managedBrowserConsent?.close(); await shutdownBackgroundTasks?.(); },
     registerApi(registerOptions) {
       const env = options.env ?? process.env;
       const organizationDocuments =
@@ -1677,6 +1682,21 @@ export function composeServerHost(
           rootDirectory: registerOptions.storageRootDirectory, placement: options.managedHeadlessAgent.placement, systems: systemBuilder});
         managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases})};
+        if (options.managedHeadlessAgent.browserConsent) {
+          const browserConsent = composeManagedBrowserConsent({hostIncarnationId, async authorize(principal, workspaceId) {
+            const current = () => {
+              const active = contexts.getCurrentOrganizationContext();
+              return active?.organizationId === principal.organizationId && active.principalId === principal.principalId;
+            };
+            if (!current()) return false;
+            const workspace = await workspaces.readWorkspace(workspaceId);
+            if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== principal.organizationId || workspace.status !== "active") return false;
+            await workspaceAuthorization.authorizeWorkspaceOperation({workspace, operation: "headless.window.observe",
+              requiredScopes: ["workspace:read", "asset:read"]});
+            return current();
+          }});
+          managedBrowserConsent = { ...browserConsent, hostIncarnationId };
+        }
       }
       const systemBuildArtifacts = createSystemBuildArtifactAdapter(storage);
       const systemDeploymentProfile = resolveServerSystemDeploymentProfile(env);

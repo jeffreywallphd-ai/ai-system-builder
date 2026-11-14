@@ -24,6 +24,7 @@ import { composeServerSecurity } from "../../../modules/hosts/server/security/co
 import { createManagedSavedStateAuthorizationAudit } from "../../../modules/hosts/server/security/createManagedSavedStateAuthorizationAudit";
 import { registerManagedSavedStateRoutes } from "../../../modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes";
 import { registerManagedHeadlessAgentRoutes } from "../../../modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes";
+import { registerManagedBrowserConsentRoute } from "../../../modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute";
 import { resolveManagedHeadlessClientPolicy } from "../../../modules/hosts/server/security/resolveManagedHeadlessClientPolicy";
 import { resolveServerOidcBearerConfig } from "../../../modules/hosts/server/security/resolveServerOidcBearerConfig";
 import type { LoggingPort } from "../../../modules/application/ports/logging";
@@ -330,6 +331,9 @@ export async function createServer(
     ? resolveServerOidcBearerConfig(env).issuer : undefined});
   if (clientPolicy && (!deploymentShape || env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE !== "1"))
     throw new Error("Managed headless agents require a managed PostgreSQL deployment with saved-state enabled.");
+  const browserOrigin = env.AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN;
+  if (browserOrigin !== undefined && (!clientPolicy || !security.config.httpsRequired || !isExactHttpsOrigin(browserOrigin)))
+    throw new Error("Managed browser consent requires verified client registrations and an exact HTTPS browser origin.");
   const postgresDatabase = deploymentShape
     ? (options.postgresDatabase ??
       (await openPostgresDatabase({
@@ -397,7 +401,7 @@ export async function createServer(
       organizationAuthorizer,
       managedSavedState: env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE === "1" && passiveSavedStateAuthorizer && listActiveSystems
         ? { listActiveSystems, authorize: passiveSavedStateAuthorizer } : undefined,
-      managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement} : undefined,
+      managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement, browserConsent: !!browserOrigin} : undefined,
       runtimeDatabases: options.runtimeDatabases,
       pythonRuntimeEnvironmentPreparer,
       ...(persistenceDocuments
@@ -464,6 +468,17 @@ export async function createServer(
         isCurrent: (admitted) => admitted.isCurrent(),
       } : undefined;
     });
+    const retireManagedBrowserConsent = registerManagedBrowserConsentRoute(app, browserOrigin, () => {
+      const consent = serverHost.getManagedBrowserConsent();
+      return clientPolicy && consent ? {
+        ...consent,
+        identify(input) {
+          const admitted = clientPolicy.identify({...input, purpose: "browser"});
+          return admitted?.purpose === "browser" ? admitted : undefined;
+        },
+        isCurrent: admitted => admitted.isCurrent(),
+      } : undefined;
+    });
     app.use(express.json({ limit: "5mb" }));
     app.use(createExpressJsonBodyErrorMiddleware());
     registerSecurityRoutes(app, {
@@ -524,12 +539,14 @@ export async function createServer(
       shutdownBackgroundTasks: () => {
         retireManagedSavedState();
         retireManagedHeadlessAgent();
+        retireManagedBrowserConsent();
         return serverHost.shutdownBackgroundTasks();
       },
       async closePersistence() {
         if (persistenceClosed) return;
         retireManagedSavedState();
         retireManagedHeadlessAgent();
+        retireManagedBrowserConsent();
         await serverHost.closeRuntimeDatabases();
         await postgresDatabase?.close();
         persistenceClosed = true;
@@ -541,6 +558,14 @@ export async function createServer(
       await postgresDatabase?.close();
     }
   }
+}
+
+function isExactHttpsOrigin(value: string) {
+  if (value.length > 256) return false;
+  try {
+    const origin = new URL(value);
+    return origin.protocol === "https:" && origin.origin === value;
+  } catch { return false; }
 }
 
 function registerOperationalHealthRoutes(

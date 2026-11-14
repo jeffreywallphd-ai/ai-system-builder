@@ -213,6 +213,28 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
         ),
     },
+    "managed-headless-browser-consent-http": {
+        "automatic_sources": (
+            "modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/managed-browser-consent.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+            "modules/adapters/transport/api-express/README.md",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "apps/server/src/createServer.ts",
+            "apps/server/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
+            "modules/adapters/transport/api-express/security/security-enforcement.unit.test.ts",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+        ),
+    },
     "managed-headless-agent-server": {
         "automatic_sources": (
             "modules/hosts/server/composition/composeManagedAgentReads.ts",

@@ -47,3 +47,4 @@ export * from "./headless-approved-turn";
 export * from "./ui-control-authority";
 export * from "./ui-control-delivery";
 export * from "./ui-control-connector";
+export * from "./managed-browser-consent";

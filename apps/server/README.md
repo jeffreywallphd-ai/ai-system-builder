@@ -33,6 +33,13 @@ configuration and schema, imports only allowlisted legacy JSON before API
 registration, and never falls back to JSON after a managed shape is selected.
 Production also requires `AI_SYSTEM_BUILDER_SECURITY_MODE=oidc-bearer`.
 
+Set `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN` to the exact HTTPS
+origin that serves the thin client and its same-origin API paths to enable
+browser consent. Enable the managed agent registrations and saved-state feed
+first. Leave the setting unset where browser consent is unavailable. A path,
+trailing slash, plain HTTP origin or unverified client configuration prevents
+startup with this setting. Use browsers that send `Sec-Fetch-Site`.
+
 Use `GET /health/live` for process liveness and `GET /health/ready` for sanitized
 PostgreSQL plus artifact-storage readiness. SIGINT/SIGTERM stop the listener and
 drain the database pool idempotently. Deployment templates live under

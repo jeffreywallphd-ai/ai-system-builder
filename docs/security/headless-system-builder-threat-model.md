@@ -211,6 +211,17 @@ request retires. The admitted attempt uses the registration lifetime across
 individual calls. This composition does not consume or send presentation
 content.
 
+The browser consent route is disabled until a managed operator supplies an
+exact HTTPS frontend origin. Browser same-origin fetch metadata and exact
+origin are additional transport checks. OIDC, organization membership,
+workspace permissions and document proof establish caller authority.
+Document proof travels by header after registration, and the route applies
+strict JSON, request size, deadline and concurrency limits. An expired
+request cannot return a consent response. Results must match the exact host,
+requested workspace or browser document, and requested attempt or lease.
+Desktop context challenges are excluded from this consent-only path. The server retires the route and
+its document authority before draining its persistence.
+
 The controlled delivery test uses two independent loopback HTTPS servers
 with the same disposable PostgreSQL database and a nonowner role without
 `BYPASSRLS`. It sends synthetic changes through the ordinary authenticated
