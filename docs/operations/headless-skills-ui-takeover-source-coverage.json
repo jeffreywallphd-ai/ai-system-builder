@@ -298,9 +298,10 @@
       "executableWitnesses": [
         "desktop-authoring",
         "browser-draft",
-        "browser-reverse"
+        "browser-reverse",
+        "managed-live-draft-conflict"
       ],
-      "knownRemainingEvidence": "Desktop has a real dirty revision conflict. The managed browser result is presently a shared editor test, pending a real Chrome conflict."
+      "knownRemainingEvidence": "Packaged Windows and managed Chrome preserved a dirty draft and rejected a stale save. Shared tests cover delayed reply order."
     },
     {
       "sourceId": "INV-14",
@@ -873,9 +874,10 @@
       "evidenceStatus": "mapped-source-not-finally-qualified",
       "executableWitnesses": [
         "desktop-authoring",
-        "browser-draft"
+        "browser-draft",
+        "managed-live-draft-conflict"
       ],
-      "knownRemainingEvidence": "A dirty Chrome editor has not yet been exercised with an actual saved update from another client."
+      "knownRemainingEvidence": "Managed Chrome retained the exact unsaved value and showed the newer revision. The browser run did not exercise the undo action."
     },
     {
       "sourceId": "AT-22",
@@ -895,9 +897,10 @@
       "evidenceStatus": "mapped-source-not-finally-qualified",
       "executableWitnesses": [
         "desktop-authoring",
-        "browser-draft"
+        "browser-draft",
+        "managed-live-draft-conflict"
       ],
-      "knownRemainingEvidence": "The tested packaged Desktop based its conflict on the original revision. The real Chrome conflict is pending."
+      "knownRemainingEvidence": "Managed Chrome showed the rejected save in Notifications. The draft value and winning saved revision both remained intact."
     },
     {
       "sourceId": "AT-23",
@@ -942,9 +945,10 @@
       "executableWitnesses": [
         "desktop-authoring",
         "replay",
-        "managed-stdio"
+        "managed-stdio",
+        "managed-live-lost-create"
       ],
-      "knownRemainingEvidence": "Desktop actually drops a response before retry. Managed stdio replays the committed operation, with intentional loss still pending."
+      "knownRemainingEvidence": "Windows covered host restart. The managed test dropped the committed reply and closed that client. A separate, already connected client with the same registered identity retried. The scoped journal contained one event. Managed host restart has separate evidence."
     },
     {
       "sourceId": "AT-25",
@@ -1759,6 +1763,16 @@
       "host": "desktop-pinned-connector-sqlite-integration",
       "path": "modules/hosts/desktop/composition/tests/desktop-headless-authoring.unit.test.ts",
       "testOrStage": "a paired writer saves through the real pinned connector and SQLite after the independent window revokes"
+    },
+    "managed-live-draft-conflict": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "dirty-canvas-remote-conflict"
+    },
+    "managed-live-lost-create": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "lost-committed-create-reply"
     }
   }
 }

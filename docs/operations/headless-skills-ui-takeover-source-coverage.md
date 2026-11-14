@@ -35,6 +35,19 @@ queue saturation. The earlier failed timing attempt remains in local history.
 This is scoped desktop authoring evidence. It does not qualify approved
 conversation execution, window takeover, or the managed server and browser.
 
+The managed Chrome and PostgreSQL run in commit `e1e8d8f60` showed a
+competing save in the Canvas, preserved an unsaved field, and reported
+the conflict in Notifications when the user tried to save. The newer
+saved revision stayed intact. This journey checked the dirty value.
+Undo and out-of-order refetch have their own focused tests.
+
+The run in commit `d1e928a22` dropped the reply to one committed create
+before the MCP client could receive it. Chrome showed the saved system.
+The test closed that client. An already connected client with the same
+registered identity repeated the same request key and received the original
+result. The scoped journal held one change for that request. The server
+restart and same-source host checks remain separate.
+
 ## Architectural invariants
 
 | Source | Owning increment | Criterion | Required assertion |
