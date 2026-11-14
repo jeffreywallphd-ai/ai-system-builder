@@ -10,7 +10,7 @@ import pg from "pg";
 import { createLocalCaTlsCertificateProvider } from "../../../../modules/adapters/security/tls/createLocalCaTlsCertificateProvider";
 import { createFilesystemTlsCertificateStore } from "../../../../modules/adapters/security/tls/createFilesystemTlsCertificateStore";
 import { openPostgresDatabase, resolvePostgresPoolConfig } from "../../../../modules/adapters/persistence/postgres";
-import { provisionOrganizationMembership } from "../../../../modules/adapters/persistence/organization";
+import { createStructuredOrganizationRepositories, provisionOrganizationMembership } from "../../../../modules/adapters/persistence/organization";
 import { createInternalPrincipalId } from "../../../../modules/adapters/security/oidc/createOidcBearerTokenVerifierAdapter";
 import { createOrganizationId } from "../../../../modules/contracts/organization";
 import { readAssetSystemSourceIdentity, assertAssetSystemSourceIdentity } from "../asset-system-source-identity.mjs";
@@ -71,9 +71,10 @@ async function interruptOwnedDeliveryProcess(child: ChildProcess, allowExited = 
 
 export async function startManagedReferenceHost(databaseReference: string,
   options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean; readonly headlessBrowser?: boolean;
-    readonly headlessBrowserPresentation?: boolean } = {}) {
+    readonly headlessBrowserPresentation?: boolean; readonly headlessMembershipLoss?: boolean } = {}) {
   assert.ok(!options.headlessBrowser || options.headlessAgent && !options.headlessDelivery);
   assert.ok(!options.headlessBrowserPresentation || options.headlessBrowser);
+  assert.ok(!options.headlessMembershipLoss || options.headlessBrowserPresentation);
   const root = path.resolve(process.cwd());
   const id = randomUUID().replaceAll("-", "");
   const runRoot = path.join(root, "artifacts/qualification/visual-composer/d", `managed-${id}`);
@@ -370,8 +371,27 @@ export async function startManagedReferenceHost(databaseReference: string,
     const common = {runRoot, sourceRevision, token, serverOrigin, request, organizationId, fixtureWorkspaceId, workerCacheRoot: environment.HF_HUB_CACHE!,
       ownedHostPid: children[0]!.pid!, restartAssetsServer, stop, report};
     const delivery = {startDeliveryWorker, caPem, workspaceId: String(positive.body.value.workspace.workspaceId)};
+    const setSyntheticMembershipSuspended = options.headlessMembershipLoss ? async (suspend: boolean) => {
+      assert.ok(admitted && !stopped, "The isolated managed fixture must still be active.");
+      const access = {organizationId, principalId:createInternalPrincipalId({issuer:issuerOrigin, subject})};
+      const store = await openPostgresDatabase({config:resolvePostgresPoolConfig({
+        DATABASE_URL:adminDatabaseUrl, POSTGRES_SSL_MODE:"disable",
+      }), migrate:false});
+      try {
+        const {memberships} = createStructuredOrganizationRepositories(store.documents);
+        const current = await memberships.readMembership(access);
+        assert.ok(current?.role === "operator" && current.status === (suspend ? "active" : "suspended"));
+        const status = suspend ? "suspended" : "active";
+        await memberships.saveMembership({...current, status, updatedAt:new Date().toISOString()});
+        assert.equal((await memberships.readMembership(access))?.status, status);
+        checks[suspend ? "synthetic_membership_suspended" : "synthetic_membership_restored"] = true;
+      } finally {
+        await store.close();
+      }
+    } : undefined;
     const agent = options.headlessAgent ? {
       workspaceId: delivery.workspaceId, caFile: ca, access: await accessToken(agentClient), browser: await accessToken(browserClient),
+      setSyntheticMembershipSuspended,
     } : undefined;
     if (options.headlessBrowser) {
       const spki = new X509Certificate(material.certPem).publicKey.export({type: "spki", format: "der"});

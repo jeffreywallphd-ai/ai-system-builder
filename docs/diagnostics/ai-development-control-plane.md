@@ -209,6 +209,13 @@ second edit reaches PostgreSQL and appears in the Manage table. The test
 then releases and reads the older response. The table must keep the newer
 value, and the takeover panel must stay closed.
 
+Set `MANAGED_HEADLESS_BROWSER_MEMBERSHIP_LOSS=1` with the extended journey to
+test membership changes. The disposable PostgreSQL fixture suspends only its
+synthetic account after Chrome accepts takeover and displays a saved system.
+The browser must release takeover. The saved-state feed, the old request
+result, and a new write must become unavailable. After the fixture restores
+the account, the original save must remain and the old lease must stay ended.
+
 The packaged Desktop test measures warm presentation and revoke, including
 when an ordinary dialog is open or a page is loading. The native hide test
 restores the browser's timer policy in the owned test window, measures the

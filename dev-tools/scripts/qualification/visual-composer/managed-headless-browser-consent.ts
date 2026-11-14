@@ -66,9 +66,10 @@ async function main() {
   const loseReply = process.env.MANAGED_HEADLESS_BROWSER_LOST_REPLY === "1";
   const inFlightEdit = process.env.MANAGED_HEADLESS_BROWSER_IN_FLIGHT_EDIT === "1";
   const reverseRefetch = process.env.MANAGED_HEADLESS_BROWSER_REVERSE_REFETCH === "1";
-  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch) || presentation);
+  const membershipLoss = process.env.MANAGED_HEADLESS_BROWSER_MEMBERSHIP_LOSS === "1";
+  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss) || presentation);
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
-    {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation});
+    {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation, headlessMembershipLoss:membershipLoss});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
   const evidence: Record<string, boolean | number | string | ReturnType<typeof measurements>> = {
     os: platform(), architecture: arch(), os_release: release(), ram_gib: Math.round(totalmem() / 2**30),
@@ -828,6 +829,89 @@ async function main() {
     assert.notEqual(next.uiIncarnationId, tab.uiIncarnationId);
     assert.equal(await modal.count(), 0);
     evidence.reload_requires_fresh_document = true;
+
+    if (membershipLoss) {
+      stage = "membership-loss-positive-control";
+      assert.ok(agent.setSyntheticMembershipSuspended);
+      const browserPost = (route:string, body:Record<string, unknown>) => fixture.request(route, {
+        method:"POST", token:browserBearer, organizationId, body});
+      const snapshot = () => browserPost("/api/headless/system-builder/snapshot", {workspaceId:activeWorkspaceId});
+      const before = await snapshot();
+      assert.equal(before.status, 200);
+      stage = "membership-loss-commit-authorized-save";
+      const input = {...scope, templateId, name:"Synthetic save before membership loss", idempotencyKey:randomUUID()};
+      const committed = readHeadlessAuthoringWireResult(await call("aisb_create_system", input));
+      assert.ok(committed.ok && committed.value.kind === "committed");
+      const reference = committed.value.reference;
+      const changes = () => browserPost("/api/headless/system-builder/changes",
+        {workspaceId:activeWorkspaceId,cursor:before.body.value.cursor});
+      stage = "membership-loss-verify-authorized-feed";
+      const allowed = await changes();
+      assert.equal(allowed.status, 200);
+      assert.deepEqual(allowed.body.value.events, [{...reference, sequence:before.body.value.cursor.sequence + 1}]);
+      stage = "membership-loss-request-own-tab";
+      const requested = readHeadlessWindowResult(await call("aisb_request_window", {target:await getTab(),
+        taskId:randomUUID(), requestKey:randomUUID()}));
+      assert.ok(requested.ok && requested.value.kind === "request");
+      const attempt = requested.value.request.target;
+      stage = "membership-loss-accept-and-activate";
+      await modal.getByRole("button", {name:"Accept automation takeover", exact:true}).click();
+      await revoke.waitFor({timeout:10_000});
+      const lease = await until<UiControlLeaseTarget>(async () => {
+        const result = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+        return result.ok && result.value.kind === "request" && result.value.request.status === "active" ? result.value.lease : undefined;
+      });
+      const show = {target:lease, commandId:randomUUID(), intent:{action:"open-system",
+        systemId:reference.systemId, revisionId:reference.revisionId}};
+      stage = "membership-loss-present-before-change";
+      const accepted = readHeadlessWindowResult(await call("aisb_present_in_window", show));
+      if (!accepted.ok) evidence.membership_presentation_safe_code = accepted.code;
+      assert.ok(accepted.ok && accepted.value.kind === "command" && accepted.value.receipt.status === "accepted");
+      await panel.waitFor({timeout:3_000});
+      stage = "membership-loss-confirm-manual-gate";
+      const settings = page.locator("button.ui-shell__settings-button");
+      assert.equal(await settings.isEnabled(), false);
+      stage = "membership-loss-detaches-presenting-browser";
+      await agent.setSyntheticMembershipSuspended(true);
+      try {
+        await revoke.waitFor({state:"detached", timeout:10_000});
+        await panel.waitFor({state:"hidden", timeout:5_000});
+        await until(async () => await settings.isEnabled() ? true : undefined, 20);
+        evidence.membership_loss_automatically_restored_manual_control = true;
+        stage = "membership-loss-denies-existing-credentials";
+        const [snapshotDenied, changesDenied] = await Promise.all([snapshot(), changes()]);
+        assert.equal(snapshotDenied.status, 403);
+        assert.equal(changesDenied.status, 403);
+        assert.equal(snapshotDenied.body.value, undefined);
+        assert.equal(changesDenied.body.value, undefined);
+        const record = await call("aisb_read_system", {...scope, systemId:reference.systemId});
+        assert.equal(record.ok, false);
+        assert.equal(record.value, undefined);
+        assert.ok(!readHeadlessWindowResult(await call("aisb_window_context", {target:lease})).ok);
+        assert.ok(!readHeadlessWindowResult(await call("aisb_renew_window", {target:lease})).ok);
+        assert.ok(!readHeadlessWindowResult(await call("aisb_present_in_window", {...show,commandId:randomUUID()})).ok);
+        const rejectedWrites = [
+          await call("aisb_create_system", input),
+          await call("aisb_create_system", {...input, name:"Synthetic forbidden save", idempotencyKey:randomUUID()}),
+        ];
+        for (const write of rejectedWrites.map(readHeadlessAuthoringWireResult)) {
+          assert.ok(!write.ok && (write.code === "headless.operation-unconfirmed" || write.code === "headless.forbidden"));
+        }
+        evidence.suspended_member_cannot_read_write_replay_or_present = true;
+      } finally {
+        await agent.setSyntheticMembershipSuspended(false);
+      }
+      stage = "membership-loss-restore-and-confirm-saved-state";
+      const currentChanges = await changes();
+      assert.equal(currentChanges.status, 200);
+      assert.deepEqual(currentChanges.body.value.events, allowed.body.value.events);
+      assert.deepEqual(await call("aisb_create_system", input), {ok:true, value:{kind:"replayed", reference}});
+      assert.ok(!readHeadlessWindowResult(await call("aisb_window_context", {target:lease})).ok);
+      assert.equal(await panel.count(), 0);
+      assert.equal(await revoke.count(), 0);
+      evidence.restored_member_sees_one_prior_save_and_no_old_lease = true;
+    }
+
     passed = true;
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
