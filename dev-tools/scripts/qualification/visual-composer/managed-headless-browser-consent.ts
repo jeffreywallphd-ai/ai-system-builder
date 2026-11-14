@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { arch, availableParallelism, platform, release, totalmem } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -14,6 +14,7 @@ import { HEADLESS_CONTRACT_VERSION } from "../../../../modules/contracts/headles
 import { MANAGED_HEADLESS_AGENT_PATHS } from "../../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
 import { readHeadlessAuthoringWireResult, readHeadlessWindowResult, type UiControlLeaseTarget } from "../../../../modules/contracts/headless";
 import { startManagedReferenceHost } from "./managed-reference-host";
+import { switchFunctionalWorkspace } from "./e2e/functional-host-common";
 
 async function until<T>(observe: () => Promise<T | undefined>, attempts = 30) {
   for (let count = 0; count < attempts; count++) {
@@ -63,7 +64,8 @@ async function main() {
   const isolation = process.env.MANAGED_HEADLESS_BROWSER_ISOLATION === "1";
   const draft = process.env.MANAGED_HEADLESS_BROWSER_DRAFT === "1";
   const loseReply = process.env.MANAGED_HEADLESS_BROWSER_LOST_REPLY === "1";
-  assert.ok(!(measure || isolation || draft || loseReply) || presentation);
+  const inFlightEdit = process.env.MANAGED_HEADLESS_BROWSER_IN_FLIGHT_EDIT === "1";
+  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit) || presentation);
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
     {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
@@ -132,6 +134,22 @@ async function main() {
     const manage = page.getByRole("tab", {name:"Manage", exact:true});
     const management = page.getByRole("region", {name:"Manage systems", exact:true});
     const panel = page.getByRole("region", {name:"Resource shown by automation", exact:true});
+    async function openCanvasTitle(systemName: string, instanceId: string) {
+      await page.getByRole("tab", {name:"Compose", exact:true}).click();
+      await page.getByRole("combobox", {name:"System", exact:true}).selectOption({label:systemName});
+      await page.getByRole("button", {name:"Edit system", exact:true}).click();
+      const editor = page.getByRole("group", {name:"System draft editor", exact:true});
+      await until(async () => await editor.getAttribute("aria-busy") === "false" ? true : undefined, 50);
+      await page.locator(`.system-composer__canvas-node[data-instance-id="${instanceId}"] > .system-composer__canvas-node-heading > button`).first().click();
+      const inspector = page.getByRole("complementary", {name:"Composer details", exact:true});
+      await inspector.getByRole("tab", {name:"Properties", exact:true}).click();
+      const title = inspector.locator('[id="title"]');
+      for (const tabLabel of ["Design", "Data", "Events"]) {
+        await inspector.getByRole("tab", {name:tabLabel, exact:true}).click();
+        if (await title.isVisible()) return title;
+      }
+      throw new Error("The asset's title field was unavailable.");
+    }
     stage = "identify-tab";
     const getTab = () => until(async () => {
       const result = await call("aisb_list_windows", scope);
@@ -246,20 +264,98 @@ async function main() {
       assert.deepEqual(renewed.value.lease, lease);
       evidence.command_confirmed_and_fresh_context_renewed = true;
     }
+    const editedTitle = "Synthetic edit already running";
+    const startEdit = async () => {
+      assert.ok(saved);
+      const original = saved;
+      const input = {...scope, systemId:original.systemId, baseRevisionId:original.revisionId,
+        baseRecordRevision:original.recordRevision, edits:[{kind:"configure",
+          instanceId:`${original.systemId}.table`, values:{title:editedTitle}}]};
+      stage = "in-flight-edit-preview";
+      const preview = await call("aisb_preview_edits", input);
+      assert.ok(preview.ok && typeof preview.value?.previewDigest === "string");
+      const snapshot = await fixture.request("/api/headless/system-builder/snapshot", {method:"POST",
+        token:browserBearer, organizationId, body:{workspaceId:activeWorkspaceId}});
+      assert.equal(snapshot.status, 200);
+      const exact = {...input, previewDigest:preview.value.previewDigest, idempotencyKey:randomUUID()};
+      const audit = path.join(fixture.runRoot, "runtime", "security", "authorization-audit.jsonl");
+      const after = (await stat(audit)).size;
+      const beganAt = performance.now();
+      let settled = false;
+      const pending = call("aisb_apply_edits", exact).then(value => ({value}), () => ({})).finally(() => {settled = true;});
+      stage = "in-flight-edit-authorized";
+      await until(async () => {
+        assert.equal(settled, false);
+        const length = (await stat(audit)).size;
+        assert.ok(length >= after && length <= 2 * 1024 * 1024);
+        const rows = (await readFile(audit)).subarray(after).toString("utf8").split("\n").slice(0, -1);
+        return rows.some(line => {
+          const row = JSON.parse(line);
+          return row.operation === "headless.systems.apply-edits" && row.kind === "authz.allowed" &&
+            row.organizationId === organizationId && row.resource?.workspaceId === activeWorkspaceId;
+        }) ? true : undefined;
+      }, 20);
+      evidence.in_flight_edit_authorized_before_revoke = true;
+      return {original, snapshot, exact, pending, beganAt, isSettled:() => settled};
+    };
+    const editing = inFlightEdit ? await startEdit() : undefined;
+
     stage = "revoke";
     await revoke.click();
     await revoke.waitFor({state:"detached", timeout:5_000});
+    stage = "revoke-old-request-retry";
     await until(async () => {
       const status = await call("aisb_window_status", {target:attempt});
       return status.ok && status.value.kind === "ended" ? true : undefined;
     });
     assert.deepEqual(await call("aisb_request_window", ask), {ok:true, value:{kind:"ended"}});
     evidence.revoke_disables_retry = true;
+    if (editing) {
+      assert.equal(editing.isSettled(), false);
+      stage = "in-flight-edit-switch-workspace";
+      await switchFunctionalWorkspace(page, workspaceId);
+      assert.equal(editing.isSettled(), false);
+      evidence.in_flight_edit_workspace_switch_ms = performance.now() - editing.beganAt;
+      const readOriginalChanges = () => fixture.request("/api/headless/system-builder/changes", {method:"POST",
+        token:browserBearer, organizationId, body:{workspaceId:activeWorkspaceId, cursor:editing.snapshot.body.value.cursor}});
+      const beforeCommit = await readOriginalChanges();
+      assert.equal(beforeCommit.status, 200);
+      assert.deepEqual(beforeCommit.body.value.events, []);
+      evidence.in_flight_edit_switch_precedes_journal_commit = true;
+      stage = "in-flight-edit-original-workspace-save";
+      const outcome = await editing.pending;
+      assert.ok("value" in outcome);
+      const result = readHeadlessAuthoringWireResult(outcome.value);
+      assert.ok(result.ok && result.value.kind === "committed");
+      const expected = result.value.reference;
+      assert.equal(expected.systemId, editing.original.systemId);
+      assert.equal(expected.recordRevision, editing.original.recordRevision + 1);
+      assert.notEqual(expected.revisionId, editing.original.revisionId);
+      assert.equal(await panel.count(), 0);
+      const events = await readOriginalChanges();
+      assert.equal(events.status, 200);
+      assert.deepEqual(events.body.value.events, [{...expected, sequence:editing.snapshot.body.value.cursor.sequence + 1}]);
+      const other = await fixture.request("/api/headless/system-builder/snapshot", {method:"POST",
+        token:browserBearer, organizationId, body:{workspaceId}});
+      assert.equal(other.status, 200);
+      assert.ok(!other.body.value.systems.some((system: {systemId:string}) => system.systemId === expected.systemId));
+      stage = "in-flight-edit-restore-original-workspace";
+      await switchFunctionalWorkspace(page, activeWorkspaceId);
+      const title = await openCanvasTitle("Synthetic saved presentation", `${expected.systemId}.table`);
+      assert.equal(await title.inputValue(), editedTitle);
+      await manage.click();
+      assert.equal(await panel.count(), 0);
+      assert.deepEqual(await call("aisb_apply_edits", editing.exact), {ok:true, value:{kind:"replayed", reference:expected}});
+      saved = expected;
+      evidence.in_flight_edit_one_durable_save_without_presentation = true;
+    }
     if (presentationRequest) {
+      stage = "revoke-old-presentation-and-context";
       await panel.waitFor({state:"hidden", timeout:3_000});
       const late = readHeadlessWindowResult(await call("aisb_window_context", {target:lease}));
       assert.ok(!late.ok);
       assert.ok(!readHeadlessWindowResult(await call("aisb_present_in_window", presentationRequest)).ok);
+      stage = "post-revoke-separate-save";
       const name = "Synthetic saved after revoke";
       const committed = await call("aisb_create_system", {...scope, templateId, name, idempotencyKey:randomUUID()});
       assert.ok(committed.ok && committed.value.kind === "committed");
@@ -524,21 +620,9 @@ async function main() {
       };
       const readName = await call("aisb_read_system", target);
       assert.ok(readName.ok && typeof readName.value?.name === "string");
-      await page.getByRole("tab", {name:"Compose", exact:true}).click();
-      await page.getByRole("combobox", {name:"System", exact:true}).selectOption({label:readName.value.name});
-      await page.getByRole("button", {name:"Edit system", exact:true}).click();
-      const editor = page.getByRole("group", {name:"System draft editor", exact:true});
-      await until(async () => await editor.getAttribute("aria-busy") === "false" ? true : undefined, 50);
       const tableId = `${saved.systemId}.table`;
-      await page.locator(`.system-composer__canvas-node[data-instance-id="${tableId}"] > .system-composer__canvas-node-heading > button`).first().click();
-      const inspector = page.getByRole("complementary", {name:"Composer details", exact:true});
-      await inspector.getByRole("tab", {name:"Properties", exact:true}).click();
-      const title = inspector.locator('[id="title"]');
-      for (const tabLabel of ["Design", "Data", "Events"]) {
-        await inspector.getByRole("tab", {name:tabLabel, exact:true}).click();
-        if (await title.isVisible()) break;
-      }
-      assert.equal(await title.inputValue(), "Authorized artifacts");
+      const title = await openCanvasTitle(readName.value.name, tableId);
+      assert.equal(await title.inputValue(), inFlightEdit ? editedTitle : "Authorized artifacts");
       const apply = async (text: string) => {
         const flow = stage;
         stage = `${flow}-read-base`;

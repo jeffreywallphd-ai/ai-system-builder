@@ -195,6 +195,14 @@ drop one committed tool reply before the test client receives it. Chrome
 must show the saved system. A retry with the original key must return that
 same system, and the authorized change feed must contain one new event.
 
+Set `MANAGED_HEADLESS_BROWSER_IN_FLIGHT_EDIT=1` with the extended journey to
+exercise a save already in progress. The fixture uses the test server's
+authorization audit to confirm admission. Chrome then revokes control and
+changes workspaces before the authorized change feed shows a new commit.
+The original workspace must receive one saved revision and the other
+workspace must stay separate. Returning to the original workspace must
+show the saved field without bringing back the takeover panel.
+
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
 The related managed saved-state browser check runs the exact observer and model
