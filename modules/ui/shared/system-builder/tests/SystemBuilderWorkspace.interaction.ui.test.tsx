@@ -2520,9 +2520,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
     // Reopen the base, then hold two different clean refreshes and return them
     // out of order. Neither refresh may change the selected asset or focus.
     listRecord = record;
-    const open = (activeSystemsRevision: number, key = "new-composer") => act(async () => {
-      root!.render(<SystemBuilderWorkspace key={key} workspaceId="workspace-a" client={client}
-        initialSystemId={String(record.systemId)} activeSystemsRevision={activeSystemsRevision} />);
+    const open = (activeSystemsRevision: number, managedSavedRefresh?: { isCurrent: () => boolean }) => act(async () => {
+      root!.render(<SystemBuilderWorkspace key="new-composer" workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} activeSystemsRevision={activeSystemsRevision}
+        managedSavedRefresh={managedSavedRefresh} />);
     });
     await open(3);
     await vi.waitFor(() => expect(container!.querySelector(".system-composer__workspace")).not.toBeNull());
@@ -2571,6 +2572,40 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await vi.waitFor(() => expect(outstandingReads.has(fifth.revisionId)).toBe(true));
     await act(async () => outstandingReads.get(fifth.revisionId)!({ ok: true, value: fifth }));
     expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("External title");
+
+    let connected = true;
+    const sixth = changed(6, "Retired connection title");
+    listRecord = { ...record, revision: 6, currentRevisionId: sixth.revisionId };
+    await open(6, { isCurrent: () => connected });
+    await vi.waitFor(() => expect(outstandingReads.has(sixth.revisionId)).toBe(true));
+    connected = false;
+    await act(async () => outstandingReads.get(sixth.revisionId)!({ ok: true, value: sixth }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("External title");
+
+    let finishList!: (value: Awaited<ReturnType<SystemBuilderClient["list"]>>) => void;
+    const heldList = new Promise<Awaited<ReturnType<SystemBuilderClient["list"]>>>((resolve) => { finishList = resolve; });
+    let started = false;
+    const originalList = client.list;
+    client.list = () => { started = true; return heldList; };
+    let visible = true;
+    try {
+      await open(6, { isCurrent: () => visible });
+      await vi.waitFor(() => expect(started).toBe(true));
+      visible = false;
+      await act(async () => finishList({ ok: true, value: [] }));
+      expect(container!.textContent).not.toContain("The open view is still here.");
+    } finally { client.list = originalList; }
+
+    const view = container.querySelector(".system-composer__workspace");
+    const focusedField = container.querySelector<HTMLInputElement>("#title")!;
+    focusedField.focus();
+    listRecord = undefined;
+    await open(6, { isCurrent: () => true });
+    await vi.waitFor(() => expect(container!.textContent).toContain("The open view is still here."));
+    expect(container.querySelector(".system-composer__workspace")).toBe(view);
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("External title");
+    expect(document.activeElement).toBe(focusedField);
+    expect(button(container, "Edit system").disabled).toBe(true);
   });
 });
 

@@ -94,6 +94,12 @@ grants no application permission. Existing ordinary OIDC calls keep their
 current behavior. Interactive document ownership needs its own proof.
 See [RFC 9068](https://www.rfc-editor.org/rfc/rfc9068.html).
 
+The thin client consumes authenticated saved-state checkpoints. It binds
+each passive list and downstream saved-revision read to the current tab
+and connection. Hide, disconnect, credential replacement and resync retire
+that ownership. Refresh leaves an open Composer visible if its saved
+system is archived elsewhere, and disables saving or building it.
+
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay
 state and a separate window-control lifecycle. Roll back by disabling the new

@@ -29,3 +29,13 @@ class ManagedSavedStateMigrationChecks(unittest.TestCase):
         self.assertNotIn("focused-tests", owned)
         mixed = catalog.plan(root, [path, "apps/server/src/unrelated.ts"], ["documentation"], "a" * 64)
         self.assertIn("focused-tests", {item["id"] for item in mixed["selected"]})
+
+    def test_saved_state_browser_profile_preserves_unrelated_thin_client_coverage(self):
+        root = HELPERS.parents[1]
+        observer = "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.ts"
+        plan = catalog.plan(root, [observer, "apps/thin-client/src/pages/SystemBuilderPage.tsx"], ["documentation"], "a" * 64)
+        selected = {check["id"] for check in plan["selected"]}
+        self.assertIn("managed-saved-state-browser", selected)
+        self.assertNotIn("focused-tests", selected)
+        other = catalog.plan(root, [observer, "apps/thin-client/src/pages/ModelsPage.tsx"], ["documentation"], "a" * 64)
+        self.assertIn("focused-tests", {check["id"] for check in other["selected"]})

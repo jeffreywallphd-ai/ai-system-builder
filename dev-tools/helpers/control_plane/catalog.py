@@ -162,6 +162,44 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "managed-saved-state-browser": {
+        "automatic_sources": (
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.ts",
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.unit.test.ts",
+        ),
+        "sources": (
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.ts",
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.unit.test.ts",
+            "apps/thin-client/src/pages/SystemBuilderPage.tsx",
+            "apps/thin-client/README.md",
+            "apps/thin-client/src/features/model-management/api/apiModelManagementClient.ts",
+            "dev-tools/helpers/tests/test_control_plane.py",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.unit.test.ts",
+            "apps/thin-client/tests/api-model-management-client-timeout.unit.test.ts",
+        ),
+    },
+    "managed-saved-state-browser-ui": {
+        "automatic_sources": (
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.ts",
+        ),
+        "sources": (
+            "apps/thin-client/src/security/pairedDeviceTokenStore.ts",
+            "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
+            "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
+            "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+            "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+            "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+        ),
+    },
     "managed-saved-state-replay": {
         "automatic_sources": (
             "modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes.ts",

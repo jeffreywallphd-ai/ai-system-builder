@@ -1096,6 +1096,37 @@ function navigationCensusLegacyView(map,result){
 let committedCensusWitness;
 const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
 function headlessPackagedCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) === "0e1e0993aded066e4061ffbdbf7f4ccfa490b12f68f7416a4505a9a8a0e7377b") {
+    // Preserve the previous definition witness and record newly changed test definitions as drift.
+    const commit = "d27ed7bacd55d3dd0578216de7f044899b906b00";
+    const saved = JSON.parse(historicalSource(commit, censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "ea3adbe2ef7dbcaff5dba0cf18952c0472c35047784ae6b5c7b70190c4501a68");
+    const expected = structuredClone(saved);
+    const source = "apps/thin-client/src/pages/SystemBuilderPage.tsx";
+    const previous = expected.inventories.find(row => row.source === source);
+    assert.equal(previous.sha256, sha(historicalSource(commit, source)));
+    const candidate = map.inventories.find(row => row.source === source);
+    assert.equal(candidate.sha256, "ab5aaf109db3c782222634f06645f92e0c5c2fcc2d3c01f8330e3866d0db162d");
+    previous.sha256 = candidate.sha256;
+    const browserReadTests = [
+      ["apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
+        "728ceb0147a088ec16119f4b27be3ea08fbddafe634f021a49ced7ed723c0d01"],
+      ["modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+        "1c9d25c6ce10fc1d3a8496823a2146550532a3250ba9b6587b64963fc9114f9b"],
+      ["modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+        "0b240cb61d4d61116243016ee2893bcd76f61ca2450ca4ff8220198d878ac18a"],
+    ];
+    for (const [path, factsDigest] of browserReadTests) {
+      const next = map.sources.find(row => row.path === path);
+      assert.equal(sha(JSON.stringify(next.facts)), factsDigest);
+      expected.sources.find(row => row.path === path).facts = next.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
   if (sha(JSON.stringify(map)) === "ea3adbe2ef7dbcaff5dba0cf18952c0472c35047784ae6b5c7b70190c4501a68") {
     const saved = JSON.parse(historicalSource("888a58bbcaf2062e8f73ce54abd7dd4f50d8ebce", censusDocument));
     assert.equal(sha(JSON.stringify(saved)), "28ab82bf208625907ad018011ef3e145bb6ca418d478d36f67773e1c46d67962");
@@ -2177,7 +2208,11 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,34);
+  assert.equal(result.gaps.length,35);
+  const isChangedTokenTest = row => row.kind === "unreviewed-source-drift" &&
+    row.source === "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts";
+  assert.equal(result.gaps.filter(isChangedTokenTest).length, 1);
+  assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps: result.gaps.filter(row => !isChangedTokenTest(row))}));
   const isNewTakeoverSpec = row => row.kind === "unreviewed-source-drift" &&
     row.source === "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
   assert.equal(result.gaps.filter(isNewTakeoverSpec).length, 1);

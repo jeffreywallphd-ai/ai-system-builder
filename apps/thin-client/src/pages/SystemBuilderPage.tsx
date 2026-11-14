@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import {
   SystemBuilderWorkspace,
   SystemManagementWorkspace,
+  type SavedSystemsRefresh,
   SystemBuildTestModal,
   SystemPublishWorkspace,
 } from "../../../../modules/ui/shared/system-builder";
@@ -16,6 +17,8 @@ import { createThinClientSystemBuildClient } from "../features/system-builder/ap
 import { createThinClientSystemPublishedLifecycleClient } from "../features/system-builder/api/thinClientSystemPublishedLifecycleClient";
 import { createThinClientSystemPublishedFormClient } from "../features/system-builder/api/thinClientSystemPublishedFormClient";
 import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
+import { observeManagedSavedSystems } from "../features/system-builder/api/observeManagedSavedSystems";
+import { pairedDeviceTokenStore } from "../security/pairedDeviceTokenStore";
 export interface SystemBuilderPageProps {
   readonly workspaceId: string;
   readonly workspaceName: string;
@@ -34,6 +37,15 @@ export function SystemBuilderPage({
   const [activeTabId, setActiveTabId] = useState("compose");
   const [composeSystemId, setComposeSystemId] = useState<string>();
   const [activeSystemsRevision, setActiveSystemsRevision] = useState(0);
+  const [managedSavedRefresh, setManagedSavedRefresh] = useState<SavedSystemsRefresh>();
+  const observeSavedState = activeTabId !== "publish";
+  useLayoutEffect(() => {
+    if (!observeSavedState) return;
+    return observeManagedSavedSystems({
+      workspaceId, visibility: document,
+      changed: (isCurrent) => setManagedSavedRefresh({ isCurrent }),
+    });
+  }, [workspaceId, observeSavedState]);
   const [buildTarget, setBuildTarget] = useState<{
     readonly system: SystemBuilderRecord;
     readonly revision: SystemBuilderRevision;
@@ -61,6 +73,9 @@ export function SystemBuilderPage({
               <SystemManagementWorkspace
                 workspaceId={workspaceId}
                 client={client}
+                activeSystemsRevision={activeSystemsRevision}
+                managedSavedRefresh={managedSavedRefresh}
+                captureSavedRead={pairedDeviceTokenStore.captureToken}
                 onOpenInCompose={(systemId) => {
                   setComposeSystemId(systemId);
                   setActiveTabId("compose");
@@ -81,6 +96,8 @@ export function SystemBuilderPage({
                 client={client}
                 initialSystemId={composeSystemId}
                 activeSystemsRevision={activeSystemsRevision}
+                managedSavedRefresh={managedSavedRefresh}
+                captureSavedRead={pairedDeviceTokenStore.captureToken}
                 onBuildAndTest={setBuildTarget}
               />
             ),

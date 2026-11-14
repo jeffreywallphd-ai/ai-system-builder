@@ -171,6 +171,13 @@ headers, payload and scope names cannot supply this identity. The identifier
 stays in server authorization context. It grants no feature permission by
 itself, and browser document ownership requires separate evidence.
 
+The thin client treats saved-state checkpoints as bounded passive data and
+keeps credentials and cursors out of URLs. The same tab and connection
+ownership guards both the notification and the data reads it starts.
+Late results after hide, detachment, resync or replacement do not update
+the view. An authoritative list that omits an open system preserves the
+existing on-screen copy and does not enable saves or builds against it.
+
 Headless workflow metadata rechecks the same exact workspace before and after
 the existing use cases run. A fixed profile and action allowlist omits
 deployment, mutation and execution. The projection does not relay private

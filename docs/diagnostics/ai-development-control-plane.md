@@ -139,6 +139,12 @@ The managed saved-state replay check runs the exact API, passive audit,
 repository, and PostgreSQL tests for the scoped snapshot and replay routes.
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
+The related managed saved-state browser check runs the exact observer and model
+client regression tests. The companion `managed-saved-state-browser-ui`
+check holds list and revision reads and tests open Composer retention when
+another client archives a system. The scope covers the Systems page refresh connection,
+duplicate events, disconnect recovery and retired views. Unrelated thin-client
+changes still need their own checks.
 Unknown impact needs a bounded catalog rule and regression test; do not replace
 it with arbitrary shell text or an early aggregate run.
 The `thin-image-form-ui` and `desktop-image-form-ui` checks each run the exact

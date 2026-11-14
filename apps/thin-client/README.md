@@ -4,6 +4,14 @@
 
 `apps/thin-client` is the server-backed thin-client host UI surface.
 
+The Systems page uses the existing saved connection to observe committed updates
+when its managed server provides saved-state streaming. Scoped replay recovers
+after a disconnect. Updates refresh saved system lists and preserve the user's
+current view and draft save base. If another client archives an open system,
+the Composer keeps that view open and disables saving and building. Updates
+pause while the tab is hidden, and delayed replies from a previous connection
+cannot change the saved view.
+
 Current scope:
 
 - minimal React bootstrap (`src/main.tsx`, `src/App.tsx`)

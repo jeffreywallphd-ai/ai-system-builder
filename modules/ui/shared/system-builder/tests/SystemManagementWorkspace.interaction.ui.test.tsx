@@ -9,7 +9,7 @@ import type {
   SystemBuilderRevision,
 } from "../../../../contracts/system-builder";
 import { SystemManagementWorkspace } from "../SystemManagementWorkspace";
-import type { SystemBuilderClient } from "../SystemBuilderWorkspace";
+import type { SavedSystemsRefresh, SystemBuilderClient } from "../SystemBuilderWorkspace";
 import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
 
 const passivePhase = vi.hoisted(() => ({paused: false, setups: [] as Array<() => void>, cleanups: [] as Array<() => void>}));
@@ -276,6 +276,35 @@ describe("SystemManagementWorkspace", () => {
       expect(container?.textContent).toContain(other.name);
       expect(client[action]).toHaveBeenCalledWith(expect.objectContaining({workspaceId: "workspace-a"}));
     } finally {held.resolve({ok: true, value: systemRecord(systemRevision())}); await held.promise;}
+  });
+
+  it("discards a held passive list when its authority ends and applies a fresh list", async () => {
+    const item = managementItem();
+    const client = systemClient({item, revision: systemRevision()});
+    const held = deferred<Awaited<ReturnType<SystemBuilderClient["listManagement"]>>>();
+    const render = (refresh?: SavedSystemsRefresh) => renderScope("workspace-a", client, undefined, undefined, 0, refresh);
+    await render();
+    expect(container?.textContent).toContain(item.name);
+    vi.mocked(client.listManagement).mockReturnValueOnce(held.promise);
+    let attached = true;
+    await render({isCurrent: () => attached});
+    await vi.waitFor(() => expect(client.listManagement).toHaveBeenCalledTimes(2));
+    attached = false;
+    await act(async () => held.resolve(await managementPage([{...item, name: "Retired list item"}])));
+    expect(container?.textContent).not.toContain("Retired list item");
+    expect(container?.textContent).toContain(item.name);
+    vi.mocked(client.listManagement).mockImplementationOnce(() => managementPage([{...item, name: "Current saved item"}]));
+    await render({isCurrent: () => true});
+    expect(container?.textContent).toContain("Current saved item");
+    await act(async () => {
+      const select = container!.querySelector<HTMLSelectElement>("select")!;
+      select.value = "archived";
+      select.dispatchEvent(new Event("change", {bubbles: true}));
+    });
+    expect(vi.mocked(client.listManagement).mock.lastCall?.[0].view).toBe("archived");
+    const totalRequests = vi.mocked(client.listManagement).mock.calls.length;
+    await render({isCurrent: () => true});
+    expect(client.listManagement).toHaveBeenCalledTimes(totalRequests);
   });
 
   it("does not describe a saved clone as failed when the refresh callback throws", async () => {
@@ -578,11 +607,13 @@ async function renderWorkspace(
 }
 
 async function renderScope(workspaceId: string, client: SystemBuilderClient,
-  onOpenInCompose: (systemId: string) => void = () => {}, onActiveSystemsChanged?: () => void, activeSystemsRevision?: number) {
+  onOpenInCompose: (systemId: string) => void = () => {}, onActiveSystemsChanged?: () => void, activeSystemsRevision?: number,
+  managedSavedRefresh?: SavedSystemsRefresh) {
   if (!container) {container = document.createElement("div"); document.body.append(container); root = createRoot(container);}
   await act(async () => root?.render(<NotificationTestHarness><SystemManagementWorkspace
     workspaceId={workspaceId} client={client} onOpenInCompose={onOpenInCompose}
-    onActiveSystemsChanged={onActiveSystemsChanged} activeSystemsRevision={activeSystemsRevision} /></NotificationTestHarness>));
+    onActiveSystemsChanged={onActiveSystemsChanged} activeSystemsRevision={activeSystemsRevision}
+    managedSavedRefresh={managedSavedRefresh} /></NotificationTestHarness>));
 }
 
 function deferred<T>() {

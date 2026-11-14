@@ -4197,8 +4197,8 @@
   {
    "path": "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
    "facts": {
-    "sha256": "3ae3e2b9b1316a91a10b72c80f93510a54e7b27e0fd77fe94abc4e061372975d",
-    "bytes": 3662,
+    "sha256": "c7a10f3edad4a66f957f3fbf425a16a5fd87a4b8d86bbf1ca30ca0d0c00a9ac3",
+    "bytes": 4641,
     "cases": [
      {
       "name": "preserves ordinary set, read and clear",
@@ -4217,18 +4217,22 @@
       "line": 29
      },
      {
-      "name": "treats absent or blocked read storage as no readable credential",
+      "name": "retires an owned response even if the previous token is restored",
       "line": 36
      },
      {
+      "name": "treats absent or blocked read storage as no readable credential",
+      "line": 55
+     },
+     {
       "name": "preserves the actual thin-client secureFetch header and fails closed on blocked storage",
-      "line": 45
+      "line": 64
      }
     ],
     "dynamicCases": 0,
     "functions": [],
-    "assertionCount": 28,
-    "assertionDigest": "5a1416236ff3b69582e440faa58fa9cee0cd48a35eb25d5409c00418fab19a7b",
+    "assertionCount": 34,
+    "assertionDigest": "a0ba11df52ddc98db9678250c6869bdefed2fe26a2f814971fed52ccc3fd3809",
     "assertionExamples": [
      {
       "line": 9,
@@ -12159,8 +12163,8 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "edca9539380a3e3c52de448862eb3b5d56fca637900735f04fa8d3384010e5ce",
-    "bytes": 123231,
+    "sha256": "e9d0715777f7429b8272cd25ae93245a854a951042345fadba9ff9368476470b",
+    "bytes": 125189,
     "cases": [
      {
       "name": "submits a published form only after valid answers and reuses the same request on retry",
@@ -12247,35 +12251,35 @@
      },
      {
       "name": "instance",
-      "line": 2577
+      "line": 2612
      },
      {
       "name": "composerDefinition",
-      "line": 2597
+      "line": 2632
      },
      {
       "name": "layoutDefinition",
-      "line": 2669
+      "line": 2704
      },
      {
       "name": "withoutComposerDetail",
-      "line": 2687
+      "line": 2722
      },
      {
       "name": "button",
-      "line": 2698
+      "line": 2733
      },
      {
       "name": "setInputValue",
-      "line": 2705
+      "line": 2740
      },
      {
       "name": "clientFor",
-      "line": 2712
+      "line": 2747
      }
     ],
-    "assertionCount": 317,
-    "assertionDigest": "45467fd2f9d9b085fe858e683946ba26d2ae301199754186910a9a60cd5cf5f3",
+    "assertionCount": 326,
+    "assertionDigest": "712cf6592eafeefb0e14774a64dde874e3a43dbbea76bb78f87dd659cd186037",
     "assertionExamples": [
      {
       "line": 69,
@@ -12529,8 +12533,8 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "a94eff0f66dc41d0fb446425aeabaf0564cbfd8bd3deebf80686cbe27f814f59",
-    "bytes": 40750,
+    "sha256": "80c43f46a13f5e57ba04f6776b0227c257cdf47795300fec5bd18c63db4ec2da",
+    "bytes": 42571,
     "cases": [
      {
       "name": "keeps a focused row and a user preview during a passive saved-state refresh",
@@ -12577,115 +12581,119 @@
       "line": 260
      },
      {
-      "name": "does not describe a saved clone as failed when the refresh callback throws",
+      "name": "discards a held passive list when its authority ends and applies a fresh list",
       "line": 281
      },
      {
+      "name": "does not describe a saved clone as failed when the refresh callback throws",
+      "line": 310
+     },
+     {
       "name": "does not let an obsolete page failure clear a newer paging request",
-      "line": 293
+      "line": 322
      },
      {
       "name": "retains an accepted restore across a search change in the same workspace",
-      "line": 319
+      "line": 348
      },
      {
       "name": "keeps the accepted %s confirmation locked before busy state renders",
-      "line": 339
+      "line": 368
      },
      {
       "name": "retires an old mutation at commit before passive cleanup runs",
-      "line": 360
+      "line": 389
      },
      {
       "name": "retires an old preview at query commit before passive effects run",
-      "line": 376
+      "line": 405
      },
      {
       "name": "keeps a committed pending clone when a client replacement render is abandoned",
-      "line": 391
+      "line": 420
      },
      {
       "name": "does not dispatch an initial read after retirement before the first promise turn",
-      "line": 417
+      "line": 446
      },
      {
       "name": "does not dispatch preview reads after retirement before the first promise turn",
-      "line": 428
+      "line": 457
      },
      {
       "name": "contains synchronous and parallel preview failures and permits retry",
-      "line": 436
+      "line": 465
      },
      {
       "name": "preserves an actionable typed revision denial and keeps archive retry available",
-      "line": 450
+      "line": 479
      },
      {
       "name": "lists systems, previews the exact revision, and hands a system to Compose",
-      "line": 464
+      "line": 493
      },
      {
       "name": "duplicates and archive-deletes without discarding immutable history",
-      "line": 503
+      "line": 532
      },
      {
       "name": "restores an archived system from the same management list",
-      "line": 548
+      "line": 577
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "renderWorkspace",
-      "line": 572
+      "line": 601
      },
      {
       "name": "renderScope",
-      "line": 580
+      "line": 609
      },
      {
       "name": "deferred",
-      "line": 588
+      "line": 619
      },
      {
       "name": "button",
-      "line": 594
+      "line": 625
      },
      {
       "name": "dialogContaining",
-      "line": 602
+      "line": 633
      },
      {
       "name": "managementItem",
-      "line": 612
+      "line": 643
      },
      {
       "name": "systemRevision",
-      "line": 644
+      "line": 675
      },
      {
       "name": "managementPage",
-      "line": 670
+      "line": 701
      },
      {
       "name": "systemClient",
-      "line": 685
+      "line": 716
      },
      {
       "name": "systemRecord",
-      "line": 712
+      "line": 743
      },
      {
       "name": "searchFor",
-      "line": 728
+      "line": 759
      },
      {
       "name": "SuspendReplacement",
-      "line": 734
+      "line": 765
      }
     ],
-    "assertionCount": 115,
-    "assertionDigest": "dfe2eda84d46284eee363f34c640085d359213d0907309aec59e5457549ea3e1",
+    "assertionCount": 122,
+    "assertionDigest": "c8a0f538f56622ea71ca7675d679b940c2651c61d303e3cd14cfa2addf8f6772",
     "assertionExamples": [
      {
       "line": 60,
@@ -17618,7 +17626,7 @@
     "Compose",
     "Publish"
    ],
-   "sha256": "9db0bd657c3118ec5719603df1de739bf6b709f559e7aac2f88236a794870105",
+   "sha256": "ab5aaf109db3c782222634f06645f92e0c5c2fcc2d3c01f8330e3866d0db162d",
    "surface_key": "systemsTabs"
   },
   {
