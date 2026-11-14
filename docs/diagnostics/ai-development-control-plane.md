@@ -219,6 +219,11 @@ The browser must release takeover. The saved-state feed, the old request
 result, and a new write must become unavailable. After the fixture restores
 the account, the original save must remain and the old lease must stay ended.
 
+Set `MANAGED_HEADLESS_BROWSER_HELD_CONTEXT=1` with the extended journey to
+hold an authorized context challenge from the local server. Chrome revokes
+takeover before reading the reply. The fixture checks that Chrome reads the
+released reply without sending context and that the old lease stays ended.
+
 The packaged Desktop test measures warm presentation and revoke, including
 when an ordinary dialog is open or a page is loading. The native hide test
 restores the browser's timer policy in the owned test window, measures the

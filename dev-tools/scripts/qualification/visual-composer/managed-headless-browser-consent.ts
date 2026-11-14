@@ -9,7 +9,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { chromium, type Browser, type Page, type Request as BrowserRequest } from "@playwright/test";
 
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER } from "../../../../modules/contracts/headless/managed-browser-consent";
-import { MANAGED_BROWSER_DELIVERY_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
+import { MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH, MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
 import { HEADLESS_CONTRACT_VERSION } from "../../../../modules/contracts/headless";
 import { MANAGED_HEADLESS_AGENT_PATHS } from "../../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
 import { readHeadlessAuthoringWireResult, readHeadlessWindowResult, type UiControlLeaseTarget } from "../../../../modules/contracts/headless";
@@ -67,7 +67,8 @@ async function main() {
   const inFlightEdit = process.env.MANAGED_HEADLESS_BROWSER_IN_FLIGHT_EDIT === "1";
   const reverseRefetch = process.env.MANAGED_HEADLESS_BROWSER_REVERSE_REFETCH === "1";
   const membershipLoss = process.env.MANAGED_HEADLESS_BROWSER_MEMBERSHIP_LOSS === "1";
-  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss) || presentation);
+  const heldContext = process.env.MANAGED_HEADLESS_BROWSER_HELD_CONTEXT === "1";
+  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss || heldContext) || presentation);
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
     {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation, headlessMembershipLoss:membershipLoss});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
@@ -364,6 +365,98 @@ async function main() {
       await management.getByRole("cell", {name:new RegExp(name)}).waitFor({timeout:10_000});
       assert.equal(await panel.count(), 0);
       evidence.revoke_ends_presentation_only = true;
+    }
+
+    if (heldContext) {
+      stage = "held-context-request-and-accept";
+      const requested = readHeadlessWindowResult(await call("aisb_request_window", {
+        target:await getTab(), taskId:randomUUID(), requestKey:randomUUID(),
+      }));
+      assert.ok(requested.ok && requested.value.kind === "request");
+      const attempt = requested.value.request.target;
+      const gate = await page.evaluateHandle(({contextPath, publishPath}) => {
+        const original = window.fetch;
+        const pause = Promise.withResolvers<void>();
+        let held = false;
+        let expired = false;
+        let consumed = false;
+        let publishes = 0;
+        let challengeRequests = 0;
+        let challengeStatus = 0;
+        const deadline = setTimeout(() => {expired = true; pause.resolve();}, 10_000);
+        const fetchHook = {async run(input:RequestInfo | URL, init?:RequestInit) {
+          const url = new URL(input instanceof Request ? input.url : input, location.href);
+          if (url.origin === location.origin && url.pathname === publishPath && init?.method === "POST") publishes++;
+          const challenge = url.origin === location.origin && url.pathname === contextPath && init?.method === "POST";
+          if (challenge) challengeRequests++;
+          const response = await original.call(window, input, init);
+          if (!challenge) return response;
+          challengeStatus = response.status;
+          if (held || !response.ok || response.url !== location.origin + contextPath) return response;
+          const witness = await response.clone().json();
+          if (held || typeof witness?.challenge !== "string" || !response.body) return response;
+          held = true;
+          await pause.promise;
+          const body = response.body;
+          const getReader = body.getReader.bind(body);
+          const bodyHook = {getReader() {
+            const reader = getReader();
+            const read = reader.read.bind(reader);
+            const readerHook = {async read() {
+              const chunk = await read();
+              if (chunk.done) consumed = true;
+              return chunk;
+            }};
+            reader.read = readerHook.read;
+            return reader;
+          }};
+          Object.defineProperty(body, "getReader", {value:bodyHook.getReader, configurable:true});
+          return response;
+        }};
+        window.fetch = fetchHook.run;
+        return {status() {return {held, expired, consumed, publishes};},
+          requests() {return {challengeRequests, challengeStatus};},
+          release() {clearTimeout(deadline); pause.resolve();},
+          restore() {
+            clearTimeout(deadline);
+            pause.resolve();
+            if (window.fetch === fetchHook.run) window.fetch = original;
+          }};
+      }, {contextPath: MANAGED_BROWSER_CONTEXT_PATH, publishPath: MANAGED_BROWSER_PUBLISH_CONTEXT_PATH});
+      try {
+        await modal.getByRole("button", {name:"Accept automation takeover",exact:true}).click();
+        await revoke.waitFor({timeout:5_000});
+        stage = "held-context-server-active";
+        const active = await until<UiControlLeaseTarget>(async () => {
+          const result = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+          return result.ok && result.value.kind === "request" && result.value.request.status === "active" ? result.value.lease : undefined;
+        });
+        stage = "held-context-positive-reply";
+        const pendingRead = call("aisb_window_context", {target:active}).then(value => ({value}), () => ({}));
+        await page.waitForFunction(state => state.status().held, gate, {timeout:3_000});
+        assert.deepEqual(await gate.evaluate(value => value.status()), {held:true, expired:false, consumed:false, publishes:0});
+        stage = "held-context-revoke-and-release";
+        await revoke.click();
+        await revoke.waitFor({state:"detached", timeout:3_000});
+        await gate.evaluate(value => value.release());
+        await until(async () => (await gate.evaluate(value => value.status())).consumed ? true : undefined, 15);
+        await until(async () => {
+          const result = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+          return result.ok && result.value.kind === "ended" ? true : undefined;
+        });
+        assert.ok(!readHeadlessWindowResult(await call("aisb_window_context", {target:active})).ok);
+        const originalRead = await pendingRead;
+        assert.ok("value" in originalRead && !readHeadlessWindowResult(originalRead.value).ok);
+        assert.deepEqual(await gate.evaluate(value => value.status()), {held:true, expired:false, consumed:true, publishes:0});
+        assert.equal(await page.locator("button.ui-shell__settings-button").isEnabled(), true);
+        evidence.held_context_reply_consumed_after_revoke_with_zero_publications = true;
+      } finally {
+        const observed = await gate.evaluate(value => value.requests());
+        evidence.held_context_challenge_requests = observed.challengeRequests;
+        evidence.held_context_challenge_status = observed.challengeStatus;
+        await gate.evaluate(value => value.restore());
+        await gate.dispose();
+      }
     }
 
     if (measure && saved && presentationRequest) {
