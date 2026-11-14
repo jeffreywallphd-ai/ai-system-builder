@@ -58,6 +58,12 @@ newer saved name, and let the app read the old reply. The Manage table
 kept the newer name. Shared tests exercise dirty drafts and retired
 saved-state connections separately.
 
+The local managed host suspended the synthetic account while Chrome
+showed an active takeover. The browser returned control to the user,
+and the account could no longer read, write, or replay saved results.
+Restoring membership kept the earlier save and left the old lease
+closed. The test did not check signing in again after access returned.
+
 ## Architectural invariants
 
 | Source | Owning increment | Criterion | Required assertion |

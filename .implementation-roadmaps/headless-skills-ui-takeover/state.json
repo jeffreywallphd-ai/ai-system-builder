@@ -840,6 +840,39 @@
       "outcome": "pending",
       "recordedAt": "2026-11-14T21:30:07Z",
       "summary": "Four Windows journeys passed. Presentation p95 was 153.04 ms, and revoke p95 was 6.7 ms. The exact queue audit matched all 32 commands and recorded no stale display. Native hide retired the lease and slowed the renderer timer. Measure the timeout behavior under background throttling before completing this criterion."
+    },
+    {
+      "artifact": "docs/operations/headless-skills-ui-takeover-source-coverage.json",
+      "command": "Local managed PostgreSQL two-worker delivery and recovery fixture",
+      "criterionId": "postgres-atomicity-and-worker-delivery",
+      "id": "evidence-22",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-14T22:18:56Z",
+      "summary": "Two local workers delivered committed changes. After one worker stopped, a fresh worker recovered the retained result from PostgreSQL. Recheck on the final candidate before completing this criterion."
+    },
+    {
+      "artifact": "docs/operations/headless-skills-ui-takeover-source-coverage.json",
+      "command": "Local Chrome and packaged Windows feature journeys",
+      "criterionId": "browser-real-host-and-parity",
+      "id": "evidence-23",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-14T22:18:57Z",
+      "summary": "Real Chrome used the managed server and PostgreSQL. A save finished in its original workspace after Chrome revoked takeover and switched workspaces. Finish the remaining browser cases and run both hosts on the same candidate."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Managed and packaged headless local timing fixtures",
+      "criterionId": "host-specific-targets-and-bounds",
+      "id": "evidence-24",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-14T22:18:57Z",
+      "summary": "Local Chrome and Windows runs recorded warm performance and queue results. Finish the current candidate timing, reconnect and timeout checks while the renderer is throttled."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1251,6 +1284,24 @@
       "eventFingerprint": "621e3b7084fb02802c643fe764ba813df39127ff1e38512b86fdfe23203afa56",
       "recordedAt": "2026-11-14T21:30:07Z",
       "sequence": 61,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2bb46f0137c462884a9fed4a16a5f2bc2402fedb80795b72fb0292107612e66d",
+      "recordedAt": "2026-11-14T22:18:56Z",
+      "sequence": 62,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "8b319bf89adfbe636fdba830dd9f8bf1b6419bc426c82a9c6cdfa3f27d1603a5",
+      "recordedAt": "2026-11-14T22:18:57Z",
+      "sequence": 63,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "42e0a309d1b18efa3094ec7da4c62dc342cddf1c0b89e70e83e869f2f25eabf1",
+      "recordedAt": "2026-11-14T22:18:57Z",
+      "sequence": 64,
       "type": "evidence-recorded"
     }
   ],
@@ -2399,5 +2450,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-14T21:30:07Z"
+  "updatedAt": "2026-11-14T22:18:57Z"
 }

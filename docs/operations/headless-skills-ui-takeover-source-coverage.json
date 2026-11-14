@@ -1205,9 +1205,10 @@
         "permission",
         "data-permission",
         "browser-credential",
-        "saved-transport"
+        "saved-transport",
+        "managed-live-membership-loss"
       ],
-      "knownRemainingEvidence": "Direct route and service tests cover changed permission. Same-candidate real membership loss is pending."
+      "knownRemainingEvidence": "The local managed host suspended its synthetic membership. Chrome detached and the current credentials could not read, write, replay, renew or present. A write already running during membership loss and signing in after restore have separate evidence requirements."
     },
     {
       "sourceId": "AT-36",
@@ -1324,9 +1325,10 @@
         "replay",
         "permission",
         "managed-stdio",
-        "saved-transport"
+        "saved-transport",
+        "managed-live-membership-loss"
       ],
-      "knownRemainingEvidence": "The managed authority test covers current permission and the live fixture covers same-key replay. A combined live sample after a permission change is pending."
+      "knownRemainingEvidence": "Retrying the exact completed save with suspended membership returned no result. After membership was restored, the original key replayed and the scoped feed still held only the prior event."
     },
     {
       "sourceId": "AT-41",
@@ -1787,6 +1789,11 @@
       "host": "authenticated-server-local-chrome",
       "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
       "testOrStage": "reverse-refetch-release-old-live-reply"
+    },
+    "managed-live-membership-loss": {
+      "host": "authenticated-server-local-chrome",
+      "path": "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+      "testOrStage": "membership-loss-denies-existing-credentials"
     }
   }
 }
