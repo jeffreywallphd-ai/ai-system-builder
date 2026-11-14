@@ -48,6 +48,17 @@ returns the window to manual control. Each exact revoke has at most one
 outstanding IPC call, with up to 32 held calls and a 60-second local retry
 record. A held call does not delay another attempt's revoke.
 
+The presentation queue admits five fixed saved-resource intents. Every
+command has a lease-scoped ID, increasing sequence and five-second deadline.
+The host retains up to 256 command outcomes and up to 32 unfinished commands.
+The renderer holds at most 16 positions beyond its current sequence and
+requests the missing position. An unresolved gap ends attachment. A terminal
+command cannot repeat its effect on retry. Preparation may await resource
+reads, then the renderer calls the exact current effect synchronously.
+A delivered command without an acknowledgment has an unconfirmed outcome.
+Only an exact acknowledgment from its still-owned renderer resolves that
+outcome. The host never delivers that sequence again.
+
 ## Rollback
 
 Stop admitting new presentation requests and retire exact open reservations.
