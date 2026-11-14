@@ -70,8 +70,9 @@ export function createManagedHeadlessBrowserDocuments(options: {
     return entry;
   }
   return {
-    async register(browser: BrowserIdentity, workspaceId: WorkspaceId) {
-      if (!isWorkspaceId(workspaceId) || await permitted(browser, workspaceId) !== "allowed" || !live(browser)) return;
+    async register(browser: BrowserIdentity, workspaceId: WorkspaceId, requestIsCurrent = () => true) {
+      if (!isWorkspaceId(workspaceId) || !requestIsCurrent() ||
+          await permitted(browser, workspaceId) !== "allowed" || !requestIsCurrent() || !live(browser)) return;
       sweep();
       if (documents.size >= MAX_DOCUMENTS) return;
       const target = Object.freeze({hostIncarnationId: options.hostIncarnationId,
@@ -87,11 +88,13 @@ export function createManagedHeadlessBrowserDocuments(options: {
       if (!options.register(target, owner)) {documents.delete(target.windowId); return;}
       return {target, proof};
     },
-    async authenticate(browser: BrowserIdentity, raw: unknown, proof: unknown) {
+    async authenticate(browser: BrowserIdentity, raw: unknown, proof: unknown, requestIsCurrent = () => true) {
+      if (!requestIsCurrent()) return;
       sweep();
       const entry = proofEntry(browser, raw, proof);
       if (!entry || !entry.owner.isCurrent()) return;
       const admission = await permitted(browser, entry.target.workspaceId);
+      if (!requestIsCurrent()) return;
       if (admission !== "allowed") {
         if (admission === "denied") remove(entry);
         return;

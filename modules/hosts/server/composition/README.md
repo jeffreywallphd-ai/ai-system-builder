@@ -34,6 +34,11 @@ for the same user and registered browser client cannot reuse that proof.
 Workspace policy governs registration. The existing takeover authority
 still requires separate user consent for presentation.
 
+The managed browser consent composition reuses the window authority for
+request, consent, readiness and revoke. An application policy read and a
+live browser document are required. A separate fence prevents a closed
+request from creating a prompt or granting consent after a held policy read.
+
 Current composition includes:
 
 - artifact-object storage via filesystem adapter,

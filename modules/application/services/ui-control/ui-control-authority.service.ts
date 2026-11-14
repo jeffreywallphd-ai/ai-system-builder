@@ -152,10 +152,10 @@ export function createUiControlAuthority(dependencies: {
     catch { return false; }
     finally { policyReads--; }
   };
-  const interactive = async (raw: unknown, owner: UiControlInteractiveOwner, activate: boolean) => {
+  const interactive = async (raw: unknown, owner: UiControlInteractiveOwner, activate: boolean, requestIsCurrent: () => boolean) => {
     // Acceptance and readiness use different exact schemas.
     const target = activate ? readUiControlLeaseTarget(raw) : readUiControlAttempt(raw);
-    if (!target) return denied;
+    if (!target || !current({ isCurrent: requestIsCurrent })) return denied;
     sweep();
     const entry = interactiveEntry(target, owner);
     if (!entry) return denied;
@@ -163,7 +163,7 @@ export function createUiControlAuthority(dependencies: {
     if (activate && (!entry.lease || !sameLease(entry.lease, target))) return denied;
     const allowed = await authorized(entry.slot, entry.agent, entry.taskId);
     sweep();
-    if (!open || interactiveEntry(target, owner) !== entry || slotFor(target) !== entry.slot) return denied;
+    if (!open || !current({ isCurrent: requestIsCurrent }) || interactiveEntry(target, owner) !== entry || slotFor(target) !== entry.slot) return denied;
     if (entry.slot.request !== entry) return ended;
     if (allowed === "busy") return busy;
     if (!allowed) { end(entry); return denied; }
@@ -204,9 +204,9 @@ export function createUiControlAuthority(dependencies: {
       retire(slot);
       return true;
     },
-    async request(raw: unknown, agent: UiControlAgent): Promise<UiControlDecision<UiControlRequestView>> {
+    async request(raw: unknown, agent: UiControlAgent, requestIsCurrent = () => true): Promise<UiControlDecision<UiControlRequestView>> {
       const request = readUiControlRequest(raw);
-      if (!request || !isUiControlId(agent.registeredClientId) || !isUiControlId(agent.agentSessionId)) return denied;
+      if (!request || !isUiControlId(agent.registeredClientId) || !isUiControlId(agent.agentSessionId) || !current({ isCurrent: requestIsCurrent })) return denied;
       sweep();
       const slot = slotFor(request.target);
       if (!slot) return denied;
@@ -216,7 +216,7 @@ export function createUiControlAuthority(dependencies: {
       if (allowed === "busy") return busy;
       if (!allowed) return denied;
       sweep();
-      if (slotFor(request.target) !== slot || !current(agent)) return denied;
+      if (slotFor(request.target) !== slot || !current(agent) || !current({ isCurrent: requestIsCurrent })) return denied;
       // A transport retry cannot recreate a dismissed prompt.
       const existing = previous ?? findRetry(request.requestKey, agent);
       if (existing) {
@@ -280,8 +280,8 @@ export function createUiControlAuthority(dependencies: {
       if (entry && entry.slot.request === entry && slotFor(target) === entry.slot &&
           sameAgent(entry.agent, agent) && current(agent)) return view(entry);
     },
-    accept: (raw: unknown, owner: UiControlInteractiveOwner) => interactive(raw, owner, false),
-    ready: (raw: unknown, owner: UiControlInteractiveOwner) => interactive(raw, owner, true),
+    accept: (raw: unknown, owner: UiControlInteractiveOwner, requestIsCurrent = () => true) => interactive(raw, owner, false, requestIsCurrent),
+    ready: (raw: unknown, owner: UiControlInteractiveOwner, requestIsCurrent = () => true) => interactive(raw, owner, true, requestIsCurrent),
     /** Final synchronous check before publishing a grant to its interactive frame. */
     readInteractiveLease(target: UiControlLeaseTarget, owner: UiControlInteractiveOwner, activeOnly = false): UiControlLease | undefined {
       sweep();
@@ -302,16 +302,17 @@ export function createUiControlAuthority(dependencies: {
       }
       return ok(undefined);
     },
-    async agentStatus(raw: unknown, agent: UiControlAgent, renew = false, renewalIsCurrent?: () => boolean): Promise<UiControlDecision<UiControlRequestView>> {
+    async agentStatus(raw: unknown, agent: UiControlAgent, renew = false, renewalIsCurrent?: () => boolean,
+      requestIsCurrent = () => true): Promise<UiControlDecision<UiControlRequestView>> {
       const target = renew ? readUiControlLeaseTarget(raw) : readUiControlAttempt(raw);
-      if (!target) return denied;
+      if (!target || !current({ isCurrent: requestIsCurrent })) return denied;
       sweep();
       const entry = exactEntry(target);
       if (!entry || !sameAgent(entry.agent, agent) || !current(agent)) return denied;
       if (renew && (!entry.lease || !sameLease(entry.lease, target))) return denied;
       const allowed = await authorized(entry.slot, agent, entry.taskId);
       sweep();
-      if (!open || exactEntry(target) !== entry || !current(agent)) return denied;
+      if (!open || exactEntry(target) !== entry || !current(agent) || !current({ isCurrent: requestIsCurrent })) return denied;
       if (allowed === "busy") return busy;
       if (entry.status === "ended") return ended;
       if (!allowed) { end(entry); return denied; }

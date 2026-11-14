@@ -1,0 +1,164 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import test from "node:test";
+
+import { UI_CONTROL_VERSION, readUiControlObservation, type HeadlessHostIncarnationId, type HeadlessWindowRequest } from "../../../../contracts/headless";
+import { createOrganizationId } from "../../../../contracts/organization";
+import { createWorkspaceId } from "../../../../contracts/workspace";
+import { composeManagedBrowserConsent } from "../composeManagedBrowserConsent";
+
+const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
+const workspaceId = createWorkspaceId("fixture-workspace");
+const organizationId = createOrganizationId("fixture-org");
+const principalId = "fixture-principal";
+const binding = {sameCredential(other: unknown) { return binding === other; }};
+const browser = {purpose: "browser" as const, organizationId, principalId, registeredClientId: randomUUID(),
+  isCurrent: () => true, credentialBinding: binding};
+const agent = {purpose: "agent" as const, organizationId, principalId, registeredClientId: randomUUID(),
+  isCurrent: () => true, agentSessionId: randomUUID()};
+const active = () => true;
+
+test("the agent requests, the exact browser consents and confirms readiness, and revoke returns to manual", async () => {
+  const service = composeManagedBrowserConsent({hostIncarnationId, async authorize(principal, id) {
+    return principal.organizationId === organizationId && id === workspaceId;
+  }});
+  try {
+    const a = await service.register(browser, workspaceId, active);
+    const b = await service.register(browser, workspaceId, active);
+    assert.ok(a && b);
+    const tabA = {...a, identity: browser};
+    const tabB = {...b, identity: browser};
+    const list = {version: UI_CONTROL_VERSION, operation: "window.list", input: {hostIncarnationId, workspaceId}} as const;
+    assert.deepEqual(await service.execute(list, agent, active), {ok: true, value: {kind: "windows", windows: [a.target, b.target]}});
+    assert.deepEqual(await service.execute(list, {...agent, principalId: "different-user"}, active), {ok: true, value: {kind: "windows", windows: []}});
+    assert.deepEqual(await service.execute(list, {...agent, organizationId: createOrganizationId("other-org")}, active), {ok: false, code: "headless.forbidden"});
+    const request = {version: UI_CONTROL_VERSION, operation: "window.request",
+      input: {target: a.target, taskId: randomUUID(), requestKey: randomUUID()}} as const;
+    const requested = await service.execute(request, agent, active);
+    assert.ok(requested.ok && requested.value.kind === "request");
+    const pending = requested.value.request;
+    const status = {version: UI_CONTROL_VERSION, operation: "window.status", input: {target: pending.target}} as const;
+    assert.equal(pending.status, "pending");
+    assert.deepEqual(readUiControlObservation(await service.observe(tabA, active)), {status: "ready", request: pending});
+    assert.deepEqual(await service.observe(tabB, active), {status: "ready"});
+    assert.equal(await service.consent(tabB, pending.target, "accept", active), undefined);
+    assert.equal(await service.consent(tabA, pending.target, "ready", active), undefined);
+    const accepted = await service.consent(tabA, pending.target, "accept", active);
+    assert.ok(accepted);
+    const waiting = await service.execute(status, agent, active);
+    assert.ok(waiting.ok && waiting.value.kind === "request" && waiting.value.request.status === "awaiting-readiness" && !waiting.value.lease);
+    assert.deepEqual(await service.execute(status, {...agent, agentSessionId: randomUUID()}, active), {ok: false, code: "headless.forbidden"});
+    const ready = await service.consent(tabA, accepted.target, "ready", active);
+    assert.ok(ready && ready.remainingMs <= 15_000);
+    const live = await service.execute(status, agent, active);
+    assert.ok(live.ok && live.value.kind === "request" && live.value.request.status === "active");
+    assert.deepEqual(live.value.lease, ready.target);
+    assert.equal(service.canPublish(status, live, agent), true);
+    assert.equal(await service.revoke(tabB, ready.target, active), false);
+    assert.equal(await service.revoke(tabA, {...ready.target, generation: ready.target.generation + 1}, active), false);
+    assert.equal(await service.revoke(tabA, ready.target, active), true);
+    assert.equal(service.canPublish(status, live, agent), false);
+    assert.deepEqual(await service.execute(status, agent, active), {ok: true, value: {kind: "ended"}});
+    assert.deepEqual(await service.execute(request, agent, active), {ok: true, value: {kind: "ended"}});
+    assert.deepEqual(await service.observe(tabA, active), {status: "ready"});
+    assert.equal(service.disconnect(tabA), true);
+    assert.deepEqual(await service.execute(list, agent, active), {ok: true, value: {kind: "windows", windows: [b.target]}});
+  } finally { service.close(); }
+});
+
+test("retired transports cannot create a prompt or consent after a held application policy check", async () => {
+  let authorityReads = 0;
+  let holdAt = 0;
+  let entered = Promise.withResolvers<void>();
+  let release = Promise.withResolvers<void>();
+  let requestIsCurrent = true;
+  const service = composeManagedBrowserConsent({hostIncarnationId, async authorize() {
+    if (++authorityReads === holdAt) {entered.resolve(); await release.promise;}
+    return true;
+  }});
+  const current = () => requestIsCurrent;
+  try {
+    const a = await service.register(browser, workspaceId, active);
+    assert.ok(a);
+    const tab = {...a, identity: browser};
+    const request: HeadlessWindowRequest = {version: UI_CONTROL_VERSION, operation: "window.request",
+      input: {target: a.target, taskId: randomUUID(), requestKey: randomUUID()}};
+    holdAt = authorityReads + 2;
+    const staleRequest = service.execute(request, agent, current);
+    await entered.promise;
+    requestIsCurrent = false;
+    release.resolve();
+    assert.deepEqual(await staleRequest, {ok: false, code: "headless.forbidden"});
+    assert.deepEqual(await service.observe(tab, active), {status: "ready"});
+
+    requestIsCurrent = true;
+    const requested = await service.execute(request, agent, current);
+    assert.ok(requested.ok && requested.value.kind === "request");
+    const {target} = requested.value.request;
+    holdAt = authorityReads + 2;
+    entered = Promise.withResolvers<void>();
+    release = Promise.withResolvers<void>();
+    const staleConsent = service.consent(tab, target, "accept", current);
+    await entered.promise;
+    requestIsCurrent = false;
+    release.resolve();
+    assert.equal(await staleConsent, undefined);
+    const state = await service.observe(tab, active);
+    assert.ok(state.status === "ready" && state.request?.status === "pending");
+    assert.equal(service.disconnect(tab), true);
+    assert.equal(await service.consent(tab, target, "accept", active), undefined);
+  } finally { release.resolve(); service.close(); }
+});
+
+test("a retired observe cannot renew a document, and a retired status denial cannot end an active consent", async () => {
+  let time = 5_000;
+  let policyReads = 0;
+  let holdAt = 0;
+  let current = true;
+  let resultWhenHeld = true;
+  let entered = Promise.withResolvers<void>();
+  let release = Promise.withResolvers<void>();
+  const service = composeManagedBrowserConsent({hostIncarnationId, now: () => time, async authorize() {
+    if (++policyReads !== holdAt) return true;
+    entered.resolve();
+    await release.promise;
+    return resultWhenHeld;
+  }});
+  try {
+    const first = await service.register(browser, workspaceId, active);
+    assert.ok(first);
+    time += 11_000;
+    holdAt = policyReads + 1;
+    const observe = service.observe({...first, identity: browser}, () => current);
+    await entered.promise;
+    current = false;
+    release.resolve();
+    assert.equal((await observe).status, "unavailable");
+    time += 1_000;
+    const list = {version: UI_CONTROL_VERSION, operation: "window.list", input: {hostIncarnationId, workspaceId}} as const;
+    assert.deepEqual(await service.execute(list, agent, active), {ok: true, value: {kind: "windows", windows: []}});
+
+    current = true;
+    const second = await service.register(browser, workspaceId, active);
+    assert.ok(second);
+    const document = {...second, identity: browser};
+    const requested = await service.execute({version: UI_CONTROL_VERSION, operation: "window.request",
+      input: {target: second.target, taskId: randomUUID(), requestKey: randomUUID()}}, agent, active);
+    assert.ok(requested.ok && requested.value.kind === "request");
+    const accepted = await service.consent(document, requested.value.request.target, "accept", active);
+    assert.ok(accepted);
+    assert.ok(await service.consent(document, accepted.target, "ready", active));
+    const status = {version: UI_CONTROL_VERSION, operation: "window.status", input: {target: requested.value.request.target}} as const;
+    entered = Promise.withResolvers<void>();
+    release = Promise.withResolvers<void>();
+    holdAt = policyReads + 2;
+    resultWhenHeld = false;
+    const pendingStatus = service.execute(status, agent, () => current);
+    await entered.promise;
+    current = false;
+    release.resolve();
+    assert.deepEqual(await pendingStatus, {ok: false, code: "headless.forbidden"});
+    const stillActive = await service.execute(status, agent, active);
+    assert.ok(stillActive.ok && stillActive.value.kind === "request" && stillActive.value.request.status === "active");
+  } finally { release.resolve(); service.close(); }
+});

@@ -202,6 +202,15 @@ policy reads. Expiry, loss of workspace access and explicit retirement end the
 document's authority. A replacement worker requires a fresh registration and
 consent.
 
+Managed consent uses the same exact-window request and lease rules as desktop.
+An admitted agent request can target only the same principal and organization
+in an authorized workspace. The browser must prove ownership of its own
+document to observe, grant, activate or revoke. A request-scoped fence stops
+held authorization from creating a prompt or changing a lease after the
+request retires. The admitted attempt uses the registration lifetime across
+individual calls. This composition does not consume or send presentation
+content.
+
 The controlled delivery test uses two independent loopback HTTPS servers
 with the same disposable PostgreSQL database and a nonowner role without
 `BYPASSRLS`. It sends synthetic changes through the ordinary authenticated
