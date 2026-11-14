@@ -162,6 +162,27 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "managed-headless-live-fixture": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-agent.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-agent.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+            "apps/server/src/createServer.ts",
+            "apps/server/README.md",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/composeManagedSavedState.ts",
+            "modules/hosts/server/composition/composeManagedAgentReads.ts",
+            "modules/adapters/transport/headless-mcp/createHeadlessMcpReadForwarder.mts",
+            "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+        ),
+    },
     "managed-headless-agent-server": {
         "automatic_sources": (
             "modules/hosts/server/composition/composeManagedAgentReads.ts",

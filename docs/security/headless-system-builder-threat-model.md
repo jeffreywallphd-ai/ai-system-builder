@@ -201,6 +201,13 @@ outcomes without storing credentials, cursors or record content. This
 check covers committed saved-state recovery, with production topology
 and full browser takeover qualified separately.
 
+The live managed authoring fixture issues short-lived synthetic access
+tokens for separate browser and agent clients. It verifies the browser
+cannot call the agent endpoint, then uses the official stdio client to
+commit once, replay a receipt and reject a different payload on the same
+key. The authorized saved-state feed observes one change. The evidence
+contains no tokens, system names or saved identifiers.
+
 Managed authoring checks the exact workspace and the existing organization's
 capability policy. It repeats these reads from the same owned transaction
 before returning a retry receipt or writing a system, receipt and change

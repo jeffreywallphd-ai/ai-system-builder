@@ -146,6 +146,16 @@ synthetic systems, interrupts an owned subscriber process and verifies replay
 and resync. Its report contains bounded timings and outcomes. Stop the
 disposable database with the same fixture operator after the check. Built
 browser presentation and production ingress are separate qualifications.
+
+The managed agent qualification uses the same disposable PostgreSQL
+reference. Run
+`node --import tsx dev-tools/scripts/qualification/visual-composer/managed-headless-agent.ts`
+with the existing `MANAGED_REFERENCE_DATABASE` fixture input. It drives the
+official stdio client through verified HTTPS and signed synthetic OIDC
+credentials. It verifies distinct browser and agent credentials, then
+creates, reads and retries the same saved system. The browser's authorized
+feed observes one committed change. The test keeps result facts without
+storing the request payload or credentials.
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
 The related managed saved-state browser check runs the exact observer and model

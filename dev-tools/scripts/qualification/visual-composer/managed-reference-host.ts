@@ -69,7 +69,8 @@ async function interruptOwnedDeliveryProcess(child: ChildProcess, allowExited = 
   });
 }
 
-export async function startManagedReferenceHost(databaseReference: string, options: { readonly headlessDelivery?: boolean } = {}) {
+export async function startManagedReferenceHost(databaseReference: string,
+  options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean } = {}) {
   const root = path.resolve(process.cwd());
   const id = randomUUID().replaceAll("-", "");
   const runRoot = path.join(root, "artifacts/qualification/visual-composer/d", `managed-${id}`);
@@ -204,6 +205,12 @@ export async function startManagedReferenceHost(databaseReference: string, optio
     });
     await new Promise<void>((resolve, reject) => {issuer!.once("error", reject); issuer!.listen(issuerPort, "127.0.0.1", resolve);});
     const token = await new SignJWT({roles: ["ignored-untrusted-token-role"]}).setProtectedHeader({alg: "RS256", kid: id}).setIssuer(issuerOrigin).setSubject(subject).setAudience("aisb-controlled-qualification").setIssuedAt().setExpirationTime("2h").sign(privateKey);
+    const agentClient = "controlled-headless-agent";
+    const browserClient = "controlled-headless-browser";
+    function accessToken(clientId: string) {
+      return new SignJWT({client_id: clientId}).setProtectedHeader({alg: "RS256", kid: id, typ: "at+jwt"})
+        .setIssuer(issuerOrigin).setSubject(subject).setAudience("aisb-controlled-qualification").setIssuedAt().setExpirationTime("10m").sign(privateKey);
+    }
     const nonmemberToken = await new SignJWT({roles: ["operator"]}).setProtectedHeader({alg: "RS256", kid: id}).setIssuer(issuerOrigin).setSubject("synthetic-nonmember").setAudience("aisb-controlled-qualification").setIssuedAt().setExpirationTime("2h").sign(privateKey);
     const ca = path.join(runRoot, "tls/local-dev-ca.pem");
     const runtimeRoot = path.join(runRoot, "runtime");
@@ -212,7 +219,11 @@ export async function startManagedReferenceHost(databaseReference: string, optio
     const environment = {...base, NODE_ENV: "test", DEPLOYMENT_SHAPE: "campus-server", DATABASE_URL: runtimeUrl, POSTGRES_SSL_MODE: "disable", PORT: String(serverPort), SERVER_STORAGE_ROOT: path.join(runRoot, "storage"), SERVER_RUNTIME_ROOT: runtimeRoot,
       AI_SYSTEM_BUILDER_SECURITY_MODE: "oidc-bearer", AI_SYSTEM_BUILDER_HTTPS_ENABLED: "true", AI_SYSTEM_BUILDER_TLS_CERT_MODE: "manual", AI_SYSTEM_BUILDER_TLS_CERT_PATH: material.certificatePath!, AI_SYSTEM_BUILDER_TLS_KEY_PATH: material.keyPath!, AI_SYSTEM_BUILDER_OIDC_ISSUER: issuerOrigin, AI_SYSTEM_BUILDER_OIDC_AUDIENCE: "aisb-controlled-qualification", AI_SYSTEM_BUILDER_OIDC_JWKS_URI: `${issuerOrigin}/jwks`, AI_SYSTEM_BUILDER_OIDC_ALGORITHMS: "RS256", AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE: "dedicated", AI_SYSTEM_BUILDER_DEDICATED_ORGANIZATION_ID: organizationId,
       PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: String(workerPort), PYTHON_RUNTIME_BASE_URL: `http://127.0.0.1:${workerPort}`, PYTHON_RUNTIME_COMMAND: process.execPath, PYTHON_RUNTIME_ARGS: "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs", PYTHON_RUNTIME_WORKER_DIR: root, PYTHON_RUNTIME_STARTUP_TIMEOUT_MS: "15000", HF_HUB_CACHE: path.join(runtimeRoot, "controlled-model-cache")};
-    if (options.headlessDelivery) Object.assign(environment, {AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE: "1"});
+    if (options.headlessDelivery || options.headlessAgent) Object.assign(environment, {AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE: "1"});
+    if (options.headlessAgent) Object.assign(environment, {
+      AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID: agentClient,
+      AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID: browserClient,
+    });
     async function launchServer(env: typeof environment = environment, delivery = false) {
       const child = fork(path.join(root, "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts"), [], {execArgv: ["--import", "tsx"], env, silent: true, windowsHide: true});
       if (delivery) deliveryServer = child;
@@ -240,7 +251,8 @@ export async function startManagedReferenceHost(databaseReference: string, optio
         child.once("error", onError);
         child.on("message", onMessage);
       }).catch(async error => {
-        if (!options.headlessDelivery) await writeFile(path.join(runRoot, "private-server-diagnostic.log"), log);
+        if (!options.headlessDelivery && !options.headlessAgent)
+          await writeFile(path.join(runRoot, "private-server-diagnostic.log"), log);
         throw error;
       });
       if (!delivery) admitted = true;
@@ -349,9 +361,12 @@ export async function startManagedReferenceHost(databaseReference: string, optio
     const common = {runRoot, sourceRevision, token, serverOrigin, request, organizationId, fixtureWorkspaceId, workerCacheRoot: environment.HF_HUB_CACHE!,
       ownedHostPid: children[0]!.pid!, restartAssetsServer, stop, report};
     const delivery = {startDeliveryWorker, caPem, workspaceId: String(positive.body.value.workspace.workspaceId)};
-    if (options.headlessDelivery) {
+    const agent = options.headlessAgent ? {
+      workspaceId: delivery.workspaceId, caFile: ca, access: await accessToken(agentClient), browser: await accessToken(browserClient),
+    } : undefined;
+    if (options.headlessDelivery || options.headlessAgent) {
       report.status = "ready"; await persist();
-      return {...common, delivery, frontendOrigin: ""};
+      return {...common, delivery, agent, frontendOrigin: ""};
     }
     const frontendConfig = path.join(root, "dev-tools/scripts/qualification/visual-composer/qualification-thin-vite.config.mjs");
     const frontend = spawn(process.execPath, [
@@ -372,6 +387,6 @@ export async function startManagedReferenceHost(databaseReference: string, optio
     for (let attempt=0; attempt<120; attempt++) {try {if ((await fetch(frontendOrigin)).ok) {ready=true;break;}} catch {} await new Promise(resolve=>setTimeout(resolve,250));}
     assert.ok(ready, "Managed frontend must become ready.");
     report.status = "ready"; await persist();
-    return {...common, frontendOrigin, delivery: undefined};
+    return {...common, frontendOrigin, delivery: undefined, agent: undefined};
   } catch (error) {report.status = "failed"; await stop().catch(()=>{}); throw error;}
 }
