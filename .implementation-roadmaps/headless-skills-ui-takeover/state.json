@@ -309,6 +309,36 @@
         "Focused browser tests verified saved display and immediate local revoke, including late responses after revoke. Receipt 0b91102f554a9676b4ca96a4594178591198c5dcc7f2e63d7cdb28c9c11c7404, review 4dafb0b68c1a2ed27d27e83cd016aa40c53cde4044496a0a50196bba1572e779. Real host timing and full parity are tracked separately."
       ],
       "title": "Use the existing managed authority"
+    },
+    {
+      "areas": [
+        "Packaged Windows desktop",
+        "Built Chrome and local authenticated managed server",
+        "Headless source mapping and evidence"
+      ],
+      "chunkId": "parity-and-final-evidence",
+      "completedAt": "2026-11-14T23:03:25Z",
+      "criteriaIds": [
+        "browser-real-host-and-parity",
+        "host-specific-targets-and-bounds",
+        "complete-contract-and-final-qualification",
+        "security-managed-parity-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/headless-matched-host-qualification.json",
+        "docs/operations/headless-skills-ui-takeover-source-coverage.md",
+        "docs/operations/headless-skills-ui-takeover-source-coverage.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "server-browser-and-delivery-qualification-parity-and-final-evidence",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "summary": "Four packaged Windows journeys and three separate built Chrome runs passed on the same frozen source. The runs recorded timing, queue and save outcomes in isolated profiles. The published crosswalk maps all 59 requirements to tests and records their limits. Local and controlled acceptance outcomes remain subject to increment verification.",
+      "tests": [
+        "Four focused packaged Desktop Playwright journeys passed.",
+        "Three local Chrome runs passed on the same source: 100-sample timing, tab isolation, and save behavior.",
+        "Reviewed report receipt f7ff6b028e53626f465598e93c1b68d880c71302b8628f1f2b14a387ac72c115 and review 1cff849981bf36ab415da8893012d64cb3124081b6bf7eebd8051008d8b8642b."
+      ],
+      "title": "Prove both real interfaces"
     }
   ],
   "completion": null,
@@ -1303,6 +1333,12 @@
       "recordedAt": "2026-11-14T22:18:57Z",
       "sequence": 64,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "cd15ac3e9dccaa1f192b959f14c21e190612966600e21875803741c5e0fa2c76",
+      "recordedAt": "2026-11-14T23:03:25Z",
+      "sequence": 65,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1812,7 +1848,8 @@
       "completedAt": null,
       "completedChunks": [
         "postgres-replay-and-workers",
-        "managed-api-and-browser"
+        "managed-api-and-browser",
+        "parity-and-final-evidence"
       ],
       "deliverables": [
         "Server/browser ADR and host/API/identity/persistence/threat-model updates for the same-server topology, interactive UI credential separation, authenticated streaming, outbox ownership and worker coordination; deployment defaults remain single replica.",
@@ -1930,7 +1967,7 @@
       ],
       "rollback": "Disable new agent/control/change-stream route admission and revoke affected delegated credentials and leases; close browser gates locally and end exact host reservations. Stop outbox dispatch/worker claims safely without deleting committed records, receipts, terminal lease state or audit. Fall back to existing authorized UI/API reads and scoped resync, preserve RLS and draft bases, and roll back only compatible additive schema/application changes. Never restore insecure dev/no-auth modes, broad cancellation or implicit lease reacquisition.",
       "startedAt": "2026-11-14T15:48:34Z",
-      "status": "implementing",
+      "status": "verifying",
       "title": "Deliver the same workflow through the authenticated server and browser",
       "verification": [
         "Run focused managed API/route-policy/workflow parity, organization/RLS, authenticated stream and PostgreSQL receipt/outbox denial/recovery tests.",
@@ -2450,5 +2487,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-14T22:18:57Z"
+  "updatedAt": "2026-11-14T23:03:25Z"
 }
