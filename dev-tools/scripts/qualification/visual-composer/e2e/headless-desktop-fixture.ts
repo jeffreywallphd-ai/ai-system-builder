@@ -11,7 +11,7 @@ import { createDesktopPinnedLoopbackAgent } from "../../../../../modules/adapter
 import { readHeadlessAuthoringWireResult } from "../../../../../modules/contracts/headless";
 import { pickFormDesktopSystemEnvironment } from "./form-composer-desktop-profile";
 
-export function prepareHeadlessDesktopProfile(mode: "author" | "conversation" | "presentation" = "author") {
+export function prepareHeadlessDesktopProfile(mode: "author" | "conversation" | "presentation" | "window-isolation" = "author") {
   const root = process.cwd();
   const runId = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID;
   assert.ok(runId && /^[a-z0-9-]{20,80}$/.test(runId), "The Headless Desktop test requires the owned run identity.");
@@ -20,7 +20,8 @@ export function prepareHeadlessDesktopProfile(mode: "author" | "conversation" | 
   assert.ok(process.env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT === base && realpathSync(base) === base,
     "The Headless Desktop profile must be within the physical run root.");
   const dataRoot = path.join(base, mode === "conversation" ? "headless-conversation" :
-    mode === "presentation" ? "headless-presentation" : "headless-paired");
+    mode === "presentation" ? "headless-presentation" :
+    mode === "window-isolation" ? "headless-window-isolation" : "headless-paired");
   assert.ok(!lstatSync(dataRoot, { throwIfNoEntry: false }), "The Headless Desktop test requires a fresh profile.");
   mkdirSync(dataRoot);
   assert.ok(realpathSync(dataRoot) === dataRoot, "The Headless Desktop profile cannot redirect.");

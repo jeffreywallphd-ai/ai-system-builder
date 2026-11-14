@@ -31,12 +31,39 @@
       "warm_present_ms": {"samples": 100, "p50": 129.99, "p95": 141.71, "max": 154.24},
       "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 6.5, "max": 6.9},
       "preview_dialog_revoke_ms": {"samples": 20, "p50": 6.2, "p95": 6.8, "max": 6.9}
+    },
+    {
+      "run_id": "2026-11-14t14-12-46-843z-a27ac02e",
+      "source_revision": "source.3d0ca7077ed3397b46e39bf7317378aef63d9250f649b4034e6c8cc0810bc2af",
+      "evidence_digest": "58ae7b08c54e49eaa32af32065b48b7fce4c6820a6d208b283df520dd8784bdf",
+      "status": "passed",
+      "scope": ["Current reviewed single-window receipt", "Three packaged cases passed", "The presentation panel was absent before each new command and after each revoke", "The approved task finished through a separately authorized client"],
+      "warm_present_ms": {"samples": 100, "p50": 127.73, "p95": 142.9, "max": 149.96},
+      "revoke_ms": {"samples": 100, "p50": 1.7, "p95": 6.2, "max": 6.8},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 5.8, "p95": 6.6, "max": 6.8}
+    },
+    {
+      "run_id": "2026-11-14t14-20-26-885z-1b906713",
+      "source_revision": "source.b02e1191d92da33c567648f11372627c47412517cd8b2a50ed9fa8656d302c19",
+      "evidence_digest": "f604f0d626c775b7cf1da864b3378459beb79b1e531f556672541bed730a2cc5",
+      "status": "passed",
+      "scope": ["Two actual desktop windows with different accepted clients", "The native File action refuses a third main window", "Minimize and restore leave independent authority in the other window", "The second window returns local control when its revoke handler cannot reach host authority", "No new context after the local revoke", "Closing the second window leaves the first window working"]
+    },
+    {
+      "run_id": "2026-11-14t14-29-50-389z-f7c87393",
+      "source_revision": "source.f990e761712f4e74a5fd625ebe87d989d82d076d545818eb1121b1f646dcddda",
+      "evidence_digest": "9bf635d57be74b7ceb288eea0fcccc8d3c159ab6cf9b6aa19bc1e2c5200054dd",
+      "status": "passed",
+      "scope": ["75 normal, 20 dialog and five actual loading revokes", "The Models page loaded after the fixture released its packaged module", "The presentation distribution here includes five held loading samples"],
+      "warm_present_ms": {"samples": 100, "p50": 132.65, "p95": 158.75, "max": 192.84},
+      "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 11.3, "max": 13.7},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 9.2, "p95": 13.3, "max": 13.7},
+      "loading_revoke_ms": {"samples": 5, "p50": 0.9, "p95": 1, "max": 1}
     }
   ],
   "pending": [
-    "Measure revoke during app loading and after loss of the host response.",
-    "Exercise multiple live app windows, timing under background throttling, and intentionally held presentation replies.",
-    "Verify packaged rollback and automate the persisted audit check.",
+    "Measure expiry and liveness while the renderer is genuinely throttled. A minimized test window did not produce the expected renderer visibility transition. The separately attempted page lifecycle fixture still allowed renewal, so this requirement remains open.",
+    "Verify packaged rollback and qualify the held-reply and persisted audit tests on this candidate.",
     "Bind the complete increment requirements to the final candidate."
   ]
 }

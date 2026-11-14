@@ -1096,6 +1096,20 @@ function navigationCensusLegacyView(map,result){
 let committedCensusWitness;
 const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
 function headlessPackagedCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) === "28ab82bf208625907ad018011ef3e145bb6ca418d478d36f67773e1c46d67962") {
+    // Replace the packaged test inventory while retaining its unreviewed drift.
+    const saved = JSON.parse(historicalSource("29524bbbf70785f0323a37d1f6af633517c19ad0", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "501a499558e742b246095d9ec0c63a474d1bd3a48a94a9f727ae224c5118d291");
+    const expected = structuredClone(saved);
+    const path = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
+    const changed = map.sources.find(row => row.path === path);
+    assert.equal(changed.facts.sha256, "2c5759d24f918a9cd53cec1792aef58de1a699fc67aef3a8793674f41e7f4bf5");
+    assert.equal(sha(JSON.stringify(changed.facts)), "cfe3a18d5bf91d2abbdac27d980155df73a0c0f5f26a248ea6b9468ef790dcae");
+    expected.sources.find(row => row.path === path).facts = changed.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, result);
+  }
   if (sha(JSON.stringify(map)) === "501a499558e742b246095d9ec0c63a474d1bd3a48a94a9f727ae224c5118d291") {
     // Inventory the real Desktop takeover journey without granting a census pass.
     const saved = JSON.parse(historicalSource("9621eb610466530fd7911b135bf8cc8208b2a9e3", censusDocument));

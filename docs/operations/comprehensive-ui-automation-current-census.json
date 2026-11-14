@@ -15253,55 +15253,75 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
    "facts": {
-    "sha256": "0187949b6bece23f8f036fc0beed178ef07fc147cf42fd6e2cda0a24d51b6887",
-    "bytes": 20062,
+    "sha256": "2c5759d24f918a9cd53cec1792aef58de1a699fc67aef3a8793674f41e7f4bf5",
+    "bytes": 42785,
     "cases": [
      {
       "name": "a real paired client presents a saved Windows resource and the user revokes before continuing saved work",
-      "line": 73
+      "line": 211
+     },
+     {
+      "name": "the native File menu opens a separately controlled window",
+      "line": 470
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "call",
-      "line": 17
+      "line": 19
      },
      {
       "name": "distribution",
-      "line": 26
+      "line": 28
      },
      {
       "name": "saveTimingObservation",
-      "line": 32
+      "line": 34
+     },
+     {
+      "name": "checkStoredAudit",
+      "line": 51
      },
      {
       "name": "measureRevocation",
-      "line": 49
+      "line": 119
+     },
+     {
+      "name": "withModelsPageLoading",
+      "line": 143
+     },
+     {
+      "name": "suppressFixtureRevoke",
+      "line": 188
+     },
+     {
+      "name": "sample",
+      "line": 324
      }
     ],
-    "assertionCount": 45,
-    "assertionDigest": "c6ea153db065d144e078a6a9ff54d69df034d2944b4fee00b6bd3be85e5bea59",
+    "assertionCount": 72,
+    "assertionDigest": "e5bb8a048863d864ca6e434cf890fa0824249c9e8cc916e3ff535d05cb9c8868",
     "assertionExamples": [
      {
-      "line": 85,
+      "line": 114,
       "kind": "expect",
-      "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+      "sha256": "e94ce9a28f3faddb50b82270466ab17a2a137708ab612459b2a6a41d4a365050"
      },
      {
-      "line": 99,
+      "line": 177,
       "kind": "expect",
-      "sha256": "a87aa5bf68c449f0b73ff11276bba51d709c2ac0791ce24e93881355cb9bdb3f"
+      "sha256": "a7c6f9ef99e25321ee116a37f5bcf865575c60b022698354bc872321473f358a"
      },
      {
-      "line": 111,
+      "line": 179,
       "kind": "expect",
-      "sha256": "9007cee21b389bf32245a405c9c984ac80e6a1b0dde82a8ea894f96f570e0a67"
+      "sha256": "ff8fe2eb9d95c34b3e7c8b9e914954a919f82726ffc567e610c70ba03e1b5f63"
      },
      {
-      "line": 116,
+      "line": 184,
       "kind": "expect",
-      "sha256": "c840011eba2ec973b8967b8b95b7e39271bfe4a83b1f72cb2bc184a212eedc84"
+      "sha256": "3db707efad1a3e7227bf110a065bab1abd2b294af40b4edefd43a505316e5acc"
      }
     ],
     "modifiers": []
