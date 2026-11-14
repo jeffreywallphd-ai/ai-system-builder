@@ -45,6 +45,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let wrongCommandReceipt = false;
   let repeatedCommand = false;
   let commandApplied = false;
+  let delayedSemanticEffects = 0;
   const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
     let body = "";
     request.on("data", (chunk: Buffer) => {body += chunk.toString();});
@@ -54,6 +55,16 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
         authHeader: request.headers.authorization === "Bearer synthetic-managed-bearer"});
       if (redirect) {
         response.writeHead(307, {Location: "/forbidden-destination", "Content-Length": 0}).end();
+        return;
+      }
+      if (input.operation === "systems.apply-edits") {
+        delayedSemanticEffects++;
+        const payload = JSON.stringify({ok:true, value:{kind:"committed", reference:{systemId, recordRevision:2,
+          revisionId:"revision-2"}}});
+        const timer = setTimeout(() => {
+          response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
+        }, 5_200);
+        response.once("close", () => clearTimeout(timer));
         return;
       }
       if (input.operation === "window.request") {
@@ -167,6 +178,13 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       sequence:1, commandId:delivery.commandId, status:"applied",
     }, duplicate:true}});
     assert.ok(requests.slice(callsBeforeDenied).every(row => row.url === "/api/headless/agent/window"));
+    const edit = {hostIncarnationId, workspaceId, systemId, baseRecordRevision:1, baseRevisionId:"revision-1",
+      edits:[{kind:"configure", instanceId:"fixture-instance", values:{title:"Synthetic title"}}],
+      idempotencyKey:randomUUID(), previewDigest:"f".repeat(64)};
+    assert.deepEqual(resultText(await client.callTool({name:"aisb_apply_edits", arguments:edit}, undefined, {timeout:14_000})),
+      {ok:true,value:{kind:"committed",reference:{systemId,recordRevision:2,revisionId:"revision-2"}}});
+    assert.equal(delayedSemanticEffects,1);
+    assert.equal(requests.at(-1)?.url,"/api/headless/agent/author");
   } finally {
     await Promise.allSettled(clients.map(client => client.close()));
     listener.closeAllConnections();

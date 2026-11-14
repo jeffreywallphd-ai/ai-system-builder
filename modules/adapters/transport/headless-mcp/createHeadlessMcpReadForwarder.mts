@@ -16,6 +16,7 @@ const { isWorkspaceId } = workspace;
 const MAX_RESULT_BYTES = 128 * 1024;
 const MAX_ACTIVE = 4;
 const DEADLINE_MS = 5_000;
+const MANAGED_SEMANTIC_APPLY_DEADLINE_MS = 13_000;
 const deadlineCode = "headless.unavailable";
 const text = z.string().min(1).max(200);
 const workspaceId = z.string().refine(isWorkspaceId, "Invalid workspace ID");
@@ -134,7 +135,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
     agent, authorization: `Bearer ${credential}`, enableAuthoring, enableConversation: false, enablePresentation: enableConsent,
-    headers, presentationHeaders});
+    headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
     if (!guard(input)) return {ok: false, code: "headless.forbidden"};
     const result = await forward(input, signal);
@@ -178,6 +179,7 @@ function createForwarder(options: {
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
+  managedSemanticApply?: boolean;
 }) {
   const {address, authoringAddress, conversationAddress, presentationAddress,
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
@@ -200,7 +202,12 @@ function createForwarder(options: {
     if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
     active++;
     try {
-      const { status, raw } = await sendRead(converse ? conversationAddress : author ? authoringAddress : address, agent, authorization, input, signal, headers);
+      // Managed apply validates twice before its owned transaction. Let the
+      // server's existing 12-second deadline decide admission and response.
+      const deadlineMs = options.managedSemanticApply && input.operation === "systems.apply-edits"
+        ? MANAGED_SEMANTIC_APPLY_DEADLINE_MS : DEADLINE_MS;
+      const { status, raw } = await sendRead(converse ? conversationAddress : author ? authoringAddress : address,
+        agent, authorization, input, signal, headers, deadlineMs);
       if (converse) {
         const result = headless.readHeadlessApprovedTurnResult(raw);
         if (status === 200 && result.ok) return result;
@@ -289,7 +296,7 @@ function isAuthoring(input: ForwardRequest): input is AuthoringRequest {
 }
 
 function sendRead(address: URL, agent: Agent | undefined, authorization: string, input: ForwardRequest, signal?: AbortSignal,
-  headers?: Readonly<Record<string, string>>) {
+  headers?: Readonly<Record<string, string>>, deadlineMs = DEADLINE_MS) {
   const body = JSON.stringify(input);
   if (Buffer.byteLength(body) > 8 * 1024) return Promise.reject(new Error("The local request is too large."));
   return new Promise<{ status: number; raw: unknown }>((resolve, reject) => {
@@ -327,7 +334,7 @@ function sendRead(address: URL, agent: Agent | undefined, authorization: string,
         } catch { reject(new Error("Invalid connector response.")); }
       });
     });
-    const timer = setTimeout(() => client.destroy(new Error("Local connector timed out.")), DEADLINE_MS);
+    const timer = setTimeout(() => client.destroy(new Error("Local connector timed out.")), deadlineMs);
     client.on("close", () => clearTimeout(timer));
     client.on("error", reject);
     client.end(body);

@@ -100,6 +100,12 @@ environment to provide its managed access token as
 The managed catalog supports host discovery, template discovery and saved
 system reads. Set `AISB_HEADLESS_ENABLE_AUTHORING=1` to include the finite
 saved authoring tools. Tool discovery never connects to the server.
+Allow at least 14 seconds in the MCP client's call timeout for
+`aisb_apply_edits` in managed mode. The adapter allows 13 seconds for that
+reply, including the server's existing 12-second request deadline. Other
+agent and desktop operations retain the five-second adapter deadline. If a
+write reply is uncertain, read the saved state and reuse the same key for an
+exact retry.
 Set `AISB_HEADLESS_ENABLE_MANAGED_CONSENT=1` to add the managed browser tab
 list, request, status and release tools. The server must enable browser
 consent. The browser user accepts from the exact tab. The connector cannot

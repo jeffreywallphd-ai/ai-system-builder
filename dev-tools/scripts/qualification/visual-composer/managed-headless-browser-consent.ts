@@ -10,6 +10,8 @@ import { chromium, type Browser, type Page } from "@playwright/test";
 
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER } from "../../../../modules/contracts/headless/managed-browser-consent";
 import { MANAGED_BROWSER_DELIVERY_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
+import { HEADLESS_CONTRACT_VERSION } from "../../../../modules/contracts/headless";
+import { MANAGED_HEADLESS_AGENT_PATHS } from "../../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
 import { readHeadlessWindowResult, type UiControlLeaseTarget } from "../../../../modules/contracts/headless";
 import { startManagedReferenceHost } from "./managed-reference-host";
 
@@ -59,7 +61,8 @@ async function main() {
   const presentation = process.env.MANAGED_HEADLESS_PRESENTATION_TEST === "1";
   const measure = process.env.MANAGED_HEADLESS_BROWSER_MEASURE === "1";
   const isolation = process.env.MANAGED_HEADLESS_BROWSER_ISOLATION === "1";
-  assert.ok(!(measure || isolation) || presentation);
+  const draft = process.env.MANAGED_HEADLESS_BROWSER_DRAFT === "1";
+  assert.ok(!(measure || isolation || draft) || presentation);
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
     {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
@@ -89,7 +92,8 @@ async function main() {
       stderr: "ignore", maxBufferSize: 256 * 1024,
     }));
     const call = async (name: string, args: Record<string, unknown> = {}) => {
-      const reply = await client.callTool({name, arguments: args}, undefined, {timeout: 5_000});
+      const reply = await client.callTool({name, arguments: args}, undefined,
+        {timeout:name === "aisb_apply_edits" ? 14_000 : 5_000});
       assert.ok(Array.isArray(reply.content) && reply.content.length === 1 && reply.content[0].type === "text");
       return JSON.parse(reply.content[0].text);
     };
@@ -506,6 +510,82 @@ async function main() {
       } finally {
         await peer.close();
       }
+    }
+
+    if (draft && saved) {
+      stage = "dirty-canvas-open";
+      const target = {...scope, systemId:saved.systemId};
+      const authoritative = async () => {
+        const result = await call("aisb_read_system", target);
+        assert.ok(result.ok && result.value?.currentRevisionId && Number.isSafeInteger(result.value.revision));
+        return {baseRecordRevision:result.value.revision, baseRevisionId:result.value.currentRevisionId};
+      };
+      const readName = await call("aisb_read_system", target);
+      assert.ok(readName.ok && typeof readName.value?.name === "string");
+      await page.getByRole("tab", {name:"Compose", exact:true}).click();
+      await page.getByRole("combobox", {name:"System", exact:true}).selectOption({label:readName.value.name});
+      await page.getByRole("button", {name:"Edit system", exact:true}).click();
+      const editor = page.getByRole("group", {name:"System draft editor", exact:true});
+      await until(async () => await editor.getAttribute("aria-busy") === "false" ? true : undefined, 50);
+      const tableId = `${saved.systemId}.table`;
+      await page.locator(`.system-composer__canvas-node[data-instance-id="${tableId}"] > .system-composer__canvas-node-heading > button`).first().click();
+      const inspector = page.getByRole("complementary", {name:"Composer details", exact:true});
+      await inspector.getByRole("tab", {name:"Properties", exact:true}).click();
+      const title = inspector.locator('[id="title"]');
+      for (const tabLabel of ["Design", "Data", "Events"]) {
+        await inspector.getByRole("tab", {name:tabLabel, exact:true}).click();
+        if (await title.isVisible()) break;
+      }
+      assert.equal(await title.inputValue(), "Authorized artifacts");
+      const apply = async (text: string) => {
+        const flow = stage;
+        stage = `${flow}-read-base`;
+        const input = {...target,...await authoritative(), edits:[{kind:"configure", instanceId:tableId, values:{title:text}}]};
+        stage = `${flow}-preview`;
+        const preview = await call("aisb_preview_edits", input);
+        if (typeof preview.code === "string" && /^headless\.[a-z-]{1,40}$/.test(preview.code))
+          evidence.last_safe_headless_code = preview.code;
+        assert.ok(preview.ok && typeof preview.value?.previewDigest === "string");
+        stage = `${flow}-apply`;
+        const exact = {...input, previewDigest:preview.value.previewDigest, idempotencyKey:randomUUID()};
+        const beganApply = performance.now();
+        const result = await call("aisb_apply_edits", exact);
+        evidence.last_apply_ms = performance.now() - beganApply;
+        if (typeof result.code === "string" && /^headless\.[a-z-]{1,40}$/.test(result.code))
+          evidence.last_safe_headless_code = result.code;
+        if (!result.ok) {
+          const decision = await fixture.request(MANAGED_HEADLESS_AGENT_PATHS.author, {method:"POST", token:access, organizationId,
+            body:{version:HEADLESS_CONTRACT_VERSION, operation:"systems.apply-edits", input:exact}});
+          evidence.same_key_status = decision.status;
+          evidence.same_key_replayed = decision.body.value?.kind === "replayed";
+          const code: unknown = decision.body.code;
+          if (typeof code === "string" && /^headless\.[a-z-]{1,40}$/.test(code)) evidence.same_key_code = code;
+          const observed = await authoritative();
+          evidence.failed_call_changed_revision = observed.baseRecordRevision !== input.baseRecordRevision;
+        }
+        assert.ok(result.ok && result.value?.reference);
+        stage = `${flow}-wait-for-ui`;
+        return result.value.reference;
+      };
+      stage = "dirty-canvas-clean-remote-update";
+      await apply("Synthetic first external version");
+      await until(async () => await title.inputValue() === "Synthetic first external version" ? true : undefined, 50);
+      await title.fill("Synthetic human draft, unsaved");
+      const save = page.getByRole("button", {name:"Save and validate revision", exact:true});
+      assert.equal(await save.isEnabled(), true);
+      stage = "dirty-canvas-remote-conflict";
+      const winner = await apply("Synthetic winning external version");
+      await page.getByText("A newer saved version exists. Your unsaved changes are still here.", {exact:true}).waitFor({timeout:10_000});
+      assert.equal(await title.inputValue(), "Synthetic human draft, unsaved");
+      await save.click();
+      const notification = page.getByRole("button", {name:/^Notifications(?:,|$)/});
+      await notification.click();
+      const notices = page.getByRole("dialog", {name:"Notifications", exact:true});
+      await notices.getByText("This system changed. Reload it before saving again.", {exact:true}).waitFor({timeout:10_000});
+      await notices.press("Escape");
+      assert.equal(await title.inputValue(), "Synthetic human draft, unsaved");
+      assert.deepEqual(await authoritative(), {baseRevisionId:winner.revisionId, baseRecordRevision:winner.recordRevision});
+      evidence.dirty_user_values_and_winning_revision_preserved = true;
     }
 
     stage = "reload";

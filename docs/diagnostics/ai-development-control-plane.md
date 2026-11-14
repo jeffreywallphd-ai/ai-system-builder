@@ -185,6 +185,11 @@ limit, retry and conflict behavior, revoke, and saved state after the tab is
 visible again. This reference fixture uses synthetic records and does not
 qualify production network latency.
 
+Set `MANAGED_HEADLESS_BROWSER_DRAFT=1` with the extended journey to check how
+Chrome handles a saved change while a user edits a system. The test uses the
+Canvas and Notification Center. It checks that the user keeps their draft,
+receives a conflict on save, and cannot overwrite the newer saved version.
+
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
 The related managed saved-state browser check runs the exact observer and model
