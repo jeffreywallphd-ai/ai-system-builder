@@ -2,8 +2,8 @@
 
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
-- Status: `roadmap-review`
-- Updated: `2026-11-14T11:23:29Z`
+- Status: `executing`
+- Updated: `2026-11-14T11:24:42Z`
 
 ## Objective
 
@@ -135,7 +135,7 @@ The user selected both approval modes, available in chat and in the app. The hos
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
 | 1: Use chat tools to author systems and keep saved data synchronized | Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control. | None | `completed` |
-| 2: Accept and revoke automation control of one desktop window | Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue. | headless-authoring-and-synchronization | `pending` |
+| 2: Accept and revoke automation control of one desktop window | Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue. | headless-authoring-and-synchronization | `implementing` |
 | 3: Deliver the same workflow through the authenticated server and browser | Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay. | revocable-desktop-presentation | `pending` |
 | 4: Turn a written request into a build plan | Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions. | server-browser-and-delivery-qualification | `pending` |
 | 5: Acquire source material and build training datasets | Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context. | plan-from-written-request | `pending` |
@@ -203,7 +203,7 @@ Disable connector discovery/admission, revoke its delegated client credentials a
 ## Increment 2: Accept and revoke automation control of one desktop window
 
 - Id: `revocable-desktop-presentation`
-- Status: `pending`
+- Status: `implementing`
 - Dependencies: `headless-authoring-and-synchronization`
 
 Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue.

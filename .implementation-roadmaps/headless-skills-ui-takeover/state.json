@@ -151,7 +151,7 @@
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "revocable-desktop-presentation",
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -818,6 +818,30 @@
       "recordedAt": "2026-11-14T11:23:29Z",
       "sequence": 36,
       "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "e96574775eabb529ca26f56b8e4769fa3cbcfb3feb3f24fb43356069df5a5768",
+      "recordedAt": "2026-11-14T11:24:42Z",
+      "sequence": 37,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "d637d09dadf94557de2234408e57460e4985d2305dd5a1952a84efde6e7037c5",
+      "recordedAt": "2026-11-14T11:24:42Z",
+      "sequence": 38,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "bd50599e7d42f5c7125080f06913431d8a4fd73cf7d67b4508886121c47857a4",
+      "recordedAt": "2026-11-14T11:24:42Z",
+      "sequence": 39,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "2ecce60a69694a236fb82d2675a42883777be28424e7d740852374917ee45ca7",
+      "recordedAt": "2026-11-14T11:24:42Z",
+      "sequence": 40,
+      "type": "increment-plan-recorded"
     }
   ],
   "increments": [
@@ -1132,11 +1156,121 @@
       "id": "revocable-desktop-presentation",
       "number": 2,
       "objective": "Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "The approved topology uses the current desktop host and already-authenticated pairing. An interactive handle is registered through trusted IPC for the current main frame and selected workspace. Server and browser support belongs to the next increment.",
+          "Presentation accepts only fixed resource intents. No ordinary command implicitly changes page or selection. Local and host authority can expire independently; an uncertain response never activates a gate. Bytes already transmitted cannot be recalled."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "exact-window-acceptance-and-reservation",
+              "immediate-local-revocation-and-exact-retry",
+              "backend-continuity-and-lifecycle-isolation",
+              "security-ui-control-reviewed"
+            ],
+            "id": "exact-window-authority",
+            "outcome": "The application owner reserves one current document for one separately accepted agent and rejects stale, malformed, cross-window and agent-authenticated interactive events.",
+            "title": "Reserve and activate exact authority"
+          },
+          {
+            "criteriaIds": [
+              "dirty-handoff-and-reachable-controls",
+              "immediate-local-revocation-and-exact-retry",
+              "security-ui-control-reviewed"
+            ],
+            "id": "shell-gate-and-handoff",
+            "outcome": "The shell lets a user accept or decline, explicitly save or keep a dirty draft, and revoke immediately from the shell or a shared dialog.",
+            "title": "Control the window and preserve human work"
+          },
+          {
+            "criteriaIds": [
+              "presentation-effect-fencing",
+              "serial-delivery-and-independent-deduplication",
+              "context-minimization-and-revoke-fence",
+              "security-ui-control-reviewed"
+            ],
+            "id": "presentation-context-and-delivery",
+            "outcome": "An active scoped lease can present only authorized saved targets and read permitted minimal context through bounded and ordered delivery.",
+            "title": "Fence every presentation and observation"
+          },
+          {
+            "criteriaIds": [
+              "backend-continuity-and-lifecycle-isolation",
+              "desktop-takeover-real-host",
+              "revocation-and-delivery-targets",
+              "security-ui-control-reviewed"
+            ],
+            "id": "race-lifecycle-and-host-journeys",
+            "outcome": "The real packaged app and MCP client prove local revocation, exact lifecycle behavior, continued backend work, and measured timing with retained evidence.",
+            "title": "Prove revocation and continuity"
+          }
+        ],
+        "completionTests": [
+          "Run the relevant contract, host, renderer, pairing, transport and presentation tests. Run the automated packaged Windows desktop takeover journey, native cleanup checks, and 100 warm presentations and revokes with timing and resource observations.",
+          "Run the applicable documentation, architecture and agent-support gates, desktop type checking and packaging. Reserve the all-suite gate for overall roadmap qualification."
+        ],
+        "documentation": [
+          "Add a successor desktop window authority ADR, update desktop host and shared System Builder guidance, update the Headless threat model and source-coverage crosswalk, and regenerate the fixed MCP tool reference."
+        ],
+        "fingerprint": "f12ea23c9f1b9be0694a8c77542e24d4107cb7b33fbc6baf4b7dd414bb755408",
+        "focusedTests": [
+          "Use fake clocks and held promises across authorization, acceptance, local revoke, ready, command preparation, effect, context, acknowledgment, cancel and reconnect. Verify denial for wrong scope, stale document, duplicate commands, expiry, unavailable policy and rate/capacity bounds.",
+          "Use rendered interaction tests for dialog focus, narrow shell, keyboard revoke, dirty draft Save or Cancel and failed save, managed edit gating and recovery in place.",
+          "Run exact loopback, MCP, preload and owned main-frame IPC tests. Check result bounds and sanitized audit counts. Re-run the existing approval and headless authorization denial and task cases after integration."
+        ],
+        "recordedAt": "2026-11-14T11:24:42Z",
+        "rollback": "Disable new takeover admission, synchronously retire local gates, terminate exact reservations and drop pending presentation/context. Preserve normal user control, saved and unsaved work, ordinary Headless agents and independent backend tasks.",
+        "steps": [
+          "Add versioned takeover contracts and one in-memory owner with exact reservation, acceptance attempt, readiness and bounded terminal replay. Construct interactive identity from trusted frame and agent identity from an existing verified registration.",
+          "Add the scoped desktop shell and shared controller. Reuse the Composer save path with explicit user confirmation. Keep revoke available inside the topmost shared dialog and during lazy loading.",
+          "Wire finite resource presentation and scoped context through bounded ordered command receipts and a synchronous final-effect guard. Extend the portable MCP skill with typed request, status, reveal and release.",
+          "Qualify race behavior with controlled async boundaries. Run the packaged Windows journeys with exact process ownership and collect the approved repeat counts and timing targets."
+        ],
+        "summary": "Add explicit desktop-window takeover with independent local and host authority, finite presentation, and measured automated qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-14T11:24:42Z",
+          "risks": [
+            "Security relevant: separate verified headless and interactive authorities. A request cannot self-accept, cross workspaces, or replace a live reservation. Avoid passing secret credentials or protected content to the renderer.",
+            "Reload can reuse window and webContents objects. Capture and retire a document incarnation on main-frame navigation and close; require the current owned frame on each IPC operation.",
+            "Revoke closes the local gate first. Capture exact attempt and lease, invalidate pending command and context callbacks, and send bounded exact retries. Do not stop business work through UI teardown.",
+            "Modal keyboard containment requires a real revoke control inside the active dialog as well as in the shell. Preserve draft on failed save and apply no presentation until readiness.",
+            "At-least-once delivery may repeat command metadata. Use exact IDs, finite queue/retention, expiry, and publication fences. Confirm packaged behavior separately."
+          ],
+          "sources": [
+            {
+              "title": "Approved desktop-first authority and lifecycle",
+              "url": "docs/adr/ADR-0047-headless-system-builder-delegation.md"
+            },
+            {
+              "title": "Existing desktop sender and window checks",
+              "url": "apps/desktop/src/main/trustedIpcSender.ts"
+            },
+            {
+              "title": "Existing immutable draft save and conflict behavior",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "title": "Existing keyboard focus trap",
+              "url": "modules/ui/shared/components/ModalDialog.tsx"
+            },
+            {
+              "title": "Electron sender validation guidance",
+              "url": "https://www.electronjs.org/docs/latest/tutorial/security#17-validate-the-sender-of-all-ipc-messages"
+            },
+            {
+              "title": "WAI modal dialog pattern",
+              "url": "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/"
+            }
+          ],
+          "summary": "The desktop pairing IPC already verifies an owned main frame. The app shell, Composer save boundary, and shared modal provide the interactive seams. Use the same desktop host, preserve existing application authorization, and keep the renderer delivery fence separate."
+        }
+      ],
       "rollback": "Disable new takeover requests, synchronously close all local presentation/context gates and restore manual controls, then exactly terminate pending/active reservations and stop delivery. Preserve headless connector authorization and independent tasks from increment1, ordinary data subscriptions, immutable revisions and drafts. Retain terminal authority records for stale retry refusal; never reuse generations or reenable a prior lease after rollback.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-11-14T11:24:42Z",
+      "status": "implementing",
       "title": "Accept and revoke automation control of one desktop window",
       "verification": [
         "Use fake clocks and held promises for AT09/10/11/12/13/14/26/27/38/39/41: grant/cancel/ready/revoke permutations and same-lease timeout races.",
@@ -1741,9 +1875,13 @@
     "state": ".implementation-roadmaps/headless-skills-ui-takeover/state.json"
   },
   "resumeAudits": [],
-  "roadmapApproval": null,
+  "roadmapApproval": {
+    "approvedAt": "2026-11-14T11:24:42Z",
+    "fingerprint": "133b4f778a42ea3bb9c1a7f366e76b46314d22bba7eba3304da1c7fdc2c22d05",
+    "note": "User approved the published single merged 10-increment Headless roadmap, pending work starts with revocable desktop window takeover."
+  },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "roadmap-review",
-  "updatedAt": "2026-11-14T11:23:29Z"
+  "status": "executing",
+  "updatedAt": "2026-11-14T11:24:42Z"
 }
