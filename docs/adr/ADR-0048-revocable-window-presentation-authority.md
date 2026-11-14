@@ -38,6 +38,10 @@ Desktop users can open a second main window with File > New Window.
 The same owned startup and current-frame checks apply to both. Only the host
 menu can request this window, with at most two live main windows. Published
 runtime windows have no authority to use this menu action.
+The main process retires the exact document authority on native hide or
+minimize. Hidden or minimized windows cannot register or answer delivery and
+context IPC. Restoring a window keeps its window ID and requires fresh document
+registration and consent. Other windows and backend tasks keep their own authority.
 
 Window control grants the finite saved-resource presentation actions and
 identifier-only context defined by the roadmap. Window context uses its

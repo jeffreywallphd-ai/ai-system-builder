@@ -358,6 +358,16 @@ test("closing a still-hidden window retires startup without a failure dialog", a
   assert.equal(f.calls.includes("maximize") || f.calls.includes("show"), false);
 });
 
+test("native hide and minimize retire the same owned window without affecting startup", async () => {
+  const f = await mainWindowFixture();
+  f.window.emit("ready-to-show"); f.resolveLoad(); await f.running;
+  assert.equal(f.retired.length, 0);
+  f.window.emit("hide");
+  f.window.emit("minimize");
+  assert.deepEqual(f.retired, [f.window, f.window]);
+  assert.equal(f.window.destroyed, false);
+});
+
 test("visible documents receive only the fixed presentation cue, including a minimized menu reload", async () => {
   const f = await mainWindowFixture(); f.window.webContents.emit("did-finish-load");
   assert.equal(f.scripts.length, 0, "do not announce native visibility before show");

@@ -100,7 +100,11 @@ test("a committed workspace or membership change denies the composed owner, and 
       handlers.set(channel, (event, input) => listener(event, input as never));
     } };
     let target: Parameters<typeof composed.authority.registerWindow>[0];
-    const owner = { ...composed, authority: { ...composed.authority,
+    const retiredDeliveries: unknown[] = [];
+    const owner = { ...composed, closeDelivery(attempt: Parameters<typeof composed.closeDelivery>[0]) {
+      retiredDeliveries.push(attempt);
+      composed.closeDelivery(attempt);
+    }, authority: { ...composed.authority,
       registerWindow(input: unknown, token: Parameters<typeof composed.authority.registerWindow>[1]) {
         target = input;
         return composed.authority.registerWindow(input, token);
@@ -111,8 +115,9 @@ test("a committed workspace or membership change denies the composed owner, and 
         return result;
       },
     } };
-    registerDesktopUiControlIpc({ ipcMain, getOwner: () => owner, resolve: event =>
-      event === trustedEvent ? { window, frame, isCurrent: () => true } : undefined,
+    let visible = true;
+    const lifecycle = registerDesktopUiControlIpc({ ipcMain, getOwner: () => owner, resolve: event =>
+      event === trustedEvent && visible ? { window, frame, isCurrent: () => visible } : undefined,
     });
     const observe = () => handlers.get(DESKTOP_UI_CONTROL_CHANNELS.observe)!(trustedEvent, workspaceId);
     const accept = (event: unknown, input: unknown) => handlers.get(DESKTOP_UI_CONTROL_CHANNELS.accept)!(event, input);
@@ -132,10 +137,23 @@ test("a committed workspace or membership change denies the composed owner, and 
     assert.equal(await accept(trustedEvent, first.target), undefined);
     assert.equal((await composed.authority.agentStatus(first.target, agent)).status, "ended");
     const second = await nextRequest();
-    assert.deepEqual(await handlers.get(DESKTOP_UI_CONTROL_CHANNELS.pull)!(trustedEvent,
-      { target: { ...second.target, leaseId: randomUUID(), generation: 1 }, sequence: 1 }), { status: "unavailable" });
-    await organization.memberships.saveMembership({ ...membership, status: "suspended" });
+    await observe();
+    visible = false;
+    lifecycle.retire(window);
+    assert.deepEqual(await observe(), { status: "unavailable" });
+    assert.deepEqual(retiredDeliveries, [second.target]);
     assert.equal(await accept(trustedEvent, second.target), undefined);
+    assert.equal((await composed.authority.agentStatus(second.target, agent)).status, "ended");
+    visible = true;
+    const previous = second.target;
+    assert.deepEqual(await observe(), { status: "ready" });
+    const third = await nextRequest();
+    assert.equal(third.target.windowId, previous.windowId);
+    assert.notEqual(third.target.uiIncarnationId, previous.uiIncarnationId);
+    assert.deepEqual(await handlers.get(DESKTOP_UI_CONTROL_CHANNELS.pull)!(trustedEvent,
+      { target: { ...third.target, leaseId: randomUUID(), generation: 1 }, sequence: 1 }), { status: "unavailable" });
+    await organization.memberships.saveMembership({ ...membership, status: "suspended" });
+    assert.equal(await accept(trustedEvent, third.target), undefined);
     assert.deepEqual(await observe(), { status: "unavailable" });
     await organization.memberships.saveMembership(membership);
     assert.deepEqual(await observe(), { status: "ready" });

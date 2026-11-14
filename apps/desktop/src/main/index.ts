@@ -65,6 +65,9 @@ async function createMainWindow(): Promise<void> {
     if (event.isMainFrame && !event.isSameDocument) retireUiControlWindow?.(mainWindow);
   });
   mainWindow.webContents.on("render-process-gone", () => retireUiControlWindow?.(mainWindow));
+  // Native visibility can change while renderer events or timers are delayed.
+  mainWindow.on("hide", () => retireUiControlWindow?.(mainWindow));
+  mainWindow.on("minimize", () => retireUiControlWindow?.(mainWindow));
 
   let hasBeenShown = false;
   let visibleCueAttempt = 0;
@@ -302,12 +305,13 @@ app.whenReady().then(async () => {
     ipcMain, getOwner: desktopHost.getUiControlOwner,
     resolve(event) {
       for (const window of openWindows) {
-        if (!isTrustedIpcSender(event, [window]) || window.webContents.isLoadingMainFrame()) continue;
+        const isUsable = () => openWindows.has(window) && !window.isDestroyed() && window.isVisible() &&
+          !window.isMinimized() && isTrustedIpcSender(event, [window]) && !window.webContents.isLoadingMainFrame();
+        if (!isUsable()) continue;
         const frame = window.webContents.mainFrame;
         return {
           window, frame,
-          isCurrent: () => openWindows.has(window) && isTrustedIpcSender(event, [window]) &&
-            window.webContents.mainFrame === frame && !window.webContents.isLoadingMainFrame(),
+          isCurrent: () => isUsable() && window.webContents.mainFrame === frame,
         };
       }
     },

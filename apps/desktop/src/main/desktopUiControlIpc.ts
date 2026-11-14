@@ -5,7 +5,7 @@ import type { DesktopUiControlOwner } from "../../../../modules/hosts/desktop/co
 import {
   DESKTOP_UI_CONTROL_CHANNELS, readUiControlAttempt, readUiControlLeaseTarget, readUiControlRevoke,
   readUiPresentationAcknowledgment, readUiPresentationPublication, readUiPresentationPull,
-  type UiControlLeaseTarget, type UiControlObservation, type UiControlWindowTarget, type UiPresentationPullResult,
+  type UiControlAttempt, type UiControlLeaseTarget, type UiControlObservation, type UiControlWindowTarget, type UiPresentationPullResult,
 } from "../../../../modules/contracts/headless";
 import { isWorkspaceId } from "../../../../modules/contracts/workspace";
 
@@ -16,6 +16,7 @@ type DocumentOwner = {
   readonly frame: Frame;
   readonly target: UiControlWindowTarget;
   readonly token: Parameters<DesktopUiControlOwner["authority"]["registerWindow"]>[1];
+  lastObservedAttempt?: UiControlAttempt;
   retired: boolean;
 };
 
@@ -33,10 +34,11 @@ export function registerDesktopUiControlIpc(dependencies: {
     pending.delete(window);
     const previous = active.get(window);
     if (!previous) return;
-    const attempt = previous.main.authority.readPending(previous.target, previous.token);
     previous.retired = true;
     previous.main.authority.retireWindow(previous.target, previous.token);
-    if (attempt) previous.main.closeDelivery(attempt.target);
+    // The old frame token can already be unusable during a native hide or
+    // document shutdown. Use only the exact attempt captured while usable.
+    if (previous.lastObservedAttempt) previous.main.closeDelivery(previous.lastObservedAttempt);
     active.delete(window);
   }
 
@@ -78,6 +80,7 @@ export function registerDesktopUiControlIpc(dependencies: {
       }
       const view = main.authority.observeInteractive(owned.target, owned.token);
       if (!view) return { status: "ready" };
+      if (view.request) owned.lastObservedAttempt = view.active?.target ?? view.request.target;
       const remainingMs = (view.active?.expiresAt ?? 0) - performance.now();
       const lease = view.active && remainingMs > 0 ? { target: view.active.target, remainingMs } : undefined;
       const contextChallenge = lease && main.contextChallenge(lease.target);
