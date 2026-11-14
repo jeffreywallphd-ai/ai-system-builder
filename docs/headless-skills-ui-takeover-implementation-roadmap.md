@@ -2,8 +2,8 @@
 
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
-- Status: `ready`
-- Updated: `2026-11-14T11:22:44Z`
+- Status: `roadmap-review`
+- Updated: `2026-11-14T11:23:29Z`
 
 ## Objective
 
@@ -115,6 +115,21 @@ The design spans a running desktop instance and a managed server/browser deploym
 | Server/browser first, then desktop (server-browser-then-desktop) | Qualify the existing managed server and browser first, then add the running desktop connector. | no | Begins with established managed identity; Delays the existing-desktop experience and front-loads managed qualification | Same final two-host scope in a different order; Desktop provider extraction occurs later |
 | Desktop only (desktop-only) | Deliver the bounded desktop workflow and defer server/browser support to a successor roadmap. | no | Smallest first scope; Does not cover the design's hosted interface in this roadmap | Managed parity and cross-worker delivery remain explicitly pending successor work |
 
+### How the agent gets permission to carry out a written plan
+
+Which approval modes and channels should the app support for a written build plan?
+
+The user selected both approval modes, available in chat and in the app. The host must verify that the person deciding has the current authority for the exact prompt and operation. Use the same approval record for both channels.
+
+- Status: `approved`
+- Selected option: `user-selects-both-modes`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Let the user choose either mode (user-selects-both-modes) | Offer scoped plan approval or a decision for each change. In either mode, the person can decide through an authenticated chat approval surface or the app popup. Both show which permissions the approval grants the agent on the person's behalf. | yes | Accommodates both low interruption and close oversight; Requires channel equivalence, hosted human verification, consistent grant display and duplicate-response handling | Use one host-owned approval record and exact scope for both channels; Keep separate approvals for sensitive actions. If chat cannot prove a real authorized user decision, finish approval in the app |
+| Approve a scoped plan (approve-scoped-plan) | The user reviews the exact sources, targets, output and limits, then approves a bounded plan for routine allowed steps. Separate approval remains for sensitive actions. | no | Fewer interruptions while writing or testing a system; Requires versioned plan binding, rate/resource limits and resumable exact step receipts | A changed scope or sensitive action needs fresh approval; A run stops at an unavailable capability and shows the app's next action |
+| Approve each change (approve-each-change) | The agent presents the same plan, then asks the user to approve each state-changing step through the app. | no | More opportunities to review individual changes; More interruptions in large data, model, asset and build workflows | Users can inspect each write explicitly; Bulk workflows may require many approvals even when their overall plan is unchanged |
+
 ## Increment map
 
 | Increment | Outcome | Dependencies | Status |
@@ -122,6 +137,13 @@ The design spans a running desktop instance and a managed server/browser deploym
 | 1: Use chat tools to author systems and keep saved data synchronized | Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control. | None | `completed` |
 | 2: Accept and revoke automation control of one desktop window | Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue. | headless-authoring-and-synchronization | `pending` |
 | 3: Deliver the same workflow through the authenticated server and browser | Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay. | revocable-desktop-presentation | `pending` |
+| 4: Turn a written request into a build plan | Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions. | server-browser-and-delivery-qualification | `pending` |
+| 5: Acquire source material and build training datasets | Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context. | plan-from-written-request | `pending` |
+| 6: Build and test RAG databases and context packs | Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results. | data-acquisition-and-datasets | `pending` |
+| 7: Manage models, fine-tune and generate outputs | Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits. | rag-and-context | `pending` |
+| 8: Select, plan and create reusable assets | Let the agent inspect the Catalog and User Library, select compatible exact assets, and create custom assets when the system needs a new component. | models-training-and-generation | `pending` |
+| 9: Compose, build, test and publish systems | Build the planned Canvas or Form system from exact data, Context, model and asset references through the supported authoring, test and publication lifecycle. | plan-from-written-request, data-acquisition-and-datasets, rag-and-context, models-training-and-generation, asset-selection-and-custom-creation | `pending` |
+| 10: Qualify coverage across the app | Deliver consistent support, discovery and actionable handoffs across the major product areas on both hosts. Show users which work needs their input and prove the complete workflow with repeatable tests. | plan-from-written-request, data-acquisition-and-datasets, rag-and-context, models-training-and-generation, asset-selection-and-custom-creation, compose-build-test-publish | `pending` |
 
 ## Increment 1: Use chat tools to author systems and keep saved data synchronized
 
@@ -252,7 +274,7 @@ Qualify shared headless/control behavior on the existing managed server and brow
 - Finite explicit API route-policy entries, principal-aware managed connector/tool forwarding, shared browser shell/gate/context integration and scoped authenticated stream with bounded polling fallback.
 - PostgreSQL transactional receipts/outbox, bounded worker claim/recovery/delivery adapter and cursor retention/resync behavior with organization RLS and current authorization.
 - Agent-executable local Chrome/server/PostgreSQL and packaged Windows acceptance definitions, source-coverage crosswalk, bounded evidence schemas, operator configuration/rollback guide and capability/qualification matrix.
-- Current exact-target receipts and separate-invocation reviews for increment criteria, then one final all-suite and repository-wide completion run after every implementation chunk is complete; no implied production/public release.
+- Current focused receipts and separate-invocation reviews for every criterion and both hosts on the same candidate.
 
 ### Acceptance criteria
 
@@ -264,13 +286,13 @@ Qualify shared headless/control behavior on the existing managed server and brow
 | `browser-real-host-and-parity`: An automated local Chrome journey must use the built thin client, a real authenticated test server and PostgreSQL, and an actual stdio MCP client forwarding to that same server. Use synthetic accounts and isolated organization/workspaces without production credentials. Discover a supported template, create and edit its saved system headlessly, click Accept automation takeover in the target tab, reveal saved work, start an existing observable operation, click Revoke automation takeover and continue backend work while the human navigates/edits elsewhere. Prove dirty-base conflict, no stale preview/focus/navigation, no fresh context after revoke, lost-response retry, reverse refetch, readiness/grant/revoke races, multi-tab isolation, expiration, disconnect and fresh acceptance after reload. Drive product human buttons automatically. Reexecute the focused packaged desktop journey on the same final candidate to establish retained desktop behavior. Complete the 18-invariant/41-scenario crosswalk with exact test and host owners; deterministic substitutes must state their limits and cannot stand in for real host, persistence or native evidence. | controlled-environment | not recorded |
 | `host-specific-targets-and-bounds`: Record Windows/Electron and Chrome/server/PostgreSQL versions, machine resources, foreground/background status, network fixture and sample counts. Collect a baseline and report actual p50/p95/max separately for each host; no draft number is a measured claim. For 100 bounded local Chrome mutations after warm-up, commit-to-current-visible-state p95 must be at most 2000 ms and warm allowed presentation p95 at most 1000 ms. For 100 local revokes, restored human controls must meet p95 at most 100 ms and maximum 250 ms after the handler begins, independent of server acknowledgment. Healthy local reconnect/replay/resync must yield authorized current state within 5000 ms. Retest background-throttled expiry/liveness and both UI command/context size and queue bounds; zero old-generation effects and zero newly published revoked context are absolute correctness requirements. Measure queue depth, duplicate suppression, conflicts, retry receipts and sanitized audit counters. Failed targets remain failed or pending and require explicit policy revision; local timing does not qualify WAN or cloud latency. | controlled-environment | not recorded |
 | `security-managed-parity-reviewed`: Update and review the security delta for API routes, stream authentication, interactive UI acceptance, managed identity, PostgreSQL outbox/receipts and worker delivery. Existing OIDC, membership, RLS and secret boundaries remain authoritative. Automated denial/failure tests must cover absent/revoked/wrong-audience credentials, wrong role or organization/workspace/window, agent self-acceptance, changed membership before replay/receipt reads, unknown/noncanonical route variants, malformed/oversized traffic and policy/stream/database failures. Verify current access before returning replayed events, receipts or refetched resources. Failed authorization ends attachment and prevents new backend operations under existing policy, unlike ordinary UI-only revoke. Credential-bearing traces, screenshots and raw logs must not be retained; tests use bounded synthetic evidence. Rollback disables the new routes/stream/control surface and ends leases while retaining existing secure APIs, data/receipts/audit, drafts and normal authorized UI access. | local | not recorded |
-| `complete-contract-and-final-qualification`: Every INV-01 through INV-18 and AT-01 through AT-41 must map to an owning criterion, executable test and applicable host. No race, draft, privacy, retry, delivery, authority or business/presentation distinction may disappear when scenarios are grouped. After every implementation chunk in all three increments is recorded and relevant checks pass, run npm run test:all once, followed by applicable docs:check, architecture:check, agent-support:check, dependency security and server/thin-client/desktop build-package gates on the current candidate. Record real command outcomes, immutable sanitized reports, exact-target receipts and a separate-invocation review. Unavailable native, IdP, ingress, PostgreSQL or runtime evidence stays pending and prevents the corresponding supported deployment claim and final closure. Keep human studies and manual acceptance offline; all retained technical UI checks are automated. User roadmap approval is separate from permission to implement, final overall approval and production/release authority. | local | not recorded |
+| `complete-contract-and-final-qualification`: Every INV-01 through INV-18 and AT-01 through AT-41 must map to an owning criterion, executable test and applicable host. No race, draft, privacy, retry, delivery, authority or business/presentation distinction may disappear when scenarios are grouped. Qualify both hosts on the same current source with focused checks, actual hosted journeys, and the applicable architecture, documentation and platform gates. The expanded roadmap runs its full suite once after the last increment. Record real command outcomes, immutable sanitized reports, exact-target receipts and a separate-invocation review. Unavailable native, IdP, ingress, PostgreSQL or runtime evidence stays pending and prevents the corresponding supported deployment claim and final closure. Keep human studies and manual acceptance offline; all retained technical UI checks are automated. User roadmap approval is separate from permission to implement, final overall approval and production/release authority. | local | not recorded |
 
 ### Verification
 
 - Run focused managed API/route-policy/workflow parity, organization/RLS, authenticated stream and PostgreSQL receipt/outbox denial/recovery tests.
 - Run thin-client-headless-takeover.e2e.spec.ts with real Chrome/server/PostgreSQL/stdio MCP, two-worker dispatch-crash/replay/access-loss tests and the final packaged desktop journey. Disable credential capture; own cleanup.
-- After all chunks, run the serial overall test:all and applicable repository gates/builds. Preserve unrelated work and separate target-environment evidence.
+- Run applicable docs, architecture, dependency, desktop package and managed platform gates for this increment. Run the all-suite check only after the last implementation increment.
 
 ### Rollback
 
@@ -281,3 +303,290 @@ Disable new agent/control/change-stream route admission and revoke affected dele
 - Cloud chat access to a local desktop, authenticated relay, remote desktop control, background daemon after desktop exit and desktop-server replication/synchronization
 - New OAuth/OIDC issuer/login UX, public MCP hosting, external broker dependency, internet-wide hardening and production scaling/deployment without separate decisions and actual qualification
 - Universal exactly-once external effects, new model/runtime recovery or cancellation promises, independent agent branches/merge, collaborative editing, screenshots/unsaved-text context and arbitrary renderer editing
+
+## Increment 4: Turn a written request into a build plan
+
+- Id: `plan-from-written-request`
+- Status: `pending`
+- Dependencies: `server-browser-and-delivery-qualification`
+
+Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions.
+
+### Work packages
+
+- **Discover what is available** (`discover-capabilities`): Read host, workspace and task capabilities, allowed effects, readiness requirements, exact resource IDs and compatible templates.
+- **Plan, approve and resume** (`plan-execute-resume`): Let the user choose scoped plan approval or explicit approval for each change. Offer either choice and each approval in authenticated chat or in an app popup, using the same app-owned record.
+- **Provide a portable AI skill** (`portable-skill`): Use a small entry skill with on-demand workflow references, strict registered schemas, bounded tool families, graded examples and a supported-client matrix.
+
+### Deliverables
+
+- An approved capability and effects matrix, versioned plan and task interfaces, and separate UI presentation boundary
+- Short skill entry with workflow references, MCP schemas and reusable evaluation harness
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `unambiguous-plan`: A plain-language request yields a validated ordered plan with exact workspace, source, desired output, resource limits, cost estimates where available, authority, prerequisites and expected output checks. Missing information triggers a focused question. Preview has zero business or provider effects. | local | not recorded |
+| `typed-tools-and-recovery`: Use strict request/response schemas, deterministic filtered tool discovery, current host-owned policy and exact canonical IDs. Bind plan and per-step outcome to immutable approval, revision and keys. Resume a lost reply by reconciling authoritative task state. Replanning after an input change requires new scope approval. | local | not recorded |
+| `user-choice-and-approval-channels`: Let users select whole scoped plan approval or per-change approval. Both modes work in authenticated chat and an accessible desktop/browser approval popup. Every request shows the requester, exactly what the agent will be allowed to do on the user's behalf, workspace, affected sources and destinations, expected effects, resource/cost limits and expiry. The popup has Approve, Deny and Cancel with keyboard support. All channels use one immutable scoped approval record. Only a verified current human principal can approve. Agent messages, model text, and unsupported clients cannot assert approval. When chat cannot attest the user and bind the decision to the exact request, direct the user to the matching app approval. Test all four mode/channel combinations and decline, expire, revoke, cross-channel races, replay and changed permissions. | local | not recorded |
+| `portable-quality`: A versioned portable skill and generated reference select only workflow-relevant tools. Automated cases grade ambiguity handling, grounded IDs, denial recovery, user outcome, task count, runtime and token/tool budgets. Use deterministic model transcripts in regular CI and clearly scoped opt-in frontier-client qualification. | local | not recorded |
+| `security-plan-and-context`: Plan text, sources and tool outputs cannot expand authority or authorize export. Issue no ambient administrator grant. Add allow/deny/no-op tests for wrong workspace, changed approved plan, unavailable scopes and private content leaving trusted boundaries without permission. | local | not recorded |
+
+### Verification
+
+- Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host.
+
+### Rollback
+
+Disable new capability discovery and plan execution, end presentation leases, and retain approved plan and task evidence. Existing individual app workflows remain usable.
+
+### Excluded
+
+- A generic API, command, URL or selector executor
+- A new identity system, external relay or embedded frontier provider requirement
+
+## Increment 5: Acquire source material and build training datasets
+
+- Id: `data-acquisition-and-datasets`
+- Status: `pending`
+- Dependencies: `plan-from-written-request`
+
+Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context.
+
+### Work packages
+
+- **Find and import source data** (`acquire-data`): Use approved file selections, supported provider browsing, bounded ingestion, scan normalization/OCR where available, and existing status/cancel surfaces.
+- **Prepare and validate datasets** (`prepare-review-data`): Inspect schemas, choose recipes and splits, preview mappings, produce artifacts and review the output. Track immutable versions and lineage.
+- **Review data work in the app** (`reveal-data`): Reveal the exact source, recipe, dataset version, inspection results or running task in Data. Open existing approval screens when required.
+
+### Deliverables
+
+- Typed acquisition, recipe, validation, review and dataset-version tools
+- Data presentation intents and synthetic local/provider qualification evidence
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `source-admission`: Scope each import to selected files or a supported approved provider and workspace. Report provenance and unsupported formats, fail closed on missing source permission, and enforce current byte, result and runtime limits before work starts. | local | not recorded |
+| `dataset-quality`: Produce immutable dataset versions with source lineage, verified schema, quality summaries and reproducible train/validation/test splits. Distinguish review-required, terminal failure, cancellation and uncertain effects. Prove no duplicate outputs on retry. | local | not recorded |
+| `real-data-handoff`: In the packaged app and authenticated browser, a real MCP client imports a synthetic source, builds and reviews a usable dataset and reveals the exact version/task on explicit takeover. Revocation preserves owned dataset work and prevents subsequent reveal. | controlled-environment | not recorded |
+| `security-data-boundaries`: Use scoped file handles or resource IDs. Preserve existing local/native/provider admission and explicit external publication controls. Validate licensed or private source handling, protected fields, prompt injection, oversized input, changed grants and destination mismatch. | local | not recorded |
+
+### Verification
+
+- Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host.
+
+### Rollback
+
+Disable new import and dataset tool routes. Preserve source artifacts, lineage, receipts and completed datasets.
+
+### Excluded
+
+- General web crawling, filesystem enumeration and unapproved scraping
+- Implicit provider upload or uncontrolled forwarding of source contents
+
+## Increment 6: Build and test RAG databases and context packs
+
+- Id: `rag-and-context`
+- Status: `pending`
+- Dependencies: `data-acquisition-and-datasets`
+
+Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results.
+
+### Work packages
+
+- **Prepare sources and index settings** (`prepare-context`): Select exact source revisions and an available embedding model. Preview extraction, chunking, metadata scopes and resource estimates.
+- **Build, query and evaluate** (`build-evaluate-context`): Create an immutable manifest, inspect lineage, run bounded queries and compare recall/citations and latency to declared fixtures. Rebuild through the existing versioned workflow.
+- **Show Context outcomes** (`reveal-context`): Reveal the exact corpus, query result summary, cited source or task page with its current permissions.
+
+### Deliverables
+
+- RAG/context capability contracts, validation reports and artifact handoffs to Systems
+- Scoped Context presentation actions and measured retrieval and resource evidence
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `grounded-context`: Use actual Context use cases for extraction, chunks, embedding selection, index building, context pack creation, test queries and approved rebuild. Return bounded manifests, citations and counts. Keep stale or partial indexes out of active results. | local | not recorded |
+| `measured-retrieval`: A synthetic source corpus reaches the predeclared retrieval, citation and resource targets on the intended supported runtime. Exercise a failed or interrupted build and exact receipt replay. Prove Desktop/browser Context reveal against the same authorized saved record. | controlled-environment | not recorded |
+| `security-context-isolation`: Protect raw source text and query results with scoped retrieval, bounded result size and egress rules. Untrusted retrieval instructions cannot become tool actions. Reject cross-workspace index, model, citation and stale manifest IDs. | local | not recorded |
+
+### Verification
+
+- Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host.
+
+### Rollback
+
+Disable agent Context admission and revoke related presentation. Retain saved and versioned indexes, packs, receipts and ordinary Context UI.
+
+### Excluded
+
+- Direct database queries, arbitrary portable index execution or default source sharing
+
+## Increment 7: Manage models, fine-tune and generate outputs
+
+- Id: `models-training-and-generation`
+- Status: `pending`
+- Dependencies: `rag-and-context`
+
+Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits.
+
+### Work packages
+
+- **Discover and acquire supported models** (`models`): Search or inspect configured providers, resolve exact model/revision, estimate local resources, and use the existing bounded download and registry tasks.
+- **Fine-tune and evaluate** (`train-evaluate`): Select a compatible base, dataset version, training method and hardware budgets. Track training progress, saved checkpoints, resulting model and clearly scoped evaluation results.
+- **Generate and show results** (`generate-and-reveal`): Use existing approved text/image workflows, manage supported tasks and reveal exact model inventory, downloads, training jobs and generated artifacts.
+
+### Deliverables
+
+- Model download, training, evaluation and supported image/text generation tool families
+- Task and notification integration, including hardware admission and verified actor/target ownership
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `compatible-download`: Resolve permitted model revision, provenance, format, license and compatible runtime. Follow memory and storage guards, show the amount of memory needed if refused, and surface durable status for retry and existing supported cancellation. | local | not recorded |
+| `training-and-generation-quality`: An approved dataset and pinned model feed the available fine-tuning task profile. Record base, recipe, data hash, hardware, task and output artifact. Run evaluation against a fixed baseline and separate training, readiness and quality results. Include supported image generation and output import in scoped capability coverage. | local | not recorded |
+| `model-runtime-hosts`: Exercise actual supported small model download on an authorized fixture, bounded local fine-tuning/evaluation, generated output and task recovery, resource guard refusal and owned cleanup. Prove paired Desktop/browser status and revoke-gated reveals. Document supported hardware profiles and unavailable methods instead of passing a stand-in. | controlled-environment | not recorded |
+| `security-model-supply-and-limits`: Use existing host-managed providers, safe formats, integrity/allowlist controls and fail-closed executable model policy. Deny hidden new suppliers, unauthorized paid or external effects, unbounded resource reservations and unsafe retries. Keep tokens, protected sample data and raw worker output out of model tool responses. | local | not recorded |
+
+### Verification
+
+- Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host.
+
+### Rollback
+
+Turn off model and generation delegation, end related presentation and preserve task cleanup, installed assets and result metadata under their owning policies.
+
+### Excluded
+
+- New arbitrary model loaders or custom training code
+- Unqualified hardware, format and model families or automatic purchasing
+
+## Increment 8: Select, plan and create reusable assets
+
+- Id: `asset-selection-and-custom-creation`
+- Status: `pending`
+- Dependencies: `models-training-and-generation`
+
+Let the agent inspect the Catalog and User Library, select compatible exact assets, and create custom assets when the system needs a new component.
+
+### Work packages
+
+- **Select assets and check fit** (`select-plan`): Search exact released definitions, dependencies, placements, ports and capabilities. Preview a compatible composition and explain substitutions.
+- **Create custom assets in a reviewable draft** (`create-custom`): Use existing declarative and layered customization contracts, immutable base/source references, proposal/review, package inspection and approved promotion.
+- **Reveal assets and plans** (`show-asset-work`): Open exact catalog, User Library, Studio draft/customization, composition plan, setup or validation results under a current window lease.
+
+### Deliverables
+
+- Exact catalog, library, Studio and planning tools plus typed Form/Canvas handoff
+- Asset provenance and package trust evidence for advertised workflow paths
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `compatible-asset-plan`: Read effective assets, immutable versions and user-library provenance. Use existing composition, readiness and execution-plan checks to explain availability. Form pages, fields, validation, routes, triggers, and Canvas structure use the same asset and scope rules. | local | not recorded |
+| `custom-asset-drafts`: Demonstrate a reusable custom declarative asset with exact base, configuration schema, ports or behaviors, validation, and immutable release references. Executable custom proposals, source overlays and packages must use the existing isolation, review and admission path with separate approval before execution or release. | local | not recorded |
+| `real-asset-workflow`: Through MCP and the paired real hosts, choose from a versioned Catalog, create a missing declarative asset, plan and use it in a composed system, and reveal its exact draft/review/validation screens. Prove correct rejection of an unavailable or revoked implementation. | controlled-environment | not recorded |
+| `security-asset-trust`: Keep generated source passive until explicitly admitted through the qualified build/review/trust path. Validate current package, workspace and capability authorization. Prevent palette/presentation steps from triggering install, activation, undeclared code execution or user-library disclosure. | local | not recorded |
+
+### Verification
+
+- Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host.
+
+### Rollback
+
+Withdraw tool families and presentation actions while retaining reviewed proposals, protected package quarantine, existing release history and saved system revisions.
+
+### Excluded
+
+- Unrestricted code or package execution
+- Implicit tenant-wide promotion, trust changes, or approving the agent's own executable work
+
+## Increment 9: Compose, build, test and publish systems
+
+- Id: `compose-build-test-publish`
+- Status: `pending`
+- Dependencies: `plan-from-written-request`, `data-acquisition-and-datasets`, `rag-and-context`, `models-training-and-generation`, `asset-selection-and-custom-creation`
+
+Build the planned Canvas or Form system from exact data, Context, model and asset references through the supported authoring, test and publication lifecycle.
+
+### Work packages
+
+- **Build the system design** (`compose-systems`): Apply reviewed semantic edits and exact bindings in supported Canvas/Form workflows. Validate behavior, version selected resources and preserve human drafts.
+- **Build and test an immutable candidate** (`build-and-test`): Start the existing deterministic build/isolated test, read logs and bounded evidence, inspect test failures and require suitable environment readiness.
+- **Prepare and approve publication** (`publish-and-operate`): Expose release diff, compatibility and intended destination. Execute eligible release or provider publication only under separately approved lifecycle authority. Show status in the existing app.
+
+### Deliverables
+
+- Authoring and run/build/test/release tools with separately gated publication, deployment and runtime access
+- Desktop/browser takeover for exact System Composer, run, artifact, validation and release review
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `validated-system-design`: Use exact system, workspace, resource and revision IDs. Exercise a working RAG system, a trained-model system and an asset-backed form or interactive system. Include tested behavior and resource bindings with no silent fallback. Compare existing and new revisions and keep draft conflicts recoverable. | local | not recorded |
+| `build-test-release`: A deterministic build produces immutable artifacts and test evidence. The agent can prepare a release and carry out a publish action only through the separately authorized app boundary bound to the exact build, evidence, audience and target. Deployment or runtime Start/Stop uses its distinct approved owner and scope. | local | not recorded |
+| `full-system-user-journeys`: Run written-request-to-build journeys on actual desktop and managed Chrome/server hosts, including exact real MCP calls, task progress, failure repair, save/reopen, controlled publish with synthetic targets and safe rollback. Exercise user approval, visible preview, and revocation without canceling independent backend work. | controlled-environment | not recorded |
+| `security-release-boundaries`: Do not treat a successful build/test, UI lease, plan acceptance or generated instruction as publication or deployment authority. Deny changed destinations, stale or cross-tenant evidence, unsigned or incompatible bundles, and unauthorized executable or external effects. Keep ordinary operator recovery and revocation. | local | not recorded |
+
+### Verification
+
+- Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host.
+
+### Rollback
+
+Disable new delegated lifecycle entry points and end their presentation. Retain immutable builds, tests, releases, active-work safety and prior release rollback procedures.
+
+### Excluded
+
+- Production/public deployment without an approved target and qualified release
+- Underlying shell, source execution, and any bypass of immutable release approval
+
+## Increment 10: Qualify coverage across the app
+
+- Id: `workspace-controls-and-product-qualification`
+- Status: `pending`
+- Dependencies: `plan-from-written-request`, `data-acquisition-and-datasets`, `rag-and-context`, `models-training-and-generation`, `asset-selection-and-custom-creation`, `compose-build-test-publish`
+
+Deliver consistent support, discovery and actionable handoffs across the major product areas on both hosts. Show users which work needs their input and prove the complete workflow with repeatable tests.
+
+### Work packages
+
+- **Cover workspace, settings and activity** (`workspace-and-settings`): Inspect authorized workspace and capability, support separately approved workspace actions, show safe effective settings, health and task notifications, and send an authorized user to exact setup, secret, identity or security UI when needed.
+- **Account for every major feature** (`capability-matrix`): Map feature, supported hosts, agent intent, typed operation, authority, takeover reveal, task behavior, test and explicit human-only outcomes to each relevant app surface.
+- **Run complete representative journeys** (`cross-product-eval`): Evaluate RAG, training, asset reuse and publishing workflows from written goals. Verify privacy and interruption behavior, compatibility, quality, latency and resource bounds. Run the consolidated exact candidate qualification.
+
+### Deliverables
+
+- Versioned complete coverage and platform capability matrix with operator guidance
+- Current automated evaluation and qualification evidence, route-policy review, user help and exact-data reporting
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `complete-capability-map`: Cover Home/readiness, workspaces and authorized workspace actions, Data, Context, Models, Image Generation, Catalog, Studio, User Library, Systems, releases/runtime, notifications, Settings and Security. Identify read, planned, approved effect, safe reveal and human-only operations with desktop and browser availability. Tool discovery and documentation match actual backend policy. | local | not recorded |
+| `administrative-handoff`: Headless workflow may report safe status and request or reveal relevant setup to the authorized person. Keep credential entry, membership and administrator controls on their existing interactive or separately authorized path. Ordinary agent grants never change authentication, trust policy or account credentials. | local | not recorded |
+| `portfolio-qualification`: Pass repeated real-host journeys, bounded fallback and no-effect denial tests. Measure tool count, clarification quality, resource use, task latency, expected user outcome, provider/host incompatibility and revocation. Exercise both a maintained frontier client and deterministic regression cases with fixed recorded thresholds. | controlled-environment | not recorded |
+| `security-final-capability-review`: Reconcile the exact published tool list, routes, schemas and claims against the complete matrix. Require independent review and current all-suite and product build gates. Unauthorized egress, secret sharing, cross-scope actions, privilege changes and revoked presentation are denied on all advertised hosts. | local | not recorded |
+
+### Verification
+
+- Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host.
+- Run the full repository all-suite and platform builds only after relevant increments are implemented and tested. Record current exact evidence and independent review.
+
+### Rollback
+
+Turn off each new capability family independently, revoke exact grants and leases, and preserve prior Headless scope, ordinary app UI and accepted records.
+
+### Excluded
+
+- Human acceptance as a technical criterion
+- Unsupported admin automation, production topology or automatic privilege escalation

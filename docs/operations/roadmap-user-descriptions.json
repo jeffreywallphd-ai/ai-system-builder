@@ -2,6 +2,512 @@
   "schema_version": "roadmap-user-descriptions-v1",
   "criteria": [
     {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "plan-from-written-request",
+      "criterion_id": "unambiguous-plan",
+      "source_description_sha256": "e61695a200952d2626b2806e5105ef5b62e8da46e74bab6dcfb0de0b0735befb",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Turn a written goal into a plan the user can check.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Show the workspace, sources, outputs, limits, expected costs, required permissions, and how to check the result.",
+          "Ask a focused question when information is missing.",
+          "Preview must leave saved data and providers untouched."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "plan-from-written-request",
+      "criterion_id": "typed-tools-and-recovery",
+      "source_description_sha256": "39e666844b8c3ce49975525f412b9c3974083f2590ee80ba78330d6b2bfa430d",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Carry out only the approved plan.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Use fixed tool inputs, exact record IDs, and current app permissions.",
+          "Tie each step and retry to the approved version of the plan.",
+          "After a lost reply, check the saved task before trying again.",
+          "Ask for new approval when the scope changes."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "plan-from-written-request",
+      "criterion_id": "user-choice-and-approval-channels",
+      "source_description_sha256": "f7496f1dea50c402315e67cfd1359b41dc01e9374ae3ffc024692e2e666d0471",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Choose how and where to approve.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Approve a complete scoped plan or approve each change separately.",
+          "Either choice works in authenticated chat and in the app popup.",
+          "Every request lists the requester, permissions granted to the agent on your behalf, workspace, sources, destinations, expected effects, limits, costs, and expiry.",
+          "Use Approve, Deny, or Cancel with the keyboard or mouse.",
+          "Both channels use the same saved request. The app checks that a current authorized person acted. If chat cannot prove this, use the app popup.",
+          "Test all four combinations, including expired requests, revoked access, repeats, and a decision submitted through both channels."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "plan-from-written-request",
+      "criterion_id": "portable-quality",
+      "source_description_sha256": "80ff779bd410a5634a0b0e0760652851d5e96e8a02cd6b107ad43067a57aea92",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Make the skill work in supported chat clients.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Give the model the relevant tools and a reference with the current schemas.",
+          "Test how it asks questions, chooses exact records, handles denial, completes work, and uses time and tools.",
+          "Grade with recorded examples and a separately qualified real chat client."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "plan-from-written-request",
+      "criterion_id": "security-plan-and-context",
+      "source_description_sha256": "c3b1a6b5983e824a4a734b0f93b10d105096c61be692f6af707dfd698dc26fdc",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep proposed plans and private content within permissions.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Treat text from the model, files, and tool results as data.",
+          "Reject changed scope, wrong workspaces, missing rights, and private data transfers without approval.",
+          "An agent cannot grant itself administrator access."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "data-acquisition-and-datasets",
+      "criterion_id": "source-admission",
+      "source_description_sha256": "6cb7feb24ad12e3d1b3108f1f025bb9043318a91c42777e0e2de1bef753845d6",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Import only approved sources.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Use selected files or an approved provider in the requested workspace.",
+          "Record where data came from and explain formats the app cannot use.",
+          "Enforce size and runtime limits and refuse missing permissions."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "data-acquisition-and-datasets",
+      "criterion_id": "dataset-quality",
+      "source_description_sha256": "57edd46e17b77a72ada9ec03167c2885c8200c1aac4eb0166ed6c707f3ff8ed8",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Build a training dataset that can be reviewed and reproduced.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Check the output schema and sources, record quality findings, and preserve the version.",
+          "Record training, validation, and test splits.",
+          "Report failures or uncertainty and reuse results after a lost reply without creating duplicates."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "data-acquisition-and-datasets",
+      "criterion_id": "real-data-handoff",
+      "source_description_sha256": "e778509cd93db1dc92c26feb9b02c81af5f415a4e9c730348c8dc792693b7624",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Prove the workflow in the packaged desktop app and authenticated browser.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Use the real chat connector to import synthetic material and build and review a dataset on both hosts.",
+          "Show the exact version or task when the user allows window control.",
+          "After revoke, the task can continue and the agent cannot open the result in the window."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "data-acquisition-and-datasets",
+      "criterion_id": "security-data-boundaries",
+      "source_description_sha256": "293333eceaa6c35e8bd82445a9cb66300cb322c53e56b69689a9d73bd20881db",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Protect local and provider data.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Use exact scoped file handles or record IDs and keep existing import and publication checks.",
+          "Test private or licensed material, protected fields, untrusted instructions, size limits, withdrawn access, and wrong destinations."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "rag-and-context",
+      "criterion_id": "grounded-context",
+      "source_description_sha256": "bb5310eb440719e39e965ba1cad546cf25a7fa71d7e1ca24cf7f95d463db0bdc",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Build and inspect a RAG database or reusable context pack.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Use the app's current tools to extract text, create chunks, choose embeddings, build the index, create a pack, test queries, and request an approved rebuild.",
+          "Report bounded counts, manifests, citations, and sources.",
+          "Keep partial or outdated indexes out of current results."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "rag-and-context",
+      "criterion_id": "measured-retrieval",
+      "source_description_sha256": "2cb1052c8fda0f8c09851a421ff2512be43cd75b53d22e2adfce7774c7295fd9",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Check retrieval quality and recovery on real hosts.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Meet declared retrieval, citation, latency, and resource targets on controlled source data.",
+          "Recover a failed or interrupted build without repeating a completed write.",
+          "Reveal the exact authorized saved item in the desktop app and browser."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "rag-and-context",
+      "criterion_id": "security-context-isolation",
+      "source_description_sha256": "952b9b8248db531d995d26489372004a2e48e538a33b9a721e89221df6baf19a",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep retrieval and results within their scope.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Limit result size and protect source and query text before sharing.",
+          "Ignore tool instructions found in source material.",
+          "Refuse a wrong workspace, stale manifest, or unauthorized index, model, or citation."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "compatible-download",
+      "source_description_sha256": "f29da3f6e2804b14796e5ea028a252e2b88db42239d19dc3dd518f70811325fb",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Choose and download a supported local model.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Check exact revision, source, license, format and runtime fit before downloading.",
+          "Keep disk and memory limits and tell the user how much memory to free if needed.",
+          "Read saved task status, reconcile retries, and offer cancel when supported."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "training-and-generation-quality",
+      "source_description_sha256": "9e1fd528d5de97a37d2d35c3d986c763d7be377ca735324d5acc11473f464289",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Train and evaluate a model or generate an output.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Use an approved dataset, exact base model, fixed recipe, and supported hardware.",
+          "Record the dataset fingerprint, task type, base model, recipe, hardware and output artifact.",
+          "Compare with a fixed baseline. Report separate results for training, readiness and quality.",
+          "Cover supported image generation and importing the result into the workspace."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "source_description_sha256": "ccebdc19cce735a5f395f0c447a87aaf9648895c5fb003447d9ce5777d36b1a6",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Test real model and generation work within resource limits.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Download an approved supported small model in the controlled test environment. Run bounded local fine-tuning and evaluation, and generate an output.",
+          "Verify resource refusal, task recovery and owned cleanup.",
+          "Reveal exact status in both apps under approved window control. Identify hardware and methods that could not be tested."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "source_description_sha256": "f7efb826afee1b6610444b0133ecb3717f468d72063fe6bd9297587b5d7e28c2",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep model sources and resource use under app control.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Enforce current provider credentials, supported formats, verified downloads, and executable loading policy.",
+          "Refuse unauthorized suppliers, paid or external effects, excess resources, and unsafe retries.",
+          "Keep credentials and protected content out of tool responses."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "asset-selection-and-custom-creation",
+      "criterion_id": "compatible-asset-plan",
+      "source_description_sha256": "ef240b9fbad98ee92a48d1d9272f1aa8beb4c91644a69aad53bbe7314014623e",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Find exact assets that fit the system.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Use the Catalog, User Library, effective assets and exact released versions.",
+          "Check placement, ports, routes, behaviors, and runtime readiness for Canvas and Form.",
+          "Explain an unavailable asset or compatible substitute."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "asset-selection-and-custom-creation",
+      "criterion_id": "custom-asset-drafts",
+      "source_description_sha256": "fb6f370609793ff376e09738e9defcd5df94069dcb2dc10f4368d06306a96382",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Prepare a new reusable asset when the catalog has a gap.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Create a validated declarative asset with exact bases, settings, ports or behaviors, and immutable reviewed releases.",
+          "Send executable work through the approved review and isolation path before any build execution or release."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "asset-selection-and-custom-creation",
+      "criterion_id": "real-asset-workflow",
+      "source_description_sha256": "2be43698a883155cedeafa753720f62fc66af3bb4c81a46b78e801a66746a062",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Use a custom asset in a real system.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Use the chat connector and both app hosts to select an existing versioned asset, create a missing declarative asset, validate the plan and use the new asset in a system.",
+          "Show the matching draft or validation view under window control.",
+          "Verify that unavailable or revoked implementations stay unusable."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "asset-selection-and-custom-creation",
+      "criterion_id": "security-asset-trust",
+      "source_description_sha256": "702febdc69d93630b7fbc34ad5faefa16b8a0e8fa76afc6d67c1c33abd27f36b",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep packages and generated source under review.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Treat generated source as data until admitted by the app's verified review and trust checks.",
+          "Preserve current workspace, library, package and capability rules.",
+          "Opening a view cannot run, install, activate, or disclose an asset."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "compose-build-test-publish",
+      "criterion_id": "validated-system-design",
+      "source_description_sha256": "5b25ae3e3a387be860d00240986482f55352542b5b6a3703ee2527445561b37c",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Validate complete systems built from the selected resources.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Build and test a RAG system, a trained-model system, and an asset-backed form or interactive system.",
+          "Bind exact resource versions and explain missing bindings.",
+          "Keep human drafts and resolve save conflicts without losing or replacing work."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "compose-build-test-publish",
+      "criterion_id": "build-test-release",
+      "source_description_sha256": "a0831e588da081c3b6161f39ec8cd232b6cf13819ebc539199bdef74dc9cdee8",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Build and test the exact system candidate before release.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Verify the same inputs produce the same build result. Keep immutable build artifacts and test evidence.",
+          "Bind separate consent to the exact build, evidence, audience, and publication destination.",
+          "Use separate authority for deployment and for operating the published system."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "compose-build-test-publish",
+      "criterion_id": "full-system-user-journeys",
+      "source_description_sha256": "80f4a560b9d87e6aaf2a64064da338d063412b89001fdd58862a9aa00f37a9f2",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Prove the path from a written goal to a tested release.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Use the real desktop and managed browser with a real MCP client and controlled publish destinations.",
+          "Verify user approval, visible preview, task progress, failure recovery, saved state and safe rollback.",
+          "Revoke window control while existing backend work continues."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "compose-build-test-publish",
+      "criterion_id": "security-release-boundaries",
+      "source_description_sha256": "f8ad8bc4956b7101db6dd7037e0b5793cb09cc2fb0f4f7f763811a97be9be739",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Give release and deployment actions their own permission checks.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "A successful build or test, an approved plan, and permission to control a window grant no permission to publish or deploy.",
+          "Require current separate approval for the intended destination. Refuse changed destinations, stale or foreign evidence, unsigned or incompatible bundles, and unauthorized executable or external effects.",
+          "Preserve safe operator recovery and revoke."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "workspace-controls-and-product-qualification",
+      "criterion_id": "complete-capability-map",
+      "source_description_sha256": "7ad11a10d63031d6210ec50a89ad3d1063dc88b0e62440d6dc3dc83d493061d5",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Account for every major product function.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Cover Home, Workspaces, Data, Context, Models, Image Generation, Catalog, Studio, User Library, Systems, release/runtime, notifications, Settings, and Security.",
+          "For each host, list what an agent can read, prepare, change with approval, or show under window control.",
+          "Name the remaining human actions and verify that discovery agrees with backend policy."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "workspace-controls-and-product-qualification",
+      "criterion_id": "administrative-handoff",
+      "source_description_sha256": "a09cb8f4ba0174c324674b4882c65c4b219191738e02db332b0aab13b5e405d5",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Show which setup actions need an authorized person.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Show safe status and take the authorized person to the existing setup screen.",
+          "Keep credentials, membership, and administrator decisions under the existing permission rules.",
+          "Ordinary agents cannot change authentication or trust settings."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "workspace-controls-and-product-qualification",
+      "criterion_id": "portfolio-qualification",
+      "source_description_sha256": "0406238ad3e68f51cdaf9b329a4697213d48b9771efdb8831dba365ef82317df",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Check representative written requests across both apps.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Run deterministic and supported real-chat-client tests for goal completion, clarify/retry behavior, latency, tool and resource limits, and revoke.",
+          "Measure against fixed thresholds and cover unsupported host/provider combinations."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "workspace-controls-and-product-qualification",
+      "criterion_id": "security-final-capability-review",
+      "source_description_sha256": "0cdbcbf8be657816d603570f90000aa8f807b6710024906c5d615f8954006a95",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Verify the final permission model for every advertised capability.",
+        "owner": "agent",
+        "next_action": "The agent must implement this capability and check the requirements below.",
+        "completion_proof": "Current automated test evidence and independent review show that the requirements are met.",
+        "requirements": [
+          "Compare the actual tools and routes with the capability list.",
+          "Test privacy, egress, secret handling, workspace isolation, and revoked window control on every supported host.",
+          "Require current automated checks, builds, and independent review."
+        ]
+      }
+    },
+    {
       "roadmap_id": "comprehensive-ui-automation",
       "increment_id": "daily-data-and-ai-journeys",
       "criterion_id": "daily-capability-and-variation-map",
@@ -7632,18 +8138,20 @@
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "server-browser-and-delivery-qualification",
       "criterion_id": "complete-contract-and-final-qualification",
-      "source_description_sha256": "300d9457f2b1e99ade55c1950e504febcd921b3d8aa0d1440ab04d846f88b627",
+      "source_description_sha256": "0a11a3e0a00a1d8fa6a61b68ced8e5c047e6b83d0514fe9077c366690467b953",
       "qualification": "local",
       "user_description": {
-        "purpose": "Close only with complete current technical evidence.",
+        "purpose": "Qualify desktop and browser together before expanding the tool set.",
         "owner": "agent",
         "next_action": "No action needed. After implementation is approved, the agent must implement and run every check below.",
         "completion_proof": "Current executed checks and a separate review must cover every requirement. Unrun or unavailable technical checks remain pending.",
         "requirements": [
-          "Every INV-01 through INV-18 and AT-01 through AT-41 must map to an owning criterion, executable test and applicable host. No race, draft, privacy, retry, delivery, authority or business/presentation distinction may disappear when scenarios are grouped.",
-          "After every implementation chunk in all three increments is recorded and relevant checks pass, run npm run test:all once, followed by applicable docs:check, architecture:check, agent-support:check, dependency security and server/thin-client/desktop build-package gates on the current candidate.",
-          "Record real command outcomes, immutable sanitized reports, exact-target receipts and a separate-invocation review. Unavailable native, IdP, ingress, PostgreSQL or runtime evidence stays pending and prevents the corresponding supported deployment claim and final closure.",
-          "Keep human studies and manual acceptance offline; all retained technical UI checks are automated. User roadmap approval is separate from permission to implement, final overall approval and production/release authority."
+          "Link each original design requirement and scenario to its exact test and applicable host.",
+          "Preserve checks for races, drafts, privacy, retry, delivery, authority and the separate business and presentation outcomes.",
+          "Run focused tests, both actual host journeys and applicable repository and platform checks on the same source.",
+          "Record real results, sanitized evidence, exact verification and independent review. Preserve unavailable deployment or native evidence.",
+          "Run the full suite once after the last increment of the combined roadmap. Human acceptance remains outside the automated release checks.",
+          "Approval to do roadmap work grants no production or release authority."
         ]
       }
     },
@@ -7785,6 +8293,97 @@
     }
   ],
   "headings": [
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "e064032df82d037181039bd832d22855025f5a4b79b04c732b25094851b6a00a",
+      "user_description": {
+        "title": "Turn a written request into a build plan",
+        "purpose": "Tell the model what you want to build. Review its plan and choose how and where to approve the work.",
+        "scope": [
+          "See the steps, effects, cost limits, and permission each approval grants."
+        ]
+      },
+      "increment_id": "plan-from-written-request"
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "b864774862101e02c7f21bb0f01603b139bd83a13db56e47da63218d4e963c31",
+      "user_description": {
+        "title": "Acquire source material and build training datasets",
+        "purpose": "Bring in approved local or provider data and turn it into a checked, versioned training dataset.",
+        "scope": [
+          "Use the Data page to inspect the result or follow the task."
+        ]
+      },
+      "increment_id": "data-acquisition-and-datasets"
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "343115fb4a0c49d836f095da59ba279f3db4aa19625f8e396237ad8b13f98dca",
+      "user_description": {
+        "title": "Build and test RAG databases and context packs",
+        "purpose": "Build a RAG database or context pack from approved data and check that searches return the right sources.",
+        "scope": [
+          "Open the exact database, pack, or citation in Context."
+        ]
+      },
+      "increment_id": "rag-and-context"
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "c2952e5445918922ad33ff6a131ce4e67115455a060099646a89c7383c462352",
+      "user_description": {
+        "title": "Manage models, fine-tune and generate outputs",
+        "purpose": "Choose and download a compatible model, train it with an approved dataset, or use it to generate an output.",
+        "scope": [
+          "View the matching download, training run, or image in the app."
+        ]
+      },
+      "increment_id": "models-training-and-generation"
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "7d7e8eb08f350b944620776aa8d676526500d9451a9162928b3c6a1ed58275ac",
+      "user_description": {
+        "title": "Select, plan and create reusable assets",
+        "purpose": "Choose compatible components or create a custom asset for something the catalog cannot supply.",
+        "scope": [
+          "Review the exact asset, form, or validation result in the app."
+        ]
+      },
+      "increment_id": "asset-selection-and-custom-creation"
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "debef78f07df18316a779798907fb92eabd6e606449253b95286f39862aec908",
+      "user_description": {
+        "title": "Compose, build, test and publish systems",
+        "purpose": "Compose a Canvas or Form system, test a saved build, and prepare it for separately approved publication.",
+        "scope": [
+          "Review the results or release details in the app."
+        ]
+      },
+      "increment_id": "compose-build-test-publish"
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "source_title_objective_digest": "66608e049f615a2c11da59b7486021acdc7de8b1702b478fe8c85fc181588449",
+      "user_description": {
+        "title": "Qualify coverage across the app",
+        "purpose": "Prove that the supported workflows work from chat and can be shown in the desktop app and browser.",
+        "scope": [
+          "See which actions an agent can do and which need an authorized person."
+        ]
+      },
+      "increment_id": "workspace-controls-and-product-qualification"
+    },
     {
       "record_type": "roadmap",
       "roadmap_id": "comprehensive-ui-automation",
@@ -9001,9 +9600,11 @@
       "source_title_objective_digest": "ea364b17c27eec52c636a3764c0f8834add6dd37591b7d67700295d5de704dbe",
       "user_description": {
         "title": "Headless Skills and Revocable UI Takeover",
-        "purpose": "Let authorized chat clients use the same application services as the UI, with optional exact-window takeover that the user can accept and immediately revoke while independent backend work continues; deliver desktop first, then server/browser support.",
+        "purpose": "Describe what to build. Use chat and optional window control to plan, build, test, and review it across AI System Builder.",
         "scope": [
-          "Roadmap approved. Implementation is on hold at the user's request."
+          "Finish the desktop and browser foundations first.",
+          "Cover Data, RAG, datasets, local models, fine-tuning, image generation, assets, systems, and publication.",
+          "Approve one plan with stated limits or approve each change. Decide in authenticated chat or in the app. If chat cannot verify who approved, use the app."
         ]
       }
     },
