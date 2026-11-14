@@ -242,6 +242,14 @@ tab and measures the timer slowdown. It drops only the test tab's
 retirement messages. The server must end the exact old lease within its
 existing deadline, and Chrome must use a fresh registration when visible.
 
+Run `MANAGED_HEADLESS_BROWSER_ROLLBACK=1` as a separate Chrome presentation
+case. The disposable server restarts at the same TLS origin with its
+managed headless routes disabled. Check that Chrome returns to manual
+control, its other editor keeps an unsaved field, and the ordinary secured
+API and saved system remain available. Check that the audit keeps its
+original records. Restore the options in this fixture only to verify the
+saved receipt and confirm that the old lease stays ended.
+
 The packaged Desktop test measures warm presentation and revoke, including
 when an ordinary dialog is open or a page is loading. The native hide test
 restores the browser's timer policy in the owned test window, measures the

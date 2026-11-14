@@ -8,10 +8,10 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { chromium, type Browser, type Frame, type Page, type Request as BrowserRequest, type Route } from "@playwright/test";
 
-import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER } from "../../../../modules/contracts/headless/managed-browser-consent";
-import { MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH, MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
+import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH } from "../../../../modules/contracts/headless/managed-browser-consent";
+import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH, MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
 import { HEADLESS_CONTRACT_VERSION } from "../../../../modules/contracts/headless";
-import { MANAGED_HEADLESS_AGENT_PATHS } from "../../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
+import { MANAGED_HEADLESS_AGENT_PATHS, MANAGED_SAVED_STATE_PATHS } from "../../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
 import { readHeadlessAuthoringWireResult, readHeadlessWindowResult, type UiControlLeaseTarget } from "../../../../modules/contracts/headless";
 import { startManagedReferenceHost } from "./managed-reference-host";
 import { switchFunctionalWorkspace } from "./e2e/functional-host-common";
@@ -80,9 +80,14 @@ async function main() {
   const heldContext = process.env.MANAGED_HEADLESS_BROWSER_HELD_CONTEXT === "1";
   const leaseRaces = process.env.MANAGED_HEADLESS_BROWSER_LEASE_RACES === "1";
   const reconnect = process.env.MANAGED_HEADLESS_BROWSER_RECONNECT === "1";
-  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss || heldContext || leaseRaces || reconnect) || presentation);
+  const rollback = process.env.MANAGED_HEADLESS_BROWSER_ROLLBACK === "1";
+  const extended = measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss ||
+    heldContext || leaseRaces || reconnect;
+  assert.ok(!(extended || rollback) || presentation);
+  assert.ok(!(extended && rollback), "Managed rollback requires its own isolated run.");
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
-    {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation, headlessMembershipLoss:membershipLoss});
+    {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation,
+      headlessMembershipLoss:membershipLoss, headlessRollback:rollback});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
   const evidence: Record<string, boolean | number | string | ReturnType<typeof measurements>> = {
     os: platform(), architecture: arch(), os_release: release(), ram_gib: Math.round(totalmem() / 2**30),
@@ -149,14 +154,14 @@ async function main() {
     const manage = page.getByRole("tab", {name:"Manage", exact:true});
     const management = page.getByRole("region", {name:"Manage systems", exact:true});
     const panel = page.getByRole("region", {name:"Resource shown by automation", exact:true});
-    async function openCanvasTitle(systemName: string, instanceId: string) {
-      await page.getByRole("tab", {name:"Compose", exact:true}).click();
-      await page.getByRole("combobox", {name:"System", exact:true}).selectOption({label:systemName});
-      await page.getByRole("button", {name:"Edit system", exact:true}).click();
-      const editor = page.getByRole("group", {name:"System draft editor", exact:true});
+    async function openCanvasTitle(systemName: string, instanceId: string, target = page) {
+      await target.getByRole("tab", {name:"Compose", exact:true}).click();
+      await target.getByRole("combobox", {name:"System", exact:true}).selectOption({label:systemName});
+      await target.getByRole("button", {name:"Edit system", exact:true}).click();
+      const editor = target.getByRole("group", {name:"System draft editor", exact:true});
       await until(async () => await editor.getAttribute("aria-busy") === "false" ? true : undefined, 50);
-      await page.locator(`.system-composer__canvas-node[data-instance-id="${instanceId}"] > .system-composer__canvas-node-heading > button`).first().click();
-      const inspector = page.getByRole("complementary", {name:"Composer details", exact:true});
+      await target.locator(`.system-composer__canvas-node[data-instance-id="${instanceId}"] > .system-composer__canvas-node-heading > button`).first().click();
+      const inspector = target.getByRole("complementary", {name:"Composer details", exact:true});
       await inspector.getByRole("tab", {name:"Properties", exact:true}).click();
       const title = inspector.locator('[id="title"]');
       for (const tabLabel of ["Design", "Data", "Events"]) {
@@ -1369,6 +1374,112 @@ async function main() {
       assert.equal(await panel.count(), 0);
       assert.equal(await revoke.count(), 0);
       evidence.restored_member_sees_one_prior_save_and_no_old_lease = true;
+    }
+
+    if (rollback) {
+      stage = "rollback-commit-before-restart";
+      assert.ok(agent.restartHeadlessServer);
+      const input = {...scope, templateId, name:"Synthetic saved before managed rollback", idempotencyKey:randomUUID()};
+      const committed = readHeadlessAuthoringWireResult(await call("aisb_create_system", input));
+      assert.ok(committed.ok && committed.value.kind === "committed");
+      const reference = committed.value.reference;
+      const registerTarget = await getTab();
+      const draftContext = await browser.newContext({viewport:{width:1280, height:900}, acceptDownloads:false, serviceWorkers:"block"});
+      try {
+        stage = "rollback-create-ordinary-draft";
+        await draftContext.route("**/*", route => {
+          const destination = new URL(route.request().url());
+          return destination.origin !== trusted || [MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_OBSERVE_PATH]
+            .some(pathname => destination.pathname === pathname) ? route.abort() : route.continue();
+        });
+        await draftContext.addInitScript(({origin, value}) => {
+          if (location.origin === origin) localStorage.setItem("ai-system-builder.paired-device-token", value);
+        }, {origin:trusted, value:browserBearer});
+        const draftPage = await draftContext.newPage();
+        await draftPage.goto(`${trusted}/systems`, {waitUntil:"domcontentloaded"});
+        const field = await openCanvasTitle(input.name, `${reference.systemId}.table`, draftPage);
+        const unsaved = "Synthetic draft retained across restart";
+        assert.notEqual(await field.inputValue(), unsaved);
+        await field.fill(unsaved);
+        const dirty = draftPage.getByText("Unsaved changes", {exact:true});
+        await dirty.waitFor({timeout:5_000});
+        await page.bringToFront();
+        const settings = page.locator("button.ui-shell__settings-button");
+        stage = "rollback-activate-exact-browser";
+        const request = readHeadlessWindowResult(await call("aisb_request_window", {target:await getTab(),
+          requestKey:randomUUID(), taskId:randomUUID()}));
+        assert.ok(request.ok && request.value.kind === "request");
+        const target = request.value.request.target;
+        assert.equal(target.workspaceId, registerTarget.workspaceId);
+        await modal.getByRole("button", {name:"Accept automation takeover", exact:true}).click();
+        await revoke.waitFor({timeout:10_000});
+        const lease = await until<UiControlLeaseTarget>(async () => {
+          const result = readHeadlessWindowResult(await call("aisb_window_status", {target}));
+          return result.ok && result.value.kind === "request" && result.value.request.status === "active" ? result.value.lease : undefined;
+        });
+        const show = readHeadlessWindowResult(await call("aisb_present_in_window", {target:lease, commandId:randomUUID(),
+          intent:{action:"open-system", systemId:reference.systemId, revisionId:reference.revisionId}}));
+        assert.ok(show.ok && show.value.kind === "command" && show.value.receipt.status === "accepted");
+        await panel.waitFor({timeout:5_000});
+        assert.equal(await settings.isEnabled(), false);
+        const ordinary = "/api/workspaces";
+        const managePath = `/api/systems/manage?workspaceId=${encodeURIComponent(activeWorkspaceId)}&view=active&sort=updated-desc&limit=25`;
+        const browserAuth = {token:browserBearer, organizationId};
+        const audit = path.join(fixture.runRoot, "runtime", "security", "authorization-audit.jsonl");
+        assert.equal((await fixture.request(ordinary, browserAuth)).status, 200);
+        const beforeSize = (await stat(audit)).size;
+        assert.ok(beforeSize > 0 && beforeSize <= 512 * 1024, "Synthetic audit has a bounded nonempty prefix.");
+        const before = await readFile(audit);
+        stage = "rollback-disable-and-retire";
+        await agent.restartHeadlessServer(false);
+        await revoke.waitFor({state:"detached", timeout:12_000});
+        await panel.waitFor({state:"hidden", timeout:5_000});
+        await until(async () => await settings.isEnabled() ? true : undefined, 20);
+        assert.equal(await modal.count(), 0);
+        assert.equal(await field.inputValue(), unsaved);
+        assert.ok(await dirty.isVisible() && await field.isEnabled());
+        evidence.rollback_restored_manual_controls_and_retained_draft = true;
+        stage = "rollback-disabled-route-and-ordinary-api";
+        const optional = [
+          ...Object.values(MANAGED_SAVED_STATE_PATHS), MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_OBSERVE_PATH,
+          MANAGED_BROWSER_DELIVERY_PATH, MANAGED_BROWSER_ACKNOWLEDGE_PATH,
+          MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_PUBLISH_CONTEXT_PATH,
+        ];
+        for (const route of optional) {
+          const response = await fixture.request(route, {...browserAuth, method:"POST", body:{workspaceId:activeWorkspaceId}});
+          assert.equal(response.status, 404);
+        }
+        for (const route of Object.values(MANAGED_HEADLESS_AGENT_PATHS)) {
+          const response = await fixture.request(route, {token:access, organizationId, method:"POST", body:{workspaceId:activeWorkspaceId}});
+          assert.equal(response.status, 404);
+        }
+        evidence.rollback_disabled_routes = optional.length + Object.keys(MANAGED_HEADLESS_AGENT_PATHS).length;
+        assert.equal((await fixture.request(ordinary)).status, 401);
+        assert.equal((await fixture.request(ordinary, {...browserAuth, organizationId:"qualification.foreign"})).status, 403);
+        const managed = await fixture.request(managePath, browserAuth);
+        assert.equal(managed.status, 200);
+        const item = managed.body.value.items.find((value: {systemId:string}) => value.systemId === reference.systemId);
+        assert.equal(item?.name, input.name);
+        assert.equal(item?.recordRevision, reference.recordRevision);
+        await manage.click();
+        await management.getByRole("cell", {name:new RegExp(input.name)}).waitFor({timeout:7_000});
+        const afterSize = (await stat(audit)).size;
+        assert.ok(afterSize > before.length && afterSize <= 512 * 1024);
+        assert.ok((await readFile(audit)).subarray(0, before.length).equals(before));
+        evidence.rollback_removed_optional_routes_and_preserved_secured_api_and_audit = true;
+        stage = "rollback-restore-to-verify-durable-receipt";
+        await agent.restartHeadlessServer(true);
+        const fresh = await call("aisb_host_describe");
+        assert.ok(fresh.ok && fresh.value.hostIncarnationId !== scope.hostIncarnationId);
+        const result = await call("aisb_create_system", {...input, hostIncarnationId:fresh.value.hostIncarnationId});
+        assert.deepEqual(result, {ok:true, value:{kind:"replayed", reference}});
+        assert.ok(!readHeadlessWindowResult(await call("aisb_window_context", {target:lease})).ok);
+        assert.equal(await panel.count(), 0);
+        assert.equal(await field.inputValue(), unsaved);
+        evidence.rollback_retained_saved_receipt_without_restoring_old_lease = true;
+      } finally {
+        await draftContext.close();
+      }
     }
 
     passed = true;

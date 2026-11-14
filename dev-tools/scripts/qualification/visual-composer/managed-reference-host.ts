@@ -71,10 +71,12 @@ async function interruptOwnedDeliveryProcess(child: ChildProcess, allowExited = 
 
 export async function startManagedReferenceHost(databaseReference: string,
   options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean; readonly headlessBrowser?: boolean;
-    readonly headlessBrowserPresentation?: boolean; readonly headlessMembershipLoss?: boolean } = {}) {
+    readonly headlessBrowserPresentation?: boolean; readonly headlessMembershipLoss?: boolean; readonly headlessRollback?: boolean } = {}) {
   assert.ok(!options.headlessBrowser || options.headlessAgent && !options.headlessDelivery);
   assert.ok(!options.headlessBrowserPresentation || options.headlessBrowser);
   assert.ok(!options.headlessMembershipLoss || options.headlessBrowserPresentation);
+  assert.ok(!options.headlessRollback || options.headlessBrowserPresentation &&
+    process.env.MANAGED_HEADLESS_BROWSER_ROLLBACK === "1");
   const root = path.resolve(process.cwd());
   const id = randomUUID().replaceAll("-", "");
   const runRoot = path.join(root, "artifacts/qualification/visual-composer/d", `managed-${id}`);
@@ -103,6 +105,7 @@ export async function startManagedReferenceHost(databaseReference: string,
   let restartOperation: Promise<void> | undefined;
   let restartFailed = false;
   let assetsRestarts = 0;
+  let headlessRestarts = 0;
   const workerScenario = process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO ?? "immediate";
   const checks: Record<string, unknown> = {};
   const report = {schema_version: "managed-reference-host-v1", run_id: id, source_revision: sourceRevision, profile: "windows-i5-14600kf-16g-rtx4060-reference", deployment: "controlled-campus-server-oidc-postgres", tls_verification: true, database_image: IMAGE, database_container_digest: digest(fixture.container), checks, status: "starting"};
@@ -234,6 +237,9 @@ export async function startManagedReferenceHost(databaseReference: string,
       MANAGED_REFERENCE_SERVE_BUILT_BROWSER: "1",
     });
     if (options.headlessBrowserPresentation) Object.assign(environment, {AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION: "1"});
+    // The system authoring cases alone do not create the artifact directory.
+    // Both rollback successors must pass the ordinary server readiness check.
+    if (options.headlessRollback) await mkdir(environment.SERVER_STORAGE_ROOT, {recursive:false});
     async function launchServer(env: typeof environment = environment, delivery = false) {
       const child = fork(path.join(root, "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts"), [], {execArgv: ["--import", "tsx"], env, silent: true, windowsHide: true});
       if (delivery) deliveryServer = child;
@@ -282,25 +288,33 @@ export async function startManagedReferenceHost(databaseReference: string,
         req.end(options.body === undefined ? undefined : JSON.stringify(options.body));
       });
     }
-    function restartAssetsServer() {
-      assert.ok(process.env.VISUAL_COMPOSER_MANAGED_ASSETS_RESTART === "1" &&
-        workerScenario === "immediate" && admitted && !stopped && !restartOperation && !restartFailed && assetsRestarts < 4,
-        "Managed Assets restart requires a ready, owned persistence fixture.");
+    function restartOwnedServer(env: typeof environment, recordSuccess: () => void) {
+      assert.ok(workerScenario === "immediate" && admitted && !stopped && !restartOperation && !restartFailed,
+        "A managed restart requires a ready, owned persistence fixture.");
       restartOperation = (async () => {
         const prior = children[0]!;
         await closeOwnedManagedServer(prior);
         admitted = false;
+        if (options.headlessRollback) checks.headless_restart_step = "prior-exited";
         const cache = await readdir(environment.HF_HUB_CACHE).catch(error => {
           if (error.code === "ENOENT") return [];
           throw error;
         });
         assert.ok(!cache.some(name => /^qualification-worker-identity-[0-9]+\.json$/.test(name)),
-          "Managed Assets restart must not leave a model worker to retire.");
-        assert.ok(!stopped, "Managed Assets restart cannot continue during cleanup.");
-        const successor = await launchServer();
-        assert.ok(successor.pid && successor.pid !== prior.pid, "Managed Assets restart requires a new process.");
-        assert.equal((await request("/health/ready")).status, 200);
-        checks.assets_graceful_restarts = ++assetsRestarts;
+          "A managed restart must not leave a model worker to retire.");
+        assert.ok(!stopped, "A managed restart cannot continue during cleanup.");
+        if (options.headlessRollback) checks.headless_restart_step = "starting-successor";
+        const successor = await launchServer(env);
+        assert.ok(successor.pid && successor.pid !== prior.pid, "A managed restart requires a new process.");
+        if (options.headlessRollback) checks.headless_restart_step = "successor-listening";
+        const health = await request("/health/ready");
+        if (options.headlessRollback) {
+          checks.headless_restart_readiness_status = health.status;
+          checks.headless_restart_persistence_ready = health.body?.checks?.persistence?.status === "ready";
+          checks.headless_restart_storage_ready = health.body?.checks?.artifactStorage?.status === "ready";
+        }
+        assert.equal(health.status, 200);
+        recordSuccess();
       })().catch(error => {
         restartFailed = true;
         throw error;
@@ -309,6 +323,25 @@ export async function startManagedReferenceHost(databaseReference: string,
       });
       return restartOperation;
     }
+    function restartAssetsServer() {
+      assert.ok(process.env.VISUAL_COMPOSER_MANAGED_ASSETS_RESTART === "1" &&
+        !options.headlessRollback && assetsRestarts < 4,
+        "Managed Assets restart requires the explicit bounded fixture.");
+      return restartOwnedServer(environment, () => {checks.assets_graceful_restarts = ++assetsRestarts;});
+    }
+    const restartHeadlessServer = options.headlessRollback ? (enable: boolean) => {
+      assert.equal(headlessRestarts, enable ? 1 : 0);
+      const env = enable ? environment : {
+        ...environment,
+        AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE: undefined,
+        AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID: undefined,
+        AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID: undefined,
+        AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN: undefined,
+        AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION: undefined,
+        MANAGED_REFERENCE_SERVE_BUILT_BROWSER: "0",
+      };
+      return restartOwnedServer(env, () => {checks.headless_graceful_restarts = ++headlessRestarts;});
+    } : undefined;
     for (const [name, credentials, expected] of [["missing_token", {}, 401], ["invalid_token", {token: "invalid"}, 401], ["nonmember", {token: nonmemberToken}, 403], ["foreign_organization", {token, organizationId: "qualification.foreign"}, 403]] as const) {
       const response = await request("/api/workspaces", credentials); assert.equal(response.status, expected); checks[name] = response.status;
     }
@@ -391,7 +424,7 @@ export async function startManagedReferenceHost(databaseReference: string,
     } : undefined;
     const agent = options.headlessAgent ? {
       workspaceId: delivery.workspaceId, caFile: ca, access: await accessToken(agentClient), browser: await accessToken(browserClient),
-      setSyntheticMembershipSuspended,
+      setSyntheticMembershipSuspended, restartHeadlessServer,
     } : undefined;
     if (options.headlessBrowser) {
       const spki = new X509Certificate(material.certPem).publicKey.export({type: "spki", format: "der"});
