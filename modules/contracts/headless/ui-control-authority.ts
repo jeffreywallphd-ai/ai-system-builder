@@ -55,22 +55,30 @@ export type UiControlLease = {
 const channel = (operation: string) => createIpcChannelValue(createTransportOperation("window-control", operation), "request");
 export const DESKTOP_UI_CONTROL_CHANNELS = Object.freeze({
   observe: channel("observe"), accept: channel("accept"), ready: channel("ready"), revoke: channel("revoke"),
+  pull: channel("pull"), acknowledge: channel("acknowledge"), context: channel("context"),
 });
 export type UiControlTimedGrant = { readonly target: UiControlLeaseTarget; readonly remainingMs: number };
 export type UiControlObservation =
-  | { readonly status: "ready"; readonly request?: UiControlRequestView }
+  | { readonly status: "ready"; readonly request?: UiControlRequestView; readonly lease?: UiControlTimedGrant; readonly contextChallenge?: string }
   | { readonly status: "busy" | "unavailable" };
 
 export function readUiControlObservation(value: unknown): UiControlObservation | undefined {
   try {
-    const row = readStrictPassiveRecord(value, ["status", "request"]);
+    const row = readStrictPassiveRecord(value, ["status", "request", "lease", "contextChallenge"]);
     if (row.status === "busy" || row.status === "unavailable") {
-      return "request" in row ? undefined : { status: row.status };
+      return Object.keys(row).length === 1 ? { status: row.status } : undefined;
     }
     if (row.status !== "ready") return;
-    if (!("request" in row)) return { status: "ready" };
+    if (!("request" in row)) return Object.keys(row).length === 1 ? { status: "ready" } : undefined;
     const request = readUiControlRequestView(row.request);
-    return request && { status: "ready", request };
+    if (!request) return;
+    if (!("lease" in row)) return "contextChallenge" in row ? undefined : { status: "ready", request };
+    const lease = readUiControlTimedGrant(row.lease);
+    if (!lease || request.status !== "active") return;
+    const { leaseId: _leaseId, generation: _generation, ...attempt } = lease.target;
+    if (JSON.stringify(attempt) !== JSON.stringify(request.target)) return;
+    if (!("contextChallenge" in row)) return { status: "ready", request, lease };
+    if (isUiControlId(row.contextChallenge)) return { status: "ready", request, lease, contextChallenge: row.contextChallenge };
   } catch { return undefined; }
 }
 

@@ -59,17 +59,27 @@ export function createUiControlDelivery(options: {
     return false;
   }
 
+  function known(command: UiPresentationSubmission) {
+    const prior = byId.get(command.commandId);
+    if (!prior) return;
+    if (JSON.stringify(prior.command.intent) !== JSON.stringify(command.intent)) return { status: "conflict" } as const;
+    return { status: "duplicate", receipt: receipt(prior) } as const;
+  }
+
   return {
+    readSubmission(raw: unknown) {
+      const command = readUiPresentationSubmission(raw);
+      if (!command || !live(command.target)) return;
+      advance();
+      return known(command);
+    },
     submit(raw: unknown) {
       const command = readUiPresentationSubmission(raw);
       if (!command || encoder.encode(JSON.stringify(command)).byteLength > limits.commandBytes ||
           !live(command.target)) return { status: "denied" } as const;
       advance();
-      const prior = byId.get(command.commandId);
-      if (prior) {
-        if (JSON.stringify(prior.command.intent) !== JSON.stringify(command.intent)) return { status: "conflict" } as const;
-        return { status: "duplicate", receipt: receipt(prior) } as const;
-      }
+      const prior = known(command);
+      if (prior) return prior;
       if (entries.length >= limits.receipts || entries.length - firstUnfinished >= limits.queued) {
         return { status: "busy" } as const;
       }
@@ -80,7 +90,7 @@ export function createUiControlDelivery(options: {
       byId.set(command.commandId, entry);
       return { status: "accepted", receipt: receipt(entry) } as const;
     },
-    next(exact: UiControlLeaseTarget, sequence: number) {
+    next(exact: UiControlLeaseTarget, sequence: number, markDelivered = true) {
       if (!live(exact) || !Number.isSafeInteger(sequence) || sequence <= 0) return { status: "denied" } as const;
       advance();
       const entry = entries[sequence - 1];
@@ -93,7 +103,7 @@ export function createUiControlDelivery(options: {
         advance();
         return { status: "terminal", receipt: receipt(entry) } as const;
       }
-      entry.status = "delivered";
+      if (markDelivered) entry.status = "delivered";
       const command: UiPresentationDelivery = { ...entry.command, target: { ...target }, intent: { ...entry.command.intent }, sequence, remainingMs };
       return { status: "delivered", command } as const;
     },
@@ -113,6 +123,18 @@ export function createUiControlDelivery(options: {
       if (sequence !== firstUnfinished + 1 || entry.status !== "delivered") return undefined;
       entry.status = status;
       advance();
+      return receipt(entry);
+    },
+    rejectUndeliverable(exact: UiControlLeaseTarget, sequence: number, commandId: string) {
+      if (!live(exact) || !Number.isSafeInteger(sequence) || sequence <= 0) return undefined;
+      advance();
+      const entry = entries[sequence - 1];
+      if (!entry || entry.command.commandId !== commandId) return undefined;
+      if (!isTerminal(entry)) {
+        if (sequence !== firstUnfinished + 1) return undefined;
+        entry.status = entry.status === "delivered" ? "unconfirmed" : "rejected";
+        advance();
+      }
       return receipt(entry);
     },
     publishContext(exact: UiControlLeaseTarget, raw: unknown) {

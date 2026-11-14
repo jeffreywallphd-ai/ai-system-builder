@@ -1,6 +1,6 @@
 ---
 name: control-ai-system-builder
-description: Use a paired AI System Builder desktop host's finite MCP tools to read or edit saved systems, check workflow or task status, or send one user-requested turn to an already approved conversation. Repository development and window automation use other workflows.
+description: Use a paired AI System Builder desktop host's finite MCP tools to read or edit saved systems, check a task, send a requested approved conversation turn, or show saved resources in a desktop window with explicit consent.
 ---
 
 # Control AI System Builder
@@ -59,5 +59,27 @@ key for a separately requested operation.
 After a restart, obtain the current connector address and pin through Settings
 and use the current host incarnation. If the original registration cannot
 reconnect, reconcile through saved state or the app. Report the saved result separately from
-whether a window displayed it. This skill has no window controls. A canceled
+whether a window displayed it. A canceled
 local wait does not establish cancellation or rollback.
+
+## Show a saved resource in a desktop window
+
+1. Use this workflow only when the user asks to attach a window. List windows
+   in the exact paired workspace with `aisb_list_windows`. If the choice is
+   ambiguous, ask the user to identify the window.
+2. Use `aisb_request_window` with the selected window, an opaque task ID and
+   a fresh request key. Poll `aisb_window_status` for that attempt. Only the
+   interactive app can accept and activate the request.
+3. Use `aisb_present_in_window` with the exact current lease and saved resource
+   IDs. Report the command outcome separately from any saved change. The
+   same command ID and intent can read a receipt without repeating the effect.
+   `unconfirmed` means the host attempted delivery, but its result is
+   still unknown. Keep the same ID. Use `aisb_window_context` only while attached.
+4. Use `aisb_renew_window` only while the approved presentation is in use.
+   Release it with `aisb_release_window` when presentation ends. Stop using
+   the window after revoke or expiry. Ask before requesting a new attachment.
+   An approved backend task may continue under its own authority.
+
+Window context contains the permitted view and saved resource IDs. Draft
+content, screenshots and credentials stay in their owning surfaces. Ending a
+lease stops fresh context. Previously transmitted responses can still arrive.

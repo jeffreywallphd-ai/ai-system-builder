@@ -6,6 +6,9 @@ import { DESKTOP_HEADLESS_PAIRING_CHANNELS, DESKTOP_SYSTEM_CHANGE_POLL_CHANNEL, 
 import {
   DESKTOP_UI_CONTROL_CHANNELS, readUiControlAttempt, readUiControlLeaseTarget, readUiControlObservation,
   readUiControlRevoke, readUiControlTimedGrant, type UiControlObservation, type UiControlTimedGrant,
+  readUiPresentationPull, readUiPresentationPullResult, readUiPresentationAcknowledgment, readUiPresentationPublication,
+  type UiPresentationPullResult,
+  isDesktopHeadlessClientAccess,
 } from "../../../../modules/contracts/headless";
 import { normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary, type ReadWorkspaceSummaryRequest } from "../../../../modules/contracts/workspace";
 import { createDesktopWorkspaceSummaryRequest, DESKTOP_WORKSPACE_SUMMARY_OPERATION, DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, type DesktopWorkspaceSummaryResponse } from "../../../../modules/contracts/ipc";
@@ -767,6 +770,9 @@ export interface DesktopPreloadApi {
   acceptWindowTakeover: (target: unknown) => Promise<UiControlTimedGrant | undefined>;
   readyWindowTakeover: (target: unknown) => Promise<UiControlTimedGrant | undefined>;
   revokeWindowTakeover: (target: unknown) => Promise<boolean>;
+  pullWindowPresentation: (input: unknown) => Promise<UiPresentationPullResult>;
+  acknowledgeWindowPresentation: (input: unknown) => Promise<boolean>;
+  publishWindowContext: (input: unknown) => Promise<boolean>;
   readHeadlessPairingStatus: () => Promise<DesktopHeadlessPairingStatus>;
   readRecentHeadlessChatTasks: (workspaceId: string) => Promise<DesktopHeadlessChatTasks>;
   readSystemBuilderChangeWatermark: (workspaceId: string) => Promise<DesktopSystemChangeWatermark>;
@@ -2130,6 +2136,23 @@ export function createDesktopPreloadApi(
       } catch { /* Malformed or disconnected bridge cannot preserve local control. */ }
       return { status: "unavailable" };
     },
+    async pullWindowPresentation(value) {
+      const input = readUiPresentationPull(value);
+      if (!input) return { status: "unavailable" };
+      try {
+        return readUiPresentationPullResult(await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.pull, input));
+      } catch { return { status: "unavailable" }; }
+    },
+    async acknowledgeWindowPresentation(value) {
+      const input = readUiPresentationAcknowledgment(value);
+      try { return !!input && await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.acknowledge, input) === true; }
+      catch { return false; }
+    },
+    async publishWindowContext(value) {
+      const input = readUiPresentationPublication(value);
+      try { return !!input && await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.context, input) === true; }
+      catch { return false; }
+    },
     async acceptWindowTakeover(value) {
       const target = readUiControlAttempt(value);
       if (!target) return;
@@ -2170,7 +2193,7 @@ export function createDesktopPreloadApi(
       return result === "started" || result === "canceled" || result === "denied" ? result : "unavailable";
     },
     async beginHeadlessPairing(workspaceId, access = "read") {
-      if (access !== "read" && access !== "author" && access !== "conversation") return "denied";
+      if (!isDesktopHeadlessClientAccess(access)) return "denied";
       const result = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.pair, { workspaceId, access });
       return result === "shown" || result === "canceled" || result === "denied" ? result : "unavailable";
     },

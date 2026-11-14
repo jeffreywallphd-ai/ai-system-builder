@@ -24,6 +24,8 @@ assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
 const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_templates", "aisb_list_workflows", "aisb_list_workspaces",
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_preview_edits", "aisb_rename_system"];
+const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_release_window", "aisb_renew_window",
+  "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
 
 test("the portable reference matches the exact credential-free SDK discovery catalog", { timeout: 45_000 }, async () => {
@@ -37,6 +39,8 @@ test("the portable reference matches the exact credential-free SDK discovery cat
     { mode: "authoring", tools: [...expectedTools, ...authoringTools].sort() },
     { mode: "conversation", tools: [...expectedTools, conversation].sort() },
     { mode: "authoring-and-conversation", tools: [...expectedTools, ...authoringTools, conversation].sort() },
+    { mode: "presentation", tools: [...expectedTools, ...presentationTools].sort() },
+    { mode: "all", tools: [...expectedTools, ...authoringTools, conversation, ...presentationTools].sort() },
   ]);
   const schemas = new Map(reference.tools.map(({ name, inputSchema }) => [name, inputSchema]));
   const assertExactObject = (name: string, required: string[], optional: string[] = []) => {
@@ -67,6 +71,12 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   assertExactObject("aisb_apply_edits", [...base, "edits", "previewDigest", "idempotencyKey"]);
   const turn = assertExactObject(conversation, [...workspace, "planId", "planRevision", "sessionId", "snapshotRevision", "key", "text"]);
   assert.deepEqual(turn.properties?.text, { type: "string", minLength: 1, maxLength: 2_000 });
+  assertExactObject("aisb_list_windows", workspace);
+  assertExactObject("aisb_request_window", ["target", "taskId", "requestKey"]);
+  assertExactObject("aisb_present_in_window", ["target", "commandId", "intent"]);
+  for (const name of ["aisb_window_context", "aisb_window_status", "aisb_release_window", "aisb_renew_window"]) {
+    assertExactObject(name, ["target"]);
+  }
 });
 
 function pair(connector: { endpoint: string; fingerprint: string }, pairingCode: string) {

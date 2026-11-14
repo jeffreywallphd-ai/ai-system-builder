@@ -59,6 +59,24 @@ A delivered command without an acknowledgment has an unconfirmed outcome.
 Only an exact acknowledgment from its still-owned renderer resolves that
 outcome. The host never delivers that sequence again.
 
+The paired desktop connector exposes a separate finite window operation
+family. Only the explicit presentation pairing can request control. That
+dedicated registration is the stable identity of a chat
+client session. A caller cannot select that identity in a request. The app
+checks the exact current workspace and resource permissions for an intent,
+including artifact and runtime read scopes as applicable. The desktop uses
+the already-owned workspace, record, artifact catalog and run services.
+The interactive app may show a bounded saved-resource detail. The connector
+receives only an identifier projection, with an exact current lease check
+after asynchronous reads and before the response is written.
+Each context read and renewal requires a new 750 ms challenge response
+from the current renderer. Stale or cached editor state cannot answer a new
+request. The deadline is checked when the host consumes the response and
+again when it publishes context or renews a lease. A renderer that already
+sent an answer cannot recall it. Once the user revokes, the renderer answers
+no new challenge. The renderer commits the bounded detail view before acknowledging
+application. Revoked registrations and dialogs keep their exact owner.
+
 ## Rollback
 
 Stop admitting new presentation requests and retire exact open reservations.

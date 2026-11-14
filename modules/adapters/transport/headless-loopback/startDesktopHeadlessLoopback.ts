@@ -6,6 +6,8 @@ import { performance } from "node:perf_hooks";
 import selfsigned from "selfsigned";
 import {
   HEADLESS_APPROVED_TURN_PATH, parseHeadlessApprovedTurnRequest, readHeadlessApprovedTurnResult,
+  HEADLESS_WINDOW_CONTROL_PATH, readHeadlessWindowRequest, readHeadlessWindowResult,
+  type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessApprovedTurnInput, type HeadlessApprovedTurnResult,
   parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest, readHeadlessAuthoringWireResult,
   type HeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadResult,
@@ -32,6 +34,8 @@ type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementR
 export interface DesktopHeadlessAuthoringWireGrant extends Pick<LegacyGrant, "organizationId" | "principalId" | "registeredClientId" | "workspaceIds" | "operations"> {
   readonly authoring?: readonly AuthoringRequest["operation"][];
   readonly conversation?: true;
+  readonly presentation?: true;
+  readonly isPresentationCurrent?: () => boolean;
   readonly isCurrent?: () => boolean;
 }
 
@@ -61,6 +65,11 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       readonly currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>;
       readonly fingerprint: (data: string) => string;
     }) => Promise<HeadlessApprovedTurnResult>;
+  };
+  readonly presentation?: {
+    readonly execute: (request: HeadlessWindowRequest, grant: DesktopHeadlessAuthoringWireGrant, sessionId: string) => Promise<HeadlessWindowResult>;
+    readonly authorizePublication: (request: HeadlessWindowRequest, result: HeadlessWindowResult) => Promise<boolean>;
+    readonly canPublish: (request: HeadlessWindowRequest, result: HeadlessWindowResult, grant: DesktopHeadlessAuthoringWireGrant, sessionId: string) => boolean;
   };
   /** Allows the owning desktop to keep a newly bound listener dormant until confirmed. */
   readonly isAdmitted?: () => boolean;
@@ -158,6 +167,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     }
     if (request.method !== "POST" || (request.url !== PAIR_PATH && request.url !== READ_PATH &&
         (request.url !== AUTHOR_PATH || !dependencies.authoring) &&
+        (request.url !== HEADLESS_WINDOW_CONTROL_PATH || !dependencies.presentation) &&
         (request.url !== HEADLESS_APPROVED_TURN_PATH || !dependencies.conversation))) {
       fail(response, 404, "headless.not-found");
       return;
@@ -223,7 +233,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       return;
     }
     if (!admitting() || response.destroyed) return;
-    const requiresFence = request.url === AUTHOR_PATH || request.url === HEADLESS_APPROVED_TURN_PATH || initialGrant.isCurrent !== undefined;
+    const requiresFence = request.url === AUTHOR_PATH || request.url === HEADLESS_APPROVED_TURN_PATH ||
+      request.url === HEADLESS_WINDOW_CONTROL_PATH || initialGrant.isCurrent !== undefined;
     const currentGrant = async (requireConnection = true): Promise<DesktopHeadlessAuthoringWireGrant | undefined> => {
       if (!admitting() || (requireConnection && response.destroyed)) return undefined;
       const current: DesktopHeadlessAuthoringWireGrant | undefined = await dependencies.registrations.verifyCredential(credential);
@@ -232,6 +243,27 @@ export async function startDesktopHeadlessLoopback(dependencies: {
           !sameScope(current, initialGrant) || !grantIsCurrent(current, requiresFence)) return undefined;
       return current;
     };
+    if (request.url === HEADLESS_WINDOW_CONTROL_PATH && dependencies.presentation) {
+      if (initialGrant.presentation !== true) { fail(response, 403, "headless.forbidden"); return; }
+      const decoded = readHeadlessWindowRequest(body);
+      if (!decoded) { fail(response, 400, "headless.invalid-request"); return; }
+      const verified = await currentGrant();
+      if (verified?.presentation !== true) { fail(response, 403, "headless.forbidden"); return; }
+      // A dedicated connector pairing represents one verified client session.
+      // Request data cannot select or impersonate a different session.
+      const sessionId = verified.registeredClientId;
+      const result = await dependencies.presentation.execute(decoded, verified, sessionId);
+      const finalGrant = await currentGrant();
+      const allowed = finalGrant?.presentation === true && await dependencies.presentation.authorizePublication(decoded, result);
+      if (!admitting() || response.destroyed) return;
+      if (!allowed || !finalGrant || !dependencies.presentation.canPublish(decoded, result, finalGrant, sessionId)) {
+        fail(response, 403, "headless.forbidden");
+        return;
+      }
+      const safeResult = readHeadlessWindowResult(result);
+      send(response, safeResult.ok ? 200 : errorStatus(safeResult.code), safeResult);
+      return;
+    }
     let result: HeadlessReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult;
     if (request.url === AUTHOR_PATH && dependencies.authoring) {
       const { hostIncarnationId, execute } = dependencies.authoring;
@@ -299,7 +331,8 @@ function sameScope(left: DesktopHeadlessAuthoringWireGrant, right: DesktopHeadle
   const equal = <T>(a: readonly T[], b: readonly T[]) =>
     a.length === b.length && a.every((value) => b.includes(value)) && b.every((value) => a.includes(value));
   return equal(left.workspaceIds, right.workspaceIds) && equal(left.operations, right.operations) &&
-    equal(left.authoring ?? [], right.authoring ?? []) && left.conversation === right.conversation;
+    equal(left.authoring ?? [], right.authoring ?? []) && left.conversation === right.conversation &&
+    left.presentation === right.presentation;
 }
 
 function hasHeader(request: IncomingMessage, name: string): boolean {

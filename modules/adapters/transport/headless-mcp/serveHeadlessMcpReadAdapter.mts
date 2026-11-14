@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
-import type { HeadlessApprovedTurnRequest, HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest } from "../../../contracts/headless/index.js";
+import type { HeadlessApprovedTurnRequest, HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessWindowRequest } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import type { SystemBuilderSystemId } from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
@@ -21,18 +21,71 @@ const workflowSource = z.discriminatedUnion("kind", [
 const version = headless.HEADLESS_CONTRACT_VERSION;
 const enableAuthoring = process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
 const enableConversation = process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
+const enablePresentation = process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
 const forward = createHeadlessMcpReadForwarder(
-  process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL, enableAuthoring, enableConversation,
+  process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL,
+  enableAuthoring, enableConversation, enablePresentation,
 );
 delete process.env.AISB_HEADLESS_CREDENTIAL;
 
-async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest | HeadlessApprovedTurnRequest, signal?: AbortSignal) {
+async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest, signal?: AbortSignal) {
   const result = await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" };
   return { content: [{ type: "text" as const, text: JSON.stringify(result) }], isError: !result.ok };
 }
 
 function invalidAuthoring() {
   return { content: [{ type: "text" as const, text: '{"ok":false,"code":"headless.invalid-request"}' }], isError: true };
+}
+
+function addPresentationTools(server: McpServer) {
+  const id = z.string().refine(headless.isUiControlId, "Invalid window control ID");
+  const window = { hostIncarnationId, workspaceId, windowId: id, uiIncarnationId: id };
+  const attempt = { ...window, requestId: id, attemptId: id };
+  const lease = z.strictObject({ ...attempt, leaseId: id, generation: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) });
+  const destructiveHint = false;
+  const openWorldHint = false;
+  const read = { readOnlyHint: true, destructiveHint, openWorldHint };
+  const action = { readOnlyHint: false, destructiveHint, openWorldHint, idempotentHint: true };
+  const exactResource = z.string().min(1).max(160);
+  const intent = z.discriminatedUnion("action", [
+    z.strictObject({ action: z.literal("open-system"), systemId, revisionId: exactResource }),
+    z.strictObject({ action: z.literal("select-component"), systemId, revisionId: exactResource, instanceId: exactResource }),
+    z.strictObject({ action: z.literal("show-validation"), systemId, revisionId: exactResource }),
+    z.strictObject({ action: z.literal("show-run"), runId: exactResource }),
+    z.strictObject({ action: z.literal("show-artifact"), artifactId: z.string().min(1).max(512) }),
+  ]);
+  const call = (operation: HeadlessWindowRequest["operation"], input: unknown, signal?: AbortSignal) => {
+    const request = headless.readHeadlessWindowRequest({ version: headless.UI_CONTROL_VERSION, operation, input });
+    return request ? invoke(request, signal) : invalidAuthoring();
+  };
+  server.registerTool("aisb_list_windows", {
+    description: "List current application window identities in the paired workspace.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId }), annotations: read,
+  }, (input, context) => call("window.list", input, context.mcpReq.signal));
+  server.registerTool("aisb_request_window", {
+    description: "Ask the user to attach a single identified window. Reuse the request key after an uncertain reply.",
+    inputSchema: z.strictObject({ target: z.strictObject(window), taskId: id, requestKey: id }), annotations: action,
+  }, (input, context) => call("window.request", input, context.mcpReq.signal));
+  server.registerTool("aisb_window_status", {
+    description: "Read the exact request status. Only an active request has a lease. Ended requests require fresh user direction.",
+    inputSchema: z.strictObject({ target: z.strictObject(attempt) }), annotations: read,
+  }, (input, context) => call("window.status", input, context.mcpReq.signal));
+  server.registerTool("aisb_renew_window", {
+    description: "Keep the same active lease current. Failed and ended leases stay detached.",
+    inputSchema: z.strictObject({ target: lease }), annotations: { ...action, idempotentHint: false },
+  }, (input, context) => call("window.renew", input, context.mcpReq.signal));
+  server.registerTool("aisb_release_window", {
+    description: "Dismiss the exact attempt or release its exact lease. Independent chat work continues.",
+    inputSchema: z.strictObject({ target: z.union([lease, z.strictObject(attempt)]) }), annotations: action,
+  }, (input, context) => call("window.release", input, context.mcpReq.signal));
+  server.registerTool("aisb_present_in_window", {
+    description: "Show one exact saved resource in the active window. Retry the same command ID and target to read the outcome without repeating the effect.",
+    inputSchema: z.strictObject({ target: lease, commandId: id, intent }), annotations: action,
+  }, (input, context) => call("window.present", input, context.mcpReq.signal));
+  server.registerTool("aisb_window_context", {
+    description: "Read the current allowed view and saved resource identifiers from one active lease.",
+    inputSchema: z.strictObject({ target: lease }), annotations: read,
+  }, (input, context) => call("window.context", input, context.mcpReq.signal));
 }
 
 function addAuthoringTools(server: McpServer) {
@@ -157,6 +210,7 @@ serveStdio(() => {
     ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
   if (enableAuthoring) addAuthoringTools(server);
+  if (enablePresentation) addPresentationTools(server);
   if (enableConversation) server.registerTool("aisb_send_approved_turn", {
     description: "Send one message to an already approved conversation at its exact saved revisions. An uncertain reply never authorizes a new key; reconcile before retrying the same request.",
     inputSchema: z.strictObject({

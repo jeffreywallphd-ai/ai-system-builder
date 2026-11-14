@@ -161,6 +161,18 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "headless-desktop-window-renderer": {
+        "companion_to": "headless-desktop-takeover-controls",
+        "sources": (
+            "apps/desktop/src/renderer/tests/desktop-window-takeover.ui.test.tsx",
+            "apps/desktop/src/renderer/features/workspace/hooks/useActiveWorkspaceTakeover.ts",
+            "apps/desktop/src/renderer/App.tsx",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "apps/desktop/src/renderer/tests/desktop-window-takeover.ui.test.tsx",
+        ),
+    },
     "headless-desktop-takeover-controls": {
         "automatic_sources": (
             "apps/desktop/src/main/desktopUiControlIpc.ts",
@@ -190,6 +202,17 @@ PUBLISHED_FORM_CHECKS = {
             "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
             "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
             "modules/ui/shared/components/tests/ModalDialog.unit.test.tsx",
+        ),
+    },
+    "headless-desktop-takeover-startup": {
+        "companion_to": "headless-desktop-takeover-controls",
+        "sources": (
+            "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
+            "apps/desktop/src/main/index.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
         ),
     },
     "headless-desktop-takeover-draft": {

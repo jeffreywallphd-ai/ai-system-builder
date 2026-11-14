@@ -8,6 +8,8 @@ const modes = [
   { name: "authoring", authoring: true, conversation: false },
   { name: "conversation", authoring: false, conversation: true },
   { name: "authoring-and-conversation", authoring: true, conversation: true },
+  { name: "presentation", authoring: false, conversation: false, presentation: true },
+  { name: "all", authoring: true, conversation: true, presentation: true },
 ] as const;
 const entrypoint = fileURLToPath(new URL("./serveHeadlessMcpReadAdapter.mts", import.meta.url));
 const repository = fileURLToPath(new URL("../../../../", import.meta.url));
@@ -23,6 +25,7 @@ export async function collectHeadlessMcpToolReference() {
     const env: Record<string, string> = { TSX_DISABLE_CACHE: "1" };
     if (mode.authoring) env.AISB_HEADLESS_ENABLE_AUTHORING = "1";
     if (mode.conversation) env.AISB_HEADLESS_ENABLE_CONVERSATION = "1";
+    if ("presentation" in mode && mode.presentation) env.AISB_HEADLESS_ENABLE_PRESENTATION = "1";
     const transport = new StdioClientTransport({
       command: process.execPath, args: ["--import", "tsx", entrypoint], cwd: repository,
       env, stderr: "ignore", maxBufferSize: 256 * 1024,

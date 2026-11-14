@@ -8,7 +8,11 @@ export const DESKTOP_HEADLESS_PAIRING_CHANNELS = Object.freeze({
 });
 
 export type DesktopHeadlessPairingAction = keyof typeof DESKTOP_HEADLESS_PAIRING_CHANNELS;
-export type DesktopHeadlessClientAccess = "read" | "author" | "conversation";
+export type DesktopHeadlessClientAccess = "read" | "author" | "conversation" | "presentation";
+
+export function isDesktopHeadlessClientAccess(value: unknown): value is DesktopHeadlessClientAccess {
+  return value === "read" || value === "author" || value === "conversation" || value === "presentation";
+}
 
 export const DESKTOP_HEADLESS_AUTHORING_OPERATIONS = Object.freeze([
   "systems.preview-edits", "systems.apply-edits", "systems.create", "systems.rename", "systems.clone",
@@ -27,7 +31,7 @@ export function readDesktopHeadlessPairingRequest(value: unknown): {
     const workspace = Object.getOwnPropertyDescriptor(value, "workspaceId");
     const mode = Object.getOwnPropertyDescriptor(value, "access");
     if (!workspace?.enumerable || !("value" in workspace) || !isWorkspaceId(workspace.value) ||
-        !mode?.enumerable || !("value" in mode) || (mode.value !== "read" && mode.value !== "author" && mode.value !== "conversation")) return undefined;
+        !mode?.enumerable || !("value" in mode) || !isDesktopHeadlessClientAccess(mode.value)) return undefined;
     return { workspaceId: workspace.value, access: mode.value };
   } catch { return undefined; }
 }
@@ -39,6 +43,7 @@ export type DesktopHeadlessPairingStatus =
       readonly endpoint?: string;
       readonly fingerprint?: string;
       readonly conversationAvailable?: true;
+      readonly presentationAvailable?: true;
       readonly clients: readonly {
         readonly registeredClientId: string;
         readonly workspaceId: WorkspaceId;
@@ -86,9 +91,10 @@ export function readDesktopHeadlessPairingStatus(value: unknown): DesktopHeadles
       registeredClientId: string; workspaceId: WorkspaceId; expiresAt: number;
     };
     const access = "access" in item ? item.access : undefined;
-    if (access !== undefined && access !== "read" && access !== "author" && access !== "conversation") return { status: "unavailable" };
-    clients.push({ registeredClientId, workspaceId, expiresAt, ...(access === "author" || access === "conversation" ? { access } : {}) });
+    if (access !== undefined && !isDesktopHeadlessClientAccess(access)) return { status: "unavailable" };
+    clients.push({ registeredClientId, workspaceId, expiresAt, ...(access && access !== "read" ? { access } : {}) });
   }
   return { status: "ready", running: value.running, clients, ...address,
-    ...("conversationAvailable" in value && value.conversationAvailable === true ? { conversationAvailable: true as const } : {}) };
+    ...("conversationAvailable" in value && value.conversationAvailable === true ? { conversationAvailable: true as const } : {}),
+    ...("presentationAvailable" in value && value.presentationAvailable === true ? { presentationAvailable: true as const } : {}) };
 }

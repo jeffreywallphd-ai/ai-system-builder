@@ -33,6 +33,7 @@ export {
   readDesktopHeadlessPairingRequest,
   type DesktopHeadlessAuthoringOperation,
   type DesktopHeadlessClientAccess,
+  isDesktopHeadlessClientAccess,
   type DesktopHeadlessPairingAction,
   type DesktopHeadlessPairingResult,
   type DesktopHeadlessPairingStatus,
@@ -45,3 +46,4 @@ export { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } fro
 export * from "./headless-approved-turn";
 export * from "./ui-control-authority";
 export * from "./ui-control-delivery";
+export * from "./ui-control-connector";

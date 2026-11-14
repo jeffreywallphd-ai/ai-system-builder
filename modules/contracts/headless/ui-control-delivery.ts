@@ -34,6 +34,84 @@ export type UiPresentationReceipt = {
   readonly status: "accepted" | "delivered" | "unconfirmed" | UiPresentationOutcome;
 };
 
+export type UiPresentationPullResult =
+  | { readonly status: "command"; readonly command: UiPresentationDelivery; readonly detail: UiPresentationDetail }
+  | { readonly status: "terminal"; readonly receipt: UiPresentationReceipt }
+  | { readonly status: "empty" | "unavailable" };
+
+/** Interactive-only display data. Never part of the connector's context. */
+export type UiPresentationDetail = { readonly title: string; readonly summary?: string };
+
+export function readUiPresentationDetail(raw: unknown): UiPresentationDetail | undefined {
+  try {
+    const { title, summary } = readStrictPassiveRecord(raw, ["title", "summary"]);
+    const valid = (value: unknown, max: number): value is string =>
+      typeof value === "string" && value.trim().length > 0 && value.length <= max &&
+      !/[\x00-\x1f\x7f]/.test(value) && !hasKnownPassiveCredential(value);
+    if (!valid(title, 200) || (summary !== undefined && !valid(summary, 320))) return;
+    return { title, ...(summary ? { summary } : {}) };
+  } catch { return undefined; }
+}
+
+function isSequence(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 && value <= UI_PRESENTATION_LIMITS.receipts;
+}
+
+export function readUiPresentationReceipt(raw: unknown): UiPresentationReceipt | undefined {
+  try {
+    const { sequence, commandId, status } = readStrictPassiveRecord(raw, ["sequence", "commandId", "status"]);
+    if (!isSequence(sequence) || !isUiControlId(commandId)) return;
+    if (status === "accepted" || status === "delivered" || status === "unconfirmed" ||
+        status === "applied" || status === "rejected" || status === "discarded") return { sequence, commandId, status };
+  } catch { return undefined; }
+}
+
+export function readUiPresentationPull(raw: unknown) {
+  try {
+    const { target: rawTarget, sequence } = readStrictPassiveRecord(raw, ["target", "sequence"]);
+    const target = readUiControlLeaseTarget(rawTarget);
+    if (target && isSequence(sequence)) return { target, sequence };
+  } catch { return undefined; }
+}
+
+export function readUiPresentationPullResult(raw: unknown): UiPresentationPullResult {
+  try {
+    const row = readStrictPassiveRecord(raw, ["status", "command", "receipt", "detail"]);
+    if ((row.status === "empty" || row.status === "unavailable") && Object.keys(row).length === 1) return { status: row.status };
+    if (row.status === "command") {
+      const command = readUiPresentationDelivery(row.command);
+      const detail = readUiPresentationDetail(row.detail);
+      if (Object.keys(row).length === 3 && command && detail) return { status: "command", command, detail };
+    }
+    if (row.status === "terminal") {
+      const receipt = readUiPresentationReceipt(row.receipt);
+      if (Object.keys(row).length === 2 && receipt && receipt.status !== "accepted" && receipt.status !== "delivered")
+        return { status: "terminal", receipt };
+    }
+  } catch { /* Failed observation cannot imply a command or a receipt. */ }
+  return { status: "unavailable" };
+}
+
+export function readUiPresentationAcknowledgment(raw: unknown) {
+  try {
+    const { target: rawTarget, receipt: rawReceipt } = readStrictPassiveRecord(raw, ["target", "receipt"]);
+    const target = readUiControlLeaseTarget(rawTarget);
+    const receipt = readUiPresentationReceipt(rawReceipt);
+    if (target && receipt && (receipt.status === "applied" || receipt.status === "rejected" || receipt.status === "discarded")) {
+      return { target, receipt: { ...receipt, status: receipt.status } };
+    }
+  } catch { return undefined; }
+}
+
+export function readUiPresentationPublication(raw: unknown) {
+  try {
+    const { target: rawTarget, context: rawContext, challenge } = readStrictPassiveRecord(raw, ["target", "context", "challenge"]);
+    const target = readUiControlLeaseTarget(rawTarget);
+    const context = readUiPresentationContext(rawContext);
+    if (target && context && isUiControlId(challenge)) return { target, context, challenge };
+  } catch { return undefined; }
+}
+
 export type UiPresentationContext = {
   readonly view: "system" | "component" | "run" | "artifact" | "validation" | "other";
   readonly ready: boolean;
@@ -126,8 +204,7 @@ export function readUiPresentationDelivery(value: unknown): UiPresentationDelive
     const row = readStrictPassiveRecord(value, ["target", "commandId", "intent", "sequence", "remainingMs"]);
     const submission = readSubmission(row);
     const { sequence, remainingMs } = row;
-    if (!submission || typeof sequence !== "number" || !Number.isSafeInteger(sequence) || sequence <= 0 ||
-        sequence > UI_PRESENTATION_LIMITS.receipts || typeof remainingMs !== "number" ||
+    if (!submission || !isSequence(sequence) || typeof remainingMs !== "number" ||
         !Number.isFinite(remainingMs) || remainingMs <= 0 || remainingMs > UI_PRESENTATION_LIMITS.commandMs) return;
     return { ...submission, sequence, remainingMs };
   } catch { return undefined; }

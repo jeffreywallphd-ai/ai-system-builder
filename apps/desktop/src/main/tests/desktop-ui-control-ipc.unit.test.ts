@@ -42,6 +42,15 @@ test("only the exact current interactive sender can register a workspace, and a 
       principalDisplayName: "Fixture user", createdAt: "2026-11-14T00:00:00Z", updatedAt: "2026-11-14T00:00:00Z",
     },
     authority: auth,
+    async execute() { return { ok: false, code: "headless.forbidden" }; },
+    canPublish: () => false,
+    authorizePublication: async () => false,
+    readDelivery: () => undefined,
+    closeDelivery: () => {},
+    authorizeIntent: async () => undefined,
+    publishContext: () => false,
+    contextChallenge: () => undefined,
+    close: () => auth.close(),
     canObserve(workspaceId: string) {
       authorizationCalls.push(workspaceId);
       return held ? new Promise<boolean>(resolve => { finish = resolve; }) : Promise.resolve(true);
@@ -123,6 +132,8 @@ test("a committed workspace or membership change denies the composed owner, and 
     assert.equal(await accept(trustedEvent, first.target), undefined);
     assert.equal((await composed.authority.agentStatus(first.target, agent)).status, "ended");
     const second = await nextRequest();
+    assert.deepEqual(await handlers.get(DESKTOP_UI_CONTROL_CHANNELS.pull)!(trustedEvent,
+      { target: { ...second.target, leaseId: randomUUID(), generation: 1 }, sequence: 1 }), { status: "unavailable" });
     await organization.memberships.saveMembership({ ...membership, status: "suspended" });
     assert.equal(await accept(trustedEvent, second.target), undefined);
     assert.deepEqual(await observe(), { status: "unavailable" });

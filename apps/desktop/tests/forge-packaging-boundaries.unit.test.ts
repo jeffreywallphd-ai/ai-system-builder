@@ -257,6 +257,7 @@ async function mainWindowFixture(options: { synchronousPaint?: boolean; synchron
   const scripts: string[] = [];
   let rejectCue = options.cueRejects ?? false;
   const errors: string[][] = [];
+  const retired: MockWindow[] = [];
   const deadlines = new Map<number, () => void>();
   class MockWindow extends EventEmitter {
     destroyed = false;
@@ -287,6 +288,7 @@ async function mainWindowFixture(options: { synchronousPaint?: boolean; synchron
   }
   const context: Record<string, any> = {
     BrowserWindow: MockWindow, openWindows: new Set(), recordDesktopMemorySnapshot() {},
+    retireUiControlWindow(window: MockWindow) { retired.push(window); },
     path, pathToFileURL: (await import("node:url")).pathToFileURL,
     __dirname: path.resolve(".vite/build"), MAIN_WINDOW_VITE_DEV_SERVER_URL: "http://127.0.0.1:3005", MAIN_WINDOW_VITE_NAME: "main_window",
     dialog: { showErrorBox: (...values: string[]) => { calls.push("error"); errors.push(values); } },
@@ -296,7 +298,7 @@ async function mainWindowFixture(options: { synchronousPaint?: boolean; synchron
   runInNewContext(compiled.code, context);
   const running: Promise<void> = context.fixtureBoot();
   await Promise.resolve();
-  return { window: constructed, running, calls, scripts, errors, deadlines, resolveLoad, rejectLoad,
+  return { window: constructed, running, calls, scripts, errors, deadlines, retired, resolveLoad, rejectLoad,
     cueSucceeds() { rejectCue = false; },
     async flush() { await Promise.resolve(); await Promise.resolve(); },
     timeout() { const callback = deadlines.get(1); assert.ok(callback); callback(); },
@@ -322,7 +324,8 @@ for (const order of ["paint-first", "load-first", "synchronous-paint"] as const)
     assert.equal(f.deadlines.size, 0);
     assert.equal(f.window.listenerCount("ready-to-show"), 0);
     assert.equal(f.window.webContents.listenerCount("preload-error"), 0);
-    assert.equal(f.window.webContents.listenerCount("render-process-gone"), 0);
+    assert.equal(f.window.webContents.listenerCount("render-process-gone"), 1, "the live document retains its takeover retirement handler");
+    assert.equal(f.retired.length, 0);
     assert.equal(f.errors.length, 0);
     f.window.emit("ready-to-show"); assert.equal(f.calls.filter(c => c === "show").length, 1);
   });
@@ -349,6 +352,7 @@ for (const failure of ["reject", "throw", "preload-error", "render-process-gone"
 
 test("closing a still-hidden window retires startup without a failure dialog", async () => {
   const f = await mainWindowFixture(); f.window.destroy(); await f.running;
+  assert.deepEqual(f.retired, [f.window]);
   assert.equal(f.errors.length, 0); assert.equal(f.deadlines.size, 0);
   f.resolveLoad(); f.window.emit("ready-to-show"); await f.flush();
   assert.equal(f.calls.includes("maximize") || f.calls.includes("show"), false);

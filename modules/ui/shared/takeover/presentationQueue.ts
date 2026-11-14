@@ -6,7 +6,7 @@ import {
 type Work = { readonly command: UiPresentationDelivery; readonly expiresAt: number };
 type Terminal =
   | { readonly work: Work; readonly outcome: UiPresentationOutcome }
-  | { readonly commandId: string; readonly outcome: "discarded" };
+  | { readonly commandId: string; readonly outcome: UiPresentationOutcome };
 type Result = "queued" | "duplicate" | "denied" | "detached";
 type PreparedEffect = () => boolean;
 
@@ -161,8 +161,8 @@ export function createPresentationQueue(options: {
       pump();
       return "queued";
     },
-    /** The host proves an exact earlier position expired before a later command can run. */
-    skip(exact: UiControlLeaseTarget, missingSequence: number, commandId: string) {
+    /** Advance an exact host terminal position that this renderer never applied. */
+    skip(exact: UiControlLeaseTarget, missingSequence: number, commandId: string, outcome: "rejected" | "discarded" = "discarded") {
       if (!sameUiControlLease(target, exact) || !live()) return false;
       if (gapExpired()) { fault(); return false; }
       if (active || missingSequence !== sequence ||
@@ -170,7 +170,7 @@ export function createPresentationQueue(options: {
       gap = undefined;
       clearTimeout(gapTimer);
       occupied.set(commandId, sequence);
-      terminal.set(sequence, { commandId, outcome: "discarded" });
+      terminal.set(sequence, { commandId, outcome });
       sequence++;
       pump();
       return true;

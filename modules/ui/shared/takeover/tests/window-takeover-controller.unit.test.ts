@@ -127,3 +127,30 @@ test("a held revoke for A does not delay B and its retry never substitutes B", a
   assert.deepEqual(calls, [a.target.attemptId, b.target.attemptId, a.target.attemptId]);
   controller.close();
 });
+
+test("renewal observes only the exact current lease and cannot revive a local expiry", async () => {
+  const pending = request(10);
+  const exact = grant(pending);
+  let now = 0;
+  const controller = createWindowTakeoverController({
+    now: () => now, readDraft: () => ({ status: "clean" }),
+    port: { async accept() { return exact; }, async ready() { return exact; }, async revoke() { return true; } },
+  });
+  try {
+    controller.update(pending);
+    controller.accept();
+    await turn();
+    const active = { ...pending, status: "active" } as const;
+    const fence = controller.fence();
+    now = 4000;
+    const held = controller.beginObservation();
+    held(active, { ...exact, remainingMs: 10_000 });
+    now = 6000;
+    assert.equal(controller.permits(exact.target, fence), true);
+    const late = controller.beginObservation();
+    now = 14_000;
+    late(active, { ...exact, remainingMs: 11_000 });
+    assert.equal(controller.permits(exact.target, fence), false);
+    assert.equal(controller.getSnapshot().status, "manual");
+  } finally { controller.close(); }
+});

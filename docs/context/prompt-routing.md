@@ -144,8 +144,9 @@ by default; do not insert routine per-increment approval pauses. Stop only when 
 skill's scope, authority, security, blocker, controlled-environment, or final
 approval gates apply.
 
-Requests to inspect or edit a saved system, check a conversation task, or send
-one turn to an approved conversation through a paired MCP client route to
+Requests to inspect or edit a saved system, check a conversation task, send
+one turn to an approved conversation, or show a saved resource in a consented
+desktop window through a paired MCP client route to
 `skills/control-ai-system-builder/SKILL.md`. Repository development and roadmap
 implementation continue to use the contributor workflow.
 

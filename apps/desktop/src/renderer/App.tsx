@@ -291,6 +291,14 @@ export function WorkspaceAwareDesktopApp({
           pages={desktopPageDefinitions}
           takeoverWorkspaceLabel={workspace.activeWorkspace?.displayName}
         >
+          {takeover.presented ? (
+            <section ref={takeover.presentedElement} className="ui-panel ui-panel--compact" aria-label="Resource shown by automation">
+              <h2>{takeover.presented.detail.title}</h2>
+              {takeover.presented.detail.summary ? <p>{takeover.presented.detail.summary}</p> : null}
+              <code>{"systemId" in takeover.presented.intent ? takeover.presented.intent.systemId :
+                "runId" in takeover.presented.intent ? takeover.presented.intent.runId : takeover.presented.intent.artifactId}</code>
+            </section>
+          ) : null}
           <Suspense fallback={lazyPageFallback}>{content}</Suspense>
         </AppShell>
       </WindowTakeoverProvider>

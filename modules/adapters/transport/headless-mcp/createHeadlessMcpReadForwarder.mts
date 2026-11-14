@@ -1,7 +1,7 @@
 import { request, type Agent } from "node:https";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
-import type { HeadlessApprovedTurnRequest, HeadlessApprovedTurnResult, HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest } from "../../../contracts/headless/index.js";
+import type { HeadlessApprovedTurnRequest, HeadlessApprovedTurnResult, HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessWindowRequest, HeadlessWindowResult } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
 import loopback from "../headless-loopback/index.js";
@@ -89,11 +89,11 @@ type ReadResult = { ok: true; operation: HeadlessReadRequest["operation"]; value
 const unavailable: ReadResult = { ok: false, code: deadlineCode };
 
 type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
-type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest;
+type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest;
 const unknownWrite: HeadlessAuthoringWireResult = { ok: false, code: "headless.operation-unconfirmed" };
 const unknownTurn = { ok: false, code: "headless.operation-unconfirmed" } as const;
 export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: unknown, credential: unknown,
-  enableAuthoring = false, enableConversation = false) {
+  enableAuthoring = false, enableConversation = false, enablePresentation = false) {
   if (!isDesktopHeadlessEndpoint(endpoint) || !isDesktopHeadlessFingerprint(fingerprint) || typeof credential !== "string" ||
       credential.length !== 43 || !/^[A-Za-z0-9_-]{43}$/.test(credential)) return undefined;
   // Build fixed paths locally. The pinned Agent attaches HTTP only to
@@ -101,10 +101,22 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const address = new URL("/aisb-headless/v1/read", endpoint);
   const authoringAddress = new URL("/aisb-headless/v1/author", endpoint);
   const conversationAddress = new URL(headless.HEADLESS_APPROVED_TURN_PATH, endpoint);
+  const presentationAddress = new URL(headless.HEADLESS_WINDOW_CONTROL_PATH, endpoint);
   const agent = loopback.createDesktopPinnedLoopbackAgent(endpoint, fingerprint);
   const authorization = `Bearer ${credential}`;
   let active = 0;
-  return async (input: ForwardRequest, signal?: AbortSignal): Promise<ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult> => {
+  return async (input: ForwardRequest, signal?: AbortSignal): Promise<ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult> => {
+    if (input.version === headless.UI_CONTROL_VERSION) {
+      if (!enablePresentation) return { ok: false, code: "headless.forbidden" };
+      if (!headless.readHeadlessWindowRequest(input) || active >= MAX_ACTIVE || signal?.aborted) return unavailable;
+      active++;
+      try {
+        const { status, raw } = await sendRead(presentationAddress, agent, authorization, input, signal);
+        const result = headless.readHeadlessWindowResult(raw);
+        return (status === 200) === result.ok ? result : unavailable;
+      } catch { return unavailable; }
+      finally { active--; }
+    }
     const author = isAuthoring(input);
     const converse = input.operation === headless.HEADLESS_APPROVED_TURN_OPERATION;
     if ((author && !enableAuthoring) || (converse && !enableConversation)) return { ok: false, code: "headless.forbidden" };

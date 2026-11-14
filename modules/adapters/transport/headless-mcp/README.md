@@ -80,3 +80,11 @@ the exact saved plan and session revisions and returns only a turn ID and a
 run ID for status lookup. It does not grant approval or select a provider.
 If a reply is uncertain, reconcile the saved task. Never retry it under a
 different key.
+
+The optional `AISB_HEADLESS_ENABLE_PRESENTATION=1` flag exposes the seven
+window tools. Pair the client that can request window control in Settings.
+Configure a separate paired client for each independent chat
+session that needs to request window control. The app identifies the caller
+from the registration. The request names one window and must be accepted there.
+Presentation shows saved resource details inside the app and has its own
+receipts, expiry, and release. It adds no saved-data or runtime permissions.

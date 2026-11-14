@@ -94,6 +94,11 @@ export function createWindowTakeoverController(options: {
     flushRevokes();
   }
   function stillCurrent(expected: number) { return !closed && expected === generation; }
+  function updateExpiry(deadline: number, expected: number) {
+    expires = deadline;
+    clearTimeout(localEnd);
+    localEnd = setTimeout(() => { if (stillCurrent(expected)) retire("unavailable"); }, Math.max(0, expires - options.now()));
+  }
 
   async function activate(request: UiControlRequestView, target: UiControlAttempt, save?: () => Promise<boolean>) {
     const expected = ++generation;
@@ -120,8 +125,7 @@ export function createWindowTakeoverController(options: {
         retire("unavailable");
         return;
       }
-      expires = readyStarted + ready.remainingMs;
-      localEnd = setTimeout(() => { if (stillCurrent(expected)) retire("unavailable"); }, Math.max(0, expires - options.now()));
+      updateExpiry(readyStarted + ready.remainingMs, expected);
       publish({ status: "active", request, grant: ready });
     } catch {
       if (stillCurrent(expected)) retire("unavailable");
@@ -157,9 +161,18 @@ export function createWindowTakeoverController(options: {
     },
     beginObservation() {
       const snapshot = state;
-      return (request: UiControlRequestView | undefined) => {
+      const beganAt = options.now();
+      return (request: UiControlRequestView | undefined, lease?: TakeoverGrant) => {
         // A pre-readiness response can arrive after this exact attempt becomes active.
-        if (state === snapshot) controller.update(request);
+        if (state !== snapshot) return;
+        if (snapshot.status === "active" && request?.status === "active" && options.now() < expires) {
+          const exact = normaliseGrant(lease, request.target, beganAt);
+          if (exact && sameLease(snapshot.grant.target, exact.target)) {
+            const deadline = beganAt + exact.remainingMs;
+            if (deadline > expires) updateExpiry(deadline, generation);
+          }
+        }
+        controller.update(request);
       };
     },
     accept() {

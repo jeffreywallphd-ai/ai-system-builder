@@ -234,13 +234,50 @@ export function createUiControlAuthority(dependencies: {
       const slot = slotFor(target);
       if (slot?.owner === owner && slot.request) return view(slot.request);
     },
+    observeInteractive(raw: unknown, owner: UiControlInteractiveOwner) {
+      const target = readUiControlWindow(raw);
+      if (!target) return;
+      sweep();
+      const slot = slotFor(target);
+      if (slot?.owner !== owner || !slot.request) return;
+      const active = slot.request.status === "active" ? lease(slot.request) : undefined;
+      return { request: view(slot.request), active };
+    },
+    /** Identifiers of open interactive documents in one already-authorized workspace. */
+    readWindows(workspaceId: string, agent: UiControlAgent): readonly UiControlWindowTarget[] {
+      if (!open || !current(agent)) return [];
+      sweep();
+      const eligible: UiControlWindowTarget[] = [];
+      for (const slot of windows.values()) {
+        if (slot.target.workspaceId === workspaceId && samePrincipal(agent, slot.owner)) eligible.push({ ...slot.target });
+      }
+      return eligible;
+    },
+    readAgentLease(raw: unknown, agent: UiControlAgent): UiControlLease | undefined {
+      const target = readUiControlRevoke(raw);
+      if (!target) return;
+      sweep();
+      const entry = exactEntry(target);
+      if (entry?.status === "active" && entry.slot.request === entry &&
+          slotFor(target) === entry.slot && sameAgent(entry.agent, agent) && current(agent) &&
+          (!("leaseId" in target) || !!entry.lease && sameLease(entry.lease, target))) return lease(entry);
+    },
+    readAgentRequest(raw: unknown, agent: UiControlAgent): UiControlRequestView | undefined {
+      const target = readUiControlAttempt(raw);
+      if (!target) return;
+      sweep();
+      const entry = exactEntry(target);
+      if (entry && entry.slot.request === entry && slotFor(target) === entry.slot &&
+          sameAgent(entry.agent, agent) && current(agent)) return view(entry);
+    },
     accept: (raw: unknown, owner: UiControlInteractiveOwner) => interactive(raw, owner, false),
     ready: (raw: unknown, owner: UiControlInteractiveOwner) => interactive(raw, owner, true),
     /** Final synchronous check before publishing a grant to its interactive frame. */
-    readInteractiveLease(target: UiControlLeaseTarget, owner: UiControlInteractiveOwner): UiControlLease | undefined {
+    readInteractiveLease(target: UiControlLeaseTarget, owner: UiControlInteractiveOwner, activeOnly = false): UiControlLease | undefined {
       sweep();
       const entry = interactiveEntry(target, owner);
-      if (entry && entry.slot.request === entry && entry.lease && sameLease(entry.lease, target)) return lease(entry);
+      if (entry && entry.slot.request === entry && (!activeOnly || entry.status === "active") &&
+          entry.lease && sameLease(entry.lease, target)) return lease(entry);
     },
     revoke(raw: unknown, owner: UiControlInteractiveOwner): UiControlDecision<undefined> {
       const target = readUiControlRevoke(raw);
@@ -251,7 +288,7 @@ export function createUiControlAuthority(dependencies: {
       end(entry);
       return ok(undefined);
     },
-    async agentStatus(raw: unknown, agent: UiControlAgent, renew = false): Promise<UiControlDecision<UiControlRequestView>> {
+    async agentStatus(raw: unknown, agent: UiControlAgent, renew = false, renewalIsCurrent?: () => boolean): Promise<UiControlDecision<UiControlRequestView>> {
       const target = renew ? readUiControlLeaseTarget(raw) : readUiControlAttempt(raw);
       if (!target) return denied;
       sweep();
@@ -264,7 +301,10 @@ export function createUiControlAuthority(dependencies: {
       if (allowed === "busy") return busy;
       if (entry.status === "ended") return ended;
       if (!allowed) { end(entry); return denied; }
-      if (renew && entry.status === "active") entry.expiresAt = dependencies.now() + limits.leaseMs;
+      if (renew && entry.status === "active") {
+        if (renewalIsCurrent && !current({ isCurrent: renewalIsCurrent })) return unavailable;
+        entry.expiresAt = dependencies.now() + limits.leaseMs;
+      }
       return ok(view(entry));
     },
     release(raw: unknown, agent: UiControlAgent): UiControlDecision<undefined> {

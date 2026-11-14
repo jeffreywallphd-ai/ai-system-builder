@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { request } from "node:https";
 import { test } from "node:test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import type { StructuredDocumentStore } from "../../../../adapters/persistence/shared";
-import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId } from "../../../../contracts/headless";
+import { HEADLESS_CONTRACT_VERSION, UI_CONTROL_VERSION, isHeadlessHostIncarnationId, readHeadlessWindowResult } from "../../../../contracts/headless";
+import { createStructuredOrganizationRepositories } from "../../../../adapters/persistence/organization";
+import { createLocalWorkspaceRepository } from "../../../../adapters/persistence/workspace";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createDesktopPinnedLoopbackAgent } from "../../../../adapters/transport/headless-loopback";
 import { composeDesktopHeadlessConnection } from "../composeDesktopHeadlessConnection";
+import { composeDesktopUiControl } from "../composeDesktopUiControl";
 
 const workspaceId = createWorkspaceId("local-connection-workspace");
 const organizationId = createOrganizationId("local-connection-org");
@@ -15,7 +19,7 @@ const at = "2026-11-13T00:00:00.000Z";
 const hostIncarnationId = "632cfa6b-c323-419a-b2bd-5880b1f34858";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
 
-function call(connector: { endpoint: string; fingerprint: string }, path: "pair" | "read", input: object, credential?: string) {
+function call(connector: { endpoint: string; fingerprint: string }, path: "pair" | "read" | "window", input: object, credential?: string) {
   const body = JSON.stringify(input);
   return new Promise<{ status: number; result: { value?: { credential?: string; registeredClientId?: string } } }>((resolve, reject) => {
     const req = request(new URL("/aisb-headless/v1/" + path, connector.endpoint), {
@@ -34,6 +38,121 @@ function call(connector: { endpoint: string; fingerprint: string }, path: "pair"
     req.on("error", reject).end(body);
   });
 }
+
+test("pinned paired agents can request and present only with an exact interactive lease", async () => {
+  const platform = createInMemoryStructuredDocumentStore();
+  const documents = platform.forOrganization(organizationId);
+  const identity = { organizationId, principalId: "fixture-owner", principalDisplayName: "Fixture", createdAt: at, updatedAt: at };
+  const repositories = createStructuredOrganizationRepositories(platform);
+  const workspace = { organizationId, workspaceId, displayName: "Fixture", status: "active" as const, createdAt: at, updatedAt: at };
+  await repositories.organizations.saveOrganization({ ...workspace });
+  await repositories.memberships.saveMembership({ organizationId, principalId: identity.principalId,
+    role: "owner", status: "active", createdAt: at, updatedAt: at });
+  const workspaces = createLocalWorkspaceRepository({ documents, rootDirectory: "." });
+  await workspaces.saveWorkspace(workspace);
+  let now = 100;
+  let available = true;
+  let beforePublish: (() => Promise<void>) | undefined;
+  const control = composeDesktopUiControl({ identity, hostIncarnationId, rootDirectory: ".", documents: platform, isOpen: () => true, now: () => now,
+    async canPresent(scope, intent) {
+      return available && scope === workspaceId && intent.action === "open-system" && intent.systemId === "system-a" && intent.revisionId === "revision-a"
+        ? { title: "Fixture resource" } : undefined;
+    },
+  });
+  const connector = composeDesktopHeadlessConnection({ documents, identity, workspaces, presentation: {
+    ...control, async authorizePublication(...args) {
+      await beforePublish?.();
+      return control.authorizePublication(...args);
+    },
+  },
+    authorization: { async authorizeWorkspaceOperation() {} },
+    async read() { return { ok: false, code: "headless.forbidden" }; },
+  });
+  try {
+    const window = { hostIncarnationId, workspaceId, windowId: randomUUID(), uiIncarnationId: randomUUID() };
+    const owner = { ...identity, isCurrent: () => true };
+    assert.equal(control.authority.registerWindow(window, owner), true);
+    const first = await connector.beginPairing(workspaceId, () => true, "presentation");
+    assert.equal(first.status, "ready");
+    const firstPaired = await call(first, "pair", { pairingCode: first.pairingCode });
+    const credential = firstPaired.result.value?.credential;
+    assert.ok(credential);
+    const second = await connector.beginPairing(workspaceId, () => true);
+    assert.equal(second.status, "ready");
+    const other = (await call(second, "pair", { pairingCode: second.pairingCode })).result.value?.credential;
+    assert.ok(other);
+    const third = await connector.beginPairing(workspaceId, () => true, "presentation");
+    assert.equal(third.status, "ready");
+    const { credential: peer, registeredClientId: peerId } = (await call(third, "pair", { pairingCode: third.pairingCode })).result.value ?? {};
+    assert.ok(peer && peerId);
+    const dispatch = async (operation: string, input: object, selected = credential) => {
+      const reply = await call(first, "window", { version: UI_CONTROL_VERSION, operation, input }, selected);
+      return { status: reply.status, body: readHeadlessWindowResult(reply.result) };
+    };
+    assert.deepEqual((await dispatch("window.list", { hostIncarnationId, workspaceId })).body,
+      { ok: true, value: { kind: "windows", windows: [window] } });
+    assert.equal((await dispatch("window.list", { hostIncarnationId, workspaceId }, other)).status, 403);
+    assert.equal((await dispatch("window.list", { hostIncarnationId, workspaceId: "other-workspace" })).status, 403);
+    const prompt = { target: window, taskId: randomUUID(), requestKey: randomUUID() };
+    assert.equal((await dispatch("window.request", { ...prompt, agentSessionId: randomUUID() })).status, 400);
+    const request = (await dispatch("window.request", prompt)).body;
+    assert.ok(request.ok && request.value.kind === "request" && request.value.request.status === "pending");
+    const attempt = request.value.request.target;
+    assert.equal(request.value.request.agentSessionId, firstPaired.result.value?.registeredClientId);
+    assert.equal((await dispatch("window.accept", { target: attempt })).status, 400);
+    assert.equal((await dispatch("window.status", { target: attempt }, peer)).status, 403);
+    const accepted = await control.authority.accept(attempt, owner);
+    assert.ok(accepted.status === "ok");
+    const target = accepted.value.target;
+    const commandId = randomUUID();
+    const intent = { action: "open-system", systemId: "system-a", revisionId: "revision-a" };
+    assert.equal((await dispatch("window.present", { target, commandId, intent })).status, 403);
+    assert.equal((await control.authority.ready(target, owner)).status, "ok");
+    const live = (await dispatch("window.status", { target: attempt })).body;
+    assert.ok(live.ok && live.value.kind === "request" && live.value.lease?.leaseId === target.leaseId);
+    assert.equal((await dispatch("window.present", { target, commandId, intent }, peer)).status, 403);
+    assert.equal((await dispatch("window.present", { target, commandId, intent: { ...intent, systemId: "wrong" } })).status, 403);
+    assert.equal((await dispatch("window.present", { target, commandId, intent })).status, 200);
+    const queue = control.readDelivery(target);
+    assert.equal(queue?.next(target, 1).status, "delivered");
+    assert.equal(queue?.acknowledge(target, 1, commandId, "applied")?.status, "applied");
+    assert.equal((await dispatch("window.present", { target, commandId, intent: { ...intent, revisionId: "revision-b" } })).status, 409);
+    const context = { view: "other", ready: true, dirtyNavigationBlocked: false } as const;
+    async function waitForChallenge() {
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 5));
+        const value = control.contextChallenge(target);
+        if (value) return value;
+      }
+      assert.fail("Expected a current context challenge.");
+    }
+    const readingContext = dispatch("window.context", { target });
+    const challenge = await waitForChallenge();
+    assert.equal(control.publishContext(target, owner, context, randomUUID()), false);
+    assert.equal(control.publishContext(target, owner, context, challenge), true);
+    assert.equal(control.publishContext(target, owner, context, challenge), false);
+    assert.deepEqual((await readingContext).body, { ok: true, value: { kind: "context", context } });
+    const held = dispatch("window.context", { target });
+    const heldChallenge = await waitForChallenge();
+    beforePublish = async () => { now += 750; };
+    assert.equal(control.publishContext(target, owner, context, heldChallenge), true);
+    assert.equal((await held).status, 403);
+    beforePublish = undefined;
+    assert.equal((await dispatch("window.context", { target })).status, 503);
+    assert.deepEqual((await dispatch("window.present", { target, commandId, intent })).body,
+      { ok: true, value: { kind: "command", duplicate: true, receipt: { sequence: 1, commandId, status: "applied" } } });
+    beforePublish = async () => { available = false; };
+    assert.equal((await dispatch("window.present", { target, commandId, intent })).status, 403);
+    beforePublish = undefined;
+    available = true;
+    assert.equal(await connector.revoke(peerId), true);
+    assert.ok((await dispatch("window.status", { target: attempt })).body.ok);
+    assert.equal(control.authority.revoke(target, owner).status, "ok");
+    assert.equal((await dispatch("window.context", { target })).status, 403);
+    assert.deepEqual(await dispatch("window.renew", { target }), { status: 200, body: { ok: true, value: { kind: "ended" } } });
+    assert.equal(queue?.next(target, 1).status, "denied");
+  } finally { await connector.close(); }
+});
 
 test("starts only on explicit approved workspace pairing or reconnect and closes owned listener", async () => {
   const documents = createInMemoryStructuredDocumentStore().forOrganization(organizationId);

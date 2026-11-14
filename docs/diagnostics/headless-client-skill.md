@@ -19,7 +19,9 @@ pair a client with editing permission and enable authoring in the launcher.
 If the desktop offers conversation access, pair a client for that access and
 enable conversation in the launcher. The flags control tool discovery.
 The desktop checks pairing, workspace permission and the existing exact
-conversation approval when it receives a request. If the desktop does not
+conversation approval when it receives a request. Presentation tools can ask to
+attach an exact app window. The user accepts or declines in that window and can
+revoke from the shell or an open dialog. If the desktop does not
 offer conversation access, leave that feature unavailable. Installing the skill
 grants none of these permissions.
 
@@ -29,7 +31,7 @@ or task status before replaying the exact request with the original key.
 A missing window does not establish whether work was saved or canceled.
 
 The tool reference is generated from the official SDK's `listTools` for
-read, authoring, conversation, and combined modes. The generator starts no
+read, authoring, conversation, presentation, and combined modes. The generator starts no
 connector and calls no tools. It emits names and input schemas without
 workspace data, credentials or message content. For a repository update,
 run this from the repository root with the existing dependencies installed.

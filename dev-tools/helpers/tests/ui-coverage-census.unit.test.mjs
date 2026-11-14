@@ -1096,6 +1096,23 @@ function navigationCensusLegacyView(map,result){
 let committedCensusWitness;
 const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
 function headlessPackagedCensusLegacyView(map, result) {
+  if (sha(JSON.stringify(map)) === "9ffbb7fd0b0a331e63a3e7294219d5b97a9fcfc68e7e6e414b804ca0109e14bb") {
+    // The existing startup fixture now verifies that closing its window
+    // retires the exact takeover owner.
+    const saved = JSON.parse(historicalSource("95b92b2abf34dde147c09a1eddaaa0ff888035ba", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "d87c96feb11029c8e7f0f646d2fdf20ec704bc7658952a9ca99b6aeb110c0edd");
+    const expected = structuredClone(saved);
+    const path = "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts";
+    const facts = map.sources.find(row => row.path === path).facts;
+    assert.equal(facts.sha256, "56407da8dcc0bf336e33fe19069a50e0fb933aa6f5a58002cb0f929f767fa642");
+    assert.equal(sha(JSON.stringify(facts)), "74f7211e94344823202c0e0b248eac989f8c13c626df820d29b7a8c96c49c52d");
+    expected.sources.find(row => row.path === path).facts = facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
   if (sha(JSON.stringify(map)) === "d87c96feb11029c8e7f0f646d2fdf20ec704bc7658952a9ca99b6aeb110c0edd") {
     // The shell checkpoint changes the Composer witness and the declared desktop
     // Systems tab source. Preserve the previously recorded facts and all gaps.
@@ -2084,7 +2101,11 @@ test("current published form checkpoint preserves its complete source gaps and o
   const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,32);
+  assert.equal(result.gaps.length,33);
+  const isPendingDesktopStartup = row => row.kind === "unreviewed-source-drift" &&
+    row.source === "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts";
+  assert.equal(result.gaps.filter(isPendingDesktopStartup).length, 1);
+  assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>!isPendingDesktopStartup(row))}));
   const isPendingHeadless = row => row.kind === "unreviewed-source-drift" && row.source === headlessPackagedSpec;
   assert.equal(result.gaps.filter(isPendingHeadless).length,1);
   assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>!isPendingHeadless(row))}));

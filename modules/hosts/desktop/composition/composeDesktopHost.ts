@@ -12,6 +12,8 @@ import { composeDesktopHeadlessConversation } from "./composeDesktopHeadlessConv
 import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
 import { registerDesktopHeadlessTaskList } from "./registerDesktopHeadlessTaskList";
 import { composeDesktopUiControl, type DesktopUiControlOwner } from "./composeDesktopUiControl";
+import { normalizeExecutionRunId } from "../../../contracts/execution-runs";
+import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../contracts/system-builder";
 import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
 import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
 import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
@@ -726,7 +728,7 @@ export function composeDesktopHost(
     },
     async shutdownBackgroundTasks() {
       headlessReadAdmissionClosed = true;
-      uiControlOwner?.authority.close();
+      uiControlOwner?.close();
       uiControlOwner = undefined;
       headlessReadHandler = undefined;
       headlessConversation?.stopAdmission();
@@ -2246,6 +2248,44 @@ export function composeDesktopHost(
             if (platformDocuments) uiControlOwner = composeDesktopUiControl({
               hostIncarnationId, identity, documents: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
               isOpen: () => !headlessReadAdmissionClosed,
+              async canPresent(workspaceId, intent) {
+                if (intent.action === "show-run") {
+                  const run = await executionRunRepositories.executionRunRepository.getExecutionRunById(workspaceId, normalizeExecutionRunId(intent.runId));
+                  if (run?.workspaceId === workspaceId && run.id === intent.runId && run.status !== "archived")
+                    return { title: "Execution run", summary: `Run status: ${run.status}` };
+                  return;
+                }
+                if (intent.action === "show-artifact") {
+                  const catalog = (await getArtifactFeatures()).artifactCatalog;
+                  const result = await catalog.readArtifactCatalogRecord({ workspaceId, storageKey: intent.artifactId }, { workspaceId });
+                  if (result.ok && result.value.record.workspaceId === workspaceId &&
+                      result.value.record.storageKey === intent.artifactId) {
+                    const artifact = result.value.record;
+                    return { title: artifact.originalName || "Saved artifact", summary: `Artifact type: ${artifact.artifactFamily}` };
+                  }
+                  return;
+                }
+                const systemId = normalizeSystemBuilderSystemId(intent.systemId);
+                const revision = await systemBuilder.repository.readRevision(workspaceId, systemId, normalizeSystemBuilderRevisionId(intent.revisionId));
+                if (revision?.targetWorkspaceId !== workspaceId || revision.systemId !== systemId ||
+                    revision.revisionId !== intent.revisionId) return;
+                // The revision is immutable. Confirm the live record still names
+                // the same revision after reading it.
+                const system = await systemBuilder.repository.readRecord(workspaceId, systemId);
+                if (system?.targetWorkspaceId !== workspaceId || system.systemId !== systemId ||
+                    system.status === "archived" || system.currentRevisionId !== intent.revisionId) return;
+                if (intent.action === "select-component") {
+                  const instance = revision.instances.find(item => item.instanceId === intent.instanceId);
+                  if (instance) return { title: instance.displayName, summary: `Component in revision ${revision.revisionNumber}` };
+                  return;
+                }
+                if (intent.action === "show-validation") {
+                  const errors = revision.validationIssues.filter(item => item.severity === "error").length;
+                  return { title: revision.composition.displayName,
+                    summary: `Validation: ${errors} blocking, ${revision.validationIssues.length - errors} for review` };
+                }
+                return { title: revision.composition.displayName, summary: `Saved revision ${revision.revisionNumber} · ${revision.instances.length} components` };
+              },
             });
             if (platformDocuments && delegatedTurnAdmission) {
               headlessConversation = composeDesktopHeadlessConversation({
@@ -2275,6 +2315,7 @@ export function composeDesktopHost(
               authorization: workspaceAuthorization,
               read: headlessReadHandler,
               conversation: headlessConversation,
+              presentation: uiControlOwner,
               authoring: options.persistence?.documents ? composeDesktopHeadlessAuthoring({
                 hostIncarnationId, identity, platformDocuments: options.persistence.documents, rootDirectory: registerOptions.storageRootDirectory,
                 workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,

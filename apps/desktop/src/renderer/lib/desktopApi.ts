@@ -598,6 +598,9 @@ interface DesktopApiBridge {
   acceptWindowTakeover?: (target: unknown) => Promise<import("../../../../../modules/contracts/headless").UiControlTimedGrant | undefined>;
   readyWindowTakeover?: (target: unknown) => Promise<import("../../../../../modules/contracts/headless").UiControlTimedGrant | undefined>;
   revokeWindowTakeover?: (target: unknown) => Promise<boolean>;
+  pullWindowPresentation?: (input: unknown) => Promise<import("../../../../../modules/contracts/headless").UiPresentationPullResult>;
+  acknowledgeWindowPresentation?: (input: unknown) => Promise<boolean>;
+  publishWindowContext?: (input: unknown) => Promise<boolean>;
   readSystemBuilderChangeWatermark?: (workspaceId: string) => Promise<import("../../../../../modules/contracts/headless").DesktopSystemChangeWatermark>;
   startHeadlessConnector?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessStartResult>;
   beginHeadlessPairing?: (workspaceId: string, access?: import("../../../../../modules/contracts/headless").DesktopHeadlessClientAccess) => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingResult>;

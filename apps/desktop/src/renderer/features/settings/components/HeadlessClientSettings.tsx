@@ -66,7 +66,7 @@ export function HeadlessClientSettings() {
 
   return (
     <section aria-label="Local chat clients" className="ui-stack ui-stack--sm">
-      <p>Choose whether a local chat client can read or edit saved systems in one workspace. Pairing does not give the client control of this window.</p>
+      <p>Choose what a local chat client can do in one workspace. A client needs your consent in each window it uses.</p>
       {data?.status === "ready" ? <>
         <p>{data.running ? "The local connector is on." : "The local connector is off."}</p>
         {data.endpoint ? <p>Local address: <code>{data.endpoint}</code></p> : null}
@@ -83,6 +83,10 @@ export function HeadlessClientSettings() {
             onClick={() => void pair("conversation")}>
             Pair a client that can run approved conversations
           </button> : null}
+          {data.presentationAvailable ? <button type="button" disabled={pending || workspaceStatus !== "ready" || !activeWorkspaceId}
+            onClick={() => void pair("presentation")}>
+            Pair a client that can request window control
+          </button> : null}
           <button type="button" disabled={pending} onClick={() => setRefresh((current) => current + 1)}>
             Refresh clients
           </button>
@@ -93,7 +97,8 @@ export function HeadlessClientSettings() {
         {data.clients.length ? <ul>
           {data.clients.map((client) => <li key={client.registeredClientId}>
             <span>{client.workspaceId} · Client {client.registeredClientId.slice(0, 8)} · {client.access === "author" ? "Read and edit"
-              : client.access === "conversation" ? "Read and run approved conversations" : "Read only"} </span>
+              : client.access === "conversation" ? "Read and run approved conversations"
+                : client.access === "presentation" ? "Read and request window control" : "Read only"} </span>
             <button type="button" disabled={pending} onClick={() => void revoke(client.registeredClientId)}
               aria-label={`Remove access for client ${client.registeredClientId.slice(0, 8)}`}>Remove access</button>
           </li>)}

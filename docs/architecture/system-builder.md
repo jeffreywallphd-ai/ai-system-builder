@@ -652,5 +652,8 @@ immediate revoke while activation is pending or active. Revoke closes the
 window's local gate before IPC. The Composer stays mounted across Systems tabs
 so the handoff sees any pending draft. During attachment, modal body controls are
 inert and keyboard users can still revoke or close the dialog.
-The command catalog and native end-to-end
-qualification are tracked separately in the Headless roadmap.
+The paired client can request a saved system, component, validation summary,
+artifact, or run. The window shows the authorized resource in a dedicated
+view while the current draft remains in place. Command delivery and saved
+business results have separate receipts. Native end-to-end qualification is
+tracked in the Headless roadmap.

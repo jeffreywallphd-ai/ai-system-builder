@@ -2701,8 +2701,8 @@
   {
    "path": "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
    "facts": {
-    "sha256": "77533f21ce788b2c98bc1c05cdf86ca6d0c01cf3aa312eddaa221014b8f3932e",
-    "bytes": 24385,
+    "sha256": "56407da8dcc0bf336e33fe19069a50e0fb933aa6f5a58002cb0f929f767fa642",
+    "bytes": 24646,
     "cases": [
      {
       "name": "desktop packaging includes the complete managed Python worker resource",
@@ -2742,23 +2742,23 @@
      },
      {
       "name": "closing a still-hidden window retires startup without a failure dialog",
-      "line": 350
+      "line": 353
      },
      {
       "name": "visible documents receive only the fixed presentation cue, including a minimized menu reload",
-      "line": 357
+      "line": 361
      },
      {
       "name": "a live document's failed presentation cue shows fixed recovery and retires its unusable window",
-      "line": 371
+      "line": 375
      },
      {
       "name": "a superseded loading document can reject its cue and replay it after the new load",
-      "line": 379
+      "line": 383
      },
      {
       "name": "production Vite rewrites the real startup document, styles and controller to local packaged assets",
-      "line": 389
+      "line": 393
      }
     ],
     "dynamicCases": 2,
@@ -2772,8 +2772,8 @@
       "line": 245
      }
     ],
-    "assertionCount": 109,
-    "assertionDigest": "2b996e140fe70f35f9d84890dfa6e863cb91a4bc3ac0608b58d0ab123b776c6f",
+    "assertionCount": 111,
+    "assertionDigest": "21fa85751fa726c9830eadc19427834eb51812f32a8fa9a0f825986065d463f5",
     "assertionExamples": [
      {
       "line": 14,

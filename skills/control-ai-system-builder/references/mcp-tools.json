@@ -72,6 +72,56 @@
         "aisb_saved_system_snapshot",
         "aisb_send_approved_turn"
       ]
+    },
+    {
+      "mode": "presentation",
+      "tools": [
+        "aisb_host_describe",
+        "aisb_list_systems",
+        "aisb_list_templates",
+        "aisb_list_windows",
+        "aisb_list_workflows",
+        "aisb_list_workspaces",
+        "aisb_prepare_workflow",
+        "aisb_present_in_window",
+        "aisb_read_conversation_task",
+        "aisb_read_system",
+        "aisb_release_window",
+        "aisb_renew_window",
+        "aisb_request_window",
+        "aisb_saved_system_changes",
+        "aisb_saved_system_snapshot",
+        "aisb_window_context",
+        "aisb_window_status"
+      ]
+    },
+    {
+      "mode": "all",
+      "tools": [
+        "aisb_apply_edits",
+        "aisb_clone_system",
+        "aisb_create_system",
+        "aisb_host_describe",
+        "aisb_list_systems",
+        "aisb_list_templates",
+        "aisb_list_windows",
+        "aisb_list_workflows",
+        "aisb_list_workspaces",
+        "aisb_prepare_workflow",
+        "aisb_present_in_window",
+        "aisb_preview_edits",
+        "aisb_read_conversation_task",
+        "aisb_read_system",
+        "aisb_release_window",
+        "aisb_rename_system",
+        "aisb_renew_window",
+        "aisb_request_window",
+        "aisb_saved_system_changes",
+        "aisb_saved_system_snapshot",
+        "aisb_send_approved_turn",
+        "aisb_window_context",
+        "aisb_window_status"
+      ]
     }
   ],
   "tools": [
@@ -462,6 +512,26 @@
       }
     },
     {
+      "name": "aisb_list_windows",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "aisb_list_workflows",
       "inputSchema": {
         "type": "object",
@@ -574,6 +644,183 @@
           "workspaceId",
           "profileId",
           "source"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_present_in_window",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "object",
+            "properties": {
+              "hostIncarnationId": {
+                "type": "string"
+              },
+              "workspaceId": {
+                "type": "string"
+              },
+              "windowId": {
+                "type": "string"
+              },
+              "uiIncarnationId": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "attemptId": {
+                "type": "string"
+              },
+              "leaseId": {
+                "type": "string"
+              },
+              "generation": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "hostIncarnationId",
+              "workspaceId",
+              "windowId",
+              "uiIncarnationId",
+              "requestId",
+              "attemptId",
+              "leaseId",
+              "generation"
+            ],
+            "additionalProperties": false
+          },
+          "commandId": {
+            "type": "string"
+          },
+          "intent": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "open-system"
+                  },
+                  "systemId": {
+                    "type": "string"
+                  },
+                  "revisionId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  }
+                },
+                "required": [
+                  "action",
+                  "systemId",
+                  "revisionId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "select-component"
+                  },
+                  "systemId": {
+                    "type": "string"
+                  },
+                  "revisionId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "instanceId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  }
+                },
+                "required": [
+                  "action",
+                  "systemId",
+                  "revisionId",
+                  "instanceId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "show-validation"
+                  },
+                  "systemId": {
+                    "type": "string"
+                  },
+                  "revisionId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  }
+                },
+                "required": [
+                  "action",
+                  "systemId",
+                  "revisionId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "show-run"
+                  },
+                  "runId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  }
+                },
+                "required": [
+                  "action",
+                  "runId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "show-artifact"
+                  },
+                  "artifactId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  }
+                },
+                "required": [
+                  "action",
+                  "artifactId"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "target",
+          "commandId",
+          "intent"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false
@@ -875,6 +1122,97 @@
       }
     },
     {
+      "name": "aisb_release_window",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "hostIncarnationId": {
+                    "type": "string"
+                  },
+                  "workspaceId": {
+                    "type": "string"
+                  },
+                  "windowId": {
+                    "type": "string"
+                  },
+                  "uiIncarnationId": {
+                    "type": "string"
+                  },
+                  "requestId": {
+                    "type": "string"
+                  },
+                  "attemptId": {
+                    "type": "string"
+                  },
+                  "leaseId": {
+                    "type": "string"
+                  },
+                  "generation": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "hostIncarnationId",
+                  "workspaceId",
+                  "windowId",
+                  "uiIncarnationId",
+                  "requestId",
+                  "attemptId",
+                  "leaseId",
+                  "generation"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "hostIncarnationId": {
+                    "type": "string"
+                  },
+                  "workspaceId": {
+                    "type": "string"
+                  },
+                  "windowId": {
+                    "type": "string"
+                  },
+                  "uiIncarnationId": {
+                    "type": "string"
+                  },
+                  "requestId": {
+                    "type": "string"
+                  },
+                  "attemptId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "hostIncarnationId",
+                  "workspaceId",
+                  "windowId",
+                  "uiIncarnationId",
+                  "requestId",
+                  "attemptId"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "aisb_rename_system",
       "inputSchema": {
         "type": "object",
@@ -920,6 +1258,106 @@
           "baseRevisionId",
           "idempotencyKey",
           "name"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_renew_window",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "object",
+            "properties": {
+              "hostIncarnationId": {
+                "type": "string"
+              },
+              "workspaceId": {
+                "type": "string"
+              },
+              "windowId": {
+                "type": "string"
+              },
+              "uiIncarnationId": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "attemptId": {
+                "type": "string"
+              },
+              "leaseId": {
+                "type": "string"
+              },
+              "generation": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "hostIncarnationId",
+              "workspaceId",
+              "windowId",
+              "uiIncarnationId",
+              "requestId",
+              "attemptId",
+              "leaseId",
+              "generation"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_request_window",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "object",
+            "properties": {
+              "hostIncarnationId": {
+                "type": "string"
+              },
+              "workspaceId": {
+                "type": "string"
+              },
+              "windowId": {
+                "type": "string"
+              },
+              "uiIncarnationId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hostIncarnationId",
+              "workspaceId",
+              "windowId",
+              "uiIncarnationId"
+            ],
+            "additionalProperties": false
+          },
+          "taskId": {
+            "type": "string"
+          },
+          "requestKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "taskId",
+          "requestKey"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false
@@ -1032,6 +1470,106 @@
           "snapshotRevision",
           "key",
           "text"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_window_context",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "object",
+            "properties": {
+              "hostIncarnationId": {
+                "type": "string"
+              },
+              "workspaceId": {
+                "type": "string"
+              },
+              "windowId": {
+                "type": "string"
+              },
+              "uiIncarnationId": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "attemptId": {
+                "type": "string"
+              },
+              "leaseId": {
+                "type": "string"
+              },
+              "generation": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "hostIncarnationId",
+              "workspaceId",
+              "windowId",
+              "uiIncarnationId",
+              "requestId",
+              "attemptId",
+              "leaseId",
+              "generation"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_window_status",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "object",
+            "properties": {
+              "hostIncarnationId": {
+                "type": "string"
+              },
+              "workspaceId": {
+                "type": "string"
+              },
+              "windowId": {
+                "type": "string"
+              },
+              "uiIncarnationId": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "attemptId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hostIncarnationId",
+              "workspaceId",
+              "windowId",
+              "uiIncarnationId",
+              "requestId",
+              "attemptId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "target"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false
