@@ -215,6 +215,22 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/security/oidc/tests/oidc-bearer-token-verifier.unit.test.ts",
         ),
     },
+    "managed-headless-transactional-authoring": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/composeManagedHeadlessAuthoring.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/composition/composeManagedHeadlessAuthoring.ts",
+            "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/headless-system-authoring.unit.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+        ),
+    },
     "managed-saved-state-replay": {
         "automatic_sources": (
             "modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes.ts",

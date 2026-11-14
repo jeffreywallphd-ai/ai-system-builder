@@ -22,6 +22,13 @@ still verify prerequisites and own the process and its runtime files.
 
 `composeServerHost` wires server-host lifecycle dependencies while keeping transport setup thin.
 
+The managed headless authoring service composes the shared System Builder
+against the authenticated request organization. It checks the current
+workspace and membership again inside the transaction that owns a save
+and its durable retry receipt. It rechecks access before returning a
+successful result. The service accepts only an already verified agent
+registration. A transport route is a separate composition step.
+
 Current composition includes:
 
 - artifact-object storage via filesystem adapter,

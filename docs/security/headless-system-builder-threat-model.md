@@ -194,6 +194,13 @@ outcomes without storing credentials, cursors or record content. This
 check covers committed saved-state recovery, with production topology
 and full browser takeover qualified separately.
 
+Managed authoring checks the exact workspace and the existing organization's
+capability policy. It repeats these reads from the same owned transaction
+before returning a retry receipt or writing a system, receipt and change
+entry. The pre-commit fence checks the bound request lifetime. Before
+returning a successful result, the service rechecks current workspace access
+and returns a bounded result with no policy details or raw errors.
+
 Headless workflow metadata rechecks the same exact workspace before and after
 the existing use cases run. A fixed profile and action allowlist omits
 deployment, mutation and execution. The projection does not relay private
