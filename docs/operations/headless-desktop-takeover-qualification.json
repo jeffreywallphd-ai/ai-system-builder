@@ -100,11 +100,92 @@
       "preview_dialog_revoke_ms": {"samples": 20, "p50": 6, "p95": 7, "max": 8},
       "loading_revoke_ms": {"samples": 5, "p50": 0.8, "p95": 1.7, "max": 1.7},
       "environment": {"os": "Windows 10.0.26200", "electron": "42.11.18", "chromium": "148.0.7778.280", "ram_gib": 16, "logical_cpus": 20, "visible_document": true}
+    },
+    {
+      "run_id": "2026-11-14t21-20-53-566z-9ba59e8d",
+      "source_revision": "source.7c9171d6e5c569a2037e0fc2b8422e0d62c2b71c814f147a0d985f0309a64ccb",
+      "evidence_file_sha256": "79dada3aa3e3e7dc23e32696f884db5aa788494bcea5879d7363e11beba6fb74",
+      "timing_file_sha256": "77ffae4e9b1dacee65a2de26ab44c1d98f2ccf0e6e79a4b69db7bd2285fb8e25",
+      "queue_file_sha256": "4f3cd04a4136df3777524278606fa622426eab88a4bd0c7353161d4650337a31",
+      "background_file_sha256": "1fe677533010f43b88a3bef2782f38907837701eb91b4556a8fa13bce25a2155",
+      "receipt_digest": "3ee75b4cea9fb8fd5039bc5e0a0e249bdffc7053017ab6e53a101cc9a61e435c",
+      "review_digest": "d4217be92e39705f891f0f88c8603e8d65dfdb5beea503f6d639161ac549145a",
+      "status": "passed",
+      "scope": [
+        "Four packaged Windows journeys passed.",
+        "Ordinary, loading, and dialog revoke met the foreground target.",
+        "Native hide retired the exact lease, and visible restore required a new registration.",
+        "The audit matched delivery, conflict, 31 discarded commands and one unconfirmed command to exact admitted positions."
+      ],
+      "environment": {
+        "electron": "42.11.18",
+        "chrome": "148.0.7778.280",
+        "os_release": "10.0.26200",
+        "logical_cpus": 20,
+        "ram_gib": 16,
+        "visible_document": true
+      },
+      "warm_present_ms": {
+        "count": 100,
+        "p50Ms": 133.0298999999941,
+        "p95Ms": 153.03609999996843,
+        "maxMs": 159.9648000000161
+      },
+      "revoke_ms": {
+        "count": 105,
+        "p50Ms": 1.800000011920929,
+        "p95Ms": 6.699999988079071,
+        "maxMs": 15.5
+      },
+      "preview_dialog_revoke_ms": {
+        "count": 20,
+        "p50Ms": 6.300000011920929,
+        "p95Ms": 11.199999988079071,
+        "maxMs": 15.5
+      },
+      "loading_revoke_ms": {
+        "count": 5,
+        "p50Ms": 0.9000000357627869,
+        "p95Ms": 1.2000000476837158,
+        "maxMs": 1.2000000476837158
+      },
+      "background_timer": {
+        "foreground": {
+          "count": 7,
+          "p50Ms": 49.10000002384186,
+          "p95Ms": 61.80000001192093,
+          "maxMs": 61.80000001192093
+        },
+        "background": {
+          "count": 5,
+          "p50Ms": 1000,
+          "p95Ms": 1011.3000000119209,
+          "maxMs": 1011.3000000119209
+        },
+        "scope": "native hide",
+        "nativeThrottling": true,
+        "hideToLeaseRetiredMs": 16.475199999986216
+      },
+      "queue": {
+        "queuePeak": 32,
+        "capacityRejections": 1,
+        "duplicates": 1,
+        "conflicts": 1,
+        "staleEffects": 0,
+        "audit": {
+          "delivered": 1,
+          "applied": 0,
+          "discarded": 31,
+          "unconfirmed": 1,
+          "conflicts": 1
+        }
+      }
     }
   ],
-  "pending": [
+  "previous_follow_up": [
     "Measure expiry and liveness while the renderer is genuinely throttled. A minimized test window did not produce the expected renderer visibility transition. The separately attempted page lifecycle fixture still allowed renewal, so this requirement remains open.",
     "Measure complete delivery-queue health, including peak depth and dropped and stale counts, in the live fixture.",
     "Bind the remaining checks and complete increment requirements to the final candidate."
-  ]
+  ],
+  "pending": ["Measure expiry and liveness under background throttling. Native hide already retires the lease, and the existing deadline test used the visible window.", "Run the current exact increment qualification after the rest of the roadmap is implemented."]
 }

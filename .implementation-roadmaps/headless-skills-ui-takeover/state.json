@@ -829,6 +829,17 @@
       "outcome": "passed",
       "recordedAt": "2026-11-14T15:36:39Z",
       "summary": "Real local SQLite committed a held save after exact window revoke. Replay recovered the result and a new save succeeded. Packaged tests covered native window isolation, approved task continuity, expiry, restart and fresh consent."
+    },
+    {
+      "artifact": "docs/operations/headless-desktop-takeover-qualification.json",
+      "command": "Control-plane check headless-packaged-desktop-journey",
+      "criterionId": "revocation-and-delivery-targets",
+      "id": "evidence-21",
+      "incrementId": "revocable-desktop-presentation",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-14T21:30:07Z",
+      "summary": "Four Windows journeys passed. Presentation p95 was 153.04 ms, and revoke p95 was 6.7 ms. The exact queue audit matched all 32 commands and recorded no stale display. Native hide retired the lease and slowed the renderer timer. Measure the timeout behavior under background throttling before completing this criterion."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1235,6 +1246,12 @@
       "recordedAt": "2026-11-14T20:50:40Z",
       "sequence": 60,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "621e3b7084fb02802c643fe764ba813df39127ff1e38512b86fdfe23203afa56",
+      "recordedAt": "2026-11-14T21:30:07Z",
+      "sequence": 61,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -2382,5 +2399,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-14T20:50:40Z"
+  "updatedAt": "2026-11-14T21:30:07Z"
 }
