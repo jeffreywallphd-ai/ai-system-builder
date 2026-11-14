@@ -13,6 +13,8 @@ export const SECURITY_EVENT_KINDS = [
   "pairing.completed",
   "token.revoked",
   "security.config.resolved",
+  "headless.presentation",
+  "headless.backend",
 ] as const;
 
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];

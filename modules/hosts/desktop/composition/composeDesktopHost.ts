@@ -15,6 +15,7 @@ import { composeDesktopUiControl, type DesktopUiControlOwner } from "./composeDe
 import { normalizeExecutionRunId } from "../../../contracts/execution-runs";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../contracts/system-builder";
 import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
+import { createStoredDesktopHeadlessAudit, type DesktopHeadlessAudit } from "./desktopHeadlessAudit";
 import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
 import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
 import { WorkspaceAssetAccessService } from "../../../application/services/asset/workspace-asset-access.service";
@@ -706,6 +707,7 @@ export function composeDesktopHost(
   let headlessConnection: DesktopHeadlessConnection | undefined;
   let headlessConversation: ReturnType<typeof composeDesktopHeadlessConversation> | undefined;
   let uiControlOwner: DesktopUiControlOwner | undefined;
+  let headlessAudit: DesktopHeadlessAudit | undefined;
   let headlessReadAdmissionClosed = false;
   let closeImageAdmission: (() => void) | undefined;
   let stopOwnedImageRuntime: (() => Promise<void>) | undefined;
@@ -742,6 +744,8 @@ export function composeDesktopHost(
       });
       await headlessConversation?.drain();
       headlessConversation = undefined;
+      await headlessAudit?.close();
+      headlessAudit = undefined;
     },
     async stopPythonRuntime() {
       if (!pythonRuntimeFoundationPromise) return;
@@ -2245,8 +2249,10 @@ export function composeDesktopHost(
             isOpen: () => !headlessReadAdmissionClosed,
           });
           if (organizationDocuments?.organizationId === identity.organizationId) {
+            headlessAudit = createStoredDesktopHeadlessAudit(organizationDocuments, identity);
             if (platformDocuments) uiControlOwner = composeDesktopUiControl({
               hostIncarnationId, identity, documents: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
+              audit: headlessAudit,
               isOpen: () => !headlessReadAdmissionClosed,
               async canPresent(workspaceId, intent) {
                 if (intent.action === "show-run") {
@@ -2293,6 +2299,7 @@ export function composeDesktopHost(
                 workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
                 workflows, readRole: readWorkflowRole, sessions: conversationRepositories.conversationSessionRepository,
                 submit: conversationExecutionServices.submitTurn, isOpen: () => !headlessReadAdmissionClosed,
+                audit: headlessAudit,
               });
             }
             if (platformDocuments) registerDesktopHeadlessTaskList({
@@ -2319,7 +2326,7 @@ export function composeDesktopHost(
               authoring: options.persistence?.documents ? composeDesktopHeadlessAuthoring({
                 hostIncarnationId, identity, platformDocuments: options.persistence.documents, rootDirectory: registerOptions.storageRootDirectory,
                 workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
-                systems: systemBuilder, isOpen: () => !headlessReadAdmissionClosed,
+                systems: systemBuilder, isOpen: () => !headlessReadAdmissionClosed, audit: headlessAudit,
               }) : undefined,
             });
           }

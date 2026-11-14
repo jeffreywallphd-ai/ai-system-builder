@@ -10,13 +10,10 @@ type Entry = {
   readonly expiresAt: number;
   status: UiPresentationReceipt["status"];
 };
+type AuditStatus = "delivered" | UiPresentationOutcome | "unconfirmed" | "conflict";
 
 const limits = UI_PRESENTATION_LIMITS;
 const isTerminal = (entry: Entry) => entry.status !== "accepted" && entry.status !== "delivered";
-function expire(entry: Entry) {
-  if (entry.status === "accepted") entry.status = "discarded";
-  else if (entry.status === "delivered") entry.status = "unconfirmed";
-}
 const encoder = new TextEncoder();
 const receipt = (entry: Entry): UiPresentationReceipt => ({
   commandId: entry.command.commandId, sequence: entry.sequence, status: entry.status,
@@ -27,6 +24,7 @@ export function createUiControlDelivery(options: {
   readonly target: UiControlLeaseTarget;
   readonly now: () => number;
   readonly isCurrent: () => boolean;
+  readonly audit?: (status: AuditStatus, commandId: string, sequence: number) => void;
 }) {
   const target = { ...options.target };
   const entries: Entry[] = [];
@@ -34,6 +32,14 @@ export function createUiControlDelivery(options: {
   let firstUnfinished = 0;
   let ended = false;
   let context: UiPresentationContext | undefined;
+  const audit = (entry: Entry, status: AuditStatus) => {
+    try { options.audit?.(status, entry.command.commandId, entry.sequence); } catch { /* Audit cannot drive delivery. */ }
+  };
+
+  function expire(entry: Entry) {
+    if (entry.status === "accepted") { entry.status = "discarded"; audit(entry, "discarded"); }
+    else if (entry.status === "delivered") { entry.status = "unconfirmed"; audit(entry, "unconfirmed"); }
+  }
 
   function discardOutstanding() {
     ended = true;
@@ -62,7 +68,10 @@ export function createUiControlDelivery(options: {
   function known(command: UiPresentationSubmission) {
     const prior = byId.get(command.commandId);
     if (!prior) return;
-    if (JSON.stringify(prior.command.intent) !== JSON.stringify(command.intent)) return { status: "conflict" } as const;
+    if (JSON.stringify(prior.command.intent) !== JSON.stringify(command.intent)) {
+      audit(prior, "conflict");
+      return { status: "conflict" } as const;
+    }
     return { status: "duplicate", receipt: receipt(prior) } as const;
   }
 
@@ -103,7 +112,10 @@ export function createUiControlDelivery(options: {
         advance();
         return { status: "terminal", receipt: receipt(entry) } as const;
       }
-      if (markDelivered) entry.status = "delivered";
+      if (markDelivered && entry.status !== "delivered") {
+        entry.status = "delivered";
+        audit(entry, "delivered");
+      }
       const command: UiPresentationDelivery = { ...entry.command, target: { ...target }, intent: { ...entry.command.intent }, sequence, remainingMs };
       return { status: "delivered", command } as const;
     },
@@ -117,11 +129,13 @@ export function createUiControlDelivery(options: {
         // The exact active renderer can confirm an effect even after the wire
         // acknowledgment deadline. The sequence is never delivered again.
         entry.status = status;
+        audit(entry, status);
         return receipt(entry);
       }
       if (isTerminal(entry)) return receipt(entry);
       if (sequence !== firstUnfinished + 1 || entry.status !== "delivered") return undefined;
       entry.status = status;
+      audit(entry, status);
       advance();
       return receipt(entry);
     },
@@ -133,6 +147,7 @@ export function createUiControlDelivery(options: {
       if (!isTerminal(entry)) {
         if (sequence !== firstUnfinished + 1) return undefined;
         entry.status = entry.status === "delivered" ? "unconfirmed" : "rejected";
+        audit(entry, entry.status);
         advance();
       }
       return receipt(entry);

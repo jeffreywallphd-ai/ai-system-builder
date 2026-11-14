@@ -44,6 +44,8 @@ export type UiControlDecision<T> =
   | { readonly status: "ok"; readonly value: T }
   | { readonly status: "denied" | "busy" | "ended" | "unavailable" };
 
+type UiControlLifecycleEvent = "requested" | "accepted" | "activated" | "local-revoke-received" | "host-revoke-applied";
+
 const denied = { status: "denied" } as const;
 const ended = { status: "ended" } as const;
 const busy = { status: "busy" } as const;
@@ -89,12 +91,17 @@ export function createUiControlAuthority(dependencies: {
   readonly now: () => number;
   readonly issueId: () => string;
   readonly authorize: (target: UiControlWindowTarget, agent: UiControlAgent, interactive: Principal, taskId: string) => Promise<boolean>;
+  readonly audit?: (event: UiControlLifecycleEvent, target: UiControlAttempt) => void;
 }) {
   const windows = new Map<string, WindowSlot>();
   const requests = new Map<string, RequestEntry>();
   let generation = 0;
   let policyReads = 0;
   let open = true;
+
+  const audit = (event: UiControlLifecycleEvent, target: UiControlAttempt) => {
+    try { dependencies.audit?.(event, target); } catch { /* Audit never changes a presentation decision. */ }
+  };
 
   const current = (owner: { readonly isCurrent: () => boolean }) => {
     try { return owner.isCurrent() === true; } catch { return false; }
@@ -164,6 +171,7 @@ export function createUiControlAuthority(dependencies: {
       if (entry.status === "awaiting-readiness") {
         entry.status = "active";
         entry.expiresAt = dependencies.now() + limits.leaseMs;
+        audit("activated", entry.lease!);
       }
     } else if (entry.status === "pending") {
       const leaseId = dependencies.issueId();
@@ -171,6 +179,7 @@ export function createUiControlAuthority(dependencies: {
       entry.lease = { ...entry.target, leaseId, generation: ++generation };
       entry.status = "awaiting-readiness";
       entry.expiresAt = dependencies.now() + limits.readinessMs;
+      audit("accepted", entry.lease);
     }
     const result = lease(entry);
     return result ? ok(result) : denied;
@@ -224,6 +233,7 @@ export function createUiControlAuthority(dependencies: {
         taskId: request.taskId, requestKey: request.requestKey, status: "pending", expiresAt: dependencies.now() + limits.requestMs };
       requests.set(requestId, entry);
       slot.request = entry;
+      audit("requested", entry.target);
       return ok(view(entry));
     },
     /** Internal view. The interactive transport must gate its publication on current workspace permission. */
@@ -285,7 +295,11 @@ export function createUiControlAuthority(dependencies: {
       sweep();
       const entry = interactiveEntry(target, owner);
       if (!entry || ("leaseId" in target && (!entry.lease || !sameLease(entry.lease, target)))) return denied;
-      end(entry);
+      if (entry.status !== "ended") {
+        audit("local-revoke-received", target);
+        end(entry);
+        audit("host-revoke-applied", target);
+      }
       return ok(undefined);
     },
     async agentStatus(raw: unknown, agent: UiControlAgent, renew = false, renewalIsCurrent?: () => boolean): Promise<UiControlDecision<UiControlRequestView>> {

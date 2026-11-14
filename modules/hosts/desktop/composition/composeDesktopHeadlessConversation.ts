@@ -13,6 +13,7 @@ import type { LocalIdentityProfile, OrganizationRole } from "../../../contracts/
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { ConversationSessionRepositoryPort } from "../../../application/ports/conversations";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
+import type { DesktopHeadlessAudit } from "./desktopHeadlessAudit";
 
 const MAX_DESKTOP_TURNS = 2;
 const DRAIN_LIMIT_MS = 5_000;
@@ -41,6 +42,7 @@ export function composeDesktopHeadlessConversation(dependencies: {
   readonly submit: Pick<SubmitConversationTurnUseCase, "execute">;
   readonly readRole: () => Promise<OrganizationRole | undefined>;
   readonly isOpen: () => boolean;
+  readonly audit?: DesktopHeadlessAudit;
 }) {
   const { hostIncarnationId, identity, platformDocuments, rootDirectory, workspaces, authorization, workflows,
     sessions, submit, readRole, isOpen } = dependencies;
@@ -141,6 +143,9 @@ export function composeDesktopHeadlessConversation(dependencies: {
           canObserve: async () => await live("observe") && Boolean(await readSession()) && await live("observe"),
           canDispatch: prepared,
         });
+        dependencies.audit?.backend("approved-conversation", workspaceId,
+          result.kind === "observed" ? "handle-observed" : result.kind === "conflict" ? "conflict" :
+            result.kind === "denied" ? "denied" : result.kind === "unconfirmed" ? "unconfirmed" : "refused");
         switch (result.kind) {
           case "observed": return { ok: true, value: result.reference };
           case "conflict": return { ok: false, code: "headless.idempotency-conflict" };
@@ -150,7 +155,10 @@ export function composeDesktopHeadlessConversation(dependencies: {
           case "invalid": return { ok: false, code: "headless.invalid-request" };
           default: return unconfirmed;
         }
-      } catch { return unconfirmed; }
+      } catch {
+        dependencies.audit?.backend("approved-conversation", workspaceId, "unconfirmed");
+        return unconfirmed;
+      }
     },
     stopAdmission() { open = false; },
     async drain() {

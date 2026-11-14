@@ -84,6 +84,20 @@ sent an answer cannot recall it. Once the user revokes, the renderer answers
 no new challenge. The renderer commits the bounded detail view before acknowledging
 application. Revoked registrations and dialogs keep their exact owner.
 
+## Local audit
+
+Desktop writes fixed request, acceptance, activation, revoke, delivery and
+receipt events to the existing local security audit port. A local revoke
+entry means the owning frame's revoke reached the host. A distinct host
+entry records the transition to ended. A lost revoke signal can only be
+measured in the interactive document. Independent backend audit labels
+distinguish preview, commit and replay from observation of a conversation
+handle and an unconfirmed dispatch. Conversation completion remains in the
+existing task lifecycle. Desktop stores up to 4,096 sanitized events per
+organization, each at most 2 KiB. The event and its capacity counter commit
+together. At capacity the store preserves prior evidence and refuses new
+entries. The audit writer never delays the local fence.
+
 ## Rollback
 
 Stop admitting new presentation requests and retire exact open reservations.

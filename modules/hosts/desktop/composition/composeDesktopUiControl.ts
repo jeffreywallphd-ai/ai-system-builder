@@ -14,9 +14,10 @@ import type { LocalIdentityProfile } from "../../../contracts/organization";
 import type { SecurityScope } from "../../../contracts/security";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
+import type { DesktopHeadlessAudit } from "./desktopHeadlessAudit";
 
 export function composeDesktopUiControl({
-  hostIncarnationId, identity, documents, rootDirectory, isOpen, canPresent, now = () => performance.now(),
+  hostIncarnationId, identity, documents, rootDirectory, isOpen, canPresent, audit, now = () => performance.now(),
 }: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
   readonly identity: LocalIdentityProfile;
@@ -25,6 +26,7 @@ export function composeDesktopUiControl({
   readonly isOpen: () => boolean;
   readonly canPresent?: (workspaceId: WorkspaceId, intent: UiPresentationIntent) => Promise<UiPresentationDetail | undefined>;
   readonly now?: () => number;
+  readonly audit?: DesktopHeadlessAudit;
 }) {
   async function authorizeWorkspace(workspaceId: WorkspaceId, scopes: readonly SecurityScope[]): Promise<boolean> {
     if (!isOpen() || documents.organizationId !== undefined) return false;
@@ -62,6 +64,7 @@ export function composeDesktopUiControl({
   };
   const authority = createUiControlAuthority({
     hostIncarnationId, now, issueId: randomUUID,
+    audit: audit?.window,
     authorize: async (target, agent, interactive) => agent.principalId === identity.principalId &&
       interactive.principalId === identity.principalId && agent.organizationId === identity.organizationId &&
       interactive.organizationId === identity.organizationId && await canObserve(target.workspaceId),
@@ -96,7 +99,8 @@ export function composeDesktopUiControl({
     const existing = deliveries.get(target.leaseId);
     if (existing) return sameUiControlLease(existing.target, target) ? existing.queue : undefined;
     if (deliveries.size >= 32) return undefined;
-    const created = createUiControlDelivery({ target, now, isCurrent: current });
+    const created = createUiControlDelivery({ target, now, isCurrent: current,
+      audit: (status, commandId, sequence) => audit?.window(`command-${status}`, target, commandId, sequence) });
     deliveries.set(target.leaseId, { target, queue: created, current });
     return created;
   }

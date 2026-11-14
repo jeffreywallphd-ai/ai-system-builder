@@ -13,6 +13,7 @@ import type { LocalIdentityProfile } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
+import type { DesktopHeadlessAudit } from "./desktopHeadlessAudit";
 
 type Request = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
@@ -28,6 +29,7 @@ export function composeDesktopHeadlessAuthoring(dependencies: {
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly systems: Pick<SystemBuilderCompositionRoot, "composeHeadlessAuthoring">;
   readonly isOpen: () => boolean;
+  readonly audit?: DesktopHeadlessAudit;
 }) {
   const { hostIncarnationId, identity, platformDocuments, rootDirectory, workspaces, authorization, systems, isOpen } = dependencies;
   if (platformDocuments.organizationId !== undefined) throw new Error("The desktop authoring scope is unavailable.");
@@ -72,13 +74,24 @@ export function composeDesktopHeadlessAuthoring(dependencies: {
           grant.registeredClientId === registeredClientId && grant.workspaceIds.includes(workspace) &&
           grant.authoring?.includes(operation) && grant.isCurrent?.());
       if (!matches(initial, workspaceId)) return forbidden;
+      let result: Awaited<ReturnType<typeof service.execute>>;
       try {
-        const result = await service.execute(request, hostIncarnationId, {
+        result = await service.execute(request, hostIncarnationId, {
           ...identity, registeredClientId,
           isCurrent: (workspace, requested) => workspace === workspaceId && requested === operation && matches(initial, workspace),
           canUse: async (workspace, requested) => workspace === workspaceId && requested === operation &&
             matches(initial, workspace) && matches(await currentGrant(), workspace),
         });
+      } catch {
+        dependencies.audit?.backend("system-authoring", workspaceId, "unconfirmed");
+        return unavailable;
+      }
+      const status = result.ok ? (result.value.kind === "preview" ? "previewed" : result.value.kind) :
+        result.error.code === "headless.idempotency-conflict" ? "conflict" :
+        result.error.code === "headless.forbidden" ? "denied" :
+        result.error.code === "headless.operation-unconfirmed" ? "unconfirmed" : "refused";
+      dependencies.audit?.backend("system-authoring", workspaceId, status);
+      try {
         if (!matches(initial, workspaceId) || !matches(await currentGrant(), workspaceId)) return forbidden;
         return readHeadlessAuthoringWireResult(result.ok ? result : { ok: false, code: result.error.code });
       } catch { return unavailable; }

@@ -188,6 +188,9 @@ PUBLISHED_FORM_CHECKS = {
             "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
             "apps/desktop/src/renderer/features/workspace/hooks/useActiveWorkspaceTakeover.ts",
             "modules/hosts/desktop/composition/composeDesktopUiControl.ts",
+            "modules/hosts/desktop/composition/desktopHeadlessAudit.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-audit.unit.test.ts",
+            "modules/application/services/ui-control/ui-control-delivery.service.ts",
             "modules/ui/shared/components/ModalDialog.tsx",
             "modules/ui/shared/styles/components/shell.css",
             "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
@@ -203,6 +206,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
             "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
             "modules/ui/shared/components/tests/ModalDialog.unit.test.tsx",
+            "modules/hosts/desktop/composition/tests/desktop-headless-audit.unit.test.ts",
         ),
     },
     "headless-desktop-takeover-startup": {
