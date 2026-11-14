@@ -19716,6 +19716,66 @@
           "In separate phases, the test held a display reply and a context reply. The native menu test then disabled takeover and confirmed that a separately paired editor could still save."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3682af3509ef2a440bef6a2d786620503b55ed475fd3a7b833ac372480ce7ac8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Two PostgreSQL connections tried the same save. The database kept one saved result and returned that result on retry."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "367e221ece720cda4132056e3530414efe04609c41d55956bf4d01a8ff02df87",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The test also confirmed rollback after permission was withdrawn before commit. Delivery to browsers connected to separate servers still needs a live test."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2824e703c25f5ad4957e912198ba670366b86f1b89b76bcb7fcdcf688c0c2ce9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The server can provide a small list of saved systems and changes to an authorized workspace member. Successful checks add no audit log entry."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0d93b5f12587fb002ea9371a8ae31d20670f808b6958e2a2be7e1a594d90c8a9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The isolated tests confirmed workspace limits and access denial. An automated browser journey still needs to verify this behavior through the complete app."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "527584ed1652f547b6c45bf1e00852315e9080d768126b5b3c3bbdcbaedbecb6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The server sends saved system changes over an authenticated connection. It closes the connection if access ends or it cannot keep up with sending updates."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2f69263243fdfb4efb1b1b3893d7ffef4788d103ee2487c0d606912f4dc6890a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A local HTTP test verified access loss and connection limits. Browser refresh, browser takeover and recovery across separate servers still need qualification."
+        ]
+      }
     }
   ]
 }

@@ -13485,6 +13485,52 @@
         "The tests used held replies to verify that an unresponsive window loses its lease. Timing under natural Windows background throttling and complete queue measurements are still pending.",
         "In separate phases, the test held a display reply and a context reply. The native menu test then disabled takeover and confirmed that a separately paired editor could still save."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "postgres-atomicity-and-worker-delivery",
+      "work_id": "headless-managed-owned-postgres-transaction",
+      "work_criteria": [
+        "managed-owned-transaction-boundary",
+        "managed-headless-receipt-rollback"
+      ],
+      "receipt_digest": "41bbf3712627efcfed59a88ff2f59b3866a27ba479cd470e7a77eb822df2ee76",
+      "review_digest": "08ce333cc1be9f20772b562e034b46ff0595995acd53e45ec1030db403a4fb7a",
+      "scope": "Two PostgreSQL connections tried the same save. The database kept one saved result and returned that result on retry.",
+      "limitations": [
+        "The test also confirmed rollback after permission was withdrawn before commit. Delivery to browsers connected to separate servers still needs a live test."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "authenticated-browser-stream-and-refresh",
+      "work_id": "headless-managed-qualified-scoped-replay",
+      "work_criteria": [
+        "managed-local-scoped-replay"
+      ],
+      "receipt_digest": "4bcccfc7aa11bc1391d9bdca9c9f2abccc6b9e0e1f66a89e15f8bb4130b4cd1d",
+      "review_digest": "eea9cb27851dc470eaac0892b52e9ec401bdaab90ba8d1df050fd8b211c0fa3d",
+      "scope": "The server can provide a small list of saved systems and changes to an authorized workspace member. Successful checks add no audit log entry.",
+      "limitations": [
+        "The isolated tests confirmed workspace limits and access denial. An automated browser journey still needs to verify this behavior through the complete app."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "authenticated-browser-stream-and-refresh",
+      "work_id": "headless-managed-saved-state-stream",
+      "work_criteria": [
+        "managed-authenticated-stream-bounds"
+      ],
+      "receipt_digest": "5932c65aff9ac554ff37b925c25f5b86c5a29098695b779a8e0a2d094f8ec016",
+      "review_digest": "5fd523dc8c09f6fceca271e9c18130987e66d99cba0a85f3a3c85c925d3579bd",
+      "scope": "The server sends saved system changes over an authenticated connection. It closes the connection if access ends or it cannot keep up with sending updates.",
+      "limitations": [
+        "A local HTTP test verified access loss and connection limits. Browser refresh, browser takeover and recovery across separate servers still need qualification."
+      ]
     }
   ]
 }
