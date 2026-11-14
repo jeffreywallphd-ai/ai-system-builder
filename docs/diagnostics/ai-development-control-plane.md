@@ -203,6 +203,12 @@ The original workspace must receive one saved revision and the other
 workspace must stay separate. Returning to the original workspace must
 show the saved field without bringing back the takeover panel.
 
+Set `MANAGED_HEADLESS_BROWSER_REVERSE_REFETCH=1` with the extended journey to
+test delayed saved-system refresh. Chrome holds one real response while a
+second edit reaches PostgreSQL and appears in the Manage table. The test
+then releases and reads the older response. The table must keep the newer
+value, and the takeover panel must stay closed.
+
 The packaged Desktop test measures warm presentation and revoke, including
 when an ordinary dialog is open or a page is loading. The native hide test
 restores the browser's timer policy in the owned test window, measures the

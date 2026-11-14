@@ -65,7 +65,8 @@ async function main() {
   const draft = process.env.MANAGED_HEADLESS_BROWSER_DRAFT === "1";
   const loseReply = process.env.MANAGED_HEADLESS_BROWSER_LOST_REPLY === "1";
   const inFlightEdit = process.env.MANAGED_HEADLESS_BROWSER_IN_FLIGHT_EDIT === "1";
-  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit) || presentation);
+  const reverseRefetch = process.env.MANAGED_HEADLESS_BROWSER_REVERSE_REFETCH === "1";
+  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch) || presentation);
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
     {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
@@ -607,6 +608,97 @@ async function main() {
         evidence.hidden_tab_shows_current_save_with_fresh_registration = true;
       } finally {
         await peer.close();
+      }
+    }
+
+    if (reverseRefetch && saved) {
+      stage = "reverse-refetch-prepare";
+      const {systemId} = saved;
+      await manage.click();
+      const record = await call("aisb_read_system", {...scope, systemId});
+      assert.ok(record.ok && typeof record.value?.name === "string");
+      const row = management.locator(`tr[data-saved-system="${systemId}"]`);
+      await row.getByText(record.value.name, {exact:true}).waitFor();
+      const olderName = "Synthetic earlier list result";
+      const newerName = "Synthetic current list result";
+      const gate = await page.evaluateHandle(({systemId, workspaceId, olderName, newerName}) => {
+        const original = window.fetch;
+        const delay = Promise.withResolvers<void>();
+        let held = false;
+        let expired = false;
+        let released = false;
+        const deadline = setTimeout(() => {expired = true; delay.resolve();}, 12_000);
+        let consumed = false;
+        let staleAppearances = 0;
+        const read = {async run(input:RequestInfo | URL, init?:RequestInit) {
+          const response = await original.call(window, input, init);
+          if (held || !response.ok) return response;
+          const url = new URL(response.url);
+          if (url.origin !== location.origin || url.pathname !== "/api/systems/manage" ||
+              url.searchParams.get("workspaceId") !== workspaceId) return response;
+          const reply = await response.clone().json();
+          if (held || reply?.ok !== true || !reply.value?.items?.some((item:{systemId:string;name:string}) =>
+            item.systemId === systemId && item.name === olderName)) return response;
+          held = true;
+          await delay.promise;
+          const json = response.json.bind(response);
+          const reader = {async read() {
+            const result = await json();
+            consumed = true;
+            return result;
+          }};
+          response.json = reader.read;
+          return response;
+        }};
+        window.fetch = read.run;
+        const table = {row() {
+          return [...document.querySelectorAll<HTMLTableRowElement>("tr[data-saved-system]")]
+            .find(element => element.dataset.savedSystem === systemId);
+        }};
+        const watcher = new MutationObserver(() => {
+          if (table.row()?.textContent?.includes(olderName)) staleAppearances++;
+        });
+        return {held() {return held && !released && !expired;},
+          check() {return {consumed, expired, staleAppearances, rendersNewer:table.row()?.textContent?.includes(newerName) === true};},
+          watchAndRelease() {
+            watcher.observe(document.body, {subtree:true, childList:true, characterData:true});
+            clearTimeout(deadline);
+            released = true;
+            delay.resolve();
+          },
+          restore() {
+            watcher.disconnect();
+            clearTimeout(deadline);
+            delay.resolve();
+            if (window.fetch === read.run) window.fetch = original;
+          }};
+      }, {systemId, workspaceId:activeWorkspaceId, olderName, newerName});
+      const rename = async (base: {revisionId:string;recordRevision:number}, name:string) => {
+        const result = readHeadlessAuthoringWireResult(await call("aisb_rename_system", {...scope, systemId,
+          baseRevisionId:base.revisionId, baseRecordRevision:base.recordRevision, name, idempotencyKey:randomUUID()}));
+        assert.ok(result.ok && result.value.kind === "committed");
+        return result.value.reference;
+      };
+      try {
+        stage = "reverse-refetch-hold-old-live-reply";
+        const earlier = await rename({revisionId:record.value.currentRevisionId, recordRevision:record.value.revision}, olderName);
+        await until(async () => await gate.evaluate(value => value.held()) ? true : undefined, 25);
+        stage = "reverse-refetch-render-new-live-reply";
+        const current = await rename(earlier, newerName);
+        await row.getByText(newerName, {exact:true}).waitFor({timeout:5_000});
+        assert.equal(await gate.evaluate(value => value.held()), true);
+        stage = "reverse-refetch-release-old-live-reply";
+        await gate.evaluate(value => value.watchAndRelease());
+        await until(async () => (await gate.evaluate(value => value.check())).consumed ? true : undefined, 20);
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+        assert.deepEqual(await gate.evaluate(value => value.check()), {consumed:true, expired:false, staleAppearances:0, rendersNewer:true});
+        assert.equal(await row.getByText(olderName, {exact:true}).count(), 0);
+        assert.equal(await panel.count(), 0);
+        saved = current;
+        evidence.reverse_managed_refetch_consumed_without_regression = true;
+      } finally {
+        await gate.evaluate(value => value.restore());
+        await gate.dispose();
       }
     }
 
