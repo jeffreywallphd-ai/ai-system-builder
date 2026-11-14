@@ -15,13 +15,14 @@ import type { WorkspaceId } from "../../../contracts/workspace";
 const denied = () => systemBuilderFailure("headless.forbidden", "Workspace access is unavailable.");
 
 export function composeManagedSavedState(options: {
+  readonly hostIncarnationId?: HeadlessHostIncarnationId;
   readonly documents: StructuredDocumentStore;
   readonly listActiveSystems: NonNullable<OpenedPostgresDatabase["listActiveSystemSummaries"]>;
   readonly workspaces: Pick<WorkspaceRepository, "readWorkspace">;
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly contexts: OrganizationRequestContextProviderPort;
 }): ManagedSavedStateHandlers {
-  const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
+  const hostIncarnationId = options.hostIncarnationId ?? randomUUID() as HeadlessHostIncarnationId;
   const cursorKey = randomBytes(32);
   const feed = createStructuredHeadlessOperationStore(options.documents);
   function prepare(identity: Parameters<ManagedSavedStateHandlers["snapshot"]>[0], workspaceId: WorkspaceId, current: () => boolean) {

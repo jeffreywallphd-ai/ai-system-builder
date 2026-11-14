@@ -23,6 +23,9 @@ import {
 import { composeServerSecurity } from "../../../modules/hosts/server/security/composeServerSecurity";
 import { createManagedSavedStateAuthorizationAudit } from "../../../modules/hosts/server/security/createManagedSavedStateAuthorizationAudit";
 import { registerManagedSavedStateRoutes } from "../../../modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes";
+import { registerManagedHeadlessAgentRoutes } from "../../../modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes";
+import { resolveManagedHeadlessClientPolicy } from "../../../modules/hosts/server/security/resolveManagedHeadlessClientPolicy";
+import { resolveServerOidcBearerConfig } from "../../../modules/hosts/server/security/resolveServerOidcBearerConfig";
 import type { LoggingPort } from "../../../modules/application/ports/logging";
 import type { StructuredLogSink } from "../../../modules/adapters/observability/logging";
 import {
@@ -323,6 +326,10 @@ export async function createServer(
       "Production managed-server startup requires AI_SYSTEM_BUILDER_SECURITY_MODE=oidc-bearer.",
     );
   }
+  const clientPolicy = resolveManagedHeadlessClientPolicy({env, oidcIssuer: security.config.mode === "oidc-bearer"
+    ? resolveServerOidcBearerConfig(env).issuer : undefined});
+  if (clientPolicy && (!deploymentShape || env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE !== "1"))
+    throw new Error("Managed headless agents require a managed PostgreSQL deployment with saved-state enabled.");
   const postgresDatabase = deploymentShape
     ? (options.postgresDatabase ??
       (await openPostgresDatabase({
@@ -372,6 +379,9 @@ export async function createServer(
       ...auditOptions, audit: createManagedSavedStateAuthorizationAudit(audit),
     }) : undefined;
     const listActiveSystems = postgresDatabase?.listActiveSystemSummaries;
+    if (clientPolicy && (!listActiveSystems || !postgresDatabase?.documents.runInOwnedTransaction ||
+        postgresDatabase.documents.organizationId !== undefined))
+      throw new Error("Managed headless agents require the PostgreSQL transaction and saved-state providers.");
     const serverHost = composeServerHost({
       env: options.env,
       logging: {
@@ -387,6 +397,7 @@ export async function createServer(
       organizationAuthorizer,
       managedSavedState: env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE === "1" && passiveSavedStateAuthorizer && listActiveSystems
         ? { listActiveSystems, authorize: passiveSavedStateAuthorizer } : undefined,
+      managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement} : undefined,
       runtimeDatabases: options.runtimeDatabases,
       pythonRuntimeEnvironmentPreparer,
       ...(persistenceDocuments
@@ -442,6 +453,17 @@ export async function createServer(
       );
     }
     const retireManagedSavedState = registerManagedSavedStateRoutes(app, () => serverHost.getManagedSavedState());
+    const retireManagedHeadlessAgent = registerManagedHeadlessAgentRoutes(app, () => {
+      const handlers = serverHost.getManagedHeadlessAgent();
+      return clientPolicy && handlers ? {
+        ...handlers,
+        identify: (input) => {
+          const admitted = clientPolicy.identify({...input, purpose: "agent"});
+          return admitted?.purpose === "agent" ? {...admitted, purpose: "agent" as const} : undefined;
+        },
+        isCurrent: (admitted) => admitted.isCurrent(),
+      } : undefined;
+    });
     app.use(express.json({ limit: "5mb" }));
     app.use(createExpressJsonBodyErrorMiddleware());
     registerSecurityRoutes(app, {
@@ -501,11 +523,13 @@ export async function createServer(
       loggingPort: serverHost.loggingPort,
       shutdownBackgroundTasks: () => {
         retireManagedSavedState();
+        retireManagedHeadlessAgent();
         return serverHost.shutdownBackgroundTasks();
       },
       async closePersistence() {
         if (persistenceClosed) return;
         retireManagedSavedState();
+        retireManagedHeadlessAgent();
         await serverHost.closeRuntimeDatabases();
         await postgresDatabase?.close();
         persistenceClosed = true;

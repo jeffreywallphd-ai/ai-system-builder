@@ -162,6 +162,29 @@ HEADLESS_MCP_SOURCES = (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    "managed-headless-agent-server": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/composeManagedAgentReads.ts",
+        ),
+        "sources": (
+            "apps/server/src/createServer.ts",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "apps/server/README.md",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/composeManagedSavedState.ts",
+            "modules/hosts/server/composition/composeManagedAgentReads.ts",
+            "modules/hosts/server/composition/tests/managed-headless-agent-reads.unit.test.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessAuthoring.ts",
+            "modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "modules/hosts/server/composition/tests/managed-headless-agent-reads.unit.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-saved-state-routes.integration.test.ts",
+        ),
+    },
     "managed-saved-state-browser": {
         "automatic_sources": (
             "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.ts",

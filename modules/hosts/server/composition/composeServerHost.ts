@@ -249,6 +249,10 @@ import { composeAssetStudioWorkflow } from "../../shared/composition/composeAsse
 import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
 import { composeManagedSavedState } from "./composeManagedSavedState";
+import { composeManagedAgentReads } from "./composeManagedAgentReads";
+import { composeManagedHeadlessAuthoring } from "./composeManagedHeadlessAuthoring";
+import type { HeadlessHostIncarnationId } from "../../../contracts/headless";
+import type { TenantPlacementConfig } from "../../../contracts/config";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
 import { composeSystemData, createManagedSystemDataPrincipal } from "../../shared/composition/composeSystemData";
 import { composePublishedSystemForms } from "../../shared/composition/composePublishedSystemForms";
@@ -379,6 +383,7 @@ export interface ComposeServerHostOptions {
     readonly listActiveSystems: Parameters<typeof composeManagedSavedState>[0]["listActiveSystems"];
     readonly authorize: Pick<AuthorizeOperationService, "execute">;
   };
+  managedHeadlessAgent?: { readonly placement: TenantPlacementConfig };
   env?: NodeJS.ProcessEnv;
   logging?: ComposeServerHostLoggingOptions;
   logSink?: StructuredLogSink;
@@ -641,6 +646,11 @@ export interface ServerHostComposition {
   registerApi: (options: RegisterServerApiOptions) => void;
   waitForAssetFoundation: () => Promise<void>;
   getManagedSavedState: () => ReturnType<typeof composeManagedSavedState> | undefined;
+  getManagedHeadlessAgent: () => {
+    readonly hostIncarnationId: HeadlessHostIncarnationId;
+    readonly read: ReturnType<typeof composeManagedAgentReads>;
+    readonly author: ReturnType<typeof composeManagedHeadlessAuthoring>["execute"];
+  } | undefined;
   closeRuntimeDatabases: () => Promise<void>;
   shutdownBackgroundTasks: () => Promise<void>;
   getInternalAssetRegistry: () => InternalAssetRegistryComposition | undefined;
@@ -741,6 +751,8 @@ export function composeServerHost(
   let internalAssetRegistry: InternalAssetRegistryComposition | undefined;
   let assetFoundationReady: Promise<void> = Promise.resolve();
   let managedSavedState: ReturnType<typeof composeManagedSavedState> | undefined;
+  let managedHeadlessAgent: ReturnType<ServerHostComposition["getManagedHeadlessAgent"]>;
+  const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
   let systemRuntimeDatabases = options.runtimeDatabases;
 
   let shutdownBackgroundTasks: (() => Promise<void>) | undefined;
@@ -764,6 +776,7 @@ export function composeServerHost(
       return assetFoundationReady;
     },
     getManagedSavedState: () => managedSavedState,
+    getManagedHeadlessAgent: () => managedHeadlessAgent,
     async closeRuntimeDatabases() {
       await shutdownBackgroundTasks?.();
       await systemRuntimeDatabases?.closeAll();
@@ -1653,9 +1666,17 @@ export function composeServerHost(
           })
         : undefined;
       if (managed && managedDocuments && systemBuilder && contexts) {
-        managedSavedState = composeManagedSavedState({ documents: managedDocuments, listActiveSystems: managed.listActiveSystems,
+        managedSavedState = composeManagedSavedState({ documents: managedDocuments, listActiveSystems: managed.listActiveSystems, hostIncarnationId,
           workspaces: workspaceFoundation.workspaceRepositories.workspaceRepository, contexts,
           authorization: new AuthorizeWorkspaceOperationService({ organizationContext: contexts, authorizer: managed.authorize }) });
+      }
+      if (options.managedHeadlessAgent && managedDocuments && systemBuilder && contexts && workspaceAuthorization) {
+        const workspaces = workspaceFoundation.workspaceRepositories.workspaceRepository;
+        const scoped = {hostIncarnationId, workspaces, contexts, authorization: workspaceAuthorization};
+        const authoring = composeManagedHeadlessAuthoring({...scoped, platform: managedDocuments,
+          rootDirectory: registerOptions.storageRootDirectory, placement: options.managedHeadlessAgent.placement, systems: systemBuilder});
+        managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
+          read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases})};
       }
       const systemBuildArtifacts = createSystemBuildArtifactAdapter(storage);
       const systemDeploymentProfile = resolveServerSystemDeploymentProfile(env);

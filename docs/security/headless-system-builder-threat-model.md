@@ -209,6 +209,13 @@ and response projection. A browser registration cannot dispatch agent work.
 Disabled or retired routing denies new work, and abandoned requests cannot
 publish a late response.
 
+Managed agent routing stays unavailable without the opt-in client bindings,
+managed PostgreSQL provider and authenticated saved-state feed. The host
+reuses the existing membership and resource checks for each read and save.
+It stops admitting requests before persistence closes. Rollback removes the
+client bindings and restarts the server. Existing workspace data and
+receipts remain in the application database.
+
 Headless workflow metadata rechecks the same exact workspace before and after
 the existing use cases run. A fixed profile and action allowlist omits
 deployment, mutation and execution. The projection does not relay private

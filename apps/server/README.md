@@ -253,3 +253,18 @@ The opt-in disabled-development security toggle uses the existing nonpublic
 unauthenticated; once `lan-token-enforced` is enabled, missing/invalid tokens
 and nonadmin scopes cannot change the mode. Listener/TLS posture remains
 startup-owned, and LAN/OIDC startup does not enable this development toggle.
+## Managed headless system authoring
+
+The managed server holds the System Builder and saved-state feed used by
+the browser and the headless agent. To enable the agent routes on a configured
+OIDC/PostgreSQL deployment, enable `AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE=1`
+and specify the issuer's separate client IDs with
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID` and
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID`. With both client
+bindings unset, the agent routes are unavailable.
+
+Agent requests use the already configured issuer, an exact organization
+selection and an explicitly chosen workspace. Discovery provides a host
+identifier and available read operations without enumerating workspaces.
+The existing application membership and workspace policies control reads,
+edits and receipt replay. Enabling the route does not enable document takeover.

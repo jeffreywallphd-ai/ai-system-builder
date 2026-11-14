@@ -107,6 +107,11 @@ match the authenticated organization context. The host derives a stable
 registration identifier from the issuer and configured client for receipt
 scoping. A match classifies the request for later policy checks.
 
+When managed agent access is enabled, the agent routes and saved-state feed
+share the same server incarnation and application providers. Explicit workspace
+selection, current policy and the PostgreSQL transaction protect finite reads
+and authoring requests. Discovery does not list workspaces.
+
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay
 state and a separate window-control lifecycle. Roll back by disabling the new
