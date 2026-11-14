@@ -280,6 +280,35 @@
         "Official managed stdio MCP confirmed repeat-save receipt replay, conflicting-key rejection and one journal event on real PostgreSQL. Receipt 358aa8a4c4d47a211657852fcce0ef513f3f9a2ed58f196cd9a8257690d0b9fb, independent review 9f82f7326cde75164fcaa5df4faa1a70c272bd025f1f7721969fe0e15a531775, commit 6b8ef106d."
       ],
       "title": "Recover and deliver committed state"
+    },
+    {
+      "areas": [
+        "Managed HTTPS and official stdio adapter",
+        "Authenticated application updates and exact-tab browser presentation",
+        "Revocation, renewal, and one-time browser context"
+      ],
+      "chunkId": "managed-api-and-browser",
+      "completedAt": "2026-11-14T20:50:40Z",
+      "criteriaIds": [
+        "same-server-authority-and-route-parity",
+        "authenticated-browser-stream-and-refresh",
+        "security-managed-parity-reviewed"
+      ],
+      "documentation": [
+        "apps/thin-client/README.md",
+        "docs/diagnostics/headless-client-skill.md",
+        "docs/security/headless-system-builder-threat-model.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "server-browser-and-delivery-qualification-managed-api-and-browser",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "summary": "The browser and the official chat adapter use the same managed application through the existing authorization checks. Only the browser tab that accepted control receives supported presentation. Revoking control closes the local display before the server responds. Full browser and Windows qualification remains open.",
+      "tests": [
+        "The official stdio connector and an authenticated browser-purpose HTTP client used the same live managed HTTPS server and PostgreSQL data. It verified exact retry, changed-body rejection, and one durable event for one saved change. Receipt 358aa8a4c4d47a211657852fcce0ef513f3f9a2ed58f196cd9a8257690d0b9fb, review 9f82f7326cde75164fcaa5df4faa1a70c272bd025f1f7721969fe0e15a531775.",
+        "Focused checks verified protected pull, acknowledgement and context routes, resource authorization, and denial of stale, oversized, or cross-tab operations. Receipt 06be64af957168b83dad141c9ef735ab3d3244ae1115f20a03015c868b2a957a, review 82b875bfea4e5b26f8595877b6c777e134afe1045be9f8487158074d24be6e6a.",
+        "Focused browser tests verified saved display and immediate local revoke, including late responses after revoke. Receipt 0b91102f554a9676b4ca96a4594178591198c5dcc7f2e63d7cdb28c9c11c7404, review 4dafb0b68c1a2ed27d27e83cd016aa40c53cde4044496a0a50196bba1572e779. Real host timing and full parity are tracked separately."
+      ],
+      "title": "Use the existing managed authority"
     }
   ],
   "completion": null,
@@ -1200,6 +1229,12 @@
       "recordedAt": "2026-11-14T19:29:53Z",
       "sequence": 59,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "4f257dc8811b5693542e8bad7c6254c23b1ea513384f68cf71df27dc85acc0c2",
+      "recordedAt": "2026-11-14T20:50:40Z",
+      "sequence": 60,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1708,7 +1743,8 @@
       "allowPendingQualification": true,
       "completedAt": null,
       "completedChunks": [
-        "postgres-replay-and-workers"
+        "postgres-replay-and-workers",
+        "managed-api-and-browser"
       ],
       "deliverables": [
         "Server/browser ADR and host/API/identity/persistence/threat-model updates for the same-server topology, interactive UI credential separation, authenticated streaming, outbox ownership and worker coordination; deployment defaults remain single replica.",
@@ -2346,5 +2382,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-14T19:29:53Z"
+  "updatedAt": "2026-11-14T20:50:40Z"
 }
