@@ -234,6 +234,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "modules/contracts/headless/managed-browser-consent.ts",
+            "modules/contracts/headless/managed-browser-presentation.ts",
             "modules/contracts/headless/index.ts",
             "modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute.ts",
             "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",

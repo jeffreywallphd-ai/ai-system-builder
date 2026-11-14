@@ -6,6 +6,8 @@ import express from "express";
 
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
 import { createOrganizationId } from "../../../../../contracts/organization";
+import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
+  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../../contracts/headless/managed-browser-presentation";
 import { createWorkspaceId } from "../../../../../contracts/workspace";
 import { resolveApiRoutePolicy } from "../../security/apiRouteSecurityPolicy";
 import { setExpressAuthContext } from "../../security/expressAuthContext";
@@ -21,11 +23,12 @@ const attempt = {...target, requestId: randomUUID(), attemptId: randomUUID()};
 const proof = "a".repeat(43);
 
 test("only the exact POST has a central non-public policy", () => {
-  assert.deepEqual(resolveApiRoutePolicy("POST", MANAGED_BROWSER_CONSENT_PATH), {public: false, scopes: ["workspace:read", "asset:read"]});
-  assert.deepEqual(resolveApiRoutePolicy("POST", MANAGED_BROWSER_OBSERVE_PATH), {public: false, scopes: ["workspace:read", "asset:read"]});
-  for (const [method, path] of [["GET", MANAGED_BROWSER_CONSENT_PATH], ["POST", `${MANAGED_BROWSER_CONSENT_PATH}/`],
-    ["POST", MANAGED_BROWSER_CONSENT_PATH.toUpperCase()], ["OPTIONS", MANAGED_BROWSER_CONSENT_PATH]] as const) {
-    assert.equal(resolveApiRoutePolicy(method, path).deny, true);
+  for (const path of [MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_OBSERVE_PATH, MANAGED_BROWSER_DELIVERY_PATH,
+    MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_PUBLISH_CONTEXT_PATH]) {
+    assert.deepEqual(resolveApiRoutePolicy("POST", path), {public:false, scopes:["workspace:read", "asset:read"]});
+    for (const [method, variant] of [["GET", path], ["POST", `${path}/`], ["POST", path.toUpperCase()], ["OPTIONS", path]] as const) {
+      assert.equal(resolveApiRoutePolicy(method, variant).deny, true);
+    }
   }
 });
 
@@ -44,11 +47,17 @@ test("exact browser origin, purposeful authentication, framing and live request 
   let registerReply: unknown = {target, proof};
   let observeReply: Awaited<ReturnType<import("../registerManagedBrowserConsentRoute").ManagedBrowserConsentHandlers<unknown>["observe"]>> | undefined;
   const grant = {target: {...attempt, leaseId: randomUUID(), generation: 1}, remainingMs: 10_000};
+  const command = {target:grant.target,commandId:randomUUID(),intent:{action:"open-system",systemId:"fixture.system",revisionId:"revision-1"},sequence:1,remainingMs:1_000};
+  const challenge = randomUUID();
+  let pullResult: unknown = {status:"command", command, detail:{title:"Saved example"}};
+  let deliveryCurrent = true;
+  let deliveryEnabled = false;
   let consentReply: typeof grant | undefined;
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const retire = registerManagedBrowserConsentRoute(app, configuredOrigin, () => ({
     hostIncarnationId: target.hostIncarnationId,
+    deliveryEnabled,
     identify({auth, organization, organizationHeader}) {
       if (auth?.oidcAccessTokenClientId === "fixture-browser" && organization?.organizationId === organizationId &&
         organizationHeader === organizationId) return {isCurrent: () => admitted};
@@ -68,6 +77,10 @@ test("exact browser origin, purposeful authentication, framing and live request 
     },
     async revoke() { return false; },
     disconnect() { registrationRetired = true; return true; },
+    async pullPresentation() { return {result: pullResult, canPublish: () => deliveryCurrent}; },
+    async acknowledgePresentation() { return {result: true, canPublish: () => deliveryCurrent}; },
+    async readContextChallenge() { return {result: challenge, canPublish: () => deliveryCurrent}; },
+    async publishContext() { return {result: true, canPublish: () => deliveryCurrent}; },
   }));
   const server = app.listen(0, "127.0.0.1");
   try {
@@ -115,6 +128,37 @@ test("exact browser origin, purposeful authentication, framing and live request 
     const descriptor = {target: attempt, agentSessionId: randomUUID(), taskId: randomUUID(), expiresAt: 50_000};
     const proofHeader = {[MANAGED_BROWSER_DOCUMENT_HEADER]: proof};
     assert.equal((await post({operation: "revoke", document: target, target: attempt}, proofHeader, "", MANAGED_BROWSER_OBSERVE_PATH)).status, 400);
+    const pull = {operation:"pull",document:target,input:{target:grant.target,sequence:1}};
+    assert.equal((await post(pull,proofHeader,"",MANAGED_BROWSER_DELIVERY_PATH)).status,404);
+    const off = await post({operation:"observe", document:target}, proofHeader);
+    assert.equal(off.headers.get("x-aisb-headless-presentation"),null);
+    deliveryEnabled = true;
+    const on = await post({operation:"observe", document:target}, proofHeader);
+    assert.equal(on.headers.get("x-aisb-headless-presentation"),"1");
+    assert.equal((await post(pull,proofHeader,"",MANAGED_BROWSER_CONTEXT_PATH)).status,400);
+    assert.equal((await post(pull,{},"",MANAGED_BROWSER_DELIVERY_PATH)).status,403);
+    assert.equal((await post({...pull,input:{...pull.input,target:{...grant.target,uiIncarnationId:randomUUID()}}},proofHeader,"",MANAGED_BROWSER_DELIVERY_PATH)).status,400);
+    assert.deepEqual(await (await post(pull,proofHeader,"",MANAGED_BROWSER_DELIVERY_PATH)).json(),pullResult);
+    const challengeRequest = {operation:"challenge",document:target,input:{target:grant.target}};
+    deliveryCurrent = false;
+    for (const [request, path] of [[pull, MANAGED_BROWSER_DELIVERY_PATH], [challengeRequest, MANAGED_BROWSER_CONTEXT_PATH]] as const) {
+      const response = await post(request, proofHeader, "", path);
+      assert.equal(response.status, 403);
+      assert.deepEqual(await response.json(), {error:"headless.browser-consent-unavailable"});
+    }
+    deliveryCurrent = true;
+    pullResult = {status:"command",command:{...command,target:{...grant.target,generation:2}},detail:{title:"Foreign metadata"}};
+    assert.equal((await post(pull,proofHeader,"",MANAGED_BROWSER_DELIVERY_PATH)).status,503);
+    assert.deepEqual(await (await post(challengeRequest,proofHeader,"",MANAGED_BROWSER_CONTEXT_PATH)).json(),{challenge});
+    const ack = {operation:"acknowledge",document:target,input:{target:grant.target,
+      receipt:{commandId:command.commandId,sequence:1,status:"applied"}}};
+    const publish = {operation:"publish",document:target,input:{target:grant.target, challenge,
+      context:{view:"other",ready:true,dirtyNavigationBlocked:false}}};
+    assert.equal((await post(ack,proofHeader,"",MANAGED_BROWSER_DELIVERY_PATH)).status,400);
+    assert.equal((await post(publish,proofHeader,"",MANAGED_BROWSER_CONTEXT_PATH)).status,400);
+    assert.equal((await post(ack,proofHeader,"",MANAGED_BROWSER_ACKNOWLEDGE_PATH)).status,200);
+    assert.equal((await post(publish,proofHeader,"",MANAGED_BROWSER_PUBLISH_CONTEXT_PATH)).status,200);
+    assert.equal((await post({...challengeRequest,input:{...challengeRequest.input,untrusted:"x".repeat(8_193)}},proofHeader,"",MANAGED_BROWSER_CONTEXT_PATH)).status,413);
     observeReply = {status: "ready", request: {...descriptor, status: "pending", target: {...attempt, windowId: randomUUID()}}};
     assert.equal((await post({operation: "observe", document: target}, proofHeader)).status, 503);
     observeReply = {status: "ready", request: {...descriptor, status: "active"}, lease: grant, contextChallenge: randomUUID()};

@@ -266,6 +266,15 @@ compares the revision against the currently saved system before returning
 display metadata. The lease gates separate command, acknowledgment and context
 operations. The browser can never return fresh context for a retired lease.
 
+The browser delivery and context routes use separate fixed request schemas.
+They require the same verified browser identity and proof as consent plus an
+exact lease and generation. Delivery responses must match the requested lease
+and sequence. Context uses an opaque challenge and a bounded passive snapshot.
+The HTTPS adapter rechecks the live lease and unconsumed command or challenge
+immediately before returning metadata. Separate passive polling routes retain
+current access checks with bounded audit. Acknowledgment and publication use
+their own audited routes and cannot be submitted through the passive paths.
+
 The controlled delivery test uses two independent loopback HTTPS servers
 with the same disposable PostgreSQL database and a nonowner role without
 `BYPASSRLS`. It sends synthetic changes through the ordinary authenticated

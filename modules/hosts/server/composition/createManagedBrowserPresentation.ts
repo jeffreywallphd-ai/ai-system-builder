@@ -107,6 +107,18 @@ export function createManagedBrowserPresentation(options: {readonly now?: () => 
       const {target, receipt} = input;
       return Boolean(existing(target)?.acknowledge(target, receipt.sequence, receipt.commandId, receipt.status));
     },
+    canPublishPull(target: UiControlLeaseTarget, result: UiPresentationPullResult) {
+      if (result.status === "command") {
+        const entry = existing(target)?.next(target, result.command.sequence, false);
+        return entry?.status === "delivered" && entry.command.commandId === result.command.commandId;
+      }
+      if (result.status === "terminal") {
+        const entry = existing(target)?.next(target, result.receipt.sequence, false);
+        return entry?.status === "terminal" && entry.receipt.commandId === result.receipt.commandId &&
+          entry.receipt.status === result.receipt.status;
+      }
+      return result.status === "empty";
+    },
     async readFreshContext(target: UiControlLeaseTarget, isCurrent: Current): Promise<Context | undefined> {
       if (!live(isCurrent) || challenges.size >= MAX_CONTEXT_READS || challenges.has(target.leaseId)) return;
       let finish!: (value?: Context) => void;

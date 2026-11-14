@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import type { AuthorizeOperationService } from "../../../../application/services/security";
 import { MANAGED_BROWSER_OBSERVE_PATH } from "../../../../contracts/headless/managed-browser-consent";
+import { MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH } from "../../../../contracts/headless/managed-browser-presentation";
 import { getExpressAuthContext } from "./expressAuthContext";
 import { getExpressOrganizationContext } from "./expressOrganizationContext";
 import { createSecurityApiFailure, mapSecurityFailure } from "./createSecurityApiFailure";
@@ -26,8 +27,10 @@ export function createExpressOrganizationAuthorizationMiddleware(deps: {
       }));
     }
     try {
+      const browserPoll = request.method === "POST" && (request.originalUrl === MANAGED_BROWSER_OBSERVE_PATH ||
+        request.originalUrl === MANAGED_BROWSER_CONTEXT_PATH || request.originalUrl === MANAGED_BROWSER_DELIVERY_PATH);
       const passive = isManagedSavedStatePath(request.method, request.path) ? deps.passiveSavedStateAuthorizer :
-        request.method === "POST" && request.originalUrl === MANAGED_BROWSER_OBSERVE_PATH ? deps.passiveBrowserObserveAuthorizer : undefined;
+        browserPoll ? deps.passiveBrowserObserveAuthorizer : undefined;
       const authorizer = passive ?? deps.authorizer;
       await authorizer.execute({
         authContext,

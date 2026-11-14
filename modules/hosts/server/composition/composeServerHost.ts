@@ -1706,10 +1706,10 @@ export function composeServerHost(
           const browserConsent = composeManagedBrowserConsent({hostIncarnationId,
             authorize: authorize(workspaceAuthorization),
             authorizeObservation: authorize(observation),
-            async resolvePresentation(principal, workspaceId, intent) {
+            async resolvePresentation(principal, workspaceId, intent, {passive}) {
               const scopes = intent.action === "show-run" ? [...readScopes, "runtime:read"] as const :
                 intent.action === "show-artifact" ? [...readScopes, "artifact:read"] as const : readScopes;
-              const mayRead = authorize(workspaceAuthorization, scopes);
+              const mayRead = authorize(passive ? observation : workspaceAuthorization, scopes);
               if (!await mayRead(principal, workspaceId)) return;
               const value = await presentation(workspaceId, intent);
               if (value && await mayRead(principal, workspaceId)) return value;

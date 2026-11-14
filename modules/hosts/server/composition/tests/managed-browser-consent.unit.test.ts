@@ -46,11 +46,14 @@ test("only observations use the passive workspace authorizer and its denial reti
 
 test("only the active managed lease receives saved presentation and one fresh minimal context", async () => {
   const intent = {action:"open-system", systemId:"fixture.saved", revisionId:"revision-1"} as const;
-  const service = composeManagedBrowserConsent({hostIncarnationId, authorize:async () => true,
-    async resolvePresentation(principal, workspace, input) {
+  const resourcePolicyModes: boolean[] = [];
+  let now = 0;
+  const service = composeManagedBrowserConsent({hostIncarnationId, authorize:async () => true, now:() => now,
+    async resolvePresentation(principal, workspace, input, {passive}) {
       assert.equal(principal.organizationId, organizationId);
       assert.equal(principal.principalId, principalId);
       assert.equal(workspace, workspaceId);
+      resourcePolicyModes.push(passive);
       return input.action === "open-system" && input.systemId === intent.systemId ? {title:"Saved metadata"} : undefined;
     }});
   try {
@@ -71,25 +74,42 @@ test("only the active managed lease receives saved presentation and one fresh mi
     assert.ok(queued.ok && queued.value.kind === "command" && queued.value.receipt.status === "accepted");
     assert.equal(service.canPublish(present,queued,agent),true);
     const pull = {target,sequence:1};
-    assert.deepEqual(await service.pullPresentation({...foreign,identity:browser},pull,active),{status:"unavailable"});
+    assert.equal(await service.pullPresentation({...foreign,identity:browser},pull,active),undefined);
     const delivered = await service.pullPresentation(tab,pull,active);
-    assert.ok(delivered.status === "command" && delivered.detail.title === "Saved metadata");
-    assert.equal(await service.acknowledgePresentation(tab,{target,receipt:{...queued.value.receipt,status:"applied"}},active),true);
+    assert.ok(delivered?.result.status === "command" && delivered.result.detail.title === "Saved metadata");
+    assert.equal(delivered.canPublish(), true);
+    const repeated = await service.pullPresentation(tab, pull, active);
+    assert.ok(repeated?.canPublish());
+    assert.deepEqual(resourcePolicyModes,[false,true,true]);
+    now = 5_001;
+    const unconfirmed = await service.pullPresentation(tab, pull, active);
+    assert.ok(unconfirmed?.result.status === "terminal" && unconfirmed.result.receipt.status === "unconfirmed");
+    assert.equal(unconfirmed.canPublish(), true);
+    assert.equal((await service.acknowledgePresentation(tab,{target,receipt:{...queued.value.receipt,status:"applied"}},active))?.result,true);
+    assert.equal(delivered.canPublish(), false);
+    assert.equal(unconfirmed.canPublish(), false);
+    const confirmed = await service.pullPresentation(tab, pull, active);
+    assert.ok(confirmed?.result.status === "terminal" && confirmed.result.receipt.status === "applied");
+    assert.equal(confirmed.canPublish(), true);
     const read = {version:UI_CONTROL_VERSION,operation:"window.context",input:{target}} as const;
     const openContext = service.execute(read,agent,active);
-    const challenge = await service.readContextChallenge(tab,target,active);
-    assert.ok(challenge);
+    const challengeResponse = await service.readContextChallenge(tab,target,active);
+    const challenge = challengeResponse?.result;
+    assert.ok(challenge && challengeResponse.canPublish());
     const context = {view:"system",ready:true,dirtyNavigationBlocked:false,selection:intent};
-    assert.equal(await service.publishContext(tab,{target,challenge,context},active),true);
+    assert.equal((await service.publishContext(tab,{target,challenge,context},active))?.result,true);
+    assert.equal(challengeResponse.canPublish(), false);
     const response = await openContext;
     assert.deepEqual(response,{ok:true,value:{kind:"context",context}});
     assert.equal(service.canPublish(read,response,agent),true);
     const pending = service.execute(read,agent,active);
-    assert.ok(await service.readContextChallenge(tab,target,active));
+    const pendingChallenge = await service.readContextChallenge(tab,target,active);
+    assert.ok(pendingChallenge?.result && pendingChallenge.canPublish());
     assert.equal(await service.revoke(tab,target,active),true);
+    assert.equal(pendingChallenge.canPublish(), false);
     assert.deepEqual(await pending,{ok:false,code:"headless.unavailable"});
     assert.equal(service.canPublish(read,response,agent),false);
-    assert.deepEqual(await service.pullPresentation(tab,pull,active),{status:"unavailable"});
+    assert.equal(await service.pullPresentation(tab,pull,active),undefined);
 
     const replacement = await service.execute({version:UI_CONTROL_VERSION, operation:"window.request",
       input:{target:registered.target, taskId:randomUUID(), requestKey:randomUUID()}}, agent, active);
@@ -100,12 +120,12 @@ test("only the active managed lease receives saved presentation and one fresh mi
     const nextReceipt = await service.execute(nextCommand, agent, active);
     assert.ok(nextReceipt.ok && nextReceipt.value.kind === "command");
     const nextRead = service.execute({...read, input:{target:next.target}}, agent, active);
-    const nextChallenge = await service.readContextChallenge(tab, next.target, active);
+    const nextChallenge = (await service.readContextChallenge(tab, next.target, active))?.result;
     assert.ok(nextChallenge);
     assert.equal(await service.revoke(tab, request.value.request.target, active), true);
     const nextDelivery = await service.pullPresentation(tab, {target:next.target, sequence:1}, active);
-    assert.ok(nextDelivery.status === "command" && nextDelivery.command.commandId === nextCommand.input.commandId);
-    assert.equal(await service.publishContext(tab, {target:next.target, challenge:nextChallenge, context}, active), true);
+    assert.ok(nextDelivery?.result.status === "command" && nextDelivery.result.command.commandId === nextCommand.input.commandId);
+    assert.equal((await service.publishContext(tab, {target:next.target, challenge:nextChallenge, context}, active))?.result, true);
     assert.deepEqual(await nextRead, {ok:true,value:{kind:"context",context}});
   } finally {service.close();}
 });

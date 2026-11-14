@@ -464,6 +464,7 @@ export async function createServer(
     }
     const retireManagedSavedState = registerManagedSavedStateRoutes(app, () => serverHost.getManagedSavedState());
     const browserPresentationKey = browserOrigin ? randomBytes(32) : undefined;
+    const browserDeliveryEnabled = !!browserOrigin && env.AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION === "1";
     const retireManagedHeadlessAgent = registerManagedHeadlessAgentRoutes<ManagedHeadlessAuthoringRegistration>(app, () => {
       const handlers = serverHost.getManagedHeadlessAgent();
       const consent = serverHost.getManagedBrowserConsent();
@@ -475,6 +476,7 @@ export async function createServer(
         },
         isCurrent: (admitted) => admitted.isCurrent(),
         ...(consent && browserPresentationKey ? {window: {
+          deliveryEnabled: browserDeliveryEnabled,
           execute: (input, agent, session, current) => consent.execute(input, browserPresentationAgent(agent, session, browserPresentationKey), current),
           canPublish: (input, result, agent, session) => consent.canPublish(input, result, browserPresentationAgent(agent, session, browserPresentationKey)),
         }} : {}),
@@ -484,6 +486,7 @@ export async function createServer(
       const consent = serverHost.getManagedBrowserConsent();
       return clientPolicy && consent ? {
         ...consent,
+        deliveryEnabled: browserDeliveryEnabled,
         identify(input) {
           const admitted = clientPolicy.identify({...input, purpose: "browser"});
           return admitted?.purpose === "browser" ? admitted : undefined;

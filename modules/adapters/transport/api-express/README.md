@@ -12,6 +12,11 @@ configured HTTPS browser origin, same-origin fetch metadata, the verified
 browser registration and current workspace access. After registration, a
 private tab proof in a header identifies the exact document. Responses
 are uncached and the route cannot grant access to other application data.
+Separate delivery, acknowledgment, context challenge and context publication
+POST routes accept only the exact active lease. Polling retains bounded audit,
+while acknowledgments and publication use the standard audit path. Replies
+recheck current authority, use the browser proof, and retain the origin and
+request size limits.
 
 Dataset preparation exposes authenticated asynchronous lifecycle routes:
 

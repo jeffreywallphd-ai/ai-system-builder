@@ -31,7 +31,8 @@ export function composeManagedBrowserConsent(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
   readonly authorize: (principal: Principal, workspaceId: WorkspaceId) => Promise<boolean>;
   readonly authorizeObservation?: (principal: Principal, workspaceId: WorkspaceId) => Promise<boolean>;
-  readonly resolvePresentation?: (principal: Principal, workspaceId: WorkspaceId, intent: UiPresentationIntent) => Promise<unknown>;
+  readonly resolvePresentation?: (principal: Principal, workspaceId: WorkspaceId, intent: UiPresentationIntent,
+    mode: {readonly passive: boolean}) => Promise<unknown>;
   readonly now?: () => number;
 }) {
   const {hostIncarnationId, authorize, now = () => performance.now()} = options;
@@ -63,9 +64,9 @@ export function composeManagedBrowserConsent(options: {
     }
   }
 
-  async function detail(principal: Principal, target: UiControlLeaseTarget, intent: UiPresentationIntent) {
+  async function detail(principal: Principal, target: UiControlLeaseTarget, intent: UiPresentationIntent, passive = false) {
     try {
-      return readUiPresentationDetail(await options.resolvePresentation?.(principal, target.workspaceId, intent));
+      return readUiPresentationDetail(await options.resolvePresentation?.(principal, target.workspaceId, intent, {passive}));
     } catch { return undefined; }
   }
 
@@ -74,8 +75,8 @@ export function composeManagedBrowserConsent(options: {
     return !!lease && sameUiControlLease(lease.target, target);
   };
 
-  async function browserLease(document: AuthenticatedDocument, target: UiControlLeaseTarget, requestIsCurrent: () => boolean) {
-    const tab = await authenticate(document, requestIsCurrent);
+  async function browserLease(document: AuthenticatedDocument, target: UiControlLeaseTarget, requestIsCurrent: () => boolean, passive: boolean) {
+    const tab = await authenticate(document, requestIsCurrent, passive);
     const live = () => !!tab?.isCurrent() && requestIsCurrent() && !!authority.readInteractiveLease(target, tab.owner, true);
     return live() ? live : undefined;
   }
@@ -152,27 +153,31 @@ export function composeManagedBrowserConsent(options: {
     },
     async pullPresentation(document: AuthenticatedDocument, raw: unknown, requestIsCurrent: () => boolean) {
       const input = readUiPresentationPull(raw);
-      if (!input) return {status:"unavailable"} as const;
-      const live = await browserLease(document, input.target, requestIsCurrent);
-      return live ? presentation.pull(input, live, intent => detail(document.identity, input.target, intent)) : {status:"unavailable"} as const;
+      if (!input) return;
+      const live = await browserLease(document, input.target, requestIsCurrent, true);
+      if (!live) return;
+      const result = await presentation.pull(input, live, intent => detail(document.identity, input.target, intent, true));
+      return {result, canPublish: () => live() && presentation.canPublishPull(input.target, result)};
     },
     async acknowledgePresentation(document: AuthenticatedDocument, raw: unknown, requestIsCurrent: () => boolean) {
       const input = readUiPresentationAcknowledgment(raw);
-      if (!input) return false;
-      const live = await browserLease(document, input.target, requestIsCurrent);
-      return !!live && presentation.acknowledge(input, live);
+      if (!input) return;
+      const live = await browserLease(document, input.target, requestIsCurrent, false);
+      if (live) return {result: presentation.acknowledge(input, live), canPublish: live};
     },
     async readContextChallenge(document: AuthenticatedDocument, raw: unknown, requestIsCurrent: () => boolean) {
       const target = readUiControlLeaseTarget(raw);
       if (!target) return;
-      const live = await browserLease(document, target, requestIsCurrent);
-      return live ? presentation.contextChallenge(target, live) : undefined;
+      const live = await browserLease(document, target, requestIsCurrent, true);
+      if (!live) return;
+      const result = presentation.contextChallenge(target, live);
+      return {result, canPublish: () => live() && (!result || result === presentation.contextChallenge(target, live))};
     },
     async publishContext(document: AuthenticatedDocument, raw: unknown, requestIsCurrent: () => boolean) {
       const input = readUiPresentationPublication(raw);
-      if (!input) return false;
-      const live = await browserLease(document, input.target, requestIsCurrent);
-      return !!live && presentation.publishContext(input, live);
+      if (!input) return;
+      const live = await browserLease(document, input.target, requestIsCurrent, false);
+      if (live) return {result: presentation.publishContext(input, live), canPublish: live};
     },
     async execute(request: HeadlessWindowRequest, identity: AgentRegistration, requestIsCurrent: () => boolean): Promise<HeadlessWindowResult> {
       const input = request.input;

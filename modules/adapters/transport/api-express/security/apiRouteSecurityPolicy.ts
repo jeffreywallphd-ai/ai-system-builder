@@ -1,5 +1,7 @@
 import type { OrganizationRole } from "../../../../contracts/organization";
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_OBSERVE_PATH } from "../../../../contracts/headless/managed-browser-consent";
+import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
+  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../contracts/headless/managed-browser-presentation";
 import { MANAGED_HEADLESS_AGENT_WINDOW_PATH } from "../../../../contracts/headless/managed-headless-window";
 import type { SecurityScope } from "../../../../contracts/security";
 
@@ -31,6 +33,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
 >([
   [`POST ${MANAGED_BROWSER_CONSENT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_BROWSER_OBSERVE_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_BROWSER_DELIVERY_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_BROWSER_ACKNOWLEDGE_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_BROWSER_CONTEXT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_BROWSER_PUBLISH_CONTEXT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_HEADLESS_AGENT_PATHS.read}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   // The authoring use case requires the write scope for mutations. Preview is a read.
   [`POST ${MANAGED_HEADLESS_AGENT_PATHS.author}`, { public: false, scopes: ["workspace:read", "asset:read"] }],

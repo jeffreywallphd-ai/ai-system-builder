@@ -1,24 +1,30 @@
 import { raw, type Application, type Request, type RequestHandler, type Response } from "express";
 
-import { readUiControlObservation, readUiControlTimedGrant, sameUiControlLease,
+import { isUiControlId, readUiControlObservation, readUiControlTimedGrant, readUiPresentationPullResult, sameUiControlLease,
   type HeadlessHostIncarnationId, type UiControlObservation, type UiControlTimedGrant } from "../../../../contracts/headless";
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, isManagedBrowserDocumentProof,
   parseManagedBrowserConsent, parseManagedBrowserRegistration, sameManagedBrowserAttempt,
   sameManagedBrowserDocument } from "../../../../contracts/headless/managed-browser-consent";
+import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
+  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH, parseManagedBrowserPresentation,
+  type ManagedBrowserPresentationOperation } from "../../../../contracts/headless/managed-browser-presentation";
 import type { WorkspaceId } from "../../../../contracts/workspace";
 import { readStrictPassiveRecord } from "../../../../contracts/shared";
 import { getExpressAuthContext } from "../security/expressAuthContext";
 import { getExpressOrganizationContext } from "../security/expressOrganizationContext";
 
-const MAX_BODY = 4_096;
+const MAX_BODY = 8_192;
 const MAX_CALLS = 32;
 const CALL_MS = 5_000;
 
 type Document<Identity> = { readonly identity: Identity; readonly target: unknown; readonly proof: unknown };
 type Current = () => boolean;
+type Lane = "consent" | "observe" | ManagedBrowserPresentationOperation;
+type LeaseResponse = {readonly result: unknown; readonly canPublish: Current};
 
 export type ManagedBrowserConsentHandlers<Identity> = {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
+  readonly deliveryEnabled?: boolean;
   readonly identify: (input: {readonly auth: ReturnType<typeof getExpressAuthContext>;
     readonly organization: ReturnType<typeof getExpressOrganizationContext>; readonly organizationHeader: unknown}) => Identity | undefined;
   readonly isCurrent: (identity: Identity) => boolean;
@@ -27,18 +33,24 @@ export type ManagedBrowserConsentHandlers<Identity> = {
   readonly consent: (document: Document<Identity>, target: unknown, phase: "accept" | "ready", current: Current) => Promise<UiControlTimedGrant | undefined>;
   readonly revoke: (document: Document<Identity>, target: unknown, current: Current) => Promise<boolean>;
   readonly disconnect: (document: Document<Identity>) => boolean;
+  readonly pullPresentation?: (document: Document<Identity>, input: unknown, current: Current) => Promise<LeaseResponse | undefined>;
+  readonly acknowledgePresentation?: (document: Document<Identity>, input: unknown, current: Current) => Promise<LeaseResponse | undefined>;
+  readonly readContextChallenge?: (document: Document<Identity>, target: unknown, current: Current) => Promise<LeaseResponse | undefined>;
+  readonly publishContext?: (document: Document<Identity>, input: unknown, current: Current) => Promise<LeaseResponse | undefined>;
 };
 
 export function registerManagedBrowserConsentRoute<Identity>(app: Pick<Application, "post">, origin: string | undefined,
   getHandlers: () => ManagedBrowserConsentHandlers<Identity> | undefined) {
-  const parse = raw({ limit: MAX_BODY, type: () => true, inflate: false });
+  const parseConsent = raw({ limit: 4_096, type: () => true, inflate: false });
+  const parsePresentation = raw({ limit: MAX_BODY, type: () => true, inflate: false });
   const slots = new Set<Response>();
   let open = true;
-  const attach = (path: string): RequestHandler => (request, response) => {
+  const attach = (path: string, lane: Lane): RequestHandler => (request, response) => {
     response.set({"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"});
     if (request.method !== "POST" || request.originalUrl !== path) return error(response, 400);
     const handlers = open && origin && getHandlers();
     if (!handlers) return error(response, 404);
+    if (lane !== "consent" && lane !== "observe" && !handlers.deliveryEnabled) return error(response, 404);
     if (request.headers.origin !== origin || request.headers["sec-fetch-site"] !== "same-origin") return error(response, 403);
     const identity = handlers.identify({auth: getExpressAuthContext(request), organization: getExpressOrganizationContext(request),
       organizationHeader: request.headers["x-organization-id"]});
@@ -52,14 +64,19 @@ export function registerManagedBrowserConsentRoute<Identity>(app: Pick<Applicati
     const timer = setTimeout(() => response.destroy(), CALL_MS);
     const release = () => { clearTimeout(timer); slots.delete(response); };
     response.once("close", release);
+    const parse = lane === "consent" || lane === "observe" ? parseConsent : parsePresentation;
     parse(request, response, (failure?: {status?: number}) => {
       response.removeListener("close", release);
       if (failure) { release(); return error(response, failure.status === 413 ? 413 : 400); }
-      void respond(request, response, handlers, identity, current, path === MANAGED_BROWSER_OBSERVE_PATH).catch(() => error(response, 503)).finally(release);
+      void respond(request, response, handlers, identity, current, lane).catch(() => error(response, 503)).finally(release);
     });
   };
-  app.post(MANAGED_BROWSER_CONSENT_PATH, attach(MANAGED_BROWSER_CONSENT_PATH));
-  app.post(MANAGED_BROWSER_OBSERVE_PATH, attach(MANAGED_BROWSER_OBSERVE_PATH));
+  app.post(MANAGED_BROWSER_CONSENT_PATH, attach(MANAGED_BROWSER_CONSENT_PATH, "consent"));
+  app.post(MANAGED_BROWSER_OBSERVE_PATH, attach(MANAGED_BROWSER_OBSERVE_PATH, "observe"));
+  app.post(MANAGED_BROWSER_DELIVERY_PATH, attach(MANAGED_BROWSER_DELIVERY_PATH, "pull"));
+  app.post(MANAGED_BROWSER_ACKNOWLEDGE_PATH, attach(MANAGED_BROWSER_ACKNOWLEDGE_PATH, "acknowledge"));
+  app.post(MANAGED_BROWSER_CONTEXT_PATH, attach(MANAGED_BROWSER_CONTEXT_PATH, "challenge"));
+  app.post(MANAGED_BROWSER_PUBLISH_CONTEXT_PATH, attach(MANAGED_BROWSER_PUBLISH_CONTEXT_PATH, "publish"));
   return () => {
     open = false;
     for (const response of slots) response.destroy();
@@ -71,15 +88,17 @@ function readBody(body: unknown) {
   try {
     const text = new TextDecoder("utf-8", {fatal: true, ignoreBOM: true}).decode(body);
     const parsed: unknown = JSON.parse(text);
-    if (JSON.stringify(parsed) === text) return parseManagedBrowserConsent(parsed);
+    if (JSON.stringify(parsed) === text) return parsed;
   } catch { return undefined; }
 }
 
 async function respond<Identity>(request: Request, response: Response, handlers: ManagedBrowserConsentHandlers<Identity>,
-  identity: Identity, current: Current, observeOnly: boolean) {
+  identity: Identity, current: Current, lane: Lane) {
   if (!current()) return error(response, 403);
-  const input = readBody(request.body);
-  if (!input || observeOnly !== (input.operation === "observe")) return error(response, 400);
+  const raw = readBody(request.body);
+  if (lane !== "consent" && lane !== "observe") return respondPresentation(raw, lane, request, response, handlers, identity, current);
+  const input = parseManagedBrowserConsent(raw);
+  if (!input || (lane === "observe") !== (input.operation === "observe")) return error(response, 400);
   const proof = request.headers[MANAGED_BROWSER_DOCUMENT_HEADER];
   if (input.operation === "register") {
     if (proof !== undefined) return error(response, 400);
@@ -103,6 +122,7 @@ async function respond<Identity>(request: Request, response: Response, handlers:
     if (!current() || !result) return error(response, 403);
     if (result.status === "ready" && (result.contextChallenge ||
       result.request && !sameManagedBrowserDocument(result.request.target, input.document))) return error(response, 503);
+    if (result.status === "ready" && handlers.deliveryEnabled) response.set("X-AISB-Headless-Presentation", "1");
     return response.json(result);
   }
   if (input.operation === "disconnect" || input.operation === "revoke") {
@@ -117,6 +137,45 @@ async function respond<Identity>(request: Request, response: Response, handlers:
     sameManagedBrowserAttempt(grant.target, input.target);
   if (!exact) return error(response, 503);
   return response.json(grant);
+}
+
+async function respondPresentation<Identity>(raw: unknown, lane: ManagedBrowserPresentationOperation, request: Request,
+  response: Response, handlers: ManagedBrowserConsentHandlers<Identity>, identity: Identity, current: Current) {
+  const input = parseManagedBrowserPresentation(raw, lane);
+  if (!input) return error(response, 400);
+  const proof = request.headers[MANAGED_BROWSER_DOCUMENT_HEADER];
+  if (!isManagedBrowserDocumentProof(proof) || input.document.hostIncarnationId !== handlers.hostIncarnationId) return error(response, 403);
+  const document = {identity, target:input.document, proof};
+  switch (input.operation) {
+    case "pull": {
+      if (!handlers.pullPresentation) return error(response, 404);
+      const outcome = await handlers.pullPresentation(document, input.payload, current);
+      const result = readUiPresentationPullResult(outcome?.result);
+      if (!outcome || result.status === "unavailable") return error(response, 403);
+      if (result.status === "command" && (!sameUiControlLease(result.command.target, input.payload.target) ||
+          result.command.sequence !== input.payload.sequence)) return error(response, 503);
+      if (result.status === "terminal" && result.receipt.sequence !== input.payload.sequence) return error(response, 503);
+      if (!current() || !outcome.canPublish()) return error(response, 403);
+      return response.json(result);
+    }
+    case "challenge": {
+      if (!handlers.readContextChallenge) return error(response, 404);
+      const outcome = await handlers.readContextChallenge(document, input.payload.target, current);
+      if (!outcome) return error(response, 403);
+      const challenge = outcome.result;
+      if (challenge !== undefined && !isUiControlId(challenge)) return error(response, 503);
+      if (!current() || !outcome.canPublish()) return error(response, 403);
+      return response.json(challenge ? {challenge} : {});
+    }
+    case "acknowledge":
+    case "publish": {
+      const action = input.operation === "acknowledge" ? handlers.acknowledgePresentation : handlers.publishContext;
+      if (!action) return error(response, 404);
+      const outcome = await action(document, input.payload, current);
+      if (outcome?.result !== true || !current() || !outcome.canPublish()) return error(response, 403);
+      return response.json({ok:true});
+    }
+  }
 }
 
 function registrationIsBusy(value: unknown) {

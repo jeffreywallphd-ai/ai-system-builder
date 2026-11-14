@@ -41,6 +41,10 @@ trailing slash, plain HTTP origin or unverified client configuration prevents
 startup with this setting. Use browsers that send `Sec-Fetch-Site`.
 The separate agent window route accepts requests only from the verified
 agent registration. Consent and revoke belong to the browser document.
+Set `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION=1` on a
+consent-enabled host to enable saved-resource delivery, fresh context and
+lease renewal. Leave it unset for consent-only operation. Presentation
+still requires the user's approval in the exact browser tab.
 
 Use `GET /health/live` for process liveness and `GET /health/ready` for sanitized
 PostgreSQL plus artifact-storage readiness. SIGINT/SIGTERM stop the listener and
