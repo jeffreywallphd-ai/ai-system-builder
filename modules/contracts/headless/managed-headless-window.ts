@@ -1,6 +1,6 @@
 import { readHeadlessWindowResult, type HeadlessWindowRequest } from "./ui-control-connector";
 import { sameManagedBrowserAttempt, sameManagedBrowserDocument } from "./managed-browser-consent";
-import { sameUiControlLease } from "./ui-control-authority";
+import { sameUiControlLease } from "./ui-control-delivery";
 
 export const MANAGED_HEADLESS_AGENT_WINDOW_PATH = "/api/headless/agent/window";
 export const MANAGED_HEADLESS_AGENT_SESSION_HEADER = "x-aisb-headless-session";

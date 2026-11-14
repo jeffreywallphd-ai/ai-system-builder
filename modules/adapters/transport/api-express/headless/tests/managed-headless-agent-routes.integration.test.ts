@@ -81,6 +81,7 @@ test("exact managed requests respect authentication, framing, authority lifetime
   let windowAvailable = true;
   let deliveryEnabled = false;
   let wrongCommandReceipt = false;
+  let wrongRenewedGeneration = false;
   const handlers: ManagedAgentRouteHandlers<typeof agent> = {
     hostIncarnationId,
     identify: ({auth, organization, organizationHeader}) =>
@@ -98,6 +99,12 @@ test("exact managed requests respect authentication, framing, authority lifetime
           receipt: {commandId: wrongCommandReceipt ? randomUUID() : input.input.commandId, sequence: 1, status: "accepted"}}};
         if (input.operation === "window.context") return {ok: true, value: {kind: "context",
           context: {view: "other", ready: true, dirtyNavigationBlocked: false}}};
+        if (input.operation === "window.renew") {
+          const {leaseId, generation, ...attempt} = input.input.target;
+          return {ok: true, value: {kind:"request", request:{target:attempt, agentSessionId:randomUUID(),
+            taskId:randomUUID(), status:"active", expiresAt:50_000},
+            lease:{...attempt, leaseId, generation:wrongRenewedGeneration ? generation + 1 : generation}}};
+        }
         return {ok: true, value: {kind: "windows", windows: [windowOutcome]}};
       },
       canPublish() { return windowAvailable; },
@@ -186,6 +193,13 @@ test("exact managed requests respect authentication, framing, authority lifetime
     assert.equal((await send(windowPath, present, "fixture-agent", "application/json", session)).body.value.receipt.commandId,
       present.input.commandId);
     assert.equal((await send(windowPath, invalidContext, "fixture-agent", "application/json", session)).body.value.context.ready, true);
+    const renew = {...invalidContext, operation:"window.renew"};
+    const renewed = await send(windowPath, renew, "fixture-agent", "application/json", session);
+    assert.equal(renewed.status, 200);
+    assert.deepEqual(renewed.body.value.lease, renew.input.target);
+    wrongRenewedGeneration = true;
+    assert.deepEqual((await send(windowPath, renew, "fixture-agent", "application/json", session)).body,
+      {ok:false, code:"headless.unavailable"});
     wrongCommandReceipt = true;
     assert.deepEqual((await send(windowPath, present, "fixture-agent", "application/json", session)).body,
       {ok: false, code: "headless.unavailable"});
