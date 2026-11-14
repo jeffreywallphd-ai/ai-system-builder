@@ -57,6 +57,7 @@ export const DESKTOP_UI_CONTROL_CHANNELS = Object.freeze({
   observe: channel("observe"), accept: channel("accept"), ready: channel("ready"), revoke: channel("revoke"),
   pull: channel("pull"), acknowledge: channel("acknowledge"), context: channel("context"),
 });
+export const DESKTOP_UI_CONTROL_RETIRED_EVENT = createIpcChannelValue(createTransportOperation("window-control", "retired"), "event");
 export type UiControlTimedGrant = { readonly target: UiControlLeaseTarget; readonly remainingMs: number };
 export type UiControlObservation =
   | { readonly status: "ready"; readonly request?: UiControlRequestView; readonly lease?: UiControlTimedGrant; readonly contextChallenge?: string }

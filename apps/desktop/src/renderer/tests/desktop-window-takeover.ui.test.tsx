@@ -2,11 +2,11 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
-import type { UiControlLeaseTarget, UiControlRequestView } from "../../../../../modules/contracts/headless";
+import type { UiControlAttempt, UiControlLeaseTarget, UiControlRequestView } from "../../../../../modules/contracts/headless";
 import { readUiControlLeaseTarget } from "../../../../../modules/contracts/headless";
 import { useDesktopWindowTakeover } from "../features/workspace/hooks/useActiveWorkspaceTakeover";
 
-test("the desktop hook commits a real visible presentation before acknowledgment and never answers context after revoke", async () => {
+test.each(["explicit revoke", "native retirement"] as const)("the desktop acknowledges the visible effect and fences context after %s", async mode => {
   const host = "b4d241c0-c0a4-42ca-ae65-be1ccff1b068";
   const id = (n: number) => `a28b2b28-3baa-4cce-b6ae-${String(n).padStart(12, "0")}`;
   const lease: UiControlLeaseTarget = readUiControlLeaseTarget({
@@ -21,13 +21,20 @@ test("the desktop hook commits a real visible presentation before acknowledgment
   const root = createRoot(mount);
   let current!: ReturnType<typeof useDesktopWindowTakeover>;
   let served = false;
+  let currentRead: (() => Promise<unknown>) | undefined;
   let acknowledgedAtView: string | undefined;
   const previous = Object.getOwnPropertyDescriptor(window, "desktopApi");
   const previousHidden = Object.getOwnPropertyDescriptor(document, "hidden");
   Object.defineProperty(document, "hidden", { configurable: true, value: false });
   const publishWindowContext = vi.fn(async () => true);
+  let notifyRetirement: ((attempt: UiControlAttempt) => void) | undefined;
   Object.defineProperty(window, "desktopApi", { configurable: true, value: {
+    onWindowTakeoverRetired(listener: typeof notifyRetirement) {
+      notifyRetirement = listener;
+      return () => { notifyRetirement = undefined; };
+    },
     async readWindowTakeover() {
+      if (currentRead) return currentRead();
       return request.status === "active" ? { status: "ready", request, lease: grant, contextChallenge: id(8) } : { status: "ready", request };
     },
     async acceptWindowTakeover() { return grant; },
@@ -63,14 +70,33 @@ test("the desktop hook commits a real visible presentation before acknowledgment
         view: "system", selection: { action: "open-system", systemId: "sample-system", revisionId: "revision-one" },
       }),
     })));
-    await act(async () => current.controller.revoke());
+    await act(async () => notifyRetirement?.({ ...target, attemptId: id(99) }));
+    expect(current.controller.getSnapshot().status).toBe("active");
+    await act(async () => {
+      if (mode === "native retirement") notifyRetirement?.(target);
+      else current.controller.revoke();
+    });
     expect(current.controller.getSnapshot().status).toBe("manual");
     expect(mount.querySelector("section")).toBeNull();
     const calls = publishWindowContext.mock.calls.length;
-    await act(async () => new Promise(resolve => setTimeout(resolve, 330)));
+    const inFlight = Promise.withResolvers<void>();
+    const reply = Promise.withResolvers<{ status: "ready"; request: UiControlRequestView }>();
+    currentRead = () => { inFlight.resolve(); return reply.promise; };
+    await act(async () => inFlight.promise);
+    const oldPending = { ...request, target: { ...target, attemptId: id(10) }, status: "pending" as const };
+    await act(async () => notifyRetirement?.(oldPending.target));
+    await act(async () => reply.resolve({ status: "ready", request: oldPending }));
+    currentRead = undefined;
+    expect(current.controller.getSnapshot().status).toBe("manual");
     expect(publishWindowContext.mock.calls).toHaveLength(calls);
+    const nextObservation = current.controller.beginObservation();
+    const nextPending = { ...oldPending, target: { ...oldPending.target, attemptId: id(11) } };
+    await act(async () => notifyRetirement?.(oldPending.target));
+    await act(async () => nextObservation(nextPending));
+    expect(current.controller.getSnapshot()).toEqual({ status: "pending", request: nextPending });
   } finally {
     await act(async () => root.unmount());
+    expect(notifyRetirement).toBeUndefined();
     mount.remove();
     if (previous) Object.defineProperty(window, "desktopApi", previous);
     else Reflect.deleteProperty(window, "desktopApi");

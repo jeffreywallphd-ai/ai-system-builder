@@ -30,6 +30,7 @@ test("only the exact current interactive sender can register a workspace, and a 
   const window = {};
   const authorizedEvent = {};
   const authorizationCalls: string[] = [];
+  const retiredDocuments: unknown[] = [];
   let finish!: (value: boolean) => void;
   let held = true;
   const auth = createUiControlAuthority({ hostIncarnationId, now: () => 100,
@@ -58,6 +59,7 @@ test("only the exact current interactive sender can register a workspace, and a 
   };
   const lifecycle = registerDesktopUiControlIpc({ ipcMain, getOwner: () => owner, resolve: event =>
     event === authorizedEvent ? { window, frame, isCurrent: () => true } : undefined,
+    notifyRetirement: (...entry) => retiredDocuments.push(entry),
   });
   const observe = handlers.get(DESKTOP_UI_CONTROL_CHANNELS.observe)!;
   assert.deepEqual(await observe({}, "fixture-workspace"), { status: "unavailable" });
@@ -68,6 +70,7 @@ test("only the exact current interactive sender can register a workspace, and a 
   lifecycle.retire(window);
   finish(true);
   assert.deepEqual(await read, { status: "unavailable" });
+  assert.deepEqual(retiredDocuments, [], "No stale or unobserved attempt can be published to a window");
   held = false;
   assert.deepEqual(readUiControlObservation(await observe(authorizedEvent, "another-workspace")), { status: "ready" });
   assert.deepEqual(authorizationCalls, ["fixture-workspace", "another-workspace"]);
@@ -116,8 +119,10 @@ test("a committed workspace or membership change denies the composed owner, and 
       },
     } };
     let visible = true;
+    const retiredDocuments: unknown[] = [];
     const lifecycle = registerDesktopUiControlIpc({ ipcMain, getOwner: () => owner, resolve: event =>
       event === trustedEvent && visible ? { window, frame, isCurrent: () => visible } : undefined,
+      notifyRetirement: (...entry) => retiredDocuments.push(entry),
     });
     const observe = () => handlers.get(DESKTOP_UI_CONTROL_CHANNELS.observe)!(trustedEvent, workspaceId);
     const accept = (event: unknown, input: unknown) => handlers.get(DESKTOP_UI_CONTROL_CHANNELS.accept)!(event, input);
@@ -142,6 +147,7 @@ test("a committed workspace or membership change denies the composed owner, and 
     lifecycle.retire(window);
     assert.deepEqual(await observe(), { status: "unavailable" });
     assert.deepEqual(retiredDeliveries, [second.target]);
+    assert.deepEqual(retiredDocuments, [[window, frame, second.target]]);
     assert.equal(await accept(trustedEvent, second.target), undefined);
     assert.equal((await composed.authority.agentStatus(second.target, agent)).status, "ended");
     visible = true;

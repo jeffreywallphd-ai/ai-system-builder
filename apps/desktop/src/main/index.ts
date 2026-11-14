@@ -15,6 +15,7 @@ import {
   readLocalIdentityProfile,
 } from "../../../../modules/adapters/security/local-identity";
 import { isTrustedIpcSender } from "./trustedIpcSender";
+import { DESKTOP_UI_CONTROL_RETIRED_EVENT } from "../../../../modules/contracts/headless";
 import { captureDesktopHeadlessPairingWindow, registerDesktopHeadlessPairingIpc } from "./desktopHeadlessPairingIpc";
 import { registerDesktopUiControlIpc } from "./desktopUiControlIpc";
 import { installDesktopMainWindowMenu } from "./desktopMainWindowMenu";
@@ -303,6 +304,15 @@ app.whenReady().then(async () => {
   });
   retireUiControlWindow = registerDesktopUiControlIpc({
     ipcMain, getOwner: desktopHost.getUiControlOwner,
+    notifyRetirement(window, frame, target) {
+      for (const current of openWindows) {
+        if (current !== window || current.isDestroyed() || current.webContents.isDestroyed() ||
+            current.webContents.isLoadingMainFrame() || current.webContents.mainFrame !== frame) continue;
+        try { current.webContents.mainFrame.send(DESKTOP_UI_CONTROL_RETIRED_EVENT, target); }
+        catch { /* An already closed frame cannot consume the signal. */ }
+        break;
+      }
+    },
     resolve(event) {
       for (const window of openWindows) {
         const isUsable = () => openWindows.has(window) && !window.isDestroyed() && window.isVisible() &&

@@ -78,11 +78,15 @@ export function useDesktopWindowTakeover(workspaceId: string | undefined, isSyst
       else void poll();
     };
     document.addEventListener("visibilitychange", visibility);
+    const stopRetirement = getDesktopApi().onWindowTakeoverRetired?.(target => {
+      if (current) control.controller.observeHostRetirement(target);
+    });
     void poll();
     return () => {
       current = false;
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", visibility);
+      stopRetirement?.();
       control.controller.revoke();
     };
   }, [control, workspaceId]);

@@ -42,6 +42,11 @@ The main process retires the exact document authority on native hide or
 minimize. Hidden or minimized windows cannot register or answer delivery and
 context IPC. Restoring a window keeps its window ID and requires fresh document
 registration and consent. Other windows and backend tasks keep their own authority.
+The host sends one bounded retirement event to the still-current main frame.
+The preload validates the retired attempt and forwards only its identifiers.
+The renderer closes its local fence when that attempt matches. Later events
+for old attempts cannot revoke a fresh grant. Delivery before that event may
+already have happened. The explicit user Revoke action closes locally first.
 
 Window control grants the finite saved-resource presentation actions and
 identifier-only context defined by the roadmap. Window context uses its

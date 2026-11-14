@@ -24,6 +24,7 @@ export function registerDesktopUiControlIpc(dependencies: {
   readonly ipcMain: IpcMainHandlePort;
   readonly getOwner: () => DesktopUiControlOwner | undefined;
   readonly resolve: (event: unknown) => { readonly window: Window; readonly frame: Frame; readonly isCurrent: () => boolean } | undefined;
+  readonly notifyRetirement?: (window: Window, frame: Frame, target: UiControlAttempt) => void;
 }) {
   const active = new WeakMap<Window, DocumentOwner>();
   const windows = new WeakMap<Window, string>();
@@ -38,8 +39,11 @@ export function registerDesktopUiControlIpc(dependencies: {
     previous.main.authority.retireWindow(previous.target, previous.token);
     // The old frame token can already be unusable during a native hide or
     // document shutdown. Use only the exact attempt captured while usable.
-    if (previous.lastObservedAttempt) previous.main.closeDelivery(previous.lastObservedAttempt);
     active.delete(window);
+    if (previous.lastObservedAttempt) {
+      previous.main.closeDelivery(previous.lastObservedAttempt);
+      dependencies.notifyRetirement?.(window, previous.frame, previous.lastObservedAttempt);
+    }
   }
 
   const { ipcMain, getOwner, resolve } = dependencies;
@@ -80,7 +84,7 @@ export function registerDesktopUiControlIpc(dependencies: {
       }
       const view = main.authority.observeInteractive(owned.target, owned.token);
       if (!view) return { status: "ready" };
-      if (view.request) owned.lastObservedAttempt = view.active?.target ?? view.request.target;
+      if (view.request) owned.lastObservedAttempt = view.request.target;
       const remainingMs = (view.active?.expiresAt ?? 0) - performance.now();
       const lease = view.active && remainingMs > 0 ? { target: view.active.target, remainingMs } : undefined;
       const contextChallenge = lease && main.contextChallenge(lease.target);

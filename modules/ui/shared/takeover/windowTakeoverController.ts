@@ -47,6 +47,7 @@ export function createWindowTakeoverController(options: {
   let activeTarget: UiControlAttempt | UiControlLeaseTarget | undefined;
   let localEnd: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
+  let observedRetirements: UiControlAttempt[] | undefined;
   const revokesInFlight = new Set<string>();
   const retries = new Map<string, {
     readonly target: UiControlAttempt | UiControlLeaseTarget;
@@ -162,9 +163,13 @@ export function createWindowTakeoverController(options: {
     beginObservation() {
       const snapshot = state;
       const beganAt = options.now();
+      const retired: UiControlAttempt[] = [];
+      observedRetirements = retired;
       return (request: UiControlRequestView | undefined, lease?: TakeoverGrant) => {
+        if (observedRetirements !== retired) return;
+        observedRetirements = undefined;
         // A pre-readiness response can arrive after this exact attempt becomes active.
-        if (state !== snapshot) return;
+        if (state !== snapshot || (request && retired.some(target => sameAttempt(target, request.target)))) return;
         if (snapshot.status === "active" && request?.status === "active" && options.now() < expires) {
           const exact = normaliseGrant(lease, request.target, beganAt);
           if (exact && sameLease(snapshot.grant.target, exact.target)) {
@@ -189,6 +194,16 @@ export function createWindowTakeoverController(options: {
       void activate(state.request, activeTarget, draft.status === "dirty" ? draft.save : undefined);
     },
     revoke() { if (activeTarget) retire("revoked"); },
+    observeHostRetirement(target: UiControlAttempt) {
+      if (closed) return;
+      // A reply for this exact attempt can still be in transit. Track only the
+      // current observation, and fail closed if the local bound is exceeded.
+      if (observedRetirements) {
+        if (observedRetirements.length >= maximumRevokes) observedRetirements = undefined;
+        else if (!observedRetirements.some(previous => sameAttempt(previous, target))) observedRetirements.push(target);
+      }
+      if (activeTarget && sameAttempt(target, activeTarget)) retire("unavailable");
+    },
     /** A late callback must supply the original lease and the captured local fence. */
     permits(target: UiControlLeaseTarget, fence: number): boolean {
       return stillCurrent(fence) && state.status === "active" && options.now() < expires &&

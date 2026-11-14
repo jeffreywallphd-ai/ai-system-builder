@@ -5,7 +5,7 @@ import { DESKTOP_HEADLESS_CHAT_TASKS_CHANNEL, DESKTOP_HEADLESS_CHAT_TASKS_UNAVAI
 import { DESKTOP_HEADLESS_PAIRING_CHANNELS, DESKTOP_SYSTEM_CHANGE_POLL_CHANNEL, readDesktopHeadlessPairingStatus, readDesktopSystemChangePoll, readDesktopSystemChangeWatermark, type DesktopHeadlessClientAccess, type DesktopHeadlessPairingResult, type DesktopHeadlessPairingStatus, type DesktopHeadlessRevokeResult, type DesktopHeadlessStartResult, type DesktopSystemChangeWatermark } from "../../../../modules/contracts/headless";
 import {
   DESKTOP_UI_CONTROL_CHANNELS, readUiControlAttempt, readUiControlLeaseTarget, readUiControlObservation,
-  readUiControlRevoke, readUiControlTimedGrant, type UiControlObservation, type UiControlTimedGrant,
+  readUiControlRevoke, readUiControlTimedGrant, type UiControlAttempt, type UiControlObservation, type UiControlTimedGrant,
   readUiPresentationPull, readUiPresentationPullResult, readUiPresentationAcknowledgment, readUiPresentationPublication,
   type UiPresentationPullResult,
   isDesktopHeadlessClientAccess,
@@ -767,6 +767,7 @@ type DesktopSystemDeploymentContextInput = {
 export interface DesktopPreloadApi {
   memoryDiagnosticsEnabled: boolean;
   readWindowTakeover: (workspaceId: string | null) => Promise<UiControlObservation>;
+  onWindowTakeoverRetired: (listener: (target: UiControlAttempt) => void) => () => void;
   acceptWindowTakeover: (target: unknown) => Promise<UiControlTimedGrant | undefined>;
   readyWindowTakeover: (target: unknown) => Promise<UiControlTimedGrant | undefined>;
   revokeWindowTakeover: (target: unknown) => Promise<boolean>;
@@ -2065,6 +2066,7 @@ export interface CreateDesktopPreloadApiDependencies {
   uploadSource?: string;
   artifactSource?: string;
   memoryDiagnosticsEnabled?: boolean;
+  listenForWindowRetirement?: (listener: (target: UiControlAttempt) => void) => () => void;
 }
 
 function assertDesktopEnvelopeResponse<
@@ -2129,6 +2131,10 @@ export function createDesktopPreloadApi(
 
   return {
     memoryDiagnosticsEnabled: dependencies.memoryDiagnosticsEnabled === true,
+    onWindowTakeoverRetired(listener) {
+      return typeof listener === "function" && dependencies.listenForWindowRetirement
+        ? dependencies.listenForWindowRetirement(listener) : () => {};
+    },
     async readWindowTakeover(workspaceId) {
       try {
         const reply = readUiControlObservation(await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.observe, workspaceId));
