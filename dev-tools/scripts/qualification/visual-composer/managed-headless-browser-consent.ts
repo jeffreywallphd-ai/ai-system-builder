@@ -6,7 +6,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import { chromium, type Browser, type Page, type Request as BrowserRequest } from "@playwright/test";
+import { chromium, type Browser, type Page, type Request as BrowserRequest, type Route } from "@playwright/test";
 
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER } from "../../../../modules/contracts/headless/managed-browser-consent";
 import { MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH, MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
@@ -58,6 +58,16 @@ function measurements(values: number[]) {
   return {samples:sorted.length, p50:at(.5), p95:at(.95), max:at(1)};
 }
 
+async function restoreNativeFocus(target: Page) {
+  // On the pinned driver, only the primary session owns the focus override.
+  const {_connection} = target as unknown as {_connection: {toImpl?(tab:Page): {delegate?: {_mainFrameSession?: {
+    _client?: {send(method:"Emulation.setFocusEmulationEnabled", input:{enabled:boolean}):Promise<unknown>};
+  }}} | undefined}};
+  const driver = _connection.toImpl?.(target)?.delegate?._mainFrameSession?._client;
+  assert.ok(driver, "The fixture cannot restore the Chrome focus policy.");
+  await driver.send("Emulation.setFocusEmulationEnabled", {enabled:false});
+}
+
 async function main() {
   const presentation = process.env.MANAGED_HEADLESS_PRESENTATION_TEST === "1";
   const measure = process.env.MANAGED_HEADLESS_BROWSER_MEASURE === "1";
@@ -68,7 +78,8 @@ async function main() {
   const reverseRefetch = process.env.MANAGED_HEADLESS_BROWSER_REVERSE_REFETCH === "1";
   const membershipLoss = process.env.MANAGED_HEADLESS_BROWSER_MEMBERSHIP_LOSS === "1";
   const heldContext = process.env.MANAGED_HEADLESS_BROWSER_HELD_CONTEXT === "1";
-  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss || heldContext) || presentation);
+  const leaseRaces = process.env.MANAGED_HEADLESS_BROWSER_LEASE_RACES === "1";
+  assert.ok(!(measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss || heldContext || leaseRaces) || presentation);
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
     {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation, headlessMembershipLoss:membershipLoss});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
@@ -108,7 +119,7 @@ async function main() {
     assert.equal(described.ok, true);
     const scope = {hostIncarnationId: described.value.hostIncarnationId, workspaceId: activeWorkspaceId};
     browser = await chromium.launch({channel: "chrome", headless: true,
-      ...(isolation ? {ignoreDefaultArgs:["--disable-background-timer-throttling", "--disable-backgrounding-occluded-windows",
+      ...(isolation || leaseRaces ? {ignoreDefaultArgs:["--disable-background-timer-throttling", "--disable-backgrounding-occluded-windows",
         "--disable-renderer-backgrounding"]} : {}),
       args: [`--ignore-certificate-errors-spki-list=${fixture.browserPin}`]});
     const context = await browser.newContext({viewport: {width: 1280, height: 900}, acceptDownloads: false, serviceWorkers: "block"});
@@ -154,11 +165,12 @@ async function main() {
       throw new Error("The asset's title field was unavailable.");
     }
     stage = "identify-tab";
-    const getTab = () => until(async () => {
+    const getTab = (maximumPolls = 30, previousUiIncarnation?: string) => until(async () => {
       const result = await call("aisb_list_windows", scope);
       assert.equal(result.ok, true);
-      return result.value.windows.length === 1 ? result.value.windows[0] : undefined;
-    });
+      const [entry] = result.value.windows;
+      return result.value.windows.length === 1 && entry?.uiIncarnationId !== previousUiIncarnation ? entry : undefined;
+    }, maximumPolls);
     const tab = await getTab();
     assert.equal(tab.hostIncarnationId, scope.hostIncarnationId);
     evidence.same_running_host = true;
@@ -459,8 +471,179 @@ async function main() {
       }
     }
 
+    if (leaseRaces) {
+      const requestCurrentTab = async () => {
+        const result = readHeadlessWindowResult(await call("aisb_request_window", {
+          target:await getTab(), taskId:randomUUID(), requestKey:randomUUID(),
+        }));
+        assert.ok(result.ok && result.value.kind === "request");
+        return result.value.request.target;
+      };
+      const waitActive = (target: Awaited<ReturnType<typeof requestCurrentTab>>) => until<UiControlLeaseTarget>(async () => {
+        const result = readHeadlessWindowResult(await call("aisb_window_status", {target}));
+        return result.ok && result.value.kind === "request" && result.value.request.status === "active" ? result.value.lease : undefined;
+      });
+      const accept = () => modal.getByRole("button", {name:"Accept automation takeover",exact:true}).click();
+      stage = "held-readiness-first-request";
+      const oldAttempt = await requestCurrentTab();
+      const heldReady = await page.evaluateHandle(({consentPath, requestId}) => {
+        const nativeFetch = window.fetch;
+        const pause = Promise.withResolvers<void>();
+        let held = false;
+        let consumed = false;
+        let expired = false;
+        const deadline = setTimeout(() => {expired = true; pause.resolve();}, 3_500);
+        const hook = {async run(input:RequestInfo | URL, init?:RequestInit) {
+          const result = await nativeFetch.call(window, input, init);
+          if (held || !result.ok || result.url !== location.origin + consentPath || init?.method !== "POST" ||
+            typeof init.body !== "string") return result;
+          const submitted = JSON.parse(init.body);
+          if (submitted.operation !== "ready" || submitted.target?.requestId !== requestId) return result;
+          const witness = await result.clone().json();
+          if (held || witness?.target?.requestId !== requestId || typeof witness?.target?.leaseId !== "string" || !result.body) return result;
+          held = true;
+          await pause.promise;
+          const body = result.body;
+          const getReader = body.getReader.bind(body);
+          const bodyHook = {getReader() {
+            const reader = getReader();
+            const read = reader.read.bind(reader);
+            const readerHook = {async read() {
+              const chunk = await read();
+              if (chunk.done) consumed = true;
+              return chunk;
+            }};
+            reader.read = readerHook.read;
+            return reader;
+          }};
+          Object.defineProperty(body, "getReader", {value:bodyHook.getReader, configurable:true});
+          return result;
+        }};
+        window.fetch = hook.run;
+        return {state() {return {held,consumed,expired};},
+          release() {clearTimeout(deadline); pause.resolve();},
+          restore() {
+            clearTimeout(deadline);
+            pause.resolve();
+            if (window.fetch === hook.run) window.fetch = nativeFetch;
+          }};
+      }, {consentPath:MANAGED_BROWSER_CONSENT_PATH, requestId:oldAttempt.requestId});
+      const attached = page.getByText("Automation controls this window.", {exact:true});
+      try {
+        await accept();
+        stage = "held-readiness-positive-reply";
+        await page.waitForFunction(value => value.state().held, heldReady, {timeout:2_500});
+        await page.getByText("Preparing automation takeover.", {exact:true}).waitFor({timeout:1_500});
+        const oldLease = await waitActive(oldAttempt);
+        stage = "held-readiness-revoke-and-replace";
+        await revoke.click();
+        await revoke.waitFor({state:"detached",timeout:1_500});
+        await until(async () => {
+          const result = readHeadlessWindowResult(await call("aisb_window_status", {target:oldAttempt}));
+          return result.ok && result.value.kind === "ended" ? true : undefined;
+        }, 10);
+        const newAttempt = await requestCurrentTab();
+        await accept();
+        await attached.waitFor({timeout:2_000});
+        const newLease = await waitActive(newAttempt);
+        assert.notEqual(newLease.leaseId, oldLease.leaseId);
+        assert.ok(newLease.generation > oldLease.generation);
+        assert.deepEqual(await heldReady.evaluate(value => value.state()), {held:true,consumed:false,expired:false});
+        stage = "held-readiness-cannot-replace-active-lease";
+        await heldReady.evaluate(value => value.release());
+        await page.waitForFunction(value => value.state().consumed, heldReady, {timeout:1_000});
+        assert.ok(!readHeadlessWindowResult(await call("aisb_window_context", {target:oldLease})).ok);
+        assert.deepEqual(await waitActive(newAttempt), newLease);
+        const currentContext = readHeadlessWindowResult(await call("aisb_window_context", {target:newLease}));
+        assert.ok(currentContext.ok && currentContext.value.kind === "context" && currentContext.value.context.ready);
+        assert.equal(await attached.isVisible(), true);
+        await revoke.click();
+        await revoke.waitFor({state:"detached",timeout:3_000});
+        evidence.held_server_readiness_cannot_replace_newer_lease = true;
+      } finally {
+        await heldReady.evaluate(value => value.restore());
+        await heldReady.dispose();
+      }
+
+      stage = "background-lease-native-visibility";
+      const peer = await context.newPage();
+      let droppedDisconnects = 0;
+      let droppedRevokes = 0;
+      let hiddenLease: UiControlLeaseTarget | undefined;
+      const consentUrl = trusted + MANAGED_BROWSER_CONSENT_PATH;
+      const interruptRetirement = async (route: Route) => {
+        const request = route.request();
+        const body = request.method() === "POST" ? request.postDataJSON() : undefined;
+        const expected = hiddenLease;
+        const owned = expected && body?.document?.windowId === expected.windowId &&
+          body?.document?.uiIncarnationId === expected.uiIncarnationId;
+        if (owned && body.operation === "disconnect") {droppedDisconnects++; await route.abort("failed"); return;}
+        if (owned && body.operation === "revoke" && body.target?.requestId === expected.requestId) {
+          droppedRevokes++; await route.abort("failed"); return;
+        }
+        await route.continue();
+      };
+      const timers = () => page.evaluate(async () => {
+        const elapsed: number[] = [];
+        for (let sample = 0; sample < 3; sample++) {
+          const start = performance.now();
+          await new Promise<void>(resolve => setTimeout(resolve, 50));
+          elapsed.push(performance.now() - start);
+        }
+        return elapsed;
+      });
+      try {
+        await restoreNativeFocus(page);
+        await restoreNativeFocus(peer);
+        await page.bringToFront();
+        await page.waitForFunction(() => document.visibilityState === "visible");
+        const foreground = measurements(await timers());
+        const attempt = await requestCurrentTab();
+        await accept();
+        await attached.waitFor({timeout:3_000});
+        const active = await waitActive(attempt);
+        hiddenLease = active;
+        const status = () => call("aisb_window_status", {target:attempt}).then(readHeadlessWindowResult);
+        await page.route(consentUrl, interruptRetirement);
+        const beginning = performance.now();
+        await peer.bringToFront();
+        await page.waitForFunction(() => document.visibilityState === "hidden", undefined, {timeout:3_000});
+        stage = "background-lease-host-watchdog";
+        const initial = await status();
+        assert.ok(initial.ok && initial.value.kind === "request" && initial.value.request.status === "active");
+        const [background, retiredMs] = await Promise.all([
+          timers().then(measurements),
+          until(async () => {
+            const current = await status();
+            return current.ok && current.value.kind === "ended" ? performance.now() - beginning : undefined;
+          }, 75),
+        ]);
+        assert.ok(background.p50 >= 250 && background.p50 >= 3 * foreground.p50);
+        assert.ok(droppedDisconnects + droppedRevokes > 0);
+        assert.ok(retiredMs > 1_000 && retiredMs <= 15_000);
+        assert.equal(await page.evaluate(() => document.visibilityState), "hidden");
+        assert.ok(!readHeadlessWindowResult(await call("aisb_renew_window", {target:active})).ok);
+        assert.ok(!readHeadlessWindowResult(await call("aisb_window_context", {target:active})).ok);
+        stage = "background-lease-returns-with-fresh-document";
+        await page.unroute(consentUrl, interruptRetirement);
+        await page.bringToFront();
+        const fresh = await getTab();
+        assert.notEqual(fresh.uiIncarnationId, active.uiIncarnationId);
+        assert.equal(await revoke.count(), 0);
+        assert.equal(await panel.count(), 0);
+        evidence.visible_tab_timer_ms = foreground;
+        evidence.hidden_tab_timer_ms = background;
+        evidence.managed_background_retired_ms = retiredMs;
+        evidence.managed_background_dropped_retirements = droppedDisconnects + droppedRevokes;
+      } finally {
+        await page.unroute(consentUrl, interruptRetirement);
+        await peer.close();
+      }
+    }
+
     if (measure && saved && presentationRequest) {
       stage = "browser-timing";
+      const timedTab = await getTab();
       const dispatchTimes: number[] = [];
       const replyTimes: number[] = [];
       const revealTimes: number[] = [];
@@ -489,7 +672,7 @@ async function main() {
         replyTimes.push(visibleAt - replyAt);
 
         stage = "timed-consent";
-        const request = readHeadlessWindowResult(await call("aisb_request_window", {target:tab, taskId:randomUUID(), requestKey:randomUUID()}));
+        const request = readHeadlessWindowResult(await call("aisb_request_window", {target:timedTab, taskId:randomUUID(), requestKey:randomUUID()}));
         assert.ok(request.ok && request.value.kind === "request");
         await modal.getByRole("button", {name:"Accept automation takeover", exact:true}).click({timeout:5_000});
         await revoke.waitFor({timeout:5_000});
@@ -534,16 +717,10 @@ async function main() {
 
     if (isolation && saved && presentationRequest) {
       stage = "second-tab";
+      const savedRecord = await call("aisb_read_system", {...scope, systemId:saved.systemId});
+      assert.ok(savedRecord.ok && typeof savedRecord.value?.currentRevisionId === "string");
+      const currentIntent = {...presentationRequest.intent, revisionId:savedRecord.value.currentRevisionId};
       const peer = await context.newPage();
-      const restoreNativeFocus = async (target: Page) => {
-        // On the pinned driver, only the primary session owns the focus override.
-        const {_connection} = target as unknown as {_connection: {toImpl?(tab:Page): {delegate?: {_mainFrameSession?: {
-          _client?: {send(method:"Emulation.setFocusEmulationEnabled", input:{enabled:boolean}):Promise<unknown>};
-        }}} | undefined}};
-        const driver = _connection.toImpl?.(target)?.delegate?._mainFrameSession?._client;
-        assert.ok(driver, "The fixture cannot restore the Chrome focus policy.");
-        await driver.send("Emulation.setFocusEmulationEnabled", {enabled:false});
-      };
       await restoreNativeFocus(page);
       await restoreNativeFocus(peer);
       try {
@@ -629,7 +806,7 @@ async function main() {
             const status = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
             return status.ok && status.value.kind === "request" ? status.value.lease : undefined;
           });
-          const command = {...presentationRequest, target:active, commandId:randomUUID()};
+          const command = {...presentationRequest, intent:currentIntent, target:active, commandId:randomUUID()};
           const present = async (args: typeof command) => readHeadlessWindowResult(await call("aisb_present_in_window", args));
           stage = "queue-first-admission";
           const first = await present(command);
@@ -958,11 +1135,17 @@ async function main() {
       evidence.lost_create_reply_replayed_one_durable_event = true;
     }
 
-    stage = "reload";
+    stage = "reload-before-document";
+    const beforeReload = await getTab();
+    stage = "reload-visible-systems";
     await page.reload({waitUntil:"domcontentloaded"});
+    await page.bringToFront();
     await systems.waitFor({timeout: 20_000});
-    const next = await getTab();
-    assert.notEqual(next.uiIncarnationId, tab.uiIncarnationId);
+    stage = "reload-fresh-registration";
+    // A connection lost during reload can leave the old document registered
+    // until the host's existing 12-second document watchdog expires.
+    const next = await getTab(75, beforeReload.uiIncarnationId);
+    assert.notEqual(next.uiIncarnationId, beforeReload.uiIncarnationId);
     assert.equal(await modal.count(), 0);
     evidence.reload_requires_fresh_document = true;
 

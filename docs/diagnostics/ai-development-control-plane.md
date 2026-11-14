@@ -175,8 +175,10 @@ test document visible in headless Chrome. Saved-state timing starts before
 the MCP request to give an upper bound on time after commit. The report
 also records the separate MCP-reply-to-visible interval. The test respects
 the existing revoke retention window and applies targets to unrounded timings.
-The timing report does not cover hidden tabs, live queue depth or a production
-network.
+Collect timing in a separate fixture invocation so other journeys do not
+share the tab's retained revoke records. Use the separate behavior tests
+for hidden tabs and live queue depth. Local timing does not cover a
+production network.
 
 Set `MANAGED_HEADLESS_BROWSER_ISOLATION=1` with the extended journey to test
 two real tabs without Playwright's background-throttling overrides. The test
@@ -223,6 +225,14 @@ Set `MANAGED_HEADLESS_BROWSER_HELD_CONTEXT=1` with the extended journey to
 hold an authorized context challenge from the local server. Chrome revokes
 takeover before reading the reply. The fixture checks that Chrome reads the
 released reply without sending context and that the old lease stays ended.
+
+Set `MANAGED_HEADLESS_BROWSER_LEASE_RACES=1` with the extended journey to
+hold a real readiness reply through Revoke and a fresh acceptance. The
+browser still has to return fresh context for the new lease after it reads
+the old reply. The same option hides a Chrome
+tab and measures the timer slowdown. It drops only the test tab's
+retirement messages. The server must end the exact old lease within its
+existing deadline, and Chrome must use a fresh registration when visible.
 
 The packaged Desktop test measures warm presentation and revoke, including
 when an ordinary dialog is open or a page is loading. The native hide test
