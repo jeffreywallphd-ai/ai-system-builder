@@ -12,7 +12,7 @@ import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER } from ".
 import { MANAGED_BROWSER_DELIVERY_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
 import { HEADLESS_CONTRACT_VERSION } from "../../../../modules/contracts/headless";
 import { MANAGED_HEADLESS_AGENT_PATHS } from "../../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
-import { readHeadlessWindowResult, type UiControlLeaseTarget } from "../../../../modules/contracts/headless";
+import { readHeadlessAuthoringWireResult, readHeadlessWindowResult, type UiControlLeaseTarget } from "../../../../modules/contracts/headless";
 import { startManagedReferenceHost } from "./managed-reference-host";
 
 async function until<T>(observe: () => Promise<T | undefined>, attempts = 30) {
@@ -62,7 +62,8 @@ async function main() {
   const measure = process.env.MANAGED_HEADLESS_BROWSER_MEASURE === "1";
   const isolation = process.env.MANAGED_HEADLESS_BROWSER_ISOLATION === "1";
   const draft = process.env.MANAGED_HEADLESS_BROWSER_DRAFT === "1";
-  assert.ok(!(measure || isolation || draft) || presentation);
+  const loseReply = process.env.MANAGED_HEADLESS_BROWSER_LOST_REPLY === "1";
+  assert.ok(!(measure || isolation || draft || loseReply) || presentation);
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
     {headlessAgent:true, headlessBrowser:true, headlessBrowserPresentation:presentation});
   const client = new Client({name: "managed-browser-consent-qualification", version: "1.0.0"});
@@ -83,14 +84,15 @@ async function main() {
     assert.equal(selected.status, 201);
     const activeWorkspaceId = selected.body.value.workspace.workspaceId;
     assert.notEqual(activeWorkspaceId, workspaceId);
-    await client.connect(new StdioClientTransport({command: process.execPath,
+    const makeTransport = () => new StdioClientTransport({command: process.execPath,
       args: ["--import", "tsx", path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts")],
       env: {AISB_HEADLESS_MODE: "managed", AISB_HEADLESS_MANAGED_ORIGIN: serverOrigin, AISB_HEADLESS_MANAGED_CREDENTIAL: access,
         AISB_HEADLESS_MANAGED_ORGANIZATION_ID: organizationId, AISB_HEADLESS_MANAGED_WORKSPACE_ID: activeWorkspaceId,
         AISB_HEADLESS_ENABLE_MANAGED_CONSENT: "1", AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION: presentation ? "1" : "0",
         AISB_HEADLESS_ENABLE_AUTHORING: presentation ? "1" : "0", NODE_EXTRA_CA_CERTS: caFile, TSX_DISABLE_CACHE: "1"},
       stderr: "ignore", maxBufferSize: 256 * 1024,
-    }));
+    });
+    await client.connect(makeTransport());
     const call = async (name: string, args: Record<string, unknown> = {}) => {
       const reply = await client.callTool({name, arguments: args}, undefined,
         {timeout:name === "aisb_apply_edits" ? 14_000 : 5_000});
@@ -586,6 +588,61 @@ async function main() {
       assert.equal(await title.inputValue(), "Synthetic human draft, unsaved");
       assert.deepEqual(await authoritative(), {baseRevisionId:winner.revisionId, baseRecordRevision:winner.recordRevision});
       evidence.dirty_user_values_and_winning_revision_preserved = true;
+    }
+
+    if (loseReply) {
+      stage = "lost-committed-create-reply";
+      await manage.click();
+      const snapshot = await fixture.request("/api/headless/system-builder/snapshot", {method:"POST",
+        token:browserBearer, organizationId, body:{workspaceId:activeWorkspaceId}});
+      assert.equal(snapshot.status, 200);
+      const lostClient = new Client({name:"managed-lost-write-fixture", version:"1.0.0"});
+      const transport = makeTransport();
+      let droppedReference: {systemId:string;revisionId:string;recordRevision:number} | undefined;
+      const name = "Synthetic system with a lost reply";
+      const args = {...scope, templateId, name, idempotencyKey:randomUUID()};
+      try {
+        await lostClient.connect(transport);
+        let id: string | number | undefined;
+        const send = transport.send.bind(transport);
+        const receive = transport.onmessage;
+        transport.send = message => {
+          if ("id" in message && "method" in message && message.method === "tools/call" &&
+              message.params?.name === "aisb_create_system") id = message.id;
+          return send(message);
+        };
+        transport.onmessage = message => {
+          if (id !== undefined && "id" in message && message.id === id && "result" in message) {
+            const blocks = message.result.content;
+            if (Array.isArray(blocks) && blocks.length === 1 && blocks[0]?.type === "text" && typeof blocks[0].text === "string") {
+              try {
+                const result = readHeadlessAuthoringWireResult(JSON.parse(blocks[0].text));
+                if (result.ok && result.value.kind === "committed") {
+                  droppedReference = result.value.reference;
+                  transport.send = send;
+                  transport.onmessage = receive;
+                  void lostClient.close().catch(() => undefined);
+                  return;
+                }
+              } catch { /* Bad or non-commit replies remain visible to the fixture. */ }
+            }
+          }
+          receive?.(message);
+        };
+        await assert.rejects(lostClient.callTool({name:"aisb_create_system", arguments:args}, undefined, {timeout:5_000}));
+        assert.ok(droppedReference);
+      } finally {
+        await lostClient.close();
+      }
+      await management.getByRole("cell", {name:new RegExp(name)}).waitFor({timeout:8_000});
+      assert.deepEqual(await call("aisb_create_system", args), {ok:true,value:{kind:"replayed",reference:droppedReference}});
+      const events = await fixture.request("/api/headless/system-builder/changes", {method:"POST", token:browserBearer,
+        organizationId, body:{workspaceId:activeWorkspaceId,cursor:snapshot.body.value.cursor}});
+      assert.equal(events.status, 200);
+      assert.equal(events.body.value.events.length, 1);
+      assert.deepEqual(events.body.value.events[0], {...droppedReference,sequence:snapshot.body.value.cursor.sequence + 1});
+      assert.equal(await management.getByRole("cell", {name:new RegExp(name)}).count(), 1);
+      evidence.lost_create_reply_replayed_one_durable_event = true;
     }
 
     stage = "reload";

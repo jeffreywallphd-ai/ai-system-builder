@@ -190,6 +190,11 @@ Chrome handles a saved change while a user edits a system. The test uses the
 Canvas and Notification Center. It checks that the user keeps their draft,
 receives a conflict on save, and cannot overwrite the newer saved version.
 
+Set `MANAGED_HEADLESS_BROWSER_LOST_REPLY=1` with the extended journey to
+drop one committed tool reply before the test client receives it. Chrome
+must show the saved system. A retry with the original key must return that
+same system, and the authorized change feed must contain one new event.
+
 It leaves broader source changes and aggregate completion tests to their own
 gates. The PostgreSQL integration tests need an isolated database URL to run.
 The related managed saved-state browser check runs the exact observer and model
