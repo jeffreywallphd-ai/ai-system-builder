@@ -47,6 +47,29 @@
           "Saving through an approved Managed plan, importing provider sources, preparing datasets and opening them from chat still need evidence."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "05d082c476168a2d795736fc630fef33d5d6f3fa7caeb4167a1f91b153f4e47a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both Managed approval screens showed the selected file and permission to save it.",
+          "The user approved the plan in the app popup.",
+          "The client saved one CSV and received the same reference on retry.",
+          "The next step waited for the file save."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5124908527675eeb0b10095ca15c29e7e9501241c406f5f23088766ff027a10f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider imports, dataset preparation and opening the exact dataset from chat still need evidence."
+        ]
+      }
     }
   ]
 }
