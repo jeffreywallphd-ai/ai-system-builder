@@ -24,10 +24,10 @@ const workflowSource = z.discriminatedUnion("kind", [
 const version = headless.HEADLESS_CONTRACT_VERSION;
 const requestedMode = process.env.AISB_HEADLESS_MODE;
 const managed = requestedMode === "managed";
-const enablePlanReview = !managed && process.env.AISB_HEADLESS_ENABLE_PLAN_REVIEW === "1";
+const enablePlanReview = process.env.AISB_HEADLESS_ENABLE_PLAN_REVIEW === "1";
 const enableAuthoring = !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
 const enableConversation = !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
-const enableManagedConsent = managed && process.env.AISB_HEADLESS_ENABLE_MANAGED_CONSENT === "1";
+const enableManagedConsent = managed && !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_MANAGED_CONSENT === "1";
 const enableManagedDelivery = enableManagedConsent && process.env.AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION === "1";
 const enablePresentation = managed ? enableManagedConsent : !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
 const forward = managed ? createManagedHeadlessMcpReadForwarder({
@@ -35,7 +35,7 @@ const forward = managed ? createManagedHeadlessMcpReadForwarder({
   credential: process.env.AISB_HEADLESS_MANAGED_CREDENTIAL,
   organizationId: process.env.AISB_HEADLESS_MANAGED_ORGANIZATION_ID,
   workspaceId: process.env.AISB_HEADLESS_MANAGED_WORKSPACE_ID,
-}, enableAuthoring, enableManagedConsent, enableManagedDelivery) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
+}, enableAuthoring, enableManagedConsent, enableManagedDelivery, enablePlanReview) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
   process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL,
   enableAuthoring, enableConversation, enablePresentation, enablePlanReview,
 ) : undefined;

@@ -285,14 +285,18 @@ edits and receipt replay. Enabling the route does not enable document takeover.
 To let a managed headless client send a plan for a person to review, set
 `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_PLAN_REVIEW_CLIENT_ID` to a third client
 ID from the same issuer. It must differ from the agent and browser client
-IDs. The plan client can read workspace information and submit or check a
-proposal. It cannot edit a system, approve a proposal, or control a window.
+  IDs. The plan client can read workspace information, submit or check a
+  proposal, and run the next approved change. Direct authoring, approval
+  decisions, and window control require separate authority.
 Configure the issuer to identify this client in each token it issues for
 the registration. The server accepts only a typed access token with an exact
 signed client ID for plan review. It also uses a signed client ID or
 authorized party to refuse ordinary app routes to this client.
 Staging checks the saved revisions and records the exact steps. If the
 client sends the same proposal again, it keeps the original expiration time.
+  Execution reads the exact plan and approval revision from PostgreSQL. It
+  returns a saved reference once and recovers the same reference on an exact
+  retry while approval stays current.
 
 With the exact managed browser origin configured, the browser approval
 endpoint can list, open, approve, deny, cancel or withdraw the signed-in

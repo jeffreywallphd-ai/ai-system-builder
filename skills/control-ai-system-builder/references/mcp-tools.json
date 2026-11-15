@@ -148,6 +148,19 @@
         "aisb_saved_system_changes",
         "aisb_saved_system_snapshot"
       ]
+    },
+    {
+      "mode": "managed-plan-review",
+      "tools": [
+        "aisb_build_plan_approval_status",
+        "aisb_host_describe",
+        "aisb_list_templates",
+        "aisb_plan_capabilities",
+        "aisb_preview_build_plan",
+        "aisb_read_system",
+        "aisb_request_build_plan_approval",
+        "aisb_run_approved_build_step"
+      ]
     }
   ],
   "tools": [

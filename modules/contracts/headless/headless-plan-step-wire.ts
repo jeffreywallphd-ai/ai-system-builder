@@ -6,6 +6,7 @@ import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHo
 import { HEADLESS_MAX_BUILD_PLAN_STEPS } from "./headless-system-management";
 
 export const HEADLESS_PLAN_STEP_PATH = "/aisb-headless/v1/plan-step";
+export const MANAGED_HEADLESS_PLAN_STEP_PATH = "/api/headless/agent/plan-step";
 export interface HeadlessPlanStepTarget {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
   readonly workspaceId: WorkspaceId;

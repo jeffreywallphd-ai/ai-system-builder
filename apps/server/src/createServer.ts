@@ -462,7 +462,8 @@ export async function createServer(
       app.use((request, response, next) => {
         if (!clientPolicy.isPlanReviewCredential(getExpressAuthContext(request))) return next();
         if (request.method === "POST" && (request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS.read ||
-            request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS["plan-review"])) return next();
+            request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS["plan-review"] ||
+            request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS["plan-step"])) return next();
         return response.status(403).json(createSecurityApiFailure({status:403, code:"security.forbidden",
           message:"This credential is limited to managed plan review."}));
       });
@@ -483,17 +484,18 @@ export async function createServer(
       const handlers = serverHost.getManagedHeadlessAgent();
       const consent = serverHost.getManagedBrowserConsent();
       const planReview = handlers?.planReview;
+      const runPlanStep = planReview?.runStep;
       const denied = {ok: false, code: "headless.forbidden"} as const;
       return clientPolicy && handlers ? {
         hostIncarnationId: handlers.hostIncarnationId,
         read: handlers.read,
         author: async (input, agent, current) => agent.purpose === "agent" ? handlers.author(input, agent, current) : denied,
         identify: (input, kind) => {
-          if (kind !== "plan-review") {
+          if (kind !== "plan-review" && kind !== "plan-step") {
             const author = clientPolicy.identify({...input, purpose: "agent"});
             if (author?.purpose === "agent") return author;
           }
-          if (planReview && (kind === "read" || kind === "plan-review")) {
+          if (planReview && (kind === "read" || kind === "plan-review" || kind === "plan-step")) {
             const planner = clientPolicy.identify({...input, purpose: "plan-review"});
             if (planner?.purpose === "plan-review") return planner;
           }
@@ -502,6 +504,8 @@ export async function createServer(
         isCurrent: (admitted) => admitted.isCurrent(),
         ...(planReview ? { planReview: async (input, agent, current) =>
           agent.purpose === "plan-review" ? planReview(input, agent, current) : denied } : {}),
+        ...(runPlanStep ? { planStep: async (input, agent, current) =>
+          agent.purpose === "plan-review" ? runPlanStep(input, agent, current) : { result: denied } } : {}),
         ...(consent && browserPresentationKey ? {window: {
           deliveryEnabled: browserDeliveryEnabled,
           execute: async (input, agent, session, current) => agent.purpose === "agent"

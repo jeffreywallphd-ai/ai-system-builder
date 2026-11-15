@@ -4,6 +4,7 @@ import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHo
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal } from "./headless-system-management";
 
 export const HEADLESS_PLAN_REVIEW_PATH = "/aisb-headless/v1/plan-review";
+export const MANAGED_HEADLESS_PLAN_REVIEW_PATH = "/api/headless/agent/plan-review";
 export const HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES = 32 * 1024;
 
 interface PlanTarget {

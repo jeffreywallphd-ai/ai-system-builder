@@ -29,6 +29,11 @@ and its durable retry receipt. It rechecks access before returning a
 successful result. The service accepts only an already verified agent
 registration. A transport route is a separate composition step.
 
+The managed plan client uses its own verified registration. The server loads
+the next approved change from the saved plan and commits it with its durable
+receipt. It checks that permission and approval still apply before sending
+the successful result. This uses exact row locks in PostgreSQL.
+
 Each managed browser tab registers a short-lived proof. A different bearer
 for the same user and registered browser client cannot reuse that proof.
 Workspace policy governs registration. The existing takeover authority

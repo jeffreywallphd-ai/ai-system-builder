@@ -114,7 +114,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly credential?: string;
   readonly organizationId?: string;
   readonly workspaceId?: string;
-}, enableAuthoring = false, enableConsent = false, enableDelivery = false) {
+}, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
@@ -126,6 +126,8 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   const address = new URL("/api/headless/agent/read", origin);
   const authoringAddress = new URL("/api/headless/agent/author", origin);
   const presentationAddress = new URL(managedWindow.MANAGED_HEADLESS_AGENT_WINDOW_PATH, origin);
+  const planReviewAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PLAN_REVIEW_PATH, origin) : undefined;
+  const planStepAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PLAN_STEP_PATH, origin) : undefined;
   const headers = {"x-organization-id": organizationId};
   const presentationSession = randomUUID();
   const presentationHeaders = {...headers, [managedWindow.MANAGED_HEADLESS_AGENT_SESSION_HEADER]: presentationSession};
@@ -133,19 +135,21 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   // Each fixed POST independently prevents proxying and redirect following.
   const agent = new Agent({rejectUnauthorized: true, keepAlive: false, maxSockets: MAX_ACTIVE});
   const guard = (input: ForwardRequest) => {
-    if (isPlanReview(input) || input.operation === "plan.run-step") return false;
+    if (isPlanReview(input)) return enablePlanReview && input.target.workspaceId === workspaceId;
+    if (input.operation === "plan.run-step") return enablePlanReview && input.input.workspaceId === workspaceId;
     if (input.version === headless.UI_CONTROL_VERSION) {
       const target = "target" in input.input ? input.input.target : input.input;
-      return enableConsent && target.workspaceId === workspaceId &&
+      return !enablePlanReview && enableConsent && target.workspaceId === workspaceId &&
         managedWindow.isManagedWindowOperation(input.operation, enableDelivery);
     }
     return input.version === HEADLESS_CONTRACT_VERSION &&
     (input.operation === "host.describe" ||
       ("workspaceId" in input.input && input.input.workspaceId === workspaceId &&
-        (isAuthoring(input) || MANAGED_HEADLESS_READS.some(operation => operation === input.operation))));
+        ((!enablePlanReview && isAuthoring(input)) || MANAGED_HEADLESS_READS.some(operation => operation === input.operation))));
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
-    agent, authorization: `Bearer ${credential}`, enableAuthoring, enableConversation: false, enablePresentation: enableConsent,
+    planReviewAddress, planStepAddress, agent, authorization: `Bearer ${credential}`,
+    enableAuthoring: !enablePlanReview && enableAuthoring, enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
     if (!guard(input)) return {ok: false, code: "headless.forbidden"};
@@ -153,7 +157,8 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
     if (!result.ok) return result;
     const serialized = JSON.stringify(result);
     if (serialized.includes(credential) || serialized.toLowerCase().includes(presentationSession))
-      return isAuthoring(input) && input.operation !== "systems.preview-edits" ? unknownWrite : unavailable;
+      return input.operation === "plan.run-step" || isAuthoring(input) && input.operation !== "systems.preview-edits"
+        ? unknownWrite : unavailable;
     if (input.version === headless.UI_CONTROL_VERSION) return managedWindow.readManagedWindowResult(result, input);
     if (resultHasOperation(result, "host.describe")) {
       const described = resultValue["host.describe"].safeParse(result.value);

@@ -12,6 +12,7 @@ import { HEADLESS_CONTRACT_VERSION, HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, pars
 import { MANAGED_HEADLESS_AGENT_SESSION_HEADER } from "../../../../../contracts/headless/managed-headless-window";
 import { createOrganizationId } from "../../../../../contracts/organization";
 import { type AuthContext, createSecurityApplicationError } from "../../../../../contracts/security";
+import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../../contracts/workspace";
 import { MANAGED_HEADLESS_AGENT_PATHS, resolveApiRoutePolicy } from "../../security/apiRouteSecurityPolicy";
 import { createExpressSecurityMiddleware } from "../../security/createExpressSecurityMiddleware";
@@ -20,7 +21,7 @@ import { registerManagedHeadlessAgentRoutes, type ManagedAgentRouteHandlers } fr
 test("managed agent routes stay exact in the central deny-by-default API", () => {
   for (const [kind, path] of Object.entries(MANAGED_HEADLESS_AGENT_PATHS)) {
     assert.deepEqual(resolveApiRoutePolicy("POST", path), {public: false,
-      scopes: ["workspace:read", "asset:read", ...(kind === "plan-review" ? ["asset:write"] : [])]});
+      scopes: ["workspace:read", "asset:read", ...(kind === "plan-review" || kind === "plan-step" ? ["asset:write"] : [])]});
     for (const method of ["GET", "HEAD", "DELETE", "PATCH"])
       assert.equal(resolveApiRoutePolicy(method, path).deny, true);
     for (const variant of [path + "/", path.toUpperCase(), path.replace("agent", "%61gent"), path + "/other"])
@@ -28,15 +29,18 @@ test("managed agent routes stay exact in the central deny-by-default API", () =>
   }
 });
 
-test("the managed plan route admits exact bounded proposals and safe status only", {timeout:10_000}, async () => {
+test("managed plan routes admit only exact proposals, status and an approved step result", {timeout:10_000}, async () => {
   const organizationId = createOrganizationId("managed-plan-fixture");
   const workspaceId = createWorkspaceId("fixture-workspace");
   const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
   const planIdentity = {role:"plan-review" as const};
   let enabled = true;
   let publish = true;
+  let current = true;
   let calls = 0;
+  let sends = 0;
   const expiresAt = Date.now() + 30_000;
+  let stepExpiresAt = expiresAt;
   const app = express();
   app.enable("case sensitive routing");
   app.use(createExpressSecurityMiddleware({mode:"oidc-bearer", authRequired:true, httpsRequired:false,
@@ -47,15 +51,28 @@ test("the managed plan route admits exact bounded proposals and safe status only
   }));
   const retire = registerManagedHeadlessAgentRoutes(app, (): ManagedAgentRouteHandlers<typeof planIdentity> => ({
     hostIncarnationId,
-    identify: (request, kind) => kind === "plan-review" && request.organizationHeader === organizationId &&
+    identify: (request, kind) => (kind === "plan-review" || kind === "plan-step") && request.organizationHeader === organizationId &&
       request.auth?.oidcAccessTokenClientId === "fixture-plan" ? planIdentity : undefined,
-    isCurrent: identity => identity === planIdentity,
+    isCurrent: identity => identity === planIdentity && current,
     async read() { throw new Error("Unexpected plan read."); },
     async author() { throw new Error("Unexpected direct write."); },
     ...(enabled ? {async planReview(request) {
       calls += 1;
       return {ok:true, value:{fingerprint:request.target.fingerprint, revision:1, stepCount:publish ? 1 : 2,
         approvedSteps:0, expiresAt, status:"pending"}};
+    }, async planStep({input}) {
+      return {
+        result: {ok:true, value:{kind:"committed", fingerprint:input.fingerprint, step:input.step,
+          approvalRevision:input.approvalRevision, expiresAt:stepExpiresAt, reference:{
+            systemId:normalizeSystemBuilderSystemId("system.fixture"),
+            revisionId:normalizeSystemBuilderRevisionId("revision.fixture"), recordRevision:1}}},
+        async publishIfCurrent(send) {
+          if (!publish) current = false;
+          const result = send();
+          if (result) sends += 1;
+          return result;
+        }
+      };
     }} : {}),
   }));
   const server = app.listen(0, "127.0.0.1");
@@ -93,9 +110,23 @@ test("the managed plan route admits exact bounded proposals and safe status only
     assert.deepEqual(result, {status:200, cache:"no-store", body:{ok:true,
       value:{fingerprint, revision:1, stepCount:1, approvedSteps:0, expiresAt, status:"pending"}}});
     assert.deepEqual(await request({version:HEADLESS_CONTRACT_VERSION, operation:"plan.status", input:{...scope, fingerprint}}), result);
+    const stepPath = MANAGED_HEADLESS_AGENT_PATHS["plan-step"];
+    const step = {version:HEADLESS_CONTRACT_VERSION, operation:"plan.run-step", input:{...scope, fingerprint, approvalRevision:2, step:1}};
+    assert.equal((await request(step, "fixture-agent", stepPath)).status, 403);
+    assert.equal((await request(step, "fixture-browser", stepPath)).status, 403);
+    assert.equal((await request({...step, input:{...step.input, name:"Another name"}}, "fixture-plan", stepPath)).status, 400);
+    assert.equal((await request(step, "fixture-plan", stepPath)).status, 200);
+    assert.equal(sends,1);
+    stepExpiresAt = Date.now() - 1;
+    assert.equal((await request(step, "fixture-plan", stepPath)).status, 403);
+    assert.equal(sends,1);
+    stepExpiresAt = expiresAt;
     publish = false;
     assert.equal((await request(proposal)).status, 503);
     assert.equal(calls, 3);
+    assert.deepEqual(await request(step, "fixture-plan", stepPath), {status:403, cache:"no-store",
+      body:{ok:false, code:"headless.forbidden"}});
+    assert.equal(sends,1);
   } finally {
     retire();
     server.closeAllConnections();

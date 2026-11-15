@@ -1690,7 +1690,7 @@ export function composeServerHost(
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases}),
           ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: composeManagedHeadlessPlanReview({
             ...scoped, platform: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
-            placement: options.managedHeadlessAgent.placement,
+            placement: options.managedHeadlessAgent.placement, systems: systemBuilder,
           }) } : {}),
         };
         if (options.managedHeadlessAgent.browserObservationAuthorizer) {

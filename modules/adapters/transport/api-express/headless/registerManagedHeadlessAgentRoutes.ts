@@ -7,6 +7,7 @@ import {
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
   HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult,
   type HeadlessPlanReviewAgentRequest, type HeadlessPlanReviewAgentResult,
+  readHeadlessPlanStepRequest, readHeadlessPlanStepResult, type HeadlessPlanStepRequest, type HeadlessPlanStepResult,
 } from "../../../../contracts/headless";
 import { isManagedWindowOperation, MANAGED_HEADLESS_AGENT_SESSION_HEADER,
   readManagedWindowResult } from "../../../../contracts/headless/managed-headless-window";
@@ -41,6 +42,10 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly read: (input: HeadlessReadRequest, agent: Agent, current: () => boolean) => Promise<HeadlessReadResult>;
   readonly author: (input: Authoring, agent: Agent, current: () => boolean) => Promise<unknown>;
   readonly planReview?: (input: HeadlessPlanReviewAgentRequest, agent: Agent, current: () => boolean) => Promise<HeadlessPlanReviewAgentResult>;
+  readonly planStep?: (input: HeadlessPlanStepRequest, agent: Agent, current: () => boolean) => Promise<{
+    readonly result: HeadlessPlanStepResult;
+    readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
+  }>;
   readonly window?: {
     readonly deliveryEnabled?: boolean;
     readonly execute: (input: HeadlessWindowRequest, agent: Agent, session: string, current: () => boolean) => Promise<HeadlessWindowResult>;
@@ -67,6 +72,7 @@ export function registerManagedHeadlessAgentRoutes<Agent extends object>(
       if (!open || !handlers) return failure(response, 404, "headless.unavailable");
       if (kind === "window" && !handlers.window) return failure(response, 404, "headless.unavailable");
       if (kind === "plan-review" && !handlers.planReview) return failure(response, 404, "headless.unavailable");
+      if (kind === "plan-step" && !handlers.planStep) return failure(response, 404, "headless.unavailable");
       const agent = handlers.identify({
         auth: getExpressAuthContext(request), organization: getExpressOrganizationContext(request),
         organizationHeader: request.headers["x-organization-id"],
@@ -119,6 +125,22 @@ async function respond<Agent>(
     if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
     if (result.value.expiresAt <= Date.now()) return failure(response, 410, "headless.plan-expired");
     return send(response, result);
+  }
+  if (kind === "plan-step") {
+    const parsed = readHeadlessPlanStepRequest(value, handlers.hostIncarnationId);
+    if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
+    if (!handlers.planStep) return failure(response, 404, "headless.unavailable");
+    const outcome = await handlers.planStep(parsed.request, agent, current);
+    if (!current()) return failure(response, 403, "headless.forbidden");
+    const result = readHeadlessPlanStepResult(outcome.result, parsed.request.input);
+    if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
+    const sent = await outcome.publishIfCurrent?.(() => {
+      if (!current() || response.headersSent || result.value.expiresAt <= Date.now()) return false;
+      send(response, result);
+      return response.statusCode === 200 && response.headersSent;
+    });
+    if (!sent) return failure(response, 403, "headless.forbidden");
+    return;
   }
   if (kind === "window") {
     const session = incoming.headers[MANAGED_HEADLESS_AGENT_SESSION_HEADER];

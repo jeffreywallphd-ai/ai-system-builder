@@ -129,6 +129,10 @@ environment to provide its managed access token as
 The managed catalog supports host discovery, template discovery and saved
 system reads. Set `AISB_HEADLESS_ENABLE_AUTHORING=1` to include the finite
 saved authoring tools. Tool discovery never connects to the server.
+Set `AISB_HEADLESS_ENABLE_PLAN_REVIEW=1` with the managed plan client's own
+token to list its plan tools instead of direct authoring and window tools.
+The user can review the exact plan in browser Settings. Follow the same
+status, ordered execution and exact retry procedure as on Desktop.
 Allow at least 14 seconds in the MCP client's call timeout for
 `aisb_apply_edits` in managed mode. The adapter allows 13 seconds for that
 reply, including the server's existing 12-second request deadline. Other
