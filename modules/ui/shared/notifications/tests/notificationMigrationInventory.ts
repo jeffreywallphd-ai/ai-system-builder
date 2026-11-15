@@ -100,6 +100,11 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     rationale: "This read-only panel reports loading, absence, and availability for the scoped task list. It does not announce task outcomes or publish notifications.",
   },
   {
+    path: "modules/ui/shared/headless/HeadlessPlanApprovalDialog.tsx",
+    classification: "contextual-only",
+    rationale: "The current approval view shows loading and decision feedback for the exact request. This lets the user open the current request again when a decision could not be confirmed.",
+  },
+  {
     path: "modules/ui/shared/takeover/WindowTakeoverControls.tsx",
     classification: "contextual-only",
     rationale: "The live window control region tells the user who controls the current window and keeps revoke available. Its status is separate from independent chat task outcomes.",

@@ -598,6 +598,9 @@ interface DesktopApiBridge {
   openHeadlessPlanApproval?: (selection: import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalSelection) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalView | undefined>;
   decideHeadlessPlanApproval?: (decision: import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalDecision) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalView["state"] | undefined>;
   dismissHeadlessPlanApproval?: (viewId: string) => Promise<boolean>;
+  openHeadlessPlanChat?: DesktopApiBridge["openHeadlessPlanApproval"];
+  decideHeadlessPlanChat?: DesktopApiBridge["decideHeadlessPlanApproval"];
+  dismissHeadlessPlanChat?: DesktopApiBridge["dismissHeadlessPlanApproval"];
   readWindowTakeover?: (workspaceId: string | null) => Promise<import("../../../../../modules/contracts/headless").UiControlObservation>;
   onWindowTakeoverRetired?: (listener: (target: import("../../../../../modules/contracts/headless").UiControlAttempt) => void) => () => void;
   acceptWindowTakeover?: (target: unknown) => Promise<import("../../../../../modules/contracts/headless").UiControlTimedGrant | undefined>;

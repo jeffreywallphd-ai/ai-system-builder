@@ -371,7 +371,7 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     const dialog = page.getByRole("dialog", { name: "Review plan requests" });
     const templateId = "reference.secured-data-review@1.0.0";
 
-    async function stage(first: string, second: string) {
+    async function stage(first: string, second: string, panel = dialog, activate = trigger) {
       const steps = [first, second].map(name => ({ operation: "systems.create", templateId, name, idempotencyKey: randomUUID() }));
       const preview = await call(client, "aisb_preview_build_plan", { ...workspace, steps });
       const fingerprint = (preview.value as { fingerprint?: string } | undefined)?.fingerprint;
@@ -381,11 +381,11 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
       expect(await call(client, "aisb_request_build_plan_approval", { ...target, steps })).toMatchObject({
         ok: true, value: { fingerprint, status: "pending", revision: 1, approvedSteps: 0, stepCount: 2 },
       });
-      await trigger.click();
-      await expect(dialog).toBeVisible();
-      await dialog.getByRole("button", { name: new RegExp("^Review request " + fingerprint.slice(0, 8)) }).click();
-      await expect(dialog.getByRole("list", { name: "Requested changes" }).getByRole("listitem").nth(0)).toContainText("Create " + first);
-      await expect(dialog.getByRole("list", { name: "Requested changes" }).getByRole("listitem").nth(1)).toContainText("Create " + second);
+      await activate.click();
+      await expect(panel).toBeVisible();
+      await panel.getByRole("button", { name: new RegExp("^Review request " + fingerprint.slice(0, 8)) }).click();
+      await expect(panel.getByRole("list", { name: "Requested changes" }).getByRole("listitem").nth(0)).toContainText("Create " + first);
+      await expect(panel.getByRole("list", { name: "Requested changes" }).getByRole("listitem").nth(1)).toContainText("Create " + second);
       return { target, status: async () => call(client, "aisb_build_plan_approval_status", target) };
     }
 
@@ -417,6 +417,37 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     await expect(dialog.getByText("Request canceled.", { exact: true })).toBeVisible();
     expect(await cancel.status()).toMatchObject({ ok: true, value: { status: "cancelled", revision: 2, approvedSteps: 0 } });
     expect(await call(client, "aisb_list_systems", workspace)).toEqual(baseline);
+    await dialog.getByRole("button", { name: "Close plan review" }).click();
+
+    const chatButton = region.getByRole("button", { name: "Open plan approval chat" });
+    const chat = page.getByRole("region", { name: "Plan approval chat", exact: true });
+    const chatWhole = await stage("Fixture chat queue", "Fixture chat report", chat, chatButton);
+    await chat.getByRole("radio", { name: "Approve all listed changes" }).check();
+    await chat.getByRole("button", { name: "Approve all changes", exact: true }).click();
+    await expect(chat.getByText("All 2 changes are approved.", { exact: true })).toBeVisible();
+    expect(await chatWhole.status()).toMatchObject({ok:true, value:{status:"approved",mode:"whole-plan",revision:2}});
+    await chat.getByRole("button", { name: "Close plan approval chat" }).click();
+    await expect(chatButton).toBeFocused();
+    await trigger.click();
+    await dialog.getByRole("button", { name: new RegExp("^Review request " + chatWhole.target.fingerprint.slice(0,8)) }).click();
+    await dialog.getByRole("button", { name: "Withdraw approval" }).click();
+    await expect(dialog.getByText("Approval withdrawn.", { exact: true })).toBeVisible();
+    expect(await chatWhole.status()).toMatchObject({ok:true,value:{status:"revoked",revision:3}});
+    await dialog.getByRole("button", { name: "Close plan review" }).click();
+
+    const chatEach = await stage("Fixture chat intake", "Fixture chat triage", chat, chatButton);
+    await chat.getByRole("button", { name: "Approve change 1", exact: true }).click();
+    await expect(chat.getByText("1 of 2 changes approved.", { exact: true })).toBeVisible();
+    expect(await chatEach.status()).toMatchObject({ok:true, value:{status:"pending",mode:"each-change",revision:2,approvedSteps:1}});
+    await trigger.click();
+    await dialog.getByRole("button", { name: new RegExp("^Review request " + chatEach.target.fingerprint.slice(0,8)) }).click();
+    await dialog.getByRole("button", { name: "Approve change 2", exact: true }).click();
+    await expect(dialog.getByText("All 2 changes are approved.", { exact: true })).toBeVisible();
+    await dialog.getByRole("button", { name: "Close plan review" }).click();
+    await chat.getByRole("button", { name: "Approve change 2", exact: true }).click();
+    await expect(chat.getByText("The app could not confirm your decision. Check the current request before trying again.",
+      {exact:true})).toBeVisible();
+    expect(await chatEach.status()).toMatchObject({ok:true,value:{status:"approved",revision:3,approvedSteps:2}});
 
     const runStep = (step: number) => call(client, "aisb_run_approved_build_step", { ...whole.target, approvalRevision: 2, step });
     expect(await runStep(2)).toMatchObject({ ok: false, code: "headless.operation-unconfirmed" });
@@ -426,9 +457,11 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     if (!firstResult.value || typeof firstResult.value !== "object") throw new Error("The approved step has no saved receipt.");
     expect(await runStep(1)).toEqual({ ...firstResult, value: { ...firstResult.value, kind: "replayed" } });
     expect(await runStep(2)).toMatchObject({ ok: true, value: { kind: "committed", step: 2 } });
+    expect(await call(client, "aisb_run_approved_build_step", { ...chatEach.target, approvalRevision: 3, step: 1 }))
+      .toMatchObject({ ok: true, value: { kind: "committed", step: 1 } });
     const final = await call(client, "aisb_list_systems", workspace);
     expect(final.ok && Array.isArray(final.value) && final.value.map(item => item.name).sort()).toEqual([
-      "Fixture review queue", "Fixture review report",
+      "Fixture chat intake", "Fixture review queue", "Fixture review report",
     ]);
   } finally {
     try { await mcp?.close(); }

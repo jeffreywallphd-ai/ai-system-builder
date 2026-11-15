@@ -3,7 +3,8 @@ import { createHash } from "node:crypto";
 import { test } from "node:test";
 import type { IpcMainHandlePort } from "../../../../../modules/adapters/transport/ipc-electron/ipcMainHandlePort";
 import { DESKTOP_HEADLESS_PAIRING_CHANNELS, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal } from "../../../../../modules/contracts/headless";
-import { DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS, type DesktopPlanApprovalView } from "../../../../../modules/contracts/headless/desktop-headless-plan-approval";
+import { DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS, DESKTOP_HEADLESS_PLAN_CHAT_CHANNELS,
+  type DesktopPlanApprovalView } from "../../../../../modules/contracts/headless/desktop-headless-plan-approval";
 import { createWorkspaceId } from "../../../../../modules/contracts/workspace";
 import type { composeDesktopHeadlessPlanApprovals } from "../../../../../modules/hosts/desktop/composition/composeDesktopHeadlessPlanApprovals";
 import { createDesktopPreloadApi } from "../../preload/exposedApi";
@@ -149,6 +150,7 @@ test("the desktop approval bridge accepts decisions only for the exact view issu
   let pauseDecision: (() => Promise<void>) | undefined;
   let decisionCalls = 0;
   let commits = 0;
+  let expectedChannel: "app-popup" | "authenticated-chat" = "app-popup";
   const service: ReturnType<typeof composeDesktopHeadlessPlanApprovals> = {
     async list(id, current) {
       assert.equal(id, selectedWorkspace);
@@ -156,7 +158,7 @@ test("the desktop approval bridge accepts decisions only for the exact view issu
       return { ok: true, requests: [{ registeredClientId: clientId, fingerprint: proposalFingerprint, expiresAt: deadline }] };
     },
     async open(target, caller) {
-      assert.equal(caller.channel, "app-popup");
+      assert.equal(caller.channel, expectedChannel);
       assert.equal(caller.isCurrent(), true);
       const preview = corruptView ? { ...plan.preview, workspaceId: createWorkspaceId("different-fixture-workspace") }
         : changedProposal || target.fingerprint === other.fingerprint ? alternative.preview : plan.preview;
@@ -166,7 +168,7 @@ test("the desktop approval bridge accepts decisions only for the exact view issu
     async decide(chosen, raw, caller) {
       assert.deepEqual(chosen, selection);
       assert.deepEqual(raw, { fingerprint: proposalFingerprint, expectedRevision, decision: choice });
-      assert.equal(caller.channel, "app-popup");
+      assert.equal(caller.channel, expectedChannel);
       decisionCalls++;
       await pauseDecision?.();
       if (!caller.isCurrent()) return { ok: false, code: "forbidden" };
@@ -261,6 +263,22 @@ test("the desktop approval bridge accepts decisions only for the exact view issu
   assert.deepEqual(await api.decideHeadlessPlanApproval(available), { fingerprint: proposalFingerprint, ...approved });
   assert.deepEqual(await invoke("decide", available), unavailable);
   assert.equal(commits, 1);
+
+  const popup = await api.openHeadlessPlanApproval(selection);
+  expectedChannel = "authenticated-chat";
+  const chat = await api.openHeadlessPlanChat(selection);
+  assert.ok(popup && chat);
+  assert.notEqual(chat.viewId, popup.viewId);
+  const chatDecision = decisionFor(chat.viewId);
+  assert.deepEqual(await invoke("decide", chatDecision), unavailable);
+  assert.equal(await api.decideHeadlessPlanChat(decisionFor(popup.viewId)), undefined);
+  assert.equal(await api.dismissHeadlessPlanChat(popup.viewId), false);
+  const chatDecide = handlers.get(DESKTOP_HEADLESS_PLAN_CHAT_CHANNELS.decide)!;
+  assert.deepEqual(await chatDecide(second, chatDecision), unavailable);
+  assert.deepEqual(await chatDecide(owned, {...chatDecision, channel:"app-popup"}), unavailable);
+  assert.deepEqual(await api.decideHeadlessPlanChat(chatDecision), {fingerprint:proposalFingerprint, ...approved});
+  assert.equal(await api.decideHeadlessPlanChat(chatDecision), undefined);
+  assert.equal(commits, 2);
 });
 
 test("the production resolver fences a captured main frame when focus or trust changes", () => {

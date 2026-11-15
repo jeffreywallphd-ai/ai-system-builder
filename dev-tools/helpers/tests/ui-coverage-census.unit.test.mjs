@@ -1105,6 +1105,21 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "4c9b5045beb3199e76fcb56683f3e2f97b6acf2e9bc6f8dab98cf46f728fe01d") {
+    const previous = JSON.parse(historicalSource("d259564ece0bb1d8adc32cc56005b878087c2dfa", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "d72ec82f70c7f2c552467ef75cffaee1c1e28ef23a354a43d2aa8d565b3b6541");
+    const expected = structuredClone(previous);
+    const revised = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(sha(JSON.stringify(revised.facts)), "e01271428f783a8f80816f953cbe22324bfc195877c0dd041fe37e35d1a7d10b");
+    const matches = expected.sources.filter(row => row.path === headlessPackagedSpec);
+    assert.equal(matches.length, 1);
+    matches[0].facts = revised.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
   if (sha(JSON.stringify(map)) === "d72ec82f70c7f2c552467ef75cffaee1c1e28ef23a354a43d2aa8d565b3b6541") {
     const approvedStepCommit = "d259564ece0bb1d8adc32cc56005b878087c2dfa";
     const previous = JSON.parse(historicalSource("67f91d8f279da39bd7b15e383c08fe73313aa029", censusDocument));

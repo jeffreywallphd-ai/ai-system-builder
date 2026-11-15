@@ -159,7 +159,7 @@ still holds the exact current approval. A decision withdrawn before the reply
 withholds the result. The already committed effect remains in the journal.
 The portable desktop client forwards only the step reference. It validates
 the exact receipt and reports an uncertain reply without issuing a second
-request. Managed execution needs its own current approval and delivery checks.
+request. Managed execution uses its own current approval and delivery checks.
 The approval list contains at most 32 live proposal references for one
 app user, workspace and host session. Listing requires current access to
 that exact scope. The index and review record share the owned transaction.
@@ -171,22 +171,25 @@ local profile. Opening or deciding a proposal checks the matching live
 plan-review registration and workspace membership under the transaction.
 The service uses the same live registry as the connector. Its requester
 check detects revocation or expiry before commit and when returning results.
-This service still needs a verified app entry point for each approval channel.
-The desktop approval bridge accepts fixed list, open, dismiss and decision messages
-from a trusted current window. A decision requires the exact view that the
-same window opened, including the workspace, requester, proposal fingerprint
-and revision. The bridge checks the canonical fingerprint before returning a
-view. Only a successful reply issues a one-use view ID. Opening a new view
-retires the old ID even when the proposal and revision match. A window can
-also close its exact view before a decision commits. The trusted
-adapter supplies the app-popup channel. Request data cannot choose a channel.
-The desktop app attaches the bridge in its focused, visible, owned main
-window. Its Settings popup lists requests in the selected workspace, shows
-the exact saved-system effects, and requires an explicit decision. Closing
-the popup or switching workspaces discards late replies and sends a request
-to retire the exact view. Once main processes that request, an uncommitted
-decision loses its view authority. A committed decision remains in the plan
-record. Preload exposes the fixed operations and projects bounded results.
+The desktop approval bridge accepts fixed messages from a trusted current
+window. Popup and chat use separate open, dismiss and decision messages.
+The native handler fixes the approval channel. The request body and chat
+text cannot choose it. A decision requires the exact view issued to that
+window and channel. The view binds workspace, requester, plan fingerprint
+and displayed revision. The bridge checks the canonical fingerprint before
+sending the view. Only a successful reply issues a one-use view ID.
+Reopening retires the previous ID for that channel. Closing a view retires
+its exact ID. A decision from either channel advances the same durable
+revision, so a stale view in the other channel cannot overwrite it.
+
+Desktop attaches the bridge in its focused, visible, owned main window.
+Settings offers a popup and an approval conversation for the selected
+workspace. Both show the exact saved-system effects and require an explicit
+choice. Closing a view or switching workspaces discards late replies and
+asks the native handler to retire that view. When main processes retirement,
+an uncommitted decision loses its view authority. A committed decision
+remains in the saved plan. Preload exposes only the fixed operations and
+bounded results.
 Desktop plan-review credentials use a distinct pairing mode. A current
 registration can request plan review only when the host provides that
 capability. It carries no direct editing, conversation or window-control

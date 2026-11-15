@@ -206,6 +206,7 @@ function originalCensusRows(bundle:CensusBundle,map:CensusMap) {
             "205d01b56f5e64bfecd6d77f0efb5b8a5d4cea232522a3e587dfdd43de7d4ae9",
             "e0bf28e6f84706bcf55d47457174fdc31946f415e5938ad852143556b38658de",
             "eff2c4bcec59a0555daeafe0edb50e49543a7587861f8e7995b546cee37dab16",
+            "e01271428f783a8f80816f953cbe22324bfc195877c0dd041fe37e35d1a7d10b",
             jsonSha(bundle.api.sourceFacts(row.path,gitSource(packagedTakeoverOriginalCommit,row.path)))].includes(jsonSha(row.facts))) {
         throw new Error("UI definition Git pin does not match its reviewed Headless source version.");
       }

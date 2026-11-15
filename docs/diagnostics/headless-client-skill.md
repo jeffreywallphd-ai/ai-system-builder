@@ -27,6 +27,13 @@ header keeps Revoke available. If the desktop does not
 offer conversation access, leave that feature unavailable. Installing the skill
 grants none of these permissions.
 
+For a client paired to request plan approval, open **Settings** and expand
+**Local chat clients**. Select **Review plan requests** for the popup or
+**Open plan approval chat** for the conversation. Both show the same saved
+request. Use the controls to approve the whole plan or one change at a
+time, or to deny, cancel, or withdraw approval. A paired client can read
+the result. The app records the decision from the current user.
+
 If the app restarts, open Settings and use the current connection address and
 certificate fingerprint. If a write or turn reply is lost, check saved state
 or task status before replaying the exact request with the original key.

@@ -12,6 +12,11 @@ export const DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS = Object.freeze({
   dismiss: "desktop.headless.plan-approvals.dismiss",
   decide: "desktop.headless.plan-approvals.decide",
 });
+export const DESKTOP_HEADLESS_PLAN_CHAT_CHANNELS = Object.freeze({
+  open: "desktop.headless.plan-chat.open",
+  dismiss: "desktop.headless.plan-chat.dismiss",
+  decide: "desktop.headless.plan-chat.decide",
+});
 
 export interface DesktopPlanApprovalSelection {
   readonly workspaceId: WorkspaceId;

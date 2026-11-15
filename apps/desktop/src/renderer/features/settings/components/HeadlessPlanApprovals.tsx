@@ -8,10 +8,20 @@ const client: HeadlessPlanApprovalClient = {
   decide: decision => getDesktopApi().decideHeadlessPlanApproval?.(decision),
   dismiss: viewId => getDesktopApi().dismissHeadlessPlanApproval?.(viewId),
 };
+const chatClient: HeadlessPlanApprovalClient = {
+  list: client.list,
+  open: selection => getDesktopApi().openHeadlessPlanChat?.(selection),
+  decide: decision => getDesktopApi().decideHeadlessPlanChat?.(decision),
+  dismiss: viewId => getDesktopApi().dismissHeadlessPlanChat?.(viewId),
+};
 
 export function HeadlessPlanApprovals({ workspaceId, workspaceName }: {
   readonly workspaceId: WorkspaceId;
   readonly workspaceName: string;
 }) {
-  return <HeadlessPlanApprovalDialog workspaceId={workspaceId} workspaceName={workspaceName} client={client} />;
+  return <>
+    <HeadlessPlanApprovalDialog workspaceId={workspaceId} workspaceName={workspaceName} client={client} />
+    {getDesktopApi().openHeadlessPlanChat ? <HeadlessPlanApprovalDialog workspaceId={workspaceId} workspaceName={workspaceName}
+      client={chatClient} surface="chat" /> : null}
+  </>;
 }
