@@ -23,6 +23,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   readonly conversation?: ReturnType<typeof composeDesktopHeadlessConversation>;
   readonly presentation?: Parameters<typeof startDesktopHeadlessLoopback>[0]["presentation"];
   readonly planReview?: Parameters<typeof startDesktopHeadlessLoopback>[0]["planReview"];
+  readonly dataPreview?: Parameters<typeof startDesktopHeadlessLoopback>[0]["dataPreview"];
   /** Synthetic composition may exercise access without registering a dispatch handler. */
   readonly canRunConversation?: (workspaceId: WorkspaceId) => Promise<boolean>;
 }) {
@@ -90,6 +91,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
       }, read: dependencies.read, authoring: dependencies.authoring, conversation: dependencies.conversation,
       presentation: dependencies.presentation,
       planReview: dependencies.planReview,
+      dataPreview: dependencies.dataPreview,
       isAdmitted: () => open && endpoint !== undefined,
     });
     let connector: DesktopHeadlessLoopback;

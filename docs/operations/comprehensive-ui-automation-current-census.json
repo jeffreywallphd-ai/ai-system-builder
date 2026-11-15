@@ -15187,8 +15187,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
    "facts": {
-    "sha256": "d32aca3aa9b8244bd69cdf6ecb71d985faba78527986bf2d26fb7721bc389839",
-    "bytes": 45848,
+    "sha256": "93092fae455ce459a99a97b18957d110ab062b5109a4ca3c827f624f2bf7750b",
+    "bytes": 46136,
     "cases": [
      {
       "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart",
@@ -15200,7 +15200,7 @@
      },
      {
       "name": "packaged Desktop observes a running approved turn from a separately paired MCP client",
-      "line": 514
+      "line": 518
      }
     ],
     "dynamicCases": 0,
@@ -15243,15 +15243,15 @@
      },
      {
       "name": "stage",
-      "line": 374
+      "line": 378
      },
      {
       "name": "verifySavedStep",
-      "line": 439
+      "line": 443
      }
     ],
-    "assertionCount": 113,
-    "assertionDigest": "c626e008938546d9b85eef493a18b3e3f0ef2b5ffdd06b4f8fec57423079d6e0",
+    "assertionCount": 114,
+    "assertionDigest": "60d9e591e6bfa05b4372ac9db86ffd091b00d82b37f437660c56cecd31a1323d",
     "assertionExamples": [
      {
       "line": 38,

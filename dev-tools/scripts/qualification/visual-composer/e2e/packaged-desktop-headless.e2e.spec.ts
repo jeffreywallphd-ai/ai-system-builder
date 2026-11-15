@@ -362,9 +362,13 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     expect(names).toEqual([
       "aisb_build_plan_approval_status", "aisb_host_describe", "aisb_list_systems", "aisb_list_templates",
       "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
-      "aisb_preview_build_plan", "aisb_read_conversation_task", "aisb_read_system", "aisb_request_build_plan_approval",
+      "aisb_preview_build_plan", "aisb_preview_selected_local_file", "aisb_read_conversation_task", "aisb_read_system",
+      "aisb_request_build_plan_approval",
       "aisb_run_approved_build_step", "aisb_saved_system_changes", "aisb_saved_system_snapshot",
     ]);
+    expect(await call(client, "aisb_preview_selected_local_file", {
+      ...workspace, taskId: "ingestion.unselected-fixture", fileId: "file.unselected-fixture", taskRevision: 1,
+    })).toMatchObject({ ok: false, code: "headless.forbidden" });
     const baseline = await call(client, "aisb_list_systems", workspace);
     expect(baseline.ok).toBe(true);
     const trigger = region.getByRole("button", { name: "Review plan requests" });

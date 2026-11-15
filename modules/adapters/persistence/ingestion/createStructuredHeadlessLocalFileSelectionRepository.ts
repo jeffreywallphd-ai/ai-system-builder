@@ -30,19 +30,6 @@ export function createStructuredHeadlessLocalFileSelectionRepository(
     throw new Error("Local file selection policy requires the platform transaction owner.");
   const ownWrite = writePolicy ? writePolicy.platform.runInOwnedTransaction!.bind(writePolicy.platform) : owned;
 
-  async function readPreview(transaction: StructuredDocumentStore, selection: HeadlessLocalFileSelection) {
-    const { workspaceId, taskId } = selection.target;
-    const source = await createStructuredIngestionAcquisitionRepository(transaction).readTask(workspaceId, taskId);
-    return source ? projectHeadlessLocalFileImport(source, selection.target, now()) :
-      { ok: false, code: "headless.forbidden" } as const;
-  }
-
-  async function readMatch(transaction: StructuredDocumentStore, expected: HeadlessLocalFileSelection) {
-    if (expected.organizationId !== organizationId) return false;
-    const found = await transaction.readDocument(namespace, selectionKey(expected));
-    return Boolean(found && sameSelection(validate(found.value), expected));
-  }
-
   return {
     async record(value, expectedRevision, isCurrent) {
       const selection = validate(value);
@@ -53,7 +40,7 @@ export function createStructuredHeadlessLocalFileSelectionRepository(
         if (!isCurrent()) return;
         if (writePolicy && (!await writePolicy.allows(owner, selection) || !isCurrent())) return;
         const transaction = writePolicy ? owner.forOrganization(organizationId) : owner;
-        if (!(await readPreview(transaction, selection)).ok || !isCurrent()) return;
+        if (!(await readPreview(transaction, selection, now)).ok || !isCurrent()) return;
         const found = await transaction.readDocument(namespace, key);
         if (found) {
           const existing = validate(found.value);
@@ -77,11 +64,32 @@ export function createStructuredHeadlessLocalFileSelectionRepository(
     async observe(value) {
       const selection = validate(value);
       if (selection.organizationId !== organizationId) return;
-      return owned(async transaction => {
-        if (await readMatch(transaction, selection)) return readPreview(transaction, selection);
-      }, () => {});
+      return owned(transaction => readStructuredHeadlessLocalFileSelection(transaction, selection, now), () => {});
     },
   };
+}
+
+/** Read the exact selection and task through a view supplied by the owning caller. */
+export async function readStructuredHeadlessLocalFileSelection(
+  transaction: StructuredDocumentStore,
+  value: HeadlessLocalFileSelection,
+  now: () => number = Date.now,
+) {
+  const selection = validate(value);
+  if (await readMatch(transaction, selection)) return readPreview(transaction, selection, now);
+}
+
+async function readMatch(transaction: StructuredDocumentStore, expected: HeadlessLocalFileSelection) {
+  if (expected.organizationId !== transaction.organizationId) return false;
+  const found = await transaction.readDocument(namespace, selectionKey(expected));
+  return Boolean(found && sameSelection(validate(found.value), expected));
+}
+
+async function readPreview(transaction: StructuredDocumentStore, selection: HeadlessLocalFileSelection, now: () => number) {
+  const { workspaceId, taskId } = selection.target;
+  const source = await createStructuredIngestionAcquisitionRepository(transaction).readTask(workspaceId, taskId);
+  return source ? projectHeadlessLocalFileImport(source, selection.target, now()) :
+    { ok: false, code: "headless.forbidden" } as const;
 }
 
 function selectionKey({ target }: HeadlessLocalFileSelection) {

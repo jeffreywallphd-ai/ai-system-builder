@@ -6,7 +6,7 @@ import {
 } from "../../ingestion";
 import { createWorkspaceId } from "../../workspace";
 import {
-  projectHeadlessLocalFileImport, readHeadlessLocalFileImportRequest,
+  projectHeadlessLocalFileImport, readHeadlessLocalFileImportRequest, readHeadlessLocalFileImportResult,
   type HeadlessLocalFileImportRequest,
 } from "../headless-data-local-file";
 import { HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId } from "../headless-read-request";
@@ -57,6 +57,20 @@ test("a complete staged file projects only the exact approval metadata and effec
   const empty = projectHeadlessLocalFileImport({ ...task, status: "queued", files: [emptyFile] }, input, now);
   assert.ok(empty.ok);
   assert.equal(empty.value.fileBytes, 0);
+});
+
+test("the local preview reply carries only validated metadata for the same file and revision", () => {
+  const result = projectHeadlessLocalFileImport(task, input, now);
+  assert.ok(result.ok);
+  assert.deepEqual(readHeadlessLocalFileImportResult(result, input), result);
+  for (const extra of [
+    { fileName: "synthetic-private.csv" }, { bytes: [10] }, { checkpointId: "checkpoint.private" },
+    { fileId: "file.other" }, { taskRevision: 4 }, { fileBytes: Number.MAX_SAFE_INTEGER },
+    { externalProviderCalls: 1 }, { effect: "upload-provider" }, { mediaType: "unsupported without type" },
+  ]) assert.deepEqual(readHeadlessLocalFileImportResult({ ok: true, value: { ...result.value, ...extra } }, input),
+    { ok: false, code: "headless.unavailable" });
+  assert.deepEqual(readHeadlessLocalFileImportResult({ ok: false, code: "headless.stale", message: "private" }, input),
+    { ok: false, code: "headless.unavailable" });
 });
 
 test("reject unrelated, lost, stale, incomplete, expired, and non-local selections without publication", () => {

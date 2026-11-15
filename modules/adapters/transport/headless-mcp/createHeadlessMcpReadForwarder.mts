@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
 import type { HeadlessPlanReviewAgentRequest, HeadlessPlanReviewAgentResult, HeadlessPlanStepRequest,
-  HeadlessPlanStepResult } from "../../../contracts/headless/index.js";
+  HeadlessPlanStepResult, HeadlessLocalFileImportRequest, HeadlessLocalFileImportResult } from "../../../contracts/headless/index.js";
 import type { HeadlessApprovedTurnRequest, HeadlessApprovedTurnResult, HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessWindowRequest, HeadlessWindowResult } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
@@ -102,12 +102,12 @@ const unavailable: ReadResult = { ok: false, code: deadlineCode };
 type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
 export type HeadlessPlanReviewForwardRequest = HeadlessPlanReviewAgentRequest & { readonly version: typeof HEADLESS_CONTRACT_VERSION };
 type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest |
-  HeadlessPlanReviewForwardRequest | HeadlessPlanStepRequest;
+  HeadlessPlanReviewForwardRequest | HeadlessPlanStepRequest | HeadlessLocalFileImportRequest;
 const unknownWrite: HeadlessAuthoringWireResult = { ok: false, code: "headless.operation-unconfirmed" };
 const unknownTurn = { ok: false, code: "headless.operation-unconfirmed" } as const;
 export const MANAGED_HEADLESS_READS = ["host.describe", "templates.list", "systems.read", "plan.capabilities"] as const;
 type ForwardResult = ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult |
-  HeadlessPlanReviewAgentResult | HeadlessPlanStepResult;
+  HeadlessPlanReviewAgentResult | HeadlessPlanStepResult | HeadlessLocalFileImportResult;
 
 export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly httpsOrigin?: string;
@@ -186,9 +186,10 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const presentationAddress = new URL(headless.HEADLESS_WINDOW_CONTROL_PATH, endpoint);
   const planReviewAddress = enablePlanReview ? new URL(headless.HEADLESS_PLAN_REVIEW_PATH, endpoint) : undefined;
   const planStepAddress = enablePlanReview ? new URL(headless.HEADLESS_PLAN_STEP_PATH, endpoint) : undefined;
+  const localFilePreviewAddress = enablePlanReview ? new URL(headless.HEADLESS_LOCAL_FILE_PREVIEW_PATH, endpoint) : undefined;
   const agent = loopback.createDesktopPinnedLoopbackAgent(endpoint, fingerprint);
   const authorization = `Bearer ${credential}`;
-  return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress,
+  return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress, localFilePreviewAddress,
     agent, authorization, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
 }
@@ -197,6 +198,7 @@ function createForwarder(options: {
   address: URL; authoringAddress: URL; conversationAddress: URL; presentationAddress: URL;
   planReviewAddress?: URL;
   planStepAddress?: URL;
+  localFilePreviewAddress?: URL;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
@@ -206,6 +208,25 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
+    if (input.operation === "data.prepare-local-file") {
+      if (!options.localFilePreviewAddress) return { ok: false, code: "headless.forbidden" };
+      const decoded = headless.readHeadlessLocalFileImportRequest(input, input.input.hostIncarnationId);
+      if (!decoded.ok) return decoded;
+      if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
+      active++;
+      try {
+        const { status, raw } = await sendRead(options.localFilePreviewAddress, agent, authorization, decoded.request, signal, headers);
+        const result = headless.readHeadlessLocalFileImportResult(raw, decoded.request.input);
+        if (result.ok) return status === 200 && result.value.checkpointExpiresAt > Date.now() &&
+          !JSON.stringify(result).includes(authorization.slice("Bearer ".length)) ? result : unavailable;
+        if ((status === 403 && result.code === "headless.forbidden") ||
+            (status === 400 && result.code === "headless.invalid-request") ||
+            (status === 409 && (result.code === "headless.host-changed" ||
+              result.code === "headless.source-not-ready" || result.code === "headless.stale"))) return result;
+        return unavailable;
+      } catch { return unavailable; }
+      finally { active--; }
+    }
     if (input.operation === "plan.run-step") {
       if (!options.planStepAddress) return { ok: false, code: "headless.forbidden" };
       const accepted = headless.readHeadlessPlanStepRequest(input, input.input.hostIncarnationId);

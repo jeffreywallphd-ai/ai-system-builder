@@ -573,8 +573,8 @@ checks caller liveness and the checkpoint deadline before commit. The
 last owned read checks the saved selection and staged file together. It
 follows the last awaited policy check and orders the preview after an
 earlier replacement or upload change. The application checks the grant
-and deadline again before returning. The host still needs an outward reply
-fence. The selection grants no save or provider transfer.
+and deadline again before returning. Each host must also fence its outward
+reply. The selection grants no save or provider transfer.
 
 The Desktop entry for recording a selection uses the current focused and
 trusted main frame. The host looks up the selected plan-review client
@@ -584,5 +584,14 @@ and client must still be current when Desktop releases the app receipt.
 The owned selection transaction checks workspace access and the same
 registration again before saving. The app receives a receipt for that
 specific selection action. Finding a current offer requires a new preview.
-The agent cannot invoke this app entry. The renderer action,
-remote agent preview and resulting plan execution need separate wiring.
+The agent cannot invoke this app entry.
+
+The pinned Desktop connector offers a read-only preview to the exact
+plan-review registration selected for the upload. It checks workspace
+Data read access and uses an owned read to hold the selection and task
+observation through response release. Success and source-specific stale
+or readiness results need that final observation. The connector rejects
+unknown request and response fields and returns only bounded file
+metadata. The official Desktop MCP client exposes this one preview.
+The renderer selection action, managed browser flow and approved save
+still need host wiring.

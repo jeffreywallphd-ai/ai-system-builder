@@ -1,5 +1,6 @@
 import {
   INGESTION_TASK_MAXIMUM_CHUNK_BYTES,
+  INGESTION_TASK_MAXIMUM_FILE_BYTES,
   normalizeIngestionTaskFileId,
   normalizeIngestionTaskRecord,
   type IngestionTaskFileId,
@@ -14,6 +15,8 @@ import {
 import { readHeadlessIngestionStatusRequest, type HeadlessIngestionStatusRequest } from "./headless-data-task-status";
 
 type TaskTarget = HeadlessIngestionStatusRequest["input"];
+
+export const HEADLESS_LOCAL_FILE_PREVIEW_PATH = "/aisb-headless/v1/data/local-file-preview";
 
 export interface HeadlessLocalFileImportRequest {
   readonly version: typeof HEADLESS_CONTRACT_VERSION;
@@ -40,6 +43,39 @@ const invalid = { ok: false, code: "headless.invalid-request" } as const;
 const denied = { ok: false, code: "headless.forbidden" } as const;
 const stale = { ok: false, code: "headless.stale" } as const;
 const notReady = { ok: false, code: "headless.source-not-ready" } as const;
+const unavailable = { ok: false, code: "headless.unavailable" } as const;
+const previewErrors = ["headless.invalid-request", "headless.host-changed", "headless.forbidden",
+  "headless.stale", "headless.source-not-ready", "headless.unavailable"] as const;
+type PreviewError = typeof previewErrors[number];
+
+export type HeadlessLocalFileImportResult =
+  | { readonly ok: true; readonly value: HeadlessLocalFileImportPreview }
+  | { readonly ok: false; readonly code: PreviewError };
+
+/** Rebuild a bounded, exact response before allowing it to cross a host or connector. */
+export function readHeadlessLocalFileImportResult(
+  value: unknown,
+  expected: HeadlessLocalFileImportRequest["input"],
+): HeadlessLocalFileImportResult {
+  try {
+    const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["ok", "code", "value"]);
+    if (raw.ok === false && !("value" in raw) && previewErrors.includes(raw.code as PreviewError))
+      return { ok: false, code: raw.code as PreviewError };
+    if (raw.ok !== true || "code" in raw) return unavailable;
+    const { workspaceId, taskId, fileId, taskRevision, mediaType, fileBytes, checkpointExpiresAt, effect, externalProviderCalls } =
+      readStrictPassiveRecord(raw.value, ["workspaceId", "taskId", "fileId", "taskRevision", "mediaType", "fileBytes",
+        "checkpointExpiresAt", "effect", "externalProviderCalls"]);
+    if (workspaceId !== expected.workspaceId || taskId !== expected.taskId || fileId !== expected.fileId ||
+        taskRevision !== expected.taskRevision || typeof mediaType !== "string" || mediaType.length > 128 ||
+        !/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/.test(mediaType) || hasKnownPassiveCredential(mediaType) ||
+        typeof fileBytes !== "number" || !Number.isSafeInteger(fileBytes) || fileBytes < 0 ||
+        fileBytes > INGESTION_TASK_MAXIMUM_FILE_BYTES || typeof checkpointExpiresAt !== "number" ||
+        !Number.isSafeInteger(checkpointExpiresAt) || checkpointExpiresAt < 1 ||
+        effect !== "save-local-source" || externalProviderCalls !== 0) return unavailable;
+    return { ok: true, value: { workspaceId: expected.workspaceId, taskId: expected.taskId, fileId: expected.fileId,
+      taskRevision: expected.taskRevision, mediaType, fileBytes, checkpointExpiresAt, effect, externalProviderCalls } };
+  } catch { return unavailable; }
+}
 
 export function readHeadlessLocalFileImportRequest(value: unknown, currentHost: HeadlessHostIncarnationId):
   { readonly ok: true; readonly request: HeadlessLocalFileImportRequest } |

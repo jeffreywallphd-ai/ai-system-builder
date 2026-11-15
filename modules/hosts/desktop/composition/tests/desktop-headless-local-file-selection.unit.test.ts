@@ -148,3 +148,38 @@ test("suspending role access after the last preflight denies the actual owned se
     assert.equal(await isSelected(request), false);
   } finally { registry.close(); }
 });
+
+test("only the exact paired agent can preview the current selection and owned data protects reply release", async () => {
+  const { service, registry, makeRequest, tasks, task } = await fixture();
+  try {
+    const appSelection = await makeRequest("plan-review");
+    const otherSelection = await makeRequest("plan-review");
+    const { registeredClientId, expectedSelectionRevision: _expected, ...input } = appSelection.input;
+    const request = { version: HEADLESS_CONTRACT_VERSION, operation: "data.prepare-local-file", input } as const;
+    const grant = { organizationId, principalId: identity.principalId, registeredClientId,
+      workspaceIds: [workspaceId], operations: [], planReview: true as const, isCurrent: () => true };
+    assert.deepEqual((await service.preview(request, grant)).result, forbidden);
+    assert.ok((await service.select(appSelection, () => true)).ok);
+    assert.deepEqual((await service.preview(request, { ...grant, planReview: undefined })).result, forbidden);
+    assert.deepEqual((await service.preview(request, { ...grant, registeredClientId: otherSelection.input.registeredClientId })).result, forbidden);
+    assert.deepEqual((await service.preview(request, { ...grant, workspaceIds: [] })).result, forbidden);
+    const pending = await service.preview(request, grant);
+    assert.deepEqual(pending.result, { ok: true, value: { workspaceId, taskId, fileId, taskRevision: 1,
+      mediaType: "text/csv", fileBytes: 0, checkpointExpiresAt: now() + 60_000, effect: "save-local-source", externalProviderCalls: 0 } });
+    let releases = 0;
+    const send = () => { releases++; return true; };
+    assert.equal(await pending.publishIfCurrent?.(send), true);
+    assert.ok((await service.select({ ...otherSelection,
+      input: { ...otherSelection.input, expectedSelectionRevision: 1 } }, () => true)).ok);
+    assert.equal(await pending.publishIfCurrent?.(send), false);
+    assert.deepEqual((await service.preview(request, grant)).result, forbidden);
+    assert.ok((await service.select({ ...appSelection,
+      input: { ...appSelection.input, expectedSelectionRevision: 2 } }, () => true)).ok);
+    const current = await service.preview(request, grant);
+    assert.ok(current.result.ok);
+    await tasks.saveTask({ ...task, revision: 2, updatedAt: "2026-11-13T00:00:01.000Z" }, 1);
+    assert.equal(await current.publishIfCurrent?.(send), false);
+    assert.deepEqual((await service.preview(request, grant)).result, { ok: false, code: "headless.stale" });
+    assert.equal(releases, 1);
+  } finally { registry.close(); }
+});

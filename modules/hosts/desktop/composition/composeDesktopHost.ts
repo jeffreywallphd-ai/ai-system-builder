@@ -2347,6 +2347,11 @@ export function composeDesktopHost(
                 ...planReviewOwner, workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
                 systems: systemBuilder, audit: headlessAudit,
               }) : undefined,
+              dataPreview: planReviewOwner ? {
+                hostIncarnationId,
+                execute: async (request, grant) => headlessLocalFileSelection?.preview(request, grant) ??
+                  { result: { ok: false, code: "headless.unavailable" } },
+              } : undefined,
               authoring: options.persistence?.documents ? composeDesktopHeadlessAuthoring({
                 hostIncarnationId, identity, platformDocuments: options.persistence.documents, rootDirectory: registerOptions.storageRootDirectory,
                 workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,

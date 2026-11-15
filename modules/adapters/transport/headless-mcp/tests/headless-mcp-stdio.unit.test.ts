@@ -14,10 +14,11 @@ import { createStructuredHeadlessPlanReviewRepository } from "../../../persisten
 import { HeadlessBuildPlanReviewUseCase } from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
 import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../../headless-loopback";
-import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_STEP_PATH, HEADLESS_READ_OPERATIONS,
+import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_LOCAL_FILE_PREVIEW_PATH, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_STEP_PATH, HEADLESS_READ_OPERATIONS,
   isHeadlessHostIncarnationId, parseHeadlessReadRequest, readHeadlessPlanReviewAgentRequest,
   readHeadlessPlanReviewAgentResult, type HeadlessChangeCursor } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
+import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../contracts/ingestion";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { boundHeadlessMcpStdio } from "../boundHeadlessMcpStdio.mjs";
@@ -33,6 +34,7 @@ const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_sy
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
 const planReviewTools = ["aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
   "aisb_request_build_plan_approval", "aisb_run_approved_build_step"];
+const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_release_window", "aisb_renew_window",
   "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
@@ -266,6 +268,13 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     target.scope.workspaceId === workspaceId);
   let effectCount = 0;
   let requestCount = 0;
+  let sourceReads = 0;
+  let wrongPreview = false;
+  const sourceTarget = { hostIncarnationId, workspaceId, taskId: normalizeIngestionTaskId("ingestion.fixture"),
+    fileId: normalizeIngestionTaskFileId("file.fixture"), taskRevision: 4 };
+  const sourceValue = { workspaceId, taskId: sourceTarget.taskId, fileId: sourceTarget.fileId, taskRevision: 4,
+    mediaType: "text/csv", fileBytes: 16, checkpointExpiresAt: Date.now() + 60_000,
+    effect: "save-local-source" as const, externalProviderCalls: 0 as const };
   const connector = await startDesktopHeadlessLoopback({
     registrations: registry,
     async read(raw, getGrant) {
@@ -279,6 +288,13 @@ test("the plan-review stdio mode can run an exact approved step after the app re
         return { ok: true, operation: "plan.capabilities", value: { workspaceId, actions: ["systems.create"], approval: "required" } };
       return { ok: false, code: "headless.unsupported-operation" };
     },
+    dataPreview: { hostIncarnationId, async execute(request, grant) {
+      assert.deepEqual(request.input, sourceTarget);
+      assert.ok(grant.planReview);
+      sourceReads++;
+      return { result: { ok: true, value: { ...sourceValue, taskRevision: wrongPreview ? 5 : 4 } },
+        publishIfCurrent: async publish => grant.isCurrent?.() === true && publish() };
+    } },
     planReview: { hostIncarnationId, async execute(input, grant) {
       const { fingerprint, workspaceId } = input.target;
       const target = { hostIncarnationId, fingerprint, scope: { workspaceId, organizationId: grant.organizationId,
@@ -324,8 +340,14 @@ test("the plan-review stdio mode can run an exact approved step after the app re
         AISB_HEADLESS_ENABLE_CONVERSATION: "1", AISB_HEADLESS_ENABLE_PRESENTATION: "1", TSX_DISABLE_CACHE: "1" },
       stderr: "ignore", maxBufferSize: 256 * 1024,
     }));
-    assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(), [...expectedTools, ...planReviewTools].sort());
+    assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(),
+      [...expectedTools, ...planReviewTools, desktopDataPreviewTool].sort());
     const call = async (name: string, args: Record<string, unknown>) => resultText(await client.callTool({ name, arguments: args }));
+    assert.deepEqual(await call(desktopDataPreviewTool, sourceTarget), { ok: true, value: sourceValue });
+    wrongPreview = true;
+    assert.deepEqual(await call(desktopDataPreviewTool, sourceTarget), { ok: false, code: "headless.unavailable" });
+    assert.equal(sourceReads, 2);
+    assert.equal(effectCount, 0);
     const scope = { hostIncarnationId, workspaceId };
     assert.deepEqual(await call("aisb_plan_capabilities", scope), { ok: true, operation: "plan.capabilities",
       value: { workspaceId, actions: ["systems.create"], approval: "required" } });
@@ -378,6 +400,14 @@ test("the pinned plan forwarder validates status and preserves uncertain writes"
   const fingerprint = "7a".repeat(32);
   const expiresAt = Date.now() + 60_000;
   let reportedSteps = 1;
+  const localTarget = { hostIncarnationId, workspaceId, taskId: normalizeIngestionTaskId("ingestion.pinned-fixture"),
+    fileId: normalizeIngestionTaskFileId("file.pinned-fixture"), taskRevision: 4 };
+  const localValue = { workspaceId, taskId: localTarget.taskId, fileId: localTarget.fileId, taskRevision: 4,
+    mediaType: "text/csv", fileBytes: 22, checkpointExpiresAt: expiresAt,
+    effect: "save-local-source", externalProviderCalls: 0 };
+  const localReplies = [localValue, { ...localValue, fileId: "file.other" },
+    { ...localValue, privatePath: "synthetic-private.csv" }];
+  let localRequests = 0;
   const stepReplies = [
     {status:503, body:{ok:false, code:"headless.invalid-request"}},
     {status:503, body:{unexpected:true}},
@@ -391,6 +421,12 @@ test("the pinned plan forwarder validates status and preserves uncertain writes"
   const listener = createServer({ key: certificate.private, cert: certificate.cert }, (incoming, response) => {
     incoming.resume();
     incoming.once("end", () => {
+      if (incoming.url === HEADLESS_LOCAL_FILE_PREVIEW_PATH) {
+        const value = JSON.stringify({ ok: true, value: localReplies[localRequests++] });
+        response.writeHead(200, { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(value) });
+        response.end(value);
+        return;
+      }
       if (incoming.url === HEADLESS_PLAN_STEP_PATH) {
         const reply = stepReplies[stepRequests++];
         if (!reply) { incoming.socket.destroy(); return; }
@@ -415,6 +451,11 @@ test("the pinned plan forwarder validates status and preserves uncertain writes"
     const pin = new X509Certificate(certificate.cert).fingerprint256.replaceAll(":", "").toLowerCase();
     const forward = createHeadlessMcpReadForwarder("https://127.0.0.1:" + address.port, pin, "A".repeat(43), false, false, false, true);
     assert.ok(forward);
+    const localRequest = { version, operation: "data.prepare-local-file", input: localTarget } as const;
+    assert.deepEqual(await forward(localRequest), { ok: true, value: localValue });
+    for (const _ of [1, 2])
+      assert.deepEqual(await forward(localRequest), { ok: false, code: "headless.unavailable" });
+    assert.equal(localRequests, 3);
     const request = readHeadlessPlanReviewAgentRequest({ version, operation: "plan.submit",
       input: { hostIncarnationId, workspaceId, fingerprint, steps: [{ operation: "systems.create", name: "Fixture proposal",
         templateId: "reference.secured-data-review@1.0.0", idempotencyKey: randomUUID() }] } }, hostIncarnationId);
@@ -448,7 +489,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
     { mode: "authoring-and-conversation", tools: [...expectedTools, ...authoringTools, conversation].sort() },
     { mode: "presentation", tools: [...expectedTools, ...presentationTools].sort() },
     { mode: "all", tools: [...expectedTools, ...authoringTools, conversation, ...presentationTools].sort() },
-    { mode: "plan-review", tools: [...expectedTools, ...planReviewTools].sort() },
+    { mode: "plan-review", tools: [...expectedTools, ...planReviewTools, desktopDataPreviewTool].sort() },
     { mode: "managed-plan-review", tools: ["aisb_host_describe", "aisb_list_templates", "aisb_read_system", ...planReviewTools].sort() },
   ]);
   const schemas = new Map(reference.tools.map(({ name, inputSchema }) => [name, inputSchema]));
@@ -481,6 +522,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   assertExactObject("aisb_request_build_plan_approval", [...workspace, "fingerprint", "steps"]);
   assertExactObject("aisb_build_plan_approval_status", [...workspace, "fingerprint"]);
   assertExactObject("aisb_run_approved_build_step", [...workspace, "fingerprint", "approvalRevision", "step"]);
+  assertExactObject(desktopDataPreviewTool, [...workspace, "taskId", "fileId", "taskRevision"]);
   assertExactObject("aisb_preview_edits", [...base, "edits"]);
   assertExactObject("aisb_apply_edits", [...base, "edits", "previewDigest", "idempotencyKey"]);
   const turn = assertExactObject(conversation, [...workspace, "planId", "planRevision", "sessionId", "snapshotRevision", "key", "text"]);

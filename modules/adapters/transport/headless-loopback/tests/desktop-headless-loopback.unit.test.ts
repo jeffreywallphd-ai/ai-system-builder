@@ -5,9 +5,10 @@ import { connect } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { createOrganizationId } from "../../../../contracts/organization";
+import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../contracts/ingestion";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { HEADLESS_APPROVED_TURN_OPERATION, HEADLESS_APPROVED_TURN_PATH, HEADLESS_CONTRACT_VERSION, HEADLESS_PLAN_REVIEW_PATH,
-  HEADLESS_WINDOW_CONTROL_PATH, UI_CONTROL_VERSION, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
+  HEADLESS_LOCAL_FILE_PREVIEW_PATH, HEADLESS_WINDOW_CONTROL_PATH, UI_CONTROL_VERSION, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
   readHeadlessPlanReviewAgentResult, type DesktopHeadlessClientAccess } from "../../../../contracts/headless";
 import { createInMemoryStructuredDocumentStore } from "../../../persistence/shared";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
@@ -60,6 +61,71 @@ function registrations() {
     canReadWorkspace: async (id) => id === workspaceId,
   });
 }
+
+test("the paired Desktop preview route rejects app actions, foreign grants and withdrawn replies", { timeout: 12_000 }, async () => {
+  const registry = createDesktopHeadlessClientAuthority({
+    documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId), identity,
+    canReadWorkspace: async target => target === workspaceId,
+    canReviewPlans: async target => target === workspaceId,
+  });
+  const target = { hostIncarnationId: incarnation, workspaceId, taskId: normalizeIngestionTaskId("ingestion.source"),
+    fileId: normalizeIngestionTaskFileId("file.source"), taskRevision: 3 };
+  const request = { version: HEADLESS_CONTRACT_VERSION, operation: "data.prepare-local-file", input: target };
+  const value = { workspaceId, taskId: target.taskId, fileId: target.fileId, taskRevision: target.taskRevision,
+    mediaType: "text/csv", fileBytes: 64, checkpointExpiresAt: Date.now() + 60_000,
+    effect: "save-local-source" as const, externalProviderCalls: 0 as const };
+  let release = true;
+  let responseShape = true;
+  let stale = false;
+  let reads = 0;
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: registry,
+    async read() { return { ok: false, code: "headless.forbidden" }; },
+    planReview: { hostIncarnationId: incarnation, async execute() { return { ok: false, code: "headless.forbidden" }; } },
+    dataPreview: { hostIncarnationId: incarnation, async execute(input, grant) {
+      reads++;
+      assert.deepEqual(input.input, target);
+      assert.equal(grant.planReview, true);
+      if (stale) return { result: { ok: false, code: "headless.stale" },
+        publishIfCurrent: async publish => release && publish() };
+      return { result: { ok: true, value: { ...value, ...(responseShape ? {} : { fileName: "synthetic-private-name.csv" }) } },
+        publishIfCurrent: async publish => release && publish() };
+    } },
+  });
+  try {
+    async function credentials(mode: DesktopHeadlessClientAccess) {
+      const pending = await registry.beginPairing(workspaceId, () => true, mode);
+      assert.equal(pending.status, "ready");
+      const paired = await post(connector, pairPath, JSON.stringify({ pairingCode: pending.pairingCode }));
+      assert.equal(paired.status, 200);
+      assert.ok(paired.json.value?.credential);
+      return { Authorization: "Bearer " + paired.json.value.credential };
+    }
+    const readOnly = await credentials("read");
+    const review = await credentials("plan-review");
+    const local = (value: object, headers = review) =>
+      post(connector, HEADLESS_LOCAL_FILE_PREVIEW_PATH, JSON.stringify(value), headers);
+    assert.equal((await local(request, readOnly)).status, 403);
+    assert.equal((await local({ ...request, operation: "data.select-local-file" })).status, 400);
+    assert.equal((await local({ ...request, input: { ...target, bytes: [1] } })).status, 400);
+    assert.equal((await local({ ...request, input: { ...target, workspaceId: createWorkspaceId("workspace.foreign") } })).status, 403);
+    assert.equal(reads, 0);
+    assert.deepEqual((await local(request)).json, { ok: true, value });
+    release = false;
+    assert.deepEqual((await local(request)).json, { ok: false, code: "headless.forbidden" });
+    release = true;
+    responseShape = false;
+    assert.deepEqual((await local(request)).json, { ok: false, code: "headless.unavailable" });
+    stale = true;
+    assert.deepEqual((await local(request)).json, { ok: false, code: "headless.stale" });
+    release = false;
+    assert.deepEqual((await local(request)).json, { ok: false, code: "headless.forbidden" });
+    assert.equal(reads, 5);
+  } finally {
+    registry.close();
+    await connector.close();
+  }
+});
 
 test("the pinned desktop plan-review route admits stage and status only for a dedicated current grant", { timeout: 12_000 }, async () => {
   const documents = createInMemoryStructuredDocumentStore();

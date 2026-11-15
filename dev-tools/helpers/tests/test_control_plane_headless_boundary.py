@@ -36,6 +36,9 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         desktop_selection_test = "apps/desktop/src/main/tests/desktop-headless-local-file-selection-ipc.unit.test.ts"
         self.assertIn(desktop_selection_test, self.plan([desktop_selection])[check]["argv"])
         self.assertNotIn("focused-tests", self.plan([desktop_selection, desktop_selection_test], check))
+        data_transport_reference = "skills/control-ai-system-builder/references/mcp-tools.json"
+        data_transport_test = "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts"
+        self.assertIn(data_transport_test, self.plan([data_transport_reference])["headless-desktop-pinned-mcp"]["argv"])
         self.assertIn("focused-tests", self.plan([owner, "modules/contracts/headless/unrelated.ts"], check))
 
     def test_window_authority_check_covers_the_exact_core_and_keeps_neighbor_fallback(self):

@@ -152,6 +152,8 @@ HEADLESS_PACKAGED_SOURCES = (
 )
 HEADLESS_MCP_SOURCES = (
     "modules/contracts/headless/headless-approved-turn.ts",
+    "modules/contracts/headless/headless-data-local-file.ts",
+    "modules/adapters/transport/headless-loopback/startDesktopHeadlessLoopback.ts",
     "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
     "modules/adapters/transport/headless-mcp/README.md",
     "modules/adapters/transport/headless-mcp/boundHeadlessMcpStdio.mts",
@@ -160,6 +162,7 @@ HEADLESS_MCP_SOURCES = (
     "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
     "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
     "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts",
+    "skills/control-ai-system-builder/references/mcp-tools.json",
 )
 
 PUBLISHED_FORM_CHECKS = {
@@ -709,6 +712,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/desktop/composition/composeDesktopHeadlessLocalFileSelection.ts",
             "modules/hosts/desktop/composition/composeDesktopIngestionFeature.ts",
             "modules/hosts/desktop/composition/composeDesktopHost.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessConnection.ts",
             "modules/hosts/desktop/composition/tests/desktop-headless-local-file-selection.unit.test.ts",
             "apps/desktop/src/main/desktopHeadlessLocalFileSelectionIpc.ts",
             "apps/desktop/src/main/tests/desktop-headless-local-file-selection-ipc.unit.test.ts",
