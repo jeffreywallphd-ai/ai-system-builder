@@ -12,6 +12,17 @@ class HeadlessReadRoutingTests(unittest.TestCase):
     def plan(self, paths, *required):
         return {row["id"]: row for row in catalog.plan(HELPERS.parents[1], paths, ["architecture", *required], "a" * 64)["selected"]}
 
+    def test_data_task_status_check_covers_exact_contract_and_application_service(self):
+        check = "headless-data-task-status"
+        owner = "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts"
+        barrel = "modules/contracts/headless/index.ts"
+        self.assertIn(check, self.plan([owner]))
+        selected = self.plan([owner, barrel], check)
+        self.assertNotIn("focused-tests", selected)
+        self.assertIn("modules/contracts/headless/tests/headless-data-task-status.unit.test.ts", selected[check]["argv"])
+        self.assertIn("modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts", selected[check]["argv"])
+        self.assertIn("focused-tests", self.plan([owner, "modules/contracts/headless/unrelated.ts"], check))
+
     def test_window_authority_check_covers_the_exact_core_and_keeps_neighbor_fallback(self):
         check = "headless-ui-control-authority"
         source = "modules/application/services/ui-control/ui-control-authority.service.ts"

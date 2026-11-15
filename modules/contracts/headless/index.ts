@@ -43,6 +43,7 @@ export {
 export * from "./headless-system-management";
 export * from "./headless-plan-review-wire";
 export * from "./headless-plan-step-wire";
+export * from "./headless-data-task-status";
 export * from "./desktop-system-change-poll";
 export { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } from "./headless-authoring-result";
 export * from "./headless-approved-turn";

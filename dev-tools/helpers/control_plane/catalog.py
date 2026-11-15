@@ -676,6 +676,24 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/system-run-workflow/tests/system-run-workflow-use-cases.unit.test.ts",
         ),
     },
+    "headless-data-task-status": {
+        "automatic_sources": (
+            "modules/contracts/headless/headless-data-task-status.ts",
+            "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/headless-data-task-status.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/contracts/headless/tests/headless-data-task-status.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/headless-data-task-status.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts",
+        ),
+    },
     "headless-system-builder-semantic-edits": {
         "sources": (
             "modules/application/ports/system-builder/headless-operation-store.port.ts",

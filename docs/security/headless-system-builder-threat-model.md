@@ -509,3 +509,22 @@ orders later stored changes after admission; the adapter separately checks
 the live registration before submitting. These checks do not cancel a
 task already accepted by the runtime. The desktop owns its detached work
 and waits for retirement before releasing persistence.
+
+## Delegated ingestion task status
+
+A delegated Data request names one exact app-owned task in the current
+host and workspace. The status contract admits opaque task IDs and uses
+the existing ingestion owner for the read. The host must supply the
+verified organization, workspace, principal, and permission for that task.
+The use case rechecks that permission after the read and suppresses its
+result if the grant has ended. Missing and denied tasks have the same
+response. Transport composition must apply its own live reply fence.
+
+The response contains the task ID, revision, source kind, state, and
+bounded progress counts. Canonical ingestion validation derives the counts
+from the saved files and requires every file to finish before reporting
+success. File names, storage paths, provider coordinates,
+and diagnostic text stay in the owning Data interface. Test fixtures cover
+foreign scope, extra request fields, revoked permission, out-of-range
+progress, and missing tasks. Host wiring, import effects and presentation
+have separate verification before a registration can use those capabilities.
