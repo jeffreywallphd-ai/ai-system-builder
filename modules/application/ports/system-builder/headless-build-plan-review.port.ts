@@ -1,4 +1,4 @@
-import type { HeadlessHostIncarnationId } from "../../../contracts/headless";
+import type { HeadlessHostIncarnationId, parseHeadlessBuildPlanProposal } from "../../../contracts/headless";
 import type { HeadlessOperationScope } from "./headless-operation-store.port";
 
 export type HeadlessPlanReviewChannel = "app-popup" | "authenticated-chat";
@@ -22,20 +22,41 @@ export interface HeadlessPlanReviewState {
 
 export type HeadlessPlanReviewResult =
   | { readonly ok: true; readonly state: HeadlessPlanReviewState }
-  | { readonly ok: false; readonly code: "invalid" | "forbidden" | "stale" | "expired" | "unconfirmed" };
+  | { readonly ok: false; readonly code: "invalid" | "forbidden" | "stale" | "expired" | "capacity" | "unconfirmed" };
 
 export interface HeadlessPlanReviewPort {
   /**
    * Select the immutable proposal under the exact target and apply the decision
    * in an owned transaction. The host policy must authorize within this
-   * transaction. Check the synchronous fence again immediately before commit.
-   * Return success only after confirming the owned commit. A veto must
-   * discard the proposed update and return a non-success result.
+   * transaction. Check actor liveness and the stored deadline immediately
+   * before commit. Return success only after confirming the owned commit.
+   * An inactive actor gets a denial. A current actor with an expired proposal
+   * gets an expiry result. Both vetoes discard the proposed update.
    * Absent or inaccessible targets must return the same forbidden response.
    */
   decide(input: {
     readonly target: HeadlessPlanReviewTarget;
+    /** Checks the actor and request. The repository enforces its stored deadline. */
     readonly isCurrent: () => boolean;
     readonly update: (state: HeadlessPlanReviewState) => HeadlessPlanReviewResult;
   }): Promise<HeadlessPlanReviewResult>;
+}
+
+export type HeadlessPlanReviewSnapshot = {
+  readonly state: HeadlessPlanReviewState;
+  readonly preview: Extract<ReturnType<typeof parseHeadlessBuildPlanProposal>, { ok: true }>["preview"];
+};
+
+export type HeadlessPlanReviewSnapshotResult =
+  | { readonly ok: true; readonly snapshot: HeadlessPlanReviewSnapshot }
+  | Extract<HeadlessPlanReviewResult, { ok: false }>;
+
+export interface HeadlessPlanReviewQuery {
+  readonly target: HeadlessPlanReviewTarget;
+  readonly isCurrent: () => boolean;
+}
+
+export interface HeadlessPlanReviewRepository extends HeadlessPlanReviewPort {
+  propose(input: HeadlessPlanReviewQuery & { readonly proposal: unknown }): Promise<HeadlessPlanReviewSnapshotResult>;
+  read(input: HeadlessPlanReviewQuery): Promise<HeadlessPlanReviewSnapshotResult>;
 }

@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import type { HeadlessOperationStorePort, SystemBuilderRepositoryPort } from "../../../../application/ports/system-builder";
+import type { HeadlessPlanReviewTarget } from "../../../../application/ports/system-builder/headless-build-plan-review.port";
+import { HeadlessBuildPlanReviewUseCase } from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
+import { isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
 import {
   normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId, systemBuilderFailure, systemBuilderSuccess,
@@ -14,6 +18,7 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createInMemoryStructuredDocumentStore, type StructuredDocumentStore } from "../../shared";
 import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../sqlite";
 import { createStructuredSystemBuilderRepository } from "../createStructuredSystemBuilderRepository";
+import { createStructuredHeadlessPlanReviewRepository } from "../createStructuredHeadlessPlanReviewRepository";
 import {
   createStructuredHeadlessOperationStore, HEADLESS_RECEIPT_TTL_MS, HEADLESS_RETAINED_SYSTEM_CHANGES, HEADLESS_SYSTEM_CHANGE_PAGE_SIZE,
 } from "../createStructuredHeadlessOperationStore";
@@ -379,4 +384,123 @@ test("never repeats an expired key and requires resync when a retained change cu
   assert.equal(page.events.length, HEADLESS_SYSTEM_CHANGE_PAGE_SIZE);
   assert.equal(page.events[0]?.sequence, 2);
   assert.equal(page.watermark, HEADLESS_RETAINED_SYSTEM_CHANGES + 1);
+});
+
+const reviewHost = "41a96fc3-d2b8-4414-bd29-00059badc72d";
+if (!isHeadlessHostIncarnationId(reviewHost)) throw new Error("Invalid fixture plan host.");
+const reviewProposal = {
+  hostIncarnationId: reviewHost, workspaceId: scope.workspaceId,
+  steps: [
+    { operation: "systems.create", name: "First fixture proposal", idempotencyKey: key(21), templateId: "reference.secured-data-review@1.0.0" },
+    { operation: "systems.create", name: "Second fixture proposal", idempotencyKey: key(22), templateId: "reference.secured-data-review@1.0.0" },
+  ],
+};
+const reviewPlan = parseHeadlessBuildPlanProposal(reviewProposal, reviewHost);
+if (!reviewPlan.ok) throw new Error("Invalid fixture plan.");
+const reviewFingerprint = createHash("sha256").update(JSON.stringify(reviewPlan.preview), "utf8").digest("hex");
+const reviewTarget = { hostIncarnationId: reviewHost, scope, fingerprint: reviewFingerprint };
+const reviewQuery = { target: reviewTarget, isCurrent: () => true };
+const approval = (revision: number, step: number) => ({
+  fingerprint: reviewFingerprint, expectedRevision: revision,
+  decision: { kind: "approve", mode: "each-change", step },
+});
+
+test("persists exact plan approval and responds to competing verified decisions with one commit", async () => {
+  const directory = await realpath(await mkdtemp(path.join(await realpath(tmpdir()), "headless-plan-review-")));
+  const policy = resolveLocalSqliteDatabasePolicy({ dataRootDirectory: directory });
+  let db: Awaited<ReturnType<typeof openLocalSqliteDatabase>> | undefined;
+  try {
+    db = await openLocalSqliteDatabase({ policy });
+    let now = 1_000;
+    let permitted = true;
+    const authorize = async (_owner: StructuredDocumentStore, target: HeadlessPlanReviewTarget) =>
+      permitted && target.hostIncarnationId === reviewHost &&
+      target.scope.workspaceId === scope.workspaceId && target.scope.organizationId === scope.organizationId &&
+      target.scope.principalId === scope.principalId && target.scope.registeredClientId === scope.registeredClientId;
+    let store = createStructuredHeadlessPlanReviewRepository(db.documents, authorize, () => now);
+    const fresh = await store.propose({ ...reviewQuery, proposal: reviewProposal });
+    assert.ok(fresh.ok);
+    assert.equal(fresh.snapshot.state.status, "pending");
+    assert.equal(fresh.snapshot.state.expiresAt, now + 15 * 60 * 1_000);
+    assert.deepEqual(fresh.snapshot.preview, reviewPlan.preview);
+    now += 100;
+    assert.deepEqual(await store.propose({ ...reviewQuery, proposal: reviewProposal }), fresh);
+    const app = new HeadlessBuildPlanReviewUseCase(store, () => now);
+    const actor = ({ organizationId: scope.organizationId, principalId: scope.principalId, channel: "app-popup" as const,
+      canDecide: async () => permitted, isCurrent: () => permitted });
+    const paired = await Promise.all([
+      app.decide(approval(1, 1), reviewHost, scope, actor),
+      app.decide(approval(1, 1), reviewHost, scope, { ...actor, channel: "authenticated-chat" }),
+    ]);
+    assert.equal(paired.filter(item => item.ok).length, 1);
+    assert.ok(paired.some(item => !item.ok && item.code === "stale"));
+    const afterDecision = await store.read(reviewQuery);
+    assert.ok(afterDecision.ok);
+    assert.equal(afterDecision.snapshot.state.revision, 2);
+    assert.equal(afterDecision.snapshot.state.approvedSteps, 1);
+    assert.deepEqual(await store.read({ ...reviewQuery, target: { ...reviewTarget, scope: { ...scope,
+      workspaceId: createWorkspaceId("other-fixture-workspace"),
+    } } }), { ok: false, code: "forbidden" });
+    assert.deepEqual(await store.read({ ...reviewQuery, target: { ...reviewTarget, fingerprint: "ab".repeat(32) } }),
+      { ok: false, code: "forbidden" });
+    permitted = false;
+    assert.deepEqual(await store.read(reviewQuery), { ok: false, code: "forbidden" });
+    permitted = true;
+    await db.close();
+    db = undefined;
+    db = await openLocalSqliteDatabase({ policy });
+    store = createStructuredHeadlessPlanReviewRepository(db.documents, authorize, () => now);
+    assert.deepEqual(await store.read(reviewQuery), afterDecision);
+    assert.deepEqual(await store.propose({ ...reviewQuery, proposal: reviewProposal }), afterDecision);
+    const partition = db.documents.forOrganization(scope.organizationId);
+    assert.equal((await partition.listDocuments("headless/system-builder/plan-reviews")).length, 1);
+    assert.equal((await createStructuredSystemBuilderRepository(partition).listRecords(scope.workspaceId)).length, 0);
+    now = fresh.snapshot.state.expiresAt;
+    assert.deepEqual(await store.read(reviewQuery), { ok: false, code: "expired" });
+    assert.deepEqual(await store.propose({ ...reviewQuery, proposal: reviewProposal }), { ok: false, code: "expired" });
+    assert.equal((await partition.listDocuments("headless/system-builder/plan-reviews")).length, 1);
+  } finally {
+    try { await db?.close(); }
+    finally { await rm(directory, { recursive: true, force: true }); }
+  }
+});
+
+test("rolls back a plan decision at the owned commit fence and refuses a changed stored proposal", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  const partition = documents.forOrganization(scope.organizationId);
+  let now = 2_000;
+  let atCommit: () => void = () => {};
+  const wrapped: StructuredDocumentStore = {
+    ...documents, runInOwnedTransaction(work, beforeCommit) {
+      return documents.runInOwnedTransaction!(work, () => { atCommit(); beforeCommit(); });
+    },
+  };
+  const store = createStructuredHeadlessPlanReviewRepository(wrapped, async () => true, () => now);
+  const fresh = await store.propose({ ...reviewQuery, proposal: reviewProposal });
+  assert.ok(fresh.ok);
+  assert.deepEqual(await store.propose({ ...reviewQuery, proposal: { ...reviewProposal,
+    steps: [{ ...reviewProposal.steps[0], name: "Changed plan" }],
+  } }), { ok: false, code: "invalid" });
+
+  const useCase = new HeadlessBuildPlanReviewUseCase(store, () => now);
+  const actor = { organizationId: scope.organizationId, principalId: scope.principalId, channel: "app-popup" as const,
+    canDecide: async () => true, isCurrent: () => true };
+  atCommit = () => { now = fresh.snapshot.state.expiresAt; };
+  const refused = await useCase.decide(approval(1, 1), reviewHost, scope, actor);
+  assert.deepEqual(refused, { ok: false, code: "expired" });
+  now = 2_000;
+  let actorCurrent = true;
+  atCommit = () => { actorCurrent = false; };
+  assert.deepEqual(await useCase.decide(approval(1, 1), reviewHost, scope, {
+    ...actor, isCurrent: () => actorCurrent,
+  }), { ok: false, code: "forbidden" });
+  const [before] = await partition.listDocuments<Record<string, unknown>>("headless/system-builder/plan-reviews");
+  assert.equal(before.revision, 1);
+  assert.deepEqual(before.value.state, fresh.snapshot.state);
+
+  atCommit = () => {};
+  await partition.writeDocument(before.namespace, before.key, { ...before.value,
+    proposal: { ...reviewProposal, steps: [{ ...reviewProposal.steps[0], name: "Changed persisted plan" }] },
+  }, { expectedRevision: before.revision });
+  assert.deepEqual(await store.read(reviewQuery), { ok: false, code: "unconfirmed" });
 });

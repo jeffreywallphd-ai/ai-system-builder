@@ -50,8 +50,8 @@ function buildPlanReviewFixture(options: { expireBeforeCommit?: boolean; expireA
       const result = update(state);
       if (result.ok) {
         if (options.expireBeforeCommit) time = state.expiresAt;
-        if (!isCurrent()) return { ok: false, code: "expired" };
-        if (!permitted) return { ok: false, code: "forbidden" };
+        if (!isCurrent() || !permitted) return { ok: false, code: "forbidden" };
+        if (time >= state.expiresAt) return { ok: false, code: "expired" };
         state = result.state;
         updates++;
         if (options.expireAfterCommit) time = state.expiresAt;

@@ -62,8 +62,7 @@ export class HeadlessBuildPlanReviewUseCase {
     try {
       let expiresAt: number | undefined;
       const result = await this.store.decide({
-        target,
-        isCurrent: () => isCurrent() && (expiresAt === undefined || this.now() < expiresAt),
+        target, isCurrent,
         update: state => {
           expiresAt = state.expiresAt;
           return isCurrent() ? transition(state, request, channel, this.now()) : forbidden;
