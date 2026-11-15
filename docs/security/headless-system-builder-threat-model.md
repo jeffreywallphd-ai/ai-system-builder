@@ -165,7 +165,13 @@ view. Only a successful reply issues a one-use view ID. Opening a new view
 retires the old ID even when the proposal and revision match. A window can
 also close its exact view before a decision commits. The trusted
 adapter supplies the app-popup channel. Request data cannot choose a channel.
-Normal startup still needs to attach this bridge and its approval screen.
+The desktop app attaches the bridge in its focused, visible, owned main
+window. Its Settings popup lists requests in the selected workspace, shows
+the exact saved-system effects, and requires an explicit decision. Closing
+the popup or switching workspaces discards late replies and sends a request
+to retire the exact view. Once main processes that request, an uncommitted
+decision loses its view authority. A committed decision remains in the plan
+record. Preload exposes the fixed operations and projects bounded results.
 Desktop plan-review credentials use a distinct pairing mode. A current
 registration can request plan review only when the host provides that
 capability. It carries no direct editing, conversation or window-control
@@ -180,8 +186,8 @@ existing edit routes with this grant. The desktop composition binds the
 route to the current app policy and platform transaction. New proposals
 resolve exact immutable saved sources inside the owned write. An authorized
 retry can read its original proposal even after a source changes. Later
-execution still needs a current revision check. Normal desktop startup
-keeps the route disabled until the interactive approval path is connected.
+execution still needs a current revision check. Desktop startup connects the
+route and app approval service only when it has the platform transaction owner.
 The desktop MCP plan-review mode offers proposal and status tools through
 the pinned connector. It omits direct editing, conversation sending, and
 window control when the launcher selects this mode. The server still checks

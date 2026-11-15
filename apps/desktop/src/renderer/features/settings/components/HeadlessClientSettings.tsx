@@ -4,6 +4,7 @@ import { isWorkspaceId } from "../../../../../../../modules/contracts/workspace"
 import { getDesktopApi } from "../../../lib/desktopApi";
 import { useActiveWorkspace } from "../../workspace";
 import { RecentHeadlessChatTasks } from "./RecentHeadlessChatTasks";
+import { HeadlessPlanApprovals } from "./HeadlessPlanApprovals";
 
 export function HeadlessClientSettings() {
   const { activeWorkspace, activeWorkspaceId, status: workspaceStatus } = useActiveWorkspace();
@@ -87,6 +88,10 @@ export function HeadlessClientSettings() {
             onClick={() => void pair("presentation")}>
             Pair a client that can request window control
           </button> : null}
+          {data.planReviewAvailable ? <button type="button" disabled={pending || workspaceStatus !== "ready" || !activeWorkspaceId}
+            onClick={() => void pair("plan-review")}>
+            Pair a client that requests plan approval
+          </button> : null}
           <button type="button" disabled={pending} onClick={() => setRefresh((current) => current + 1)}>
             Refresh clients
           </button>
@@ -98,15 +103,19 @@ export function HeadlessClientSettings() {
           {data.clients.map((client) => <li key={client.registeredClientId}>
             <span>{client.workspaceId} · Client {client.registeredClientId.slice(0, 8)} · {client.access === "author" ? "Read and edit"
               : client.access === "conversation" ? "Read and run approved conversations"
-                : client.access === "presentation" ? "Read and request window control" : "Read only"} </span>
+                : client.access === "presentation" ? "Read and request window control"
+                  : client.access === "plan-review" ? "Read and request plan approval" : "Read only"} </span>
             <button type="button" disabled={pending} onClick={() => void revoke(client.registeredClientId)}
               aria-label={`Remove access for client ${client.registeredClientId.slice(0, 8)}`}>Remove access</button>
           </li>)}
         </ul> : <p>No paired clients.</p>}
       </> : <p>{data ? "Local chat pairing is unavailable." : "Checking local chat pairing…"}</p>}
       <p role="status">{message}</p>
+      {data?.status === "ready" && data.planReviewAvailable && workspaceStatus === "ready" && isWorkspaceId(activeWorkspaceId)
+        ? <HeadlessPlanApprovals key={"plan-approvals-" + activeWorkspaceId} workspaceId={activeWorkspaceId}
+          workspaceName={activeWorkspace?.displayName || activeWorkspaceId} /> : null}
       {workspaceStatus === "ready" && isWorkspaceId(activeWorkspaceId)
-        ? <RecentHeadlessChatTasks key={activeWorkspaceId} workspaceId={activeWorkspaceId} /> : null}
+        ? <RecentHeadlessChatTasks key={"chat-tasks-" + activeWorkspaceId} workspaceId={activeWorkspaceId} /> : null}
     </section>
   );
 }

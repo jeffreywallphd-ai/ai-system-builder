@@ -10,7 +10,13 @@ import {
   type UiPresentationPullResult,
   isDesktopHeadlessClientAccess,
 } from "../../../../modules/contracts/headless";
-import { normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary, type ReadWorkspaceSummaryRequest } from "../../../../modules/contracts/workspace";
+import { isWorkspaceId, normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary, type ReadWorkspaceSummaryRequest } from "../../../../modules/contracts/workspace";
+import { readStrictPassiveRecord } from "../../../../modules/contracts/shared";
+import { isDesktopHeadlessClientId, readHeadlessPlanReviewAgentResult } from "../../../../modules/contracts/headless";
+import { DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS, readDesktopPlanApprovalDecision, readDesktopPlanApprovalList,
+  readDesktopPlanApprovalSelection, readDesktopPlanApprovalView, type DesktopPlanApprovalDecision,
+  type DesktopPlanApprovalListEntry, type DesktopPlanApprovalSelection, type DesktopPlanApprovalView,
+} from "../../../../modules/contracts/headless/desktop-headless-plan-approval";
 import { createDesktopWorkspaceSummaryRequest, DESKTOP_WORKSPACE_SUMMARY_OPERATION, DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, type DesktopWorkspaceSummaryResponse } from "../../../../modules/contracts/ipc";
 import {
   DESKTOP_ARTIFACT_BROWSE_OPERATION,
@@ -775,6 +781,10 @@ export interface DesktopPreloadApi {
   acknowledgeWindowPresentation: (input: unknown) => Promise<boolean>;
   publishWindowContext: (input: unknown) => Promise<boolean>;
   readHeadlessPairingStatus: () => Promise<DesktopHeadlessPairingStatus>;
+  listHeadlessPlanApprovals: (workspaceId: string) => Promise<readonly DesktopPlanApprovalListEntry[] | undefined>;
+  openHeadlessPlanApproval: (selection: DesktopPlanApprovalSelection) => Promise<DesktopPlanApprovalView | undefined>;
+  decideHeadlessPlanApproval: (decision: DesktopPlanApprovalDecision) => Promise<DesktopPlanApprovalView["state"] | undefined>;
+  dismissHeadlessPlanApproval: (viewId: string) => Promise<boolean>;
   readRecentHeadlessChatTasks: (workspaceId: string) => Promise<DesktopHeadlessChatTasks>;
   readSystemBuilderChangeWatermark: (workspaceId: string) => Promise<DesktopSystemChangeWatermark>;
   startHeadlessConnector: () => Promise<DesktopHeadlessStartResult>;
@@ -2182,6 +2192,38 @@ export function createDesktopPreloadApi(
     },
     async readHeadlessPairingStatus() {
       return readDesktopHeadlessPairingStatus(await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.status, null));
+    },
+    async listHeadlessPlanApprovals(workspaceId) {
+      if (!isWorkspaceId(workspaceId)) return;
+      try {
+        const raw = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS.list, workspaceId);
+        const result = readStrictPassiveRecord(raw, ["ok", "entries"]);
+        if (result.ok === true) return readDesktopPlanApprovalList(result.entries, workspaceId);
+      } catch { return undefined; }
+    },
+    async openHeadlessPlanApproval(rawSelection) {
+      const selection = readDesktopPlanApprovalSelection(rawSelection);
+      if (!selection) return;
+      try {
+        const raw = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS.open, selection);
+        const result = readStrictPassiveRecord(raw, ["ok", "view"]);
+        if (result.ok === true) return readDesktopPlanApprovalView(result.view, selection);
+      } catch { return undefined; }
+    },
+    async decideHeadlessPlanApproval(rawDecision) {
+      const decision = readDesktopPlanApprovalDecision(rawDecision);
+      if (!decision) return;
+      try {
+        const raw = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS.decide, decision);
+        const result = readStrictPassiveRecord(raw, ["ok", "state"]);
+        const parsed = readHeadlessPlanReviewAgentResult({ ok: result.ok, value: result.state }, decision.selection.fingerprint);
+        if (parsed.ok && parsed.value.revision === decision.expectedRevision + 1) return parsed.value;
+      } catch { return undefined; }
+    },
+    async dismissHeadlessPlanApproval(viewId) {
+      if (!isDesktopHeadlessClientId(viewId)) return false;
+      try { return await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS.dismiss, viewId) === true; }
+      catch { return false; }
     },
     async readRecentHeadlessChatTasks(workspaceId) {
       const id = readDesktopHeadlessChatTaskRequest({ workspaceId });

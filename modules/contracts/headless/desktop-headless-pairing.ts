@@ -45,6 +45,7 @@ export type DesktopHeadlessPairingStatus =
       readonly fingerprint?: string;
       readonly conversationAvailable?: true;
       readonly presentationAvailable?: true;
+      readonly planReviewAvailable?: true;
       readonly clients: readonly {
         readonly registeredClientId: string;
         readonly workspaceId: WorkspaceId;
@@ -97,5 +98,6 @@ export function readDesktopHeadlessPairingStatus(value: unknown): DesktopHeadles
   }
   return { status: "ready", running: value.running, clients, ...address,
     ...("conversationAvailable" in value && value.conversationAvailable === true ? { conversationAvailable: true as const } : {}),
+    ...("planReviewAvailable" in value && value.planReviewAvailable === true ? { planReviewAvailable: true as const } : {}),
     ...("presentationAvailable" in value && value.presentationAvailable === true ? { presentationAvailable: true as const } : {}) };
 }

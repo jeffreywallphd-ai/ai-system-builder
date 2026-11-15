@@ -17,6 +17,7 @@ import {
 import { isTrustedIpcSender } from "./trustedIpcSender";
 import { DESKTOP_UI_CONTROL_RETIRED_EVENT } from "../../../../modules/contracts/headless";
 import { captureDesktopHeadlessPairingWindow, registerDesktopHeadlessPairingIpc } from "./desktopHeadlessPairingIpc";
+import { registerDesktopHeadlessPlanApprovalIpc } from "./desktopHeadlessPlanApprovalIpc";
 import { registerDesktopUiControlIpc } from "./desktopUiControlIpc";
 import { installDesktopMainWindowMenu } from "./desktopMainWindowMenu";
 import { createRevealModelPath } from "./revealModelPath";
@@ -326,6 +327,20 @@ app.whenReady().then(async () => {
       }
     },
   }).retire;
+  registerDesktopHeadlessPlanApprovalIpc({
+    ipcMain,
+    getApprovals: desktopHost.getHeadlessPlanApprovals,
+    resolveWindow(event) {
+      const window = BrowserWindow.getFocusedWindow();
+      if (!window) return;
+      const isUsable = () => BrowserWindow.getFocusedWindow() === window && openWindows.has(window) &&
+        !window.isDestroyed() && window.isVisible() && !window.isMinimized() &&
+        isTrustedIpcSender(event, [window]) && !window.webContents.isLoadingMainFrame();
+      if (!isUsable()) return;
+      const frame = window.webContents.mainFrame;
+      return { key: frame, isUsable: () => isUsable() && window.webContents.mainFrame === frame };
+    },
+  });
   registerDesktopHeadlessPairingIpc({
     ipcMain,
     getConnection: desktopHost.getHeadlessConnection,
@@ -337,17 +352,20 @@ app.whenReady().then(async () => {
           const canEdit = access === "author";
           const canConverse = access === "conversation";
           const canPresent = access === "presentation";
+          const canPropose = access === "plan-review";
           const { response } = await dialog.showMessageBox(window, {
             type: "question",
             title: "Pair a chat client",
             message: canPresent ? "Allow this chat client to ask for control of a window?"
               : canConverse ? "Allow a local chat client to read saved systems and run approved conversations?"
-              : canEdit ? "Allow a local chat client to edit saved systems?" : "Allow a local chat client to read saved systems?",
+              : canPropose ? "Allow a local chat client to send plans for review?"
+                : canEdit ? "Allow a local chat client to edit saved systems?" : "Allow a local chat client to read saved systems?",
             detail: `Workspace: ${workspaceLabel}\n${canEdit
               ? "The new client can create, rename, copy and edit saved systems in this workspace."
               : canConverse ? "The client can read saved systems in this workspace. It can also send messages to conversation sessions already approved for this workspace. It cannot approve a session or edit saved systems."
                 : canPresent ? "The client can read saved systems and ask to show saved resources in one window. You must accept each request in that window."
-                : "The new client can read saved systems in this workspace."} The local connector also lets previously paired clients reconnect with their existing access. This does not give the client control of this window.`,
+                : canPropose ? "The client can read saved systems and ask you to approve proposed changes. You decide which changes the app may make."
+                  : "The new client can read saved systems in this workspace."} The local connector also lets previously paired clients reconnect with their existing access. This does not give the client control of this window.`,
             buttons: ["Cancel", "Create pairing code"], defaultId: 0, cancelId: 0, noLink: true,
           });
           return response === 1;

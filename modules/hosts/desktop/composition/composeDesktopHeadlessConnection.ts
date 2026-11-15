@@ -125,6 +125,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
         if (value.status !== "ready" || !open) return { status: "unavailable" };
         return { status: "ready", running: endpoint !== undefined, endpoint, fingerprint, clients: value.clients,
           ...(canRunConversation ? { conversationAvailable: true as const } : {}),
+          ...(dependencies.planReview ? { planReviewAvailable: true as const } : {}),
           ...(presentationOpen ? { presentationAvailable: true as const } : {}) };
       });
     },

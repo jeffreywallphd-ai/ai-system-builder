@@ -22,6 +22,7 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
   let confirmed = false;
   let closeOnConfirm = false;
   let conversationAvailable = false;
+  let planReviewAvailable = false;
   const effects: unknown[] = [];
   const handlers = new Map<string, (event: unknown, payload: unknown) => Promise<unknown>>();
   const ipcMain: IpcMainHandlePort = {
@@ -33,9 +34,11 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
     ipcMain,
     getConnection: () => ({
       async status() {
-        const access = conversationAvailable ? { access: "conversation" as const } : {};
+        const access = planReviewAvailable ? { access: "plan-review" as const }
+          : conversationAvailable ? { access: "conversation" as const } : {};
         return { status: "ready", running: true, endpoint: address, fingerprint,
           ...(conversationAvailable ? { conversationAvailable: true as const } : {}),
+          ...(planReviewAvailable ? { planReviewAvailable: true as const } : {}),
           clients: [{ registeredClientId: clientId, workspaceId: workspace as never,
             expiresAt: 5_000, internalCode: code, ...access }] };
       },
@@ -100,6 +103,12 @@ test("trusted pairing requires a fresh window, explicit confirmation, and never 
   assert.deepEqual(await api.readHeadlessPairingStatus(), { status: "ready", running: true, endpoint: address, fingerprint,
     conversationAvailable: true,
     clients: [{ registeredClientId: clientId, workspaceId: workspace, expiresAt: 5_000, access: "conversation" }] });
+  planReviewAvailable = true;
+  assert.equal(await api.beginHeadlessPairing(workspace, "plan-review"), "shown");
+  assert.deepEqual(effects.slice(-2), [["begin", workspace, "plan-review"], ["private native dialog", address, fingerprint, code]]);
+  assert.deepEqual(await api.readHeadlessPairingStatus(), { status: "ready", running: true, endpoint: address, fingerprint,
+    conversationAvailable: true, planReviewAvailable: true,
+    clients: [{ registeredClientId: clientId, workspaceId: workspace, expiresAt: 5_000, access: "plan-review" }] });
   assert.equal(await api.startHeadlessConnector(), "started");
   assert.equal(await api.revokeHeadlessClient(clientId + "\n"), "denied");
   assert.equal(await api.revokeHeadlessClient(clientId), "revoked");
@@ -174,6 +183,11 @@ test("the desktop approval bridge accepts decisions only for the exact view issu
   });
   const invoke = (operation: keyof typeof DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS, input: unknown, window: object = owned) =>
     handlers.get(DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS[operation])!(window, input);
+  const api = createDesktopPreloadApi({ ipcRenderer: { async invoke(channel, input) {
+    const handler = handlers.get(channel);
+    assert.ok(handler);
+    return handler(owned, input);
+  } } });
   async function show(target = selection, preview = plan.preview) {
     const result = await invoke("open", target) as { ok: boolean; view?: DesktopPlanApprovalView };
     assert.ok(result.ok && result.view);
@@ -185,6 +199,8 @@ test("the desktop approval bridge accepts decisions only for the exact view issu
 
   assert.deepEqual(await invoke("list", workspace, {}), unavailable);
   assert.deepEqual(await invoke("list", workspace), { ok: true, entries: [{ ...selection, expiresAt: deadline }] });
+  assert.deepEqual(await api.listHeadlessPlanApprovals(workspace), [{ ...selection, expiresAt: deadline }]);
+  assert.equal(await api.listHeadlessPlanApprovals(""), undefined);
   const unseen = decisionFor("eb49f5b8-e0ab-4fd9-aab7-9452426c1800");
   assert.deepEqual(await invoke("decide", unseen), unavailable);
   corruptView = true;
@@ -233,11 +249,16 @@ test("the desktop approval bridge accepts decisions only for the exact view issu
   assert.equal(commits, 0);
 
   pauseDecision = undefined;
-  const available = await show();
+  const finalView = await api.openHeadlessPlanApproval(selection);
+  assert.ok(finalView);
+  assert.deepEqual(finalView.preview, plan.preview);
+  const available = { selection, viewId: finalView.viewId, expectedRevision, decision: {
+    kind: "approve", mode: "whole-plan",
+  } } as const;
   usable = false;
   assert.deepEqual(await invoke("decide", available), unavailable);
   usable = true;
-  assert.deepEqual(await invoke("decide", available), { ok: true, state: { fingerprint: proposalFingerprint, ...approved } });
+  assert.deepEqual(await api.decideHeadlessPlanApproval(available), { fingerprint: proposalFingerprint, ...approved });
   assert.deepEqual(await invoke("decide", available), unavailable);
   assert.equal(commits, 1);
 });

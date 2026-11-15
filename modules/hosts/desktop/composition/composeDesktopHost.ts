@@ -9,6 +9,8 @@ import { asyncLazyObject } from "./lazyProxy";
 import { composeDesktopHeadlessReads, type DesktopHeadlessReadHandler } from "./composeDesktopHeadlessReads";
 import { composeDesktopHeadlessAuthoring } from "./composeDesktopHeadlessAuthoring";
 import { composeDesktopHeadlessConversation } from "./composeDesktopHeadlessConversation";
+import { composeDesktopHeadlessPlanReview } from "./composeDesktopHeadlessPlanReview";
+import { composeDesktopHeadlessPlanApprovals } from "./composeDesktopHeadlessPlanApprovals";
 import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
 import { registerDesktopHeadlessTaskList } from "./registerDesktopHeadlessTaskList";
 import { composeDesktopUiControl, type DesktopUiControlOwner } from "./composeDesktopUiControl";
@@ -353,6 +355,7 @@ export interface DesktopHostComposition {
   getHeadlessReadHandler: () => DesktopHeadlessReadHandler | undefined;
   /** Interactive main-process entry point. Never expose the object to a renderer. */
   getHeadlessConnection: () => DesktopHeadlessConnection | undefined;
+  getHeadlessPlanApprovals: () => ReturnType<typeof composeDesktopHeadlessPlanApprovals> | undefined;
   getUiControlOwner: () => DesktopUiControlOwner | undefined;
   disableWindowTakeover: () => void;
   registerArtifactUploadIpc: (
@@ -706,6 +709,7 @@ export function composeDesktopHost(
   const taskReconciler = createOwnedTaskReconciler();
   let headlessReadHandler: DesktopHeadlessReadHandler | undefined;
   let headlessConnection: DesktopHeadlessConnection | undefined;
+  let headlessPlanApprovals: ReturnType<typeof composeDesktopHeadlessPlanApprovals> | undefined;
   let headlessConversation: ReturnType<typeof composeDesktopHeadlessConversation> | undefined;
   let uiControlOwner: DesktopUiControlOwner | undefined;
   let headlessAudit: DesktopHeadlessAudit | undefined;
@@ -731,6 +735,7 @@ export function composeDesktopHost(
     },
     async shutdownBackgroundTasks() {
       headlessReadAdmissionClosed = true;
+      headlessPlanApprovals = undefined;
       uiControlOwner?.close();
       uiControlOwner = undefined;
       headlessReadHandler = undefined;
@@ -795,6 +800,7 @@ export function composeDesktopHost(
     getFeatureLifecycleState: featureLifecycle.getFeatureLifecycleState,
     getHeadlessReadHandler: () => headlessReadHandler,
     getHeadlessConnection: () => headlessConnection,
+    getHeadlessPlanApprovals: () => headlessPlanApprovals,
     getUiControlOwner: () => uiControlOwner,
     disableWindowTakeover() {
       headlessConnection?.stopPresentationAdmission();
@@ -2321,6 +2327,10 @@ export function composeDesktopHost(
               documents: organizationDocuments, organizationId: identity.organizationId,
               isOpen: () => !headlessReadAdmissionClosed,
             });
+            const planReviewOwner = platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction
+              ? { hostIncarnationId, identity, platform: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
+                  isOpen: () => !headlessReadAdmissionClosed }
+              : undefined;
             headlessConnection = composeDesktopHeadlessConnection({
               documents: organizationDocuments,
               identity,
@@ -2329,11 +2339,17 @@ export function composeDesktopHost(
               read: headlessReadHandler,
               conversation: headlessConversation,
               presentation: uiControlOwner,
+              planReview: planReviewOwner ? composeDesktopHeadlessPlanReview({
+                ...planReviewOwner, workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+              }) : undefined,
               authoring: options.persistence?.documents ? composeDesktopHeadlessAuthoring({
                 hostIncarnationId, identity, platformDocuments: options.persistence.documents, rootDirectory: registerOptions.storageRootDirectory,
                 workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
                 systems: systemBuilder, isOpen: () => !headlessReadAdmissionClosed, audit: headlessAudit,
               }) : undefined,
+            });
+            if (planReviewOwner) headlessPlanApprovals = composeDesktopHeadlessPlanApprovals({
+              ...planReviewOwner, capturePlanReviewClients: headlessConnection.capturePlanReviewClients,
             });
           }
         }
