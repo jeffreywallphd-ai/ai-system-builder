@@ -36,6 +36,24 @@ Every request includes release identity, system release, workspace, organization
 
 ## UI isolation
 
+The package, Studio and authoring IPC registrars require the desktop's existing
+owned-window main-frame sender policy. Their fixed channel gate runs before any
+request metadata, payload, deferred feature or use case access. Missing, denied
+or throwing policy returns a sanitized `forbidden` response on the matching fixed
+response channel. No request-derived correlation value is echoed on this denial.
+This transport admission does not replace workspace resource authorization or
+atomic approval-bound publication, which require separate application controls.
+
+Studio proposal/draft, package lifecycle and derived customization application
+entries require `WorkspaceAssetAccessPort`. Reads require `asset:read`; inspection,
+review and other mutations require `asset:write`. Both hosts supply the existing
+guard backed by the persisted active workspace and organization operation policy.
+An absent, archived, mismatched or foreign workspace, suspended membership or
+missing policy denies before protected source, model, artifact, definition or
+lifecycle access. Private dependency errors remain sanitized. Derived feature
+readiness follows this admission. Trusted Foundation implementation seeding is an
+internal operation and does not receive user workspace authority from this gate.
+
 Untrusted UI must use:
 
 - no Node integration or preload access;
@@ -201,7 +219,6 @@ archived or other-organization workspaces and suspended membership deny with saf
 transport failures; server membership middleware remains a separate control.
 Legacy multi-record draft publication is not made atomic by this resource guard;
 its concurrency and complete controlled Assets qualification remain separate.
-
 
 Read-policy and repository failures settle as fixed unavailable API/IPC responses.
 Missing required fields retain validation failures. Focused tests cover every

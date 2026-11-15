@@ -37,6 +37,13 @@ Include this pack when prompts materially involve:
 
 ## Core constraints
 
+- Package, Studio and authoring IPC require the owned-window main-frame sender
+  policy before request or lazy feature access. Admission never establishes
+  workspace resource authority or a current publication approval.
+- Studio, package and derived application entries require persisted active
+  workspace admission through the existing organization policy. Read and write
+  scopes remain distinct; missing policy fails closed before protected I/O.
+
 - Workspace isolation remains default; explicit workspace context is mandatory for workspace-owned operations.
 - User Library scope is separate from workspace and system foundation scopes.
 - `system.foundation@1.0.0` remains immutable/system-owned.
@@ -82,8 +89,9 @@ Include this pack when prompts materially involve:
   Asset Studio source boundary as deferred until explicitly scoped with safe
   schema/tests.
 - Keep override behavior non-destructive and explicit.
-- Do not treat automated workflow semantics or responsive-layout assertions as
-  manual accessibility or controlled security qualification evidence.
+- Automated workflow and responsive assertions alone do not establish full
+  accessibility or controlled security qualification. Run the actual owning
+  technical checks; human acceptance is handled offline by the user.
 
 ## Relationship to User Library Reuse
 
@@ -124,3 +132,11 @@ Use conservative wording in prompts and reviews:
 - treat draft publication as creating new authored assets only;
 - do not claim executable outputs, automatic rebase/conflict resolution, source
   mutation, implicit activation/deployment, or `system.foundation` mutation.
+
+- Legacy authoring uses seven required application write guards and an eight-method
+  authorized public read facade in both hosts. Sender/membership admission alone
+  does not establish a persisted active workspace. Keep raw repository and
+  unscoped by-ID methods out of public legacy reads. Legacy multi-record publish
+  atomicity remains separate from this authorization support.
+
+- Saved recovers rejected Studio/legacy listing calls independently. Legacy IPC list requests map validated `targetWorkspaceId` to the exact repository `workspaceId`; no fallback or renderer override grants another workspace.

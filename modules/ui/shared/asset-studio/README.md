@@ -17,6 +17,8 @@ resource-backed Studio draft with seeded frontend structure, styling, and
 backend logic while preserving the legacy record. Legacy provenance makes this
 upgrade idempotent and prevents duplicate Saved rows.
 
+Saved settles Studio and legacy listing failures separately. A rejected adapter call produces a static retry message, releases the busy state, and preserves any available authorized listing. The legacy desktop request retains its public `targetWorkspaceId`; IPC maps that exact target to the repository `workspaceId`, never an extra renderer-supplied workspace.
+
 ## Persistence and safety
 
 Semantic records contain safe structured data and artifact descriptors. Actual backing-resource paths and content remain in the authorized immutable artifact boundary. Saving never publishes or executes content. Review materializes a verified immutable snapshot. Publication creates definition and implementation lineage but does not install, activate, deploy, or execute it.
@@ -26,7 +28,7 @@ A changed reviewed draft must be saved before it can be reviewed again. Optimist
 ## Qualification
 
 Desktop and thin-client hosts share this surface and its ordered workflow,
-backing-resource validation, busy/error semantics, and responsive rules. Repository
+backing-resource validation, busy/error semantics, and responsive rules. Editable JSON, definition, type/family, and source fields have explicit accessible names independent of option text and current source contents. Repository
 tests prove these automated contracts and non-execution boundaries. They do not
 replace the controlled accessibility and security procedure in
 `docs/operations/asset-experience-controlled-review.md`.
@@ -41,6 +43,8 @@ Use focused tests while iterating:
 - Asset Studio transport parity and workflow tests for actor, workspace, revision, artifact, review, and publication boundaries.
 
 Run the applicable repository gates after the complete increment, as required by `AGENTS.md`.
+
+The opt-in packaged-desktop and managed-reference Assets journeys exercise real package admission, exact Foundation/imported copies, resource-backed Studio save/reopen and process restart persistence. Their finite readiness waits are functional observation bounds, not latency targets. Failed runs and slow cold initialization remain findings; authored resources are never activated by these journeys. Managed qualification requires the existing authorized OIDC/PostgreSQL/TLS host.
 
 ## Draft session and retry behavior
 

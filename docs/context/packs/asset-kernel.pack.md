@@ -2,6 +2,12 @@
 
 - Pack name: `asset-kernel`
 
+- Workspace Browse/detail includes exact published Studio and derived references
+  from the two private organization-scoped repositories. Global metadata and
+  unpublished records grant no visibility. Preserve bounded per-request ownership,
+  fail-closed reader errors and existing authorization; see the canonical Asset
+  Kernel workspace-scope section and package/authoring threat model.
+
 - Image/output public identities use the private owner-scoped persisted random
   index in ADR-0043; view bodies stay computed. Details reauthorize exact sources,
   and legacy references require explicit migration without a decoding fallback.
@@ -11,6 +17,9 @@
 - Semantic Asset Pack fingerprints validate bounded passive full input and use
   `sha256:semantic-v2`; display sanitization is not hash input. Legacy identities
   need explicit revalidation; byte digests and immutable approvals stay separate.
+  The shared imported-package inspector verifies all entry claims and supplied
+  checksums before eligibility. Admission re-inspects actual immutable bytes;
+  stale eligible summaries cannot transfer trust or approval.
 
 - Keep implementation prompts aligned to the canonical Asset Kernel vocabulary.
 - Prevent parallel models for assets, artifacts, resources, UI components, workflows, tools, pages, systems, generated outputs, previews, models, datasets, documents, external repository objects, and AI-readable context.
@@ -162,9 +171,3 @@ Use this pack for tasks involving:
 Foundation startup uses bounded exact reads and optional validated atomic batch
 registration with expected-body CAS guards. Preserve full stored-content checks
 and injected registration hooks; see the canonical Asset Kernel architecture.
-
-- Workspace Browse/detail includes exact published Studio and derived references
-  from the two private organization-scoped repositories. Global metadata and
-  unpublished records grant no visibility. Preserve bounded per-request ownership,
-  fail-closed reader errors and existing authorization; see the canonical Asset
-  Kernel workspace-scope section and package/authoring threat model.

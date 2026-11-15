@@ -11,7 +11,7 @@ Repository implementation and production qualification are different states.
 The repository gates prove declared invariants on the current source revision.
 A deployment profile is `qualified` only when every required check in the
 machine-readable profile has passed against the exact product digest. Missing,
-failed, or manual evidence never becomes a pass by inference.
+failed, or unexecuted controlled evidence never becomes a pass by inference.
 
 ## Supported compatibility and deprecation
 
@@ -66,9 +66,9 @@ after restart; base immutability; non-execution; fail-closed validation; modal a
 status semantics; and responsive desktop/thin-client presentation. Every
 qualification profile requires this automated evidence.
 
-Automated evidence does not replace `accessibility-manual` or `security-manual`.
+Author tests do not replace the separately assessed `accessibility-manual` or `security-manual` evidence. These historical schema keys now denote AI-executable technical accessibility assessment and separate-invocation security review; they do not require human acceptance.
 Use the [Asset Experience Controlled Review](asset-experience-controlled-review.md)
-for the reusable keyboard, screen-reader, zoom/reflow, contrast, isolation,
+for the reusable automated keyboard, accessibility-tree, zoom/reflow, contrast, isolation,
 revocation, and non-execution review procedure. Missing controlled evidence keeps
 the target profile `incomplete`; it is never inferred from repository tests.
 
@@ -132,7 +132,7 @@ configuration, or trusted renderers when actual output diverges.
 
 This command qualifies only the exact packaged Windows Electron and configured
 local Chrome environments that ran. It does not replace physical touch hardware,
-screen-reader product review, manual security review, other platform/browser
+offline user acceptance, independent technical security review, other platform/browser
 profiles, or dedicated performance qualification. A shared-workstation duration
 is diagnostic evidence, not a portable performance target.
 
@@ -209,7 +209,7 @@ undo/redo, rendered preview, save and fresh-renderer reopen, keyboard/focus retu
 and reachable controls with real 320 CSS-pixel geometry. The harness pins a source
 digest before loading/building and checks source stability at teardown. Its
 sanitized evidence includes source/environment identity and each host result.
-It makes no model/provider call and does not replace manual assistive-technology,
+It makes no model/provider call and does not establish offline assistive-technology acceptance,
 participant, real-model hardware or named controlled performance qualification.
 
 Within one build, identical exact definitions and resolution inputs share the
@@ -292,7 +292,7 @@ redaction, authorization and tenant denial, route-policy coverage, API/IPC
 parity, revocation propagation, sandbox-unavailable denial, interrupted-state
 reconciliation, and Electron main/renderer compilation.
 
-Manual review uses OWASP ASVS 5.0 as control vocabulary and must cover package
+Separate-invocation AI security review uses OWASP ASVS 5.0 as control vocabulary and must cover package
 parser abuse, coding-model tool scope, renderer isolation and sender validation,
 capability-broker messages, security-asset narrowing, tenant isolation,
 audit/privacy, sandbox escape/egress/resource controls, and target identity/TLS.
@@ -307,12 +307,12 @@ semantics, keyboard-operable actions, status/log regions, truthful empty/error
 states, bounded content, and the Catalog/package, functional preview, Builder,
 build/release, deployment, data entry, chatbot, and data-review presenters.
 
-Manual WCAG 2.2 AA review remains required on both desktop and thin-client
-surfaces. Test keyboard-only traversal, visible focus, focus order and modal
+Agent-executable accessibility assessment remains required on both desktop and thin-client
+surfaces. Test automated keyboard traversal, visible focus, focus order and modal
 return, accessible names/descriptions, error association, status announcements,
-zoom/reflow, contrast, non-color cues, target size, reduced motion, screen-reader
-navigation, and timeout/cancellation behavior with representative data and all
-three reference systems. Automated semantic assertions do not establish WCAG
+zoom/reflow, contrast, non-color cues, target size, reduced motion, accessibility-tree
+semantics, and timeout/cancellation behavior with representative data and all
+three reference systems. Human acceptance and observed assistive-technology sessions are user-owned offline. Automated assertions do not establish full WCAG
 conformance. Record failures and retest evidence; do not mark
 `accessibility-manual` passed while exceptions remain unapproved.
 
@@ -321,6 +321,6 @@ conformance. Record failures and retest evidence; do not mark
 The repository currently supplies implementation and automated-gate evidence.
 Cross-platform desktop packaging, live managed services, coordinated artifact
 recovery, load/concurrency/cancellation, sandbox resource limits, target security
-review, manual accessibility review, and rehearsed revocation/recovery evidence
+review, exact-profile automated accessibility assessment, and rehearsed revocation/recovery evidence
 remain controlled-environment responsibilities. The machine assessor keeps each
 profile incomplete until its exact required checks pass.
