@@ -118,6 +118,15 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         self.assertIn("focused-tests", self.plan([mcp, barrel]))
         self.assertNotIn("focused-tests", self.plan([mcp, barrel], "headless-desktop-activation"))
 
+    def test_plan_skill_grade_runs_only_in_its_exact_mcp_profile(self):
+        check = "headless-desktop-pinned-mcp"
+        grade = "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts"
+        other = "dev-tools/scripts/agent-support/tests/unrelated.unit.test.ts"
+        selected = self.plan([grade], check)
+        self.assertIn(grade, selected[check]["argv"])
+        self.assertNotIn("focused-tests", selected)
+        self.assertIn("focused-tests", self.plan([grade, other], check))
+
     def test_packaged_headless_check_is_opt_in_and_exact(self):
         fixture = "dev-tools/scripts/qualification/visual-composer/e2e/headless-desktop-fixture.ts"
         unrelated = "modules/contracts/headless/some-other-source.ts"

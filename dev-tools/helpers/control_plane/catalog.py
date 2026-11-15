@@ -159,6 +159,7 @@ HEADLESS_MCP_SOURCES = (
     "modules/adapters/transport/headless-mcp/generateHeadlessMcpToolReference.mts",
     "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
     "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+    "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts",
 )
 
 PUBLISHED_FORM_CHECKS = {
@@ -1163,7 +1164,8 @@ def definitions(root: Path) -> list[dict]:
         {"id": HEADLESS_MCP_CHECK, "patterns": list(HEADLESS_MCP_SOURCES),
          "argv": [node, "--import", "tsx", "--test", "--",
                   "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
-                  "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts"],
+                  "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+                  "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts"],
          "timeout": 120},
         {"id": HEADLESS_PACKAGED_CHECK, "patterns": [],
          "argv": [node, "node_modules/@playwright/test/cli.js", "test",

@@ -112,6 +112,23 @@ share the same server incarnation and application providers. Explicit workspace
 selection, current policy and the PostgreSQL transaction protect finite reads
 and authoring requests. Discovery does not list workspaces.
 
+Desktop and managed hosts have a separate plan-review registration. The
+client previews, submits and checks a bounded plan, then requests the next
+approved step by fingerprint and approval revision. It receives no direct
+authoring, approval, or window-control grant from this registration.
+
+The user can approve the scoped plan or each change in the app popup or
+signed-in approval chat. The host verifies the current user and binds the
+decision to the exact plan view. All decision channels use the same saved
+approval and revision. A client whose chat cannot prove the person's
+decision routes them to the matching app popup.
+
+The host commits each approved change with its scoped retry receipt.
+An exact retry can recover the receipt under current approval and access.
+The host rechecks authority before sending a result. Desktop serializes
+this check with its SQLite owner. Managed PostgreSQL locks the exact
+permission and approval records through one successful send.
+
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay
 state and a separate window-control lifecycle. Roll back by disabling the new

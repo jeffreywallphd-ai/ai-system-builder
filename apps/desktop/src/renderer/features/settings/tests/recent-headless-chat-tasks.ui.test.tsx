@@ -165,6 +165,11 @@ it("uses the modal to display exact proposed changes and discard a workspace's l
     ]);
     expect(dialog.textContent).toContain("Saved revision: fixture-system.r3.");
     expect(dialog.textContent).toContain("Record version: 5.");
+    expect([...dialog.querySelectorAll('ul[aria-label="Permissions and limits"] li')].map(item => item.textContent)).toEqual([
+      "Save only the changes shown below in this workspace.",
+      "Limit of 2 saved changes for this plan.",
+      "No outside service calls or provider charges.",
+    ]);
     expect(dialog.textContent).toContain("Approve all listed changes");
     expect(dialog.textContent).toContain("Approve each change separately");
     await act(async () => button(dialog, "Approve change 1").click());

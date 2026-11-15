@@ -74,3 +74,21 @@ host. Select the managed mode and provide its access token, organization
 and workspace at launch through the supported private configuration. The
 tool schemas still require the exact host and workspace identifiers. See
 [managed connector configuration](../../modules/adapters/transport/headless-mcp/README.md#managed-server-connection).
+
+## Plan from a written request
+
+Install the full skill folder so the agent can open
+[Build from a written request](../../skills/control-ai-system-builder/references/build-plans.md).
+Use the dedicated plan-review connection on Desktop or managed HTTPS.
+The reference describes the exact setup, supported effects, and app approval
+choices. Leave the ordinary authoring and window controls outside that
+connection's allowed scope.
+
+The standard test suite grades deterministic examples with synthetic
+responses. It checks decision quality, result recovery and small-plan
+limits without running a model or sending a provider request.
+The official stdio client and the built app approval journeys are separate
+controlled checks. To evaluate another model or client, establish the exact
+client build, approved test workspace, synthetic request, tool and resource
+limits, user decision surface, and saved-result checks before running it.
+Record that result for the tested configuration.

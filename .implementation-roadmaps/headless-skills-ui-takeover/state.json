@@ -368,6 +368,35 @@
         "The server TypeScript build passed. Separate SDK and preview receipts were independently accepted."
       ],
       "title": "Discover supported host actions and preview a plan"
+    },
+    {
+      "areas": [
+        "Portable AI System Builder skill",
+        "Desktop and browser plan approval",
+        "Deterministic skill tests"
+      ],
+      "chunkId": "portable-skill",
+      "completedAt": "2026-11-15T07:49:41Z",
+      "criteriaIds": [
+        "portable-quality",
+        "typed-tools-and-recovery",
+        "user-choice-and-approval-channels"
+      ],
+      "documentation": [
+        "Build from a written request",
+        "Headless client skill setup",
+        "Headless delegation architecture decision"
+      ],
+      "feedbackAddressed": [],
+      "id": "plan-from-written-request-portable-skill",
+      "incrementId": "plan-from-written-request",
+      "summary": "The portable skill can guide a written request from workspace selection through user approval, saved-result checks, and recovery after a lost reply. The approval screen lists what the agent can save and how many changes it can make.",
+      "tests": [
+        "Seven automated transcript tests cover scope, approval, exact retry, saved results and limits.",
+        "An independent walkthrough covered an ambiguous workspace, unverified chat approval, a lost reply and an unsupported publishing request.",
+        "App interface tests verified the permission list. The packaged Windows and managed-browser approval journeys also passed."
+      ],
+      "title": "Teach and test the planning workflow in chat"
     }
   ],
   "completion": null,
@@ -1551,6 +1580,12 @@
       "recordedAt": "2026-11-15T00:53:37Z",
       "sequence": 79,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "162153c7dd3962829af54aa6ba09c83673f90b28fe928ae4efefa329d7ab221d",
+      "recordedAt": "2026-11-15T07:49:41Z",
+      "sequence": 80,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -2240,7 +2275,8 @@
       "allowPendingQualification": false,
       "completedAt": null,
       "completedChunks": [
-        "discover-capabilities"
+        "discover-capabilities",
+        "portable-skill"
       ],
       "deliverables": [
         "An approved capability and effects matrix, versioned plan and task interfaces, and separate UI presentation boundary",
@@ -2796,5 +2832,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-15T00:53:37Z"
+  "updatedAt": "2026-11-15T07:49:41Z"
 }

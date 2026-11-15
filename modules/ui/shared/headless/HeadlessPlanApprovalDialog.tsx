@@ -196,7 +196,11 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
   return <>
     <p>Requested by Client {view.selection.registeredClientId.slice(0, 8)}</p>
-    <p>This request asks for permission to save the changes shown below. It makes no outside service calls.</p>
+    <ul aria-label="Permissions and limits">
+      <li>Save only the changes shown below in this workspace.</li>
+      <li>Limit of {state.stepCount} {state.stepCount === 1 ? "saved change" : "saved changes"} for this plan.</li>
+      <li>No outside service calls or provider charges.</li>
+    </ul>
     <p>Request expires at <time dateTime={new Date(state.expiresAt).toISOString()}>
       {new Date(state.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}
     </time>.</p>
