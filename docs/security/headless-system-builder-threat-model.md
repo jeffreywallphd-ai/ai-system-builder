@@ -129,8 +129,13 @@ ordinary UI access and evidence.
 The read-only plan preview uses the shared proposal parser to validate the
 ordered steps and exact host and workspace scope. The parser derives the
 effects from the allowed operations and rejects additional authority data.
-The preview fingerprint supports comparison. Approval remains an app-owned
-decision.
+The preview fingerprint supports comparison. The application decision policy
+requires the exact proposal, current revision, unexpired deadline and
+host-verified human identity for the proposal's organization and workspace.
+Whole-plan approval covers the bounded list. Individual approval can add only
+the next step. A closed or revoked decision cannot be reopened. The host
+must bind each channel to the same owned transaction and recheck the actor
+and deadline before commit. This policy has no execution entry point.
 The internal operation store partitions receipts by verified organization and
 hashes the complete principal, client, workspace, operation and key scope.
 Receipts hold a fingerprint and the minimum saved revision reference; change

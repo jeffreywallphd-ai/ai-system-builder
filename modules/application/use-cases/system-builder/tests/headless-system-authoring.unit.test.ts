@@ -12,6 +12,8 @@ import {
 } from "../../../services/asset-packs/system-packs";
 import { SystemBuilderReferenceTemplateRegistry, ValidateSystemBuilderRevisionService } from "../../../services/system-builder";
 import { HeadlessSystemAuthoringUseCase } from "../headless-system-authoring.use-case";
+import type { HeadlessPlanReviewPort, HeadlessPlanReviewState } from "../../../ports/system-builder/headless-build-plan-review.port";
+import { HeadlessBuildPlanReviewUseCase, type HeadlessPlanReviewActor } from "../headless-build-plan-review.use-case";
 import { CreateSystemBuilderSystemUseCase } from "../system-builder-use-cases";
 
 const hostId = (id: string) => {
@@ -29,6 +31,119 @@ const definitions = [SYSTEM_FOUNDATION_PACK_MANIFEST, SYSTEM_FOUNDATION_PACK_V2_
   .flatMap(({ assets }) => assets.map(({ definition }) => definition));
 const readExactDefinition = async (ref: AssetReference) =>
   definitions.find((definition) => definition.definitionId === ref.id && definition.version === ref.version);
+
+function buildPlanReviewFixture(options: { expireBeforeCommit?: boolean; expireAfterCommit?: boolean } = {}) {
+  const fingerprint = "ab".repeat(32);
+  const targetScope = { organizationId, workspaceId, principalId: "fixture-principal", registeredClientId: clientId };
+  let current = true;
+  let permitted = true;
+  let time = 100;
+  let updates = 0;
+  let state: HeadlessPlanReviewState = {
+    revision: 1, stepCount: 3, expiresAt: 200, status: "pending", approvedSteps: 0,
+  };
+  const store: HeadlessPlanReviewPort = {
+    async decide({ target, isCurrent, update }) {
+      if (target.hostIncarnationId !== firstHost || target.fingerprint !== fingerprint ||
+          target.scope.workspaceId !== workspaceId || target.scope.registeredClientId !== clientId ||
+          !isCurrent() || !permitted) return { ok: false, code: "forbidden" };
+      const result = update(state);
+      if (result.ok) {
+        if (options.expireBeforeCommit) time = state.expiresAt;
+        if (!isCurrent()) return { ok: false, code: "expired" };
+        if (!permitted) return { ok: false, code: "forbidden" };
+        state = result.state;
+        updates++;
+        if (options.expireAfterCommit) time = state.expiresAt;
+      }
+      return result;
+    },
+  };
+  const useCase = new HeadlessBuildPlanReviewUseCase(store, () => time);
+  const actor: HeadlessPlanReviewActor = {
+    organizationId, principalId: targetScope.principalId, channel: "app-popup",
+    isCurrent: () => current, canDecide: async () => permitted,
+  };
+  const decide = (expectedRevision: number, decision: unknown, options?: {
+    actor?: Partial<HeadlessPlanReviewActor>; scope?: Partial<typeof targetScope>; request?: Record<string, unknown>;
+  }) => useCase.decide({ fingerprint, expectedRevision, decision, ...options?.request }, firstHost,
+    { ...targetScope, ...options?.scope }, { ...actor, ...options?.actor });
+  return { targetScope, actor, decide, snapshot: () => ({ ...state }), updates: () => updates,
+    expire: () => { time = 200; }, disconnect: () => { current = false; }, losePermission: () => { permitted = false; } };
+}
+
+test("accepts a whole plan from either verified human channel and supports exact revoke", async () => {
+  for (const channel of ["app-popup", "authenticated-chat"] as const) {
+    const fixture = buildPlanReviewFixture();
+    const approve = { kind: "approve", mode: "whole-plan" };
+    const outcome = await fixture.decide(1, approve, { actor: { channel } });
+    assert.ok(outcome.ok);
+    assert.deepEqual(outcome.state, { ...fixture.snapshot(), revision: 2, status: "approved",
+      mode: "whole-plan", approvedSteps: 3, lastChannel: channel });
+    assert.deepEqual(await fixture.decide(1, approve, { actor: { channel } }), { ok: false, code: "stale" });
+    assert.equal(fixture.updates(), 1);
+    await fixture.decide(2, { kind: "revoke" }, { actor: { channel: channel === "app-popup" ? "authenticated-chat" : "app-popup" } });
+    assert.equal(fixture.snapshot().status, "revoked");
+    assert.deepEqual(await fixture.decide(3, approve), { ok: false, code: "stale" });
+  }
+});
+
+test("records decisions for individual steps in order across the same plan on both channels", async () => {
+  const fixture = buildPlanReviewFixture();
+  const approve = (step: number) => ({ kind: "approve", mode: "each-change", step });
+  assert.deepEqual(await fixture.decide(1, approve(2)), { ok: false, code: "stale" });
+  const results = await Promise.all([
+    fixture.decide(1, approve(1)),
+    fixture.decide(1, approve(1), { actor: { channel: "authenticated-chat" } }),
+  ]);
+  assert.equal(results.filter(result => result.ok).length, 1);
+  assert.equal(fixture.snapshot().approvedSteps, 1);
+  assert.deepEqual(await fixture.decide(2, { kind: "approve", mode: "whole-plan" }), { ok: false, code: "stale" });
+  const second = await fixture.decide(2, approve(2), { actor: { channel: "authenticated-chat" } });
+  assert.ok(second.ok && second.state.status === "pending" && second.state.approvedSteps === 2);
+  const third = await fixture.decide(3, approve(3));
+  assert.ok(third.ok && third.state.status === "approved" && third.state.approvedSteps === 3);
+});
+
+test("rejects a new decision against changed plan, missing authority or expiry, and leaves denied or cancelled plans closed", async () => {
+  const approve = { kind: "approve", mode: "whole-plan" };
+  const fixture = buildPlanReviewFixture();
+  const denied = { ok: false, code: "forbidden" };
+  assert.deepEqual(await fixture.decide(1, approve, { request: { fingerprint: "cd".repeat(32) } }), denied);
+  assert.deepEqual(await fixture.decide(1, approve, { actor: { principalId: "different-person" } }), denied);
+  assert.deepEqual(await fixture.decide(1, approve, { scope: { workspaceId: createWorkspaceId("other-workspace") } }), denied);
+  assert.deepEqual(await fixture.decide(1, approve, { request: { channel: "authenticated-chat" } }), { ok: false, code: "invalid" });
+  assert.deepEqual(await fixture.decide(1, { ...approve, step: 1 }), { ok: false, code: "invalid" });
+  fixture.expire();
+  assert.deepEqual(await fixture.decide(1, approve), { ok: false, code: "expired" });
+  fixture.disconnect();
+  assert.deepEqual(await fixture.decide(1, approve), denied);
+  assert.equal(fixture.updates(), 0);
+  for (const [kind, status] of [["deny", "denied"], ["cancel", "cancelled"]]) {
+    const fresh = buildPlanReviewFixture();
+    const stopped = await fresh.decide(1, { kind });
+    assert.ok(stopped.ok && stopped.state.status === status);
+    assert.deepEqual(await fresh.decide(2, approve), { ok: false, code: "stale" });
+  }
+  const losesAccess = buildPlanReviewFixture();
+  assert.deepEqual(await losesAccess.decide(1, approve, {
+    actor: { canDecide: async () => { losesAccess.losePermission(); return true; } },
+  }), denied);
+  assert.equal(losesAccess.updates(), 0);
+});
+
+test("does not acknowledge approval if its deadline passes at commit or before the response", async () => {
+  const approve = { kind: "approve", mode: "whole-plan" };
+  const deniedAtCommit = buildPlanReviewFixture({ expireBeforeCommit: true });
+  assert.deepEqual(await deniedAtCommit.decide(1, approve), { ok: false, code: "expired" });
+  assert.equal(deniedAtCommit.updates(), 0);
+  assert.equal(deniedAtCommit.snapshot().status, "pending");
+
+  const expiredAtResponse = buildPlanReviewFixture({ expireAfterCommit: true });
+  assert.deepEqual(await expiredAtResponse.decide(1, approve), { ok: false, code: "expired" });
+  assert.equal(expiredAtResponse.updates(), 1);
+  assert.equal(expiredAtResponse.snapshot().status, "approved");
+});
 
 function setup(options: { readonly wrongCloneRevision?: boolean } = {}) {
   const documents = createInMemoryStructuredDocumentStore();
