@@ -20,6 +20,9 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         selected = self.plan([owner, barrel], check)
         self.assertNotIn("focused-tests", selected)
         self.assertIn("modules/contracts/headless/tests/headless-data-task-status.unit.test.ts", selected[check]["argv"])
+        local_source = "modules/contracts/headless/headless-data-local-file.ts"
+        local_test = "modules/contracts/headless/tests/headless-data-local-file.unit.test.ts"
+        self.assertIn(local_test, self.plan([local_source])[check]["argv"])
         self.assertIn("modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts", selected[check]["argv"])
         self.assertIn("focused-tests", self.plan([owner, "modules/contracts/headless/unrelated.ts"], check))
 

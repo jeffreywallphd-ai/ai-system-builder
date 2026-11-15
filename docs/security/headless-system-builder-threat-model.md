@@ -528,3 +528,12 @@ and diagnostic text stay in the owning Data interface. Test fixtures cover
 foreign scope, extra request fields, revoked permission, out-of-range
 progress, and missing tasks. Host wiring, import effects and presentation
 have separate verification before a registration can use those capabilities.
+
+The local import preview binds the current task revision and one selected
+file ID. It requires an active local task whose saved record reports a
+complete transfer and an unexpired checkpoint. Active uploads can retain
+checkpoints for later cleanup. Cancelled, paused, or already finalizing
+tasks, provider sources, and incomplete bytes deny admission. The agent
+sees only the ID, type, size, expiry, and proposed local effect. The owning
+publication path still needs exact approval, current access, and its byte
+and receipt verification.

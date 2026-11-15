@@ -1,25 +1,47 @@
 import type { ApplicationRequestContext } from "../../ports";
-import type { IngestionTaskTransportCommand, IngestionTaskTransportValue } from "../../../contracts/ingestion";
+import type { IngestionTaskRecord, IngestionTaskTransportCommand, IngestionTaskTransportValue } from "../../../contracts/ingestion";
 import type { ContractResult } from "../../../contracts/shared";
-import { projectHeadlessIngestionStatus, type HeadlessIngestionStatusRequest } from "../../../contracts/headless";
+import {
+  projectHeadlessIngestionStatus, projectHeadlessLocalFileImport,
+  type HeadlessIngestionStatusRequest, type HeadlessLocalFileImportRequest,
+} from "../../../contracts/headless";
 
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
 const unavailable = { ok: false, code: "headless.unavailable" } as const;
 
-export class ReadHeadlessIngestionStatusUseCase {
-  public constructor(private readonly ingestion: {
-    executeCommand(input: IngestionTaskTransportCommand, context: ApplicationRequestContext):
-      Promise<ContractResult<IngestionTaskTransportValue>>;
-  }) {}
+interface TaskReadAuthority {
+  readonly context: ApplicationRequestContext;
+  readonly stillAllowed: () => Promise<boolean>;
+}
 
-  public async execute(
-    request: HeadlessIngestionStatusRequest,
-    authority: {
-      readonly context: ApplicationRequestContext;
-      readonly stillAllowed: () => Promise<boolean>;
+export class ReadHeadlessIngestionStatusUseCase {
+  public constructor(
+    private readonly ingestion: {
+      executeCommand(input: IngestionTaskTransportCommand, context: ApplicationRequestContext):
+        Promise<ContractResult<IngestionTaskTransportValue>>;
     },
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  public execute(
+    request: HeadlessIngestionStatusRequest,
+    authority: TaskReadAuthority,
   ) {
-    const { taskId, workspaceId } = request.input;
+    return this.readAuthorizedTask(request.input, authority, task => projectHeadlessIngestionStatus(task, request.input));
+  }
+
+  public prepareLocalFileImport(
+    request: HeadlessLocalFileImportRequest,
+    authority: TaskReadAuthority,
+  ) {
+    return this.readAuthorizedTask(request.input, authority, task => projectHeadlessLocalFileImport(task, request.input, this.now()));
+  }
+
+  private async readAuthorizedTask<Result>(
+    { taskId, workspaceId }: HeadlessIngestionStatusRequest["input"],
+    authority: TaskReadAuthority,
+    project: (task: IngestionTaskRecord) => Result,
+  ) {
     if (authority.context.workspaceId !== workspaceId) return forbidden;
     try {
       if (!await authority.stillAllowed()) return forbidden;
@@ -29,7 +51,7 @@ export class ReadHeadlessIngestionStatusUseCase {
         if (result.error.code === "forbidden" || result.error.code === "not-found") return forbidden;
         return unavailable;
       }
-      return result.value.kind === "task" ? projectHeadlessIngestionStatus(result.value.task, request.input) : unavailable;
+      return result.value.kind === "task" ? project(result.value.task) : unavailable;
     } catch {
       return unavailable;
     }

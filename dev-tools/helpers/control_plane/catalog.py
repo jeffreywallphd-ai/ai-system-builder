@@ -679,18 +679,22 @@ PUBLISHED_FORM_CHECKS = {
     "headless-data-task-status": {
         "automatic_sources": (
             "modules/contracts/headless/headless-data-task-status.ts",
+            "modules/contracts/headless/headless-data-local-file.ts",
             "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts",
         ),
         "sources": (
             "modules/contracts/headless/headless-data-task-status.ts",
+            "modules/contracts/headless/headless-data-local-file.ts",
             "modules/contracts/headless/index.ts",
             "modules/contracts/headless/tests/headless-data-task-status.unit.test.ts",
+            "modules/contracts/headless/tests/headless-data-local-file.unit.test.ts",
             "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts",
             "modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--",
             "modules/contracts/headless/tests/headless-data-task-status.unit.test.ts",
+            "modules/contracts/headless/tests/headless-data-local-file.unit.test.ts",
             "modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts",
         ),
     },
