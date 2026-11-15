@@ -2,6 +2,7 @@ import { Agent, request } from "node:https";
 import { randomUUID } from "node:crypto";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
+import type { HeadlessPlanReviewAgentRequest, HeadlessPlanReviewAgentResult } from "../../../contracts/headless/index.js";
 import type { HeadlessApprovedTurnRequest, HeadlessApprovedTurnResult, HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessWindowRequest, HeadlessWindowResult } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
@@ -98,11 +99,12 @@ type ReadResult = { ok: true; operation: HeadlessReadRequest["operation"]; value
 const unavailable: ReadResult = { ok: false, code: deadlineCode };
 
 type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
-type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest;
+export type HeadlessPlanReviewForwardRequest = HeadlessPlanReviewAgentRequest & { readonly version: typeof HEADLESS_CONTRACT_VERSION };
+type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest | HeadlessPlanReviewForwardRequest;
 const unknownWrite: HeadlessAuthoringWireResult = { ok: false, code: "headless.operation-unconfirmed" };
 const unknownTurn = { ok: false, code: "headless.operation-unconfirmed" } as const;
 export const MANAGED_HEADLESS_READS = ["host.describe", "templates.list", "systems.read", "plan.capabilities"] as const;
-type ForwardResult = ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult;
+type ForwardResult = ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult | HeadlessPlanReviewAgentResult;
 
 export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly httpsOrigin?: string;
@@ -128,6 +130,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   // Each fixed POST independently prevents proxying and redirect following.
   const agent = new Agent({rejectUnauthorized: true, keepAlive: false, maxSockets: MAX_ACTIVE});
   const guard = (input: ForwardRequest) => {
+    if (isPlanReview(input)) return false;
     if (input.version === headless.UI_CONTROL_VERSION) {
       const target = "target" in input.input ? input.input.target : input.input;
       return enableConsent && target.workspaceId === workspaceId &&
@@ -164,7 +167,7 @@ function resultHasOperation(result: ForwardResult, operation: HeadlessReadReques
 }
 
 export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: unknown, credential: unknown,
-  enableAuthoring = false, enableConversation = false, enablePresentation = false) {
+  enableAuthoring = false, enableConversation = false, enablePresentation = false, enablePlanReview = false) {
   if (!isDesktopHeadlessEndpoint(endpoint) || !isDesktopHeadlessFingerprint(fingerprint) || typeof credential !== "string" ||
       credential.length !== 43 || !/^[A-Za-z0-9_-]{43}$/.test(credential)) return undefined;
   // Build fixed paths locally. The pinned Agent attaches HTTP only to
@@ -173,14 +176,17 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const authoringAddress = new URL("/aisb-headless/v1/author", endpoint);
   const conversationAddress = new URL(headless.HEADLESS_APPROVED_TURN_PATH, endpoint);
   const presentationAddress = new URL(headless.HEADLESS_WINDOW_CONTROL_PATH, endpoint);
+  const planReviewAddress = enablePlanReview ? new URL(headless.HEADLESS_PLAN_REVIEW_PATH, endpoint) : undefined;
   const agent = loopback.createDesktopPinnedLoopbackAgent(endpoint, fingerprint);
   const authorization = `Bearer ${credential}`;
-  return createForwarder({address, authoringAddress, conversationAddress, presentationAddress,
-    agent, authorization, enableAuthoring, enableConversation, enablePresentation});
+  return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress,
+    agent, authorization, enableAuthoring: !enablePlanReview && enableAuthoring,
+    enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
 }
 
 function createForwarder(options: {
   address: URL; authoringAddress: URL; conversationAddress: URL; presentationAddress: URL;
+  planReviewAddress?: URL;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
@@ -190,6 +196,25 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
+    if (isPlanReview(input)) {
+      if (!options.planReviewAddress) return { ok: false, code: "headless.forbidden" };
+      if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
+      active++;
+      try {
+        const fields = input.operation === "plan.submit"
+          ? { ...input.target, steps: input.proposal.preview.steps.map(({ operation, input }) => ({ operation, ...input })) }
+          : input.target;
+        const { status, raw } = await sendRead(options.planReviewAddress, agent, authorization,
+          { version: input.version, operation: input.operation, input: fields }, signal, headers,
+          DEADLINE_MS, headless.HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES);
+        const result = headless.readHeadlessPlanReviewAgentResult(raw, input.target.fingerprint,
+          input.operation === "plan.submit" ? input.proposal.requests.length : undefined);
+        if (status === 200 && result.ok)
+          return result.value.expiresAt <= Date.now() ? { ok: false, code: "headless.plan-expired" } : result;
+        return !result.ok && status >= 400 && status < 600 ? result : unavailable;
+      } catch { return unavailable; }
+      finally { active--; }
+    }
     if (input.version === headless.UI_CONTROL_VERSION) {
       if (!enablePresentation) return { ok: false, code: "headless.forbidden" };
       if (!headless.readHeadlessWindowRequest(input) || active >= MAX_ACTIVE || signal?.aborted) return unavailable;
@@ -299,15 +324,19 @@ function createForwarder(options: {
   };
 }
 
+function isPlanReview(input: ForwardRequest): input is HeadlessPlanReviewForwardRequest {
+  return input.operation === "plan.submit" || input.operation === "plan.status";
+}
+
 function isAuthoring(input: ForwardRequest): input is AuthoringRequest {
   return input.operation === "systems.preview-edits" || input.operation === "systems.apply-edits" ||
     input.operation === "systems.create" || input.operation === "systems.rename" || input.operation === "systems.clone";
 }
 
-function sendRead(address: URL, agent: Agent | undefined, authorization: string, input: ForwardRequest, signal?: AbortSignal,
-  headers?: Readonly<Record<string, string>>, deadlineMs = DEADLINE_MS) {
+function sendRead(address: URL, agent: Agent | undefined, authorization: string, input: unknown, signal?: AbortSignal,
+  headers?: Readonly<Record<string, string>>, deadlineMs = DEADLINE_MS, maxRequestBytes = 8 * 1024) {
   const body = JSON.stringify(input);
-  if (Buffer.byteLength(body) > 8 * 1024) return Promise.reject(new Error("The local request is too large."));
+  if (Buffer.byteLength(body) > maxRequestBytes) return Promise.reject(new Error("The local request is too large."));
   return new Promise<{ status: number; raw: unknown }>((resolve, reject) => {
     const client = request(address, {
       method: "POST",

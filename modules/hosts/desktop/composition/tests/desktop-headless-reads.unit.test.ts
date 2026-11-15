@@ -71,6 +71,8 @@ test("planning reports only operations allowed by the Desktop grant and current 
   let narrowOnRead = false;
   let narrowEditOnRenameCheck = false;
   let canEdit = true;
+  let trackFinalEditCheck = false;
+  let finalEditChecked = false;
   const handler = composeDesktopHeadlessReads({
     hostIncarnationId, identity:{organizationId, principalId},
     workspaceRepository:{async readWorkspace(id) {
@@ -82,6 +84,8 @@ test("planning reports only operations allowed by the Desktop grant and current 
         throw new Error("Fixture denied rename.");
       }
       if (requiredScopes.includes("asset:write") && !canEdit) throw new Error("Fixture removed editing but kept reading.");
+      if (trackFinalEditCheck && operation === "headless.plan.capabilities" && requiredScopes.includes("asset:write"))
+        finalEditChecked = true;
       if (operation === "headless.systems.create") {
         assert.deepEqual(requiredScopes, ["workspace:read", "asset:read", "asset:write"]);
         if (narrowOnRead) verified = grant;
@@ -95,13 +99,36 @@ test("planning reports only operations allowed by the Desktop grant and current 
   assert.deepEqual(await handler(target, async () => grant), {ok:true, operation, value:{workspaceId, actions:[], approval:"required"}});
   assert.deepEqual(await handler(target, async () => verified), {ok:true, operation,
     value:{workspaceId, actions:["systems.create"], approval:"required"}});
+  const proposedOnly = { ...grant, planReview: true as const };
+  assert.deepEqual(await handler(target, async () => proposedOnly), { ok: true, operation,
+    value: { workspaceId, actions: ["systems.create", "systems.clone"], approval: "required" } });
   assert.deepEqual(await handler(request(operation, {hostIncarnationId, workspaceId:otherWorkspaceId}), async () => verified), forbidden);
   const described = await handler(request("host.describe", {}), async () => verified);
   assert.ok(described.ok && described.operation === "host.describe" && !described.value.operations.includes(operation));
   narrowOnRead = true;
   assert.deepEqual(await handler(target, async () => verified), forbidden);
   narrowOnRead = false;
+  verified = proposedOnly;
+  narrowOnRead = true;
+  assert.deepEqual(await handler(target, async () => verified), forbidden);
+  narrowOnRead = false;
   verified = authored;
+  trackFinalEditCheck = true;
+  let checkedGrantAfterEdit = false;
+  const ordered = await handler(target, async () => {
+    if (finalEditChecked) {
+      checkedGrantAfterEdit = true;
+      canEdit = false;
+    }
+    return authored;
+  });
+  assert.ok(ordered.ok && ordered.operation === "plan.capabilities" && ordered.value.actions.length === 1);
+  assert.equal(finalEditChecked, true);
+  assert.equal(checkedGrantAfterEdit, false);
+  finalEditChecked = false;
+  const retired = { ...authored, isCurrent: () => !finalEditChecked };
+  assert.deepEqual(await handler(target, async () => retired), forbidden);
+  trackFinalEditCheck = false;
   narrowEditOnRenameCheck = true;
   assert.deepEqual(await handler(target, async () => verified), forbidden);
   assert.deepEqual(await handler(target, async () => verified), {ok:true, operation,

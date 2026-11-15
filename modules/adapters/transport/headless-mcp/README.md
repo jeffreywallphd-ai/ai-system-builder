@@ -69,6 +69,16 @@ approval is required before execution. Compare fingerprints to tell whether
 two previews contain the same ordered actions in the same workspace and host
 session. The owning app still needs to record approval before execution.
 
+For the desktop plan-review connector, set `AISB_HEADLESS_ENABLE_PLAN_REVIEW=1`
+with its dedicated pairing. This discovery mode includes preview, proposal
+submission and status. It excludes direct editing, conversation sending and
+window control. Submit the exact ordered steps and preview fingerprint with
+`aisb_request_build_plan_approval`. Read back the current decision with
+`aisb_build_plan_approval_status`. If a submission loses its reply, check the
+same fingerprint or resubmit the exact proposal. The tools do not make a
+decision. Normal desktop startup keeps the plan route disabled until the
+approval interface is connected.
+
 If a write reply is lost, check the saved state or repeat the exact request
 with the same key. The adapter never repeats writes automatically. Cancellation
 ends the local wait but cannot undo a transaction already committed. A canceled

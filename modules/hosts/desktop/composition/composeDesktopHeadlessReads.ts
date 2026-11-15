@@ -21,6 +21,7 @@ import type { SystemBuilderCompositionRoot } from "../../shared/composition/comp
 
 const MAX_READ_ROWS = 128;
 const MAX_DISPLAY_LENGTH = 200;
+const PLAN_REVIEW_ACTIONS = ["systems.create", "systems.rename", "systems.clone"] as const;
 
 /** Only the trusted connector can supply this result of credential verification. */
 export interface DesktopHeadlessReadGrant {
@@ -31,6 +32,8 @@ export interface DesktopHeadlessReadGrant {
   readonly operations: readonly HeadlessReadOperation[];
   readonly authoring?: readonly DesktopHeadlessAuthoringOperation[];
   readonly conversation?: true;
+  readonly planReview?: true;
+  readonly isCurrent?: () => boolean;
 }
 
 export type DesktopHeadlessReadHandler = (
@@ -41,6 +44,8 @@ export type DesktopHeadlessReadHandler = (
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
 const unavailable = { ok: false, code: "headless.unavailable" } as const;
 const tooLarge = { ok: false, code: "headless.result-too-large" } as const;
+const planActions = (grant: DesktopHeadlessReadGrant): readonly DesktopHeadlessAuthoringOperation[] =>
+  grant.planReview ? PLAN_REVIEW_ACTIONS : grant.authoring ?? [];
 
 export function composeDesktopHeadlessReads(dependencies: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -164,7 +169,7 @@ export function composeDesktopHeadlessReads(dependencies: {
         }
         case "plan.capabilities": {
           const actions: HeadlessSystemManagementRequest["operation"][] = [];
-          for (const action of new Set(grant.authoring)) {
+          for (const action of new Set(planActions(grant))) {
             if ((action === "systems.create" || action === "systems.rename" || action === "systems.clone") &&
                 await authorizedWorkspace(workspaceId, action, true)) actions.push(action);
           }
@@ -228,9 +233,13 @@ export function composeDesktopHeadlessReads(dependencies: {
       if (!finalGrant || (response.ok && response.operation === "workflows.prepare" &&
           response.value.approvedSessionIds !== undefined && finalGrant.conversation !== true)) return forbidden;
       if (response.ok && response.operation === "plan.capabilities" && response.value.actions.length > 0) {
-        if (response.value.actions.some(action => !finalGrant.authoring?.includes(action))) return forbidden;
+        if (finalGrant.planReview !== grant.planReview ||
+            response.value.actions.some(action => !planActions(finalGrant).includes(action))) return forbidden;
         // The edit scope may narrow while the request checks individual actions.
-        if (!await authorizedWorkspace(workspaceId, "plan.capabilities", true) || !isOpen()) return forbidden;
+        // Keep the policy as the last awaited check. Registry reads for direct
+        // editors alone do not recheck workspace edit permission.
+        if (!await authorizedWorkspace(workspaceId, "plan.capabilities", true) ||
+            !isOpen() || finalGrant.isCurrent?.() === false) return forbidden;
       }
       return response;
     } catch {

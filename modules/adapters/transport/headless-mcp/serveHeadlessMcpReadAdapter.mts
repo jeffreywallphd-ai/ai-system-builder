@@ -8,7 +8,8 @@ import systemBuilder from "../../../contracts/system-builder/index.js";
 import type { SystemBuilderSystemId } from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
 import type { WorkspaceId } from "../../../contracts/workspace/index.js";
-import { createHeadlessMcpReadForwarder, createManagedHeadlessMcpReadForwarder } from "./createHeadlessMcpReadForwarder.mjs";
+import { createHeadlessMcpReadForwarder, createManagedHeadlessMcpReadForwarder,
+  type HeadlessPlanReviewForwardRequest } from "./createHeadlessMcpReadForwarder.mjs";
 import { boundHeadlessMcpStdio } from "./boundHeadlessMcpStdio.mjs";
 
 const hostIncarnationId = z.string().refine(headless.isHeadlessHostIncarnationId, "Invalid host ID");
@@ -22,11 +23,12 @@ const workflowSource = z.discriminatedUnion("kind", [
 const version = headless.HEADLESS_CONTRACT_VERSION;
 const requestedMode = process.env.AISB_HEADLESS_MODE;
 const managed = requestedMode === "managed";
-const enableAuthoring = process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
-const enableConversation = process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
+const enablePlanReview = !managed && process.env.AISB_HEADLESS_ENABLE_PLAN_REVIEW === "1";
+const enableAuthoring = !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
+const enableConversation = !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
 const enableManagedConsent = managed && process.env.AISB_HEADLESS_ENABLE_MANAGED_CONSENT === "1";
 const enableManagedDelivery = enableManagedConsent && process.env.AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION === "1";
-const enablePresentation = managed ? enableManagedConsent : process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
+const enablePresentation = managed ? enableManagedConsent : !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
 const forward = managed ? createManagedHeadlessMcpReadForwarder({
   httpsOrigin: process.env.AISB_HEADLESS_MANAGED_ORIGIN,
   credential: process.env.AISB_HEADLESS_MANAGED_CREDENTIAL,
@@ -34,7 +36,7 @@ const forward = managed ? createManagedHeadlessMcpReadForwarder({
   workspaceId: process.env.AISB_HEADLESS_MANAGED_WORKSPACE_ID,
 }, enableAuthoring, enableManagedConsent, enableManagedDelivery) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
   process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL,
-  enableAuthoring, enableConversation, enablePresentation,
+  enableAuthoring, enableConversation, enablePresentation, enablePlanReview,
 ) : undefined;
 delete process.env.AISB_HEADLESS_CREDENTIAL;
 delete process.env.AISB_HEADLESS_MANAGED_CREDENTIAL;
@@ -43,7 +45,8 @@ function toolResult<T extends { ok: boolean }>(result:T) {
   return { content: [{ type: "text" as const, text: JSON.stringify(result) }], isError: !result.ok };
 }
 
-async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest, signal?: AbortSignal) {
+async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest |
+  HeadlessApprovedTurnRequest | HeadlessWindowRequest | HeadlessPlanReviewForwardRequest, signal?: AbortSignal) {
   return toolResult(await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" });
 }
 
@@ -103,7 +106,7 @@ function addPresentationTools(server: McpServer) {
   }, (input, context) => call("window.context", input, context.mcpReq.signal));
 }
 
-function addAuthoringTools(server: McpServer) {
+function addSystemBuilderTools(server: McpServer) {
   const displayName = z.string().min(1).max(120);
   const idempotencyKey = z.string().refine(headless.isHeadlessHostIncarnationId, "Invalid retry key");
   const workspaceTarget = { hostIncarnationId, workspaceId };
@@ -138,27 +141,29 @@ function addAuthoringTools(server: McpServer) {
     const management = headless.parseHeadlessSystemManagementRequest(raw, input.hostIncarnationId);
     return management.ok ? invoke(management.request, signal) : invalidAuthoring();
   }
-  server.registerTool("aisb_create_system", {
-    description: "Create one saved system from an exact template in the approved workspace. Reuse the same key after a lost reply.",
-    inputSchema: z.strictObject({ ...workspaceTarget, ...create }),
-    annotations: { ...writeHints, destructiveHint: false },
-  }, (input, context) => author("systems.create", input, context.mcpReq.signal));
-  server.registerTool("aisb_rename_system", {
-    description: "Rename one saved system against both revisions. If omitted, the existing description is preserved.",
-    inputSchema: z.strictObject({ ...workspaceTarget, ...rename }), annotations: writeHints,
-  }, (input, context) => author("systems.rename", input, context.mcpReq.signal));
-  server.registerTool("aisb_clone_system", {
-    description: "Copy one exact saved system revision in its approved workspace.",
-    inputSchema: z.strictObject(target), annotations: { ...writeHints, destructiveHint: false },
-  }, (input, context) => author("systems.clone", input, context.mcpReq.signal));
-  server.registerTool("aisb_preview_edits", {
-    description: "Validate a bounded edit batch and list what it removes. This does not change saved state.",
-    inputSchema: z.strictObject({ ...base, edits }), annotations: queryHints,
-  }, (input, context) => author("systems.preview-edits", input, context.mcpReq.signal));
-  server.registerTool("aisb_apply_edits", {
-    description: "Apply the exact preview to the same saved revision. Reuse the same key after a lost reply; do not repeat with a new key.",
-    inputSchema: z.strictObject({ ...base, edits, previewDigest: z.string().regex(/^[a-f0-9]{64}$/), idempotencyKey }), annotations: writeHints,
-  }, (input, context) => author("systems.apply-edits", input, context.mcpReq.signal));
+  if (enableAuthoring) {
+    server.registerTool("aisb_create_system", {
+      description: "Create one saved system from an exact template in the approved workspace. Reuse the same key after a lost reply.",
+      inputSchema: z.strictObject({ ...workspaceTarget, ...create }),
+      annotations: { ...writeHints, destructiveHint: false },
+    }, (input, context) => author("systems.create", input, context.mcpReq.signal));
+    server.registerTool("aisb_rename_system", {
+      description: "Rename one saved system against both revisions. If omitted, the existing description is preserved.",
+      inputSchema: z.strictObject({ ...workspaceTarget, ...rename }), annotations: writeHints,
+    }, (input, context) => author("systems.rename", input, context.mcpReq.signal));
+    server.registerTool("aisb_clone_system", {
+      description: "Copy one exact saved system revision in its approved workspace.",
+      inputSchema: z.strictObject(target), annotations: { ...writeHints, destructiveHint: false },
+    }, (input, context) => author("systems.clone", input, context.mcpReq.signal));
+    server.registerTool("aisb_preview_edits", {
+      description: "Validate a bounded edit batch and list what it removes. This does not change saved state.",
+      inputSchema: z.strictObject({ ...base, edits }), annotations: queryHints,
+    }, (input, context) => author("systems.preview-edits", input, context.mcpReq.signal));
+    server.registerTool("aisb_apply_edits", {
+      description: "Apply the exact preview to the same saved revision. Reuse the same key after a lost reply; do not repeat with a new key.",
+      inputSchema: z.strictObject({ ...base, edits, previewDigest: z.string().regex(/^[a-f0-9]{64}$/), idempotencyKey }), annotations: writeHints,
+    }, (input, context) => author("systems.apply-edits", input, context.mcpReq.signal));
+  }
   const step = z.discriminatedUnion("operation", [
     z.strictObject({ operation: z.literal("systems.create"), ...create }),
     z.strictObject({ operation: z.literal("systems.rename"), ...rename }),
@@ -220,11 +225,30 @@ function addAuthoringTools(server: McpServer) {
     const fingerprint = createHash("sha256").update(JSON.stringify(preview), "utf8").digest("hex");
     return toolResult({ ok: true, value: { ...preview, fingerprint } });
   });
+  if (enablePlanReview) {
+    const fingerprint = z.string().length(64).regex(/^[a-f0-9]{64}$/);
+    const reviewTarget = { ...workspaceTarget, fingerprint };
+    const submit = { ...reviewTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) };
+    async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
+      if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+      const raw = { version, operation, input };
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId);
+      return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
+    }
+    server.registerTool("aisb_request_build_plan_approval", {
+      description: "Send the exact preview for human review in the app. An exact retry returns the current decision and original deadline.",
+      inputSchema: z.strictObject(submit), annotations: { ...writeHints, destructiveHint: false },
+    }, (input, context) => reviewPlan("plan.submit", input, context.mcpReq.signal));
+    server.registerTool("aisb_build_plan_approval_status", {
+      description: "Read the app's current decision and expiry for one exact build-plan proposal.",
+      inputSchema: z.strictObject(reviewTarget), annotations: queryHints,
+    }, (input, context) => reviewPlan("plan.status", input, context.mcpReq.signal));
+  }
 }
 
 serveStdio(() => {
   const host = managed ? "managed" : "desktop";
-  const mode = enableAuthoring ? "authoring" : "read";
+  const mode = enablePlanReview ? "plan-review" : enableAuthoring ? "authoring" : "read";
   const server = new McpServer({ name: `ai-system-builder-${host}-${mode}`, version: "1.0.0" }, { capabilities: { tools: {} } });
   const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
   server.registerTool("aisb_host_describe", {
@@ -293,7 +317,7 @@ serveStdio(() => {
   }, (input, context) => invoke({ version, operation: "conversation-tasks.read", input: {
     ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
   } }, context.mcpReq.signal));
-  if (enableAuthoring) addAuthoringTools(server);
+  if (enableAuthoring || enablePlanReview) addSystemBuilderTools(server);
   if (enablePresentation) addPresentationTools(server);
   if (!managed && enableConversation) server.registerTool("aisb_send_approved_turn", {
     description: "Send one message to an already approved conversation at its exact saved revisions. An uncertain reply never authorizes a new key; reconcile before retrying the same request.",

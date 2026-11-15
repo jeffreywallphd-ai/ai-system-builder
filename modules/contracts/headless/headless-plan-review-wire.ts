@@ -4,6 +4,7 @@ import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHo
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal } from "./headless-system-management";
 
 export const HEADLESS_PLAN_REVIEW_PATH = "/aisb-headless/v1/plan-review";
+export const HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES = 32 * 1024;
 
 interface PlanTarget {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -55,7 +56,8 @@ export type HeadlessPlanReviewAgentResult =
     readonly mode?: "whole-plan" | "each-change";
   } };
 
-export function readHeadlessPlanReviewAgentResult(value: unknown, exactFingerprint: string): HeadlessPlanReviewAgentResult {
+export function readHeadlessPlanReviewAgentResult(value: unknown, exactFingerprint: string,
+  expectedStepCount?: number): HeadlessPlanReviewAgentResult {
   try {
     const raw = readStrictPassiveRecord(value, ["ok", "code", "value"]);
     if (raw.ok === false && !("value" in raw) && failureCodes.includes(raw.code as FailureCode))
@@ -65,6 +67,7 @@ export function readHeadlessPlanReviewAgentResult(value: unknown, exactFingerpri
       readStrictPassiveRecord(raw.value, ["fingerprint", "revision", "stepCount", "expiresAt", "status", "approvedSteps", "mode"]);
     if (!isDigest(fingerprint) || fingerprint !== exactFingerprint || !integerAtLeast(revision, 1) ||
         !integerAtLeast(stepCount, 1) || stepCount > HEADLESS_MAX_BUILD_PLAN_STEPS || !integerAtLeast(expiresAt, 1) ||
+        (expectedStepCount !== undefined && stepCount !== expectedStepCount) ||
         !integerAtLeast(approvedSteps, 0) || approvedSteps > stepCount ||
         (mode !== undefined && mode !== "whole-plan" && mode !== "each-change") ||
         (status !== "pending" && status !== "approved" && status !== "denied" && status !== "cancelled" && status !== "revoked") ||

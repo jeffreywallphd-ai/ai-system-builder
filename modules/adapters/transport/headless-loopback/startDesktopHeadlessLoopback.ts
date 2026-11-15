@@ -12,7 +12,7 @@ import {
   parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest, readHeadlessAuthoringWireResult,
   type HeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadResult,
   type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
-  HEADLESS_PLAN_REVIEW_PATH, readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult,
+  HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult,
   type HeadlessPlanReviewAgentRequest, type HeadlessPlanReviewAgentResult,
 } from "../../../contracts/headless";
 import type { createDesktopHeadlessClientAuthority } from "../../security/headless";
@@ -22,7 +22,6 @@ const PAIR_PATH = "/aisb-headless/v1/pair";
 const READ_PATH = "/aisb-headless/v1/read";
 const AUTHOR_PATH = "/aisb-headless/v1/author";
 const MAX_REQUEST_BYTES = 8 * 1024;
-const MAX_PLAN_REVIEW_REQUEST_BYTES = 32 * 1024;
 const MAX_RESPONSE_BYTES = 128 * 1024;
 const MAX_CONNECTIONS = 16;
 const MAX_REQUESTS_PER_SECOND = 128;
@@ -193,7 +192,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       return;
     }
     const length = Number(declaredLength);
-    const maximumLength = request.url === HEADLESS_PLAN_REVIEW_PATH ? MAX_PLAN_REVIEW_REQUEST_BYTES : MAX_REQUEST_BYTES;
+    const maximumLength = request.url === HEADLESS_PLAN_REVIEW_PATH ? HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES : MAX_REQUEST_BYTES;
     if (length > maximumLength) {
       fail(response, 413, "headless.invalid-request");
       return;
@@ -294,7 +293,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         return;
       }
       const outcome = await dependencies.planReview.execute(plan.request, grant, currentGrant);
-      const result = readHeadlessPlanReviewAgentResult(outcome, plan.request.target.fingerprint);
+      const result = readHeadlessPlanReviewAgentResult(outcome, plan.request.target.fingerprint,
+        plan.request.operation === "plan.submit" ? plan.request.proposal.requests.length : undefined);
       const finalGrant = await currentGrant();
       if (!admitting() || response.destroyed) return;
       if (finalGrant?.planReview !== true || !grantIsCurrent(finalGrant, true)) {

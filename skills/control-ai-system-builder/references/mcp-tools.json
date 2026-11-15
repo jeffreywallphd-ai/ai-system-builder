@@ -128,6 +128,25 @@
         "aisb_window_context",
         "aisb_window_status"
       ]
+    },
+    {
+      "mode": "plan-review",
+      "tools": [
+        "aisb_build_plan_approval_status",
+        "aisb_host_describe",
+        "aisb_list_systems",
+        "aisb_list_templates",
+        "aisb_list_workflows",
+        "aisb_list_workspaces",
+        "aisb_plan_capabilities",
+        "aisb_prepare_workflow",
+        "aisb_preview_build_plan",
+        "aisb_read_conversation_task",
+        "aisb_read_system",
+        "aisb_request_build_plan_approval",
+        "aisb_saved_system_changes",
+        "aisb_saved_system_snapshot"
+      ]
     }
   ],
   "tools": [
@@ -378,6 +397,33 @@
           "edits",
           "previewDigest",
           "idempotencyKey"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_build_plan_approval_status",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "fingerprint"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false
@@ -1484,6 +1530,158 @@
         },
         "required": [
           "target"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_request_build_plan_approval",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "steps": {
+            "minItems": 1,
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "systems.create"
+                    },
+                    "templateId": {
+                      "type": "string",
+                      "enum": [
+                        "reference.controlled-chatbot@1.0.0",
+                        "reference.secured-data-review@1.0.0",
+                        "reference.secured-data-entry@1.0.0"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "templateId",
+                    "name",
+                    "idempotencyKey"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "systems.rename"
+                    },
+                    "systemId": {
+                      "type": "string"
+                    },
+                    "baseRecordRevision": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "baseRevisionId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "systemId",
+                    "baseRecordRevision",
+                    "baseRevisionId",
+                    "idempotencyKey",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "systems.clone"
+                    },
+                    "systemId": {
+                      "type": "string"
+                    },
+                    "baseRecordRevision": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "baseRevisionId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "systemId",
+                    "baseRecordRevision",
+                    "baseRevisionId",
+                    "idempotencyKey",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "fingerprint",
+          "steps"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false

@@ -161,6 +161,10 @@ resolve exact immutable saved sources inside the owned write. An authorized
 retry can read its original proposal even after a source changes. Later
 execution still needs a current revision check. Normal desktop startup
 keeps the route disabled until the interactive approval path is connected.
+The desktop MCP plan-review mode offers proposal and status tools through
+the pinned connector. It omits direct editing, conversation sending, and
+window control when the launcher selects this mode. The server still checks
+the dedicated registration, exact proposal and current workspace policy.
 The internal operation store partitions receipts by verified organization and
 hashes the complete principal, client, workspace, operation and key scope.
 Receipts hold a fingerprint and the minimum saved revision reference; change
