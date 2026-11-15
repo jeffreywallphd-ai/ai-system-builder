@@ -344,7 +344,7 @@
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "plan-from-written-request",
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -1481,6 +1481,24 @@
       "recordedAt": "2026-11-15T00:27:30Z",
       "sequence": 74,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "07ab7fa514d6ff09340d170572a3773489f796b92a7f99c7c2643feca6e61cd6",
+      "recordedAt": "2026-11-15T00:28:08Z",
+      "sequence": 75,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "5b0fb54ccfedba5a3b0746218b8f8c13a70c141fa75c97b6d322fa5b7edb371d",
+      "recordedAt": "2026-11-15T00:28:08Z",
+      "sequence": 76,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "456b218a62a10c182a65e1f76936ba917c20e529b8230369249ef19b3a7a6bb2",
+      "recordedAt": "2026-11-15T00:28:08Z",
+      "sequence": 77,
+      "type": "increment-plan-recorded"
     }
   ],
   "increments": [
@@ -2184,11 +2202,101 @@
       "id": "plan-from-written-request",
       "number": 4,
       "objective": "Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "The chat model translates the user request into strict registered inputs. Identity, permissions and approval come from the owning app.",
+          "The first planning catalog advertises only implemented actions. Later roadmap increments extend it when their typed capabilities are available.",
+          "A chat client without a verified current human decision uses the exact app approval."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "unambiguous-plan",
+              "typed-tools-and-recovery",
+              "security-plan-and-context"
+            ],
+            "id": "discover-capabilities",
+            "outcome": "An authorized user can preview an ordered plan against current workspace data without effects. Unsupported actions and missing input remain explicit.",
+            "title": "Discover supported host actions and preview a plan"
+          },
+          {
+            "criteriaIds": [
+              "unambiguous-plan",
+              "typed-tools-and-recovery",
+              "user-choice-and-approval-channels",
+              "security-plan-and-context"
+            ],
+            "id": "plan-execute-resume",
+            "outcome": "Either approval mode binds exact user permissions and step outcomes. The UI or a chat client with verified human proof can decide the same request. Lost replies reconcile without duplicate changes.",
+            "title": "Approve, run, and resume the exact plan"
+          },
+          {
+            "criteriaIds": [
+              "portable-quality",
+              "typed-tools-and-recovery",
+              "user-choice-and-approval-channels"
+            ],
+            "id": "portable-skill",
+            "outcome": "A short skill guides a client to supported operations, exact IDs, clarification and safe recovery. Graded transcripts and real host cases verify the result.",
+            "title": "Teach and test the planning workflow in chat"
+          }
+        ],
+        "completionTests": [
+          "Exercise the actual stdio MCP path and app approval on both desktop and managed browser with isolated synthetic scopes.",
+          "Run focused contract, policy, failure, receipt and security checks for this increment, plus documentation, architecture and agent-support checks."
+        ],
+        "documentation": [
+          "Update the headless authority decision and threat model for the approved bounded plan scope.",
+          "Update the host and MCP references and the portable System Builder skill with exact capabilities and supported approval channels."
+        ],
+        "fingerprint": "88d6da987c4593e08a7906eb0a7a42103d3def930b0d6e6116c6cde3a5f376c4",
+        "focusedTests": [
+          "Validate bounded plan decoding, supported capability projection, exact resource and revision, and effect-free preview.",
+          "Test human proof, wrong workspace and actor, changed permissions, replay and racing decisions. Test popup focus, keyboard, approve, deny and cancel.",
+          "Run deterministic transcripts for ambiguity, exact IDs, recovery and task budgets."
+        ],
+        "recordedAt": "2026-11-15T00:28:08Z",
+        "rollback": "Disable the new discovery and plan execution entry points and retire associated presentation leases. Retain plan and task evidence and preserve existing secured individual operations.",
+        "steps": [
+          "Project available host capabilities and supported scope. Validate a structured plan against existing read and preview interfaces without starting an operation.",
+          "Request the user's choice of approval mode. Use a single approval record across the trusted interactive paths. Reconcile execution and replay from authoritative task state.",
+          "Add the portable skill instructions, generated tool metadata, example transcripts and grading. Test a synthetic plan on both supported hosts."
+        ],
+        "summary": "Deliver a finite, discoverable build plan in the current paired hosts, then add exact approval and replay with a portable skill and graded transcripts."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-15T00:28:08Z",
+          "risks": [
+            "Security relevant. Workspace records, approved requests, sources, drafts, and receipts require current host and application authority. Agent input and private tool output cannot grant approval or alter the registered operation catalog.",
+            "Keep execution restricted to a finite set of typed operations and recheck current workspace authority before a preview, confirmation, execution, or replay. Validate expected revisions and bounded inputs before effects.",
+            "Use a single application-owned approval record. Require verified current human proof to accept an exact request. Send unsupported chat clients to the exact app approval. Keep UI takeover separate.",
+            "Report safe codes and bounded approval metadata. Keep credentials, draft text, prompts and payloads out of logs and review evidence. Disable the new entry points on rollback and retain approved plans and their evidence."
+          ],
+          "sources": [
+            {
+              "title": "Accepted headless authority decision",
+              "url": "docs/adr/ADR-0047-headless-system-builder-delegation.md"
+            },
+            {
+              "title": "Saved workflow metadata projection",
+              "url": "modules/application/use-cases/system-run-workflow/headless-workflow-metadata.use-case.ts"
+            },
+            {
+              "title": "Existing MCP entry and trust boundary",
+              "url": "modules/adapters/transport/headless-mcp/README.md"
+            },
+            {
+              "title": "Existing threat model",
+              "url": "docs/security/headless-system-builder-threat-model.md"
+            }
+          ],
+          "summary": "The existing desktop and managed headless dispatchers already check the host, workspace and current registration. The existing tool adapter has fixed typed operations and a versioned reference. Reuse those boundaries and the existing precise System Builder results for the initial planning catalog and approved execution."
+        }
+      ],
       "rollback": "Disable new capability discovery and plan execution, end presentation leases, and retain approved plan and task evidence. Existing individual app workflows remain usable.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-11-15T00:28:08Z",
+      "status": "implementing",
       "title": "Turn a written request into a build plan",
       "verification": [
         "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
@@ -2633,6 +2741,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "ready",
-  "updatedAt": "2026-11-15T00:27:30Z"
+  "status": "executing",
+  "updatedAt": "2026-11-15T00:28:08Z"
 }
