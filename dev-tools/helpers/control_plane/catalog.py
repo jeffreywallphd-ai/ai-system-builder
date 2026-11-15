@@ -183,6 +183,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "dev-tools/scripts/qualification/visual-composer/managed-headless-agent.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-plan-staging.ts",
             "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
             "apps/server/src/createServer.ts",
             "apps/server/README.md",
@@ -407,6 +408,8 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "modules/hosts/server/security/resolveManagedHeadlessClientPolicy.ts",
             "modules/hosts/server/security/tests/managed-headless-client-policy.unit.test.ts",
+            "modules/adapters/security/oidc/createOidcBearerTokenVerifierAdapter.ts",
+            "modules/adapters/security/oidc/tests/oidc-bearer-token-verifier.unit.test.ts",
             "modules/hosts/server/README.md",
         ),
         "command": (
@@ -421,6 +424,9 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "modules/hosts/server/composition/composeManagedHeadlessAuthoring.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts",
+            "modules/hosts/shared/composition/headlessPlanReview.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessPlanReview.ts",
             "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
             "modules/hosts/server/composition/README.md",
         ),
@@ -429,6 +435,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
             "modules/application/use-cases/system-builder/tests/headless-system-authoring.unit.test.ts",
             "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
         ),
     },
     "managed-headless-agent-routes": {

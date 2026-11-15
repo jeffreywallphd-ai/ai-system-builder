@@ -21,7 +21,10 @@ interface VerifiedJwtPayload {
   readonly exp?: number;
 }
 
-type VerifiedJwt = VerifiedJwtPayload & { readonly accessTokenClientId?: string };
+type VerifiedJwt = VerifiedJwtPayload & {
+  readonly accessTokenClientId?: string;
+  readonly signedClientIds?: readonly string[];
+};
 
 export interface VerifiedOidcCredentialBinding {
   sameCredential(other: VerifiedOidcCredentialBinding): boolean;
@@ -29,10 +32,18 @@ export interface VerifiedOidcCredentialBinding {
 
 const verifiedBindings = new WeakMap<AuthContext, VerifiedOidcCredentialBinding>();
 const bindingDigests = new WeakMap<VerifiedOidcCredentialBinding, Buffer>();
+const verifiedClientIds = new WeakMap<AuthContext, ReadonlySet<string>>();
 
 /** Separately checked identity for the same verified bearer within one verifier lifetime. */
 export function getVerifiedOidcCredentialBinding(context: AuthContext): VerifiedOidcCredentialBinding | undefined {
   return verifiedBindings.get(context);
+}
+
+/** Recognize an issuer's signed client without turning an ordinary token into a typed grant. */
+export function matchVerifiedOidcClient(context: AuthContext, clientId: string): "exact" | "ambiguous" | undefined {
+  const ids = verifiedClientIds.get(context);
+  if (!ids?.has(clientId)) return;
+  return ids.size === 1 ? "exact" : "ambiguous";
 }
 
 function bindVerifiedCredential(context: AuthContext, digest: Buffer) {
@@ -48,10 +59,11 @@ function bindVerifiedCredential(context: AuthContext, digest: Buffer) {
 
 /** Project only the signed fields from the existing verifier's result. */
 export function projectVerifiedOidcIdentity(result: JWTVerifyResult): VerifiedJwt {
-  const { iss, sub, iat, exp, client_id: client } = result.payload;
+  const { iss, sub, iat, exp, client_id: client, azp: authorizedParty } = result.payload;
   const { typ } = result.protectedHeader;
   const type = typeof typ === "string" ? typ.toLowerCase() : undefined;
-  return { iss, sub, iat, exp, accessTokenClientId: (type === "at+jwt" || type === "application/at+jwt") &&
+  const signedClientIds = [client, authorizedParty].filter(isOidcAccessTokenClientId);
+  return { iss, sub, iat, exp, signedClientIds, accessTokenClientId: (type === "at+jwt" || type === "application/at+jwt") &&
     isOidcAccessTokenClientId(client) ? client : undefined };
 }
 
@@ -108,6 +120,10 @@ export function createOidcBearerTokenVerifierAdapter(input: {
             : new Date(payload.exp * 1000).toISOString(),
           ...(hasTypedClient ? { oidcAccessTokenClientId: payload.accessTokenClientId } : {}),
         };
+        if (payload.iss === input.config.issuer) {
+          const ids = new Set([payload.accessTokenClientId, ...(payload.signedClientIds ?? [])].filter(isOidcAccessTokenClientId));
+          if (ids.size) verifiedClientIds.set(context, ids);
+        }
         if (hasTypedClient) bindVerifiedCredential(context, crypto.createHmac("sha256", bindingKey).update(token).digest());
         return context;
       } catch {

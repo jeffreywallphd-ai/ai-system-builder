@@ -1,18 +1,17 @@
 import { createHash } from "node:crypto";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { prepareStructuredHeadlessPlanStep } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
-import { createStructuredSystemBuilderRepository } from "../../../adapters/persistence/system-builder";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import type { DesktopHeadlessAuthoringWireGrant, startDesktopHeadlessLoopback } from "../../../adapters/transport/headless-loopback";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
-import type { HeadlessPlanReviewSnapshotResult } from "../../../application/ports/system-builder/headless-build-plan-review.port";
-import { isDesktopHeadlessClientId, readHeadlessPlanStepResult, type HeadlessHostIncarnationId, type HeadlessPlanReviewAgentRequest,
-  type HeadlessPlanReviewAgentResult } from "../../../contracts/headless";
+import { isDesktopHeadlessClientId, readHeadlessPlanStepResult, type HeadlessHostIncarnationId,
+  type HeadlessPlanReviewAgentRequest } from "../../../contracts/headless";
 import type { LocalIdentityProfile } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
+import { projectHeadlessPlanReview, validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
 import type { DesktopHeadlessAudit } from "./desktopHeadlessAudit";
 
@@ -130,48 +129,16 @@ export function composeDesktopHeadlessPlanReview(options: {
           const repository = createLocalWorkspaceRepository({ rootDirectory, documents });
           const policy = composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity });
           return await authorize(repository, policy, workspaceId, request.operation) && isCurrent();
-        }, Date.now, async documents => {
-          if (request.operation !== "plan.submit" || !isCurrent()) return false;
-          const systems = createStructuredSystemBuilderRepository(documents);
-          for (const { operation, input } of request.proposal.requests) {
-            if (operation === "systems.create") continue;
-            const record = await systems.readRecord(workspaceId, input.systemId);
-            if (!isCurrent()) return false;
-            if (!record || record.targetWorkspaceId !== workspaceId || record.systemId !== input.systemId ||
-                record.status === "archived" || record.revision !== input.baseRecordRevision ||
-                record.currentRevisionId !== input.baseRevisionId) return "stale";
-            const revision = await systems.readRevision(workspaceId, input.systemId, input.baseRevisionId);
-            if (!isCurrent()) return false;
-            if (!revision || revision.targetWorkspaceId !== workspaceId || revision.systemId !== input.systemId ||
-                revision.revisionId !== input.baseRevisionId ||
-                revision.composition.compositionId !== record.composition.compositionId) return "stale";
-          }
-          return isCurrent();
-        });
+        }, Date.now, async documents => request.operation === "plan.submit" &&
+          validateHeadlessPlanSavedSources(documents, workspaceId, request.proposal.requests, isCurrent));
         const result = request.operation === "plan.submit" ?
           await reviews.propose({ target, isCurrent, proposal: {
             ...request.proposal.scope,
             steps: request.proposal.preview.steps.map(({ operation, input }) => ({ operation, ...input })),
           } }) : await reviews.read({ target, isCurrent });
         if (!await canUse()) return forbidden;
-        return project(result, fingerprint);
+        return projectHeadlessPlanReview(result, fingerprint);
       } catch { return isCurrent() ? unavailable : forbidden; }
     },
   };
-}
-
-function project(result: HeadlessPlanReviewSnapshotResult, fingerprint: string): HeadlessPlanReviewAgentResult {
-  if (!result.ok) {
-    switch (result.code) {
-      case "forbidden": return forbidden;
-      case "invalid": return { ok: false, code: "headless.invalid-request" };
-      case "expired": return { ok: false, code: "headless.plan-expired" };
-      case "stale": return { ok: false, code: "headless.stale" };
-      case "capacity": return { ok: false, code: "headless.operation-capacity" };
-      default: return unavailable;
-    }
-  }
-  const { revision, stepCount, expiresAt, status, approvedSteps, mode } = result.snapshot.state;
-  return { ok: true, value: { fingerprint, revision, stepCount, expiresAt, status, approvedSteps,
-    ...(mode === undefined ? {} : { mode }) } };
 }

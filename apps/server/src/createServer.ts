@@ -24,8 +24,11 @@ import { composeServerSecurity } from "../../../modules/hosts/server/security/co
 import { createManagedSavedStateAuthorizationAudit } from "../../../modules/hosts/server/security/createManagedSavedStateAuthorizationAudit";
 import { registerManagedSavedStateRoutes } from "../../../modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes";
 import { registerManagedHeadlessAgentRoutes } from "../../../modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes";
+import { MANAGED_HEADLESS_AGENT_PATHS } from "../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
+import { createSecurityApiFailure } from "../../../modules/adapters/transport/api-express/security/createSecurityApiFailure";
+import { getExpressAuthContext } from "../../../modules/adapters/transport/api-express/security/expressAuthContext";
 import { registerManagedBrowserConsentRoute } from "../../../modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute";
-import { resolveManagedHeadlessClientPolicy } from "../../../modules/hosts/server/security/resolveManagedHeadlessClientPolicy";
+import { resolveManagedHeadlessClientPolicy, type ManagedPlanReviewRegistration } from "../../../modules/hosts/server/security/resolveManagedHeadlessClientPolicy";
 import type { ManagedHeadlessAuthoringRegistration } from "../../../modules/hosts/server/composition/composeManagedHeadlessAuthoring";
 import { resolveServerOidcBearerConfig } from "../../../modules/hosts/server/security/resolveServerOidcBearerConfig";
 import type { LoggingPort } from "../../../modules/application/ports/logging";
@@ -332,6 +335,8 @@ export async function createServer(
     ? resolveServerOidcBearerConfig(env).issuer : undefined});
   if (clientPolicy && (!deploymentShape || env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE !== "1"))
     throw new Error("Managed headless agents require a managed PostgreSQL deployment with saved-state enabled.");
+  if (clientPolicy?.planReviewAvailable && !security.config.httpsRequired)
+    throw new Error("Managed plan review requires HTTPS.");
   const browserOrigin = env.AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN;
   if (browserOrigin !== undefined && (!clientPolicy || !security.config.httpsRequired || !isExactHttpsOrigin(browserOrigin)))
     throw new Error("Managed browser consent requires verified client registrations and an exact HTTPS browser origin.");
@@ -405,7 +410,7 @@ export async function createServer(
       organizationAuthorizer,
       managedSavedState: env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE === "1" && passiveSavedStateAuthorizer && listActiveSystems
         ? { listActiveSystems, authorize: passiveSavedStateAuthorizer } : undefined,
-      managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement,
+      managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement, planReviewEnabled: clientPolicy.planReviewAvailable,
         browserObservationAuthorizer: passiveBrowserObserveAuthorizer} : undefined,
       runtimeDatabases: options.runtimeDatabases,
       pythonRuntimeEnvironmentPreparer,
@@ -453,6 +458,15 @@ export async function createServer(
       postgresDatabase,
     );
     app.use(security.middleware);
+    if (clientPolicy?.planReviewAvailable) {
+      app.use((request, response, next) => {
+        if (!clientPolicy.isPlanReviewCredential(getExpressAuthContext(request))) return next();
+        if (request.method === "POST" && (request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS.read ||
+            request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS["plan-review"])) return next();
+        return response.status(403).json(createSecurityApiFailure({status:403, code:"security.forbidden",
+          message:"This credential is limited to managed plan review."}));
+      });
+    }
     if (organizationAuthorizer) {
       app.use(
         createExpressOrganizationAuthorizationMiddleware({
@@ -465,20 +479,35 @@ export async function createServer(
     const retireManagedSavedState = registerManagedSavedStateRoutes(app, () => serverHost.getManagedSavedState());
     const browserPresentationKey = browserOrigin ? randomBytes(32) : undefined;
     const browserDeliveryEnabled = !!browserOrigin && env.AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION === "1";
-    const retireManagedHeadlessAgent = registerManagedHeadlessAgentRoutes<ManagedHeadlessAuthoringRegistration>(app, () => {
+    const retireManagedHeadlessAgent = registerManagedHeadlessAgentRoutes<ManagedHeadlessAuthoringRegistration | ManagedPlanReviewRegistration>(app, () => {
       const handlers = serverHost.getManagedHeadlessAgent();
       const consent = serverHost.getManagedBrowserConsent();
+      const planReview = handlers?.planReview;
+      const denied = {ok: false, code: "headless.forbidden"} as const;
       return clientPolicy && handlers ? {
-        ...handlers,
-        identify: (input) => {
-          const admitted = clientPolicy.identify({...input, purpose: "agent"});
-          return admitted?.purpose === "agent" ? {...admitted, purpose: "agent" as const} : undefined;
+        hostIncarnationId: handlers.hostIncarnationId,
+        read: handlers.read,
+        author: async (input, agent, current) => agent.purpose === "agent" ? handlers.author(input, agent, current) : denied,
+        identify: (input, kind) => {
+          if (kind !== "plan-review") {
+            const author = clientPolicy.identify({...input, purpose: "agent"});
+            if (author?.purpose === "agent") return author;
+          }
+          if (planReview && (kind === "read" || kind === "plan-review")) {
+            const planner = clientPolicy.identify({...input, purpose: "plan-review"});
+            if (planner?.purpose === "plan-review") return planner;
+          }
+          return undefined;
         },
         isCurrent: (admitted) => admitted.isCurrent(),
+        ...(planReview ? { planReview: async (input, agent, current) =>
+          agent.purpose === "plan-review" ? planReview(input, agent, current) : denied } : {}),
         ...(consent && browserPresentationKey ? {window: {
           deliveryEnabled: browserDeliveryEnabled,
-          execute: (input, agent, session, current) => consent.execute(input, browserPresentationAgent(agent, session, browserPresentationKey), current),
-          canPublish: (input, result, agent, session) => consent.canPublish(input, result, browserPresentationAgent(agent, session, browserPresentationKey)),
+          execute: async (input, agent, session, current) => agent.purpose === "agent"
+            ? consent.execute(input, browserPresentationAgent(agent, session, browserPresentationKey), current) : denied,
+          canPublish: (input, result, agent, session) => agent.purpose === "agent" &&
+            consent.canPublish(input, result, browserPresentationAgent(agent, session, browserPresentationKey)),
         }} : {}),
       } : undefined;
     });

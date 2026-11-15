@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -16,11 +16,13 @@ import {
 import { AuthorizeWorkspaceOperationService, createOrganizationAuthorizationPolicy } from "../../../../application/services/security";
 import type { AssetReference } from "../../../../contracts/asset";
 import { createTenantPlacementConfig } from "../../../../contracts/config";
-import { HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId } from "../../../../contracts/headless";
+import { HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentRequest,
+  type HeadlessHostIncarnationId } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { composeSystemBuilder } from "../../../shared/composition/composeSystemBuilder";
 import { composeManagedHeadlessAuthoring } from "../composeManagedHeadlessAuthoring";
+import { composeManagedHeadlessPlanReview } from "../composeManagedHeadlessPlanReview";
 
 const organizationId = createOrganizationId("managed-fixture");
 const workspaceId = createWorkspaceId("workspace-fixture");
@@ -32,7 +34,7 @@ const definitions = [SYSTEM_FOUNDATION_PACK_MANIFEST, SYSTEM_FOUNDATION_PACK_V2_
 const findDefinition = async ({ id, version }: AssetReference) =>
   definitions.find(row => row.definitionId === id && row.version === version);
 
-test("managed edits and retry receipts require current workspace permission within the owned transaction", async () => {
+test("managed edits and retry receipts require current workspace permission within the owned transaction", async t => {
   const fixture = await mkdtemp(path.join(await realpath(tmpdir()), "managed-author-"));
   const db = await openLocalSqliteDatabase({policy: resolveLocalSqliteDatabasePolicy({dataRootDirectory: fixture})});
   try {
@@ -130,6 +132,57 @@ test("managed edits and retry receipts require current workspace permission with
     current = true;
     beforeOwner = () => workspaces.updateWorkspace({...workspace, status: "archived"});
     assert.deepEqual(await execute(), denied);
+
+    await t.test("a dedicated managed client stages the exact plan without changing saved systems", async () => {
+      await workspaces.updateWorkspace(workspace);
+      const review = composeManagedHeadlessPlanReview({hostIncarnationId, platform, rootDirectory:fixture,
+        contexts, workspaces, authorization, placement});
+      const client = {...registration, purpose:"plan-review" as const};
+      const scope = {hostIncarnationId, workspaceId};
+      const decode = (operation: "plan.submit" | "plan.status", input: object) => {
+        const parsed = readHeadlessPlanReviewAgentRequest({version:HEADLESS_CONTRACT_VERSION, operation, input}, hostIncarnationId);
+        assert.ok(parsed.ok);
+        return parsed.request;
+      };
+      const build = (steps: readonly unknown[]) => {
+        const proposed = parseHeadlessBuildPlanProposal({...scope, steps}, hostIncarnationId);
+        assert.ok(proposed.ok);
+        const fingerprint = createHash("sha256").update(JSON.stringify(proposed.preview)).digest("hex");
+        const input = {...scope, fingerprint, steps};
+        return {input, submit:decode("plan.submit", input), status:decode("plan.status", {...scope, fingerprint})};
+      };
+      const ordinary = build([{operation:"systems.create", name:"Synthetic approved work",
+        templateId:"reference.secured-data-review@1.0.0", idempotencyKey:randomUUID()}]);
+      const fresh = () => true;
+      assert.deepEqual(await review(ordinary.submit, client, () => false), denied);
+      context = {...context, principalId:"foreign-principal"};
+      assert.deepEqual(await review(ordinary.submit, client, fresh), denied);
+      context = {...context, principalId};
+      beforeOwner = () => repositories.memberships.saveMembership({...membership, status:"removed"});
+      assert.deepEqual(await review(ordinary.submit, client, fresh), denied);
+      await repositories.memberships.saveMembership(membership);
+      assert.deepEqual(await review(ordinary.status, client, fresh), denied);
+      atCommit = () => {current = false;};
+      assert.deepEqual(await review(ordinary.submit, client, fresh), denied);
+      atCommit = undefined;
+      current = true;
+      assert.deepEqual(await review(ordinary.status, client, fresh), denied);
+      assert.deepEqual(await review(decode("plan.submit", {...ordinary.input, fingerprint:"a".repeat(64)}), client, fresh),
+        {ok:false, code:"headless.invalid-request"});
+      const invalidSource = build([{operation:"systems.clone", systemId:"system.missing-fixture",
+        baseRecordRevision:1, baseRevisionId:"system.missing-fixture.r1", name:"Synthetic copy", idempotencyKey:randomUUID()}]);
+      assert.deepEqual(await review(invalidSource.submit, client, fresh), {ok:false, code:"headless.stale"});
+      assert.deepEqual(await review(invalidSource.status, client, fresh), denied);
+      const staged = await review(ordinary.submit, client, fresh);
+      assert.ok(staged.ok && staged.value.status === "pending" && staged.value.approvedSteps === 0);
+      assert.deepEqual(await review(ordinary.submit, client, fresh), staged);
+      assert.deepEqual(await review(ordinary.status, client, fresh), staged);
+      assert.deepEqual(await review(ordinary.status, {...client, registeredClientId:randomUUID()}, fresh), denied);
+      assert.deepEqual(await review(decode("plan.status", {...scope, fingerprint:ordinary.input.fingerprint,
+        workspaceId:"another-workspace"}), client, fresh), denied);
+      assert.equal((await systems.useCases.list.execute({workspaceId})).length, 1);
+      assert.equal(await createStructuredHeadlessOperationStore(root).watermark({organizationId, workspaceId}), 1);
+    });
   } finally {
     await db.close();
     await rm(fixture, {recursive: true, force: false});

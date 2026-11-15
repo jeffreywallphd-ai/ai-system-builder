@@ -1105,6 +1105,22 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "d72ec82f70c7f2c552467ef75cffaee1c1e28ef23a354a43d2aa8d565b3b6541") {
+    const approvedStepCommit = "d259564ece0bb1d8adc32cc56005b878087c2dfa";
+    const previous = JSON.parse(historicalSource("67f91d8f279da39bd7b15e383c08fe73313aa029", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "84a405091b232742ef6ceba41e1663b9c988fd9d61df2eb0d3bc033a2a68c7bb");
+    const expected = structuredClone(previous);
+    for (const source of [headlessPackagedSpec, "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts"]) {
+      const matches = expected.sources.filter(row => row.path === source);
+      assert.equal(matches.length, 1);
+      matches[0].facts = sourceFacts(source, historicalSource(approvedStepCommit, source));
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
   if (sha(JSON.stringify(map)) === "84a405091b232742ef6ceba41e1663b9c988fd9d61df2eb0d3bc033a2a68c7bb") {
     const source = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
     const previous = JSON.parse(historicalSource("8a783d664ada27cf55d363e87d29817e08c0665e", censusDocument));
@@ -2369,4 +2385,17 @@ test("the browser controls checkpoint retains its unqualified source drift and e
   const forged=structuredClone(current);
   forged.inventories.find(row=>row.source===browserTakeoverCensus.view).values.reverse();
   assert.throws(()=>assertCompleteCurrentSourceDrift(forged,result));
+});
+
+test("the reviewed Desktop step definitions keep the same scope and qualification gaps", () => {
+  const map = JSON.parse(historicalSource("d259564ece0bb1d8adc32cc56005b878087c2dfa", censusDocument));
+  const result = {gaps:sourceDrift(map)};
+  assert.doesNotThrow(() => assertCompleteCurrentSourceDrift(map, result));
+  for (const source of [headlessPackagedSpec, "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts"]) {
+    const forged = structuredClone(map);
+    forged.sources.find(row => row.path === source).facts.assertionCount++;
+    assert.throws(() => assertCompleteCurrentSourceDrift(forged, result));
+    assert.equal(result.gaps.filter(row => row.source === source).length, 1);
+    assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps:result.gaps.filter(row => row.source !== source)}));
+  }
 });

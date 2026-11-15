@@ -7,6 +7,7 @@ import {
   createInternalPrincipalId,
   createOidcBearerTokenVerifierAdapter,
   getVerifiedOidcCredentialBinding,
+  matchVerifiedOidcClient,
   projectVerifiedOidcIdentity,
 } from "../createOidcBearerTokenVerifierAdapter";
 
@@ -73,7 +74,7 @@ describe("OIDC bearer token verifier", () => {
     }
   });
 
-  it("projects the signed client only for verified access tokens, never a similarly named claim", async () => {
+  it("recognizes signed identity without granting ordinary tokens a typed client binding", async () => {
     const { privateKey, publicKey } = await generateKeyPair("RS256");
     const keySet = createLocalJWKSet({ keys: [{ ...await exportJWK(publicKey), kid: "fixture" }] });
     const verifier = createOidcBearerTokenVerifierAdapter({ config, jwtVerifier: {
@@ -82,8 +83,8 @@ describe("OIDC bearer token verifier", () => {
       },
     } });
     const now = new Date();
-    async function token(typ: string | number | undefined, client: unknown, audience = config.audience) {
-      return new SignJWT({ client_id: client, accessTokenClientId: "fake-projection", roles: ["owner"] })
+    async function token(typ: string | number | undefined, client: unknown, audience = config.audience, azp?: string) {
+      return new SignJWT({ client_id: client, azp, accessTokenClientId: "fake-projection", roles: ["owner"] })
         .setProtectedHeader({ alg: "RS256", kid: "fixture", ...(typ === undefined ? {} : { typ: typ as string }) }).setIssuedAt()
         .setExpirationTime("1m").setIssuer(config.issuer).setAudience(audience).setSubject("fixture").sign(privateKey);
     }
@@ -93,10 +94,19 @@ describe("OIDC bearer token verifier", () => {
     for (const typ of ["at+jwt", "APPLICATION/AT+JWT", "JWT", undefined]) {
       const context = await verifier.verifyToken({ token: await token(typ, "browser.fixture"), now });
       assert.equal(context.oidcAccessTokenClientId, typ?.toLowerCase().endsWith("at+jwt") ? "browser.fixture" : undefined);
+      assert.equal(matchVerifiedOidcClient(context, "browser.fixture"), "exact");
+      assert.equal(matchVerifiedOidcClient(context, "fake-projection"), undefined);
+      assert.equal(matchVerifiedOidcClient({...context}, "browser.fixture"), undefined);
       assert.deepEqual(context.principal.roles, []);
       assert.equal(JSON.stringify(context).includes("fake-projection"), false);
     }
     assert.equal((await verifier.verifyToken({ token: await token("at+jwt", ["agent"]), now })).oidcAccessTokenClientId, undefined);
+    const authorizedParty = await verifier.verifyToken({token:await token("JWT", undefined, config.audience, "plan.fixture"), now});
+    assert.equal(matchVerifiedOidcClient(authorizedParty, "plan.fixture"), "exact");
+    assert.equal(getVerifiedOidcCredentialBinding(authorizedParty), undefined);
+    const conflict = await verifier.verifyToken({token:await token("at+jwt", "browser.fixture", config.audience, "plan.fixture"), now});
+    assert.equal(matchVerifiedOidcClient(conflict, "plan.fixture"), "ambiguous");
+    assert.equal(matchVerifiedOidcClient(conflict, "browser.fixture"), "ambiguous");
     await assert.rejects(async () => verifier.verifyToken({ token: await token("at+jwt", "agent", "wrong-audience"), now }),
       { message: "Invalid bearer token." });
   });

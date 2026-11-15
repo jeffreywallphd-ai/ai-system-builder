@@ -130,3 +130,22 @@ class HeadlessReadRoutingTests(unittest.TestCase):
             "packaged-desktop-ui-takeover.e2e.spec.ts",
         ])
         self.assertIn("focused-tests", self.plan([fixture, unrelated], check))
+
+    def test_managed_plan_staging_uses_exact_checks_and_keeps_neighbor_fallback(self):
+        sources = [
+            "apps/server/src/createServer.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessPlanReview.ts",
+            "modules/hosts/shared/composition/headlessPlanReview.ts",
+            "modules/adapters/security/oidc/createOidcBearerTokenVerifierAdapter.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-plan-staging.ts",
+        ]
+        checks = ("managed-headless-live-fixture", "managed-headless-client-policy", "managed-headless-transactional-authoring")
+        self.assertIn("focused-tests", self.plan(sources))
+        selected = self.plan(sources, *checks)
+        self.assertNotIn("focused-tests", selected)
+        self.assertIn("modules/adapters/security/oidc/tests/oidc-bearer-token-verifier.unit.test.ts",
+                      selected["managed-headless-client-policy"]["argv"])
+        self.assertIn("modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+                      selected["managed-headless-transactional-authoring"]["argv"])
+        self.assertIn("focused-tests", self.plan(sources + ["apps/server/src/unrelated-route.ts"], *checks))

@@ -71,8 +71,10 @@ async function interruptOwnedDeliveryProcess(child: ChildProcess, allowExited = 
 
 export async function startManagedReferenceHost(databaseReference: string,
   options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean; readonly headlessBrowser?: boolean;
+    readonly headlessPlanReview?: boolean;
     readonly headlessBrowserPresentation?: boolean; readonly headlessMembershipLoss?: boolean; readonly headlessRollback?: boolean } = {}) {
   assert.ok(!options.headlessBrowser || options.headlessAgent && !options.headlessDelivery);
+  assert.ok(!options.headlessPlanReview || options.headlessAgent && !options.headlessDelivery);
   assert.ok(!options.headlessBrowserPresentation || options.headlessBrowser);
   assert.ok(!options.headlessMembershipLoss || options.headlessBrowserPresentation);
   assert.ok(!options.headlessRollback || options.headlessBrowserPresentation &&
@@ -214,8 +216,13 @@ export async function startManagedReferenceHost(databaseReference: string,
     const token = await new SignJWT({roles: ["ignored-untrusted-token-role"]}).setProtectedHeader({alg: "RS256", kid: id}).setIssuer(issuerOrigin).setSubject(subject).setAudience("aisb-controlled-qualification").setIssuedAt().setExpirationTime("2h").sign(privateKey);
     const agentClient = "controlled-headless-agent";
     const browserClient = "controlled-headless-browser";
+    const planClient = "controlled-headless-plan";
     function accessToken(clientId: string) {
       return new SignJWT({client_id: clientId}).setProtectedHeader({alg: "RS256", kid: id, typ: "at+jwt"})
+        .setIssuer(issuerOrigin).setSubject(subject).setAudience("aisb-controlled-qualification").setIssuedAt().setExpirationTime("10m").sign(privateKey);
+    }
+    function ordinaryClientToken(claims: {client_id: string} | {azp: string}) {
+      return new SignJWT(claims).setProtectedHeader({alg: "RS256", kid: id, typ: "JWT"})
         .setIssuer(issuerOrigin).setSubject(subject).setAudience("aisb-controlled-qualification").setIssuedAt().setExpirationTime("10m").sign(privateKey);
     }
     const nonmemberToken = await new SignJWT({roles: ["operator"]}).setProtectedHeader({alg: "RS256", kid: id}).setIssuer(issuerOrigin).setSubject("synthetic-nonmember").setAudience("aisb-controlled-qualification").setIssuedAt().setExpirationTime("2h").sign(privateKey);
@@ -223,7 +230,7 @@ export async function startManagedReferenceHost(databaseReference: string,
     const runtimeRoot = path.join(runRoot, "runtime");
     const base = {...process.env, NODE_EXTRA_CA_CERTS: ca};
     for (const key of ["HF_TOKEN", "HUGGING_FACE_TOKEN", "HUGGINGFACE_HUB_TOKEN", "NODE_TLS_REJECT_UNAUTHORIZED",
-      "AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION"]) delete base[key];
+      "AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION", "AI_SYSTEM_BUILDER_MANAGED_HEADLESS_PLAN_REVIEW_CLIENT_ID"]) delete base[key];
     const environment = {...base, NODE_ENV: "test", DEPLOYMENT_SHAPE: "campus-server", DATABASE_URL: runtimeUrl, POSTGRES_SSL_MODE: "disable", PORT: String(serverPort), SERVER_STORAGE_ROOT: path.join(runRoot, "storage"), SERVER_RUNTIME_ROOT: runtimeRoot,
       AI_SYSTEM_BUILDER_SECURITY_MODE: "oidc-bearer", AI_SYSTEM_BUILDER_HTTPS_ENABLED: "true", AI_SYSTEM_BUILDER_TLS_CERT_MODE: "manual", AI_SYSTEM_BUILDER_TLS_CERT_PATH: material.certificatePath!, AI_SYSTEM_BUILDER_TLS_KEY_PATH: material.keyPath!, AI_SYSTEM_BUILDER_OIDC_ISSUER: issuerOrigin, AI_SYSTEM_BUILDER_OIDC_AUDIENCE: "aisb-controlled-qualification", AI_SYSTEM_BUILDER_OIDC_JWKS_URI: `${issuerOrigin}/jwks`, AI_SYSTEM_BUILDER_OIDC_ALGORITHMS: "RS256", AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE: "dedicated", AI_SYSTEM_BUILDER_DEDICATED_ORGANIZATION_ID: organizationId,
       PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: String(workerPort), PYTHON_RUNTIME_BASE_URL: `http://127.0.0.1:${workerPort}`, PYTHON_RUNTIME_COMMAND: process.execPath, PYTHON_RUNTIME_ARGS: "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs", PYTHON_RUNTIME_WORKER_DIR: root, PYTHON_RUNTIME_STARTUP_TIMEOUT_MS: "15000", HF_HUB_CACHE: path.join(runtimeRoot, "controlled-model-cache")};
@@ -232,6 +239,8 @@ export async function startManagedReferenceHost(databaseReference: string,
       AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID: agentClient,
       AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID: browserClient,
     });
+    if (options.headlessPlanReview)
+      Object.assign(environment, {AI_SYSTEM_BUILDER_MANAGED_HEADLESS_PLAN_REVIEW_CLIENT_ID:planClient});
     if (options.headlessBrowser) Object.assign(environment, {
       AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN: `https://127.0.0.1:${serverPort}`,
       MANAGED_REFERENCE_SERVE_BUILT_BROWSER: "1",
@@ -424,6 +433,10 @@ export async function startManagedReferenceHost(databaseReference: string,
     } : undefined;
     const agent = options.headlessAgent ? {
       workspaceId: delivery.workspaceId, caFile: ca, access: await accessToken(agentClient), browser: await accessToken(browserClient),
+      planReview: options.headlessPlanReview ? await accessToken(planClient) : undefined,
+      ordinaryPlanCredentials: options.headlessPlanReview ? await Promise.all([
+        ordinaryClientToken({client_id:planClient}), ordinaryClientToken({azp:planClient}),
+      ]) : undefined,
       setSyntheticMembershipSuspended, restartHeadlessServer,
     } : undefined;
     if (options.headlessBrowser) {

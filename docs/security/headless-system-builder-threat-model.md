@@ -207,6 +207,23 @@ The desktop MCP plan-review mode offers proposal and status tools through
 the pinned connector. It omits direct editing, conversation sending, and
 window control when the launcher selects this mode. The server still checks
 the dedicated registration, exact proposal and current workspace policy.
+
+The managed host optionally accepts proposals and reads their status through
+a third exact issuer-verified OIDC client registration. Startup rejects
+duplicate identifiers. The server recognizes the configured client from
+the verified token's signed client ID or authorized party before applying
+organization policy. That client is confined to the exact headless read
+and plan-review routes even when the signed token omits the access-token
+type. Plan requests still require an unambiguous typed access token.
+Ordinary edit, approval, and window routes do not
+accept this credential even when its user has a writer role. The authoring and
+browser registrations cannot stage a proposal for the plan client.
+The managed plan route accepts only a
+bounded passive proposal or fingerprint. The owning transaction rechecks
+organization membership, the active workspace and exact saved revisions
+before inserting a proposal. The result contains only the exact fingerprint,
+approval progress and expiration. Proposal submission cannot record a human
+decision or execute a change.
 The internal operation store partitions receipts by verified organization and
 hashes the complete principal, client, workspace, operation and key scope.
 Receipts hold a fingerprint and the minimum saved revision reference; change

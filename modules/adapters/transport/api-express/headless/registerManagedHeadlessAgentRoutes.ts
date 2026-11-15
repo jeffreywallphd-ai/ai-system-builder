@@ -5,6 +5,8 @@ import {
   readHeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadOperation,
   isUiControlId, readHeadlessWindowRequest, type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
+  HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult,
+  type HeadlessPlanReviewAgentRequest, type HeadlessPlanReviewAgentResult,
 } from "../../../../contracts/headless";
 import { isManagedWindowOperation, MANAGED_HEADLESS_AGENT_SESSION_HEADER,
   readManagedWindowResult } from "../../../../contracts/headless/managed-headless-window";
@@ -34,10 +36,11 @@ type AuthAdmission = {
 /** Compose only after TLS, bearer authentication and the central organization policy. */
 export type ManagedAgentRouteHandlers<Agent> = {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
-  readonly identify: (request: AuthAdmission) => Agent | undefined;
+  readonly identify: (request: AuthAdmission, kind: keyof typeof MANAGED_HEADLESS_AGENT_PATHS) => Agent | undefined;
   readonly isCurrent: (agent: Agent) => boolean;
   readonly read: (input: HeadlessReadRequest, agent: Agent, current: () => boolean) => Promise<HeadlessReadResult>;
   readonly author: (input: Authoring, agent: Agent, current: () => boolean) => Promise<unknown>;
+  readonly planReview?: (input: HeadlessPlanReviewAgentRequest, agent: Agent, current: () => boolean) => Promise<HeadlessPlanReviewAgentResult>;
   readonly window?: {
     readonly deliveryEnabled?: boolean;
     readonly execute: (input: HeadlessWindowRequest, agent: Agent, session: string, current: () => boolean) => Promise<HeadlessWindowResult>;
@@ -52,17 +55,22 @@ export function registerManagedHeadlessAgentRoutes<Agent extends object>(
   let open = true;
   const active = new Set<Response>();
   const parse = raw({ limit: MAX_REQUEST_BYTES, type: () => true, inflate: false });
-  for (const [kind, path] of Object.entries(MANAGED_HEADLESS_AGENT_PATHS)) {
+  for (const kind of Object.keys(MANAGED_HEADLESS_AGENT_PATHS) as Array<keyof typeof MANAGED_HEADLESS_AGENT_PATHS>) {
+    const path = MANAGED_HEADLESS_AGENT_PATHS[kind];
+    const parseRequest = kind === "plan-review"
+      ? raw({ limit: HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, type: () => true, inflate: false })
+      : parse;
     app.post(path, (request, response) => {
       response.set({"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"});
       if (request.method !== "POST" || request.originalUrl !== path) return failure(response, 400, "headless.invalid-request");
       const handlers = getHandlers();
       if (!open || !handlers) return failure(response, 404, "headless.unavailable");
       if (kind === "window" && !handlers.window) return failure(response, 404, "headless.unavailable");
+      if (kind === "plan-review" && !handlers.planReview) return failure(response, 404, "headless.unavailable");
       const agent = handlers.identify({
         auth: getExpressAuthContext(request), organization: getExpressOrganizationContext(request),
         organizationHeader: request.headers["x-organization-id"],
-      });
+      }, kind);
       if (!agent || !handlers.isCurrent(agent)) return failure(response, 403, "headless.forbidden");
       if (!/^application\/json(?:;\s*charset=utf-8)?$/i.test(request.headers["content-type"] ?? ""))
         return failure(response, 415, "headless.invalid-request");
@@ -74,11 +82,11 @@ export function registerManagedHeadlessAgentRoutes<Agent extends object>(
       const timer = setTimeout(() => response.destroy(), DEADLINE_MS);
       const retireBody = () => { clearTimeout(timer); active.delete(response); };
       response.once("close", retireBody);
-      parse(request, response, (error?: { status?: number }) => {
+      parseRequest(request, response, (error?: { status?: number }) => {
         response.removeListener("close", retireBody);
         const result = error
           ? Promise.resolve(failure(response, error.status === 413 ? 413 : 400, "headless.invalid-request"))
-          : respond(kind as keyof typeof MANAGED_HEADLESS_AGENT_PATHS, request, response, handlers, agent, current);
+          : respond(kind, request, response, handlers, agent, current);
         void result.catch(() => failure(response, 503, "headless.unavailable")).finally(() => {
           clearTimeout(timer);
           active.delete(response);
@@ -97,8 +105,21 @@ async function respond<Agent>(
   current: () => boolean,
 ) {
   if (!current()) return failure(response, 403, "headless.forbidden");
-  const value = parseBody(incoming.body);
+  const value = parseBody(incoming.body, kind === "plan-review" ? HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES : MAX_REQUEST_BYTES);
   if (!value) return failure(response, 400, "headless.invalid-request");
+  if (kind === "plan-review") {
+    const parsed = readHeadlessPlanReviewAgentRequest(value, handlers.hostIncarnationId);
+    if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
+    if (!handlers.planReview) return failure(response, 404, "headless.unavailable");
+    const input = parsed.request;
+    const outcome = await handlers.planReview(input, agent, current);
+    if (!current()) return failure(response, 403, "headless.forbidden");
+    const result = readHeadlessPlanReviewAgentResult(outcome, input.target.fingerprint,
+      input.operation === "plan.submit" ? input.proposal.requests.length : undefined);
+    if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
+    if (result.value.expiresAt <= Date.now()) return failure(response, 410, "headless.plan-expired");
+    return send(response, result);
+  }
   if (kind === "window") {
     const session = incoming.headers[MANAGED_HEADLESS_AGENT_SESSION_HEADER];
     const input = readHeadlessWindowRequest(value);
@@ -179,8 +200,8 @@ function safeLabel(value: unknown): value is string {
     !/[\u0000-\u001f\u007f]/.test(value) && !hasKnownPassiveCredential(value);
 }
 
-function parseBody(body: unknown) {
-  if (!Buffer.isBuffer(body) || !body.length || body.length > MAX_REQUEST_BYTES) return undefined;
+function parseBody(body: unknown, maxBytes: number) {
+  if (!Buffer.isBuffer(body) || !body.length || body.length > maxBytes) return undefined;
   try {
     const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(body);
     const value = JSON.parse(text);
@@ -193,6 +214,7 @@ function requestErrorStatus(code: string) {
   switch (code) {
     case "headless.forbidden": return 403;
     case "headless.not-found": return 404;
+    case "headless.plan-expired": return 410;
     case "headless.idempotency-conflict":
     case "headless.idempotency-expired":
     case "headless.stale":
