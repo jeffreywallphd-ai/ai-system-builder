@@ -217,7 +217,7 @@ function websiteTask(
   };
 }
 
-function huggingFaceTask(status: "queued" | "succeeded"): IngestionTaskRecord {
+function huggingFaceTask(status: "queued" | "succeeded" | "cancelled"): IngestionTaskRecord {
   const revision = "a".repeat(40);
   return {
     schemaVersion: "1.0",
@@ -232,7 +232,7 @@ function huggingFaceTask(status: "queued" | "succeeded"): IngestionTaskRecord {
         fileName: "train.parquet",
         mediaType: "application/vnd.apache.parquet",
         totalBytes: 0,
-        status: status === "succeeded" ? "finalized" : "pending",
+        status: status === "succeeded" ? "finalized" : status === "cancelled" ? "cancelled" : "pending",
         acceptedBytes: 0,
         nextChunkIndex: 0,
         providerSource: {
@@ -264,11 +264,11 @@ function huggingFaceTask(status: "queued" | "succeeded"): IngestionTaskRecord {
           ? "Provider data is ready."
           : "Ready to import selected files.",
     },
-    revision: status === "succeeded" ? 2 : 1,
+    revision: status === "queued" ? 1 : 2,
     cleanupPending: false,
     createdAt: "2026-07-30T12:00:00.000Z",
     updatedAt: "2026-07-30T12:00:00.000Z",
-    ...(status === "succeeded"
+    ...(status !== "queued"
       ? { completedAt: "2026-07-30T12:00:00.000Z" }
       : {}),
   };
@@ -1458,9 +1458,15 @@ describe("GuidedIngestionTaskPanel", () => {
     expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 
-  it("browses Hugging Face datasets and imports only checked files at the returned immutable revision", async () => {
+  async function verifyProviderImport(prepareForChat: boolean) {
     const commands: IngestionTaskTransportCommand[] = [];
     const immutableRevision = "a".repeat(40);
+    const registeredClientId = "97441616-22eb-4126-934e-54437dded5bc";
+    const selectLocal = testDouble.fn(async () => undefined);
+    const selectProvider = testDouble.fn(async (input: DesktopLocalFileSelectionInput) => ({
+      workspaceId: input.workspaceId, taskId: input.taskId, fileId: input.fileId,
+      taskRevision: input.taskRevision, selectionRevision: 1,
+    }));
     const browseHuggingFaceNamespaceDatasets = testDouble
       .fn()
       .mockResolvedValue([
@@ -1476,6 +1482,12 @@ describe("GuidedIngestionTaskPanel", () => {
           revision: immutableRevision,
           sizeBytes: 12,
         },
+        {
+          repository: "openai/example-data",
+          path: "data/test.parquet",
+          revision: immutableRevision,
+          sizeBytes: 8,
+        },
       ]);
     const execute = testDouble.fn(
       async ({
@@ -1488,7 +1500,7 @@ describe("GuidedIngestionTaskPanel", () => {
         return {
           kind: "task" as const,
           task: huggingFaceTask(
-            command.action === "create-hugging-face" ? "queued" : "succeeded",
+            command.action === "create-hugging-face" ? "queued" : command.action === "cancel" ? "cancelled" : "succeeded",
           ),
         };
       },
@@ -1501,6 +1513,9 @@ describe("GuidedIngestionTaskPanel", () => {
         <GuidedIngestionTaskPanel
           workspaceId="workspace-a"
           client={{ execute }}
+          headlessFileClient={prepareForChat ? {
+            listClients: async () => [registeredClientId], select: selectLocal, selectProvider,
+          } : undefined}
           sourceBrowserClient={{
             browseHuggingFaceNamespaceDatasets,
             browseHuggingFaceDatasetParquetFiles,
@@ -1558,9 +1573,16 @@ describe("GuidedIngestionTaskPanel", () => {
     expect(container.textContent).toContain(
       "The exact version of each selected file is recorded automatically.",
     );
-    const add = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Add data",
-    )!;
+    const button = (label: string) => Array.from(container.querySelectorAll("button"))
+      .find(candidate => candidate.textContent === label);
+    if (prepareForChat) {
+      const otherFile = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
+        .find(input => input.parentElement?.textContent?.includes("data/test.parquet"))!;
+      await act(async () => otherFile.click());
+      expect(button("Prepare for chat")).toBeUndefined();
+      await act(async () => otherFile.click());
+    }
+    const add = button(prepareForChat ? "Prepare for chat" : "Add data")!;
     await act(async () => {
       add.click();
       await new Promise((resolve) => window.setTimeout(resolve, 10));
@@ -1583,10 +1605,32 @@ describe("GuidedIngestionTaskPanel", () => {
           },
         ],
       },
-      { action: "run-hugging-face", taskId: "ingestion.hugging-face" },
+      ...(!prepareForChat ? [{ action: "run-hugging-face", taskId: "ingestion.hugging-face" }] : []),
     ]);
-    expect(container.textContent).toContain("0 files selected");
-  });
+    expect(selectLocal).not.toHaveBeenCalled();
+    if (prepareForChat) {
+      const reference = { workspaceId: "workspace-a", taskId: "ingestion.hugging-face",
+        fileId: "file.hugging-face", taskRevision: 1 };
+      expect(selectProvider).toHaveBeenCalledWith({ ...reference, registeredClientId, expectedSelectionRevision: 0 });
+      const field = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="File reference"]');
+      expect(JSON.parse(field?.value ?? "null")).toEqual(reference);
+      expect(container.textContent).toContain("Ready for the selected chat client to preview the repository file.");
+      expect(button("Add data")?.disabled).toBe(true);
+      await act(async () => button("Cancel")?.click());
+      expect(commands[1]).toEqual({ action: "cancel", taskId: "ingestion.hugging-face" });
+      expect(container.querySelector('textarea[aria-label="File reference"]')).toBe(null);
+      expect(button("Add data")?.disabled).toBe(false);
+    } else {
+      expect(selectProvider).not.toHaveBeenCalled();
+      expect(container.textContent).toContain("0 files selected");
+    }
+  }
+
+  it("browses Hugging Face datasets and imports only checked files at the returned immutable revision",
+    () => verifyProviderImport(false));
+
+  it("prepares only one checked repository file for the selected chat client without starting the import",
+    () => verifyProviderImport(true));
 
   it("does not expose provider credentials or local paths when dataset browsing fails", async () => {
     const browseHuggingFaceNamespaceDatasets = testDouble

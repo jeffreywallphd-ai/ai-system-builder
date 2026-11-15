@@ -153,6 +153,7 @@ HEADLESS_PACKAGED_SOURCES = (
 HEADLESS_MCP_SOURCES = (
     "modules/contracts/headless/headless-approved-turn.ts",
     "modules/contracts/headless/headless-data-local-file.ts",
+    "modules/contracts/headless/headless-data-provider-file.ts",
     "modules/adapters/transport/headless-loopback/startDesktopHeadlessLoopback.ts",
     "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
     "modules/adapters/transport/headless-mcp/README.md",
@@ -686,6 +687,7 @@ PUBLISHED_FORM_CHECKS = {
         "automatic_sources": (
             "modules/contracts/headless/headless-data-task-status.ts",
             "modules/contracts/headless/headless-data-local-file.ts",
+            "modules/contracts/headless/headless-data-provider-file.ts",
             "modules/contracts/headless/headless-data-app-selection.ts",
             "modules/hosts/desktop/composition/composeDesktopHeadlessLocalFileSelection.ts",
             "apps/desktop/src/main/desktopHeadlessLocalFileSelectionIpc.ts",
@@ -709,6 +711,7 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "modules/contracts/headless/headless-data-task-status.ts",
             "modules/contracts/headless/headless-data-local-file.ts",
+            "modules/contracts/headless/headless-data-provider-file.ts",
             "modules/contracts/headless/headless-data-app-selection.ts",
             "modules/contracts/headless/index.ts",
             "modules/contracts/headless/tests/headless-data-task-status.unit.test.ts",
@@ -797,6 +800,17 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
             "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
         ),
+    },
+    "headless-data-desktop-plan-qualification": {
+        "companion_to": "headless-data-task-status",
+        "sources": ("dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",),
+        "command": (
+            "--preserve-symlinks", "--preserve-symlinks-main", "node_modules/@playwright/test/cli.js", "test",
+            "--config=dev-tools/config/playwright.visual-composer.config.ts", "--project=packaged-desktop",
+            "--workers=1", "--grep", "reviews an MCP plan in the app popup and reports the exact decision",
+            "packaged-desktop-headless.e2e.spec.ts",
+        ),
+        "timeout": 420,
     },
     "headless-system-builder-semantic-edits": {
         "sources": (
@@ -1262,7 +1276,7 @@ def definitions(root: Path) -> list[dict]:
         *[{"id": name, "patterns": [],
            "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--regression-test", test],
            "timeout": 120} for name, (_, test) in OPT_IN_REGRESSION_CHECKS.items()],
-        *[{"id": name, "patterns": [], "argv": [node, *check["command"]], "timeout": 120}
+        *[{"id": name, "patterns": [], "argv": [node, *check["command"]], "timeout": check.get("timeout", 120)}
           for name, check in PUBLISHED_FORM_CHECKS.items()],
         {"id": HEADLESS_DESKTOP_READ_CHECK, "patterns": [],
          "argv": [node, "--import", "tsx", "--test", "--",

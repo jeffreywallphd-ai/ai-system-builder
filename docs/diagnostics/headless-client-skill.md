@@ -60,6 +60,10 @@ Playwright profile and a separate official MCP client process. It uses
 synthetic data, drives the native pairing response only in the test process,
 and retains no trace, screenshot, video, pairing code, or credential.
 
+When a Headless Data change also edits the packaged test, the control plane
+runs the specific Desktop plan-review case. That case verifies tool discovery
+and refusal of an unselected provider file.
+
 The same packaged check runs `packaged-desktop-ui-takeover.e2e.spec.ts`.
 It measures the shell before and after opening consent, checks focus over
 an open Composer preview, and tests ordered presentation and explicit revoke.
@@ -107,6 +111,15 @@ If the browser chat connection changes during preparation, the app hides
 the old file reference. Cancel that staged upload before preparing it again.
 Ordinary uploads in the same workspace continue when the chat connection
 changes.
+
+### Preview a repository file on Desktop
+
+Open **Artifact Ingestion** and browse a Hugging Face dataset. Select one
+Parquet file, select the plan-review client and choose **Prepare for chat**.
+Copy the file reference to that client. The tool
+`aisb_preview_selected_provider_file` reads the file type and exact saved
+revision. It leaves the import waiting. For a direct import, choose
+**Cancel** on the prepared selection, then **Add data**.
 
 On Desktop or a configured Managed host, review the exact file in the
 approval popup or approval chat to let the client run the approved save.

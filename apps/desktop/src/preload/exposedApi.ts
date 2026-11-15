@@ -13,7 +13,8 @@ import {
 import { isWorkspaceId, normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary, type ReadWorkspaceSummaryRequest } from "../../../../modules/contracts/workspace";
 import { readStrictPassiveRecord } from "../../../../modules/contracts/shared";
 import { isDesktopHeadlessClientId, readHeadlessPlanReviewAgentResult } from "../../../../modules/contracts/headless";
-import { DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL, readAppHeadlessLocalFileSelectionValue,
+import { DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL, DESKTOP_HEADLESS_PROVIDER_FILE_SELECTION_CHANNEL,
+  readAppHeadlessLocalFileSelectionValue,
   type AppHeadlessLocalFileSelectionValue, type DesktopLocalFileSelectionInput,
 } from "../../../../modules/contracts/headless/headless-data-app-selection";
 import { DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS, DESKTOP_HEADLESS_PLAN_CHAT_CHANNELS,
@@ -786,6 +787,7 @@ export interface DesktopPreloadApi {
   publishWindowContext: (input: unknown) => Promise<boolean>;
   readHeadlessPairingStatus: () => Promise<DesktopHeadlessPairingStatus>;
   selectHeadlessLocalFile: (input: DesktopLocalFileSelectionInput) => Promise<AppHeadlessLocalFileSelectionValue | undefined>;
+  selectHeadlessProviderFile: (input: DesktopLocalFileSelectionInput) => Promise<AppHeadlessLocalFileSelectionValue | undefined>;
   listHeadlessPlanApprovals: (workspaceId: string) => Promise<readonly DesktopPlanApprovalListEntry[] | undefined>;
   openHeadlessPlanApproval: (selection: DesktopPlanApprovalSelection) => Promise<DesktopPlanApprovalView | undefined>;
   decideHeadlessPlanApproval: (decision: DesktopPlanApprovalDecision) => Promise<DesktopPlanApprovalView["state"] | undefined>;
@@ -2236,6 +2238,13 @@ export function createDesktopPreloadApi(
     async selectHeadlessLocalFile(input) {
       try {
         const raw = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL, input);
+        const reply = readStrictPassiveRecord(raw, ["ok", "value"]);
+        if (reply.ok === true) return readAppHeadlessLocalFileSelectionValue(reply.value, input);
+      } catch { return undefined; }
+    },
+    async selectHeadlessProviderFile(input) {
+      try {
+        const raw = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PROVIDER_FILE_SELECTION_CHANNEL, input);
         const reply = readStrictPassiveRecord(raw, ["ok", "value"]);
         if (reply.ok === true) return readAppHeadlessLocalFileSelectionValue(reply.value, input);
       } catch { return undefined; }

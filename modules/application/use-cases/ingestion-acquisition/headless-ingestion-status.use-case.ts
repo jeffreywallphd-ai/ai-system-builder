@@ -2,8 +2,8 @@ import type { ApplicationRequestContext } from "../../ports";
 import type { IngestionTaskRecord, IngestionTaskTransportCommand, IngestionTaskTransportValue } from "../../../contracts/ingestion";
 import type { ContractResult } from "../../../contracts/shared";
 import {
-  projectHeadlessIngestionStatus, projectHeadlessLocalFileImport,
-  type HeadlessIngestionStatusRequest, type HeadlessLocalFileImportRequest,
+  projectHeadlessIngestionStatus, projectHeadlessLocalFileImport, projectHeadlessProviderFileImport,
+  type HeadlessIngestionStatusRequest, type HeadlessLocalFileImportRequest, type HeadlessProviderFileImportRequest,
 } from "../../../contracts/headless";
 
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
@@ -35,6 +35,13 @@ export class ReadHeadlessIngestionStatusUseCase {
     authority: TaskReadAuthority,
   ) {
     return this.readAuthorizedTask(request.input, authority, task => projectHeadlessLocalFileImport(task, request.input, this.now()));
+  }
+
+  public prepareProviderFileImport(
+    request: HeadlessProviderFileImportRequest,
+    authority: TaskReadAuthority,
+  ) {
+    return this.readAuthorizedTask(request.input, authority, task => projectHeadlessProviderFileImport(task, request.input, this.now()));
   }
 
   private async readAuthorizedTask<Result>(

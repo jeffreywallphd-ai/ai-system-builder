@@ -24,7 +24,7 @@ const now = () => Date.parse(at);
 const identity = { organizationId, principalId: "fixture-owner", principalDisplayName: "Fixture", createdAt: at, updatedAt: at };
 const forbidden = { ok: false, code: "headless.forbidden" };
 
-async function fixture() {
+async function fixture(kind: "file-batch" | "hugging-face" = "file-batch", clock = now) {
   const platform = createInMemoryStructuredDocumentStore();
   const documents = platform.forOrganization(organizationId);
   const repositories = createStructuredOrganizationRepositories(platform);
@@ -35,11 +35,16 @@ async function fixture() {
   await workspaces.saveWorkspace({ organizationId, workspaceId, displayName: "Data fixture",
     status: "active", createdAt: at, updatedAt: at });
   const tasks = createStructuredIngestionAcquisitionRepository(documents);
+  const provider = kind === "hugging-face";
   const task = await tasks.createTask({
-    schemaVersion: "1.0", organizationId, workspaceId, taskId, kind: "file-batch", status: "queued",
-    revision: 1, cleanupPending: true, createdAt: at, updatedAt: at, checkpointExpiresAt: "2026-11-13T00:01:00.000Z",
-    files: [{ fileId, checkpointId: "checkpoint.sample", fileName: "synthetic.csv", mediaType: "text/csv",
-      status: "pending", totalBytes: 0, acceptedBytes: 0, nextChunkIndex: 0 }],
+    schemaVersion: "1.0", organizationId, workspaceId, taskId, kind, status: "queued",
+    revision: 1, cleanupPending: !provider, createdAt: at, updatedAt: at,
+    ...(!provider ? { checkpointExpiresAt: "2026-11-13T00:01:00.000Z" } : {}),
+    files: [{ fileId, checkpointId: "checkpoint.sample", fileName: provider ? "synthetic.parquet" : "synthetic.csv",
+      mediaType: provider ? "application/vnd.apache.parquet" : "text/csv",
+      status: "pending", totalBytes: 0, acceptedBytes: 0, nextChunkIndex: 0,
+      ...(provider ? { providerSource: { provider: "huggingface" as const, repository: "synthetic/private",
+        path: "data/synthetic.parquet", revision: "b".repeat(40) } } : {}) }],
     progress: { totalItems: 1, completedItems: 0, totalBytes: 0, acceptedBytes: 0, percent: 0 },
   });
   const registry = createDesktopHeadlessClientAuthority({ documents, identity,
@@ -58,7 +63,7 @@ async function fixture() {
     } };
   };
   const service = composeDesktopHeadlessLocalFileSelection({
-    hostIncarnationId, identity, rootDirectory: ".", now,
+    hostIncarnationId, identity, rootDirectory: ".", now: clock,
     platform: {
       ...platform,
       async runInOwnedTransaction(work, beforeCommit) {
@@ -80,7 +85,7 @@ async function fixture() {
       };
     },
   });
-  const stored = createStructuredHeadlessLocalFileSelectionRepository(documents, now);
+  const stored = createStructuredHeadlessLocalFileSelectionRepository(documents, clock);
   const isSelected = (request: AppHeadlessLocalFileSelectionRequest) => {
     const { registeredClientId, expectedSelectionRevision: _expected, ...target } = request.input;
     return stored.matches({ organizationId, principalId: identity.principalId, registeredClientId, target });
@@ -181,5 +186,89 @@ test("only the exact paired agent can preview the current selection and owned da
     assert.equal(await current.publishIfCurrent?.(send), false);
     assert.deepEqual((await service.preview(request, grant)).result, { ok: false, code: "headless.stale" });
     assert.equal(releases, 1);
+  } finally { registry.close(); }
+});
+
+test("provider preview requires an explicit provider selection and stops after that task is canceled", async () => {
+  const { service, registry, makeRequest, tasks, task, isSelected } = await fixture("hugging-face");
+  try {
+    const localSelection = await makeRequest("plan-review");
+    const providerSelection = { ...localSelection, operation: "data.select-provider-file" } as const;
+    const other = await makeRequest("plan-review");
+    const { registeredClientId, expectedSelectionRevision: _expected, ...input } = providerSelection.input;
+    const request = { version: HEADLESS_CONTRACT_VERSION, operation: "data.prepare-provider-file", input } as const;
+    const grant = { organizationId, principalId: identity.principalId, registeredClientId,
+      workspaceIds: [workspaceId], operations: [], planReview: true as const, isCurrent: () => true };
+    assert.deepEqual((await service.previewProvider(request, grant)).result, forbidden);
+    assert.equal((await service.select(localSelection, () => true)).ok, false);
+    assert.equal((await service.selectProvider(providerSelection, () => false)).ok, false);
+    const selected = await service.selectProvider(providerSelection, () => true);
+    assert.ok(selected.ok);
+    const retry = await service.selectProvider(providerSelection, () => true);
+    assert.ok(retry.ok);
+    assert.deepEqual(retry.value, selected.value);
+    assert.equal(await isSelected(localSelection), false);
+    assert.deepEqual((await service.preview({ ...request, operation: "data.prepare-local-file" }, grant)).result, forbidden);
+    assert.deepEqual((await service.previewProvider(request, { ...grant, registeredClientId: other.input.registeredClientId })).result, forbidden);
+    assert.deepEqual((await service.previewProvider(request, { ...grant, planReview: undefined })).result, forbidden);
+    const read = await service.previewProvider(request, grant);
+    assert.deepEqual(read.result, { ok: true, value: { workspaceId, taskId, fileId, taskRevision: 1,
+      provider: "huggingface", providerRevision: "b".repeat(40), mediaType: "application/vnd.apache.parquet",
+      selectionExpiresAt: now() + 86_400_000, approvalRequired: true, externalProviderCalls: 0 } });
+    assert.deepEqual(await tasks.readTask(workspaceId, taskId), task);
+    let releases = 0;
+    const send = () => { releases++; return true; };
+    assert.equal(await read.publishIfCurrent?.(send), true);
+    await tasks.saveTask({ ...task, status: "cancelled", revision: 2, updatedAt: at, completedAt: at }, 1);
+    assert.equal(await read.publishIfCurrent?.(send), false);
+    assert.deepEqual((await service.previewProvider(request, grant)).result, { ok: false, code: "headless.stale" });
+    assert.equal(releases, 1);
+  } finally { registry.close(); }
+});
+
+test("Desktop provider selection expires during final authorization or IPC handoff", async () => {
+  for (const phase of ["authorization", "handoff"]) {
+    let time = now();
+    const expiry = time + 86_400_000;
+    const { service, registry, makeRequest, counts, config } = await fixture("hugging-face", () => time);
+    try {
+      const selected = await makeRequest("plan-review");
+      const request = { ...selected, operation: "data.select-provider-file" } as const;
+      if (phase === "authorization") {
+        let crossedDeadline = false;
+        config.beforeTransaction = async ordinal => {
+          // Provider projection and the owned selection observation have resolved.
+          // Only the final authorization transaction is still pending.
+          if (ordinal === 10 && counts.reads === 2) {
+            crossedDeadline = true;
+            time = expiry;
+          }
+        };
+        assert.deepEqual(await service.selectProvider(request, () => true), { ok: false, code: "headless.source-not-ready" });
+        assert.equal(crossedDeadline, true);
+      } else {
+        const ready = await service.selectProvider(request, () => true);
+        assert.ok(ready.ok);
+        assert.equal(ready.receiptIsCurrent(), true);
+        time = expiry;
+        assert.equal(ready.receiptIsCurrent(), false);
+      }
+    } finally { registry.close(); }
+  }
+});
+
+test("Desktop selection confirmation observes a task cancelled during final authorization", async () => {
+  const { service, registry, makeRequest, counts, config, tasks, task } = await fixture("hugging-face");
+  try {
+    const selected = await makeRequest("plan-review");
+    const request = { ...selected, operation: "data.select-provider-file" } as const;
+    let cancelled = false;
+    config.beforeTransaction = async ordinal => {
+      if (ordinal !== 10 || counts.reads !== 2) return;
+      await tasks.saveTask({ ...task, status: "cancelled", revision: 2, updatedAt: at, completedAt: at }, 1);
+      cancelled = true;
+    };
+    assert.deepEqual(await service.selectProvider(request, () => true), { ok: false, code: "headless.stale" });
+    assert.equal(cancelled, true);
   } finally { registry.close(); }
 });

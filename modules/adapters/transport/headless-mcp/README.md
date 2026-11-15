@@ -92,6 +92,13 @@ returns bounded file metadata. Both hosts can save through an approved plan
 when local-file plan review is available. The app's **Add data** action
 continues to support direct imports.
 
+Desktop plan-review mode also offers `aisb_preview_selected_provider_file`.
+The user prepares one Parquet file from the app's Hugging Face browser and
+shares its copied reference. This tool reads the selected format and exact
+revision. The reply states that import requires approval and exposes no file contents,
+repository locator, or credentials. Preview makes zero provider calls.
+To import now, choose **Cancel** on the prepared selection, then **Add data**.
+
 If a write reply is lost, check the saved state or repeat the exact request
 with the same key. The adapter never repeats writes automatically. Cancellation
 ends the local wait but cannot undo a transaction already committed. A canceled

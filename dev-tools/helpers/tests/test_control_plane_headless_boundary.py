@@ -23,6 +23,21 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         local_source = "modules/contracts/headless/headless-data-local-file.ts"
         local_test = "modules/contracts/headless/tests/headless-data-local-file.unit.test.ts"
         self.assertIn(local_test, self.plan([local_source])[check]["argv"])
+        provider_source = "modules/contracts/headless/headless-data-provider-file.ts"
+        provider_checks = self.plan([provider_source])
+        self.assertIn(local_test, provider_checks[check]["argv"])
+        self.assertIn("headless-desktop-pinned-mcp", provider_checks)
+        self.assertNotIn("focused-tests", provider_checks)
+        packaged = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts"
+        desktop_plan = "headless-data-desktop-plan-qualification"
+        exact_provider = self.plan([provider_source, packaged])
+        self.assertIn(desktop_plan, exact_provider)
+        self.assertIn("reviews an MCP plan in the app popup and reports the exact decision", exact_provider[desktop_plan]["argv"])
+        self.assertIn("--project=packaged-desktop", exact_provider[desktop_plan]["argv"])
+        self.assertEqual(exact_provider[desktop_plan]["argv"][1:3], ["--preserve-symlinks", "--preserve-symlinks-main"])
+        self.assertNotIn("focused-tests", exact_provider)
+        self.assertNotIn(desktop_plan, self.plan([packaged]))
+        self.assertIn("focused-tests", self.plan([packaged]))
         self.assertIn("modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts", selected[check]["argv"])
         file_owner = "modules/application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case.ts"
         file_test = "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts"

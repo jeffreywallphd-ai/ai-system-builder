@@ -11110,187 +11110,60 @@
   {
    "path": "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "e74328c1a182f7b586f2c304d23040cada3b59fe665c516cbaca2ad86581d941",
-    "bytes": 83884,
+    "sha256": "cac26e33c2495022d9d0a47171c9f57f1e6b8cd299d825b1648f7eef3cd1fc70",
+    "bytes": 86482,
     "cases": [
-     {
-      "name": "coverage census: preserves all approved scenario families and matches the current literal route declarations",
-      "line": 297
-     },
-     {
-      "name": "stages one file for the chosen chat client, retries only selection and can cancel the staged file",
-      "line": 370
-     },
-     {
-      "name": "discards the prepared reference if the workspace changes while selection is in flight",
-      "line": 428
-     },
-     {
-      "name": "keeps an ordinary upload running while the browser's chat connection changes",
-      "line": 458
-     },
-     {
-      "name": "hides a retired chat receipt and still allows the staged upload to be canceled",
-      "line": 494
-     },
-     {
-      "name": "replaces a retired selection error with the available cancellation action",
-      "line": 529
-     },
-     {
-      "name": "refreshes paired chat clients on focus after an unavailable status read",
-      "line": 552
-     },
-     {
-      "name": "keeps a failed chat transfer out of the ordinary publishing retry",
-      "line": 574
-     },
-     {
-      "name": "acquisition race: admits only one start before React commits the busy state",
-      "line": 658
-     },
-     {
-      "name": "acquisition race: retires a removed session before deferred passive cleanup",
-      "line": 694
-     },
-     {
-      "name": "acquisition race: rejects a foreign task before progress, notification or completion",
-      "line": 729
-     },
-     {
-      "name": "acquisition race: stops before append when unmounted during a file slice",
-      "line": 741
-     },
-     {
-      "name": "acquisition race: failed cancellation keeps admission closed until an explicit status check",
-      "line": 757
-     },
-     {
-      "name": "acquisition race: nonterminal cancellation is not accepted as confirmation",
-      "line": 779
-     },
-     {
-      "name": "acquisition race: confirmed cancellation cannot be replaced by late older progress",
-      "line": 793
-     },
-     {
-      "name": "acquisition race: changing the source browser also retires a pending acquisition session",
-      "line": 806
-     },
-     {
-      "name": "acquisition race: unmount stops polling without pretending the accepted host task was cancelled",
-      "line": 819
-     },
-     {
-      "name": "acquisition race: a foreign task identity cannot finish or release the current task",
-      "line": 833
-     },
-     {
-      "name": "acquisition race: an old run cannot reset a newly admitted task after confirmed cancellation",
-      "line": 848
-     },
-     {
-      "name": "acquisition race: cancellation requested before task creation is sent once identity arrives",
-      "line": 868
-     },
-     {
-      "name": "acquisition race: duplicate cancel clicks issue one request and failed status checks stay locked",
-      "line": 883
-     },
-     {
-      "name": "acquisition race: a retry admits only one resume before the busy render",
-      "line": 908
-     },
-     {
-      "name": "acquisition workflow: transfers two distinct files across chunk boundaries without whole-file reads",
-      "line": 926
-     },
-     {
-      "name": "offers PDFs and transfers a PDF with missing browser MIME through the bounded file workflow",
-      "line": 983
-     },
-     {
-      "name": "renders the plain-language ordered source workflow with technical limits under Advanced settings",
-      "line": 1016
-     },
-     {
-      "name": "refuses a newly ambiguous normalized selection before resuming a failed file task",
-      "line": 1139
-     },
-     {
-      "name": "refuses an ambiguous saved task before transferring any selected bytes",
-      "line": 1172
-     },
-     {
-      "name": "streams a selected file in a bounded chunk and finalizes with server-computed integrity",
-      "line": 1192
-     },
-     {
-      "name": "creates and runs a bounded website task from the simple source workflow",
-      "line": 1281
-     },
-     {
-      "name": "keeps source inputs stable while working and confirms cancellation",
-      "line": 1333
-     },
-     {
-      "name": "offers a plain retry action for a retryable website failure",
-      "line": 1399
-     },
-     {
-      "name": "browses Hugging Face datasets and imports only checked files at the returned immutable revision",
-      "line": 1461
-     },
-     {
-      "name": "does not expose provider credentials or local paths when dataset browsing fails",
-      "line": 1591
-     },
-     {
-      "name": "saves a token-only Hugging Face Step 2 card through the shared settings client",
-      "line": 1645
-     }
+     { "name": "coverage census: preserves all approved scenario families and matches the current literal route declarations", "line": 297 },
+     { "name": "stages one file for the chosen chat client, retries only selection and can cancel the staged file", "line": 370 },
+     { "name": "discards the prepared reference if the workspace changes while selection is in flight", "line": 428 },
+     { "name": "keeps an ordinary upload running while the browser's chat connection changes", "line": 458 },
+     { "name": "hides a retired chat receipt and still allows the staged upload to be canceled", "line": 494 },
+     { "name": "replaces a retired selection error with the available cancellation action", "line": 529 },
+     { "name": "refreshes paired chat clients on focus after an unavailable status read", "line": 552 },
+     { "name": "keeps a failed chat transfer out of the ordinary publishing retry", "line": 574 },
+     { "name": "acquisition race: admits only one start before React commits the busy state", "line": 658 },
+     { "name": "acquisition race: retires a removed session before deferred passive cleanup", "line": 694 },
+     { "name": "acquisition race: rejects a foreign task before progress, notification or completion", "line": 729 },
+     { "name": "acquisition race: stops before append when unmounted during a file slice", "line": 741 },
+     { "name": "acquisition race: failed cancellation keeps admission closed until an explicit status check", "line": 757 },
+     { "name": "acquisition race: nonterminal cancellation is not accepted as confirmation", "line": 779 },
+     { "name": "acquisition race: confirmed cancellation cannot be replaced by late older progress", "line": 793 },
+     { "name": "acquisition race: changing the source browser also retires a pending acquisition session", "line": 806 },
+     { "name": "acquisition race: unmount stops polling without pretending the accepted host task was cancelled", "line": 819 },
+     { "name": "acquisition race: a foreign task identity cannot finish or release the current task", "line": 833 },
+     { "name": "acquisition race: an old run cannot reset a newly admitted task after confirmed cancellation", "line": 848 },
+     { "name": "acquisition race: cancellation requested before task creation is sent once identity arrives", "line": 868 },
+     { "name": "acquisition race: duplicate cancel clicks issue one request and failed status checks stay locked", "line": 883 },
+     { "name": "acquisition race: a retry admits only one resume before the busy render", "line": 908 },
+     { "name": "acquisition workflow: transfers two distinct files across chunk boundaries without whole-file reads", "line": 926 },
+     { "name": "offers PDFs and transfers a PDF with missing browser MIME through the bounded file workflow", "line": 983 },
+     { "name": "renders the plain-language ordered source workflow with technical limits under Advanced settings", "line": 1016 },
+     { "name": "refuses a newly ambiguous normalized selection before resuming a failed file task", "line": 1139 },
+     { "name": "refuses an ambiguous saved task before transferring any selected bytes", "line": 1172 },
+     { "name": "streams a selected file in a bounded chunk and finalizes with server-computed integrity", "line": 1192 },
+     { "name": "creates and runs a bounded website task from the simple source workflow", "line": 1281 },
+     { "name": "keeps source inputs stable while working and confirms cancellation", "line": 1333 },
+     { "name": "offers a plain retry action for a retryable website failure", "line": 1399 },
+     { "name": "browses Hugging Face datasets and imports only checked files at the returned immutable revision", "line": 1629 },
+     { "name": "prepares only one checked repository file for the selected chat client without starting the import", "line": 1632 },
+     { "name": "does not expose provider credentials or local paths when dataset browsing fails", "line": 1635 },
+     { "name": "saves a token-only Hugging Face Step 2 card through the shared settings client", "line": 1689 }
     ],
     "dynamicCases": 4,
     "functions": [
-     {
-      "name": "ActiveNotificationWorkspace",
-      "line": 60
-     },
-     {
-      "name": "task",
-      "line": 81
-     },
-     {
-      "name": "websiteTask",
-      "line": 143
-     },
-     {
-      "name": "huggingFaceTask",
-      "line": 220
-     },
-     {
-      "name": "chooseWebsiteAndEnterPage",
-      "line": 277
-     },
-     {
-      "name": "deferredResponse",
-      "line": 350
-     },
-     {
-      "name": "button",
-      "line": 355
-     },
-     {
-      "name": "mountAcquisition",
-      "line": 360
-     },
-     {
-      "name": "RetirementProbe",
-      "line": 698
-     }
+     { "name": "ActiveNotificationWorkspace", "line": 60 },
+     { "name": "task", "line": 81 },
+     { "name": "websiteTask", "line": 143 },
+     { "name": "huggingFaceTask", "line": 220 },
+     { "name": "chooseWebsiteAndEnterPage", "line": 277 },
+     { "name": "deferredResponse", "line": 350 },
+     { "name": "button", "line": 355 },
+     { "name": "mountAcquisition", "line": 360 },
+     { "name": "RetirementProbe", "line": 698 },
+     { "name": "verifyProviderImport", "line": 1461 }
     ],
-    "assertionCount": 196,
-    "assertionDigest": "72420e7ca6c89c7ad42407d9e387a94e267765adf19ffb9d004203b36798f297",
+    "assertionCount": 206,
+    "assertionDigest": "a1f030d37e22db9c3af90f8b748c5d62c2157309a424dd3be3f512a71234f5d2",
     "assertionExamples": [
      {
       "line": 301,
@@ -15215,71 +15088,29 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
    "facts": {
-    "sha256": "ad10ff937df6b9568ca5845b714d438accfb16951d6e4a28e3553eae8be90ae3",
-    "bytes": 52605,
+    "sha256": "bd8cdff82f575f919caa9182faa2897e778fe34ccab805d6c4dce1e1bc0fa9c1",
+    "bytes": 52899,
     "cases": [
-     {
-      "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart",
-      "line": 144
-     },
-     {
-      "name": "packaged Desktop reviews an MCP plan in the app popup and reports the exact decision",
-      "line": 335
-     },
-     {
-      "name": "packaged Desktop observes a running approved turn from a separately paired MCP client",
-      "line": 610
-     }
+     { "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart", "line": 144 },
+     { "name": "packaged Desktop reviews an MCP plan in the app popup and reports the exact decision", "line": 335 },
+     { "name": "packaged Desktop observes a running approved turn from a separately paired MCP client", "line": 614 }
     ],
     "dynamicCases": 0,
     "functions": [
-     {
-      "name": "call",
-      "line": 17
-     },
-     {
-      "name": "connectorSettings",
-      "line": 24
-     },
-     {
-      "name": "runningAddress",
-      "line": 37
-     },
-     {
-      "name": "hostId",
-      "line": 44
-     },
-     {
-      "name": "readVisibleSystemFeed",
-      "line": 51
-     },
-     {
-      "name": "canvasCompetition",
-      "line": 60
-     },
-     {
-      "name": "apply",
-      "line": 90
-     },
-     {
-      "name": "timings",
-      "line": 122
-     },
-     {
-      "name": "saveObservation",
-      "line": 128
-     },
-     {
-      "name": "stage",
-      "line": 378
-     },
-     {
-      "name": "verifySavedStep",
-      "line": 443
-     }
+     { "name": "call", "line": 17 },
+     { "name": "connectorSettings", "line": 24 },
+     { "name": "runningAddress", "line": 37 },
+     { "name": "hostId", "line": 44 },
+     { "name": "readVisibleSystemFeed", "line": 51 },
+     { "name": "canvasCompetition", "line": 60 },
+     { "name": "apply", "line": 90 },
+     { "name": "timings", "line": 122 },
+     { "name": "saveObservation", "line": 128 },
+     { "name": "stage", "line": 382 },
+     { "name": "verifySavedStep", "line": 447 }
     ],
-    "assertionCount": 134,
-    "assertionDigest": "5b73de15557f306d39756f64780ee3666b8e6f4917e64c5c785909591ef2701b",
+    "assertionCount": 135,
+    "assertionDigest": "0035de1959b95c2f1613cb0210323c3b812b3df988aaf693690557b471dc4fe1",
     "assertionExamples": [
      {
       "line": 38,

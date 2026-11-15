@@ -1,33 +1,63 @@
-import type { HeadlessLocalFileSelection, HeadlessLocalFileSelectionPort } from "../../../application/ports/ingestion/headless-local-file-selection.port";
+import type {
+  HeadlessFileSelectionPort,
+  HeadlessFileSelectionResult,
+  HeadlessLocalFileSelection,
+  HeadlessLocalFileSelectionPort,
+  HeadlessProviderFileSelectionPort,
+} from "../../../application/ports/ingestion/headless-local-file-selection.port";
 import {
   HEADLESS_CONTRACT_VERSION,
   isDesktopHeadlessClientId,
   isHeadlessHostIncarnationId,
   projectHeadlessLocalFileImport,
+  projectHeadlessProviderFileImport,
   readHeadlessLocalFileImportRequest,
 } from "../../../contracts/headless";
+import type { IngestionTaskRecord } from "../../../contracts/ingestion";
 import { isOrganizationId } from "../../../contracts/organization";
 import { hasKnownPassiveCredential, readStrictPassiveRecord } from "../../../contracts/shared";
 import type { StructuredDocumentStore } from "../shared";
 import { createStructuredIngestionAcquisitionRepository } from "./createStructuredIngestionAcquisitionRepository";
 
-const namespace = "headless/data/local-file-selections";
+const localNamespace = "headless/data/local-file-selections";
+const providerNamespace = "headless/data/provider-file-selections";
+type WritePolicy = {
+  readonly platform: StructuredDocumentStore;
+  readonly allows: (owner: StructuredDocumentStore, selection: HeadlessLocalFileSelection) => Promise<boolean>;
+};
+type ProjectPreview<Preview> = (task: IngestionTaskRecord, target: HeadlessLocalFileSelection["target"], now: number) =>
+  HeadlessFileSelectionResult<Preview>;
 
 /** The file already has one stable private identity in this workspace. Keep one selection per file. */
 export function createStructuredHeadlessLocalFileSelectionRepository(
   documents: StructuredDocumentStore,
   now: () => number = Date.now,
-  writePolicy?: {
-    readonly platform: StructuredDocumentStore;
-    readonly allows: (owner: StructuredDocumentStore, selection: HeadlessLocalFileSelection) => Promise<boolean>;
-  },
+  writePolicy?: WritePolicy,
 ): HeadlessLocalFileSelectionPort {
+  return createSelectionRepository(documents, localNamespace, projectHeadlessLocalFileImport, now, writePolicy);
+}
+
+export function createStructuredHeadlessProviderFileSelectionRepository(
+  documents: StructuredDocumentStore,
+  now: () => number = Date.now,
+  writePolicy?: WritePolicy,
+): HeadlessProviderFileSelectionPort {
+  return createSelectionRepository(documents, providerNamespace, projectHeadlessProviderFileImport, now, writePolicy);
+}
+
+function createSelectionRepository<Preview>(
+  documents: StructuredDocumentStore,
+  namespace: string,
+  project: ProjectPreview<Preview>,
+  now: () => number,
+  writePolicy?: WritePolicy,
+): HeadlessFileSelectionPort<Preview> {
   const organizationId = documents.organizationId;
   if (!organizationId || !documents.runInOwnedTransaction)
-    throw new Error("Local file selection requires an organization transaction owner.");
+    throw new Error("File selection requires an organization transaction owner.");
   const owned = documents.runInOwnedTransaction.bind(documents);
   if (writePolicy && (writePolicy.platform.organizationId !== undefined || !writePolicy.platform.runInOwnedTransaction))
-    throw new Error("Local file selection policy requires the platform transaction owner.");
+    throw new Error("File selection policy requires the platform transaction owner.");
   const ownWrite = writePolicy ? writePolicy.platform.runInOwnedTransaction!.bind(writePolicy.platform) : owned;
 
   return {
@@ -40,7 +70,7 @@ export function createStructuredHeadlessLocalFileSelectionRepository(
         if (!isCurrent()) return;
         if (writePolicy && (!await writePolicy.allows(owner, selection) || !isCurrent())) return;
         const transaction = writePolicy ? owner.forOrganization(organizationId) : owner;
-        if (!(await readPreview(transaction, selection, now)).ok || !isCurrent()) return;
+        if (!(await readPreview(transaction, selection, project, now)).ok || !isCurrent()) return;
         const found = await transaction.readDocument(namespace, key);
         if (found) {
           const existing = validate(found.value);
@@ -59,12 +89,12 @@ export function createStructuredHeadlessLocalFileSelectionRepository(
       });
     },
     matches(value) {
-      return readMatch(documents, validate(value));
+      return readMatch(documents, namespace, validate(value));
     },
     async observe(value) {
       const selection = validate(value);
       if (selection.organizationId !== organizationId) return;
-      return owned(transaction => readStructuredHeadlessLocalFileSelection(transaction, selection, now), () => {});
+      return owned(transaction => readSelectedPreview(transaction, namespace, selection, project, now), () => {});
     },
   };
 }
@@ -75,27 +105,46 @@ export async function readStructuredHeadlessLocalFileSelection(
   value: HeadlessLocalFileSelection,
   now: () => number = Date.now,
 ) {
-  const selection = validate(value);
-  if (await readMatch(transaction, selection)) return readPreview(transaction, selection, now);
+  return readSelectedPreview(transaction, localNamespace, validate(value), projectHeadlessLocalFileImport, now);
+}
+
+export function readStructuredHeadlessProviderFileSelection(
+  transaction: StructuredDocumentStore,
+  value: HeadlessLocalFileSelection,
+  now: () => number = Date.now,
+) {
+  return readSelectedPreview(transaction, providerNamespace, validate(value), projectHeadlessProviderFileImport, now);
 }
 
 /** Check the app's exact stored choice while an approved task advances its staging revision. */
 export function matchesStructuredHeadlessLocalFileSelection(
   transaction: StructuredDocumentStore, value: HeadlessLocalFileSelection,
 ): Promise<boolean> {
-  return readMatch(transaction, validate(value));
+  return readMatch(transaction, localNamespace, validate(value));
 }
 
-async function readMatch(transaction: StructuredDocumentStore, expected: HeadlessLocalFileSelection) {
+async function readSelectedPreview<Preview>(
+  transaction: StructuredDocumentStore,
+  namespace: string,
+  selection: HeadlessLocalFileSelection,
+  project: ProjectPreview<Preview>,
+  now: () => number,
+) {
+  if (await readMatch(transaction, namespace, selection)) return readPreview(transaction, selection, project, now);
+}
+
+async function readMatch(transaction: StructuredDocumentStore, namespace: string, expected: HeadlessLocalFileSelection) {
   if (expected.organizationId !== transaction.organizationId) return false;
   const found = await transaction.readDocument(namespace, selectionKey(expected));
   return Boolean(found && sameSelection(validate(found.value), expected));
 }
 
-async function readPreview(transaction: StructuredDocumentStore, selection: HeadlessLocalFileSelection, now: () => number) {
+async function readPreview<Preview>(
+  transaction: StructuredDocumentStore, selection: HeadlessLocalFileSelection, project: ProjectPreview<Preview>, now: () => number,
+) {
   const { workspaceId, taskId } = selection.target;
   const source = await createStructuredIngestionAcquisitionRepository(transaction).readTask(workspaceId, taskId);
-  return source ? projectHeadlessLocalFileImport(source, selection.target, now()) :
+  return source ? project(source, selection.target, now()) :
     { ok: false, code: "headless.forbidden" } as const;
 }
 

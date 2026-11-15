@@ -627,3 +627,15 @@ the release of a mixed-file approval view or decision receipt. The step
 response also holds the exact approval and saved-source observations
 through its PostgreSQL response fence. The ordinary upload and existing
 saved-system plans use their original paths.
+
+Desktop can stage one queued Hugging Face Parquet file for the selected
+plan-review client. This separate app operation uses the same owned selection
+transaction, with a separate storage namespace from local uploads. It checks
+Data write permission and the exact current workspace and client before
+recording the selection. The pinned connector requires Data read permission
+and holds the selection and task through response release. It checks the
+host, task revision, expiry, and a full immutable provider commit. Its fixed
+reply exposes the opaque reference, format, revision and approval requirement.
+It never sends the repository name, provider path, credentials or contents.
+The preview makes no provider calls or writes. The provider import stays
+queued. Cancellation, replacement, expiry, and lost access prevent preview.

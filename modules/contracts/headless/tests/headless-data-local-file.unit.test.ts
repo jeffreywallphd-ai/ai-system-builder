@@ -10,6 +10,9 @@ import {
   type HeadlessLocalFileImportRequest,
 } from "../headless-data-local-file";
 import { HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId } from "../headless-read-request";
+import {
+  projectHeadlessProviderFileImport, readHeadlessProviderFileImportRequest, readHeadlessProviderFileImportResult,
+} from "../headless-data-provider-file";
 
 const hostIncarnationId = "54133645-536c-43d2-8309-30701194add7" as HeadlessHostIncarnationId;
 const otherHost = "44d2cf26-9b80-4a62-a5ff-6004ae720a9a" as HeadlessHostIncarnationId;
@@ -45,6 +48,58 @@ const task = normalizeIngestionTaskRecord({
   schemaVersion: "1.0", workspaceId, taskId, kind: "file-batch", status: "transferring", files: [file], revision: 3,
   checkpointExpiresAt: expiry, cleanupPending: true, createdAt, updatedAt,
   progress: { totalBytes: 64, acceptedBytes: 64, completedItems: 0, totalItems: 1, percent: 100 },
+});
+
+const providerFile: IngestionTaskFileRecord = {
+  fileId, checkpointId: file.checkpointId, fileName: "private-fixture.parquet",
+  mediaType: "application/vnd.apache.parquet", totalBytes: 0, acceptedBytes: 0, status: "pending", nextChunkIndex: 0,
+  providerSource: { provider: "huggingface", repository: "synthetic/private", path: "data/private-fixture.parquet",
+    revision: "a".repeat(40) },
+};
+const providerTask = normalizeIngestionTaskRecord({
+  ...task, kind: "hugging-face", status: "queued", files: [providerFile],
+  checkpointExpiresAt: undefined, cleanupPending: false,
+  progress: { totalBytes: 0, acceptedBytes: 0, completedItems: 0, totalItems: 1, percent: 0 },
+});
+const providerRequest = { ...request, operation: "data.prepare-provider-file" } as const;
+
+test("provider file references use a distinct operation and cannot carry a repository locator", () => {
+  assert.deepEqual(readHeadlessProviderFileImportRequest(providerRequest, hostIncarnationId), { ok: true, request: providerRequest });
+  assert.deepEqual(readHeadlessProviderFileImportRequest(providerRequest, otherHost), { ok: false, code: "headless.host-changed" });
+  assert.deepEqual(readHeadlessProviderFileImportRequest(request, hostIncarnationId), { ok: false, code: "headless.invalid-request" });
+  assert.deepEqual(readHeadlessLocalFileImportRequest(providerRequest, hostIncarnationId), { ok: false, code: "headless.invalid-request" });
+  assert.deepEqual(readHeadlessProviderFileImportRequest({
+    ...providerRequest, input: { ...input, repository: "synthetic/private", path: "data/private-fixture.parquet" },
+  }, hostIncarnationId), { ok: false, code: "headless.invalid-request" });
+});
+
+test("provider preview exposes only the selected Parquet revision and approval requirement", () => {
+  const preview = projectHeadlessProviderFileImport(providerTask, input, now);
+  assert.ok(preview.ok);
+  assert.deepEqual(preview.value, { workspaceId, taskId, fileId, taskRevision: 3, provider: "huggingface",
+    providerRevision: "a".repeat(40), mediaType: "application/vnd.apache.parquet",
+    selectionExpiresAt: Date.parse("2025-01-02T00:00:00Z"), approvalRequired: true, externalProviderCalls: 0 });
+  assert.deepEqual(readHeadlessProviderFileImportResult(preview, input), preview);
+  for (const extra of [
+    { repository: "synthetic/private" }, { path: "data/private-fixture.parquet" }, { approvalRequired: false },
+    { providerRevision: "main" }, { fileId: "file.unselected" }, { externalProviderCalls: 1 },
+  ]) assert.deepEqual(readHeadlessProviderFileImportResult({ ok: true, value: { ...preview.value, ...extra } }, input),
+    { ok: false, code: "headless.unavailable" });
+});
+
+test("provider preview denies expired, changed, unselected, and non-provider tasks", () => {
+  const notReady = { ok: false, code: "headless.source-not-ready" };
+  const denied = { ok: false, code: "headless.forbidden" };
+  assert.deepEqual(projectHeadlessProviderFileImport(providerTask, input, Date.parse("2025-01-02T00:00:00Z")), notReady);
+  assert.deepEqual(projectHeadlessProviderFileImport(providerTask, input, Date.parse(createdAt) - 1), notReady);
+  assert.deepEqual(projectHeadlessProviderFileImport(task, input, now), notReady);
+  assert.deepEqual(projectHeadlessProviderFileImport({ ...providerTask, status: "transferring" }, input, now), notReady);
+  assert.deepEqual(projectHeadlessProviderFileImport({ ...providerTask, status: "cancelled", completedAt: updatedAt }, input, now), notReady);
+  assert.deepEqual(projectHeadlessProviderFileImport({ ...providerTask, revision: 4 }, input, now), { ok: false, code: "headless.stale" });
+  assert.deepEqual(projectHeadlessProviderFileImport(providerTask, { ...input, taskId: normalizeIngestionTaskId("task.other") }, now), denied);
+  assert.deepEqual(projectHeadlessProviderFileImport(providerTask, { ...input, fileId: normalizeIngestionTaskFileId("file.other") }, now), denied);
+  const providerSource = { ...providerFile.providerSource!, revision: "aaaaaaa" };
+  assert.deepEqual(projectHeadlessProviderFileImport({ ...providerTask, files: [{ ...providerFile, providerSource }] }, input, now), notReady);
 });
 
 test("a complete staged file projects only the exact approval metadata and effect", () => {

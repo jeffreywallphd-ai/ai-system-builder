@@ -4,7 +4,7 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
 import type { HeadlessApprovedTurnRequest, HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessSystemSummary, HeadlessWindowRequest } from "../../../contracts/headless/index.js";
-import type { HeadlessPlanStepRequest, HeadlessLocalFileImportRequest } from "../../../contracts/headless/index.js";
+import type { HeadlessPlanStepRequest, HeadlessLocalFileImportRequest, HeadlessProviderFileImportRequest } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import type { SystemBuilderSystemId } from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
@@ -48,7 +48,7 @@ function toolResult<T extends { ok: boolean }>(result:T) {
 
 async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest |
   HeadlessApprovedTurnRequest | HeadlessWindowRequest | HeadlessPlanReviewForwardRequest | HeadlessPlanStepRequest |
-  HeadlessLocalFileImportRequest,
+  HeadlessLocalFileImportRequest | HeadlessProviderFileImportRequest,
   signal?: AbortSignal) {
   return toolResult(await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" });
 }
@@ -253,6 +253,18 @@ function addSystemBuilderTools(server: McpServer) {
         input.hostIncarnationId);
       return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
     });
+    if (!managed) {
+      server.registerTool("aisb_preview_selected_provider_file", {
+        description: "Preview the file type and immutable revision of one repository file selected for this Desktop plan-review client. Import requires approval.",
+        inputSchema: z.strictObject({ ...workspaceTarget, ...localFileTarget }),
+        annotations: queryHints,
+      }, (input, context) => {
+        if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+        const decoded = headless.readHeadlessProviderFileImportRequest({ version, operation: "data.prepare-provider-file", input },
+          input.hostIncarnationId);
+        return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
+      });
+    }
     const fingerprint = z.string().length(64).regex(/^[a-f0-9]{64}$/);
     const reviewTarget = { ...workspaceTarget, fingerprint };
     const submit = { ...reviewTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) };

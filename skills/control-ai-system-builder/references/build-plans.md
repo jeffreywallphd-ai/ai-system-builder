@@ -61,6 +61,15 @@ will be saved. The approval view shows the file and upload references and
 the permission to save in Data. Tell the user to use **Add data** when the
 host does not support approved local-file saves.
 
+### Preview a user-selected repository file
+
+On Desktop, ask the user to select one Parquet file from the Hugging Face
+browser in **Data → Artifact Ingestion** and choose **Prepare for chat**.
+Pass the copied reference to `aisb_preview_selected_provider_file` when the
+tool is available. The preview gives the exact revision and confirms that
+import requires approval. For a direct import, tell the user to choose
+**Cancel** on the prepared selection, then **Add data**.
+
 ## Run, verify and recover
 
 Read `aisb_build_plan_approval_status` for the exact fingerprint before each

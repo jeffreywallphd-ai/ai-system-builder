@@ -35,6 +35,7 @@ const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_sy
 const planReviewTools = ["aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
   "aisb_request_build_plan_approval", "aisb_run_approved_build_step"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
+const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
 const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_release_window", "aisb_renew_window",
   "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
@@ -270,12 +271,17 @@ test("the plan-review stdio mode can run an exact approved step after the app re
   let fileEffectCount = 0;
   let requestCount = 0;
   let sourceReads = 0;
+  let providerReads = 0;
   let wrongPreview = false;
+  let discloseProviderPath = false;
   const sourceTarget = { hostIncarnationId, workspaceId, taskId: normalizeIngestionTaskId("ingestion.fixture"),
     fileId: normalizeIngestionTaskFileId("file.fixture"), taskRevision: 4 };
   const sourceValue = { workspaceId, taskId: sourceTarget.taskId, fileId: sourceTarget.fileId, taskRevision: 4,
     mediaType: "text/csv", fileBytes: 16, checkpointExpiresAt: Date.now() + 60_000,
     effect: "save-local-source" as const, externalProviderCalls: 0 as const };
+  const providerValue = { workspaceId, taskId: sourceTarget.taskId, fileId: sourceTarget.fileId, taskRevision: 4,
+    provider: "huggingface" as const, providerRevision: "b".repeat(40), mediaType: "application/vnd.apache.parquet" as const,
+    selectionExpiresAt: Date.now() + 60_000, approvalRequired: true as const, externalProviderCalls: 0 as const };
   const connector = await startDesktopHeadlessLoopback({
     registrations: registry,
     async read(raw, getGrant) {
@@ -294,6 +300,13 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       assert.ok(grant.planReview);
       sourceReads++;
       return { result: { ok: true, value: { ...sourceValue, taskRevision: wrongPreview ? 5 : 4 } },
+        publishIfCurrent: async publish => grant.isCurrent?.() === true && publish() };
+    }, async executeProvider(request, grant) {
+      assert.equal(request.operation, "data.prepare-provider-file");
+      assert.deepEqual(request.input, sourceTarget);
+      assert.ok(grant.planReview);
+      providerReads++;
+      return { result: { ok: true, value: { ...providerValue, ...(discloseProviderPath ? { path: "synthetic/hidden.parquet" } : {}) } },
         publishIfCurrent: async publish => grant.isCurrent?.() === true && publish() };
     } },
     planReview: { hostIncarnationId, allowLocalFileSave: true, async execute(input, grant) {
@@ -352,12 +365,18 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       stderr: "ignore", maxBufferSize: 256 * 1024,
     }));
     assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(),
-      [...expectedTools, ...planReviewTools, desktopDataPreviewTool].sort());
+      [...expectedTools, ...planReviewTools, desktopDataPreviewTool, desktopProviderPreviewTool].sort());
     const call = async (name: string, args: Record<string, unknown>) => resultText(await client.callTool({ name, arguments: args }));
     assert.deepEqual(await call(desktopDataPreviewTool, sourceTarget), { ok: true, value: sourceValue });
     wrongPreview = true;
     assert.deepEqual(await call(desktopDataPreviewTool, sourceTarget), { ok: false, code: "headless.unavailable" });
     assert.equal(sourceReads, 2);
+    assert.deepEqual(await call(desktopProviderPreviewTool, sourceTarget), { ok: true, value: providerValue });
+    discloseProviderPath = true;
+    assert.deepEqual(await call(desktopProviderPreviewTool, sourceTarget), { ok: false, code: "headless.unavailable" });
+    assert.deepEqual(await call(desktopProviderPreviewTool, { ...sourceTarget, workspaceId: "foreign-workspace" }),
+      { ok: false, code: "headless.forbidden" });
+    assert.equal(providerReads, 2);
     assert.equal(effectCount, 0);
     const scope = { hostIncarnationId, workspaceId };
     assert.deepEqual(await call("aisb_plan_capabilities", scope), { ok: true, operation: "plan.capabilities",
@@ -527,7 +546,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
     { mode: "authoring-and-conversation", tools: [...expectedTools, ...authoringTools, conversation].sort() },
     { mode: "presentation", tools: [...expectedTools, ...presentationTools].sort() },
     { mode: "all", tools: [...expectedTools, ...authoringTools, conversation, ...presentationTools].sort() },
-    { mode: "plan-review", tools: [...expectedTools, ...planReviewTools, desktopDataPreviewTool].sort() },
+    { mode: "plan-review", tools: [...expectedTools, ...planReviewTools, desktopDataPreviewTool, desktopProviderPreviewTool].sort() },
     { mode: "managed-plan-review", tools: ["aisb_host_describe", "aisb_list_templates", "aisb_read_system", ...planReviewTools, desktopDataPreviewTool].sort() },
   ]);
   const schemas = new Map(reference.tools.map(({ name, inputSchema }) => [name, inputSchema]));
@@ -561,6 +580,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   assertExactObject("aisb_build_plan_approval_status", [...workspace, "fingerprint"]);
   assertExactObject("aisb_run_approved_build_step", [...workspace, "fingerprint", "approvalRevision", "step"]);
   assertExactObject(desktopDataPreviewTool, [...workspace, "taskId", "fileId", "taskRevision"]);
+  assertExactObject(desktopProviderPreviewTool, [...workspace, "taskId", "fileId", "taskRevision"]);
   assertExactObject("aisb_preview_edits", [...base, "edits"]);
   assertExactObject("aisb_apply_edits", [...base, "edits", "previewDigest", "idempotencyKey"]);
   const turn = assertExactObject(conversation, [...workspace, "planId", "planRevision", "sessionId", "snapshotRevision", "key", "text"]);

@@ -22,6 +22,7 @@ export interface GuidedIngestionTaskClient {
 export interface GuidedHeadlessFileClient {
   listClients(workspaceId: string): Promise<readonly string[]>;
   select(input: DesktopLocalFileSelectionInput): Promise<AppHeadlessLocalFileSelectionValue | undefined>;
+  selectProvider?(input: DesktopLocalFileSelectionInput): Promise<AppHeadlessLocalFileSelectionValue | undefined>;
 }
 
 interface ChatFileScope {
@@ -30,6 +31,7 @@ interface ChatFileScope {
 
 interface PreparedLocalFile {
   readonly scope: ChatFileScope;
+  readonly source: "files" | "hugging-face";
   readonly request: DesktopLocalFileSelectionInput;
   readonly receipt?: AppHeadlessLocalFileSelectionValue;
 }
@@ -176,7 +178,9 @@ function ScopedIngestionTaskPanel({
     mountedRef.current = true;
     return () => { mountedRef.current = false; cancelledRef.current = true; };
   }, []);
-  const canChooseChatClient = sourceKind === "files" && files.length === 1;
+  const canChooseChatClient = (sourceKind === "files" && files.length === 1) ||
+    (sourceKind === "hugging-face" && headlessFileClient?.selectProvider !== undefined &&
+      selectedProviderFileKeys.size === 1);
   useEffect(() => {
     const fileClient = chatScope.client;
     if (!fileClient || !workspaceId || !canChooseChatClient) {
@@ -562,10 +566,11 @@ function ScopedIngestionTaskPanel({
   }
 
   async function confirmPreparedFile(prepared: PreparedLocalFile, isActive: () => boolean) {
-    const { scope, request } = prepared;
+    const { scope, request, source } = prepared;
     if (currentChatScope.current !== scope) return;
     const current = () => isActive() && currentChatScope.current === scope;
-    const selected = await scope.client?.select(request).catch(reason => {
+    const pending = source === "files" ? scope.client?.select(request) : scope.client?.selectProvider?.(request);
+    const selected = await pending?.catch(reason => {
       if (current()) throw reason;
     });
     if (!current()) return;
@@ -591,7 +596,8 @@ function ScopedIngestionTaskPanel({
   async function start(registeredClientId?: string): Promise<void> {
     if (!client || !workspaceId || activeOperationRef.current !== undefined ||
         statusRequestRef.current || preparedLocalFile) return;
-    if (registeredClientId && (!headlessFileClient || sourceKind !== "files" || files.length !== 1 ||
+    if (registeredClientId && (!canChooseChatClient ||
+        (sourceKind === "hugging-face" && selectedProviderFiles.length !== 1) ||
         !headlessClients.includes(registeredClientId))) return;
     if (sourceKind === "hugging-face" && (providerBrowseRef.current !== undefined || !providerFilesCurrentRef.current)) return;
     const operation = beginOperation();
@@ -621,6 +627,7 @@ function ScopedIngestionTaskPanel({
                 selectedProviderFiles,
                 operation.accept,
                 operation.isActive,
+                !registeredClientId,
               );
       if (!operation.isActive()) return;
       if (completed.status === "failed")
@@ -633,10 +640,12 @@ function ScopedIngestionTaskPanel({
         const file = completed.files[0];
         if (!file || completed.files.length !== 1 || file.acceptedBytes !== file.totalBytes)
           throw new Error("The file transfer did not finish. Check the upload before preparing it for chat.");
+        if (sourceKind === "website" || (sourceKind === "hugging-face" && completed.status !== "queued"))
+          throw new Error("The selected repository file could not be prepared for chat.");
         const request: DesktopLocalFileSelectionInput = { workspaceId: completed.workspaceId, taskId: completed.taskId,
           fileId: file.fileId, taskRevision: completed.revision, registeredClientId, expectedSelectionRevision: 0 };
         waitingForSelection = true;
-        const prepared = { scope: chatScope, request };
+        const prepared = { scope: chatScope, request, source: sourceKind };
         setPreparedLocalFile(prepared);
         await confirmPreparedFile(prepared, operation.isActive);
       }
@@ -1241,7 +1250,9 @@ function ScopedIngestionTaskPanel({
         {preparedLocalFile ? (
           <div className="ui-stack ui-stack--xs" aria-live="polite">
             {preparedReference ? <>
-              <p>Ready for the selected chat client to preview.</p>
+              <p>{preparedLocalFile.source === "hugging-face"
+                ? "Ready for the selected chat client to preview the repository file."
+                : "Ready for the selected chat client to preview."}</p>
               <textarea className="ui-textarea" aria-label="File reference" readOnly rows={2} value={preparedReference} />
               <button type="button" className="ui-button ui-button--outline" disabled={working}
                 onClick={() => void copyPreparedReference()}>{copiedReference ? "Reference copied" : "Copy file reference"}</button>
@@ -1448,6 +1459,7 @@ async function addProviderFiles(
   files: readonly HuggingFaceDatasetFile[],
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
   isActive: () => boolean,
+  run = true,
 ): Promise<IngestionTaskRecord> {
   const task = accept(
     await client.execute({
@@ -1462,7 +1474,7 @@ async function addProviderFiles(
       },
     }),
   );
-  if (["succeeded", "failed", "cancelled"].includes(task.status)) return task;
+  if (!run || ["succeeded", "failed", "cancelled"].includes(task.status)) return task;
   return runWithPolling(
     client,
     workspaceId,

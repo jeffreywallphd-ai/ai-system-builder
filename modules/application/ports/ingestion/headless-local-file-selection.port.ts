@@ -1,4 +1,7 @@
-import type { HeadlessLocalFileImportRequest, projectHeadlessLocalFileImport } from "../../../contracts/headless";
+import type {
+  HeadlessLocalFileImportPreview, HeadlessLocalFileImportRequest, HeadlessLocalFileImportResult,
+  HeadlessProviderFileImportPreview,
+} from "../../../contracts/headless";
 import type { OrganizationId } from "../../../contracts/organization";
 
 export interface HeadlessLocalFileSelection {
@@ -8,11 +11,18 @@ export interface HeadlessLocalFileSelection {
   readonly target: HeadlessLocalFileImportRequest["input"];
 }
 
-export interface HeadlessLocalFileSelectionPort {
+export type HeadlessFileSelectionResult<Preview> =
+  | { readonly ok: true; readonly value: Preview }
+  | Extract<HeadlessLocalFileImportResult, { readonly ok: false }>;
+
+export interface HeadlessFileSelectionPort<Preview> {
   /** Record an app user's exact selection in the owning organization. */
   record(selection: HeadlessLocalFileSelection, expectedRevision: number, isCurrent: () => boolean): Promise<number | undefined>;
   /** An unselected or differently scoped source returns false without exposing the record. */
   matches(selection: HeadlessLocalFileSelection): Promise<boolean>;
-  /** Observe the selection and current staged upload in the same owned read. */
-  observe(selection: HeadlessLocalFileSelection): Promise<ReturnType<typeof projectHeadlessLocalFileImport> | undefined>;
+  /** Observe the selection and current staged source in the same owned read. */
+  observe(selection: HeadlessLocalFileSelection): Promise<HeadlessFileSelectionResult<Preview> | undefined>;
 }
+
+export type HeadlessLocalFileSelectionPort = HeadlessFileSelectionPort<HeadlessLocalFileImportPreview>;
+export type HeadlessProviderFileSelectionPort = HeadlessFileSelectionPort<HeadlessProviderFileImportPreview>;

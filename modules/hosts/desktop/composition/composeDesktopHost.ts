@@ -2352,6 +2352,8 @@ export function composeDesktopHost(
                 hostIncarnationId,
                 execute: async (request, grant) => headlessLocalFileSelection?.preview(request, grant) ??
                   { result: { ok: false, code: "headless.unavailable" } },
+                executeProvider: async (request, grant) => headlessLocalFileSelection?.previewProvider(request, grant) ??
+                  { result: { ok: false, code: "headless.unavailable" } },
               } : undefined,
               authoring: options.persistence?.documents ? composeDesktopHeadlessAuthoring({
                 hostIncarnationId, identity, platformDocuments: options.persistence.documents, rootDirectory: registerOptions.storageRootDirectory,

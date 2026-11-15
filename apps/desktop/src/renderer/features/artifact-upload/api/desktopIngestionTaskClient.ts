@@ -27,5 +27,9 @@ export function createDesktopHeadlessFilePreparationClient() {
     select(input: DesktopLocalFileSelectionInput) {
       return window.desktopApi?.selectHeadlessLocalFile?.(input) ?? Promise.resolve(undefined);
     },
+    selectProvider: window.desktopApi?.selectHeadlessProviderFile
+      ? (input: DesktopLocalFileSelectionInput) =>
+        window.desktopApi?.selectHeadlessProviderFile?.(input) ?? Promise.resolve(undefined)
+      : undefined,
   };
 }
