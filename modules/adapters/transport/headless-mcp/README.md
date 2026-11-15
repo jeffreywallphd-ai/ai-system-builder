@@ -53,11 +53,14 @@ still checks the credential and current workspace permission on every call.
 | `aisb_create_system` | Saved system from one exact template |
 | `aisb_rename_system` | Saved name for the exact record and revision |
 | `aisb_clone_system` | New copy of one exact saved revision |
+| `aisb_plan_capabilities` | Saved-system actions available under current workspace permissions |
 | `aisb_preview_build_plan` | Ordered create, clone, and rename proposals checked against current saved data |
 | `aisb_preview_edits` | Preview digest and affected IDs, without a write |
 | `aisb_apply_edits` | Committed or replayed result for the exact preview |
 
-Use the build-plan preview on desktop or managed mode to check up to eight
+Check plan capabilities first. For create, select a compatible template. For
+clone or rename, read the exact saved system and both revisions. Use the
+build-plan preview on desktop or managed mode to check up to eight
 steps in one workspace. Use exact template IDs and saved revisions. Give each
 step its own retry key. A later step that uses a system already renamed in the
 plan requires a new preview against its new revision. The preview uses the

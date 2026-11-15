@@ -339,6 +339,35 @@
         "Reviewed report receipt f7ff6b028e53626f465598e93c1b68d880c71302b8628f1f2b14a387ac72c115 and review 1cff849981bf36ab415da8893012d64cb3124081b6bf7eebd8051008d8b8642b."
       ],
       "title": "Prove both real interfaces"
+    },
+    {
+      "areas": [
+        "Desktop paired connector",
+        "Managed authenticated read API",
+        "MCP capability and preview tools"
+      ],
+      "chunkId": "discover-capabilities",
+      "completedAt": "2026-11-15T00:53:37Z",
+      "criteriaIds": [
+        "unambiguous-plan",
+        "typed-tools-and-recovery",
+        "security-plan-and-context"
+      ],
+      "documentation": [
+        "MCP adapter README",
+        "Headless threat model",
+        "Generated MCP tool reference"
+      ],
+      "feedbackAddressed": [],
+      "id": "plan-from-written-request-discover-capabilities",
+      "incrementId": "plan-from-written-request",
+      "summary": "The desktop and managed connectors report which saved-system actions current workspace permissions allow. The preview checks up to eight ordered create, clone, or rename proposals against exact template IDs and saved revisions. It reports proposed effects and keeps approval separate.",
+      "tests": [
+        "Seven registered capability checks passed on both host paths, including permission withdrawal during discovery.",
+        "The real managed server reported three eligible actions, denied foreign scope and stale revision, and left the PostgreSQL snapshot unchanged.",
+        "The server TypeScript build passed. Separate SDK and preview receipts were independently accepted."
+      ],
+      "title": "Discover supported host actions and preview a plan"
     }
   ],
   "completion": null,
@@ -991,6 +1020,17 @@
       "outcome": "pending",
       "recordedAt": "2026-11-15T00:27:27Z",
       "summary": "The Chrome run completed 100 samples. Saved changes appeared in about 895 ms at p95, presentation took 249 ms at p95 and Revoke restored local control in 1.8 ms at p95. Windows still needs deadline evidence under native background throttling."
+    },
+    {
+      "artifact": "docs/operations/headless-skills-ui-takeover-source-coverage.json",
+      "command": "Managed Chrome independent-window fixture",
+      "criterionId": "browser-real-host-and-parity",
+      "id": "evidence-33",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-15T00:53:37Z",
+      "summary": "A separate reviewed Chrome run passed the two-window revoke and denied-presentation checks. Revoke ended only the first lease, and exactly one saved change remained after retry. Final qualification still needs the browser and packaged Windows tests on the same final source."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1499,6 +1539,18 @@
       "recordedAt": "2026-11-15T00:28:08Z",
       "sequence": 77,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "6220fe0388e1c983bca3fe2b16ac25d7e3afbdf303f0fb5886ad9a27b60f11df",
+      "recordedAt": "2026-11-15T00:53:37Z",
+      "sequence": 78,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b71f8646e29d57d63a4968866df216a15ecdd472684bb9e4f191bd8dc6b72c0c",
+      "recordedAt": "2026-11-15T00:53:37Z",
+      "sequence": 79,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -2187,7 +2239,9 @@
       ],
       "allowPendingQualification": false,
       "completedAt": null,
-      "completedChunks": [],
+      "completedChunks": [
+        "discover-capabilities"
+      ],
       "deliverables": [
         "An approved capability and effects matrix, versioned plan and task interfaces, and separate UI presentation boundary",
         "Short skill entry with workflow references, MCP schemas and reusable evaluation harness"
@@ -2742,5 +2796,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-15T00:28:08Z"
+  "updatedAt": "2026-11-15T00:53:37Z"
 }

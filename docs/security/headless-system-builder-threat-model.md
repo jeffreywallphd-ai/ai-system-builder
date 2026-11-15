@@ -2,8 +2,17 @@
 
 Authority: [ADR-0047](../adr/ADR-0047-headless-system-builder-delegation.md).
 Scope: the approved desktop connector, shared authoring and receipt boundaries,
-revocable window presentation, and later managed parity. This is a design
+revocable window presentation, managed parity, and passive plan discovery. This is a design
 review; the first contract alone does not qualify any live host.
+
+The build-plan capability request uses the existing authenticated read
+transport for one exact workspace. The desktop checks the current paired
+editing grant and the application policy. The managed host checks the same
+workspace permissions used by its existing editing operations. A reply lists
+only eligible operations from the fixed saved-system catalog. Both hosts
+check the shared edit scope again just before returning any action. The
+reply leaves plan approval separate. Preview only reads scoped templates and
+revisions. The audit log excludes proposed content.
 
 The [presentation authority decision](../adr/ADR-0048-revocable-window-presentation-authority.md)
 defines the new in-memory reservation, exact retry, and runtime bounds. Reject

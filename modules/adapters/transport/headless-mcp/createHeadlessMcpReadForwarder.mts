@@ -61,6 +61,11 @@ const resultValue = {
   "workspaces.list": z.array(z.strictObject({ workspaceId, displayName: text })).max(128),
   "systems.list": z.array(system).max(128),
   "systems.read": system,
+  "plan.capabilities": z.strictObject({
+    workspaceId, approval: z.literal("required"),
+    actions: z.array(z.enum(["systems.create", "systems.rename", "systems.clone"])).max(3)
+      .refine(actions => new Set(actions).size === actions.length),
+  }),
   "templates.list": z.array(z.strictObject({ templateId, displayName: text })).max(128),
   "systems.snapshot": z.strictObject({
     systems: z.array(z.strictObject({ ...savedReference, status: z.string().refine(isSystemBuilderStatus) })).max(128), cursor,
@@ -96,7 +101,7 @@ type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementR
 type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest;
 const unknownWrite: HeadlessAuthoringWireResult = { ok: false, code: "headless.operation-unconfirmed" };
 const unknownTurn = { ok: false, code: "headless.operation-unconfirmed" } as const;
-export const MANAGED_HEADLESS_READS = ["host.describe", "templates.list", "systems.read"] as const;
+export const MANAGED_HEADLESS_READS = ["host.describe", "templates.list", "systems.read", "plan.capabilities"] as const;
 type ForwardResult = ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult;
 
 export function createManagedHeadlessMcpReadForwarder(configuration: {
@@ -246,6 +251,10 @@ function createForwarder(options: {
       if (input.operation === "systems.read" &&
           (!parsed.data.value || typeof parsed.data.value !== "object" || !("systemId" in parsed.data.value) ||
             parsed.data.value.systemId !== input.input.systemId)) return unavailable;
+      if (input.operation === "plan.capabilities") {
+        const result = resultValue["plan.capabilities"].safeParse(parsed.data.value);
+        if (!result.success || result.data.workspaceId !== input.input.workspaceId) return unavailable;
+      }
       if (input.operation === "systems.snapshot") {
         const result = resultValue["systems.snapshot"].safeParse(parsed.data.value);
         if (!result.success || result.data.cursor.hostIncarnationId !== input.input.hostIncarnationId) return unavailable;

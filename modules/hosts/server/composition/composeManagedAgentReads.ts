@@ -1,7 +1,8 @@
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
-import { HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId, type HeadlessReadRequest, type HeadlessReadResult } from "../../../contracts/headless";
+import { HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId, type HeadlessReadRequest,
+  type HeadlessReadResult, type HeadlessSystemManagementRequest } from "../../../contracts/headless";
 import type { OrganizationRequestContext } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
@@ -30,22 +31,36 @@ export function composeManagedAgentReads(options: {
       return {ok: true, operation, value: {version: HEADLESS_CONTRACT_VERSION, hostIncarnationId: options.hostIncarnationId,
         workspaces: [], operations: ["host.describe", "templates.list", "systems.read"]}};
     }
-    if (operation !== "templates.list" && operation !== "systems.read")
+    if (operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities")
       return {ok: false, code: "headless.unsupported-operation"};
     if (input.hostIncarnationId !== options.hostIncarnationId) return {ok: false, code: "headless.host-changed"};
-    const authorized = async (workspaceId: WorkspaceId) => {
+    const authorized = async (workspaceId: WorkspaceId,
+      requestedOperation: HeadlessReadRequest["operation"] | HeadlessSystemManagementRequest["operation"] = operation,
+      requiresEdit = false) => {
       if (!current()) return false;
       const workspace = await options.workspaces.readWorkspace(workspaceId);
       if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== identity.organizationId || workspace.status !== "active")
         return false;
       try {
-        await options.authorization.authorizeWorkspaceOperation({workspace, operation: `headless.${operation}`,
-          requiredScopes: ["workspace:read", "asset:read"]});
+        await options.authorization.authorizeWorkspaceOperation({
+          workspace, operation: `headless.${requestedOperation}`,
+          requiredScopes: requiresEdit ? ["workspace:read", "asset:read", "asset:write"] : ["workspace:read", "asset:read"],
+        });
         return current();
       } catch { return false; }
     };
     try {
       if (!await authorized(input.workspaceId) || !current()) return denied;
+      if (operation === "plan.capabilities") {
+        const actions: HeadlessSystemManagementRequest["operation"][] = [];
+        for (const action of ["systems.create", "systems.rename", "systems.clone"] as const) {
+          if (await authorized(input.workspaceId, action, true)) actions.push(action);
+        }
+        if (!await authorized(input.workspaceId) || !current()) return denied;
+        if (actions.length && !await authorized(input.workspaceId, "plan.capabilities", true)) return denied;
+        if (!current()) return denied;
+        return {ok:true, operation, value:{workspaceId:input.workspaceId, actions, approval:"required"}};
+      }
       if (operation === "templates.list") {
         const templates = await options.systems.listTemplates.execute();
         if (!await authorized(input.workspaceId) || !current()) return denied;

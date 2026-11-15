@@ -163,6 +163,16 @@ function addAuthoringTools(server: McpServer) {
     z.strictObject({ operation: z.literal("systems.rename"), ...rename }),
     z.strictObject({ operation: z.literal("systems.clone"), ...savedChange }),
   ]);
+  server.registerTool("aisb_plan_capabilities", {
+    description: "Check which saved-system operations can be proposed in one current workspace. Use the corresponding template or saved revision as input. Plan execution requires approval.",
+    inputSchema: z.strictObject(workspaceTarget),
+    annotations: queryHints,
+  }, (input, context) => {
+    if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId) || !workspace.isWorkspaceId(input.workspaceId))
+      return invalidAuthoring();
+    return invoke({version, operation:"plan.capabilities",
+      input:{hostIncarnationId:input.hostIncarnationId, workspaceId:input.workspaceId}}, context.mcpReq.signal);
+  });
   server.registerTool("aisb_preview_build_plan", {
     description: "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
     inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(8) }),

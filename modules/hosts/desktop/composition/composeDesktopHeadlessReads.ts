@@ -11,6 +11,8 @@ import {
   type HeadlessReadOperation,
   type HeadlessReadResult,
   type HeadlessSystemSummary,
+  type DesktopHeadlessAuthoringOperation,
+  type HeadlessSystemManagementRequest,
 } from "../../../contracts/headless";
 import type { LocalIdentityProfile, OrganizationRole } from "../../../contracts/organization";
 import { isSystemBuilderStatus, isSystemBuilderSystemId, normalizeSystemBuilderRevisionId, type SystemBuilderRecord } from "../../../contracts/system-builder";
@@ -27,6 +29,7 @@ export interface DesktopHeadlessReadGrant {
   readonly organizationId: LocalIdentityProfile["organizationId"];
   readonly workspaceIds: readonly WorkspaceId[];
   readonly operations: readonly HeadlessReadOperation[];
+  readonly authoring?: readonly DesktopHeadlessAuthoringOperation[];
   readonly conversation?: true;
 }
 
@@ -61,7 +64,8 @@ export function composeDesktopHeadlessReads(dependencies: {
     return true;
   };
 
-  async function authorizedWorkspace(workspaceId: WorkspaceId, operation: HeadlessReadOperation) {
+  async function authorizedWorkspace(workspaceId: WorkspaceId,
+    operation: HeadlessReadOperation | HeadlessSystemManagementRequest["operation"], requiresEdit = false) {
     const workspace = await workspaceRepository.readWorkspace(workspaceId);
     if (workspace?.workspaceId !== workspaceId || workspace.status !== "active" ||
         workspace.organizationId !== identity.organizationId) return undefined;
@@ -69,7 +73,9 @@ export function composeDesktopHeadlessReads(dependencies: {
       await authorization.authorizeWorkspaceOperation({
         workspace,
         operation: `headless.${operation}`,
-        requiredScopes: operation === "workspaces.list" ? ["workspace:read"]
+        requiredScopes: requiresEdit
+          ? ["workspace:read", "asset:read", "asset:write"]
+          : operation === "workspaces.list" ? ["workspace:read"]
           : operation === "workflows.list" || operation === "workflows.prepare" || operation === "conversation-tasks.read"
             ? ["workspace:read", "asset:read", "runtime:read"] : ["workspace:read", "asset:read"],
       });
@@ -119,7 +125,8 @@ export function composeDesktopHeadlessReads(dependencies: {
           ok: true, operation,
           value: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
-            operations: HEADLESS_READ_OPERATIONS.filter((op) => latest.operations.includes(op) && supports(op)),
+            operations: HEADLESS_READ_OPERATIONS.filter((op) =>
+              op !== "plan.capabilities" && latest.operations.includes(op) && supports(op)),
           },
         };
         if (!workspaces.every((workspace) => boundedDisplayName(workspace.displayName))) return tooLarge;
@@ -153,6 +160,15 @@ export function composeDesktopHeadlessReads(dependencies: {
           const templates = await getUseCases().listTemplates.execute();
           response = templates.length > MAX_READ_ROWS || !templates.every(({ displayName }) => boundedDisplayName(displayName))
             ? tooLarge : { ok: true, operation, value: templates.map(({ templateId, displayName }) => ({ templateId, displayName })) };
+          break;
+        }
+        case "plan.capabilities": {
+          const actions: HeadlessSystemManagementRequest["operation"][] = [];
+          for (const action of new Set(grant.authoring)) {
+            if ((action === "systems.create" || action === "systems.rename" || action === "systems.clone") &&
+                await authorizedWorkspace(workspaceId, action, true)) actions.push(action);
+          }
+          response = {ok:true, operation, value:{workspaceId, actions, approval:"required"}};
           break;
         }
         case "systems.snapshot":
@@ -211,6 +227,11 @@ export function composeDesktopHeadlessReads(dependencies: {
       const finalGrant = await currentScopedGrant([workspaceId]);
       if (!finalGrant || (response.ok && response.operation === "workflows.prepare" &&
           response.value.approvedSessionIds !== undefined && finalGrant.conversation !== true)) return forbidden;
+      if (response.ok && response.operation === "plan.capabilities" && response.value.actions.length > 0) {
+        if (response.value.actions.some(action => !finalGrant.authoring?.includes(action))) return forbidden;
+        // The edit scope may narrow while the request checks individual actions.
+        if (!await authorizedWorkspace(workspaceId, "plan.capabilities", true) || !isOpen()) return forbidden;
+      }
       return response;
     } catch {
       return unavailable;

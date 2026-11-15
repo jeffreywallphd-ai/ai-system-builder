@@ -71,6 +71,7 @@ test("exact managed requests respect authentication, framing, authority lifetime
   let enabled = true;
   let holdAuthoring = false;
   let wrongRecord = false;
+  let wrongCapabilityScope = false;
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
@@ -111,6 +112,10 @@ test("exact managed requests respect authentication, framing, authority lifetime
     },
     async read(input) {
       count += 1;
+      if (input.operation === "plan.capabilities") return {ok:true, operation:input.operation, value:{
+        workspaceId:wrongCapabilityScope ? createWorkspaceId("other-workspace") : input.input.workspaceId,
+        actions:["systems.clone"], approval:"required",
+      }};
       if (input.operation === "systems.read") {
         if (!wrongRecord) return {ok: false, code: "synthetic-private-driver-detail".repeat(6_000) as "headless.unavailable"};
         return {ok: true, operation: "systems.read", value: {systemId: "fixture.neighbor" as typeof input.input.systemId,
@@ -172,6 +177,13 @@ test("exact managed requests respect authentication, framing, authority lifetime
     wrongRecord = true;
     assert.deepEqual((await send(read, systemRead)).body, {ok: false, code: "headless.unavailable"});
     assert.equal(generalParser, 0);
+    const capabilities = {version:HEADLESS_CONTRACT_VERSION, operation:"plan.capabilities",
+      input:{hostIncarnationId, workspaceId:tab.workspaceId}};
+    assert.equal((await send(read, capabilities, "fixture-browser")).status, 403);
+    assert.deepEqual((await send(read, capabilities)).body, {ok:true, operation:capabilities.operation,
+      value:{workspaceId:tab.workspaceId, actions:["systems.clone"], approval:"required"}});
+    wrongCapabilityScope = true;
+    assert.deepEqual((await send(read, capabilities)).body, {ok:false, code:"headless.unavailable"});
     const windowPath = MANAGED_HEADLESS_AGENT_PATHS.window;
     const listTabs = {version: UI_CONTROL_VERSION, operation: "window.list", input: {hostIncarnationId, workspaceId: tab.workspaceId}};
     const invalidContext = {version: UI_CONTROL_VERSION, operation: "window.context", input: {target: {...tab,
@@ -218,7 +230,7 @@ test("exact managed requests respect authentication, framing, authority lifetime
     retired = true;
     release.resolve();
     assert.deepEqual((await pending).body, {ok: false, code: "headless.forbidden"});
-    assert.equal(count, 5);
+    assert.equal(count, 7);
   } finally {
     release.resolve();
     retire();

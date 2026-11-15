@@ -25,7 +25,8 @@ const hostIncarnationId = "d5ed1db7-f069-4c48-bbc4-815697889c5d";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
 const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_templates", "aisb_list_workflows", "aisb_list_workspaces",
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
-const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
+const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
+  "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
 const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_release_window", "aisb_renew_window",
   "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
@@ -47,6 +48,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let commandApplied = false;
   let delayedSemanticEffects = 0;
   let sourceArchived = false;
+  let displacedCapabilities = false;
   const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
     let body = "";
     request.on("data", (chunk: Buffer) => {body += chunk.toString();});
@@ -84,6 +86,14 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           receipt: {sequence: 1, commandId: wrongCommandReceipt ? randomUUID() : input.input.commandId,
             status: commandApplied ? "applied" : "accepted"}}});
         response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "plan.capabilities") {
+        const payload = JSON.stringify({ok:true, operation:input.operation, value:{
+          workspaceId:displacedCapabilities ? "different-workspace" : workspaceId,
+          actions:["systems.rename"], approval:"required",
+        }});
+        response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
         return;
       }
       const value = input.operation === "host.describe"
@@ -218,6 +228,11 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     sourceArchived = true;
     assert.deepEqual(await preview({...planBase, steps:[steps[1]]}), {ok:false, code:"headless.not-found"});
     assert.ok(requests.slice(beforeDenied).every(row => row.url === "/api/headless/agent/read"));
+    const capabilities = async () => resultText(await client.callTool({name:"aisb_plan_capabilities", arguments:planBase}));
+    assert.deepEqual(await capabilities(), {ok:true, operation:"plan.capabilities",
+      value:{workspaceId, actions:["systems.rename"], approval:"required"}});
+    displacedCapabilities = true;
+    assert.deepEqual(await capabilities(), {ok:false, code:"headless.unavailable"});
   } finally {
     await Promise.allSettled(clients.map(client => client.close()));
     listener.closeAllConnections();
@@ -265,6 +280,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   assertExactObject("aisb_create_system", [...workspace, "templateId", "name", "idempotencyKey"]);
   assertExactObject("aisb_rename_system", namedEdit, ["description"]);
   assertExactObject("aisb_clone_system", namedEdit);
+  assertExactObject("aisb_plan_capabilities", workspace);
   assertExactObject("aisb_preview_build_plan", [...workspace, "steps"]);
   assertExactObject("aisb_preview_edits", [...base, "edits"]);
   assertExactObject("aisb_apply_edits", [...base, "edits", "previewDigest", "idempotencyKey"]);
@@ -407,10 +423,15 @@ test("official stdio opt-in lists only finite authoring tools and forwards witho
     async read(input, currentGrant) {
       const parsed = parseHeadlessReadRequest(input, hostIncarnationId);
       if (!parsed.ok) return parsed;
-      if (parsed.request.operation !== "templates.list") return {ok:false, code:"headless.unsupported-operation"};
+      if (parsed.request.operation !== "templates.list" && parsed.request.operation !== "plan.capabilities")
+        return {ok:false, code:"headless.unsupported-operation"};
       const grant = await currentGrant();
       if (!grant?.workspaceIds.includes(parsed.request.input.workspaceId)) return {ok:false, code:"headless.forbidden"};
       readCalls++;
+      if (parsed.request.operation === "plan.capabilities") return {
+        ok:true, operation:"plan.capabilities", value:{workspaceId,
+          actions:grant.authoring?.includes("systems.create") ? ["systems.create"] : [], approval:"required"},
+      };
       return {ok:true, operation:"templates.list", value:[{
         templateId:"reference.secured-data-review@1.0.0", displayName:"Saved fixture template",
       }]};
@@ -444,6 +465,9 @@ test("official stdio opt-in lists only finite authoring tools and forwards witho
     const args = { hostIncarnationId, workspaceId, templateId: "reference.secured-data-review@1.0.0",
       name: "Synthetic system", idempotencyKey: "a6f56324-2051-462c-b45b-d9b49bf6dd4a" };
     const {hostIncarnationId: planHost, workspaceId: planWorkspace, ...newSystem} = args;
+    const capabilities = await client.callTool({name:"aisb_plan_capabilities", arguments:{hostIncarnationId, workspaceId}});
+    assert.deepEqual(resultText(capabilities), {ok:true, operation:"plan.capabilities",
+      value:{workspaceId, actions:["systems.create"], approval:"required"}});
     const plan = {hostIncarnationId: planHost, workspaceId: planWorkspace, steps:[{operation: "systems.create", ...newSystem}]};
     const preview = await client.callTool({name:"aisb_preview_build_plan", arguments:plan});
     assert.deepEqual(resultText(preview), {ok:true, value:{
@@ -453,7 +477,7 @@ test("official stdio opt-in lists only finite authoring tools and forwards witho
     const extra = await client.callTool({name:"aisb_preview_build_plan",
       arguments:{...plan, steps:[{...plan.steps[0], approval:"claimed"}]}});
     assert.equal(Boolean(extra.isError), true);
-    assert.equal(readCalls, 1);
+    assert.equal(readCalls, 2);
     assert.equal(calls, 0);
     const invalid = await client.callTool({ name: "aisb_create_system", arguments: { ...args, credential: "unexpected" } });
     assert.equal(Boolean(invalid.isError), true);

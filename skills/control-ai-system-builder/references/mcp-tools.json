@@ -27,6 +27,7 @@
         "aisb_list_templates",
         "aisb_list_workflows",
         "aisb_list_workspaces",
+        "aisb_plan_capabilities",
         "aisb_prepare_workflow",
         "aisb_preview_build_plan",
         "aisb_preview_edits",
@@ -64,6 +65,7 @@
         "aisb_list_templates",
         "aisb_list_workflows",
         "aisb_list_workspaces",
+        "aisb_plan_capabilities",
         "aisb_prepare_workflow",
         "aisb_preview_build_plan",
         "aisb_preview_edits",
@@ -109,6 +111,7 @@
         "aisb_list_windows",
         "aisb_list_workflows",
         "aisb_list_workspaces",
+        "aisb_plan_capabilities",
         "aisb_prepare_workflow",
         "aisb_present_in_window",
         "aisb_preview_build_plan",
@@ -573,6 +576,26 @@
         },
         "required": [
           "hostIncarnationId"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_plan_capabilities",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false

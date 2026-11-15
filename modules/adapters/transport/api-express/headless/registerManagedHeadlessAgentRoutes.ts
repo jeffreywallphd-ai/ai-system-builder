@@ -115,7 +115,7 @@ async function respond<Agent>(
   if (kind === "read") {
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
-    if (!availableReads.includes(parsed.request.operation))
+    if (parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
     const result = await handlers.read(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
@@ -148,6 +148,15 @@ async function respond<Agent>(
           (currentRevisionId !== undefined && (normalizeSystemBuilderRevisionId(currentRevisionId) !== currentRevisionId ||
             hasKnownPassiveCredential(currentRevisionId)))) return failure(response, 503, "headless.unavailable");
       return send(response, {ok: true, operation: result.operation, value: {systemId, name, revision, status, currentRevisionId}});
+    }
+    if (result.operation === "plan.capabilities") {
+      const {workspaceId, actions, approval} = result.value;
+      if (parsed.request.operation !== "plan.capabilities" || workspaceId !== parsed.request.input.workspaceId ||
+          hasKnownPassiveCredential(workspaceId) || approval !== "required" || !Array.isArray(actions) ||
+          actions.length > 3 || new Set(actions).size !== actions.length ||
+          actions.some(action => action !== "systems.create" && action !== "systems.rename" && action !== "systems.clone"))
+        return failure(response, 503, "headless.unavailable");
+      return send(response, {ok:true, operation:result.operation, value:{workspaceId, actions, approval}});
     }
     return failure(response, 503, "headless.unavailable");
   }

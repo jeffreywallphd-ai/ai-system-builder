@@ -2,6 +2,7 @@ import type { SystemBuilderRecord, SystemBuilderRevisionId, SystemBuilderSystemI
 import type { WorkspaceId } from "../workspace";
 import type { ConversationTurnStatus } from "../conversations";
 import type { ExecutionRunStatus } from "../execution-runs";
+import type { HeadlessSystemManagementRequest } from "./headless-system-management";
 import {
   HEADLESS_CONTRACT_VERSION,
   type HeadlessChangeCursor,
@@ -82,6 +83,11 @@ export type HeadlessReadResult =
   | { readonly ok: true; readonly operation: "templates.list"; readonly value: readonly {
       readonly templateId: SystemBuilderTemplateId; readonly displayName: string;
     }[] }
+  | { readonly ok: true; readonly operation: "plan.capabilities"; readonly value: {
+    readonly workspaceId: WorkspaceId;
+    readonly actions: readonly HeadlessSystemManagementRequest["operation"][];
+    readonly approval: "required";
+  } }
   | {
       readonly ok: false;
       readonly code: Extract<HeadlessReadRequestParseResult, { ok: false }>["code"] |

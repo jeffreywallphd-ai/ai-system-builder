@@ -14,6 +14,7 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "workflows.list",
   "workflows.prepare",
   "conversation-tasks.read",
+  "plan.capabilities",
 ] as const);
 
 export type HeadlessReadOperation = (typeof HEADLESS_READ_OPERATIONS)[number];
@@ -57,6 +58,7 @@ export type HeadlessReadRequest =
   | ReadRequest<"workflows.list", WorkspaceTarget & { readonly sourceKind: HeadlessWorkflowSourceKind }>
   | ReadRequest<"workflows.prepare", WorkspaceTarget & { readonly profileId: string; readonly source: HeadlessWorkflowSource }>
   | ReadRequest<"conversation-tasks.read", WorkspaceTarget & { readonly sessionId: string; readonly turnId: string }>
+  | ReadRequest<"plan.capabilities", WorkspaceTarget>
   | ReadRequest<"systems.read", WorkspaceTarget & { readonly systemId: SystemBuilderSystemId }>;
 
 export type HeadlessReadRequestParseResult =
@@ -170,6 +172,7 @@ export function parseHeadlessReadRequest(
     case "systems.list":
     case "templates.list":
     case "systems.snapshot":
+    case "plan.capabilities":
       if (!isWorkspaceId(workspaceId)) return invalid();
       request = { version, operation, input: { hostIncarnationId, workspaceId } };
       break;

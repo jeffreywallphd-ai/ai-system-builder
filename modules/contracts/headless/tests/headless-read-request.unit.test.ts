@@ -32,6 +32,7 @@ test("accepts only the declared finite read inputs and returns a detached reques
       kind: "approved-release", sourceId: "release.1", sourceDigest: "sha256:" + "a".repeat(64),
     } },
     "conversation-tasks.read": { ...scope, sessionId: "session.1", turnId: "turn.1" },
+    "plan.capabilities": scope,
   };
   assert.deepEqual([...HEADLESS_READ_OPERATIONS].sort(), Object.keys(inputs).sort());
   for (const operation of HEADLESS_READ_OPERATIONS) {

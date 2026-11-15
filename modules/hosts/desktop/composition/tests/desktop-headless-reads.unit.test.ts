@@ -65,6 +65,49 @@ test("denies missing, mismatched, stale, or narrowed authority before invoking t
   assert.deepEqual(await handler(list, async () => { throw new Error("Grant verification should not run"); }), forbidden);
 });
 
+test("planning reports only operations allowed by the Desktop grant and current workspace policy", async () => {
+  const authored: DesktopHeadlessReadGrant = {...grant, authoring:["systems.create", "systems.rename", "systems.apply-edits"]};
+  let verified = authored;
+  let narrowOnRead = false;
+  let narrowEditOnRenameCheck = false;
+  let canEdit = true;
+  const handler = composeDesktopHeadlessReads({
+    hostIncarnationId, identity:{organizationId, principalId},
+    workspaceRepository:{async readWorkspace(id) {
+      return {workspaceId:id, organizationId, displayName:"Fixture", status:"active", createdAt:at, updatedAt:at};
+    }},
+    authorization:{async authorizeWorkspaceOperation({operation, requiredScopes}) {
+      if (operation === "headless.systems.rename") {
+        if (narrowEditOnRenameCheck) canEdit = false;
+        throw new Error("Fixture denied rename.");
+      }
+      if (requiredScopes.includes("asset:write") && !canEdit) throw new Error("Fixture removed editing but kept reading.");
+      if (operation === "headless.systems.create") {
+        assert.deepEqual(requiredScopes, ["workspace:read", "asset:read", "asset:write"]);
+        if (narrowOnRead) verified = grant;
+      }
+    }},
+    getUseCases() {throw new Error("Capability discovery does not invoke any system provider.");},
+    isOpen:() => true,
+  });
+  const operation = "plan.capabilities";
+  const target = request(operation, {hostIncarnationId, workspaceId});
+  assert.deepEqual(await handler(target, async () => grant), {ok:true, operation, value:{workspaceId, actions:[], approval:"required"}});
+  assert.deepEqual(await handler(target, async () => verified), {ok:true, operation,
+    value:{workspaceId, actions:["systems.create"], approval:"required"}});
+  assert.deepEqual(await handler(request(operation, {hostIncarnationId, workspaceId:otherWorkspaceId}), async () => verified), forbidden);
+  const described = await handler(request("host.describe", {}), async () => verified);
+  assert.ok(described.ok && described.operation === "host.describe" && !described.value.operations.includes(operation));
+  narrowOnRead = true;
+  assert.deepEqual(await handler(target, async () => verified), forbidden);
+  narrowOnRead = false;
+  verified = authored;
+  narrowEditOnRenameCheck = true;
+  assert.deepEqual(await handler(target, async () => verified), forbidden);
+  assert.deepEqual(await handler(target, async () => verified), {ok:true, operation,
+    value:{workspaceId, actions:[], approval:"required"}});
+});
+
 test("uses one actual desktop provider, reads IPC-saved state, and omits private details", { timeout: 30_000 }, async () => {
   const parent = await realpath(tmpdir());
   const root = await realpath(await mkdtemp(path.join(parent, "desktop-headless-reads-")));

@@ -21,6 +21,10 @@ test("managed discovery and saved reads remain scoped to the same host, principa
   let applies = 0;
   let workspaceReads = 0;
   let held = false;
+  let deniedAction: string | undefined;
+  let deniedScopes: readonly string[] | undefined;
+  let narrowOnActionDenial = false;
+  let canEdit = true;
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const read = composeManagedAgentReads({ hostIncarnationId,
@@ -29,7 +33,15 @@ test("managed discovery and saved reads remain scoped to the same host, principa
       workspaceReads++;
       if (target === workspaceId) return {workspaceId, organizationId, status: "active", displayName: "Fixture", createdAt: at, updatedAt: at};
     }},
-    authorization: {async authorizeWorkspaceOperation() { applies++; }},
+    authorization: {async authorizeWorkspaceOperation({operation, requiredScopes}) {
+      applies++;
+      if (operation === deniedAction) {
+        deniedScopes = requiredScopes;
+        if (narrowOnActionDenial) canEdit = false;
+        throw new Error("Fixture denied the requested action.");
+      }
+      if (requiredScopes.includes("asset:write") && !canEdit) throw new Error("Fixture removed editing but kept reading.");
+    }},
     systems: {
       read: {async execute() {
         entered.resolve();
@@ -53,6 +65,19 @@ test("managed discovery and saved reads remain scoped to the same host, principa
   assert.deepEqual(await read({...request, input: {...request.input, workspaceId: createWorkspaceId("foreign-workspace")}}, identity, live),
     {ok: false, code: "headless.forbidden"});
   assert.deepEqual(await read(request, {...identity, principalId: "different"}, live), {ok: false, code: "headless.forbidden"});
+  const capabilities = {...request, operation:"plan.capabilities" as const};
+  deniedAction = "headless.systems.rename";
+  assert.deepEqual(await read(capabilities, identity, live), {ok:true, operation:"plan.capabilities",
+    value:{workspaceId, actions:["systems.create", "systems.clone"], approval:"required"}});
+  assert.deepEqual(deniedScopes, ["workspace:read", "asset:read", "asset:write"]);
+  assert.deepEqual(await read({...capabilities, input:{...request.input, workspaceId:createWorkspaceId("other-workspace")}}, identity, live),
+    {ok:false, code:"headless.forbidden"});
+  assert.deepEqual(await read({...capabilities, input:{...request.input, hostIncarnationId:randomUUID() as HeadlessHostIncarnationId}}, identity, live),
+    {ok:false, code:"headless.host-changed"});
+  narrowOnActionDenial = true;
+  assert.deepEqual(await read(capabilities, identity, live), {ok:false, code:"headless.forbidden"});
+  assert.deepEqual(await read(capabilities, identity, live), {ok:true, operation:"plan.capabilities",
+    value:{workspaceId, actions:[], approval:"required"}});
   held = true;
   const pending = read({version, operation: "systems.read", input: {hostIncarnationId, workspaceId, systemId}}, identity, live);
   await entered.promise;
