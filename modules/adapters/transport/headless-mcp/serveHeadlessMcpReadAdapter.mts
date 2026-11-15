@@ -176,29 +176,13 @@ function addAuthoringTools(server: McpServer) {
   });
   server.registerTool("aisb_preview_build_plan", {
     description: "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
-    inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(8) }),
+    inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
     annotations: queryHints,
   }, async (input, context) => {
-    if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId) || !workspace.isWorkspaceId(input.workspaceId))
-      return invalidAuthoring();
-    const scope = { hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId };
-    const requests: HeadlessSystemManagementRequest[] = [];
-    const keys = new Set<string>();
-    const renamedSystems = new Set<SystemBuilderSystemId>();
-    for (const { operation, ...fields } of input.steps) {
-      const decoded = headless.parseHeadlessSystemManagementRequest({ version, operation, input: { ...scope, ...fields } }, scope.hostIncarnationId);
-      if (!decoded.ok) return invalidAuthoring();
-      const request = decoded.request;
-      if (keys.has(request.input.idempotencyKey)) return invalidAuthoring();
-      keys.add(request.input.idempotencyKey);
-      if (request.operation !== "systems.create") {
-        // This preview validates saved revisions. A later step cannot use the
-        // same revision after an earlier step changes it.
-        if (renamedSystems.has(request.input.systemId)) return invalidAuthoring();
-        if (request.operation === "systems.rename") renamedSystems.add(request.input.systemId);
-      }
-      requests.push(request);
-    }
+    if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId);
+    if (!proposal.ok) return invalidAuthoring();
+    const { scope, requests, preview } = proposal;
 
     const unavailable = { ok: false, code: "headless.unavailable" } as const;
     const deadline = AbortSignal.timeout(12_000);
@@ -233,17 +217,8 @@ function addAuthoringTools(server: McpServer) {
         return toolResult({ ok: false, code: "headless.stale" });
     }
     if (signal.aborted) return toolResult(unavailable);
-    const plan = {
-      version: "aisb-build-plan-preview-v1",
-      ...scope,
-      approval: "required",
-      steps: requests.map(({ operation, input: { hostIncarnationId: _host, workspaceId: _workspace, ...fields } }) => ({
-        operation, input: fields, effect: "saved-system-write", externalProviderCalls: 0,
-      })),
-    };
-    // The management parser rebuilt each step in a fixed field order.
-    const fingerprint = createHash("sha256").update(JSON.stringify(plan), "utf8").digest("hex");
-    return toolResult({ ok: true, value: { ...plan, fingerprint } });
+    const fingerprint = createHash("sha256").update(JSON.stringify(preview), "utf8").digest("hex");
+    return toolResult({ ok: true, value: { ...preview, fingerprint } });
   });
 }
 

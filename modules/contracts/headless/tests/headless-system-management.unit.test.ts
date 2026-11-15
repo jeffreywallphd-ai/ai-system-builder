@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, parseHeadlessSystemManagementRequest } from "../index";
+import { HEADLESS_CONTRACT_VERSION, HEADLESS_MAX_BUILD_PLAN_STEPS, isHeadlessHostIncarnationId,
+  parseHeadlessBuildPlanProposal, parseHeadlessSystemManagementRequest } from "../index";
 
 const host = "41a96fc3-d2b8-4414-bd29-00059badc72d";
 assert.ok(isHeadlessHostIncarnationId(host));
@@ -58,4 +59,65 @@ test("distinguishes valid requests addressed to a previous host or contract", ()
     { ok: false, code: "headless.host-changed" });
   assert.deepEqual(parse({ ...candidate, version: "headless.v999" }),
     { ok: false, code: "headless.unsupported-version" });
+});
+
+const proposalScope = { hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId };
+const createStep = {
+  operation: "systems.create", name: input.name, idempotencyKey: input.idempotencyKey,
+  templateId: "reference.secured-data-review@1.0.0",
+};
+const savedStep = {
+  name: "Second proposal", systemId: existing.systemId, baseRecordRevision: existing.baseRecordRevision,
+  baseRevisionId: existing.baseRevisionId, idempotencyKey: "3a6112ce-ab8a-456f-876f-64730ff719df",
+};
+const parseProposal = (value: unknown) => {
+  if (!isHeadlessHostIncarnationId(host)) throw new Error("Invalid fixture host");
+  return parseHeadlessBuildPlanProposal(value, host);
+};
+
+test("derives detached, canonical preview and exact scoped requests from ordered steps", () => {
+  const clone = { operation: "systems.clone", ...savedStep };
+  const renamed = { ...savedStep, operation: "systems.rename",
+    idempotencyKey: "997b544a-47c5-4910-84cc-d1757b6dedd0", description: "A proposed description." };
+  const steps = [{ ...createStep }, clone, renamed];
+  const parsed = parseProposal({ ...proposalScope, steps });
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) return;
+  const expected = steps.map(({ operation, ...fields }) => request(operation, { ...proposalScope, ...fields }));
+  assert.deepEqual(parsed.requests, expected);
+  assert.deepEqual(parsed.preview, {
+    version: "aisb-build-plan-preview-v1", ...proposalScope, approval: "required",
+    steps: steps.map(({ operation, ...fields }) => ({
+      operation, input: fields, effect: "saved-system-write", externalProviderCalls: 0,
+    })),
+  });
+  const fieldOrder = steps.map(step => Object.fromEntries(Object.entries(step).reverse()));
+  const reorderedFields = parseProposal({ steps: fieldOrder, ...proposalScope });
+  assert.equal(reorderedFields.ok && JSON.stringify(reorderedFields.preview), JSON.stringify(parsed.preview));
+  steps[0].name = "Changed caller-owned data";
+  assert.deepEqual(parsed.requests, expected);
+  assert.equal(parsed.preview.steps[0].input.name, input.name);
+});
+
+test("rejects forged scope or approval, reused keys, invalid order, and oversized or nonpassive proposals", () => {
+  const clone = { operation: "systems.clone", ...savedStep };
+  const renamed = { ...savedStep, operation: "systems.rename",
+    idempotencyKey: "997b544a-47c5-4910-84cc-d1757b6dedd0" };
+  let accessed = false;
+  const getter = { ...createStep, get name() { accessed = true; return "Fixture"; } };
+  for (const steps of [
+    [],
+    Array(HEADLESS_MAX_BUILD_PLAN_STEPS + 1).fill(createStep),
+    [createStep, { ...clone, idempotencyKey: createStep.idempotencyKey }],
+    [renamed, clone],
+    [{ ...createStep, workspaceId: "other-workspace" }],
+    [{ ...createStep, hostIncarnationId: input.hostIncarnationId }],
+    [{ ...createStep, approval: "approved" }],
+    [{ ...createStep, operation: "systems.archive" }],
+    [getter],
+  ]) assert.deepEqual(parseProposal({ ...proposalScope, steps }), invalid);
+  assert.deepEqual(parseProposal({ ...proposalScope, steps: [createStep], approver: "claimed" }), invalid);
+  assert.deepEqual(parseProposal({ ...proposalScope, hostIncarnationId: savedStep.idempotencyKey, steps: [createStep] }),
+    { ok: false, code: "headless.host-changed" });
+  assert.equal(accessed, false);
 });
