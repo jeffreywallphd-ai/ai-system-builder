@@ -344,7 +344,7 @@
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": "server-browser-and-delivery-qualification",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -925,6 +925,72 @@
       "outcome": "passed",
       "recordedAt": "2026-11-14T23:31:18Z",
       "summary": "Both local workers received a committed change. After one worker stopped, its replacement and the surviving worker recovered the saved changes. Both live restricted-role database tests passed."
+    },
+    {
+      "artifact": "docs/operations/headless-skills-ui-takeover-source-coverage.json",
+      "command": "Managed Chrome behavior and reconnect fixtures",
+      "criterionId": "authenticated-browser-stream-and-refresh",
+      "id": "evidence-27",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-15T00:27:26Z",
+      "summary": "Chrome replayed the exact saved change and restored its stream in 1.35 seconds. The local tests kept unsaved edits and newer saved results while enforcing access changes. Late replies left the user's page and focus in place."
+    },
+    {
+      "artifact": "docs/operations/headless-skills-ui-takeover-source-coverage.json",
+      "command": "Focused policy checks and managed Chrome rollback fixture",
+      "criterionId": "security-managed-parity-reviewed",
+      "id": "evidence-28",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-15T00:27:26Z",
+      "summary": "Focused policy and access checks passed. Rolling back the optional controls disabled all 12 routes. Ordinary authenticated access, the saved item, the open draft, the audit history and the original save receipt remained available in the tested scope. The browser case covered already-open pages."
+    },
+    {
+      "artifact": "docs/operations/headless-skills-ui-takeover-source-coverage.json",
+      "command": "Candidate feature checks and matched local Windows and Chrome fixtures",
+      "criterionId": "complete-contract-and-final-qualification",
+      "id": "evidence-29",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-15T00:27:27Z",
+      "summary": "All 59 design assertions have named test coverage. The 19 focused checks, four packaged Windows journeys and four managed Chrome runs passed on the same source. Final roadmap qualification remains separate."
+    },
+    {
+      "artifact": "docs/operations/headless-managed-increment-three-qualification.json",
+      "command": "Managed PostgreSQL two-worker and restricted-role live fixtures",
+      "criterionId": "postgres-atomicity-and-worker-delivery",
+      "id": "evidence-30",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-15T00:27:27Z",
+      "summary": "Both local workers received the committed change. A replacement recovered the saved changes in 3.94 seconds. Both restricted-role database tests ran and passed."
+    },
+    {
+      "artifact": "docs/operations/headless-skills-ui-takeover-source-coverage.json",
+      "command": "Packaged Windows and managed Chrome feature fixtures",
+      "criterionId": "browser-real-host-and-parity",
+      "id": "evidence-31",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-15T00:27:27Z",
+      "summary": "The Windows package and Chrome ran on the same source. The separately scoped test for two active Chrome windows and a save whose reveal is denied still needs final matched qualification."
+    },
+    {
+      "artifact": "docs/operations/headless-skills-ui-takeover-source-coverage.json",
+      "command": "Managed Chrome timing and packaged Windows background fixtures",
+      "criterionId": "host-specific-targets-and-bounds",
+      "id": "evidence-32",
+      "incrementId": "server-browser-and-delivery-qualification",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-11-15T00:27:27Z",
+      "summary": "The Chrome run completed 100 samples. Saved changes appeared in about 895 ms at p95, presentation took 249 ms at p95 and Revoke restored local control in 1.8 ms at p95. Windows still needs deadline evidence under native background throttling."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1373,6 +1439,48 @@
       "recordedAt": "2026-11-14T23:31:18Z",
       "sequence": 67,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "38c67870e4497c2b3605fbbbfe6158993d3599215ceb496f929222509377e214",
+      "recordedAt": "2026-11-15T00:27:26Z",
+      "sequence": 68,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "17c62c76e759f0fbe9667735b6816100e1d0ea4ce1f62fadef7510e1aa45b92e",
+      "recordedAt": "2026-11-15T00:27:26Z",
+      "sequence": 69,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bdc2947c3eaa97b25eb732f4eded38379cb8b81d3f0acdb2deac5283f657af3a",
+      "recordedAt": "2026-11-15T00:27:27Z",
+      "sequence": 70,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1f636db1be39d511b487e561387ffdfbb4e1cd0d246d4028a18dbc0ca5b20bd5",
+      "recordedAt": "2026-11-15T00:27:27Z",
+      "sequence": 71,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "955e91859baf15ec47d968e33cff7849255c7694a03168397133bcba682fa8c4",
+      "recordedAt": "2026-11-15T00:27:27Z",
+      "sequence": 72,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b7dd3dc52015879965fbc8bbb2c65467b239e627b5369b0a083e07c6a98a0b15",
+      "recordedAt": "2026-11-15T00:27:27Z",
+      "sequence": 73,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ae5f20f6478451e676df01d7f4b8f41e992c2b509d45fb4bf48d8c8225f41a6c",
+      "recordedAt": "2026-11-15T00:27:30Z",
+      "sequence": 74,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -1879,12 +1987,13 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": null,
+      "completedAt": "2026-11-15T00:27:30Z",
       "completedChunks": [
         "postgres-replay-and-workers",
         "managed-api-and-browser",
         "parity-and-final-evidence"
       ],
+      "completionSummary": "All three implementation chunks, four local criteria and the local managed PostgreSQL criterion have passed. The remaining controlled checks stay open for final matched browser and Windows qualification.",
       "deliverables": [
         "Server/browser ADR and host/API/identity/persistence/threat-model updates for the same-server topology, interactive UI credential separation, authenticated streaming, outbox ownership and worker coordination; deployment defaults remain single replica.",
         "Finite explicit API route-policy entries, principal-aware managed connector/tool forwarding, shared browser shell/gate/context integration and scoped authenticated stream with bounded polling fallback.",
@@ -1903,6 +2012,10 @@
       "id": "server-browser-and-delivery-qualification",
       "number": 3,
       "objective": "Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay.",
+      "pendingCriteria": [
+        "browser-real-host-and-parity",
+        "host-specific-targets-and-bounds"
+      ],
       "plan": {
         "assumptions": [
           "The controlled fixture owns synthetic credentials and data, with no external publication or managed production authority.",
@@ -2001,7 +2114,7 @@
       ],
       "rollback": "Disable new agent/control/change-stream route admission and revoke affected delegated credentials and leases; close browser gates locally and end exact host reservations. Stop outbox dispatch/worker claims safely without deleting committed records, receipts, terminal lease state or audit. Fall back to existing authorized UI/API reads and scoped resync, preserve RLS and draft bases, and roll back only compatible additive schema/application changes. Never restore insecure dev/no-auth modes, broad cancellation or implicit lease reacquisition.",
       "startedAt": "2026-11-14T15:48:34Z",
-      "status": "verifying",
+      "status": "implemented-pending-qualification",
       "title": "Deliver the same workflow through the authenticated server and browser",
       "verification": [
         "Run focused managed API/route-policy/workflow parity, organization/RLS, authenticated stream and PostgreSQL receipt/outbox denial/recovery tests.",
@@ -2520,6 +2633,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "executing",
-  "updatedAt": "2026-11-14T23:31:18Z"
+  "status": "ready",
+  "updatedAt": "2026-11-15T00:27:30Z"
 }
