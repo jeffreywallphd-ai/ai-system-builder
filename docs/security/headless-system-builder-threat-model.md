@@ -537,3 +537,26 @@ tasks, provider sources, and incomplete bytes deny admission. The agent
 sees only the ID, type, size, expiry, and proposed local effect. The owning
 publication path still needs exact approval, current access, and its byte
 and receipt verification.
+
+The ingestion owner has a separate application entry for an approved local
+effect. The host must bind its current human approval and live registration
+to the exact app-selected preview before calling this entry. The owner
+compares the preview and organization against its current task and claims
+the accepted revision through the existing compare-and-save. It checks
+permission and checkpoint expiry again before entering verified publication.
+The publication owner rechecks permission after content verification and
+before each new reservation or issue. The last check uses the live grant
+and checkpoint deadline immediately before issue. An acknowledged byte
+issue admits one byte write. An acknowledged origin issue admits the
+binding and catalog work for that origin. A grant can end during an
+admitted effect. In that case the owner still settles the effect under its
+ordinary completion and recovery rules. The agent's retired grant cannot
+start another effect or receive a success reply. Host composition still
+needs to bind the persisted plan revision to this admission guard.
+The ordinary byte verification, canonical source snapshot, and cleanup
+still run through the ingestion owner. If task admission cannot be
+confirmed or permission is withdrawn before publication starts, the saved
+checkpoint stays available to the ordinary app. Later withdrawals can
+leave partial publication recorded for safe recovery. A repeated approved
+request cannot claim that revision again. A result must identify an actual
+finalized file, and it returns only task, file, and revision IDs.

@@ -49,8 +49,18 @@ export interface IngestionFilePublicationRepositoryPort {
   savePublication(publication: IngestionFilePublication, expectedRevision: number): Promise<IngestionFilePublication>;
 }
 
+/** Application-owned permission to issue a new delegated publication effect. */
+export interface IngestionFilePublicationAdmission {
+  readonly stillAllowed: () => Promise<boolean>;
+  readonly isCurrent: () => boolean;
+}
+
 export interface IngestionFilePublicationPort {
-  publishFile(request: { readonly taskId: IngestionTaskId; readonly fileId: IngestionTaskFileId; readonly expectedSha256?: IngestionSha256Digest }, context: ApplicationRequestContext): Promise<IngestionFilePublicationOutcome>;
+  publishFile(
+    request: { readonly taskId: IngestionTaskId; readonly fileId: IngestionTaskFileId; readonly expectedSha256?: IngestionSha256Digest },
+    context: ApplicationRequestContext,
+    admission?: IngestionFilePublicationAdmission,
+  ): Promise<IngestionFilePublicationOutcome>;
   /** Read only: an existing output never acquires a missing origin on retry. */
   verifyFilePublication(request: { readonly taskId: IngestionTaskId; readonly fileId: IngestionTaskFileId; readonly expectedSha256?: IngestionSha256Digest }, context: ApplicationRequestContext): Promise<IngestionFilePublication>;
 }

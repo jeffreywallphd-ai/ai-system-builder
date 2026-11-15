@@ -15,6 +15,12 @@ import { DeleteRegisteredArtifactUseCase } from "../../delete-registered-artifac
 import type { RegisterArtifactFromRepoUseCase } from "../../register-artifact-from-repo.use-case";
 import { createContractError } from "../../../../contracts/shared";
 import { createRetrieveArtifactRequest } from "../../../../contracts/storage";
+import { createOrganizationId } from "../../../../contracts/organization";
+import { projectHeadlessLocalFileImport } from "../../../../contracts/headless";
+import type { ApplicationRequestContext } from "../../../ports";
+import type { WorkspaceOperationAuthorizationPort } from "../../../ports/security";
+import type { IngestionSourceSnapshotId } from "../../../../contracts/ingestion";
+import { createWorkspaceId } from "../../../../contracts/workspace";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -28,10 +34,13 @@ const sha = (bytes: Uint8Array) =>
 async function fixture(
   registerArtifactFromRepo?: Pick<RegisterArtifactFromRepoUseCase, "execute">,
   nowOverride?: () => string,
+  scope: Pick<ApplicationRequestContext, "organizationId" | "principalId"> = {},
+  workspaceAuthorization?: WorkspaceOperationAuthorizationPort,
 ) {
   const root = await mkdtemp(join(tmpdir(), "governed-ingestion-"));
   roots.push(root);
-  const documents = createInMemoryStructuredDocumentStore();
+  const documentStore = createInMemoryStructuredDocumentStore();
+  const documents = scope.organizationId ? documentStore.forOrganization(scope.organizationId) : documentStore;
   const repository = createStructuredIngestionAcquisitionRepository(documents);
   const publications = createStructuredIngestionFilePublicationRepository(documents);
   const checkpoints = createFilesystemIngestionCheckpointStorage({
@@ -52,6 +61,21 @@ async function fixture(
     streamStorage,
     artifactCleanup: streamStorage,
     filePublication,
+    ...(workspaceAuthorization && scope.organizationId ? {
+      workspaceAuthorization,
+      workspaceRepository: {
+        async readWorkspace(workspaceId) {
+          return workspaceId === createWorkspaceId("workspace-a") ? {
+            organizationId: scope.organizationId!,
+            workspaceId,
+            displayName: "Synthetic Data workspace",
+            status: "active",
+            createdAt: "2026-07-30T04:00:00.000Z",
+            updatedAt: "2026-07-30T04:00:00.000Z",
+          } : undefined;
+        },
+      },
+    } : {}),
     ...(registerArtifactFromRepo ? { registerArtifactFromRepo } : {}),
     now:
       nowOverride ?? (() => `2026-07-30T04:00:0${Math.min(sequence, 9)}.000Z`),
@@ -64,7 +88,7 @@ async function fixture(
     checkpoints,
     streamStorage,
     useCases,
-    context: { workspaceId: "workspace-a" },
+    context: { workspaceId: "workspace-a", ...scope },
   };
 }
 
@@ -210,16 +234,191 @@ describe("governed ingestion tasks", () => {
     });
   });
 
-  async function transferred() {
-    const value=await fixture();const bytes=new Uint8Array([11,22,33]);
-    const created=await value.useCases.createTask({files:[{fileName:"retained.bin",mediaType:"application/octet-stream",sizeBytes:bytes.length}]},value.context);
+  async function transferred(
+    scope: Pick<ApplicationRequestContext, "organizationId" | "principalId"> = {},
+    workspaceAuthorization?: WorkspaceOperationAuthorizationPort,
+  ) {
+    const value=await fixture(undefined, undefined, scope, workspaceAuthorization);const bytes=new Uint8Array([11,22,33]);
+    const { context } = value;
+    const created=await value.useCases.createTask({files:[{fileName:"retained.bin",mediaType:"application/octet-stream",sizeBytes:bytes.length}]},context);
     if(!created.ok)throw new Error("create failed");const file=created.value.files[0]!;
-    const accepted=await value.useCases.appendChunk({taskId:created.value.taskId,fileId:file.fileId,chunkIndex:0,expectedOffset:0,bytes,sha256:sha(bytes)},value.context);
+    const accepted=await value.useCases.appendChunk({taskId:created.value.taskId,fileId:file.fileId,chunkIndex:0,expectedOffset:0,bytes,sha256:sha(bytes)},context);
     if(!accepted.ok)throw new Error("transfer failed");
     let key="";let deletions=0;
     const store=value.streamStorage.storeArtifactStream.bind(value.streamStorage);value.streamStorage.storeArtifactStream=async(...args)=>{const result=await store(...args);if(result.ok)key=result.value.key;return result;};
     const remove=value.streamStorage.deleteArtifact.bind(value.streamStorage);value.streamStorage.deleteArtifact=async(...args)=>{deletions++;return remove(...args);};
-    return {...value,bytes,file,task:accepted.value,command:{taskId:created.value.taskId,fileId:file.fileId,sha256:sha(bytes)},key:()=>key,deletions:()=>deletions};
+    return {...value,context,bytes,file,task:accepted.value,command:{taskId:created.value.taskId,fileId:file.fileId,sha256:sha(bytes)},key:()=>key,deletions:()=>deletions};
+  }
+
+  async function readyForApprovedImport(workspaceAuthorization?: WorkspaceOperationAuthorizationPort) {
+    const value = await transferred({
+      organizationId: createOrganizationId("org.data-fixture"),
+      principalId: "fixture-owner",
+    }, workspaceAuthorization);
+    const { task, file } = value;
+    const target = { workspaceId: task.workspaceId, taskId: task.taskId, taskRevision: task.revision, fileId: file.fileId };
+    const observed = projectHeadlessLocalFileImport(task, target, Date.parse("2026-07-30T04:00:06.000Z"));
+    if (!observed.ok) throw new Error("Fixture did not produce a local-file preview.");
+    return { ...value, approval: { preview: observed.value, stillAllowed: async () => true, isCurrent: () => true } };
+  }
+
+  it("saves a single verified source for two competing attempts at the same approved import", async () => {
+    const { useCases, approval, context, publications, repository, task, file, bytes } = await readyForApprovedImport();
+    const results = await Promise.all([
+      useCases.finalizeApprovedLocalFile(approval, context),
+      useCases.finalizeApprovedLocalFile(approval, context),
+    ]);
+    const admitted = results.filter(result => result.ok);
+    expect(admitted.length).toBe(1);
+    expect(admitted[0]).toMatchObject({ ok: true, value: { taskId: task.taskId, fileId: file.fileId } });
+    const after = await repository.readTask(task.workspaceId, task.taskId);
+    expect(after).toMatchObject({ status: "succeeded", cleanupPending: false });
+    expect(admitted[0]).toEqual({ ok: true, value: { taskId: task.taskId, fileId: file.fileId, taskRevision: after?.revision } });
+    const publication = await publications.readPublication(task.workspaceId, task.taskId, file.fileId);
+    expect(publication).toMatchObject({ state: "committed", digest: sha(bytes) });
+    const savedFile = after?.files[0]?.output;
+    if (!savedFile?.sourceId || !savedFile.sourceSnapshotId) throw new Error("Verified source lineage is absent.");
+    expect(await repository.readSourceSnapshot(task.workspaceId, savedFile.sourceSnapshotId as IngestionSourceSnapshotId)).toMatchObject({
+      sourceId: savedFile.sourceId, snapshotId: savedFile.sourceSnapshotId, contentDigest: sha(bytes),
+    });
+    expect(await useCases.finalizeApprovedLocalFile(approval, context)).toEqual({ ok: false, code: "headless.stale" });
+  });
+
+  it("preserves the staged file when exact approved scope, revision or preview changes", async () => {
+    const { useCases, approval, context, publications, repository, task, file } = await readyForApprovedImport();
+    expect(await useCases.finalizeApprovedLocalFile(approval, { ...context, organizationId: createOrganizationId("org.foreign") }))
+      .toEqual({ ok: false, code: "headless.forbidden" });
+    expect(await useCases.finalizeApprovedLocalFile(approval, { ...context, workspaceId: "workspace-foreign" }))
+      .toEqual({ ok: false, code: "headless.forbidden" });
+    expect(await useCases.finalizeApprovedLocalFile({ ...approval, stillAllowed: async () => false }, context))
+      .toEqual({ ok: false, code: "headless.forbidden" });
+    expect(await useCases.finalizeApprovedLocalFile({ ...approval, preview: { ...approval.preview, taskRevision: task.revision - 1 } }, context))
+      .toEqual({ ok: false, code: "headless.stale" });
+    expect(await useCases.finalizeApprovedLocalFile({ ...approval, preview: { ...approval.preview, fileBytes: approval.preview.fileBytes + 1 } }, context))
+      .toEqual({ ok: false, code: "headless.stale" });
+    expect(await repository.readTask(task.workspaceId, task.taskId)).toEqual(task);
+    expect(await publications.readPublication(task.workspaceId, task.taskId, file.fileId)).toBeUndefined();
+  });
+
+  it("applies the ordinary workspace write policy even when an exact approval is live", async () => {
+    const requests: { operation: string; scopes: readonly string[] }[] = [];
+    const staged = await readyForApprovedImport({
+      async authorizeWorkspaceOperation({ operation, requiredScopes }) {
+        requests.push({ operation, scopes: requiredScopes });
+        if (operation === "ingestion.task.finalize") throw new Error("The synthetic workspace role cannot save files.");
+      },
+    });
+    const { useCases, approval, context, publications, repository, task, file } = staged;
+    expect(await useCases.finalizeApprovedLocalFile(approval, context)).toEqual({ ok: false, code: "headless.forbidden" });
+    expect(requests[requests.length - 1]).toEqual({ operation: "ingestion.task.finalize", scopes: ["artifact:write"] });
+    expect(await repository.readTask(task.workspaceId, task.taskId)).toEqual(task);
+    expect(await publications.readPublication(task.workspaceId, task.taskId, file.fileId)).toBeUndefined();
+  });
+
+  it("withdraws new publication authority while verified bytes are still being read", async () => {
+    const { useCases, approval, context, publications, repository, streamStorage, task, file, command } =
+      await readyForApprovedImport();
+    let verified: () => void;
+    let release: () => void;
+    const reading = new Promise<void>(resolve => { verified = resolve; });
+    const hold = new Promise<void>(resolve => { release = resolve; });
+    const verify = streamStorage.verifyContent.bind(streamStorage);
+    streamStorage.verifyContent = async (...args) => {
+      const result = await verify(...args);
+      expect(result.ok).toBe(true);
+      verified!();
+      await hold;
+      return result;
+    };
+    let permitted = true;
+    const run = useCases.finalizeApprovedLocalFile({ ...approval, stillAllowed: async () => permitted }, context);
+    try {
+      await Promise.race([reading, run.then(() => { throw new Error("Import ended before verifying bytes."); })]);
+      permitted = false;
+    } finally {
+      release!();
+    }
+    expect(await run).toEqual({ ok: false, code: "headless.forbidden" });
+    expect(await publications.readPublication(task.workspaceId, task.taskId, file.fileId)).toBeUndefined();
+    expect(await repository.readTask(task.workspaceId, task.taskId)).toMatchObject({ status: "finalizing", revision: task.revision + 1 });
+    streamStorage.verifyContent = verify;
+    expect(await useCases.finalizeFile(command, context)).toMatchObject({ ok: true, value: { status: "succeeded" } });
+  });
+
+  it("checks the live registration again after the last asynchronous policy result", async () => {
+    const { useCases, approval, context, publications, streamStorage, task, file } = await readyForApprovedImport();
+    let current = true;
+    let nextPolicyReadRetires = false;
+    const verify = streamStorage.verifyContent.bind(streamStorage);
+    streamStorage.verifyContent = async (...args) => {
+      const result = await verify(...args);
+      if (!result.ok) throw new Error("Fixture did not verify the staged content.");
+      nextPolicyReadRetires = true;
+      return result;
+    };
+    const result = await useCases.finalizeApprovedLocalFile({
+      ...approval,
+      isCurrent: () => current,
+      async stillAllowed() {
+        if (nextPolicyReadRetires) {
+          nextPolicyReadRetires = false;
+          // Retire after the async policy wrapper observes true, before its caller resumes.
+          queueMicrotask(() => queueMicrotask(() => { current = false; }));
+        }
+        return true;
+      },
+    }, context);
+    expect(current).toBe(false);
+    expect(result).toEqual({ ok: false, code: "headless.forbidden" });
+    expect(await publications.readPublication(task.workspaceId, task.taskId, file.fileId)).toBeUndefined();
+  });
+
+  for (const boundary of ["writing", "origin-issued"] as const) {
+    it(`settles the acknowledged ${boundary} effect after withdrawal without issuing another effect`, async () => {
+      const { useCases, approval, context, publications, repository, task, file, bytes, command } =
+        await readyForApprovedImport();
+      const save = publications.savePublication.bind(publications);
+      let current = true;
+      publications.savePublication = async (...args) => {
+        const acknowledged = await save(...args);
+        if (acknowledged.state === boundary) current = false;
+        return acknowledged;
+      };
+      const result = await useCases.finalizeApprovedLocalFile({ ...approval, isCurrent: () => current }, context);
+      expect(result).toEqual({ ok: false, code: "headless.forbidden" });
+      const publication = await publications.readPublication(task.workspaceId, task.taskId, file.fileId);
+      expect(publication).toMatchObject({
+        state: boundary === "writing" ? "bytes-acknowledged" : "committed",
+        digest: sha(bytes),
+      });
+      const ownerTask = await repository.readTask(task.workspaceId, task.taskId);
+      expect(ownerTask?.status).toBe(boundary === "writing" ? "finalizing" : "succeeded");
+      expect(await useCases.finalizeApprovedLocalFile(approval, context)).toEqual({ ok: false, code: "headless.stale" });
+      expect(await useCases.finalizeFile(command, context)).toMatchObject({ ok: true, value: { status: "succeeded" } });
+    });
+  }
+
+  for (const interruption of ["withdrawal", "lost acknowledgement"] as const) {
+    it(`holds verified bytes for the ordinary owner after task admission and ${interruption}`, async () => {
+      const { useCases, approval, context, publications, repository, task, file, command } = await readyForApprovedImport();
+      const saveTask = repository.saveTask.bind(repository);
+      let permitted = true;
+      repository.saveTask = async (...args) => {
+        const saved = await saveTask(...args);
+        if (saved.status === "finalizing") {
+          if (interruption === "lost acknowledgement") throw new Error("Synthetic admission acknowledgement loss.");
+          permitted = false;
+        }
+        return saved;
+      };
+      const result = await useCases.finalizeApprovedLocalFile({ ...approval, stillAllowed: async () => permitted }, context);
+      expect(result).toEqual({ ok: false, code: interruption === "withdrawal" ? "headless.forbidden" : "headless.operation-unconfirmed" });
+      expect(await publications.readPublication(task.workspaceId, task.taskId, file.fileId)).toBeUndefined();
+      expect(await repository.readTask(task.workspaceId, task.taskId)).toMatchObject({ status: "finalizing", revision: task.revision + 1 });
+      expect(await useCases.finalizeApprovedLocalFile(approval, context)).toEqual({ ok: false, code: "headless.stale" });
+      repository.saveTask = saveTask;
+      expect(await useCases.finalizeFile(command, context)).toMatchObject({ ok: true, value: { status: "succeeded" } });
+    });
   }
 
   it("reconciles an exact uploaded-file commit whose acknowledgement was lost without deleting bytes",async()=>{

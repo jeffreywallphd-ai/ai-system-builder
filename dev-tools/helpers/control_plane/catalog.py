@@ -681,6 +681,8 @@ PUBLISHED_FORM_CHECKS = {
             "modules/contracts/headless/headless-data-task-status.ts",
             "modules/contracts/headless/headless-data-local-file.ts",
             "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/ingestion-file-publication.service.ts",
         ),
         "sources": (
             "modules/contracts/headless/headless-data-task-status.ts",
@@ -690,12 +692,17 @@ PUBLISHED_FORM_CHECKS = {
             "modules/contracts/headless/tests/headless-data-local-file.unit.test.ts",
             "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts",
             "modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/ingestion-file-publication.service.ts",
+            "modules/application/ports/ingestion/ingestion-file-publication.port.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--",
             "modules/contracts/headless/tests/headless-data-task-status.unit.test.ts",
             "modules/contracts/headless/tests/headless-data-local-file.unit.test.ts",
             "modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
         ),
     },
     "headless-system-builder-semantic-edits": {

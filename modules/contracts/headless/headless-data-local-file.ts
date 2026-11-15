@@ -69,7 +69,7 @@ export function readHeadlessLocalFileImportRequest(value: unknown, currentHost: 
 /** Inspect the verified app-owned task. The preview grants no file or write access. */
 export function projectHeadlessLocalFileImport(
   source: IngestionTaskRecord,
-  input: HeadlessLocalFileImportRequest["input"],
+  input: Pick<HeadlessLocalFileImportPreview, "workspaceId" | "taskId" | "fileId" | "taskRevision">,
   now: number,
 ): { readonly ok: true; readonly value: HeadlessLocalFileImportPreview } | typeof denied | typeof stale | typeof notReady {
   try {
