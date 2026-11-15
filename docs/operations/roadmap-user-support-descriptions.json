@@ -70,6 +70,28 @@
           "Provider imports, dataset preparation and opening the exact dataset from chat still need evidence."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8994d1ea63008c7513f9925af790c4f324f2d92852c6a6ab11d04296a3ed5e15",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the database test, two imports of the same selected file returned the same saved source.",
+          "An error while saving the source details left no partial records.",
+          "The test used a simulated provider reply."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1feb208b85115a47dad186a02fb89e6fc6539ebc3740921de1759c4a5fed0b1c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider imports from the chat client, dataset preparation and opening data from chat still need evidence."
+        ]
+      }
     }
   ]
 }
