@@ -11,11 +11,19 @@ after pairing require the scoped client credential.
 Requests with another Host, an Origin, or forwarding headers are denied.
 Do not use the connector through a browser, reverse proxy, or remote relay.
 
-The optional plan-review route accepts only plan submission and status reads.
+The optional plan-review route accepts plan submission and status reads.
 Its separate credential is scoped to one workspace. The status response shows
 the exact proposal fingerprint, current decision, expiry, and approved step
 count. The agent must use a verified human approval channel for any decision.
-Normal desktop composition keeps this route off until the app wires approval.
+
+The companion `/aisb-headless/v1/plan-step` route accepts the exact host,
+workspace, proposal fingerprint, approval revision and step number. It runs
+only the next approved saved change. A repeat with the same approval returns
+the saved receipt. A skipped step or a changed approval needs a fresh status
+check. The app reads the operation details from its saved plan. Desktop
+enables the two routes for paired plan-review clients when the app owns the
+platform transaction. A decision withdrawn after a saved change stays
+withdrawn, and the connector withholds that step's reply.
 
 The adapter limits connection count, header and body bytes, request admission
 and concurrent requests. Shutdown closes admission and sockets and waits for

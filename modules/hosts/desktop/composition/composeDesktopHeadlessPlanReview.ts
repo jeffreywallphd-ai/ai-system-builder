@@ -1,16 +1,20 @@
+import { createHash } from "node:crypto";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import { prepareStructuredHeadlessPlanStep } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import { createStructuredSystemBuilderRepository } from "../../../adapters/persistence/system-builder";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
-import type { startDesktopHeadlessLoopback } from "../../../adapters/transport/headless-loopback";
+import type { DesktopHeadlessAuthoringWireGrant, startDesktopHeadlessLoopback } from "../../../adapters/transport/headless-loopback";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import type { HeadlessPlanReviewSnapshotResult } from "../../../application/ports/system-builder/headless-build-plan-review.port";
-import { isDesktopHeadlessClientId, type HeadlessHostIncarnationId, type HeadlessPlanReviewAgentRequest,
+import { isDesktopHeadlessClientId, readHeadlessPlanStepResult, type HeadlessHostIncarnationId, type HeadlessPlanReviewAgentRequest,
   type HeadlessPlanReviewAgentResult } from "../../../contracts/headless";
 import type { LocalIdentityProfile } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
+import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
+import type { DesktopHeadlessAudit } from "./desktopHeadlessAudit";
 
 type LoopbackPlanReview = NonNullable<Parameters<typeof startDesktopHeadlessLoopback>[0]["planReview"]>;
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
@@ -25,14 +29,16 @@ export function composeDesktopHeadlessPlanReview(options: {
   readonly workspaces: Pick<WorkspaceRepository, "readWorkspace">;
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly isOpen: () => boolean;
+  readonly systems?: Pick<SystemBuilderCompositionRoot, "composeHeadlessAuthoring">;
+  readonly audit?: DesktopHeadlessAudit;
 }): LoopbackPlanReview {
-  const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen } = options;
+  const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen, systems } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
     throw new Error("Desktop plan review requires the platform transaction owner.");
 
   async function authorize(
     repository: typeof workspaces, policy: WorkspaceOperationAuthorizationPort,
-    workspaceId: WorkspaceId, operation: HeadlessPlanReviewAgentRequest["operation"],
+    workspaceId: WorkspaceId, operation: HeadlessPlanReviewAgentRequest["operation"] | "plan.run-step",
   ) {
     try {
       const workspace = await repository.readWorkspace(workspaceId);
@@ -43,17 +49,71 @@ export function composeDesktopHeadlessPlanReview(options: {
     } catch { return false; }
   }
 
+  function admits(grant: DesktopHeadlessAuthoringWireGrant | undefined, clientId: string, workspaceId: WorkspaceId) {
+    return Boolean(isOpen() && grant?.planReview === true &&
+      !grant.authoring?.length && !grant.conversation && !grant.presentation && grant.isCurrent?.() &&
+      grant.registeredClientId === clientId && grant.organizationId === identity.organizationId &&
+      grant.principalId === identity.principalId && grant.workspaceIds.includes(workspaceId));
+  }
+
+  const runStep: NonNullable<LoopbackPlanReview["runStep"]> = async (request, initial, currentGrant) => {
+    const { workspaceId, fingerprint, approvalRevision, step } = request.input;
+    const { registeredClientId } = initial;
+    if (!systems || request.input.hostIncarnationId !== hostIncarnationId ||
+        !isDesktopHeadlessClientId(registeredClientId)) return { result: forbidden };
+    const { organizationId, principalId } = identity;
+    const scope = { organizationId, principalId, registeredClientId, workspaceId };
+    const isCurrent = () => admits(initial, registeredClientId, workspaceId);
+    const canUse = async () => isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
+      await authorize(workspaces, authorization, workspaceId, request.operation) && isCurrent();
+    try {
+      if (!await canUse()) return { result: forbidden };
+      const prepared = await prepareStructuredHeadlessPlanStep(platform, {
+        target: { hostIncarnationId, fingerprint, scope }, approvalRevision, step, isCurrent,
+      }, async owner => {
+        const repository = createLocalWorkspaceRepository({ rootDirectory, documents: owner.forOrganization(organizationId) });
+        return authorize(repository, composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }),
+          workspaceId, request.operation);
+      });
+      if (!prepared || !await canUse() || !prepared.isCurrent()) return { result: forbidden };
+      const { operation } = prepared.request;
+      const active = (workspace: WorkspaceId, requested: string) => workspace === workspaceId &&
+        requested === operation && prepared.isCurrent();
+      const service = systems.composeHeadlessAuthoring({
+        digest: value => createHash("sha256").update(value, "utf8").digest("hex"),
+        operations: prepared.operations,
+        access: { async authorize(workspace, requested, permission) {
+          if (!active(workspace, requested) || permission !== "asset:write" || !await canUse() || !prepared.isCurrent())
+            throw new Error("The approved plan step is unavailable.");
+        } },
+      });
+      const result = await service.execute(prepared.request, hostIncarnationId, {
+        ...scope, isCurrent: active,
+        canUse: async (workspace, requested) => active(workspace, requested) && await canUse() && prepared.isCurrent(),
+      });
+      const auditStatus = result.ok ? (result.value.kind === "preview" ? "refused" : result.value.kind)
+        : result.error.code === "headless.forbidden" ? "denied"
+          : result.error.code === "headless.operation-unconfirmed" ? "unconfirmed" : "refused";
+      options.audit?.backend("system-authoring", workspaceId, auditStatus);
+      if (!await canUse() || !prepared.isCurrent()) return { result: forbidden };
+      if (!result.ok) return { result: readHeadlessPlanStepResult({ ok: false, code: result.error.code }, request.input) };
+      if (result.value.kind !== "committed" && result.value.kind !== "replayed") return { result: unavailable };
+      return {
+        result: readHeadlessPlanStepResult({ ok: true, value: { ...result.value, fingerprint, approvalRevision,
+          step, expiresAt: prepared.expiresAt } }, request.input),
+        publishIfCurrent: prepared.publishIfCurrent,
+      };
+    } catch { return { result: isCurrent() ? unavailable : forbidden }; }
+  };
+
   return {
     hostIncarnationId,
+    ...(systems ? { runStep } : {}),
     async execute(request, initialGrant, getCurrentGrant) {
       const { workspaceId, fingerprint } = request.target;
       const { registeredClientId } = initialGrant;
-      const admits = (grant: typeof initialGrant | undefined) => Boolean(isOpen() && grant?.planReview === true &&
-        !grant.authoring?.length && !grant.conversation && !grant.presentation && grant.isCurrent?.() &&
-        grant.registeredClientId === registeredClientId && grant.organizationId === identity.organizationId &&
-        grant.principalId === identity.principalId && grant.workspaceIds.includes(workspaceId));
-      const isCurrent = () => admits(initialGrant);
-      const canUse = async () => isCurrent() && admits(await getCurrentGrant()) &&
+      const isCurrent = () => admits(initialGrant, registeredClientId, workspaceId);
+      const canUse = async () => isCurrent() && admits(await getCurrentGrant(), registeredClientId, workspaceId) &&
         await authorize(workspaces, authorization, workspaceId, request.operation) && isCurrent();
       if (request.target.hostIncarnationId !== hostIncarnationId || !isDesktopHeadlessClientId(registeredClientId)) return forbidden;
       try {

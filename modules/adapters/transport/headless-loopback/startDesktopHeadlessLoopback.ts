@@ -14,6 +14,8 @@ import {
   type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
   HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult,
   type HeadlessPlanReviewAgentRequest, type HeadlessPlanReviewAgentResult,
+  HEADLESS_PLAN_STEP_PATH, readHeadlessPlanStepRequest, readHeadlessPlanStepResult,
+  type HeadlessPlanStepRequest, type HeadlessPlanStepResult,
 } from "../../../contracts/headless";
 import type { createDesktopHeadlessClientAuthority } from "../../security/headless";
 
@@ -65,6 +67,11 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     readonly hostIncarnationId: HeadlessHostIncarnationId;
     readonly execute: (request: HeadlessPlanReviewAgentRequest, grant: DesktopHeadlessAuthoringWireGrant,
       currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessPlanReviewAgentResult>;
+    readonly runStep?: (request: HeadlessPlanStepRequest, grant: DesktopHeadlessAuthoringWireGrant,
+      currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<{
+        readonly result: HeadlessPlanStepResult;
+        readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
+      }>;
   };
   readonly conversation?: {
     readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -176,6 +183,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
     if (request.method !== "POST" || (request.url !== PAIR_PATH && request.url !== READ_PATH &&
         (request.url !== AUTHOR_PATH || !dependencies.authoring) &&
         (request.url !== HEADLESS_PLAN_REVIEW_PATH || !dependencies.planReview) &&
+        (request.url !== HEADLESS_PLAN_STEP_PATH || !dependencies.planReview?.runStep) &&
         (request.url !== HEADLESS_WINDOW_CONTROL_PATH || !dependencies.presentation) &&
         (request.url !== HEADLESS_APPROVED_TURN_PATH || !dependencies.conversation))) {
       fail(response, 404, "headless.not-found");
@@ -246,7 +254,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       return;
     }
     if (!admitting() || response.destroyed) return;
-    const requiresFence = request.url === AUTHOR_PATH || request.url === HEADLESS_PLAN_REVIEW_PATH || request.url === HEADLESS_APPROVED_TURN_PATH ||
+    const requiresFence = request.url === AUTHOR_PATH || request.url === HEADLESS_PLAN_REVIEW_PATH ||
+      request.url === HEADLESS_PLAN_STEP_PATH || request.url === HEADLESS_APPROVED_TURN_PATH ||
       request.url === HEADLESS_WINDOW_CONTROL_PATH || initialGrant.isCurrent !== undefined;
     const currentGrant = async (requireConnection = true): Promise<DesktopHeadlessAuthoringWireGrant | undefined> => {
       if (!admitting() || (requireConnection && response.destroyed)) return undefined;
@@ -306,6 +315,39 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         return;
       }
       send(response, result.ok ? 200 : result.code === "headless.stale" ? 409 : errorStatus(result.code), result);
+      return;
+    }
+    if (request.url === HEADLESS_PLAN_STEP_PATH && dependencies.planReview?.runStep) {
+      if (initialGrant.planReview !== true || !grantIsCurrent(initialGrant, true)) {
+        fail(response, 403, "headless.forbidden");
+        return;
+      }
+      const decoded = readHeadlessPlanStepRequest(body, dependencies.planReview.hostIncarnationId);
+      if (!decoded.ok) { fail(response, errorStatus(decoded.code), decoded.code); return; }
+      const grant = await currentGrant();
+      const target = decoded.request.input;
+      if (grant?.planReview !== true || !grantIsCurrent(grant, true) || !grant.workspaceIds.includes(target.workspaceId)) {
+        fail(response, 403, "headless.forbidden");
+        return;
+      }
+      const outcome = await dependencies.planReview.runStep(decoded.request, grant, currentGrant);
+      const result = readHeadlessPlanStepResult(outcome.result, target);
+      const finalGrant = await currentGrant();
+      if (!admitting() || response.destroyed) return;
+      if (finalGrant?.planReview !== true || !grantIsCurrent(finalGrant, true)) {
+        fail(response, 403, "headless.forbidden");
+        return;
+      }
+      if (!result.ok) { send(response, errorStatus(result.code), result); return; }
+      const sent = await outcome.publishIfCurrent?.(() => {
+        if (!admitting() || response.destroyed || !grantIsCurrent(finalGrant, true) || result.value.expiresAt <= Date.now())
+          return false;
+        send(response, 200, result);
+        return true;
+      });
+      if (!sent && admitting() && !response.destroyed && !response.headersSent) {
+        fail(response, 403, "headless.forbidden");
+      }
       return;
     }
     let result: HeadlessReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult;

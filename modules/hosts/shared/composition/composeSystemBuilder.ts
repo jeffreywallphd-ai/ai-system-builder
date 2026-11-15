@@ -99,7 +99,7 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
     modelAuthority,
     composeHeadlessAuthoring(delegation: {
       readonly access: WorkspaceAssetAccessPort;
-      readonly operations: HeadlessOperationStorePort;
+      readonly operations: Pick<HeadlessOperationStorePort, "run">;
       readonly digest: (text: string) => string;
     }) {
       const { organizationId } = options.documents;

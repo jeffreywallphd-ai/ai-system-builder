@@ -5,6 +5,7 @@ import {
 } from "../system-builder";
 import { isWorkspaceId, type WorkspaceId } from "../workspace";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId } from "./headless-read-request";
+import type { HeadlessSemanticBatchRequest } from "./headless-semantic-batch";
 
 interface ManagementTarget {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -25,6 +26,17 @@ export type HeadlessSystemManagementRequest =
     | { readonly operation: "systems.rename"; readonly input: SavedTarget & { readonly description?: string } }
     | { readonly operation: "systems.clone"; readonly input: SavedTarget }
   );
+
+/** Serialize the saved effect without the connection identity or its receipt key. */
+export function serializeHeadlessMutationInput(
+  request: HeadlessSystemManagementRequest | Extract<HeadlessSemanticBatchRequest, { operation: "systems.apply-edits" }>,
+): string {
+  const { hostIncarnationId: _host, idempotencyKey: _key, ...input } = request.input;
+  return JSON.stringify({ version: request.version, operation: request.operation, input }, (_name, item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+    return Object.fromEntries(Object.entries(item).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0));
+  });
+}
 
 const commonFields = ["hostIncarnationId", "workspaceId", "idempotencyKey", "name"];
 const savedFields = [...commonFields, "systemId", "baseRecordRevision", "baseRevisionId"];

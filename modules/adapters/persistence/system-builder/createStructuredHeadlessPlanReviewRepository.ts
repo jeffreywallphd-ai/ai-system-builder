@@ -15,6 +15,7 @@ import { HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE } from "./createStructuredHeadle
 const REVIEWS = "headless/system-builder/plan-reviews";
 const COUNTS = "headless/system-builder/plan-review-counts";
 const APPROVAL_LIST = "headless/system-builder/plan-approval-list";
+const EXECUTION_FENCE = "headless/system-builder/plan-execution-fences";
 const MAX_ACTIVE_PLAN_REVIEWS = 32;
 const REVIEW_MS = 15 * 60 * 1_000;
 const denied = { ok: false, code: "forbidden" } as const;
@@ -128,6 +129,8 @@ export function createStructuredHeadlessPlanReviewRepository(
         if (state.expiresAt !== previous.expiresAt) return unconfirmed;
         await store.writeDocument(REVIEWS, key, { version: 1, proposal: review.proposal, state } satisfies RecordValue,
           { expectedRevision: previous.revision });
+        if (!await writeExecutionFence(store, key, previous.revision, state.revision))
+          throw new Error("The approval execution fence changed.");
         if (state.status === "cancelled" || state.status === "denied" || state.status === "revoked") {
           const list = await readApprovalList(store, target);
           const requests = list.requests.filter(reference => reference.fingerprint !== target.fingerprint ||
@@ -167,7 +170,42 @@ async function readReview(store: StructuredDocumentStore, target: HeadlessPlanRe
   const { version, proposal, state } = readStrictPassiveRecord(document.value, ["version", "proposal", "state"]);
   const parsed = decodeProposal(proposal, target);
   if (version !== 1 || !parsed) throw new Error("Stored plan review is unavailable.");
-  return { proposal, preview: parsed.preview, state: readState(state, document.revision, parsed.requests.length) };
+  return { proposal, preview: parsed.preview, requests: parsed.requests,
+    state: readState(state, document.revision, parsed.requests.length) };
+}
+
+/** Used by the execution adapter after current authorization in the same transaction. */
+export async function readStructuredApprovedPlan(
+  partition: StructuredDocumentStore, target: HeadlessPlanReviewTarget, expectedRevision: number, step: number,
+) {
+  if (!validTarget(target) || partition.organizationId !== target.scope.organizationId ||
+      !nonnegativeInteger(expectedRevision) || expectedRevision < 1 ||
+      !nonnegativeInteger(step) || step < 1 || step > HEADLESS_MAX_BUILD_PLAN_STEPS) return;
+  const review = await readReview(partition, target, planKey(target));
+  if (!review) return;
+  const { state } = review;
+  if (state.revision !== expectedRevision || !state.lastChannel || step > state.approvedSteps ||
+      (state.status !== "approved" && !(state.status === "pending" && state.mode === "each-change"))) return;
+  return { expiresAt: state.expiresAt, requests: review.requests };
+}
+
+/** Serializes a real new write against approval changes, without changing its public decision revision. */
+export async function fenceStructuredApprovedPlan(
+  partition: StructuredDocumentStore, target: HeadlessPlanReviewTarget, expectedRevision: number,
+) {
+  if (!validTarget(target) || partition.organizationId !== target.scope.organizationId ||
+      !nonnegativeInteger(expectedRevision) || expectedRevision < 1) return false;
+  return writeExecutionFence(partition, planKey(target), expectedRevision, expectedRevision);
+}
+
+async function writeExecutionFence(
+  partition: StructuredDocumentStore, key: string, priorApprovalRevision: number, approvalRevision: number,
+) {
+  const fence = await partition.readDocument(EXECUTION_FENCE, key);
+  if (fence && readStrictPassiveRecord(fence.value, ["approvalRevision"]).approvalRevision !== priorApprovalRevision)
+    return false;
+  await partition.writeDocument(EXECUTION_FENCE, key, { approvalRevision }, { expectedRevision: fence?.revision ?? 0 });
+  return true;
 }
 
 function readState(value: unknown, expectedRevision: number, expectedSteps: number): HeadlessPlanReviewState {

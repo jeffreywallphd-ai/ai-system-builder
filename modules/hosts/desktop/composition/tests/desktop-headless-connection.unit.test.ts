@@ -6,10 +6,11 @@ import { test } from "node:test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import type { StructuredDocumentStore, StructuredDocumentWriteOptions } from "../../../../adapters/persistence/shared";
 import { HEADLESS_CONTRACT_VERSION, UI_CONTROL_VERSION, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
-  readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult, readHeadlessWindowResult } from "../../../../contracts/headless";
+  readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult, readHeadlessPlanStepResult,
+  readHeadlessWindowResult } from "../../../../contracts/headless";
 import { createStructuredOrganizationRepositories } from "../../../../adapters/persistence/organization";
 import { createLocalWorkspaceRepository } from "../../../../adapters/persistence/workspace";
-import { createStructuredSystemBuilderRepository } from "../../../../adapters/persistence/system-builder";
+import { createStructuredHeadlessOperationStore, createStructuredSystemBuilderRepository } from "../../../../adapters/persistence/system-builder";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { createDesktopHeadlessClientAuthority } from "../../../../adapters/security/headless";
 import { normalizeAssetId } from "../../../../contracts/asset";
@@ -23,6 +24,7 @@ import { composeDesktopHeadlessPlanReview } from "../composeDesktopHeadlessPlanR
 import { composeDesktopHeadlessPlanApprovals } from "../composeDesktopHeadlessPlanApprovals";
 import { composeDesktopWorkspaceAuthorization } from "../composeDesktopWorkspaceAuthorization";
 import { composeDesktopUiControl } from "../composeDesktopUiControl";
+import { composeSystemBuilder } from "../../../shared/composition/composeSystemBuilder";
 
 const workspaceId = createWorkspaceId("local-connection-workspace");
 const organizationId = createOrganizationId("local-connection-org");
@@ -30,7 +32,7 @@ const at = "2026-11-13T00:00:00.000Z";
 const hostIncarnationId = "632cfa6b-c323-419a-b2bd-5880b1f34858";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
 
-function call(connector: { endpoint: string; fingerprint: string }, path: "pair" | "read" | "window" | "plan-review", input: object, credential?: string) {
+function call(connector: { endpoint: string; fingerprint: string }, path: "pair" | "read" | "window" | "plan-review" | "plan-step", input: object, credential?: string) {
   const body = JSON.stringify(input);
   return new Promise<{ status: number; result: { value?: { credential?: string; registeredClientId?: string } } }>((resolve, reject) => {
     const req = request(new URL("/aisb-headless/v1/" + path, connector.endpoint), {
@@ -60,10 +62,34 @@ test("composes staged desktop plans with the same live workspace membership and 
   await repositories.memberships.saveMembership({ ...membership, status: "active" });
   const workspaces = createLocalWorkspaceRepository({ documents, rootDirectory: "." });
   await workspaces.saveWorkspace({ organizationId, workspaceId, displayName: "Plan fixture", status: "active", createdAt: at, updatedAt: at });
-  const authorization = composeDesktopWorkspaceAuthorization({ documents: platform, localIdentity: identity });
+  const baseAuthorization = composeDesktopWorkspaceAuthorization({ documents: platform, localIdentity: identity });
+  let revokeWhenCommitted: (() => Promise<void>) | undefined;
+  let pendingRevocation: Promise<void> | undefined;
+  const authorization = {
+    async authorizeWorkspaceOperation(input: Parameters<typeof baseAuthorization.authorizeWorkspaceOperation>[0]) {
+      if (input.operation === "headless.plan.run-step") await pendingRevocation;
+      return baseAuthorization.authorizeWorkspaceOperation(input);
+    },
+  };
   let open = true;
   const planReview = composeDesktopHeadlessPlanReview({ platform, hostIncarnationId, identity, workspaces, authorization,
-    rootDirectory: ".", isOpen: () => open });
+    rootDirectory: ".", isOpen: () => open, systems: composeSystemBuilder({
+      documents, definitions: { async readExactDefinition() { return undefined; } },
+      assetRegistryRead: {
+        async listDefinitionCards() { return { items: [] }; },
+        async readDefinitionDetail() { return undefined; },
+      },
+    }), audit: {
+      window() {},
+      backend(_operation, _workspaceId, status) {
+        if (status !== "committed" || !revokeWhenCommitted) return;
+        const revoke = revokeWhenCommitted;
+        revokeWhenCommitted = undefined;
+        pendingRevocation = revoke();
+      },
+      counts: () => ({ pending: 0, failed: 0, dropped: 0 }),
+      async close() {},
+    } });
   const connector = composeDesktopHeadlessConnection({ documents, identity, workspaces, authorization, planReview,
     async read() { return { ok: false, code: "headless.forbidden" }; },
   });
@@ -145,6 +171,60 @@ test("composes staged desktop plans with the same live workspace membership and 
     const approved = await approvals.decide(selection, decide, caller);
     assert.ok(approved.ok && approved.state.status === "approved" && approved.state.lastChannel === "app-popup");
     assert.deepEqual(await approvals.decide(selection, decide, caller), { ok: false, code: "stale" });
+
+    const rename = planned([{ operation: "systems.rename", name: "Approved fixture name", systemId: source.record.systemId,
+      baseRecordRevision: 2, baseRevisionId: source.revision.revisionId, idempotencyKey: randomUUID() }]);
+    assert.equal((await submit(rename)).status, 200);
+    const exact = { ...scope, fingerprint: rename.fingerprint, approvalRevision: 2, step: 1 };
+    const run = (input: typeof exact = exact) =>
+      call(pairing, "plan-step", { version: HEADLESS_CONTRACT_VERSION, operation: "plan.run-step", input }, credential);
+    assert.equal((await run()).status, 403);
+    const renameTarget = { ...selection, fingerprint: rename.fingerprint };
+    const decision = await approvals.decide(renameTarget, { ...decide, fingerprint: rename.fingerprint }, caller);
+    assert.ok(decision.ok && decision.state.status === "approved");
+    const differentPair = await connector.beginPairing(workspaceId, () => true, "plan-review");
+    assert.equal(differentPair.status, "ready");
+    const different = await call(differentPair, "pair", { pairingCode: differentPair.pairingCode });
+    const otherCredential = different.result.value?.credential;
+    assert.ok(otherCredential);
+    assert.equal((await call(pairing, "plan-step", { version: HEADLESS_CONTRACT_VERSION, operation: "plan.run-step",
+      input: exact }, otherCredential)).status, 403);
+    assert.equal((await run({ ...exact, approvalRevision: 1 })).status, 403);
+    assert.equal((await run({ ...exact, step: 2 })).status, 403);
+    assert.equal((await run({ ...exact, workspaceId: createWorkspaceId("different-fixture-workspace") })).status, 403);
+    const forgedInput = { ...exact, name: "Unapproved fixture name" };
+    assert.equal((await run(forgedInput)).status, 400);
+    const committed = await run();
+    assert.equal(committed.status, 200);
+    const saved = readHeadlessPlanStepResult(committed.result, exact);
+    assert.ok(saved.ok && saved.value.kind === "committed");
+    assert.equal(saved.value.reference.systemId, source.record.systemId);
+    assert.equal(saved.value.reference.recordRevision, 3);
+    assert.equal((await systems.readRecord(workspaceId, source.record.systemId))?.name, "Approved fixture name");
+    const retry = await run();
+    assert.equal(retry.status, 200);
+    assert.deepEqual(readHeadlessPlanStepResult(retry.result, exact), { ok: true, value: { ...saved.value, kind: "replayed" } });
+    assert.equal(await createStructuredHeadlessOperationStore(platform).watermark({ workspaceId, organizationId }), 1);
+    assert.ok((await approvals.decide(renameTarget, { fingerprint: rename.fingerprint,
+      expectedRevision: 2, decision: { kind: "revoke" } }, caller)).ok);
+    assert.equal((await run()).status, 403);
+
+    const withdrawing = planned([{ operation: "systems.rename", name: "Committed before withdrawal", systemId: source.record.systemId,
+      baseRecordRevision: 3, baseRevisionId: source.revision.revisionId, idempotencyKey: randomUUID() }]);
+    assert.equal((await submit(withdrawing)).status, 200);
+    const withdrawingTarget = { ...selection, fingerprint: withdrawing.fingerprint };
+    assert.ok((await approvals.decide(withdrawingTarget, { ...decide, fingerprint: withdrawing.fingerprint }, caller)).ok);
+    revokeWhenCommitted = async () => {
+      assert.ok((await approvals.decide(withdrawingTarget, { fingerprint: withdrawing.fingerprint,
+        expectedRevision: 2, decision: { kind: "revoke" } }, caller)).ok);
+    };
+    const withheld = await run({ ...exact, fingerprint: withdrawing.fingerprint });
+    assert.ok(pendingRevocation);
+    await pendingRevocation;
+    assert.deepEqual(withheld, { status: 403, result: { ok: false, code: "headless.forbidden" } });
+    assert.equal((await systems.readRecord(workspaceId, source.record.systemId))?.name, "Committed before withdrawal");
+    assert.equal(await createStructuredHeadlessOperationStore(platform).watermark({ workspaceId, organizationId }), 2);
+
     await repositories.memberships.saveMembership({ ...membership, status: "suspended" });
     assert.equal((await read()).status, 403);
     assert.deepEqual(await approvals.list(workspaceId, caller.isCurrent), denied);
@@ -160,7 +240,7 @@ test("composes staged desktop plans with the same live workspace membership and 
       workspaceIds: [workspaceId], operations: [], planReview: true as const, isCurrent: () => true };
     assert.deepEqual(await permissiveOuter.execute(candidate.request, formerlyCurrent, async () => formerlyCurrent),
       { ok: false, code: "headless.forbidden" });
-    assert.equal((await documents.listDocuments("headless/system-builder/plan-reviews")).length, 2);
+    assert.equal((await documents.listDocuments("headless/system-builder/plan-reviews")).length, 4);
     await repositories.memberships.saveMembership({ ...membership, status: "active" });
     assert.equal(await connector.revoke(registeredClientId), true);
     assert.deepEqual(await approvals.list(workspaceId, caller.isCurrent), { ok: true, requests: [] });

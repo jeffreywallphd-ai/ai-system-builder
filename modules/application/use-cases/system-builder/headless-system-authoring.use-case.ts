@@ -1,6 +1,6 @@
 import type { AssetDefinition, AssetReference } from "../../../contracts/asset";
 import {
-  isDesktopHeadlessClientId, parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest,
+  isDesktopHeadlessClientId, parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest, serializeHeadlessMutationInput,
   type HeadlessHostIncarnationId, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
 } from "../../../contracts/headless";
 import { isOrganizationId } from "../../../contracts/organization";
@@ -42,7 +42,7 @@ export class HeadlessSystemAuthoringUseCase {
   public constructor(private readonly dependencies: {
     readonly organizationId: HeadlessOperationScope["organizationId"];
     readonly repository: SystemBuilderRepositoryPort;
-    readonly operations: HeadlessOperationStorePort;
+    readonly operations: Pick<HeadlessOperationStorePort, "run">;
     readonly access: WorkspaceAssetAccessPort;
     readonly templates: Pick<SystemBuilderReferenceTemplateRegistry, "materialize">;
     readonly validator: (workspaceId: WorkspaceId) => Pick<ValidateSystemBuilderRevisionService, "execute">;
@@ -136,8 +136,8 @@ export class HeadlessSystemAuthoringUseCase {
           .execute({ ...sharedCommand, sourceSystemId: target.systemId }));
       })().catch(() => unavailable());
       if (!await authorize()) return forbidden();
-      const { hostIncarnationId: _host, idempotencyKey, ...stableInput } = request.input;
-      const fingerprint = this.dependencies.digest(canonicalJson({ version: request.version, operation, input: stableInput }));
+      const { idempotencyKey } = request.input;
+      const fingerprint = this.dependencies.digest(serializeHeadlessMutationInput(request));
       const stored = await this.dependencies.operations.run({
         scope: { organizationId, principalId, registeredClientId, workspaceId }, operation: request.operation,
         key: idempotencyKey, fingerprint, isCurrent,
@@ -214,11 +214,4 @@ function publicFailure(failure: Extract<SystemBuilderResult<never>, { ok: false 
     case "headless.invalid-edit-batch": return systemBuilderFailure("headless.invalid-edit-batch", "The requested edits are invalid.");
     default: return unavailable();
   }
-}
-
-function canonicalJson(value: unknown): string {
-  return JSON.stringify(value, (_key, item: unknown) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
-  });
 }

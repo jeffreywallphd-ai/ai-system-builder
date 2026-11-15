@@ -2341,6 +2341,7 @@ export function composeDesktopHost(
               presentation: uiControlOwner,
               planReview: planReviewOwner ? composeDesktopHeadlessPlanReview({
                 ...planReviewOwner, workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+                systems: systemBuilder, audit: headlessAudit,
               }) : undefined,
               authoring: options.persistence?.documents ? composeDesktopHeadlessAuthoring({
                 hostIncarnationId, identity, platformDocuments: options.persistence.documents, rootDirectory: registerOptions.storageRootDirectory,

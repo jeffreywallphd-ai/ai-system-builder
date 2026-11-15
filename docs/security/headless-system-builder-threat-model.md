@@ -145,6 +145,19 @@ and workspace uses the existing maximum count for retained headless records.
 The repository requires the host to authorize the operation in the transaction
 and checks that the request remains current at commit. Desktop and managed hosts
 must still bind this repository to verified approval channels.
+The step execution adapter rechecks the exact decision revision and reads the
+operation from the saved proposal. It requires an approved step and matching
+operation receipts for all earlier steps. The receipt key binds the host,
+proposal and step number. An ordinary save cannot satisfy that check. A new
+effect and a change to the approval both update the same private fence under
+their owned transaction. A fence conflict or an expired actor rolls back the
+effect. Saved changes and their receipts still commit together. The pinned
+desktop connector uses this adapter. The request selects a proposal and step
+by reference. Only the verified plan record supplies the operation and input.
+The connector sends a successful result while the desktop transaction owner
+still holds the exact current approval. A decision withdrawn before the reply
+withholds the result. The already committed effect remains in the journal.
+The managed host and portable tool also need to connect this path.
 The approval list contains at most 32 live proposal references for one
 app user, workspace and host session. Listing requires current access to
 that exact scope. The index and review record share the owned transaction.

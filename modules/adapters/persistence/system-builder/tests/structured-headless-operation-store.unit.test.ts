@@ -7,7 +7,7 @@ import { test } from "node:test";
 import type { HeadlessOperationStorePort, SystemBuilderRepositoryPort } from "../../../../application/ports/system-builder";
 import type { HeadlessPlanReviewListTarget, HeadlessPlanReviewTarget } from "../../../../application/ports/system-builder/headless-build-plan-review.port";
 import { HeadlessBuildPlanReviewUseCase } from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
-import { isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal } from "../../../../contracts/headless";
+import { isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal, serializeHeadlessMutationInput } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
 import {
   normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId, systemBuilderFailure, systemBuilderSuccess,
@@ -19,6 +19,7 @@ import { createInMemoryStructuredDocumentStore, type StructuredDocumentStore } f
 import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../sqlite";
 import { createStructuredSystemBuilderRepository } from "../createStructuredSystemBuilderRepository";
 import { createStructuredHeadlessPlanReviewRepository, listStructuredHeadlessPlanReviews } from "../createStructuredHeadlessPlanReviewRepository";
+import { prepareStructuredHeadlessPlanStep } from "../createStructuredHeadlessPlanStepOperationStore";
 import {
   createStructuredHeadlessOperationStore, HEADLESS_RECEIPT_TTL_MS, HEADLESS_RETAINED_SYSTEM_CHANGES, HEADLESS_SYSTEM_CHANGE_PAGE_SIZE,
 } from "../createStructuredHeadlessOperationStore";
@@ -403,6 +404,122 @@ const reviewQuery = { target: reviewTarget, isCurrent: () => true };
 const approval = (revision: number, step: number) => ({
   fingerprint: reviewFingerprint, expectedRevision: revision,
   decision: { kind: "approve", mode: "each-change", step },
+});
+
+test("checks approved plan order in the mutation transaction and reconciles the exact result after SQLite reopen", async () => {
+  const directory = await realpath(await mkdtemp(path.join(await realpath(tmpdir()), "headless-approved-step-")));
+  const policy = resolveLocalSqliteDatabasePolicy({ dataRootDirectory: directory });
+  let db: Awaited<ReturnType<typeof openLocalSqliteDatabase>> | undefined;
+  let now = 1_000;
+  let current = true;
+  const clock = () => now;
+  const isCurrent = () => current;
+  const authorized = async (_owner: StructuredDocumentStore, actor: typeof scope) =>
+    current && actor.organizationId === scope.organizationId && actor.workspaceId === scope.workspaceId &&
+    actor.principalId === scope.principalId && actor.registeredClientId === scope.registeredClientId;
+  const effectDigest = (request: Parameters<typeof serializeHeadlessMutationInput>[0]) =>
+    createHash("sha256").update(serializeHeadlessMutationInput(request), "utf8").digest("hex");
+  const stepRequest = (step: number, record: number) => {
+    const approved = reviewPlan.requests[step - 1];
+    assert.ok(approved?.operation === "systems.create");
+    return request(record, { key: approved.input.idempotencyKey, fingerprint: effectDigest(approved) });
+  };
+  const prepare = (step: number, approvalRevision: number) =>
+    prepareStructuredHeadlessPlanStep(db!.documents, { ...reviewQuery, isCurrent, approvalRevision, step }, authorized, clock);
+  try {
+    db = await openLocalSqliteDatabase({ policy });
+    const root = db.documents;
+    const reviews = createStructuredHeadlessPlanReviewRepository(root,
+      (owner, target) => authorized(owner, target.scope), clock);
+    const app = new HeadlessBuildPlanReviewUseCase(reviews, clock);
+    const actor = { organizationId: scope.organizationId, principalId: scope.principalId,
+      channel: "app-popup" as const, isCurrent, canDecide: async () => current };
+    const staged = await reviews.propose({ ...reviewQuery, proposal: reviewProposal });
+    assert.ok(staged.ok);
+    assert.equal(await prepare(1, 1), undefined);
+    assert.ok((await app.decide(approval(1, 1), reviewHost, scope, actor)).ok);
+    const firstOnly = await prepare(1, 2);
+    assert.ok(firstOnly);
+    assert.equal(await prepare(2, 2), undefined);
+    assert.ok((await app.decide(approval(2, 2), reviewHost, scope, actor)).ok);
+    assert.deepEqual(await firstOnly.operations.run(stepRequest(1, 101)), { kind: "denied" });
+
+    // A preexisting matching operation outside the approved plan must never
+    // unlock the next step or satisfy exact replay for this plan.
+    const baseline = createStructuredHeadlessOperationStore(root, clock);
+    assert.equal((await baseline.run(stepRequest(1, 100))).kind, "committed");
+    assert.equal(await prepare(2, 3), undefined);
+    const first = await prepare(1, 3);
+    assert.ok(first);
+    assert.deepEqual(first.request, reviewPlan.requests[0]);
+    const changed = stepRequest(1, 101);
+    assert.deepEqual(await first.operations.run({ ...changed, fingerprint: "fe".repeat(32) }), { kind: "denied" });
+    assert.deepEqual(await first.operations.run({ ...changed, scope: { ...scope, principalId: "other-fixture" } }), { kind: "denied" });
+    assert.deepEqual(await first.operations.run(changed), { kind: "committed", reference: system(101).reference });
+    await db.close();
+    db = await openLocalSqliteDatabase({ policy });
+    const reopenedFirst = await prepare(1, 3);
+    assert.ok(reopenedFirst);
+    assert.deepEqual(await reopenedFirst.operations.run(stepRequest(1, 102)), {
+      kind: "replayed", reference: system(101).reference,
+    });
+    const second = await prepare(2, 3);
+    assert.ok(second);
+    assert.deepEqual(second.request, reviewPlan.requests[1]);
+    current = false;
+    assert.deepEqual(await second.operations.run(stepRequest(2, 103)), { kind: "denied" });
+    current = true;
+    assert.deepEqual(await second.operations.run(stepRequest(2, 103)), {
+      kind: "committed", reference: system(103).reference,
+    });
+
+    const liveReviews = createStructuredHeadlessPlanReviewRepository(db.documents,
+      (owner, target) => authorized(owner, target.scope), clock);
+    const liveApp = new HeadlessBuildPlanReviewUseCase(liveReviews, clock);
+    assert.ok((await liveApp.decide({ fingerprint: reviewFingerprint, expectedRevision: 3, decision: { kind: "revoke" }},
+      reviewHost, scope, actor)).ok);
+    assert.deepEqual(await second.operations.run(stepRequest(2, 103)), { kind: "denied" });
+    assert.equal(await prepare(2, 4), undefined);
+    const final = createStructuredHeadlessOperationStore(db.documents, clock);
+    assert.deepEqual(await final.readChanges(scope, 0), {
+      kind: "changes", events: [
+        { ...system(100).reference, sequence: 1 }, { ...system(101).reference, sequence: 2 },
+        { ...system(103).reference, sequence: 3 },
+      ], watermark: 3,
+    });
+  } finally {
+    await db?.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("rolls back an approved plan step when its deadline passes before commit", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  let now = 1_000;
+  const clock = () => now;
+  const reviews = createStructuredHeadlessPlanReviewRepository(documents, async () => true, clock);
+  const staged = await reviews.propose({ ...reviewQuery, proposal: reviewProposal });
+  assert.ok(staged.ok);
+  const app = new HeadlessBuildPlanReviewUseCase(reviews, clock);
+  const actor = { organizationId: scope.organizationId, principalId: scope.principalId,
+    channel: "authenticated-chat" as const, isCurrent: () => true, canDecide: async () => true };
+  assert.ok((await app.decide(approval(1, 1), reviewHost, scope, actor)).ok);
+  const prepared = await prepareStructuredHeadlessPlanStep(documents, {
+    ...reviewQuery, step: 1, approvalRevision: 2,
+  }, async () => true, clock);
+  assert.ok(prepared);
+  const fingerprint = createHash("sha256").update(serializeHeadlessMutationInput(prepared.request), "utf8").digest("hex");
+  const response = await prepared.operations.run(request(104, {
+    key: prepared.request.input.idempotencyKey, fingerprint, async mutate(repository) {
+      const result = await writeSystem(repository, 104);
+      now = staged.snapshot.state.expiresAt;
+      return result;
+    },
+  }));
+  assert.deepEqual(response, { kind: "denied" });
+  assert.equal(await createStructuredHeadlessOperationStore(documents, clock).watermark(scope), 0);
+  const systems = createStructuredSystemBuilderRepository(documents.forOrganization(scope.organizationId));
+  assert.equal(await systems.readRecord(scope.workspaceId, system(104).record.systemId), undefined);
 });
 
 test("persists exact plan approval and responds to competing verified decisions with one commit", async () => {

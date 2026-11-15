@@ -35,6 +35,7 @@ export function createStructuredHeadlessOperationStore(
   policy?: {
     readonly authorize: (transaction: StructuredDocumentStore, scope: HeadlessOperationScope,
       operation: HeadlessMutation) => Promise<boolean>;
+    readonly fenceMutation?: (transaction: StructuredDocumentStore) => Promise<boolean>;
   },
 ): HeadlessOperationStorePort {
   return {
@@ -51,7 +52,7 @@ export function createStructuredHeadlessOperationStore(
           !isCurrent()) return { kind: "denied" };
       const identity = [organizationId, workspaceId, principalId, registeredClientId] as const;
       const countKey = digest(identity);
-      const receiptKey = digest([...identity, operation, key]);
+      const receiptKey = operationReceiptKey(boundScope, operation, key);
       try {
         // Authorization can need the platform directory and the exact
         // organization partition within one underlying transaction owner.
@@ -79,6 +80,8 @@ export function createStructuredHeadlessOperationStore(
           const used = count ? safeInteger(readStrictPassiveRecord(count.value, ["value"]).value, 1) : 0;
           if (used >= HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE) return { kind: "capacity" };
           if (!isCurrent()) return { kind: "denied" };
+          if (policy?.fenceMutation && (!await policy.fenceMutation(owner) || !isCurrent()))
+            throw new Rollback({ kind: "denied" });
           const { systems, written } = scopeSystemMutation(createStructuredSystemBuilderRepository(transaction, { journalChanges: true }), workspaceId, operation);
           const result = await mutate(systems);
           if (!result.ok) throw new Rollback({ kind: "mutation-failed", failure: result });
@@ -126,6 +129,20 @@ export function createStructuredHeadlessOperationStore(
         events: log.events.filter((event) => event.sequence > after).slice(0, HEADLESS_SYSTEM_CHANGE_PAGE_SIZE) };
     },
   };
+}
+
+/** A plan executor uses this inside its current owner's transaction to prove an earlier step committed. */
+export async function hasStructuredHeadlessOperationReceipt(
+  partition: StructuredDocumentStore, scope: HeadlessOperationScope,
+  operation: HeadlessMutation, key: string, fingerprint: string,
+) {
+  if (partition.organizationId !== scope.organizationId) return false;
+  const row = await partition.readDocument(RECEIPTS, operationReceiptKey(scope, operation, key));
+  return row !== undefined && exactReceipt(row.value).fingerprint === fingerprint;
+}
+
+function operationReceiptKey(scope: HeadlessOperationScope, operation: HeadlessMutation, key: string) {
+  return digest([scope.organizationId, scope.workspaceId, scope.principalId, scope.registeredClientId, operation, key]);
 }
 
 function scopedStore(documents: StructuredDocumentStore, scope: Scope): StructuredDocumentStore {
