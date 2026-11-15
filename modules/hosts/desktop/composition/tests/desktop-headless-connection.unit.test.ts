@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
+import { AsyncResource } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { request } from "node:https";
 import { test } from "node:test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
-import type { StructuredDocumentStore } from "../../../../adapters/persistence/shared";
+import type { StructuredDocumentStore, StructuredDocumentWriteOptions } from "../../../../adapters/persistence/shared";
 import { HEADLESS_CONTRACT_VERSION, UI_CONTROL_VERSION, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
   readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult, readHeadlessWindowResult } from "../../../../contracts/headless";
 import { createStructuredOrganizationRepositories } from "../../../../adapters/persistence/organization";
 import { createLocalWorkspaceRepository } from "../../../../adapters/persistence/workspace";
 import { createStructuredSystemBuilderRepository } from "../../../../adapters/persistence/system-builder";
+import { createStructuredHeadlessPlanReviewRepository } from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import { createDesktopHeadlessClientAuthority } from "../../../../adapters/security/headless";
 import { normalizeAssetId } from "../../../../contracts/asset";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { normalizeSystemBuilderSystemId, normalizeSystemBuilderRevisionId,
@@ -17,6 +20,7 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createDesktopPinnedLoopbackAgent } from "../../../../adapters/transport/headless-loopback";
 import { composeDesktopHeadlessConnection } from "../composeDesktopHeadlessConnection";
 import { composeDesktopHeadlessPlanReview } from "../composeDesktopHeadlessPlanReview";
+import { composeDesktopHeadlessPlanApprovals } from "../composeDesktopHeadlessPlanApprovals";
 import { composeDesktopWorkspaceAuthorization } from "../composeDesktopWorkspaceAuthorization";
 import { composeDesktopUiControl } from "../composeDesktopUiControl";
 
@@ -63,6 +67,8 @@ test("composes staged desktop plans with the same live workspace membership and 
   const connector = composeDesktopHeadlessConnection({ documents, identity, workspaces, authorization, planReview,
     async read() { return { ok: false, code: "headless.forbidden" }; },
   });
+  const approvals = composeDesktopHeadlessPlanApprovals({ platform, hostIncarnationId, identity, rootDirectory: ".",
+    isOpen: () => open, capturePlanReviewClients: connector.capturePlanReviewClients });
   try {
     const pairing = await connector.beginPairing(workspaceId, () => true, "plan-review");
     assert.equal(pairing.status, "ready");
@@ -123,8 +129,26 @@ test("composes staged desktop plans with the same live workspace membership and 
     const newStaleClone = planned([{ ...savedClone, idempotencyKey: randomUUID() }]);
     assert.equal((await submit(newStaleClone)).status, 409);
     assert.equal((await submit({ ...ordinary, workspaceId: createWorkspaceId("different-fixture-workspace") })).status, 403);
+    const caller = { channel: "app-popup" as const, isCurrent: () => true };
+    const selection = { workspaceId, registeredClientId, fingerprint: ordinary.fingerprint };
+    const denied = { ok: false, code: "forbidden" };
+    const currentList = await approvals.list(workspaceId, caller.isCurrent);
+    assert.ok(currentList.ok);
+    assert.deepEqual(new Set(currentList.requests.map(entry => entry.fingerprint)), new Set([ordinary.fingerprint, validClone.fingerprint]));
+    assert.ok(currentList.requests.every(entry => entry.registeredClientId === registeredClientId));
+    assert.deepEqual(await approvals.list(createWorkspaceId("different-fixture-workspace"), caller.isCurrent), denied);
+    assert.deepEqual(await approvals.open(selection, { ...caller, isCurrent: () => false }), denied);
+    const shown = await approvals.open(selection, caller);
+    assert.ok(shown.ok && shown.snapshot.state.status === "pending");
+    const decide = { expectedRevision: 1, fingerprint: ordinary.fingerprint, decision: { kind: "approve", mode: "whole-plan" } };
+    assert.deepEqual(await approvals.decide(selection, { ...decide, fingerprint: validClone.fingerprint }, caller), denied);
+    const approved = await approvals.decide(selection, decide, caller);
+    assert.ok(approved.ok && approved.state.status === "approved" && approved.state.lastChannel === "app-popup");
+    assert.deepEqual(await approvals.decide(selection, decide, caller), { ok: false, code: "stale" });
     await repositories.memberships.saveMembership({ ...membership, status: "suspended" });
     assert.equal((await read()).status, 403);
+    assert.deepEqual(await approvals.list(workspaceId, caller.isCurrent), denied);
+    assert.deepEqual(await approvals.open(selection, caller), denied);
     assert.equal((await submit(ordinary)).status, 403);
     // A pre-transaction policy result cannot replace the saved current membership.
     const candidate = readHeadlessPlanReviewAgentRequest({ version: HEADLESS_CONTRACT_VERSION,
@@ -137,10 +161,140 @@ test("composes staged desktop plans with the same live workspace membership and 
     assert.deepEqual(await permissiveOuter.execute(candidate.request, formerlyCurrent, async () => formerlyCurrent),
       { ok: false, code: "headless.forbidden" });
     assert.equal((await documents.listDocuments("headless/system-builder/plan-reviews")).length, 2);
+    await repositories.memberships.saveMembership({ ...membership, status: "active" });
+    assert.equal(await connector.revoke(registeredClientId), true);
+    assert.deepEqual(await approvals.list(workspaceId, caller.isCurrent), { ok: true, requests: [] });
+    assert.deepEqual(await approvals.open(selection, caller), denied);
+    assert.deepEqual(await approvals.decide(selection, { ...decide, expectedRevision: 2, decision: { kind: "revoke" } }, caller), denied);
   } finally {
     open = false;
     await connector.close();
   }
+});
+
+test("desktop approval commit and replies obey the same requester's lifetime", async t => {
+  const conditions = ["revoke", "expire", "revocation-write-fails", "open-egress", "decide-egress"] as const;
+  for (const condition of conditions) await t.test(condition, async () => {
+    const base = createInMemoryStructuredDocumentStore();
+    let onDecisionCommit: () => void = () => {};
+    let onOwnedResult: () => void = () => {};
+    let observedDecisionWrite = false;
+    const platform: StructuredDocumentStore = {
+      ...base,
+      async runInOwnedTransaction(work, beforeCommit) {
+        let stagedDecision = false;
+        function watch(owner: StructuredDocumentStore): StructuredDocumentStore {
+          return {
+            ...owner,
+            forOrganization(id) { return watch(owner.forOrganization(id)); },
+            async writeDocument<T>(namespace: string, key: string, value: T, options?: StructuredDocumentWriteOptions) {
+              const saved = await owner.writeDocument(namespace, key, value, options);
+              if (namespace === "headless/system-builder/plan-reviews" && options?.expectedRevision === 1)
+                stagedDecision = true;
+              return saved;
+            },
+          };
+        }
+        const result = await base.runInOwnedTransaction!(owner => work(watch(owner)), () => {
+          if (stagedDecision) {
+            observedDecisionWrite = true;
+            onDecisionCommit();
+          }
+          beforeCommit();
+        });
+        onOwnedResult();
+        return result;
+      },
+    };
+    const documents = platform.forOrganization(organizationId);
+    const identity = { organizationId, principalId: "fixture-review-owner", principalDisplayName: "Fixture", createdAt: at, updatedAt: at };
+    const provision = createStructuredOrganizationRepositories(platform);
+    await provision.organizations.saveOrganization({ organizationId, displayName: "Fixture", status: "active", createdAt: at, updatedAt: at });
+    await provision.memberships.saveMembership({ organizationId, principalId: identity.principalId, role: "owner",
+      status: "active", createdAt: at, updatedAt: at });
+    await createLocalWorkspaceRepository({ documents, rootDirectory: "." }).saveWorkspace({
+      workspaceId, organizationId, displayName: "Fixture", status: "active", createdAt: at, updatedAt: at,
+    });
+    let clock = Date.parse(at);
+    const now = () => clock;
+    let failRevocationWrite = false;
+    const registryDocuments: StructuredDocumentStore = { ...documents, async runInTransaction(work) {
+      if (failRevocationWrite) throw new Error("The synthetic registry write failed.");
+      return documents.runInTransaction(work);
+    } };
+    const registry = createDesktopHeadlessClientAuthority({ documents: registryDocuments, identity, now,
+      canReadWorkspace: async target => target === workspaceId, canReviewPlans: async target => target === workspaceId,
+    });
+    const revocationCaller = new AsyncResource("fixture-desktop-revocation");
+    try {
+      const pending = await registry.beginPairing(workspaceId, () => true, "plan-review");
+      assert.equal(pending.status, "ready");
+      const requester = await registry.completePairing(pending.pairingCode);
+      assert.equal(requester.status, "paired");
+      if (condition === "expire" || condition.endsWith("-egress")) clock = requester.expiresAt - 100;
+      const proposal = { hostIncarnationId, workspaceId, steps: [{ operation: "systems.create", name: "Fixture proposal",
+        templateId: "reference.secured-data-review@1.0.0", idempotencyKey: randomUUID() }] };
+      const decoded = parseHeadlessBuildPlanProposal(proposal, hostIncarnationId);
+      assert.ok(decoded.ok);
+      const fingerprint = createHash("sha256").update(JSON.stringify(decoded.preview), "utf8").digest("hex");
+      const { registeredClientId } = requester;
+      const target = { hostIncarnationId, fingerprint, scope: { organizationId, principalId: identity.principalId, workspaceId, registeredClientId } };
+      const store = createStructuredHeadlessPlanReviewRepository(platform, async () => true, now);
+      const staged = await store.propose({ target, isCurrent: () => true, proposal });
+      assert.ok(staged.ok);
+      const approvals = composeDesktopHeadlessPlanApprovals({ platform, hostIncarnationId, identity,
+        rootDirectory: ".", isOpen: () => true, capturePlanReviewClients: registry.capturePlanReviewClients, now });
+      const caller = { channel: "app-popup" as const, isCurrent: () => true };
+      const selection = { workspaceId, registeredClientId, fingerprint };
+      assert.ok((await approvals.open(selection, caller)).ok);
+      const decision = { fingerprint, expectedRevision: 1, decision: { kind: "approve", mode: "whole-plan" } };
+      if (condition === "open-egress" || condition === "decide-egress") {
+        const decideAtEgress = condition === "decide-egress";
+        let transactions = 0;
+        let callerChecks = 0;
+        let queuedExpiry = false;
+        onOwnedResult = () => { transactions++; };
+        const delayedCaller = { ...caller, isCurrent() {
+          if (transactions === (decideAtEgress ? 3 : 2) && ++callerChecks === (decideAtEgress ? 2 : 1)) {
+            queuedExpiry = true;
+            queueMicrotask(() => { clock = requester.expiresAt; });
+          }
+          return true;
+        } };
+        const response = decideAtEgress ? await approvals.decide(selection, decision, delayedCaller)
+          : await approvals.open(selection, delayedCaller);
+        assert.equal(queuedExpiry, true);
+        assert.deepEqual(response, { ok: false, code: "forbidden" });
+        assert.equal(observedDecisionWrite, decideAtEgress);
+        const stored = await store.read({ target, isCurrent: () => true });
+        assert.ok(stored.ok && stored.snapshot.state.status === (decideAtEgress ? "approved" : "pending"));
+        return;
+      }
+      let revoking: Promise<boolean> | undefined;
+      onDecisionCommit = () => {
+        if (condition === "expire") clock = requester.expiresAt;
+        else {
+          failRevocationWrite = condition === "revocation-write-fails";
+          revoking = revocationCaller.runInAsyncScope(() => registry.revokeClient(registeredClientId));
+        }
+      };
+      const response = await approvals.decide(selection, decision, caller);
+      assert.equal(observedDecisionWrite, true);
+      assert.deepEqual(response, { ok: false, code: "forbidden" });
+      if (condition !== "expire") {
+        assert.ok(revoking);
+        assert.equal(await revoking, condition === "revoke");
+        const enrollment = await documents.readDocument<readonly unknown[]>("headless-client-authority", "clients-v1");
+        assert.equal(enrollment?.value.length, condition === "revoke" ? 0 : 1);
+      }
+      assert.deepEqual(await store.read({ target, isCurrent: () => true }), staged);
+      assert.deepEqual(await approvals.list(workspaceId, caller.isCurrent), { ok: true, requests: [] });
+      assert.deepEqual(await approvals.open(selection, caller), { ok: false, code: "forbidden" });
+    } finally {
+      revocationCaller.emitDestroy();
+      registry.close();
+    }
+  });
 });
 
 test("pinned paired agents can request and present only with an exact interactive lease", async () => {

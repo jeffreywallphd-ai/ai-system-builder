@@ -68,17 +68,6 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
       : access === "plan-review" ? dependencies.canReviewPlans?.(workspaceId) ?? Promise.resolve(false)
       : canReadWorkspace(workspaceId);
 
-  async function readRegistry(store: StructuredDocumentStore) {
-    const saved = await store.readDocument<unknown>(NAMESPACE, KEY);
-    const value = saved ? saved.value : [];
-    if (!Array.isArray(value) || value.length > MAX_CLIENTS || !value.every(validRecord) ||
-        new Set(value.map((client) => client.registeredClientId)).size !== value.length ||
-        new Set(value.map((client) => client.credentialDigest)).size !== value.length) {
-      throw new Error("Desktop client registry is unavailable.");
-    }
-    return { clients: value, revision: saved?.revision ?? 0 };
-  }
-
   return {
     /** Trusted, explicit interactive action only. Do not expose to the connector. */
     async beginPairing(workspaceId: WorkspaceId, isStillApproved: () => boolean = () => true, access: DesktopHeadlessClientAccess = "read") {
@@ -185,6 +174,22 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
         return undefined;
       }
     },
+    /** Capture the exact requester fences from this live registry under the host's transaction. */
+    async capturePlanReviewClients(owner: StructuredDocumentStore, workspaceId: WorkspaceId) {
+      if (!open || !dependencies.canReviewPlans || owner.organizationId !== organizationId || !isWorkspaceId(workspaceId)) return [];
+      const admittedGeneration = grantGeneration;
+      const { clients } = await readRegistry(owner);
+      if (!open || grantGeneration !== admittedGeneration) return [];
+      return clients.filter(client => client.access === "plan-review" && client.principalId === principalId &&
+        client.workspaceId === workspaceId).flatMap(({ registeredClientId, expiresAt }) => {
+        const isCurrent = () => {
+          const timestamp = now();
+          return open && grantGeneration === admittedGeneration && !revoking.has(registeredClientId) &&
+            Number.isSafeInteger(timestamp) && timestamp >= 0 && expiresAt > timestamp;
+        };
+        return isCurrent() ? [{ registeredClientId, isCurrent }] : [];
+      });
+    },
     /** Trusted interactive status projection. Never include codes, hashes or bearer credentials. */
     async listClients() {
       if (!open) return unavailable;
@@ -235,6 +240,17 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
 
 function isSecret(value: unknown): value is string {
   return typeof value === "string" && value.length === 43 && SECRET_PATTERN.test(value);
+}
+
+async function readRegistry(store: StructuredDocumentStore) {
+  const saved = await store.readDocument<unknown>(NAMESPACE, KEY);
+  const value = saved ? saved.value : [];
+  if (!Array.isArray(value) || value.length > MAX_CLIENTS || !value.every(validRecord) ||
+      new Set(value.map((client) => client.registeredClientId)).size !== value.length ||
+      new Set(value.map((client) => client.credentialDigest)).size !== value.length) {
+    throw new Error("Desktop client registry is unavailable.");
+  }
+  return { clients: value, revision: saved?.revision ?? 0 };
 }
 
 function digest(purpose: "pairing" | "credential", value: string): string {

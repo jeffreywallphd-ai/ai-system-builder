@@ -115,6 +115,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   }
 
   return {
+    capturePlanReviewClients: registrations.capturePlanReviewClients,
     readWorkspaceLabel: (id: WorkspaceId, access: DesktopHeadlessClientAccess = "read") =>
       track<string | undefined>(undefined, () => readWorkspaceLabel(id, access)),
     async status(): Promise<DesktopHeadlessPairingStatus> {

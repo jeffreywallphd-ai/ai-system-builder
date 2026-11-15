@@ -150,6 +150,13 @@ app user, workspace and host session. Listing requires current access to
 that exact scope. The index and review record share the owned transaction.
 The list omits expired requests and removes cancelled, denied and revoked
 requests. The durable review record keeps the outcome and original deadline.
+The desktop approval service takes the human channel and current caller from
+the trusted host adapter. It derives organization and principal from the
+local profile. Opening or deciding a proposal checks the matching live
+plan-review registration and workspace membership under the transaction.
+The service uses the same live registry as the connector. Its requester
+check detects revocation or expiry before commit and when returning results.
+This service still needs a verified app entry point for each approval channel.
 Desktop plan-review credentials use a distinct pairing mode. A current
 registration can request plan review only when the host provides that
 capability. It carries no direct editing, conversation or window-control
