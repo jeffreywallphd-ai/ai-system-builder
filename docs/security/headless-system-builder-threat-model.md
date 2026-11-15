@@ -157,6 +157,15 @@ plan-review registration and workspace membership under the transaction.
 The service uses the same live registry as the connector. Its requester
 check detects revocation or expiry before commit and when returning results.
 This service still needs a verified app entry point for each approval channel.
+The desktop approval bridge accepts fixed list, open, dismiss and decision messages
+from a trusted current window. A decision requires the exact view that the
+same window opened, including the workspace, requester, proposal fingerprint
+and revision. The bridge checks the canonical fingerprint before returning a
+view. Only a successful reply issues a one-use view ID. Opening a new view
+retires the old ID even when the proposal and revision match. A window can
+also close its exact view before a decision commits. The trusted
+adapter supplies the app-popup channel. Request data cannot choose a channel.
+Normal startup still needs to attach this bridge and its approval screen.
 Desktop plan-review credentials use a distinct pairing mode. A current
 registration can request plan review only when the host provides that
 capability. It carries no direct editing, conversation or window-control

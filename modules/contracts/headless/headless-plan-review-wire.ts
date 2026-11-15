@@ -25,6 +25,22 @@ const failureCodes = [
 ] as const;
 type FailureCode = typeof failureCodes[number];
 
+export type HeadlessPlanReviewDecisionChoice =
+  | { readonly kind: "approve"; readonly mode: "whole-plan" }
+  | { readonly kind: "approve"; readonly mode: "each-change"; readonly step: number }
+  | { readonly kind: "deny" | "cancel" | "revoke" };
+
+export function readHeadlessPlanReviewDecisionChoice(value: unknown): HeadlessPlanReviewDecisionChoice | undefined {
+  try {
+    const fields = readStrictPassiveRecord(value, ["kind", "mode", "step"]);
+    const { kind, mode, step } = fields;
+    if (kind === "approve" && mode === "whole-plan" && !("step" in fields)) return { kind, mode };
+    if (kind === "approve" && mode === "each-change" && integerAtLeast(step, 1) && step <= HEADLESS_MAX_BUILD_PLAN_STEPS)
+      return { kind, mode, step };
+    if ((kind === "deny" || kind === "cancel" || kind === "revoke") && Object.keys(fields).length === 1) return { kind };
+  } catch { return undefined; }
+}
+
 export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost: HeadlessHostIncarnationId):
   { readonly ok: true; readonly request: HeadlessPlanReviewAgentRequest } |
   { readonly ok: false; readonly code: "headless.invalid-request" | "headless.host-changed" } {

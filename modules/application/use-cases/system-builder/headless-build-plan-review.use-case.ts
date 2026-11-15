@@ -1,5 +1,5 @@
-import { HEADLESS_MAX_BUILD_PLAN_STEPS, isDesktopHeadlessClientId, isHeadlessHostIncarnationId,
-  type HeadlessHostIncarnationId } from "../../../contracts/headless";
+import { HEADLESS_MAX_BUILD_PLAN_STEPS, isDesktopHeadlessClientId, isHeadlessHostIncarnationId, readHeadlessPlanReviewDecisionChoice,
+  type HeadlessHostIncarnationId, type HeadlessPlanReviewDecisionChoice } from "../../../contracts/headless";
 import { isOrganizationId } from "../../../contracts/organization";
 import { copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord } from "../../../contracts/shared";
 import { isWorkspaceId } from "../../../contracts/workspace";
@@ -9,14 +9,10 @@ import type {
 } from "../../ports/system-builder/headless-build-plan-review.port";
 import type { HeadlessOperationScope } from "../../ports/system-builder";
 
-type Decision = { readonly kind: "approve"; readonly mode: "whole-plan" } |
-  { readonly kind: "approve"; readonly mode: "each-change"; readonly step: number } |
-  { readonly kind: "deny" | "cancel" | "revoke" };
-
 interface ReviewRequest {
   readonly fingerprint: string;
   readonly expectedRevision: number;
-  readonly decision: Decision;
+  readonly decision: HeadlessPlanReviewDecisionChoice;
 }
 
 /** These members come from the host's verified human channel, separate from agent registration. */
@@ -91,14 +87,8 @@ function parseRequest(value: unknown): ReviewRequest | undefined {
     );
     if (typeof fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(fingerprint) ||
         !positiveInteger(expectedRevision)) return;
-    const raw = readStrictPassiveRecord(decision, ["kind", "mode", "step"]);
-    const { kind, mode, step } = raw;
-    if (kind === "approve" && mode === "whole-plan" && !("step" in raw))
-      return { fingerprint, expectedRevision, decision: { kind, mode } };
-    if (kind === "approve" && mode === "each-change" && positiveInteger(step) && step <= HEADLESS_MAX_BUILD_PLAN_STEPS)
-      return { fingerprint, expectedRevision, decision: { kind, mode, step } };
-    if ((kind === "deny" || kind === "cancel" || kind === "revoke") && Object.keys(raw).length === 1)
-      return { fingerprint, expectedRevision, decision: { kind } };
+    const choice = readHeadlessPlanReviewDecisionChoice(decision);
+    if (choice) return { fingerprint, expectedRevision, decision: choice };
   } catch { return undefined; }
 }
 
