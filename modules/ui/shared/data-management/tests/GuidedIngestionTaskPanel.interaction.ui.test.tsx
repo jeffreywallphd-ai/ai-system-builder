@@ -22,6 +22,8 @@ import {
   type IngestionTaskTransportCommand,
   type IngestionTaskTransportValue,
 } from "../../../../contracts/ingestion";
+import type { AppHeadlessLocalFileSelectionValue, DesktopLocalFileSelectionInput } from "../../../../contracts/headless";
+import type { GuidedHeadlessFileClient } from "../GuidedIngestionTaskPanel";
 import { NotificationViewport } from "../../notifications/NotificationCenter";
 import {
   NotificationProvider,
@@ -355,13 +357,158 @@ describe("GuidedIngestionTaskPanel", () => {
     expect(Boolean(value)).toBe(true);
     return value!;
   }
-  async function mountAcquisition(client: { execute: any }, onComplete = () => undefined, workspaceId = "workspace-a", withNotifications = false) {
+  async function mountAcquisition(client: { execute: any }, onComplete = () => undefined, workspaceId = "workspace-a",
+    withNotifications = false, headlessFileClient?: GuidedHeadlessFileClient) {
     if (!root) {
       container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
     }
-    const panel = <GuidedIngestionTaskPanel workspaceId={workspaceId} client={client} onComplete={onComplete} />;
+    const panel = <GuidedIngestionTaskPanel workspaceId={workspaceId} client={client} onComplete={onComplete}
+      headlessFileClient={headlessFileClient} />;
     await act(async () => root!.render(withNotifications ? <NotificationProvider><ActiveNotificationWorkspace /><NotificationViewport />{panel}</NotificationProvider> : panel));
   }
+
+  it("stages one file for the chosen chat client, retries only selection and can cancel the staged file", { timeout: 5_000 }, async () => {
+    const registeredClientId = "34012ffc-feed-411f-b86b-1b80f5d0ba2f";
+    const otherClient = "34012ffc-feed-411f-b86b-1b80f5d0ba30";
+    const selections: DesktopLocalFileSelectionInput[] = [];
+    const commands: IngestionTaskTransportCommand[] = [];
+    const onComplete = testDouble.fn();
+    const cancelResponse = deferredResponse();
+    let markSelectionStarted!: () => void;
+    const selectionStarted = new Promise<void>(resolve => { markSelectionStarted = resolve; });
+    const client = { async execute({ command }: { command: IngestionTaskTransportCommand }) {
+      commands.push(command);
+      if (command.action === "create-files") return { kind: "task", task: task("queued", 0, "pending") };
+      if (command.action === "append-chunk") return { kind: "task", task: task("transferring", 3, "transferring") };
+      if (command.action === "cancel") return cancelResponse.promise;
+      throw new Error("Unexpected ingestion action for a preview.");
+    } };
+    const headlessFileClient: GuidedHeadlessFileClient = {
+      async listClients(workspaceId) {
+        expect(workspaceId).toBe("workspace-a");
+        return [otherClient, registeredClientId];
+      },
+      async select(input) {
+        selections.push(input);
+        if (selections.length === 1) { markSelectionStarted(); return; }
+        const { workspaceId, taskId, fileId, taskRevision } = input;
+        return { workspaceId, taskId, fileId, taskRevision, selectionRevision: 1 };
+      },
+    };
+    await mountAcquisition(client, onComplete, "workspace-a", false, headlessFileClient);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    expect(button("Prepare for chat").disabled).toBe(true);
+    const clientChoice = container!.querySelector("select")!;
+    clientChoice.value = registeredClientId;
+    await act(async () => clientChoice.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Prepare for chat").click(); await selectionStarted; });
+    expect(container!.querySelector('[aria-label="File reference"]')).toBe(null);
+    expect(button("Add data").disabled).toBe(true);
+    await act(async () => button("Try preparing again").click());
+    const reference = { workspaceId: "workspace-a", taskId: "ingestion.test", fileId: "file.test", taskRevision: 2 };
+    expect(selections).toEqual(Array.from({ length: 2 }, () => ({
+      ...reference, registeredClientId, expectedSelectionRevision: 0,
+    })));
+    expect(commands.map(({ action }) => action)).toEqual(["create-files", "append-chunk"]);
+    expect(commands[1]).toMatchObject({ bytes: new TextEncoder().encode("A,B"),
+      sha256: `sha256:${createHash("sha256").update("A,B").digest("hex")}` });
+    expect(container!.querySelector<HTMLTextAreaElement>('[aria-label="File reference"]')!.value)
+      .toBe(JSON.stringify(reference));
+    await act(async () => button("Cancel").click());
+    expect(commands.map(({ action }) => action)).toEqual(["create-files", "append-chunk", "cancel"]);
+    expect(container!.querySelector('[aria-label="File reference"]')).toBe(null);
+    expect(button("Adding data…").disabled).toBe(true);
+    await act(async () => cancelResponse.resolve({ kind: "task", task: task("cancelled", 0, "cancelled") }));
+    expect(button("Add data").disabled).toBe(false);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it("discards the prepared reference if the workspace changes while selection is in flight", { timeout: 5_000 }, async () => {
+    let resolveSelection!: (receipt: AppHeadlessLocalFileSelectionValue) => void;
+    const selection = new Promise<AppHeadlessLocalFileSelectionValue>(resolve => { resolveSelection = resolve; });
+    let markSelectionStarted!: () => void;
+    const selectionStarted = new Promise<void>(resolve => { markSelectionStarted = resolve; });
+    let selected: DesktopLocalFileSelectionInput | undefined;
+    const headlessFileClient: GuidedHeadlessFileClient = {
+      async listClients() { return ["34012ffc-feed-411f-b86b-1b80f5d0ba2f"]; },
+      async select(input) { selected = input; markSelectionStarted(); return selection; },
+    };
+    const uploaded = task("transferring", 3, "transferring");
+    const client = { async execute({ command }: { command: IngestionTaskTransportCommand }) {
+      if (command.action === "create-files") return { kind: "task", task: task("queued", 0, "pending") };
+      if (command.action === "append-chunk") return { kind: "task", task: uploaded };
+      throw new Error("Unexpected ingestion action for a preview.");
+    } };
+    const onComplete = testDouble.fn();
+    await mountAcquisition(client, onComplete, "workspace-a", false, headlessFileClient);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Prepare for chat").click(); await selectionStarted; });
+    expect(selected?.workspaceId).toBe("workspace-a");
+    await mountAcquisition(client, onComplete, "workspace-b", false, headlessFileClient);
+    const { workspaceId, taskId, fileId, taskRevision } = selected!;
+    await act(async () => resolveSelection({ workspaceId, taskId, fileId, taskRevision, selectionRevision: 1 }));
+    expect(container!.querySelector('[aria-label="File reference"]')).toBe(null);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it("refreshes paired chat clients on focus after an unavailable status read", async () => {
+    const execute = testDouble.fn();
+    const select = testDouble.fn();
+    let reads = 0;
+    await mountAcquisition({ execute }, undefined, "workspace-a", false, {
+      async listClients() { return ++reads === 1 ? [] : ["34012ffc-feed-411f-b86b-1b80f5d0ba2f"]; },
+      select,
+    });
+    expect(reads).toBe(0);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    expect(reads).toBe(1);
+    expect(container!.querySelector('select[aria-label="Chat client"]')).toBe(null);
+    expect(button("Add data").disabled).toBe(false);
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    expect(reads).toBe(2);
+    expect(button("Prepare for chat").disabled).toBe(false);
+    expect(execute).not.toHaveBeenCalled();
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it("keeps a failed chat transfer out of the ordinary publishing retry", { timeout: 5_000 }, async () => {
+    const queued = task("queued", 0, "pending");
+    const failed = task("failed", 0, "failed");
+    const actions: string[] = [];
+    let markAppendStarted!: () => void;
+    const appendStarted = new Promise<void>(resolve => { markAppendStarted = resolve; });
+    const client = { async execute({ command }: { command: IngestionTaskTransportCommand }) {
+      actions.push(command.action);
+      if (command.action === "create-files") return { kind: "task", task: queued };
+      if (command.action === "append-chunk") {
+        markAppendStarted();
+        return { kind: "task", task: { ...failed, files: [{ ...failed.files[0]!,
+          error: { code: "ingestion.transfer-failed", message: "The temporary transfer failed.", retryable: true },
+        }] } };
+      }
+      throw new Error("The failed chat transfer must never start a publishing retry.");
+    } };
+    const choose = testDouble.fn();
+    await mountAcquisition(client, undefined, "workspace-a", false, {
+      async listClients() { return ["34012ffc-feed-411f-b86b-1b80f5d0ba2f"]; },
+      select: choose,
+    });
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Prepare for chat").click(); await appendStarted; });
+    expect(actions).toEqual(["create-files", "append-chunk"]);
+    expect(choose).not.toHaveBeenCalled();
+    expect(container!.querySelector('[role="alert"]')?.textContent).toContain("The temporary transfer failed.");
+    expect(Array.from(container!.querySelectorAll("button")).some(item => item.textContent === "Try again")).toBe(false);
+    expect(button("Prepare for chat").disabled).toBe(false);
+  });
 
   for (const [description, size] of [
     ["the last chunk", 3],

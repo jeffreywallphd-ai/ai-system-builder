@@ -1,7 +1,7 @@
 import type { IpcMainHandlePort } from "../../../../modules/adapters/transport/ipc-electron/ipcMainHandlePort";
 import {
   DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL,
-  readAppHeadlessLocalFileSelectionRequest,
+  readDesktopLocalFileSelectionRequest,
   readAppHeadlessLocalFileSelectionValue,
 } from "../../../../modules/contracts/headless";
 import type { composeDesktopHeadlessLocalFileSelection } from "../../../../modules/hosts/desktop/composition/composeDesktopHeadlessLocalFileSelection";
@@ -20,7 +20,7 @@ export function registerDesktopHeadlessLocalFileSelectionIpc(options: {
     const window = options.resolveWindow(event);
     const selection = options.getSelection();
     if (!window?.isUsable() || !selection || active >= MAX_PENDING) return unavailable;
-    const parsed = readAppHeadlessLocalFileSelectionRequest(raw, selection.hostIncarnationId);
+    const parsed = readDesktopLocalFileSelectionRequest(raw, selection.hostIncarnationId);
     if (!parsed.ok) return parsed;
     const isCurrent = () => window.isUsable() && options.getSelection() === selection;
     active++;

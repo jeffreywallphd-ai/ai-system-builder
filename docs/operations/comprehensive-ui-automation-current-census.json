@@ -11110,177 +11110,193 @@
   {
    "path": "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "77f66d4014e8f50732b79bf5183f60a6994b0d89d90306028225c80f89c622e8",
-    "bytes": 68403,
+    "sha256": "c3919d61d596c938864c86bc266fe361816570b4eb46093e32fd261914c52d8a",
+    "bytes": 77656,
     "cases": [
      {
       "name": "coverage census: preserves all approved scenario families and matches the current literal route declarations",
-      "line": 295
+      "line": 297
+     },
+     {
+      "name": "stages one file for the chosen chat client, retries only selection and can cancel the staged file",
+      "line": 370
+     },
+     {
+      "name": "discards the prepared reference if the workspace changes while selection is in flight",
+      "line": 428
+     },
+     {
+      "name": "refreshes paired chat clients on focus after an unavailable status read",
+      "line": 458
+     },
+     {
+      "name": "keeps a failed chat transfer out of the ordinary publishing retry",
+      "line": 480
      },
      {
       "name": "acquisition race: admits only one start before React commits the busy state",
-      "line": 417
+      "line": 564
      },
      {
       "name": "acquisition race: retires a removed session before deferred passive cleanup",
-      "line": 453
+      "line": 600
      },
      {
       "name": "acquisition race: rejects a foreign task before progress, notification or completion",
-      "line": 488
+      "line": 635
      },
      {
       "name": "acquisition race: stops before append when unmounted during a file slice",
-      "line": 500
+      "line": 647
      },
      {
       "name": "acquisition race: failed cancellation keeps admission closed until an explicit status check",
-      "line": 516
+      "line": 663
      },
      {
       "name": "acquisition race: nonterminal cancellation is not accepted as confirmation",
-      "line": 538
-     },
-     {
-      "name": "acquisition race: confirmed cancellation cannot be replaced by late older progress",
-      "line": 552
-     },
-     {
-      "name": "acquisition race: changing the source browser also retires a pending acquisition session",
-      "line": 565
-     },
-     {
-      "name": "acquisition race: unmount stops polling without pretending the accepted host task was cancelled",
-      "line": 578
-     },
-     {
-      "name": "acquisition race: a foreign task identity cannot finish or release the current task",
-      "line": 592
-     },
-     {
-      "name": "acquisition race: an old run cannot reset a newly admitted task after confirmed cancellation",
-      "line": 607
-     },
-     {
-      "name": "acquisition race: cancellation requested before task creation is sent once identity arrives",
-      "line": 627
-     },
-     {
-      "name": "acquisition race: duplicate cancel clicks issue one request and failed status checks stay locked",
-      "line": 642
-     },
-     {
-      "name": "acquisition race: a retry admits only one resume before the busy render",
-      "line": 667
-     },
-     {
-      "name": "acquisition workflow: transfers two distinct files across chunk boundaries without whole-file reads",
       "line": 685
      },
      {
+      "name": "acquisition race: confirmed cancellation cannot be replaced by late older progress",
+      "line": 699
+     },
+     {
+      "name": "acquisition race: changing the source browser also retires a pending acquisition session",
+      "line": 712
+     },
+     {
+      "name": "acquisition race: unmount stops polling without pretending the accepted host task was cancelled",
+      "line": 725
+     },
+     {
+      "name": "acquisition race: a foreign task identity cannot finish or release the current task",
+      "line": 739
+     },
+     {
+      "name": "acquisition race: an old run cannot reset a newly admitted task after confirmed cancellation",
+      "line": 754
+     },
+     {
+      "name": "acquisition race: cancellation requested before task creation is sent once identity arrives",
+      "line": 774
+     },
+     {
+      "name": "acquisition race: duplicate cancel clicks issue one request and failed status checks stay locked",
+      "line": 789
+     },
+     {
+      "name": "acquisition race: a retry admits only one resume before the busy render",
+      "line": 814
+     },
+     {
+      "name": "acquisition workflow: transfers two distinct files across chunk boundaries without whole-file reads",
+      "line": 832
+     },
+     {
       "name": "offers PDFs and transfers a PDF with missing browser MIME through the bounded file workflow",
-      "line": 742
+      "line": 889
      },
      {
       "name": "renders the plain-language ordered source workflow with technical limits under Advanced settings",
-      "line": 775
+      "line": 922
      },
      {
       "name": "refuses a newly ambiguous normalized selection before resuming a failed file task",
-      "line": 898
+      "line": 1045
      },
      {
       "name": "refuses an ambiguous saved task before transferring any selected bytes",
-      "line": 931
+      "line": 1078
      },
      {
       "name": "streams a selected file in a bounded chunk and finalizes with server-computed integrity",
-      "line": 951
+      "line": 1098
      },
      {
       "name": "creates and runs a bounded website task from the simple source workflow",
-      "line": 1040
+      "line": 1187
      },
      {
       "name": "keeps source inputs stable while working and confirms cancellation",
-      "line": 1092
+      "line": 1239
      },
      {
       "name": "offers a plain retry action for a retryable website failure",
-      "line": 1158
+      "line": 1305
      },
      {
       "name": "browses Hugging Face datasets and imports only checked files at the returned immutable revision",
-      "line": 1220
+      "line": 1367
      },
      {
       "name": "does not expose provider credentials or local paths when dataset browsing fails",
-      "line": 1350
+      "line": 1497
      },
      {
       "name": "saves a token-only Hugging Face Step 2 card through the shared settings client",
-      "line": 1404
+      "line": 1551
      }
     ],
     "dynamicCases": 4,
     "functions": [
      {
       "name": "ActiveNotificationWorkspace",
-      "line": 58
+      "line": 60
      },
      {
       "name": "task",
-      "line": 79
+      "line": 81
      },
      {
       "name": "websiteTask",
-      "line": 141
+      "line": 143
      },
      {
       "name": "huggingFaceTask",
-      "line": 218
+      "line": 220
      },
      {
       "name": "chooseWebsiteAndEnterPage",
-      "line": 275
+      "line": 277
      },
      {
       "name": "deferredResponse",
-      "line": 348
+      "line": 350
      },
      {
       "name": "button",
-      "line": 353
+      "line": 355
      },
      {
       "name": "mountAcquisition",
-      "line": 358
+      "line": 360
      },
      {
       "name": "RetirementProbe",
-      "line": 457
+      "line": 604
      }
     ],
-    "assertionCount": 151,
-    "assertionDigest": "2f3efcdec8fbcd17e2b19c31bcface5b350ec0ce9737e0f28c5efe3d88325196",
+    "assertionCount": 179,
+    "assertionDigest": "d9474231e3b72f49b8ffde4a7c2872574662125ce36ef16368d5db321d292161",
     "assertionExamples": [
      {
-      "line": 299,
+      "line": 301,
       "kind": "expect",
       "sha256": "ad83c54bafa3de9a3fec028ddb37272c53be789aa29412483d3b3be299406f43"
      },
      {
-      "line": 304,
+      "line": 306,
       "kind": "expect",
       "sha256": "3ac1fa161978630ecb5ffe2d9bd707b78f56460e87b5dec645dbf0f79e4dd2f0"
      },
      {
-      "line": 305,
+      "line": 307,
       "kind": "expect",
       "sha256": "23438fe394ca124211e6ecca54f74384e6e1471b628ff0311686a5f4db17d739"
      },
      {
-      "line": 306,
+      "line": 308,
       "kind": "expect",
       "sha256": "134f7bdaebed2ca7d9e2316fb0f5033e3cdcd52674d712b9cd4cd85ad7e0e825"
      }
@@ -15187,8 +15203,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
    "facts": {
-    "sha256": "93092fae455ce459a99a97b18957d110ab062b5109a4ca3c827f624f2bf7750b",
-    "bytes": 46136,
+    "sha256": "5a150eb03cdfe8dc1b0dd17965cbbd1910fbcd0bb89576766aefe81de5bef116",
+    "bytes": 49136,
     "cases": [
      {
       "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart",
@@ -15200,7 +15216,7 @@
      },
      {
       "name": "packaged Desktop observes a running approved turn from a separately paired MCP client",
-      "line": 518
+      "line": 562
      }
     ],
     "dynamicCases": 0,
@@ -15250,8 +15266,8 @@
       "line": 443
      }
     ],
-    "assertionCount": 114,
-    "assertionDigest": "60d9e591e6bfa05b4372ac9db86ffd091b00d82b37f437660c56cecd31a1323d",
+    "assertionCount": 123,
+    "assertionDigest": "9d9b0ca7bd347926ef31d1405b25815f5daf9275f02db5d6c981997078be9c03",
     "assertionExamples": [
      {
       "line": 38,

@@ -19,7 +19,22 @@ export type AppHeadlessLocalFileSelectionValue = Pick<
   AppHeadlessLocalFileSelectionRequest["input"], "workspaceId" | "taskId" | "fileId" | "taskRevision"
 > & { readonly selectionRevision: number };
 
+export type DesktopLocalFileSelectionInput = Omit<AppHeadlessLocalFileSelectionRequest["input"], "hostIncarnationId">;
+
 const invalid = { ok: false, code: "headless.invalid-request" } as const;
+const selectionFields = ["workspaceId", "taskId", "fileId", "taskRevision", "registeredClientId", "expectedSelectionRevision"] as const;
+
+/** The main process supplies the running host ID for an interactive renderer request. */
+export function readDesktopLocalFileSelectionRequest(value: unknown, currentHost: HeadlessHostIncarnationId) {
+  try {
+    const input = readStrictPassiveRecord(copyBoundedPassiveData(value), selectionFields);
+    return readAppHeadlessLocalFileSelectionRequest({
+      version: HEADLESS_CONTRACT_VERSION,
+      operation: "data.select-local-file",
+      input: { ...input, hostIncarnationId: currentHost },
+    }, currentHost);
+  } catch { return invalid; }
+}
 
 export function readAppHeadlessLocalFileSelectionRequest(value: unknown, currentHost: HeadlessHostIncarnationId):
   { readonly ok: true; readonly request: AppHeadlessLocalFileSelectionRequest } |
@@ -28,9 +43,8 @@ export function readAppHeadlessLocalFileSelectionRequest(value: unknown, current
     const { version, operation, input } = readStrictPassiveRecord(copyBoundedPassiveData(value),
       ["version", "operation", "input"]);
     if (version !== HEADLESS_CONTRACT_VERSION || operation !== "data.select-local-file") return invalid;
-    const { registeredClientId, expectedSelectionRevision, ...target } = readStrictPassiveRecord(input, [
-      "hostIncarnationId", "workspaceId", "taskId", "fileId", "taskRevision", "registeredClientId", "expectedSelectionRevision",
-    ]);
+    const { registeredClientId, expectedSelectionRevision, ...target } =
+      readStrictPassiveRecord(input, ["hostIncarnationId", ...selectionFields]);
     if (!isDesktopHeadlessClientId(registeredClientId) || typeof expectedSelectionRevision !== "number" ||
         !Number.isSafeInteger(expectedSelectionRevision) || expectedSelectionRevision < 0 ||
         expectedSelectionRevision >= Number.MAX_SAFE_INTEGER) return invalid;
@@ -44,7 +58,7 @@ export function readAppHeadlessLocalFileSelectionRequest(value: unknown, current
 }
 
 /** Validate the receipt for one selection action. Query separately to find the current selected file. */
-export function readAppHeadlessLocalFileSelectionValue(value: unknown, expected: AppHeadlessLocalFileSelectionRequest["input"]):
+export function readAppHeadlessLocalFileSelectionValue(value: unknown, expected: DesktopLocalFileSelectionInput):
   AppHeadlessLocalFileSelectionValue | undefined {
   try {
     const { workspaceId, taskId, fileId, taskRevision, selectionRevision } = readStrictPassiveRecord(

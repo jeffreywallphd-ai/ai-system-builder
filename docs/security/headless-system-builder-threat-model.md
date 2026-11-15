@@ -593,5 +593,11 @@ observation through response release. Success and source-specific stale
 or readiness results need that final observation. The connector rejects
 unknown request and response fields and returns only bounded file
 metadata. The official Desktop MCP client exposes this one preview.
-The renderer selection action, managed browser flow and approved save
+Desktop users explicitly choose a plan-review client in Add Data. The app
+stages one file through the ordinary verified chunk transfer, then records
+the exact task and file revision for that client. The app shows a copyable
+reference with workspace, task and file identifiers and the task revision.
+Reject a late receipt when its app view or task has ended. A retry confirms
+the same choice without sending the file a second time. Cancelling the task
+invalidates its staged preview. The managed browser flow and approved save
 still need host wiring.

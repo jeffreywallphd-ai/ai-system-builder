@@ -36,6 +36,10 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         desktop_selection_test = "apps/desktop/src/main/tests/desktop-headless-local-file-selection-ipc.unit.test.ts"
         self.assertIn(desktop_selection_test, self.plan([desktop_selection])[check]["argv"])
         self.assertNotIn("focused-tests", self.plan([desktop_selection, desktop_selection_test], check))
+        panel = "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx"
+        panel_test = "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx"
+        self.assertIn(panel_test, self.plan([panel])[check]["argv"])
+        self.assertNotIn("focused-tests", self.plan([panel, panel_test], check))
         data_transport_reference = "skills/control-ai-system-builder/references/mcp-tools.json"
         data_transport_test = "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts"
         self.assertIn(data_transport_test, self.plan([data_transport_reference])["headless-desktop-pinned-mcp"]["argv"])

@@ -509,6 +509,50 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
       "Fixture chat intake", "Fixture chat-only intake", "Fixture chat-only report",
       "Fixture review queue", "Fixture review report",
     ]);
+
+    await page.getByRole("button", { name: "Data", exact: true }).click();
+    await page.getByRole("tab", { name: "Artifact Ingestion", exact: true }).click();
+    const ingestion = page.getByRole("list", { name: "Add data workflow", exact: true });
+    const owner = await app.browserWindow(page);
+    try {
+      await owner.evaluate(window => window.focus());
+      await expect.poll(() => owner.evaluate(window => window.isFocused())).toBe(true);
+    } finally { await owner.dispose(); }
+    await expect.poll(() => page.evaluate(async id => {
+      const api = (window as Window & { desktopApi?: {
+        selectHeadlessLocalFile?: unknown;
+        readHeadlessPairingStatus?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingStatus>;
+      } }).desktopApi;
+      const status = await api?.readHeadlessPairingStatus?.();
+      return typeof api?.selectHeadlessLocalFile === "function" && status?.status === "ready" && status.running &&
+        status.clients.some(client => client.workspaceId === id && client.access === "plan-review");
+    }, workspaceId), { message: "the Data window can read its eligible paired client" }).toBe(true);
+    const contents = Buffer.from("team,priority\ntriage,2\n");
+    await ingestion.getByLabel("Choose one or more files", { exact: true }).setInputFiles({
+      name: "synthetic.csv", mimeType: "text/csv", buffer: contents,
+    });
+    await expect(ingestion.getByRole("region", { name: "Selected files", exact: true })
+      .getByText("1 file selected", { exact: true })).toBeVisible();
+    await expect(ingestion.getByRole("combobox", { name: "Chat client", exact: true })).not.toHaveValue("");
+    await ingestion.getByRole("button", { name: "Prepare for chat", exact: true }).click();
+    const fileReference = ingestion.getByRole("textbox", { name: "File reference", exact: true });
+    await expect(fileReference).toBeVisible();
+    const reference = JSON.parse(await fileReference.inputValue());
+    expect(reference).toEqual({ workspaceId, taskId: expect.any(String), fileId: expect.any(String),
+      taskRevision: expect.any(Number) });
+    const previewFile = () => call(client, "aisb_preview_selected_local_file", { ...reference, ...workspace });
+    const stagedFile = await previewFile();
+    expect(stagedFile).toMatchObject({ ok: true, value: {
+      ...reference, mediaType: "text/csv", fileBytes: contents.byteLength, effect: "save-local-source", externalProviderCalls: 0,
+    } });
+    expect(Object.keys(stagedFile.value as object).sort()).toEqual([
+      "checkpointExpiresAt", "effect", "externalProviderCalls", "fileBytes", "fileId", "mediaType",
+      "taskId", "taskRevision", "workspaceId",
+    ]);
+    await ingestion.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(fileReference).toHaveCount(0);
+    await expect(ingestion.getByRole("button", { name: "Add data", exact: true })).toBeEnabled();
+    expect(await previewFile()).toMatchObject({ ok: false });
   } finally {
     try { await mcp?.close(); }
     finally { await lifetime.retire(); }

@@ -5,6 +5,7 @@ import { DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL, HEADLESS_CONTRACT_VERSIO
   type AppHeadlessLocalFileSelectionRequest } from "../../../../../modules/contracts/headless";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../../modules/contracts/ingestion";
 import { createWorkspaceId } from "../../../../../modules/contracts/workspace";
+import { createDesktopPreloadApi } from "../../preload/exposedApi";
 import { registerDesktopHeadlessLocalFileSelectionIpc } from "../desktopHeadlessLocalFileSelectionIpc";
 
 const hostIncarnationId = "632cfa6b-c323-419a-b2bd-5880b1f34858";
@@ -15,6 +16,7 @@ const fileId = normalizeIngestionTaskFileId("file.sample");
 const raw: AppHeadlessLocalFileSelectionRequest = { version: HEADLESS_CONTRACT_VERSION, operation: "data.select-local-file",
   input: { hostIncarnationId, workspaceId, taskId, fileId, taskRevision: 7, expectedSelectionRevision: 2,
     registeredClientId: "34012ffc-feed-411f-b86b-1b80f5d0ba2f" } };
+const { hostIncarnationId: _, ...appInput } = raw.input;
 const exact = { workspaceId, taskId, fileId, taskRevision: 7, selectionRevision: 3 };
 const unavailable = { ok: false, code: "headless.unavailable" };
 
@@ -46,20 +48,41 @@ test("main IPC admits only a current trusted app frame and returns only the exac
   });
   const handler = handlers.get(DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL);
   assert.ok(handler);
-  assert.deepEqual(await handler({}, raw), unavailable);
-  assert.deepEqual(await handler(owned, { ...raw, input: { ...raw.input, path: "unexpected" } }), invalid);
-  assert.deepEqual(await handler(owned, { ...raw, operation: "data.prepare-local-file" }), invalid);
+  assert.deepEqual(await handler({}, appInput), unavailable);
+  assert.deepEqual(await handler(owned, { ...appInput, path: "unexpected" }), invalid);
+  assert.deepEqual(await handler(owned, { ...appInput, hostIncarnationId }), invalid);
+  assert.deepEqual(await handler(owned, { ...appInput, operation: "data.prepare-local-file" }), invalid);
   assert.equal(admitted, 0);
-  assert.deepEqual(await handler(owned, raw), { ok: true, value: exact });
+  assert.deepEqual(await handler(owned, appInput), { ok: true, value: exact });
   observed = { ...exact, fileId: normalizeIngestionTaskFileId("file.other") };
-  assert.deepEqual(await handler(owned, raw), unavailable);
+  assert.deepEqual(await handler(owned, appInput), unavailable);
   observed = exact;
   retireRegistrationDuringHandoff = true;
-  assert.deepEqual(await handler(owned, raw), unavailable);
+  assert.deepEqual(await handler(owned, appInput), unavailable);
   assert.equal(current, true);
   retireRegistrationDuringHandoff = false;
   registrationCurrent = true;
   retire = true;
-  assert.deepEqual(await handler(owned, raw), unavailable);
+  assert.deepEqual(await handler(owned, appInput), unavailable);
   assert.equal(admitted, 4);
+});
+
+test("preload uses one selection channel and withholds unexpected receipt fields or failures", async () => {
+  let reply: unknown = { ok: true, value: exact };
+  const api = createDesktopPreloadApi({ ipcRenderer: {
+    async invoke(channel, ...inputs) {
+      assert.equal(channel, DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL);
+      assert.deepEqual(inputs, [appInput]);
+      return reply;
+    },
+  } });
+  assert.deepEqual(await api.selectHeadlessLocalFile(appInput), exact);
+  reply = { ok: true, value: { ...exact, fileId: "file.other" } };
+  assert.equal(await api.selectHeadlessLocalFile(appInput), undefined);
+  reply = { ok: true, value: { ...exact, path: "unrequested" } };
+  assert.equal(await api.selectHeadlessLocalFile(appInput), undefined);
+  reply = { ok: true, value: exact, path: "unrequested" };
+  assert.equal(await api.selectHeadlessLocalFile(appInput), undefined);
+  reply = unavailable;
+  assert.equal(await api.selectHeadlessLocalFile(appInput), undefined);
 });

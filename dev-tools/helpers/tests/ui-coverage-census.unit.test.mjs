@@ -1105,6 +1105,29 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "1370552e5f8e8955a50777fd67b91332954e69de8649b9f8c36aa48bbe8972dc") {
+    const previous = JSON.parse(historicalSource("87c2ca4890864e1ebc8225a84913d68d6630d9f0", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "f2242386ade1358e857b17cbb3b9ad19b8c6f54fcf9574b27b18248a662efb4d");
+    const expected = structuredClone(previous);
+    const revisedSources = [
+      ["dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts","93092fae455ce459a99a97b18957d110ab062b5109a4ca3c827f624f2bf7750b","5a150eb03cdfe8dc1b0dd17965cbbd1910fbcd0bb89576766aefe81de5bef116","6fc3efc2bfd5b8d8b9f2a0f513b28c676e2aa5e777619c122911b3006576e768"],
+      ["modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx","77f66d4014e8f50732b79bf5183f60a6994b0d89d90306028225c80f89c622e8","c3919d61d596c938864c86bc266fe361816570b4eb46093e32fd261914c52d8a","ca0d3a314bc2369e35049f0da07659d4e54b30ba36ca34867803c3e4bd6f8f1c"],
+    ];
+    for (const [path, priorHash, sourceHash, factsHash] of revisedSources) {
+      const original = expected.sources.filter(row => row.path === path);
+      const revised = map.sources.find(row => row.path === path);
+      assert.equal(original.length, 1);
+      assert.equal(original[0].facts.sha256, priorHash);
+      assert.equal(revised.facts.sha256, sourceHash);
+      assert.equal(sha(JSON.stringify(revised.facts)), factsHash);
+      original[0].facts = revised.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
   if (sha(JSON.stringify(map)) === "f2242386ade1358e857b17cbb3b9ad19b8c6f54fcf9574b27b18248a662efb4d") {
     const previous = JSON.parse(historicalSource("06e7ba6e321b97a5a3d0005e8dbfed96eff4cd6c", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "54106981c207e4084f0efee420f81ab84aaf1168b73140a9099b48e41c0e2b91");

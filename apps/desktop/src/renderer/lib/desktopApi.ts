@@ -594,6 +594,8 @@ export interface DesktopPythonRuntimeApi {
 interface DesktopApiBridge {
   readRecentHeadlessChatTasks?: (workspaceId: string) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-chat-tasks").DesktopHeadlessChatTasks>;
   readHeadlessPairingStatus?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingStatus>;
+  selectHeadlessLocalFile?: (input: import("../../../../../modules/contracts/headless").DesktopLocalFileSelectionInput) =>
+    Promise<import("../../../../../modules/contracts/headless").AppHeadlessLocalFileSelectionValue | undefined>;
   listHeadlessPlanApprovals?: (workspaceId: string) => Promise<readonly import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalListEntry[] | undefined>;
   openHeadlessPlanApproval?: (selection: import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalSelection) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalView | undefined>;
   decideHeadlessPlanApproval?: (decision: import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalDecision) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalView["state"] | undefined>;

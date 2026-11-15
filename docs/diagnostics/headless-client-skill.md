@@ -93,6 +93,15 @@ client build, approved test workspace, synthetic request, tool and resource
 limits, user decision surface, and saved-result checks before running it.
 Record that result for the tested configuration.
 
+### Preview a local file on Desktop
+
+In the workspace's Add Data page, choose a local file and select your paired
+plan-review client. Choose **Prepare for chat**, then **Copy file reference**.
+Give that reference to your chosen client. It can preview the file type, size
+and planned save action using `aisb_preview_selected_local_file`. The preview
+leaves the file staged. Choose **Cancel** to discard the staged transfer, or
+use the usual **Add data** action for a direct import.
+
 For the opt-in frontier client check, start the isolated managed reference
 database and run `managed-headless-browser-plan-approval.ts` with
 `AISB_QUALIFY_FRONTIER_PLAN=1`. Use only the generated synthetic workspace.
