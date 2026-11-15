@@ -2,8 +2,8 @@
 
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
-- Status: `ready`
-- Updated: `2026-11-15T08:36:52Z`
+- Status: `executing`
+- Updated: `2026-11-15T08:37:21Z`
 
 ## Objective
 
@@ -138,7 +138,7 @@ The user selected both approval modes, available in chat and in the app. The hos
 | 2: Accept and revoke automation control of one desktop window | Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue. | headless-authoring-and-synchronization | `implemented-pending-qualification` |
 | 3: Deliver the same workflow through the authenticated server and browser | Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay. | revocable-desktop-presentation | `implemented-pending-qualification` |
 | 4: Turn a written request into a build plan | Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions. | server-browser-and-delivery-qualification | `completed` |
-| 5: Acquire source material and build training datasets | Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context. | plan-from-written-request | `pending` |
+| 5: Acquire source material and build training datasets | Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context. | plan-from-written-request | `implementing` |
 | 6: Build and test RAG databases and context packs | Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results. | data-acquisition-and-datasets | `pending` |
 | 7: Manage models, fine-tune and generate outputs | Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits. | rag-and-context | `pending` |
 | 8: Select, plan and create reusable assets | Let the agent inspect the Catalog and User Library, select compatible exact assets, and create custom assets when the system needs a new component. | models-training-and-generation | `pending` |
@@ -349,7 +349,7 @@ Disable new capability discovery and plan execution, end presentation leases, an
 ## Increment 5: Acquire source material and build training datasets
 
 - Id: `data-acquisition-and-datasets`
-- Status: `pending`
+- Status: `implementing`
 - Dependencies: `plan-from-written-request`
 
 Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context.

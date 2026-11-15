@@ -431,7 +431,7 @@
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "data-acquisition-and-datasets",
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -1712,6 +1712,24 @@
       "recordedAt": "2026-11-15T08:36:52Z",
       "sequence": 87,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "f265ddd24c88430112fcd8cdc6ed3f7055f8db2518274109206a28bc70986f8d",
+      "recordedAt": "2026-11-15T08:37:21Z",
+      "sequence": 88,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "210ee14559b418f2c2f6ab2116600b0c7ee5a65d752816de9a4bc1e785bc3ac5",
+      "recordedAt": "2026-11-15T08:37:21Z",
+      "sequence": 89,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "c134fbce06d71aa19c9539f310062727eeaefb13af85752bc8f0e28627a8e306",
+      "recordedAt": "2026-11-15T08:37:21Z",
+      "sequence": 90,
+      "type": "increment-plan-recorded"
     }
   ],
   "increments": [
@@ -2578,11 +2596,104 @@
       "id": "data-acquisition-and-datasets",
       "number": 5,
       "objective": "Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context.",
-      "plan": null,
-      "research": [],
+      "plan": {
+        "assumptions": [
+          "The app owns user file/provider selection, ordinary credentials and current scope.",
+          "Existing dataset pipeline remains the application owner. Unsupported host/runtime paths report the requirement and stay unavailable before effects.",
+          "Controlled exercise uses isolated synthetic inputs. Real private provider transfers require separately authorized credentials, exact source and destination."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "source-admission",
+              "security-data-boundaries",
+              "real-data-handoff"
+            ],
+            "id": "acquire-data",
+            "outcome": "A compatible client uses an exact app-selected file or approved provider revision. It reports input limits, availability, task status and the saved source without exposing private paths or credentials.",
+            "title": "Find and import approved source data"
+          },
+          {
+            "criteriaIds": [
+              "dataset-quality",
+              "security-data-boundaries",
+              "real-data-handoff"
+            ],
+            "id": "prepare-review-data",
+            "outcome": "The client previews the current recipe and split, runs the approved task once, and verifies the immutable dataset version, quality results and lineage through the app.",
+            "title": "Prepare and validate a dataset"
+          },
+          {
+            "criteriaIds": [
+              "real-data-handoff",
+              "security-data-boundaries"
+            ],
+            "id": "reveal-data",
+            "outcome": "The app shows the exact authorized source, version, review or task. Revoking the presentation lease stops new window effects while retaining the saved results.",
+            "title": "Review Data work in the app"
+          }
+        ],
+        "completionTests": [
+          "Use official stdio MCP with isolated packaged Windows and authenticated managed Chrome. Import sanctioned synthetic material, prepare and inspect a dataset version, then reveal its saved task or version with explicit takeover.",
+          "Run focused contracts, application, hosts, managed auth and notification checks plus architecture and documentation. Preserve any source/runtime/provider profile limits in the report."
+        ],
+        "documentation": [
+          "Data Management architecture and context pack",
+          "Headless system builder threat model and capability tables",
+          "Portable client setup, generated tool schemas and Data workflow reference"
+        ],
+        "fingerprint": "433bced576473677e58ab4c993deffb0c65ebb66dbf16b6099782981f74b2314",
+        "focusedTests": [
+          "Authorized workspace and admitted source, strict local/provider references, bytes/deadline/format limits, no effects on denial or changed permission.",
+          "Exact task reconciliation, no duplicate output, immutable lineage and stable splits for synthetic data, unavailable OCR or runtime, cancellation and result uncertainty.",
+          "Scoped Data presentation without content spill, separate business authority, stale and revoked leases denied."
+        ],
+        "recordedAt": "2026-11-15T08:37:21Z",
+        "rollback": "Retire the new Data routes and presentation commands while retaining ordinary app Data, owned in-flight task rules, saved artifacts, immutable versions and receipts.",
+        "steps": [
+          "Add bounded Data discovery, exact source admission and acquisition task handling to the supported headless connections.",
+          "Prepare and inspect datasets through the existing Data use cases. Preserve review gates and immutable source, recipe, split and quality lineage.",
+          "Open an exact saved source, dataset version or task in Data under a current presentation lease. Validate local Windows and managed-browser journeys."
+        ],
+        "summary": "Route scoped acquisition, dataset preparation and Data handoff through the existing app owners. Keep file and provider selection with the user and the app. Use server-side task and version IDs for ordered execution, status, results and resume."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-15T08:37:21Z",
+          "risks": [
+            "A path, arbitrary provider reference or unbounded upload in a delegated call could copy unintended data. Accept only exact app-selected or saved source references with current workspace and organization access and fixed ready formats.",
+            "Reusing a broad app command would expose unsupported actions and outputs. Give each delegated action a strict finite schema, current identity and a bounded, sanitized output projection.",
+            "Local/provider intake and long-running dataset steps may complete after the connection closes. Use existing task identity and checkpointing, status and cancel; require reconciled committed identity before claiming a successful retry.",
+            "Window permission must only affect presentation and must not open data, bypass review or change task ownership."
+          ],
+          "sources": [
+            {
+              "title": "Data Management architecture",
+              "url": "docs/architecture/data-management.md"
+            },
+            {
+              "title": "Headless threat model and authority composition",
+              "url": "docs/security/headless-system-builder-threat-model.md"
+            },
+            {
+              "title": "Governed task use cases",
+              "url": "modules/application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case.ts"
+            },
+            {
+              "title": "Dataset version contracts",
+              "url": "modules/contracts/dataset/dataset-version.ts"
+            },
+            {
+              "title": "Dataset preparation application owner",
+              "url": "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts"
+            }
+          ],
+          "summary": "Both hosts use the same bounded acquisition command and artifact-first dataset application use case. Existing Data surfaces own selected files, exact provider revisions, credentials, preparation settings, and review. Headless work should refer to app-owned resources and reuse their work and task controls."
+        }
+      ],
       "rollback": "Disable new import and dataset tool routes. Preserve source artifacts, lineage, receipts and completed datasets.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-11-15T08:37:21Z",
+      "status": "implementing",
       "title": "Acquire source material and build training datasets",
       "verification": [
         "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
@@ -2960,6 +3071,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "ready",
-  "updatedAt": "2026-11-15T08:36:52Z"
+  "status": "executing",
+  "updatedAt": "2026-11-15T08:37:21Z"
 }
