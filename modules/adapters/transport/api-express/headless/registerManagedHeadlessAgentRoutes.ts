@@ -10,6 +10,8 @@ import {
   readHeadlessPlanStepRequest, readHeadlessPlanStepResult, type HeadlessPlanStepRequest, type HeadlessPlanStepResult,
   readHeadlessLocalFileImportRequest, readHeadlessLocalFileImportResult,
   type HeadlessLocalFileImportRequest, type HeadlessLocalFileImportResult,
+  readHeadlessProviderFileImportRequest, readHeadlessProviderFileImportResult,
+  type HeadlessProviderFileImportRequest, type HeadlessProviderFileImportResult,
 } from "../../../../contracts/headless";
 import { isManagedWindowOperation, MANAGED_HEADLESS_AGENT_SESSION_HEADER,
   readManagedWindowResult } from "../../../../contracts/headless/managed-headless-window";
@@ -53,6 +55,10 @@ export type ManagedAgentRouteHandlers<Agent> = {
     readonly result: HeadlessLocalFileImportResult;
     readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
   }>;
+  readonly providerFilePreview?: (input: HeadlessProviderFileImportRequest, agent: Agent, current: () => boolean) => Promise<{
+    readonly result: HeadlessProviderFileImportResult;
+    readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
+  }>;
   readonly window?: {
     readonly deliveryEnabled?: boolean;
     readonly execute: (input: HeadlessWindowRequest, agent: Agent, session: string, current: () => boolean) => Promise<HeadlessWindowResult>;
@@ -81,6 +87,7 @@ export function registerManagedHeadlessAgentRoutes<Agent extends object>(
       if (kind === "plan-review" && !handlers.planReview) return failure(response, 404, "headless.unavailable");
       if (kind === "plan-step" && !handlers.planStep) return failure(response, 404, "headless.unavailable");
       if (kind === "local-file-preview" && !handlers.localFilePreview) return failure(response, 404, "headless.unavailable");
+      if (kind === "provider-file-preview" && !handlers.providerFilePreview) return failure(response, 404, "headless.unavailable");
       const agent = handlers.identify({
         auth: getExpressAuthContext(request), organization: getExpressOrganizationContext(request),
         organizationHeader: request.headers["x-organization-id"],
@@ -152,17 +159,26 @@ async function respond<Agent>(
     if (!sent) return failure(response, 403, "headless.forbidden");
     return;
   }
-  if (kind === "local-file-preview") {
-    const input = readHeadlessLocalFileImportRequest(value, handlers.hostIncarnationId);
+  if (kind === "local-file-preview" || kind === "provider-file-preview") {
+    const input = kind === "provider-file-preview"
+      ? readHeadlessProviderFileImportRequest(value, handlers.hostIncarnationId)
+      : readHeadlessLocalFileImportRequest(value, handlers.hostIncarnationId);
     if (!input.ok) return failure(response, requestErrorStatus(input.code), input.code);
-    if (!handlers.localFilePreview) return failure(response, 404, "headless.unavailable");
-    const outcome = await handlers.localFilePreview(input.request, agent, current);
+    const outcome = input.request.operation === "data.prepare-provider-file"
+      ? await handlers.providerFilePreview?.(input.request, agent, current)
+      : await handlers.localFilePreview?.(input.request, agent, current);
+    if (!outcome) return failure(response, 404, "headless.unavailable");
     if (!current()) return failure(response, 403, "headless.forbidden");
-    const result = readHeadlessLocalFileImportResult(outcome.result, input.request.input);
+    const result = input.request.operation === "data.prepare-provider-file"
+      ? readHeadlessProviderFileImportResult(outcome.result, input.request.input)
+      : readHeadlessLocalFileImportResult(outcome.result, input.request.input);
     if (!result.ok && result.code !== "headless.stale" && result.code !== "headless.source-not-ready")
       return failure(response, requestErrorStatus(result.code), result.code);
     const sent = await outcome.publishIfCurrent?.(() => {
-      if (!current() || response.headersSent || (result.ok && Date.now() >= result.value.checkpointExpiresAt)) return false;
+      const expiresAt = result.ok
+        ? ("selectionExpiresAt" in result.value ? result.value.selectionExpiresAt : result.value.checkpointExpiresAt)
+        : undefined;
+      if (!current() || response.headersSent || (expiresAt !== undefined && Date.now() >= expiresAt)) return false;
       if (result.ok) send(response, result);
       else failure(response, 409, result.code);
       return response.headersSent;

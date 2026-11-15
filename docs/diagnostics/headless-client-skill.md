@@ -112,10 +112,11 @@ the old file reference. Cancel that staged upload before preparing it again.
 Ordinary uploads in the same workspace continue when the chat connection
 changes.
 
-### Preview a repository file on Desktop
+### Preview a repository file
 
-Open **Artifact Ingestion** and browse a Hugging Face dataset. Select one
-Parquet file, select the plan-review client and choose **Prepare for chat**.
+In Desktop or a configured Managed browser, open **Artifact Ingestion**
+and browse a Hugging Face dataset. Select one Parquet file, select the
+plan-review client and choose **Prepare for chat**.
 Copy the file reference to that client. The tool
 `aisb_preview_selected_provider_file` reads the file type and exact saved
 revision. It leaves the import waiting. For a direct import, choose

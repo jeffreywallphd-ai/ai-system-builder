@@ -464,7 +464,8 @@ export async function createServer(
         if (request.method === "POST" && (request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS.read ||
             request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS["plan-review"] ||
             request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS["plan-step"] ||
-            request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS["local-file-preview"])) return next();
+            request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS["local-file-preview"] ||
+            request.originalUrl === MANAGED_HEADLESS_AGENT_PATHS["provider-file-preview"])) return next();
         return response.status(403).json(createSecurityApiFailure({status:403, code:"security.forbidden",
           message:"This credential is limited to managed plan review."}));
       });
@@ -487,17 +488,20 @@ export async function createServer(
       const planReview = handlers?.planReview;
       const runPlanStep = planReview?.runStep;
       const previewSelectedFile = planReview?.previewSelectedFile;
+      const previewSelectedProviderFile = planReview?.previewSelectedProviderFile;
       const denied = {ok: false, code: "headless.forbidden"} as const;
       return clientPolicy && handlers ? {
         hostIncarnationId: handlers.hostIncarnationId,
         read: handlers.read,
         author: async (input, agent, current) => agent.purpose === "agent" ? handlers.author(input, agent, current) : denied,
         identify: (input, kind) => {
-          if (kind !== "plan-review" && kind !== "plan-step" && kind !== "local-file-preview") {
+          const planOnly = kind === "plan-review" || kind === "plan-step" ||
+            kind === "local-file-preview" || kind === "provider-file-preview";
+          if (!planOnly) {
             const author = clientPolicy.identify({...input, purpose: "agent"});
             if (author?.purpose === "agent") return author;
           }
-          if (planReview && (kind === "read" || kind === "plan-review" || kind === "plan-step" || kind === "local-file-preview")) {
+          if (planReview && (kind === "read" || planOnly)) {
             const planner = clientPolicy.identify({...input, purpose: "plan-review"});
             if (planner?.purpose === "plan-review") return planner;
           }
@@ -511,6 +515,8 @@ export async function createServer(
           agent.purpose === "plan-review" ? runPlanStep(input, agent, current) : { result: denied } } : {}),
         ...(previewSelectedFile ? { localFilePreview: async (input, agent, current) =>
           agent.purpose === "plan-review" ? previewSelectedFile(input, agent, current) : { result: denied } } : {}),
+        ...(previewSelectedProviderFile ? { providerFilePreview: async (input, agent, current) =>
+          agent.purpose === "plan-review" ? previewSelectedProviderFile(input, agent, current) : { result: denied } } : {}),
         ...(consent && browserPresentationKey ? {window: {
           deliveryEnabled: browserDeliveryEnabled,
           execute: async (input, agent, session, current) => agent.purpose === "agent"

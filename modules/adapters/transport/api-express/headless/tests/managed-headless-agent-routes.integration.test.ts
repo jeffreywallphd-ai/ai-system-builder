@@ -21,7 +21,7 @@ import { registerManagedHeadlessAgentRoutes, type ManagedAgentRouteHandlers } fr
 
 test("managed agent routes stay exact in the central deny-by-default API", () => {
   for (const [kind, path] of Object.entries(MANAGED_HEADLESS_AGENT_PATHS)) {
-    const scopes = kind === "local-file-preview" ? ["workspace:read", "artifact:read"] :
+    const scopes = kind === "local-file-preview" || kind === "provider-file-preview" ? ["workspace:read", "artifact:read"] :
       ["workspace:read", "asset:read", ...(kind === "plan-review" || kind === "plan-step" ? ["asset:write"] : [])];
     assert.deepEqual(resolveApiRoutePolicy("POST", path), {public: false, scopes});
     for (const method of ["GET", "HEAD", "DELETE", "PATCH"])
@@ -42,6 +42,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let calls = 0;
   let sends = 0;
   let previewCalls = 0;
+  let providerCalls = 0;
   let previewState: "selected" | "stale" | "expired" | "malformed" = "selected";
   let previewFence = true;
   let previewCurrent = true;
@@ -61,7 +62,8 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   const retire = registerManagedHeadlessAgentRoutes(app, (): ManagedAgentRouteHandlers<typeof planIdentity> => ({
     hostIncarnationId,
     allowLocalFileSave:supportsLocalSave,
-    identify: (request, kind) => (kind === "plan-review" || kind === "plan-step" || kind === "local-file-preview") &&
+    identify: (request, kind) => (kind === "plan-review" || kind === "plan-step" ||
+      kind === "local-file-preview" || kind === "provider-file-preview") &&
       request.organizationHeader === organizationId &&
       request.auth?.oidcAccessTokenClientId === "fixture-plan" ? planIdentity : undefined,
     isCurrent: identity => identity === planIdentity && current,
@@ -96,6 +98,21 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       return {
         result:previewState === "stale" ? {ok:false, code:"headless.stale"} :
           {ok:true, value:previewState === "malformed" ? {...value, localPath:"private-synthetic.csv"} : value},
+        async publishIfCurrent(send) {
+          if (!previewCurrent) current = false;
+          return previewFence && send();
+        },
+      };
+    }, async providerFilePreview({input}) {
+      providerCalls++;
+      const {workspaceId, taskId, fileId, taskRevision} = input;
+      const value = {workspaceId, taskId, fileId, taskRevision, provider:"huggingface" as const,
+        providerRevision:"b".repeat(40), mediaType:"application/vnd.apache.parquet" as const,
+        selectionExpiresAt:previewState === "expired" ? Date.now() - 1 : expiresAt,
+        approvalRequired:true as const, externalProviderCalls:0 as const};
+      return {
+        result:previewState === "stale" ? {ok:false, code:"headless.stale"} :
+          {ok:true, value:previewState === "malformed" ? {...value, path:"synthetic/private.parquet"} : value},
         async publishIfCurrent(send) {
           if (!previewCurrent) current = false;
           return previewFence && send();
@@ -167,6 +184,34 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     previewCurrent = false;
     assert.deepEqual(await readFile(), denied);
     current = true;
+    previewCurrent = true;
+    const providerPath = MANAGED_HEADLESS_AGENT_PATHS["provider-file-preview"];
+    const provider = {...preview, operation:"data.prepare-provider-file"};
+    const readProvider = (body:object = provider, token = "fixture-plan", org = organizationId) =>
+      request(body, token, providerPath, org);
+    for (const token of ["fixture-agent", "fixture-browser"])
+      assert.equal((await readProvider(provider, token)).status, 403);
+    assert.equal((await readProvider(provider, "fixture-plan", createOrganizationId("other-fixture"))).status, 403);
+    assert.equal((await readProvider(preview)).status, 400);
+    assert.equal((await readFile(provider)).status, 400);
+    assert.equal((await readProvider({...provider, input:{...provider.input, path:"synthetic/private.parquet"}})).status, 400);
+    assert.equal(providerCalls, 0);
+    assert.deepEqual(await readProvider(), {status:200, cache:"no-store", body:{ok:true,
+      value:{...file, provider:"huggingface", providerRevision:"b".repeat(40), mediaType:"application/vnd.apache.parquet",
+        selectionExpiresAt:expiresAt, approvalRequired:true, externalProviderCalls:0}}});
+    previewState = "stale";
+    assert.deepEqual(await readProvider(), {status:409, cache:"no-store", body:{ok:false, code:"headless.stale"}});
+    previewFence = false;
+    assert.deepEqual(await readProvider(), denied);
+    previewFence = true;
+    previewState = "expired";
+    assert.deepEqual(await readProvider(), denied);
+    previewState = "malformed";
+    assert.deepEqual(await readProvider(), {status:503, cache:"no-store", body:{ok:false, code:"headless.unavailable"}});
+    previewState = "selected";
+    previewCurrent = false;
+    assert.deepEqual(await readProvider(), denied);
+    previewCurrent = current = true;
     const stepPath = MANAGED_HEADLESS_AGENT_PATHS["plan-step"];
     const step = {version:HEADLESS_CONTRACT_VERSION, operation:"plan.run-step", input:{...scope, fingerprint, approvalRevision:2, step:1}};
     assert.equal((await request(step, "fixture-agent", stepPath)).status, 403);

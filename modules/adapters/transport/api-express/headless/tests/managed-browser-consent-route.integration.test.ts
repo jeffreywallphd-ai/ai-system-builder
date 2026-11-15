@@ -118,9 +118,9 @@ test("exact browser origin, purposeful authentication, framing and live request 
           } : undefined,
         };
       }
-      if (input.operation === "list-file-clients" || input.operation === "select-file") {
+      if (input.operation === "list-file-clients" || input.operation === "select-file" || input.operation === "select-provider-file") {
         fileSelectionCalls++;
-        if (document.proof !== proof || (input.operation === "select-file" &&
+        if (document.proof !== proof || (input.operation !== "list-file-clients" &&
           input.file.registeredClientId !== file.registeredClientId)) return;
         return {
           value:input.operation === "list-file-clients" ? [file.registeredClientId] : fileReceipt,
@@ -207,19 +207,25 @@ test("exact browser origin, purposeful authentication, framing and live request 
     assert.deepEqual(approvalChannels, ["app-popup", "authenticated-chat"]);
     const listFileClients = {operation:"list-file-clients", document:target};
     const selectFile = {operation:"select-file", document:target, file};
+    const selectProviderFile = {...selectFile, operation:"select-provider-file"};
     assert.equal((await chatPost(listFileClients)).status, 403);
     assert.equal((await chatPost(selectFile)).status, 403);
+    assert.equal((await chatPost(selectProviderFile)).status, 403);
     assert.equal((await planPost(selectFile, {})).status, 403);
     assert.equal((await planPost(selectFile, {...proofHeader, origin:"https://other.invalid"})).status, 403);
     assert.equal((await planPost({...selectFile, file:{...file, hostIncarnationId:target.hostIncarnationId}})).status, 400);
     assert.equal((await planPost({...selectFile, file:{...file, workspaceId:"other-workspace"}})).status, 400);
     assert.equal((await planPost({...selectFile, file:{...file, path:"synthetic.csv"}})).status, 400);
+    assert.equal((await planPost({...selectProviderFile, file:{...file, path:"synthetic/private.parquet"}})).status, 400);
+    assert.equal((await planPost(selectProviderFile, {})).status, 403);
     assert.equal(fileSelectionCalls, 0);
     assert.equal((await planPost({...selectFile, file:{...file, registeredClientId:randomUUID()}})).status, 403);
     assert.deepEqual(await (await planPost(listFileClients)).json(), [file.registeredClientId]);
     assert.deepEqual(await (await planPost(selectFile)).json(), fileReceipt);
+    assert.deepEqual(await (await planPost(selectProviderFile)).json(), fileReceipt);
     stableFileRead = false;
     assert.equal((await planPost(selectFile)).status, 403);
+    assert.equal((await planPost(selectProviderFile)).status, 403);
     stableFileRead = true;
     const openFilePlan = {operation:"open",document:target,selection:filePlanSelection};
     const decideFilePlan = {operation:"decide",document:target,decision:{selection:filePlanSelection,viewId:filePlanView.viewId,

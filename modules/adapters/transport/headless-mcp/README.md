@@ -92,7 +92,7 @@ returns bounded file metadata. Both hosts can save through an approved plan
 when local-file plan review is available. The app's **Add data** action
 continues to support direct imports.
 
-Desktop plan-review mode also offers `aisb_preview_selected_provider_file`.
+Desktop and Managed plan-review modes also offer `aisb_preview_selected_provider_file`.
 The user prepares one Parquet file from the app's Hugging Face browser and
 shares its copied reference. This tool reads the selected format and exact
 revision. The reply states that import requires approval and exposes no file contents,

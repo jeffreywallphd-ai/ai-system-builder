@@ -59,6 +59,7 @@ test("file preparation retains the browser scope and accepts only a current sele
     .mockResolvedValueOnce(response({...receipt, path:"synthetic.csv"}))
     .mockResolvedValueOnce(response({...receipt, selectionRevision:2}))
     .mockResolvedValueOnce(response(receipt))
+    .mockResolvedValueOnce(response(receipt))
     .mockImplementationOnce(async () => {
       retired.abort();
       return response(receipt);
@@ -70,14 +71,17 @@ test("file preparation retains the browser scope and accepts only a current sele
   expect(await client.selectPlanLocalFile(tab,file,signal)).toBeUndefined();
   expect(await client.selectPlanLocalFile(tab,file,signal)).toBeUndefined();
   expect(await client.selectPlanLocalFile(tab,file,signal)).toEqual(receipt);
-  expect(await client.selectPlanLocalFile(tab,file,retired.signal)).toBeUndefined();
-  expect(transport).toHaveBeenCalledTimes(6);
+  expect(await client.selectPlanProviderFile(tab,{...file, workspaceId:createWorkspaceId("workspace.foreign")},signal)).toBeUndefined();
+  expect(await client.selectPlanProviderFile(tab,file,signal)).toEqual(receipt);
+  expect(await client.selectPlanProviderFile(tab,file,retired.signal)).toBeUndefined();
+  expect(transport).toHaveBeenCalledTimes(7);
   for (const [path,options] of transport.mock.calls) {
     expect(path).toBe(MANAGED_BROWSER_PLAN_APPROVAL_PATH);
     expect(options!.headers).toMatchObject({"x-organization-id":"fixture-org",[MANAGED_BROWSER_DOCUMENT_HEADER]:tab.proof});
   }
   expect(JSON.parse(transport.mock.calls[0]![1]!.body as string)).toEqual({operation:"list-file-clients",document});
   expect(JSON.parse(transport.mock.calls[2]![1]!.body as string)).toEqual({operation:"select-file",document,file});
+  expect(JSON.parse(transport.mock.calls[5]![1]!.body as string)).toEqual({operation:"select-provider-file",document,file});
 });
 
 test("foreign or altered views and receipts that disagree with the displayed decision are refused", async () => {

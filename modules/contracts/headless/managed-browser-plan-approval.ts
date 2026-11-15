@@ -6,7 +6,7 @@ import {
 import { readHeadlessPlanReviewAgentResult } from "./headless-plan-review-wire";
 import { isUiControlId, readUiControlWindow, type UiControlWindowTarget } from "./ui-control-authority";
 import { isDesktopHeadlessClientId } from "./desktop-headless-pairing";
-import { readAppHeadlessLocalFileSelectionValue, readDesktopLocalFileSelectionRequest,
+import { readAppHeadlessLocalFileSelectionValue, readDesktopLocalFileSelectionRequest, readDesktopProviderFileSelectionRequest,
   type DesktopLocalFileSelectionInput } from "./headless-data-app-selection";
 
 export const MANAGED_BROWSER_PLAN_APPROVAL_PATH = "/api/headless/browser/plan-approvals";
@@ -19,6 +19,7 @@ export type ManagedBrowserPlanApprovalRequest =
   | { readonly operation: "decide"; readonly document: UiControlWindowTarget; readonly decision: DesktopPlanApprovalDecision }
   | { readonly operation: "list-file-clients"; readonly document: UiControlWindowTarget }
   | { readonly operation: "select-file"; readonly document: UiControlWindowTarget; readonly file: DesktopLocalFileSelectionInput }
+  | { readonly operation: "select-provider-file"; readonly document: UiControlWindowTarget; readonly file: DesktopLocalFileSelectionInput }
   | { readonly operation: "dismiss"; readonly document: UiControlWindowTarget; readonly viewId: string };
 
 export function readManagedBrowserPlanApprovalRequest(value: unknown): ManagedBrowserPlanApprovalRequest | undefined {
@@ -49,9 +50,11 @@ export function readManagedBrowserPlanApprovalRequest(value: unknown): ManagedBr
         if (isUiControlId(viewId)) return { operation, document, viewId };
         return;
       }
-      case "select-file": {
+      case "select-file":
+      case "select-provider-file": {
         const { file: selected } = readStrictPassiveRecord(fields, ["file"]);
-        const parsed = readDesktopLocalFileSelectionRequest(selected, document.hostIncarnationId);
+        const parsed = operation === "select-provider-file" ? readDesktopProviderFileSelectionRequest(selected, document.hostIncarnationId)
+          : readDesktopLocalFileSelectionRequest(selected, document.hostIncarnationId);
         if (!parsed.ok || parsed.request.input.workspaceId !== document.workspaceId) return;
         const { hostIncarnationId: _boundByDocument, ...file } = parsed.request.input;
         return { operation, document, file };
@@ -72,7 +75,8 @@ export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanA
       } catch { return; }
       return;
     }
-    case "select-file": return readAppHeadlessLocalFileSelectionValue(value, request.file);
+    case "select-file":
+    case "select-provider-file": return readAppHeadlessLocalFileSelectionValue(value, request.file);
     case "open": {
       const view = readDesktopPlanApprovalView(value, request.selection, { allowLocalFileSave: options?.allowLocalFileSave === true });
       return view?.preview.hostIncarnationId === request.document.hostIncarnationId ? view : undefined;

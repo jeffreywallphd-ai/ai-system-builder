@@ -12,6 +12,7 @@ import {
 import { HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId } from "./headless-read-request";
 
 export const HEADLESS_PROVIDER_FILE_PREVIEW_PATH = "/aisb-headless/v1/data/provider-file-preview";
+export const MANAGED_HEADLESS_PROVIDER_FILE_PREVIEW_PATH = "/api/headless/agent/data/provider-file-preview";
 
 type FileTarget = HeadlessLocalFileImportRequest["input"];
 

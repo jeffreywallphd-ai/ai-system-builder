@@ -639,3 +639,11 @@ reply exposes the opaque reference, format, revision and approval requirement.
 It never sends the repository name, provider path, credentials or contents.
 The preview makes no provider calls or writes. The provider import stays
 queued. Cancellation, replacement, expiry, and lost access prevent preview.
+
+Managed browser preparation uses its verified app document and the same
+workspace read and artifact read and write permissions. The authenticated
+chat approval channel cannot register a selected source. The separate
+provider preview route accepts only the issuer-verified plan registration
+for the tenant and workspace. The PostgreSQL owner checks current
+workspace access and the exact task and selection through reply release.
+The Managed reply has the same bounded fields as the Desktop reply.

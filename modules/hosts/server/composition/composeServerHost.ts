@@ -1693,7 +1693,7 @@ export function composeServerHost(
           ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: composeManagedHeadlessPlanReview({
             ...scoped, platform: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
             placement: options.managedHeadlessAgent.placement, systems: systemBuilder,
-            enableLocalFilePreview: Boolean(ingestionTasks && options.managedHeadlessAgent.browserObservationAuthorizer),
+            enableFilePreview: Boolean(ingestionTasks && options.managedHeadlessAgent.browserObservationAuthorizer),
             finalizeApprovedLocalFile: localFileSave,
           }) } : {}),
         };

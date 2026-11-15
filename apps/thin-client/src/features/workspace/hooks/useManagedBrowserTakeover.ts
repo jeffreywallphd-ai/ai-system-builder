@@ -130,6 +130,7 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
           return id === tab.target.workspaceId ? (await call(() => client.listPlanFileClients(tab, signal))) ?? [] : [];
         },
         select: file => call(() => client.selectPlanLocalFile(tab, file, signal)),
+        selectProvider: file => call(() => client.selectPlanProviderFile(tab, file, signal)),
       };
       const port = {client:getPort(false), chatClient:chatEnabled ? getPort(true) : undefined, fileClient};
       scope.planApprovals = port;

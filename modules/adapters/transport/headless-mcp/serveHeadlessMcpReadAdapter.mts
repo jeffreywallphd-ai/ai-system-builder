@@ -253,18 +253,16 @@ function addSystemBuilderTools(server: McpServer) {
         input.hostIncarnationId);
       return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
     });
-    if (!managed) {
-      server.registerTool("aisb_preview_selected_provider_file", {
-        description: "Preview the file type and immutable revision of one repository file selected for this Desktop plan-review client. Import requires approval.",
-        inputSchema: z.strictObject({ ...workspaceTarget, ...localFileTarget }),
-        annotations: queryHints,
-      }, (input, context) => {
-        if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-        const decoded = headless.readHeadlessProviderFileImportRequest({ version, operation: "data.prepare-provider-file", input },
-          input.hostIncarnationId);
-        return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
-      });
-    }
+    server.registerTool("aisb_preview_selected_provider_file", {
+      description: "Preview the file type and immutable revision of one repository file selected for this plan-review client. Import requires approval.",
+      inputSchema: z.strictObject({ ...workspaceTarget, ...localFileTarget }),
+      annotations: queryHints,
+    }, (input, context) => {
+      if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+      const decoded = headless.readHeadlessProviderFileImportRequest({ version, operation: "data.prepare-provider-file", input },
+        input.hostIncarnationId);
+      return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     const fingerprint = z.string().length(64).regex(/^[a-f0-9]{64}$/);
     const reviewTarget = { ...workspaceTarget, fingerprint };
     const submit = { ...reviewTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) };

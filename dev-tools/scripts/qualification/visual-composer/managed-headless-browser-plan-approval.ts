@@ -9,6 +9,10 @@ import {StdioClientTransport} from "@modelcontextprotocol/client/stdio";
 
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId,
   parseHeadlessBuildPlanProposal} from "../../../../modules/contracts/headless";
+import {
+  createApiHuggingFaceDatasetParquetFilesBrowseSuccessResponse,
+  createApiHuggingFaceNamespaceDatasetsBrowseSuccessResponse,
+} from "../../../../modules/contracts/api";
 import {copyBoundedPassiveData, normalizePassiveText, readStrictPassiveRecord} from "../../../../modules/contracts/shared";
 import {MANAGED_HEADLESS_AGENT_PATHS, MANAGED_SAVED_STATE_PATHS} from "../../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
 import {startManagedReferenceHost} from "./managed-reference-host";
@@ -207,7 +211,7 @@ async function main() {
     const toolList = await client.listTools();
     assert.deepEqual(toolList.tools.map(tool => tool.name).sort(), [
       "aisb_build_plan_approval_status", "aisb_host_describe", "aisb_list_templates", "aisb_plan_capabilities",
-      "aisb_preview_build_plan", "aisb_preview_selected_local_file", "aisb_read_system",
+      "aisb_preview_build_plan", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file", "aisb_read_system",
       "aisb_request_build_plan_approval", "aisb_run_approved_build_step",
     ]);
     async function call(name:string, input:Record<string, unknown> = {}) {
@@ -617,6 +621,62 @@ async function main() {
     await page.getByRole("tab",{name:"Artifact Browser",exact:true}).click();
     await expect(page.getByRole("button",{name:managedSaveName,exact:true})).toHaveCount(1);
     checks.managed_approved_source_is_available_in_data = true;
+
+    stage = "prepare-provider-file";
+    const providerNamespace = "synthetic-fixture";
+    const repository = providerNamespace + "/selected-dataset";
+    const sourcePath = "data/synthetic-selected.parquet";
+    const revision = "b".repeat(40);
+    const browseRoutes = [
+      { path:"/api/huggingface/namespace/datasets", verify:{namespace:providerNamespace},
+        payload:createApiHuggingFaceNamespaceDatasetsBrowseSuccessResponse({namespace:providerNamespace,
+          datasets:[{namespace:providerNamespace, repository}]}) },
+      { path:"/api/huggingface/dataset/parquet-files", verify:{repository},
+        payload:createApiHuggingFaceDatasetParquetFilesBrowseSuccessResponse({repository, revision,
+          files:[{repository, path:sourcePath, revision, sizeBytes:32}]}) },
+    ] as const;
+    for (const expected of browseRoutes) await page.route(serverOrigin + expected.path, async route => {
+      const request = route.request();
+      if (request.method() !== "POST") { await route.abort(); return; }
+      const payload = request.postDataJSON();
+      if (!Object.entries(expected.verify).every(([key,value]) => payload?.[key] === value)) {
+        await route.abort();
+        return;
+      }
+      await route.fulfill({json:expected.payload});
+    });
+    await page.getByRole("tab",{name:"Artifact Ingestion",exact:true}).click();
+    await workflow.getByRole("radio",{name:/Hugging Face dataset/}).check();
+    await workflow.getByPlaceholder("Hugging Face name",{exact:true}).fill(providerNamespace);
+    await workflow.getByRole("button",{name:"Find datasets",exact:true}).click();
+    stage = "select-provider-dataset";
+    await workflow.getByRole("checkbox",{name:repository,exact:true}).check();
+    await workflow.getByRole("button",{name:"View files from selected datasets",exact:true}).click();
+    stage = "select-provider-file";
+    await workflow.getByRole("checkbox",{name:sourcePath,exact:true}).check();
+    await expect(clients.locator("option")).toHaveCount(2);
+    await clients.selectOption({index:1});
+    stage = "stage-provider-file-in-managed-app";
+    await workflow.getByRole("button",{name:"Prepare for chat",exact:true}).click();
+    await expect(referenceField).toHaveValue(/^\{.+\}$/);
+    const providerFile = JSON.parse(await referenceField.inputValue());
+    assert.deepEqual(Object.keys(providerFile).sort(), ["fileId","taskId","taskRevision","workspaceId"]);
+    assert.equal(providerFile.workspaceId, workspaceId);
+    const providerTarget = {...scope,...providerFile};
+    stage = "preview-provider-file-from-managed-mcp";
+    const providerPreview = await call("aisb_preview_selected_provider_file",providerTarget);
+    assert.equal(providerPreview.ok,true);
+    const {selectionExpiresAt,...providerMetadata} = providerPreview.value;
+    assert.equal(Number.isSafeInteger(selectionExpiresAt) && selectionExpiresAt > Date.now(),true);
+    assert.deepEqual(providerMetadata,{...providerFile,provider:"huggingface",providerRevision:revision,
+      mediaType:"application/vnd.apache.parquet",approvalRequired:true,externalProviderCalls:0});
+    assert.equal((await call("aisb_preview_selected_local_file",providerTarget)).ok,false);
+    checks.managed_provider_file_prepared_and_exact_revision_previewed = true;
+    stage = "cancel-managed-provider-file";
+    await workflow.getByRole("button",{name:"Cancel",exact:true}).click();
+    await expect(referenceField).toHaveCount(0);
+    assert.equal((await call("aisb_preview_selected_provider_file",providerTarget)).ok,false);
+    checks.managed_provider_preview_retired_on_cancel = true;
     passed = true;
   } catch {
     // Report only fixed stages and check outcomes.

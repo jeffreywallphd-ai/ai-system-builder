@@ -7,6 +7,7 @@ import { MANAGED_HEADLESS_AGENT_WINDOW_PATH } from "../../../../contracts/headle
 import { MANAGED_HEADLESS_PLAN_REVIEW_PATH } from "../../../../contracts/headless/headless-plan-review-wire";
 import { MANAGED_HEADLESS_PLAN_STEP_PATH } from "../../../../contracts/headless/headless-plan-step-wire";
 import { MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH } from "../../../../contracts/headless/headless-data-local-file";
+import { MANAGED_HEADLESS_PROVIDER_FILE_PREVIEW_PATH } from "../../../../contracts/headless/headless-data-provider-file";
 import type { SecurityScope } from "../../../../contracts/security";
 
 export interface ApiRoutePolicy {
@@ -28,6 +29,7 @@ export const MANAGED_HEADLESS_AGENT_PATHS = {
   "plan-review": MANAGED_HEADLESS_PLAN_REVIEW_PATH,
   "plan-step": MANAGED_HEADLESS_PLAN_STEP_PATH,
   "local-file-preview": MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH,
+  "provider-file-preview": MANAGED_HEADLESS_PROVIDER_FILE_PREVIEW_PATH,
   window: MANAGED_HEADLESS_AGENT_WINDOW_PATH,
 } as const;
 export function isManagedSavedStatePath(method: string, path: string): boolean {
@@ -52,6 +54,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   [`POST ${MANAGED_HEADLESS_AGENT_PATHS["plan-review"]}`, { public: false, scopes: ["workspace:read", "asset:read", "asset:write"] }],
   [`POST ${MANAGED_HEADLESS_AGENT_PATHS["plan-step"]}`, { public: false, scopes: ["workspace:read", "asset:read", "asset:write"] }],
   [`POST ${MANAGED_HEADLESS_AGENT_PATHS["local-file-preview"]}`, { public: false, scopes: ["workspace:read", "artifact:read"] }],
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS["provider-file-preview"]}`, { public: false, scopes: ["workspace:read", "artifact:read"] }],
   [`POST ${MANAGED_HEADLESS_AGENT_PATHS.window}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_SAVED_STATE_PATHS.snapshot}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_SAVED_STATE_PATHS.changes}`, { public: false, scopes: ["workspace:read", "asset:read"] }],

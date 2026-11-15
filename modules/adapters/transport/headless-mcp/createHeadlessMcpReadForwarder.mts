@@ -130,6 +130,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   const planReviewAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PLAN_REVIEW_PATH, origin) : undefined;
   const planStepAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PLAN_STEP_PATH, origin) : undefined;
   const localFilePreviewAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH, origin) : undefined;
+  const providerFilePreviewAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PROVIDER_FILE_PREVIEW_PATH, origin) : undefined;
   const headers = {"x-organization-id": organizationId};
   const presentationSession = randomUUID();
   const presentationHeaders = {...headers, [managedWindow.MANAGED_HEADLESS_AGENT_SESSION_HEADER]: presentationSession};
@@ -137,10 +138,10 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   // Each fixed POST independently prevents proxying and redirect following.
   const agent = new Agent({rejectUnauthorized: true, keepAlive: false, maxSockets: MAX_ACTIVE});
   const guard = (input: ForwardRequest) => {
-    if (input.operation === "data.prepare-provider-file") return false;
+    if (input.operation === "data.prepare-provider-file" || input.operation === "data.prepare-local-file")
+      return enablePlanReview && input.input.workspaceId === workspaceId;
     if (isPlanReview(input)) return enablePlanReview && input.target.workspaceId === workspaceId;
     if (input.operation === "plan.run-step") return enablePlanReview && input.input.workspaceId === workspaceId;
-    if (input.operation === "data.prepare-local-file") return enablePlanReview && input.input.workspaceId === workspaceId;
     if (input.version === headless.UI_CONTROL_VERSION) {
       const target = "target" in input.input ? input.input.target : input.input;
       return !enablePlanReview && enableConsent && target.workspaceId === workspaceId &&
@@ -152,7 +153,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
         ((!enablePlanReview && isAuthoring(input)) || MANAGED_HEADLESS_READS.some(operation => operation === input.operation))));
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
-    planReviewAddress, planStepAddress, localFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
+    planReviewAddress, planStepAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
     allowLocalFileSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});

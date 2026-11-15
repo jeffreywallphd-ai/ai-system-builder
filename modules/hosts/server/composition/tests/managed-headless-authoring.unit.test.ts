@@ -7,6 +7,7 @@ import path from "node:path";
 import test from "node:test";
 import express from "express";
 
+import { createStructuredIngestionAcquisitionRepository } from "../../../../adapters/persistence/ingestion";
 import { createStructuredOrganizationRepositories } from "../../../../adapters/persistence/organization";
 import type { StructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../../../adapters/persistence/sqlite";
@@ -23,6 +24,7 @@ import type { AssetReference } from "../../../../contracts/asset";
 import { createTenantPlacementConfig } from "../../../../contracts/config";
 import { HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentRequest,
   type HeadlessHostIncarnationId } from "../../../../contracts/headless";
+import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../contracts/ingestion";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createOidcBearerConfig } from "../../../../contracts/security";
 import { MANAGED_BROWSER_DOCUMENT_HEADER, parseManagedBrowserRegistration } from "../../../../contracts/headless/managed-browser-consent";
@@ -284,6 +286,78 @@ test("managed edits and retry receipts require current workspace permission with
       assert.equal(latest.value.state.approvedSteps, 2);
       assert.equal(latest.value.state.status, "approved");
       assert.equal((await systems.useCases.list.execute({workspaceId})).length, 1);
+    });
+
+    await t.test("Managed provider preview rechecks its selected task and tenant access at publication", async () => {
+      const tasks = createStructuredIngestionAcquisitionRepository(documents);
+      const taskId = normalizeIngestionTaskId("ingestion.managed-provider-choice");
+      const fileId = normalizeIngestionTaskFileId("file.managed-provider-choice");
+      const createdAt = new Date().toISOString();
+      const providerRevision = "c".repeat(40);
+      const task = await tasks.createTask({schemaVersion:"1.0", organizationId, workspaceId, taskId, kind:"hugging-face",
+        status:"queued", revision:1, cleanupPending:false, createdAt, updatedAt:createdAt,
+        files:[{fileId, checkpointId:"checkpoint.fixture", fileName:"synthetic.parquet", mediaType:"application/vnd.apache.parquet",
+          status:"pending", totalBytes:0, acceptedBytes:0, nextChunkIndex:0, providerSource:{provider:"huggingface",
+            repository:"synthetic/private", path:"data/private.parquet", revision:providerRevision}}],
+        progress:{totalItems:1, completedItems:0, totalBytes:0, acceptedBytes:0, percent:0}});
+      const client = {...registration, purpose:"plan-review" as const, isCurrent:() => true};
+      const document = {hostIncarnationId, workspaceId, windowId:randomUUID(), uiIncarnationId:randomUUID()};
+      const target = {workspaceId,taskId,fileId,taskRevision:1};
+      const selection = {...target,registeredClientId:client.registeredClientId,expectedSelectionRevision:0};
+      const caller = {organizationId,principalId};
+      let hold: {entered:PromiseWithResolvers<void>; release:PromiseWithResolvers<void>} | undefined;
+      const stable: StructuredDocumentStore = {...platform, async publishWithStableReads(check,publish) {
+        hold?.entered.resolve();
+        await hold?.release.promise;
+        return platform.runInOwnedTransaction!(async owner => await check(owner) && publish(), () => {});
+      }};
+      const approval = composeManagedHeadlessPlanApprovals({hostIncarnationId, planClientId:client.registeredClientId,
+        platform:stable, rootDirectory:fixture, contexts, placement, localIngestion:{
+          async executeCommand(command, context) {
+            assert.deepEqual(command,{action:"read",taskId});
+            assert.deepEqual(context,{...caller,workspaceId});
+            return {ok:true,value:{kind:"task",task:(await tasks.readTask(workspaceId,taskId))!}};
+          },
+        }});
+      const review = composeManagedHeadlessPlanReview({hostIncarnationId, platform:stable, rootDirectory:fixture,
+        contexts, workspaces, authorization, placement, enableFilePreview:true});
+      assert.ok(review.previewSelectedProviderFile);
+      assert.ok(review.previewSelectedFile);
+      const query = {version:HEADLESS_CONTRACT_VERSION, operation:"data.prepare-provider-file", input:{hostIncarnationId,...target}} as const;
+      const input = {operation:"select-provider-file",document,file:selection} as const;
+      const admit = (command = input, channel?: "authenticated-chat") =>
+        approval(command,caller,() => true,() => true,channel);
+      assert.deepEqual((await review.previewSelectedProviderFile(query,client,() => true)).result,denied);
+      assert.deepEqual(await admit(input,"authenticated-chat"),{ok:false,code:"forbidden"});
+      assert.deepEqual(await admit({...input,file:{...selection,registeredClientId:randomUUID()}}),{ok:false,code:"forbidden"});
+      const prepared = await admit();
+      assert.ok(prepared.ok && "publishIfCurrent" in prepared && prepared.publishIfCurrent);
+      assert.deepEqual(prepared.value,{...target,selectionRevision:1});
+      assert.equal(await prepared.publishIfCurrent(() => true),true);
+      const pending = await review.previewSelectedProviderFile(query,client,() => true);
+      assert.ok(pending.result.ok && pending.publishIfCurrent);
+      assert.equal(pending.result.value.providerRevision,providerRevision);
+      assert.equal(pending.result.value.externalProviderCalls,0);
+      assert.deepEqual((await review.previewSelectedFile({...query,operation:"data.prepare-local-file"},client,() => true)).result,denied);
+      hold = {entered:Promise.withResolvers<void>(),release:Promise.withResolvers<void>()};
+      let sent = 0;
+      const publish = () => {sent++; return true;};
+      const response = pending.publishIfCurrent(publish);
+      await hold.entered.promise;
+      try {
+        await repositories.memberships.saveMembership({...membership,status:"removed"});
+        hold.release.resolve();
+        assert.equal(await response,false);
+        assert.equal(sent,0);
+      } finally {
+        hold.release.resolve();
+        hold = undefined;
+        await repositories.memberships.saveMembership(membership);
+      }
+      await tasks.saveTask({...task,status:"cancelled",revision:2,updatedAt:createdAt,completedAt:createdAt},1);
+      assert.equal(await pending.publishIfCurrent(publish),false);
+      assert.equal(await prepared.publishIfCurrent(publish),false);
+      assert.equal(sent,0);
     });
 
     await t.test("mixed-file approval views and committed decisions require permission at publication", async () => {

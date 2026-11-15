@@ -58,6 +58,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let delayedSemanticEffects = 0;
   let sourceArchived = false;
   let displacedCapabilities = false;
+  let displacedProviderReply = false;
   const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
     let body = "";
     request.on("data", (chunk: Buffer) => {body += chunk.toString();});
@@ -102,6 +103,15 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           workspaceId:displacedCapabilities ? "different-workspace" : workspaceId,
           actions:["systems.rename"], approval:"required",
         }});
+        response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "data.prepare-provider-file") {
+        const {hostIncarnationId:_host, ...selected} = input.input;
+        const value = {...selected, provider:"huggingface", providerRevision:"b".repeat(40), mediaType:"application/vnd.apache.parquet",
+          selectionExpiresAt:Date.now() + 60_000, approvalRequired:true, externalProviderCalls:0,
+          ...(displacedProviderReply ? {path:"synthetic/private.parquet"} : {})};
+        const payload = JSON.stringify({ok:true, value});
         response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
         return;
       }
@@ -248,6 +258,25 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       value:{workspaceId, actions:["systems.rename"], approval:"required"}});
     displacedCapabilities = true;
     assert.deepEqual(await capabilities(), {ok:false, code:"headless.unavailable"});
+    const planner = await connect({NODE_EXTRA_CA_CERTS:ca,AISB_HEADLESS_ENABLE_PLAN_REVIEW:"1"});
+    const tool = (await planner.listTools()).tools.find(entry => entry.name === desktopProviderPreviewTool);
+    assert.ok(tool);
+    const selected = {...planBase, taskId:normalizeIngestionTaskId("ingestion.managed-synthetic"),
+      fileId:normalizeIngestionTaskFileId("file.managed-synthetic"), taskRevision:3};
+    const readProvider = async (input = selected) =>
+      resultText(await planner.callTool({name:desktopProviderPreviewTool, arguments:input}));
+    const requested = requests.length;
+    assert.deepEqual(await readProvider({...selected,workspaceId:createWorkspaceId("foreign-workspace")}),
+      {ok:false,code:"headless.forbidden"});
+    assert.equal(requests.length,requested);
+    const outcome = await readProvider();
+    assert.equal(outcome.ok,true);
+    assert.equal(outcome.value.providerRevision,"b".repeat(40));
+    assert.equal(outcome.value.approvalRequired,true);
+    assert.deepEqual(requests.at(-1),{url:"/api/headless/agent/data/provider-file-preview",workspace:workspaceId,
+      organization:organizationId,authHeader:true});
+    displacedProviderReply = true;
+    assert.deepEqual(await readProvider(),{ok:false,code:"headless.unavailable"});
   } finally {
     await Promise.allSettled(clients.map(client => client.close()));
     listener.closeAllConnections();
@@ -547,7 +576,8 @@ test("the portable reference matches the exact credential-free SDK discovery cat
     { mode: "presentation", tools: [...expectedTools, ...presentationTools].sort() },
     { mode: "all", tools: [...expectedTools, ...authoringTools, conversation, ...presentationTools].sort() },
     { mode: "plan-review", tools: [...expectedTools, ...planReviewTools, desktopDataPreviewTool, desktopProviderPreviewTool].sort() },
-    { mode: "managed-plan-review", tools: ["aisb_host_describe", "aisb_list_templates", "aisb_read_system", ...planReviewTools, desktopDataPreviewTool].sort() },
+    { mode: "managed-plan-review", tools: ["aisb_host_describe", "aisb_list_templates", "aisb_read_system",
+      ...planReviewTools, desktopDataPreviewTool, desktopProviderPreviewTool].sort() },
   ]);
   const schemas = new Map(reference.tools.map(({ name, inputSchema }) => [name, inputSchema]));
   const assertExactObject = (name: string, required: string[], optional: string[] = []) => {

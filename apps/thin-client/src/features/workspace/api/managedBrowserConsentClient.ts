@@ -133,6 +133,11 @@ export function createManagedBrowserConsentClient(organizationId: string, fetch 
       const result = await approval({ operation:"select-file", document:tab.target, file }, tab, signal, false);
       if (!signal.aborted) return readAppHeadlessLocalFileSelectionValue(result, file);
     },
+    async selectPlanProviderFile(tab: Registration, file: DesktopLocalFileSelectionInput, signal: AbortSignal) {
+      if (file.workspaceId !== tab.target.workspaceId) return;
+      const result = await approval({ operation:"select-provider-file", document:tab.target, file }, tab, signal, false);
+      if (!signal.aborted) return readAppHeadlessLocalFileSelectionValue(result, file);
+    },
     async consent(operation: "accept" | "ready", tab: Registration, target: UiControlAttempt | UiControlLeaseTarget, signal: AbortSignal) {
       return readUiControlTimedGrant((await send({operation, document: tab.target, target}, {proof: tab.proof, signal})).body);
     },

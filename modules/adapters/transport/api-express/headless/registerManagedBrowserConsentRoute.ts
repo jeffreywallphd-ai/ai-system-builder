@@ -159,7 +159,7 @@ async function respondPlanApproval<Identity>(raw: unknown, request: Request, res
   handlers: ManagedBrowserConsentHandlers<Identity>, identity: Identity, current: Current, channel: ApprovalChannel) {
   const input = readManagedBrowserPlanApprovalRequest(raw);
   if (!input) return error(response, 400);
-  const fileSelection = input.operation === "list-file-clients" || input.operation === "select-file";
+  const fileSelection = input.operation === "list-file-clients" || input.operation === "select-file" || input.operation === "select-provider-file";
   if (fileSelection && channel !== "app-popup") return error(response, 403);
   const proof = request.headers[MANAGED_BROWSER_DOCUMENT_HEADER];
   if (!isManagedBrowserDocumentProof(proof) || input.document.hostIncarnationId !== handlers.hostIncarnationId)

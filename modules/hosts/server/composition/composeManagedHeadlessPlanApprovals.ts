@@ -1,6 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createStructuredOrganizationRepositories } from "../../../adapters/persistence/organization";
-import { createStructuredHeadlessLocalFileSelectionRepository, readStructuredHeadlessLocalFileSelection } from
+import {
+  createStructuredHeadlessLocalFileSelectionRepository, readStructuredHeadlessLocalFileSelection,
+  createStructuredHeadlessProviderFileSelectionRepository, readStructuredHeadlessProviderFileSelection,
+} from
   "../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import { createStructuredHeadlessPlanReviewRepository, listStructuredHeadlessPlanReviews } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
@@ -9,7 +12,10 @@ import type { OrganizationRequestContextProviderPort } from "../../../applicatio
 import type { HeadlessPlanReviewChannel, HeadlessPlanReviewTarget } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import { AuthorizeWorkspaceOperationService, createOrganizationAuthorizationPolicy } from "../../../application/services/security";
 import { HeadlessBuildPlanReviewUseCase } from "../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
-import { HeadlessLocalFileSelectionUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-local-file-selection.use-case";
+import type { HeadlessLocalFileSelection } from "../../../application/ports/ingestion/headless-local-file-selection.port";
+import {
+  HeadlessLocalFileSelectionUseCase, HeadlessProviderFileSelectionUseCase,
+} from "../../../application/use-cases/ingestion-acquisition/headless-local-file-selection.use-case";
 import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
 import type { TenantPlacementConfig } from "../../../contracts/config";
 import { HEADLESS_CONTRACT_VERSION, isDesktopHeadlessClientId, readHeadlessPlanReviewAgentResult,
@@ -108,12 +114,15 @@ export function composeManagedHeadlessPlanApprovals(options: {
         } catch {return false;}
       };
     }
-    if (request.operation === "list-file-clients" || request.operation === "select-file") {
+    if (request.operation === "list-file-clients" || request.operation === "select-file" || request.operation === "select-provider-file") {
       const ingestion = options.localIngestion;
       if (channel !== "app-popup" || !ingestion || !stableReads) return forbidden;
-      const isSelect = request.operation === "select-file";
+      const isSelect = request.operation !== "list-file-clients";
+      const provider = request.operation === "select-provider-file";
+      const operation = provider ? "headless.data.select-provider-file"
+        : isSelect ? "headless.data.select-local-file" : "headless.data.list-file-clients";
       const authorizeFile = (owner: StructuredDocumentStore) => authorize(owner, identity, workspaceId, current,
-        fileScopes, isSelect ? "headless.data.select-local-file" : "headless.data.list-file-clients");
+        fileScopes, operation);
       const requireCurrent = () => { if (!current()) throw new Error("The file selection document is unavailable."); };
       const stillAllowed = () => transaction(authorizeFile, requireCurrent).catch(() => false);
       if (!await stillAllowed() || !current()) return forbidden;
@@ -126,28 +135,37 @@ export function composeManagedHeadlessPlanApprovals(options: {
       if (registeredClientId !== planClientId || selectedFile.workspaceId !== workspaceId) return forbidden;
       const target = { hostIncarnationId, ...selectedFile };
       const selection = { organizationId, principalId, registeredClientId, target };
-      const selections = createStructuredHeadlessLocalFileSelectionRepository(platform.forOrganization(organizationId), now, {
-        platform, async allows(owner, item) {
+      const writePolicy = {
+        platform, async allows(owner: StructuredDocumentStore, item: HeadlessLocalFileSelection) {
           return item.organizationId === organizationId && item.principalId === principalId &&
             item.registeredClientId === planClientId && item.target.workspaceId === workspaceId &&
             item.target.hostIncarnationId === hostIncarnationId && item.target.taskId === target.taskId &&
             item.target.fileId === target.fileId && item.target.taskRevision === target.taskRevision && await authorizeFile(owner);
         },
-      });
-      const selected = await new HeadlessLocalFileSelectionUseCase(selections, new ReadHeadlessIngestionStatusUseCase(ingestion, now), now)
-        .recordSelectedFile({ version: HEADLESS_CONTRACT_VERSION, operation: "data.prepare-local-file", input: target },
+      };
+      const documents = platform.forOrganization(organizationId);
+      const status = new ReadHeadlessIngestionStatusUseCase(ingestion, now);
+      const files = provider
+        ? new HeadlessProviderFileSelectionUseCase(createStructuredHeadlessProviderFileSelectionRepository(documents, now, writePolicy), status, now)
+        : new HeadlessLocalFileSelectionUseCase(createStructuredHeadlessLocalFileSelectionRepository(documents, now, writePolicy), status, now);
+      const selected = await files
+        .recordSelectedFile({ version: HEADLESS_CONTRACT_VERSION,
+          operation: provider ? "data.prepare-provider-file" : "data.prepare-local-file", input: target },
           { context: baseScope, hostIncarnationId, registeredClientId, expectedSelectionRevision, isCurrent: current, stillAllowed });
       if (!selected.ok || !current()) return forbidden;
-      const { taskId, fileId, taskRevision, checkpointExpiresAt } = selected.value;
+      const { taskId, fileId, taskRevision } = selected.value;
+      const expiresAt = "selectionExpiresAt" in selected.value ? selected.value.selectionExpiresAt : selected.value.checkpointExpiresAt;
       const ready = () => {
         const time = now();
-        return current() && Number.isSafeInteger(time) && time > 0 && time < checkpointExpiresAt;
+        return current() && Number.isSafeInteger(time) && time > 0 && time < expiresAt;
       };
       return {
         ok: true, value: { workspaceId, taskId, fileId, taskRevision, selectionRevision: selected.selectionRevision }, canPublish: ready,
         publishIfCurrent: (publish: () => boolean) => stableReads(async owner => {
           if (!await authorizeFile(owner) || !ready()) return false;
-          const latest = await readStructuredHeadlessLocalFileSelection(owner.forOrganization(organizationId), selection, now);
+          const scope = owner.forOrganization(organizationId);
+          const latest = provider ? await readStructuredHeadlessProviderFileSelection(scope, selection, now)
+            : await readStructuredHeadlessLocalFileSelection(scope, selection, now);
           return latest?.ok === true && JSON.stringify(latest.value) === JSON.stringify(selected.value) && ready();
         }, () => ready() && publish()),
       } as const;
