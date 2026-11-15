@@ -28,6 +28,10 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         file_test = "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts"
         self.assertIn(file_test, self.plan([file_owner])[check]["argv"])
         self.assertNotIn("focused-tests", self.plan([file_owner, file_test], check))
+        selection_owner = "modules/adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository.ts"
+        selection_test = "modules/application/use-cases/ingestion-acquisition/tests/headless-local-file-selection.unit.test.ts"
+        self.assertIn(selection_test, self.plan([selection_owner])[check]["argv"])
+        self.assertNotIn("focused-tests", self.plan([selection_owner, selection_test], check))
         self.assertIn("focused-tests", self.plan([owner, "modules/contracts/headless/unrelated.ts"], check))
 
     def test_window_authority_check_covers_the_exact_core_and_keeps_neighbor_fallback(self):

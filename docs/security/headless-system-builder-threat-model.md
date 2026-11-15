@@ -560,3 +560,18 @@ checkpoint stays available to the ordinary app. Later withdrawals can
 leave partial publication recorded for safe recovery. A repeated approved
 request cannot claim that revision again. A result must identify an actual
 finalized file, and it returns only task, file, and revision IDs.
+
+Hosts must record a selection from a verified app action and use a
+separate agent entry for preview. An ordinary upload or knowledge of its
+task and file IDs grants no delegated preview. The organization store
+checks the exact app user, host, workspace, connection, file and recorded
+task version. A different user cannot replace the selection. The same
+user can explicitly choose a new connection with the current selection
+revision. An exact retry cannot overwrite a later selection. The write
+reads the exact upload again in its owned transaction. The same transaction
+checks caller liveness and the checkpoint deadline before commit. The
+last owned read checks the saved selection and staged file together. It
+follows the last awaited policy check and orders the preview after an
+earlier replacement or upload change. The application checks the grant
+and deadline again before returning. The host still needs an outward reply
+fence. The selection grants no save or provider transfer.

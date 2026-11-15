@@ -51,7 +51,10 @@ export class ReadHeadlessIngestionStatusUseCase {
         if (result.error.code === "forbidden" || result.error.code === "not-found") return forbidden;
         return unavailable;
       }
-      return result.value.kind === "task" ? project(result.value.task) : unavailable;
+      if (result.value.kind !== "task") return unavailable;
+      if (authority.context.organizationId !== undefined && result.value.task.organizationId !== authority.context.organizationId)
+        return forbidden;
+      return project(result.value.task);
     } catch {
       return unavailable;
     }

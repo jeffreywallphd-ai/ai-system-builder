@@ -668,6 +668,16 @@ unprefixed object mapping; server retains organization-prefixed bytes and curren
 HTTP task admission denials. Preparation queries exact workspace/key metadata and
 rejects a mismatched returned record before runtime admission.
 
+The application can record an explicit local-file selection for a paired
+agent. It checks the existing upload before recording the exact file and
+task version. One private selection belongs to each uploaded file. The
+record binds the current host, workspace, app user, and agent connection in
+the organization's store. Preview checks that selection and the current
+upload and returns a short description of the local save. File contents,
+names, and checkpoint identifiers stay in Data. The ordinary upload workflow
+continues to use the same task and publication owners. App and agent
+connections to the selection operation still need host wiring.
+
 These cooperative controls do not qualify native byte integrity after publication,
 hostile parent races, protected crash recovery or filesystem/metadata atomicity.
 Unknown candidates stay retained. Generic explicit-key/legacy data is never bound
