@@ -24,6 +24,29 @@
           "Managed browser import, provider sources, dataset review and exact app reveal still need evidence."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e56b4e31726a7bbcbbb5f7bf67738ea46bcddd7bcc9a394444eaee91b1413b7a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the Managed browser, the user prepared one CSV for the configured chat client.",
+          "The client read the file type and size.",
+          "Cancel removed access to the preview.",
+          "The usual Add data action saved one copy."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5b3b279780b2f6073e930bc7fb82f3eee269510cf99bd48f87bcd41f7c6ec29d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Saving through an approved Managed plan, importing provider sources, preparing datasets and opening them from chat still need evidence."
+        ]
+      }
     }
   ]
 }
