@@ -5,11 +5,17 @@
 The transport binds an OS-selected HTTPS port on 127.0.0.1 and generates a
 certificate for that listener only. The client verifies the exact SHA-256
 fingerprint supplied by the desktop before the request attaches to the TLS
-socket. It accepts only compact
-UTF-8 JSON over POST at two fixed routes: complete a one-use pairing, and
-dispatch a finite read. Reads require the existing client credential.
+socket. It accepts compact UTF-8 JSON over POST at fixed routes for one-use
+pairing, finite reads, and capabilities that the host has enabled. Requests
+after pairing require the scoped client credential.
 Requests with another Host, an Origin, or forwarding headers are denied.
 Do not use the connector through a browser, reverse proxy, or remote relay.
+
+The optional plan-review route accepts only plan submission and status reads.
+Its separate credential is scoped to one workspace. The status response shows
+the exact proposal fingerprint, current decision, expiry, and approved step
+count. The agent must use a verified human approval channel for any decision.
+Normal desktop composition keeps this route off until the app wires approval.
 
 The adapter limits connection count, header and body bytes, request admission
 and concurrent requests. Shutdown closes admission and sockets and waits for

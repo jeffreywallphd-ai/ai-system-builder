@@ -41,6 +41,7 @@ export {
   type DesktopHeadlessRevokeResult,
 } from "./desktop-headless-pairing";
 export * from "./headless-system-management";
+export * from "./headless-plan-review-wire";
 export * from "./desktop-system-change-poll";
 export { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } from "./headless-authoring-result";
 export * from "./headless-approved-turn";

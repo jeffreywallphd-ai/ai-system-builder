@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { request } from "node:https";
 import { connect } from "node:net";
+import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
-import { HEADLESS_APPROVED_TURN_OPERATION, HEADLESS_APPROVED_TURN_PATH, HEADLESS_CONTRACT_VERSION,
-  HEADLESS_WINDOW_CONTROL_PATH, UI_CONTROL_VERSION, isHeadlessHostIncarnationId } from "../../../../contracts/headless";
+import { HEADLESS_APPROVED_TURN_OPERATION, HEADLESS_APPROVED_TURN_PATH, HEADLESS_CONTRACT_VERSION, HEADLESS_PLAN_REVIEW_PATH,
+  HEADLESS_WINDOW_CONTROL_PATH, UI_CONTROL_VERSION, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
+  readHeadlessPlanReviewAgentResult, type DesktopHeadlessClientAccess } from "../../../../contracts/headless";
 import { createInMemoryStructuredDocumentStore } from "../../../persistence/shared";
+import { createStructuredHeadlessPlanReviewRepository } from "../../../persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
 import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../index";
 
@@ -56,6 +60,149 @@ function registrations() {
     canReadWorkspace: async (id) => id === workspaceId,
   });
 }
+
+test("the pinned desktop plan-review route admits stage and status only for a dedicated current grant", { timeout: 12_000 }, async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  const registry = createDesktopHeadlessClientAuthority({
+    documents: documents.forOrganization(organizationId), identity,
+    canReadWorkspace: async target => target === workspaceId,
+    canReviewPlans: async target => target === workspaceId,
+    canAuthorWorkspace: async target => target === workspaceId,
+  });
+  const proposals = createStructuredHeadlessPlanReviewRepository(documents, async (_owner, target) =>
+    target.scope.organizationId === organizationId && target.scope.principalId === identity.principalId &&
+    target.scope.workspaceId === workspaceId);
+  let retiredAgent: string | undefined;
+  let retireBeforeReply = false;
+  let malformedReply = false;
+  let expireBeforeReply = false;
+  let replyDeadline: number | undefined;
+  let retireBeforeDispatch = false;
+  let verifierPasses = 0;
+  let liveDuringDispatch = true;
+  let planCalls = 0;
+  let editCalls = 0;
+  const connector = await startDesktopHeadlessLoopback({
+    registrations: {
+      ...registry,
+      async verifyCredential(credential) {
+        const grant = await registry.verifyCredential(credential);
+        if (!grant?.planReview) return grant;
+        if (replyDeadline !== undefined) {
+          const remaining = replyDeadline - Date.now();
+          if (remaining >= 0) await delay(remaining + 1);
+        }
+        if (!retireBeforeDispatch) return grant;
+        const pass = ++verifierPasses;
+        return { ...grant, isCurrent() {
+          if (pass === 2) queueMicrotask(() => { liveDuringDispatch = false; });
+          return liveDuringDispatch && grant.isCurrent();
+        } };
+      },
+    },
+    async read() { return { ok: false, code: "headless.forbidden" }; },
+    authoring: { hostIncarnationId: incarnation, async execute() {
+      editCalls++;
+      return { ok: false, code: "headless.unavailable" };
+    } },
+    planReview: { hostIncarnationId: incarnation, async execute(request, grant, currentGrant) {
+      planCalls++;
+      assert.equal(grant.planReview, true);
+      assert.ok(await currentGrant());
+      const { hostIncarnationId, workspaceId, fingerprint } = request.target;
+      const query = { target: { hostIncarnationId, fingerprint, scope: {
+        workspaceId, organizationId: grant.organizationId, principalId: grant.principalId, registeredClientId: grant.registeredClientId,
+      } }, isCurrent: () => grant.isCurrent?.() === true };
+      const stored = request.operation === "plan.submit" ? await proposals.propose({ ...query, proposal: {
+        hostIncarnationId, workspaceId,
+        steps: request.proposal.preview.steps.map(({ operation, input }) => ({ operation, ...input })),
+      } }) : await proposals.read(query);
+      if (!stored.ok) return stored.code === "invalid" ? { ok: false, code: "headless.invalid-request" } :
+        { ok: false, code: "headless.forbidden" };
+      if (retireBeforeReply) {
+        assert.equal(retiredAgent, grant.registeredClientId);
+        assert.equal(await registry.revokeClient(grant.registeredClientId), true);
+      }
+      const { revision, stepCount, approvedSteps, status, expiresAt } = stored.snapshot.state;
+      if (expireBeforeReply) replyDeadline = Date.now() + (retireBeforeReply ? -1 : 25);
+      return { ok: true, value: { fingerprint, revision, stepCount, approvedSteps, status, expiresAt: replyDeadline ?? expiresAt,
+        ...(malformedReply ? { actor: "synthetic unexpected field" } : {}) } };
+    } },
+  });
+  try {
+    async function pair(mode: DesktopHeadlessClientAccess) {
+      const pending = await registry.beginPairing(workspaceId, () => true, mode);
+      assert.equal(pending.status, "ready");
+      const result = await post(connector, pairPath, JSON.stringify({ pairingCode: pending.pairingCode }));
+      assert.equal(result.status, 200);
+      assert.ok(result.json.value?.credential && result.json.value.registeredClientId);
+      return { registeredClientId: result.json.value.registeredClientId,
+        headers: { Authorization: "Bearer " + result.json.value.credential } };
+    }
+
+    const editor = await pair("author");
+    const planner = await pair("plan-review");
+    retiredAgent = planner.registeredClientId;
+    const scope = { hostIncarnationId: incarnation, workspaceId };
+    const { operation, ...fields } = {
+      operation: "systems.create", name: "Synthetic plan proposal",
+      templateId: "reference.secured-data-review@1.0.0",
+      idempotencyKey: "3a6112ce-ab8a-456f-876f-64730ff719df",
+    };
+    const steps = [{ operation, ...fields }];
+    const preview = parseHeadlessBuildPlanProposal({ ...scope, steps }, incarnation);
+    assert.ok(preview.ok);
+    const fingerprint = createHash("sha256").update(JSON.stringify(preview.preview), "utf8").digest("hex");
+    const version = HEADLESS_CONTRACT_VERSION;
+    const target = { ...scope, fingerprint };
+    const planCall = (operation: string, input: unknown, headers: Record<string, string> = planner.headers) =>
+      post(connector, HEADLESS_PLAN_REVIEW_PATH, JSON.stringify({ version, operation, input }), headers);
+    assert.equal((await planCall("plan.submit", { ...target, steps }, editor.headers)).status, 403);
+    assert.equal((await planCall("plan.status", target, {})).status, 403);
+    assert.equal((await planCall("plan.approve", target)).status, 400);
+    assert.equal((await planCall("plan.submit", { ...target, steps, decision: "approve" })).status, 400);
+    assert.equal((await planCall("plan.status", { ...target, workspaceId: "other-workspace" })).status, 403);
+    assert.equal((await planCall("plan.status", { ...target, hostIncarnationId: fields.idempotencyKey })).status, 409);
+    assert.equal((await planCall("plan.submit", { ...target, steps, extra: "x".repeat(34 * 1024) })).status, 413);
+    assert.equal((await post(connector, authorPath, JSON.stringify({ version, operation, input: { ...scope, ...fields } }),
+      planner.headers)).status, 403);
+    assert.equal(editCalls, 0);
+    assert.equal(planCalls, 0);
+
+    const submission = await planCall("plan.submit", { ...target, steps });
+    assert.equal(submission.status, 200);
+    const staged = readHeadlessPlanReviewAgentResult(submission.json, fingerprint);
+    assert.ok(staged.ok && staged.value.status === "pending" && staged.value.revision === 1 && staged.value.approvedSteps === 0);
+    assert.deepEqual((await planCall("plan.status", target)).json, submission.json);
+    assert.deepEqual((await planCall("plan.submit", { ...target, steps })).json, submission.json);
+    const callsBeforeDispatch = planCalls;
+    retireBeforeDispatch = true;
+    const retiredBeforeDispatch = await planCall("plan.status", target);
+    assert.equal(retiredBeforeDispatch.status, 403);
+    assert.equal(planCalls, callsBeforeDispatch);
+    assert.equal(liveDuringDispatch, false);
+    retireBeforeDispatch = false;
+    expireBeforeReply = true;
+    const expiredBeforeReply = await planCall("plan.status", target);
+    assert.equal(expiredBeforeReply.status, 410);
+    assert.deepEqual(expiredBeforeReply.json, { ok: false, code: "headless.plan-expired" });
+    expireBeforeReply = false;
+    replyDeadline = undefined;
+    malformedReply = true;
+    const malformed = await planCall("plan.status", target);
+    assert.equal(malformed.status, 503);
+    assert.deepEqual(malformed.json, { ok: false, code: "headless.unavailable" });
+    malformedReply = false;
+    expireBeforeReply = true;
+    retireBeforeReply = true;
+    const retired = await planCall("plan.status", target);
+    assert.equal(retired.status, 403);
+    assert.deepEqual(retired.json, { ok: false, code: "headless.forbidden" });
+    assert.equal((await documents.forOrganization(organizationId).listDocuments("headless/system-builder/plan-reviews")).length, 1);
+  } finally {
+    await connector.close();
+  }
+});
 
 test("presentation rollback fences pending pairing and window replies without ending existing reads", { timeout: 8_000 }, async () => {
   let presentationOpen = true;

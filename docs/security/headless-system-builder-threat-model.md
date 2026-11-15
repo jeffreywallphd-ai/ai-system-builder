@@ -150,6 +150,13 @@ registration can request plan review only when the host provides that
 capability. It carries no direct editing, conversation or window-control
 grant. The desktop host keeps the mode unavailable until it wires the plan
 route and its policy.
+The optional desktop connector route accepts only proposal submission and
+status reads with the dedicated grant. It rechecks the registered client and
+workspace before dispatch and checks both current authority and the plan
+deadline before sending a successful result. It bounds the body and validates
+the exact status result. Agent requests cannot carry a decision or use the
+existing edit routes with this grant. The desktop app must still wire the
+route to its own policy.
 The internal operation store partitions receipts by verified organization and
 hashes the complete principal, client, workspace, operation and key scope.
 Receipts hold a fingerprint and the minimum saved revision reference; change
