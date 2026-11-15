@@ -48,6 +48,7 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
   readonly canAuthorWorkspace?: (workspaceId: WorkspaceId) => Promise<boolean>;
   readonly canRunConversation?: (workspaceId: WorkspaceId) => Promise<boolean>;
   readonly canPresent?: (workspaceId: WorkspaceId) => Promise<boolean>;
+  readonly canReviewPlans?: (workspaceId: WorkspaceId) => Promise<boolean>;
   readonly now?: () => number;
 }) {
   const { documents, canReadWorkspace, now = Date.now } = dependencies;
@@ -64,6 +65,7 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
     access === "author" ? dependencies.canAuthorWorkspace?.(workspaceId) ?? Promise.resolve(false)
       : access === "conversation" ? dependencies.canRunConversation?.(workspaceId) ?? Promise.resolve(false)
       : access === "presentation" ? dependencies.canPresent?.(workspaceId) ?? Promise.resolve(false)
+      : access === "plan-review" ? dependencies.canReviewPlans?.(workspaceId) ?? Promise.resolve(false)
       : canReadWorkspace(workspaceId);
 
   async function readRegistry(store: StructuredDocumentStore) {
@@ -166,13 +168,14 @@ export function createDesktopHeadlessClientAuthority(dependencies: {
         }
         const isPresentationCurrent = () => !!presentation && open && client.expiresAt > now() &&
           !revoking.has(client.registeredClientId) && presentationClients.get(client.registeredClientId) === presentation;
-        if (client.access === "conversation" &&
-            (await canUseWorkspace(client.workspaceId, "conversation") !== true || !isCurrent())) return undefined;
+        if ((client.access === "conversation" || client.access === "plan-review") &&
+            (await canUseWorkspace(client.workspaceId, client.access) !== true || !isCurrent())) return undefined;
         return {
           organizationId, principalId, registeredClientId: client.registeredClientId,
           workspaceIds: [client.workspaceId], operations: READ_PERMISSIONS,
           authoring: client.access === "author" && dependencies.canAuthorWorkspace ? DESKTOP_HEADLESS_AUTHORING_OPERATIONS : [],
           ...(client.access === "conversation" ? { conversation: true as const } : {}),
+          ...(client.access === "plan-review" ? { planReview: true as const } : {}),
           ...(presentation ? {
             presentation: true as const, isPresentationCurrent,
           } : {}),

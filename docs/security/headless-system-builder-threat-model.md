@@ -145,6 +145,11 @@ and workspace uses the existing maximum count for retained headless records.
 The repository requires the host to authorize the operation in the transaction
 and checks that the request remains current at commit. Desktop and managed hosts
 must still bind this repository to verified approval channels.
+Desktop plan-review credentials use a distinct pairing mode. A current
+registration can request plan review only when the host provides that
+capability. It carries no direct editing, conversation or window-control
+grant. The desktop host keeps the mode unavailable until it wires the plan
+route and its policy.
 The internal operation store partitions receipts by verified organization and
 hashes the complete principal, client, workspace, operation and key scope.
 Receipts hold a fingerprint and the minimum saved revision reference; change

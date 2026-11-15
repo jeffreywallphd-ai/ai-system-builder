@@ -8,10 +8,11 @@ export const DESKTOP_HEADLESS_PAIRING_CHANNELS = Object.freeze({
 });
 
 export type DesktopHeadlessPairingAction = keyof typeof DESKTOP_HEADLESS_PAIRING_CHANNELS;
-export type DesktopHeadlessClientAccess = "read" | "author" | "conversation" | "presentation";
+export type DesktopHeadlessClientAccess = "read" | "author" | "conversation" | "presentation" | "plan-review";
 
 export function isDesktopHeadlessClientAccess(value: unknown): value is DesktopHeadlessClientAccess {
-  return value === "read" || value === "author" || value === "conversation" || value === "presentation";
+  return value === "read" || value === "author" || value === "conversation" ||
+    value === "presentation" || value === "plan-review";
 }
 
 export const DESKTOP_HEADLESS_AUTHORING_OPERATIONS = Object.freeze([

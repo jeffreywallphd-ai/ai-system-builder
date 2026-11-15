@@ -69,6 +69,8 @@ test("pinned paired agents can request and present only with an exact interactiv
     async read() { return { ok: false, code: "headless.forbidden" }; },
   });
   try {
+    assert.equal(await connector.readWorkspaceLabel(workspaceId, "plan-review"), undefined);
+    assert.deepEqual(await connector.beginPairing(workspaceId, () => true, "plan-review"), { status: "denied" });
     const window = { hostIncarnationId, workspaceId, windowId: randomUUID(), uiIncarnationId: randomUUID() };
     const owner = { ...identity, isCurrent: () => true };
     assert.equal(control.authority.registerWindow(window, owner), true);

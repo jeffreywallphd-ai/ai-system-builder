@@ -127,6 +127,57 @@ test("approved conversation registration is separate from both saved-system edit
   assert.equal(await recovered.verifyCredential(runner.credential), undefined);
 });
 
+test("a plan-review registration requires current policy and grants no direct editing or window control", async () => {
+  const documents = createInMemoryStructuredDocumentStore().forOrganization(identity.organizationId);
+  const base = { documents, identity, canReadWorkspace: async () => true,
+    canAuthorWorkspace: async () => true, canPresent: async () => true, canRunConversation: async () => true };
+  let permitted = false;
+  let onVerify: (() => Promise<boolean>) | undefined;
+  const unwired = createDesktopHeadlessClientAuthority(base);
+  assert.deepEqual(await unwired.beginPairing(workspaceId, () => true, "plan-review"), denied);
+  const authority = createDesktopHeadlessClientAuthority({ ...base, async canReviewPlans(target) {
+    return target === workspaceId && (onVerify ? await onVerify() : permitted);
+  } });
+  assert.deepEqual(await authority.beginPairing(workspaceId, () => true, "plan-review"), denied);
+  permitted = true;
+  const pending = await authority.beginPairing(workspaceId, () => true, "plan-review");
+  assert.equal(pending.status, "ready");
+  permitted = false;
+  assert.deepEqual(await authority.completePairing(pending.pairingCode), denied);
+
+  permitted = true;
+  const approved = await authority.beginPairing(workspaceId, () => true, "plan-review");
+  assert.equal(approved.status, "ready");
+  const client = await authority.completePairing(approved.pairingCode);
+  assert.equal(client.status, "paired");
+  assert.equal(client.access, "plan-review");
+  assert.equal(await unwired.verifyCredential(client.credential), undefined);
+  const grant = await authority.verifyCredential(client.credential);
+  assert.ok(grant);
+  assert.deepEqual(grant.workspaceIds, [workspaceId]);
+  assert.equal(grant.planReview, true);
+  assert.deepEqual(grant.authoring, []);
+  assert.equal(grant.conversation, undefined);
+  assert.equal(grant.presentation, undefined);
+  permitted = false;
+  assert.equal(await authority.verifyCredential(client.credential), undefined);
+
+  let entered!: () => void;
+  let release!: (allowed: boolean) => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const checked = new Promise<boolean>(resolve => { release = resolve; });
+  onVerify = async () => { entered(); return checked; };
+  const verifying = authority.verifyCredential(client.credential);
+  assert.equal(await Promise.race([started.then(() => "checking"), verifying.then(() => "returned")]), "checking");
+  try {
+    assert.equal(await authority.revokeClient(client.registeredClientId), true);
+    assert.equal(grant.isCurrent(), false);
+  } finally {
+    release(true);
+  }
+  assert.equal(await verifying, undefined);
+});
+
 test("requires current workspace authority, bounds guesses, and consumes the exact code once", async () => {
   const { authority } = fixture();
   assert.deepEqual(await authority.beginPairing(createWorkspaceId("ungranted-fixture")), denied);

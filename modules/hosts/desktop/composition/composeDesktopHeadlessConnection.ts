@@ -43,7 +43,8 @@ export function composeDesktopHeadlessConnection(dependencies: {
   }
 
   async function readWorkspaceLabel(workspaceId: WorkspaceId, access: DesktopHeadlessClientAccess = "read"): Promise<string | undefined> {
-    if (!open || !isWorkspaceId(workspaceId) || (access === "author" && !dependencies.authoring) ||
+    // The desktop host exposes this mode once its plan-review route is wired.
+    if (!open || !isWorkspaceId(workspaceId) || access === "plan-review" || (access === "author" && !dependencies.authoring) ||
         (access === "conversation" && !canRunConversation) ||
         (access === "presentation" && !presentationOpen)) return undefined;
     try {
