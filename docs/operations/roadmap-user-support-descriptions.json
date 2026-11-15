@@ -115,6 +115,28 @@
           "Provider import after approval, Managed browser preview, dataset preparation and opening data from chat still need work."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f21d16ee24a71ae7c93bb994ff4dea7c2b940543d97b9e94c999d1132628b314",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Managed browser test prepared one Parquet file for the configured chat client.",
+          "The chat client read the exact revision and could no longer preview that file after cancellation.",
+          "The test used Chrome over local HTTPS, with PostgreSQL and a simulated repository listing."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6b745d7d4b22dfd9a8662fdb2f2fa73052ccbed2a0aac0a79867c69ebb86aca0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider import after approval, dataset preparation and opening data from chat still need work."
+        ]
+      }
     }
   ]
 }
