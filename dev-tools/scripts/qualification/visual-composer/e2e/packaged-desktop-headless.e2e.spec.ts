@@ -332,6 +332,97 @@ test("packaged Desktop pairs a real MCP client, observes its saved edit, and rep
   }
 });
 
+test("packaged Desktop reviews an MCP plan in the app popup and reports the exact decision", async () => {
+  test.setTimeout(120_000);
+  const profile = prepareHeadlessDesktopProfile("plan-review");
+  const lifetime = assetApplicationLifetime<ElectronApplication>();
+  let mcp: Client | undefined;
+  try {
+    const app = await lifetime.launch(() => electron.launch({ executablePath: profile.executablePath, env: profile.env,
+      args: ["--user-data-dir=" + profile.dataRoot, "--disable-gpu"], timeout: 60_000 }));
+    const page = await app.firstWindow({ timeout: 60_000 });
+    await expect(page.getByRole("heading", { name: "Create a Workspace", exact: true })).toBeVisible({ timeout: 60_000 });
+    const workspaceId = await createFormWorkspace(page, "Plan approval qualification");
+    const region = await connectorSettings(app, page);
+    await expect(region.getByText("The local connector is off.", { exact: true })).toBeVisible();
+    const pair = region.getByRole("button", { name: "Pair a client that requests plan approval" });
+    await installPairingDialogDriver(app, false, "plan-review");
+    await pair.click();
+    await expect.poll(() => app.evaluate(() =>
+      (globalThis as typeof globalThis & { headlessTestConfirmations?: number }).headlessTestConfirmations ?? 0)).toBe(1);
+    await expect(pair).toBeEnabled();
+    await expect(region.getByText("The local connector is off.", { exact: true })).toBeVisible();
+    await installPairingDialogDriver(app, true, "plan-review");
+    await pair.click();
+    const { address, fingerprint: pin } = await runningAddress(region);
+    const credential = await exchangePairing(address, pin, await takePairingCode(app));
+    const client = mcp = await connectMcp(address, pin, credential, undefined, "plan-review");
+    const workspace = { hostIncarnationId: await hostId(client), workspaceId };
+    const names = (await client.listTools()).tools.map(tool => tool.name).sort();
+    expect(names).toEqual([
+      "aisb_build_plan_approval_status", "aisb_host_describe", "aisb_list_systems", "aisb_list_templates",
+      "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
+      "aisb_preview_build_plan", "aisb_read_conversation_task", "aisb_read_system", "aisb_request_build_plan_approval",
+      "aisb_saved_system_changes", "aisb_saved_system_snapshot",
+    ]);
+    const baseline = await call(client, "aisb_list_systems", workspace);
+    expect(baseline.ok).toBe(true);
+    const trigger = region.getByRole("button", { name: "Review plan requests" });
+    const dialog = page.getByRole("dialog", { name: "Review plan requests" });
+    const templateId = "reference.secured-data-review@1.0.0";
+
+    async function stage(first: string, second: string) {
+      const steps = [first, second].map(name => ({ operation: "systems.create", templateId, name, idempotencyKey: randomUUID() }));
+      const preview = await call(client, "aisb_preview_build_plan", { ...workspace, steps });
+      const fingerprint = (preview.value as { fingerprint?: string } | undefined)?.fingerprint;
+      expect(preview.ok && Boolean(fingerprint)).toBe(true);
+      if (!fingerprint) throw new Error("The staged plan has no exact fingerprint.");
+      const target = { ...workspace, fingerprint };
+      expect(await call(client, "aisb_request_build_plan_approval", { ...target, steps })).toMatchObject({
+        ok: true, value: { fingerprint, status: "pending", revision: 1, approvedSteps: 0, stepCount: 2 },
+      });
+      await trigger.click();
+      await expect(dialog).toBeVisible();
+      await dialog.getByRole("button", { name: new RegExp("^Review request " + fingerprint.slice(0, 8)) }).click();
+      await expect(dialog.getByRole("list", { name: "Requested changes" }).getByRole("listitem").nth(0)).toContainText("Create " + first);
+      await expect(dialog.getByRole("list", { name: "Requested changes" }).getByRole("listitem").nth(1)).toContainText("Create " + second);
+      return async () => call(client, "aisb_build_plan_approval_status", target);
+    }
+
+    const whole = await stage("Fixture review queue", "Fixture review report");
+    await dialog.getByRole("radio", { name: "Approve all listed changes" }).check();
+    await dialog.getByRole("button", { name: "Approve all changes", exact: true }).click();
+    await expect(dialog.getByText("Plan approved.", { exact: true })).toBeVisible();
+    expect(await whole()).toMatchObject({ ok: true, value: {
+      status: "approved", mode: "whole-plan", revision: 2, approvedSteps: 2,
+    } });
+    await dialog.getByRole("button", { name: "Close plan review" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+
+    const individual = await stage("Fixture intake", "Fixture triage");
+    await dialog.getByRole("button", { name: "Approve change 1", exact: true }).click();
+    await expect(dialog.getByText("1 of 2 changes approved.", { exact: true })).toBeVisible();
+    expect(await individual()).toMatchObject({ ok: true, value: {
+      status: "pending", mode: "each-change", revision: 2, approvedSteps: 1,
+    } });
+    await dialog.getByRole("button", { name: "Withdraw approval", exact: true }).click();
+    await expect(dialog.getByText("Approval withdrawn.", { exact: true })).toBeVisible();
+    expect(await individual()).toMatchObject({ ok: true, value: { status: "revoked", revision: 3 } });
+    expect(await whole()).toMatchObject({ ok: true, value: { status: "approved", revision: 2 } });
+    await dialog.getByRole("button", { name: "Close plan review" }).click();
+
+    const cancel = await stage("Fixture cancellation", "Fixture cleanup");
+    await dialog.getByRole("button", { name: "Cancel request", exact: true }).press("Enter");
+    await expect(dialog.getByText("Request canceled.", { exact: true })).toBeVisible();
+    expect(await cancel()).toMatchObject({ ok: true, value: { status: "cancelled", revision: 2, approvedSteps: 0 } });
+    expect(await call(client, "aisb_list_systems", workspace)).toEqual(baseline);
+  } finally {
+    try { await mcp?.close(); }
+    finally { await lifetime.retire(); }
+  }
+});
+
 test("packaged Desktop observes a running approved turn from a separately paired MCP client", async () => {
   test.setTimeout(240_000);
   const profile = prepareHeadlessDesktopProfile("conversation");

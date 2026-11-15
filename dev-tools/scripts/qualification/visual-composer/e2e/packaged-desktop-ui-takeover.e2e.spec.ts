@@ -5,7 +5,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { expect, test, type Page } from "@playwright/test";
 import { _electron as electron, type ElectronApplication } from "playwright";
-import { DESKTOP_UI_CONTROL_CHANNELS, readHeadlessWindowResult } from "../../../../../modules/contracts/headless";
+import { DESKTOP_UI_CONTROL_CHANNELS, readHeadlessWindowResult, type UiControlWindowTarget } from "../../../../../modules/contracts/headless";
 import { resolveLocalSqliteDatabasePolicy } from "../../../../../modules/adapters/persistence/sqlite/local-sqlite-database-policy";
 import { DESKTOP_DISABLE_TAKEOVER_MENU_ID } from "../../../../../apps/desktop/src/main/desktopMainWindowMenu";
 import { assetApplicationLifetime } from "../asset-experience-oracles";
@@ -544,26 +544,48 @@ test("the native File menu opens a separately controlled window", async () => {
       await expect.poll(async () => (await list()).length).toBe(1);
       const [firstTarget] = await list();
       if (!firstTarget) throw new Error("The first owned window was not registered.");
-      const nextWindow = app.waitForEvent("window");
-      await app.evaluate(({ Menu, BrowserWindow }) => {
-        const focused = BrowserWindow.getFocusedWindow();
-        const menu = Menu.getApplicationMenu();
-        const item = menu?.getMenuItemById("desktop-new-window");
-        if (!focused || !item) throw new Error("The native New Window command is missing.");
-        item.click(item, focused, {});
-      });
-      const second = await nextWindow;
+      const originalWindowId = await original.evaluate(window => window.id);
+      const [second] = await Promise.all([
+        app.waitForEvent("window", { timeout: 15_000 }),
+        expect.poll(() => app.evaluate(({ Menu, BrowserWindow }, id) => {
+          const current = BrowserWindow.fromId(id);
+          const item = Menu.getApplicationMenu()?.getMenuItemById("desktop-new-window");
+          if (!item?.enabled) return "menu unavailable";
+          if (!current || current.isDestroyed() || !current.isVisible() || current.isMinimized())
+            return "original window unavailable";
+          current.focus();
+          if (BrowserWindow.getFocusedWindow() !== current) return "original window has no focus";
+          item.click(item, current, {});
+          return "opened";
+        }, originalWindowId), { timeout: 10_000, message: "The native File menu opens a window from the exact original owner" })
+          .toBe("opened"),
+      ]);
       await expect(second.getByLabel("Select current workspace")).toHaveValue(workspaceId);
       await expect.poll(async () => (await list()).length).toBe(2);
       const secondTarget = (await list()).find(row => row.windowId !== firstTarget?.windowId);
-      const requestWindow = (client: Client, target: unknown) => call(client, "aisb_request_window", {
+      if (!secondTarget) throw new Error("The newly opened window did not register.");
+      const requestWindow = (client: Client, target: UiControlWindowTarget) => call(client, "aisb_request_window", {
         target, requestKey: randomUUID(), taskId: randomUUID(),
       }).then(readHeadlessWindowResult);
-      const attach = async (page: Page, client: Client, request: Awaited<ReturnType<typeof requestWindow>>) => {
+      const attach = async (page: Page, client: Client, target: UiControlWindowTarget, label: string) => {
+        const nativeWindow = await app.browserWindow(page);
+        try {
+          await nativeWindow.evaluate(window => window.focus());
+          await expect.poll(() => nativeWindow.evaluate(window =>
+            window.isVisible() && !window.isMinimized() && window.isFocused()),
+            { message: label + " needs native focus before the consent request" }).toBe(true);
+          await expect.poll(() => page.evaluate(() => document.visibilityState),
+            { message: label + " needs a visible renderer before the consent request" }).toBe("visible");
+        } finally {
+          await nativeWindow.dispose();
+        }
+        const request = await requestWindow(client, target);
         if (!request.ok || request.value.kind !== "request") throw new Error("The isolated window request was denied.");
         const attempt = request.value.request.target;
-        await page.getByRole("dialog", { name: "Automation takeover request", exact: true })
-          .getByRole("button", { name: "Accept automation takeover", exact: true }).click();
+        const consent = page.getByRole("dialog", { name: "Automation takeover request", exact: true })
+          .getByRole("button", { name: "Accept automation takeover", exact: true });
+        await expect(consent, label + " shows its own consent").toBeVisible({ timeout: 15_000 });
+        await consent.click();
         const status = () => call(client, "aisb_window_status", { target: attempt }).then(readHeadlessWindowResult);
         await expect.poll(async () => {
           const result = await status();
@@ -571,9 +593,8 @@ test("the native File menu opens a separately controlled window", async () => {
         }).toBe(true);
         return status;
       };
-      const secondStatus = await attach(second, peer, await requestWindow(peer, secondTarget));
-      await original.evaluate(window => window.focus());
-      const firstStatus = await attach(first, agent, await requestWindow(agent, firstTarget));
+      const secondStatus = await attach(second, peer, secondTarget, "The newly opened window");
+      const firstStatus = await attach(first, agent, firstTarget, "The original window");
       const active = await firstStatus();
       if (!active.ok || active.value.kind !== "request" || !active.value.lease) {
         throw new Error("The owned first window did not attach.");
@@ -697,7 +718,7 @@ test("the native File menu opens a separately controlled window", async () => {
       await expect(second.getByRole("button", { name: "Revoke automation takeover", exact: true })).toBeVisible();
       queueWitness = {owner:{attemptId: active.value.lease.attemptId, commandBySequence}, counts:{queuePeak:queuedCount, capacityRejections,
         duplicates:duplicateCount, conflicts:conflictCount, staleEffects}};
-      const nativeStatus = await attach(first, agent, await requestWindow(agent, firstTarget));
+      const nativeStatus = await attach(first, agent, firstTarget, "The window before minimize");
       const beforeMinimize = await nativeStatus();
       if (!beforeMinimize.ok || beforeMinimize.value.kind !== "request" || !beforeMinimize.value.lease) {
         throw new Error("The first window did not attach before native minimize.");
@@ -796,7 +817,7 @@ test("the native File menu opens a separately controlled window", async () => {
 
       const currentTarget = (await list()).find(row => row.windowId === firstTarget.windowId);
       if (!currentTarget) throw new Error("The restored native window did not register again.");
-      const expiringStatus = await attach(first, agent, await requestWindow(agent, currentTarget));
+      const expiringStatus = await attach(first, agent, currentTarget, "The window restored after minimize");
       const expiring = await expiringStatus();
       if (!expiring.ok || expiring.value.kind !== "request" || !expiring.value.lease) {
         throw new Error("The expiry test requires an active native grant.");
@@ -865,7 +886,7 @@ test("the native File menu opens a separately controlled window", async () => {
       await expect(first.getByRole("button", { name: "Settings", exact: true, description: "Settings" })).toBeEnabled();
       const restoredTarget = (await list()).find(row => row.windowId === firstTarget.windowId);
       if (!restoredTarget) throw new Error("The rollback fixture has no current window.");
-      const rollbackStatus = await attach(first, agent, await requestWindow(agent, restoredTarget));
+      const rollbackStatus = await attach(first, agent, restoredTarget, "The restored window before disabling takeover");
       const granted = await rollbackStatus();
       if (!granted.ok || granted.value.kind !== "request" || !granted.value.lease) {
         throw new Error("The packaged rollback requires an active exact lease.");

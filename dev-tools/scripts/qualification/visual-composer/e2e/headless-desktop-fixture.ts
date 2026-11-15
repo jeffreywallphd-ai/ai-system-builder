@@ -11,7 +11,9 @@ import { createDesktopPinnedLoopbackAgent } from "../../../../../modules/adapter
 import { readHeadlessAuthoringWireResult } from "../../../../../modules/contracts/headless";
 import { pickFormDesktopSystemEnvironment } from "./form-composer-desktop-profile";
 
-export function prepareHeadlessDesktopProfile(mode: "author" | "conversation" | "presentation" | "window-isolation" = "author") {
+type HeadlessFixturePairing = "author" | "conversation" | "presentation" | "plan-review";
+
+export function prepareHeadlessDesktopProfile(mode: HeadlessFixturePairing | "window-isolation" = "author") {
   const root = process.cwd();
   const runId = process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID;
   assert.ok(runId && /^[a-z0-9-]{20,80}$/.test(runId), "The Headless Desktop test requires the owned run identity.");
@@ -21,6 +23,7 @@ export function prepareHeadlessDesktopProfile(mode: "author" | "conversation" | 
     "The Headless Desktop profile must be within the physical run root.");
   const dataRoot = path.join(base, mode === "conversation" ? "headless-conversation" :
     mode === "presentation" ? "headless-presentation" :
+    mode === "plan-review" ? "headless-plan-review" :
     mode === "window-isolation" ? "headless-window-isolation" : "headless-paired");
   assert.ok(!lstatSync(dataRoot, { throwIfNoEntry: false }), "The Headless Desktop test requires a fresh profile.");
   mkdirSync(dataRoot);
@@ -53,7 +56,7 @@ export function seedApprovedHeadlessConversation(profile: ReturnType<typeof prep
   assert.ok(seed.status === 0, "Unable to seed the isolated approved conversation.");
 }
 
-export async function installPairingDialogDriver(app: ElectronApplication, confirm: boolean, mode: "author" | "conversation" | "presentation" = "author") {
+export async function installPairingDialogDriver(app: ElectronApplication, confirm: boolean, mode: HeadlessFixturePairing = "author") {
   await app.evaluate(({ dialog, BrowserWindow }, { allow, mode }) => {
     const testProcess = globalThis as typeof globalThis & {
       headlessTestCode?: string; headlessTestConfirmations?: number; headlessOriginalDialog?: typeof dialog.showMessageBox;
@@ -63,6 +66,7 @@ export async function installPairingDialogDriver(app: ElectronApplication, confi
       if (options?.title === "Pair a chat client" && owner === BrowserWindow.getFocusedWindow() &&
           options.message === (mode === "conversation" ? "Allow a local chat client to read saved systems and run approved conversations?"
             : mode === "presentation" ? "Allow this chat client to ask for control of a window?"
+            : mode === "plan-review" ? "Allow a local chat client to send plans for review?"
             : "Allow a local chat client to edit saved systems?") &&
           options.buttons?.[1] === "Create pairing code" && options.defaultId === 0 && options.cancelId === 0) {
         testProcess.headlessTestConfirmations = (testProcess.headlessTestConfirmations ?? 0) + 1;
@@ -126,13 +130,14 @@ export async function exchangePairing(address: string, fingerprint: string, pair
 }
 
 export async function connectMcp(address: string, fingerprint: string, credential: string, onDroppedCommittedCreate?: () => void,
-  mode: "author" | "conversation" | "presentation" = "author") {
+  mode: HeadlessFixturePairing = "author") {
   const client = new Client({ name: "packaged-headless-fixture", version: "1.0.0" });
   const transport = new StdioClientTransport({
     command: process.execPath, args: ["--import", "tsx", "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts"],
     env: { AISB_HEADLESS_ENDPOINT: address, AISB_HEADLESS_FINGERPRINT: fingerprint,
       AISB_HEADLESS_CREDENTIAL: credential, ...(mode === "conversation" ? { AISB_HEADLESS_ENABLE_CONVERSATION: "1" }
         : mode === "presentation" ? { AISB_HEADLESS_ENABLE_PRESENTATION: "1" }
+        : mode === "plan-review" ? { AISB_HEADLESS_ENABLE_PLAN_REVIEW: "1" }
         : { AISB_HEADLESS_ENABLE_AUTHORING: "1" }), TSX_DISABLE_CACHE: "1" },
     stderr: "ignore", maxBufferSize: 256 * 1024,
   });
