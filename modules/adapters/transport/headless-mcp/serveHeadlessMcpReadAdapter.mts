@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
-import type { HeadlessApprovedTurnRequest, HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessWindowRequest } from "../../../contracts/headless/index.js";
+import type { HeadlessApprovedTurnRequest, HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessSystemSummary, HeadlessWindowRequest } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import type { SystemBuilderSystemId } from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
@@ -38,13 +38,16 @@ const forward = managed ? createManagedHeadlessMcpReadForwarder({
 delete process.env.AISB_HEADLESS_CREDENTIAL;
 delete process.env.AISB_HEADLESS_MANAGED_CREDENTIAL;
 
-async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest, signal?: AbortSignal) {
-  const result = await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" };
+function toolResult<T extends { ok: boolean }>(result:T) {
   return { content: [{ type: "text" as const, text: JSON.stringify(result) }], isError: !result.ok };
 }
 
+async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest, signal?: AbortSignal) {
+  return toolResult(await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" });
+}
+
 function invalidAuthoring() {
-  return { content: [{ type: "text" as const, text: '{"ok":false,"code":"headless.invalid-request"}' }], isError: true };
+  return toolResult({ ok: false, code: "headless.invalid-request" });
 }
 
 function addPresentationTools(server: McpServer) {
@@ -102,11 +105,16 @@ function addPresentationTools(server: McpServer) {
 function addAuthoringTools(server: McpServer) {
   const displayName = z.string().min(1).max(120);
   const idempotencyKey = z.string().refine(headless.isHeadlessHostIncarnationId, "Invalid retry key");
-  const base = {
-    hostIncarnationId, workspaceId, systemId, baseRecordRevision: z.number().int().positive(),
+  const workspaceTarget = { hostIncarnationId, workspaceId };
+  const savedRevision = {
+    systemId, baseRecordRevision: z.number().int().positive(),
     baseRevisionId: z.string().min(1).max(160),
   };
-  const target = { ...base, idempotencyKey, name: displayName };
+  const base = { ...workspaceTarget, ...savedRevision };
+  const create = { templateId: z.enum(systemBuilder.SYSTEM_BUILDER_TEMPLATE_IDS), name: displayName, idempotencyKey };
+  const savedChange = { ...savedRevision, idempotencyKey, name: displayName };
+  const rename = { ...savedChange, description: z.string().min(1).max(1_000).optional() };
+  const target = { ...workspaceTarget, ...savedChange };
   const id = z.string().min(1).max(160);
   const place = { parentInstanceId: id, slotId: id, order: z.number().int().nonnegative().max(511) };
   const configuration = z.record(z.string().min(1).max(64), z.unknown());
@@ -131,12 +139,12 @@ function addAuthoringTools(server: McpServer) {
   }
   server.registerTool("aisb_create_system", {
     description: "Create one saved system from an exact template in the approved workspace. Reuse the same key after a lost reply.",
-    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, templateId: z.enum(systemBuilder.SYSTEM_BUILDER_TEMPLATE_IDS), name: displayName, idempotencyKey }),
+    inputSchema: z.strictObject({ ...workspaceTarget, ...create }),
     annotations: { ...writeHints, destructiveHint: false },
   }, (input, context) => author("systems.create", input, context.mcpReq.signal));
   server.registerTool("aisb_rename_system", {
     description: "Rename one saved system against both revisions. If omitted, the existing description is preserved.",
-    inputSchema: z.strictObject({ ...target, description: z.string().min(1).max(1_000).optional() }), annotations: writeHints,
+    inputSchema: z.strictObject({ ...workspaceTarget, ...rename }), annotations: writeHints,
   }, (input, context) => author("systems.rename", input, context.mcpReq.signal));
   server.registerTool("aisb_clone_system", {
     description: "Copy one exact saved system revision in its approved workspace.",
@@ -150,6 +158,79 @@ function addAuthoringTools(server: McpServer) {
     description: "Apply the exact preview to the same saved revision. Reuse the same key after a lost reply; do not repeat with a new key.",
     inputSchema: z.strictObject({ ...base, edits, previewDigest: z.string().regex(/^[a-f0-9]{64}$/), idempotencyKey }), annotations: writeHints,
   }, (input, context) => author("systems.apply-edits", input, context.mcpReq.signal));
+  const step = z.discriminatedUnion("operation", [
+    z.strictObject({ operation: z.literal("systems.create"), ...create }),
+    z.strictObject({ operation: z.literal("systems.rename"), ...rename }),
+    z.strictObject({ operation: z.literal("systems.clone"), ...savedChange }),
+  ]);
+  server.registerTool("aisb_preview_build_plan", {
+    description: "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
+    inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(8) }),
+    annotations: queryHints,
+  }, async (input, context) => {
+    if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId) || !workspace.isWorkspaceId(input.workspaceId))
+      return invalidAuthoring();
+    const scope = { hostIncarnationId: input.hostIncarnationId, workspaceId: input.workspaceId };
+    const requests: HeadlessSystemManagementRequest[] = [];
+    const keys = new Set<string>();
+    const renamedSystems = new Set<SystemBuilderSystemId>();
+    for (const { operation, ...fields } of input.steps) {
+      const decoded = headless.parseHeadlessSystemManagementRequest({ version, operation, input: { ...scope, ...fields } }, scope.hostIncarnationId);
+      if (!decoded.ok) return invalidAuthoring();
+      const request = decoded.request;
+      if (keys.has(request.input.idempotencyKey)) return invalidAuthoring();
+      keys.add(request.input.idempotencyKey);
+      if (request.operation !== "systems.create") {
+        // This preview validates saved revisions. A later step cannot use the
+        // same revision after an earlier step changes it.
+        if (renamedSystems.has(request.input.systemId)) return invalidAuthoring();
+        if (request.operation === "systems.rename") renamedSystems.add(request.input.systemId);
+      }
+      requests.push(request);
+    }
+
+    const unavailable = { ok: false, code: "headless.unavailable" } as const;
+    const deadline = AbortSignal.timeout(12_000);
+    const signal = context.mcpReq.signal ? AbortSignal.any([deadline, context.mcpReq.signal]) : deadline;
+    let templates: ReadonlySet<string> | undefined;
+    const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
+    for (const request of requests) {
+      if (request.operation === "systems.create") {
+        if (!templates) {
+          const result = await forward?.({ version, operation: "templates.list", input: scope }, signal);
+          if (!result?.ok) return toolResult(result ?? unavailable);
+          if (!("operation" in result) || result.operation !== "templates.list" || !Array.isArray(result.value))
+            return toolResult(unavailable);
+          templates = new Set(result.value.map(({ templateId }) => templateId));
+        }
+        if (!templates.has(request.input.templateId)) return toolResult({ ok: false, code: "headless.not-found" });
+        continue;
+      }
+      const { systemId, baseRecordRevision, baseRevisionId } = request.input;
+      let record = records.get(systemId);
+      if (!record) {
+        const result = await forward?.({ version, operation: "systems.read", input: { ...scope, systemId } }, signal);
+        if (!result?.ok) return toolResult(result ?? unavailable);
+        if (!("operation" in result) || result.operation !== "systems.read") return toolResult(unavailable);
+        // The existing read forwarder validates this response and its target.
+        record = result.value as HeadlessSystemSummary;
+        records.set(systemId, record);
+      }
+      if (record.systemId !== systemId || record.status === "archived")
+        return toolResult({ ok: false, code: "headless.not-found" });
+      if (record.revision !== baseRecordRevision || record.currentRevisionId !== baseRevisionId)
+        return toolResult({ ok: false, code: "headless.stale" });
+    }
+    if (signal.aborted) return toolResult(unavailable);
+    return toolResult({ ok: true, value: {
+      version: "aisb-build-plan-preview-v1",
+      ...scope,
+      approval: "required",
+      steps: requests.map(({ operation, input: { hostIncarnationId: _host, workspaceId: _workspace, ...fields } }) => ({
+        operation, input: fields, effect: "saved-system-write", externalProviderCalls: 0,
+      })),
+    } });
+  });
 }
 
 serveStdio(() => {

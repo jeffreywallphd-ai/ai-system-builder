@@ -25,7 +25,7 @@ const hostIncarnationId = "d5ed1db7-f069-4c48-bbc4-815697889c5d";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
 const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_templates", "aisb_list_workflows", "aisb_list_workspaces",
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
-const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_preview_edits", "aisb_rename_system"];
+const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
 const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_release_window", "aisb_renew_window",
   "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
@@ -46,6 +46,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let repeatedCommand = false;
   let commandApplied = false;
   let delayedSemanticEffects = 0;
+  let sourceArchived = false;
   const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
     let body = "";
     request.on("data", (chunk: Buffer) => {body += chunk.toString();});
@@ -92,7 +93,10 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
         : input.operation === "templates.list"
           ? {ok: true, operation: "templates.list", value: [{templateId: "reference.secured-data-review@1.0.0",
             displayName: echoCredential ? "Synthetic synthetic-managed-bearer" : "Synthetic"}]}
-        : {ok: true, value: {kind: "committed", reference: {systemId, recordRevision: 1, revisionId: "revision-1"}}};
+          : input.operation === "systems.read"
+            ? {ok:true, operation: "systems.read", value: {systemId, name: "Saved fixture", revision: 1,
+              status: sourceArchived ? "archived" : "draft", currentRevisionId: "revision-1"}}
+            : {ok: true, value: {kind: "committed", reference: {systemId, recordRevision: 1, revisionId: "revision-1"}}};
       const payload = JSON.stringify(value);
       response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
     });
@@ -142,6 +146,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     echoCredential = true;
     const echo = resultText(await client.callTool({name: "aisb_list_templates", arguments: {hostIncarnationId, workspaceId}}));
     assert.deepEqual(echo, {ok: false, code: "headless.unavailable"});
+    echoCredential = false;
     redirect = true;
     assert.deepEqual(await discover(client), {ok: false, code: "headless.unavailable"});
     assert.equal(requests.length, 5);
@@ -185,6 +190,34 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       {ok:true,value:{kind:"committed",reference:{systemId,recordRevision:2,revisionId:"revision-2"}}});
     assert.equal(delayedSemanticEffects,1);
     assert.equal(requests.at(-1)?.url,"/api/headless/agent/author");
+    const planBase = {hostIncarnationId, workspaceId};
+    const source = {systemId, baseRevisionId: "revision-1", baseRecordRevision: 1};
+    const steps = [
+      {operation: "systems.create", name: "New proposal", templateId: args.templateId, idempotencyKey: randomUUID()},
+      {operation: "systems.clone", name: "Copy proposal", ...source, idempotencyKey: randomUUID()},
+      {operation: "systems.rename", name: "Rename proposal", ...source, idempotencyKey: randomUUID()},
+    ];
+    const preview = async (input: Record<string, unknown>) => resultText(await client.callTool({
+      name: "aisb_preview_build_plan", arguments: input,
+    }));
+    const beforePreview = requests.length;
+    assert.deepEqual(await preview({...planBase, steps}), {ok:true, value: {
+      version: "aisb-build-plan-preview-v1", ...planBase, approval: "required",
+      steps: steps.map(({operation, ...input}) => ({operation, input, effect: "saved-system-write", externalProviderCalls: 0})),
+    }});
+    assert.equal(requests.length - beforePreview, 2);
+    assert.ok(requests.slice(beforePreview).every(row => row.url === "/api/headless/agent/read" && row.workspace === workspaceId));
+    const beforeDenied = requests.length;
+    assert.deepEqual(await preview({...planBase, workspaceId: "foreign-workspace", steps}), {ok:false, code:"headless.forbidden"});
+    assert.deepEqual(await preview({...planBase, steps:[steps[2], steps[1]]}), {ok:false, code:"headless.invalid-request"});
+    assert.deepEqual(await preview({...planBase, steps:[steps[0], steps[0]]}), {ok:false, code:"headless.invalid-request"});
+    assert.equal(requests.length, beforeDenied);
+    assert.deepEqual(await preview({...planBase, steps:[{...steps[2], baseRecordRevision: 2}]}), {ok:false, code:"headless.stale"});
+    assert.deepEqual(await preview({...planBase, steps:[{...steps[0], templateId: "reference.controlled-chatbot@1.0.0"}]}),
+      {ok:false, code:"headless.not-found"});
+    sourceArchived = true;
+    assert.deepEqual(await preview({...planBase, steps:[steps[1]]}), {ok:false, code:"headless.not-found"});
+    assert.ok(requests.slice(beforeDenied).every(row => row.url === "/api/headless/agent/read"));
   } finally {
     await Promise.allSettled(clients.map(client => client.close()));
     listener.closeAllConnections();
@@ -232,6 +265,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   assertExactObject("aisb_create_system", [...workspace, "templateId", "name", "idempotencyKey"]);
   assertExactObject("aisb_rename_system", namedEdit, ["description"]);
   assertExactObject("aisb_clone_system", namedEdit);
+  assertExactObject("aisb_preview_build_plan", [...workspace, "steps"]);
   assertExactObject("aisb_preview_edits", [...base, "edits"]);
   assertExactObject("aisb_apply_edits", [...base, "edits", "previewDigest", "idempotencyKey"]);
   const turn = assertExactObject(conversation, [...workspace, "planId", "planRevision", "sessionId", "snapshotRevision", "key", "text"]);
@@ -366,10 +400,21 @@ test("official stdio opt-in lists only finite authoring tools and forwards witho
   let calls = 0;
   let unknown = false;
   let revokeAfterDispatch = false;
+  let readCalls = 0;
   if (!isHeadlessHostIncarnationId(hostIncarnationId)) throw new Error("Invalid test host");
   const connector = await startDesktopHeadlessLoopback({
     registrations,
-    async read() { return { ok: false, code: "headless.unavailable" }; },
+    async read(input, currentGrant) {
+      const parsed = parseHeadlessReadRequest(input, hostIncarnationId);
+      if (!parsed.ok) return parsed;
+      if (parsed.request.operation !== "templates.list") return {ok:false, code:"headless.unsupported-operation"};
+      const grant = await currentGrant();
+      if (!grant?.workspaceIds.includes(parsed.request.input.workspaceId)) return {ok:false, code:"headless.forbidden"};
+      readCalls++;
+      return {ok:true, operation:"templates.list", value:[{
+        templateId:"reference.secured-data-review@1.0.0", displayName:"Saved fixture template",
+      }]};
+    },
     authoring: {
       hostIncarnationId,
       async execute(input, grant) {
@@ -398,6 +443,18 @@ test("official stdio opt-in lists only finite authoring tools and forwards witho
     assert.equal(calls, 0);
     const args = { hostIncarnationId, workspaceId, templateId: "reference.secured-data-review@1.0.0",
       name: "Synthetic system", idempotencyKey: "a6f56324-2051-462c-b45b-d9b49bf6dd4a" };
+    const {hostIncarnationId: planHost, workspaceId: planWorkspace, ...newSystem} = args;
+    const plan = {hostIncarnationId: planHost, workspaceId: planWorkspace, steps:[{operation: "systems.create", ...newSystem}]};
+    const preview = await client.callTool({name:"aisb_preview_build_plan", arguments:plan});
+    assert.deepEqual(resultText(preview), {ok:true, value:{
+      version:"aisb-build-plan-preview-v1", hostIncarnationId, workspaceId, approval:"required",
+      steps:[{operation:"systems.create", input:newSystem, effect:"saved-system-write", externalProviderCalls:0}],
+    }});
+    const extra = await client.callTool({name:"aisb_preview_build_plan",
+      arguments:{...plan, steps:[{...plan.steps[0], approval:"claimed"}]}});
+    assert.equal(Boolean(extra.isError), true);
+    assert.equal(readCalls, 1);
+    assert.equal(calls, 0);
     const invalid = await client.callTool({ name: "aisb_create_system", arguments: { ...args, credential: "unexpected" } });
     assert.equal(Boolean(invalid.isError), true);
     assert.equal(calls, 0);

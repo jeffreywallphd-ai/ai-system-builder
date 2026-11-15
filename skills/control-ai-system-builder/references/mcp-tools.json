@@ -28,6 +28,7 @@
         "aisb_list_workflows",
         "aisb_list_workspaces",
         "aisb_prepare_workflow",
+        "aisb_preview_build_plan",
         "aisb_preview_edits",
         "aisb_read_conversation_task",
         "aisb_read_system",
@@ -64,6 +65,7 @@
         "aisb_list_workflows",
         "aisb_list_workspaces",
         "aisb_prepare_workflow",
+        "aisb_preview_build_plan",
         "aisb_preview_edits",
         "aisb_read_conversation_task",
         "aisb_read_system",
@@ -109,6 +111,7 @@
         "aisb_list_workspaces",
         "aisb_prepare_workflow",
         "aisb_present_in_window",
+        "aisb_preview_build_plan",
         "aisb_preview_edits",
         "aisb_read_conversation_task",
         "aisb_read_system",
@@ -821,6 +824,151 @@
           "target",
           "commandId",
           "intent"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_preview_build_plan",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "steps": {
+            "minItems": 1,
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "systems.create"
+                    },
+                    "templateId": {
+                      "type": "string",
+                      "enum": [
+                        "reference.controlled-chatbot@1.0.0",
+                        "reference.secured-data-review@1.0.0",
+                        "reference.secured-data-entry@1.0.0"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "templateId",
+                    "name",
+                    "idempotencyKey"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "systems.rename"
+                    },
+                    "systemId": {
+                      "type": "string"
+                    },
+                    "baseRecordRevision": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "baseRevisionId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "systemId",
+                    "baseRecordRevision",
+                    "baseRevisionId",
+                    "idempotencyKey",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "systems.clone"
+                    },
+                    "systemId": {
+                      "type": "string"
+                    },
+                    "baseRecordRevision": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "baseRevisionId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "systemId",
+                    "baseRecordRevision",
+                    "baseRevisionId",
+                    "idempotencyKey",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "steps"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false

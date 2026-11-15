@@ -45,7 +45,7 @@ work and do not return prompts, transcripts, record values or credentials.
 
 The adapter is read-only by default. A trusted local launcher can set
 `AISB_HEADLESS_ENABLE_AUTHORING=1` after the user pairs a client with editing
-permission. This setting makes the five tools below visible; the desktop
+permission. This setting makes the tools below visible. The desktop
 still checks the credential and current workspace permission on every call.
 
 | Optional tool | Result |
@@ -53,8 +53,16 @@ still checks the credential and current workspace permission on every call.
 | `aisb_create_system` | Saved system from one exact template |
 | `aisb_rename_system` | Saved name for the exact record and revision |
 | `aisb_clone_system` | New copy of one exact saved revision |
+| `aisb_preview_build_plan` | Ordered create, clone, and rename proposals checked against current saved data |
 | `aisb_preview_edits` | Preview digest and affected IDs, without a write |
 | `aisb_apply_edits` | Committed or replayed result for the exact preview |
+
+Use the build-plan preview on desktop or managed mode to check up to eight
+steps in one workspace. Use exact template IDs and saved revisions. Give each
+step its own retry key. A later step that uses a system already renamed in the
+plan requires a new preview against its new revision. The preview uses the
+existing authorized reads. It marks each proposed write and reports that
+approval is required before execution.
 
 If a write reply is lost, check the saved state or repeat the exact request
 with the same key. The adapter never repeats writes automatically. Cancellation
