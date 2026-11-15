@@ -13609,6 +13609,28 @@
       "review_digest": "936fd2ba4cc7db347895b763dc80a8c8dcd8c3a402ba616b338a0cf701b8f9a2",
       "scope": "Rollback disabled all 12 optional routes and returned control to the user. The saved system, open draft, audit history, and record of the original save survived.",
       "limitations": ["The test covered already-open Chrome pages. Opening a new page during rollback remains unverified."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "plan-from-written-request",
+      "criterion_id": "unambiguous-plan",
+      "work_id": "headless-canonical-build-plan-preview-identity",
+      "work_criteria": ["preview-fingerprint-binds-ordered-proposal"],
+      "receipt_digest": "6499f1406e789aa6b278c718da0b5a71e53ac802310378732da56159ee606470",
+      "review_digest": "af33d9a1294fcd3731cb6699593b16635a4e0fbe6f7011a16ef7d1f274f1fcbc",
+      "scope": "The managed app previewed three proposed changes and returned an identifier for their exact order and inputs. The saved systems stayed unchanged. The app refused a stale saved revision and a different workspace.",
+      "limitations": ["This verifies the preview only. Approval and execution still need implementation and testing."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "plan-from-written-request",
+      "criterion_id": "security-plan-and-context",
+      "work_id": "headless-shared-build-plan-validation",
+      "work_criteria": ["shared-canonical-proposal"],
+      "receipt_digest": "556f956740542f3fd12a0e6a0c18439f5e1c14c1e00dd6459b47b9bfb02751bb",
+      "review_digest": "40bc9fea684d632afe5f6744f1af23742b87cc1c233d9c5c738087720f87a258",
+      "scope": "Shared preview checks reject proposed steps that claim approval, add a workspace, reuse a retry key, or use a saved revision after an earlier step changes it.",
+      "limitations": ["The checks cover preview inputs. The app still needs separate checks for approval decisions, changes to authority, and recovery after a lost response."]
     }
   ]
 }
