@@ -141,8 +141,13 @@ acknowledged issue. An exact replay checks the committed source and
 the original issue records. If a run ends after the upload enters
 finalizing and before the source commits, the connector reports an
 unconfirmed result. Use the existing Data task recovery to inspect
-that upload. The managed connector denies this effect until its own
-staged-file flow is available.
+that upload.
+
+A configured Managed browser can stage one local file and record the user's
+choice for the registered plan-review client. The Managed connector offers
+the same bounded preview and holds the selected task and current
+authorization through the PostgreSQL read fence. Direct **Add data** still
+uses the existing browser import. A Managed plan cannot save a staged file.
 
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay

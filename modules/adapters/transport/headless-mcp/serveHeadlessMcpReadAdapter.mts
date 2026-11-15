@@ -243,18 +243,16 @@ function addSystemBuilderTools(server: McpServer) {
     return toolResult({ ok: true, value: { ...preview, fingerprint } });
   });
   if (enablePlanReview) {
-    if (!managed) {
-      server.registerTool("aisb_preview_selected_local_file", {
-        description: "Preview a staged local file that the user selected for this Desktop connection. Shows file type, size, and the proposed save. A separate approval is required to save it.",
-        inputSchema: z.strictObject({ ...workspaceTarget, ...localFileTarget }),
-        annotations: queryHints,
-      }, (input, context) => {
-        if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-        const decoded = headless.readHeadlessLocalFileImportRequest({ version, operation: "data.prepare-local-file", input },
-          input.hostIncarnationId);
-        return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
-      });
-    }
+    server.registerTool("aisb_preview_selected_local_file", {
+      description: "Preview the type and size of a staged local file the user selected for this plan-review client. Preview leaves the file staged.",
+      inputSchema: z.strictObject({ ...workspaceTarget, ...localFileTarget }),
+      annotations: queryHints,
+    }, (input, context) => {
+      if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+      const decoded = headless.readHeadlessLocalFileImportRequest({ version, operation: "data.prepare-local-file", input },
+        input.hostIncarnationId);
+      return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     const fingerprint = z.string().length(64).regex(/^[a-f0-9]{64}$/);
     const reviewTarget = { ...workspaceTarget, fingerprint };
     const submit = { ...reviewTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) };

@@ -37,7 +37,8 @@ export type ManagedBrowserConsentHandlers<Identity> = {
   readonly revoke: (document: Document<Identity>, target: unknown, current: Current) => Promise<boolean>;
   readonly disconnect: (document: Document<Identity>) => boolean;
   readonly planApproval?: (document: Document<Identity>, request: ManagedBrowserPlanApprovalRequest, current: Current,
-    channel: ApprovalChannel) => Promise<{readonly value:unknown; readonly canPublish:Current} | undefined>;
+    channel: ApprovalChannel) => Promise<{readonly value:unknown; readonly canPublish:Current;
+      readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>} | undefined>;
   readonly pullPresentation?: (document: Document<Identity>, input: unknown, current: Current) => Promise<LeaseResponse | undefined>;
   readonly acknowledgePresentation?: (document: Document<Identity>, input: unknown, current: Current) => Promise<LeaseResponse | undefined>;
   readonly readContextChallenge?: (document: Document<Identity>, target: unknown, current: Current) => Promise<LeaseResponse | undefined>;
@@ -158,6 +159,8 @@ async function respondPlanApproval<Identity>(raw: unknown, request: Request, res
   handlers: ManagedBrowserConsentHandlers<Identity>, identity: Identity, current: Current, channel: ApprovalChannel) {
   const input = readManagedBrowserPlanApprovalRequest(raw);
   if (!input) return error(response, 400);
+  const fileSelection = input.operation === "list-file-clients" || input.operation === "select-file";
+  if (fileSelection && channel !== "app-popup") return error(response, 403);
   const proof = request.headers[MANAGED_BROWSER_DOCUMENT_HEADER];
   if (!isManagedBrowserDocumentProof(proof) || input.document.hostIncarnationId !== handlers.hostIncarnationId)
     return error(response, 403);
@@ -165,6 +168,15 @@ async function respondPlanApproval<Identity>(raw: unknown, request: Request, res
   if (!current() || result === undefined) return error(response, 403);
   const value = readManagedBrowserPlanApprovalValue(input, result.value);
   if (value === undefined || Buffer.byteLength(JSON.stringify(value)) > MANAGED_BROWSER_PLAN_APPROVAL_MAX_RESULT_BYTES) return error(response, 503);
+  if (fileSelection) {
+    const sent = await result.publishIfCurrent?.(() => {
+      if (!current() || !result.canPublish() || response.headersSent) return false;
+      response.json(value);
+      return response.headersSent;
+    });
+    if (!sent) return error(response, 403);
+    return;
+  }
   if (!current() || !result.canPublish()) return error(response, 403);
   return response.json(value);
 }

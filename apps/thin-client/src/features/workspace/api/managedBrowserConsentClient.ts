@@ -9,6 +9,7 @@ import { readStrictPassiveRecord } from "../../../../../../modules/contracts/sha
 import { MANAGED_BROWSER_PLAN_APPROVAL_MAX_RESULT_BYTES, MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH,
   readManagedBrowserPlanApprovalValue, type ManagedBrowserPlanApprovalRequest } from "../../../../../../modules/contracts/headless/managed-browser-plan-approval";
 import type { DesktopPlanApprovalDecision, DesktopPlanApprovalListEntry, DesktopPlanApprovalSelection, DesktopPlanApprovalView } from "../../../../../../modules/contracts/headless/desktop-headless-plan-approval";
+import { readAppHeadlessLocalFileSelectionValue, type DesktopLocalFileSelectionInput } from "../../../../../../modules/contracts/headless/headless-data-app-selection";
 import { secureFetch } from "../../../security/secureFetch";
 
 const MAX_RESPONSE = 4_096;
@@ -122,6 +123,15 @@ export function createManagedBrowserConsentClient(organizationId: string, fetch 
     },
     async dismissPlanApproval(tab: Registration, viewId: string, signal: AbortSignal, chat = false) {
       return await approval({operation:"dismiss", document:tab.target, viewId}, tab, signal, chat) === true;
+    },
+    async listPlanFileClients(tab: Registration, signal: AbortSignal): Promise<readonly string[]> {
+      const result = await approval({ operation:"list-file-clients", document:tab.target }, tab, signal, false);
+      return Array.isArray(result) && result.every(item => typeof item === "string") ? result : [];
+    },
+    async selectPlanLocalFile(tab: Registration, file: DesktopLocalFileSelectionInput, signal: AbortSignal) {
+      if (file.workspaceId !== tab.target.workspaceId) return;
+      const result = await approval({ operation:"select-file", document:tab.target, file }, tab, signal, false);
+      if (!signal.aborted) return readAppHeadlessLocalFileSelectionValue(result, file);
     },
     async consent(operation: "accept" | "ready", tab: Registration, target: UiControlAttempt | UiControlLeaseTarget, signal: AbortSignal) {
       return readUiControlTimedGrant((await send({operation, document: tab.target, target}, {proof: tab.proof, signal})).body);

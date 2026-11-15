@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import { createWindowTakeoverController, type DraftHandoff } from "../../../../../../modules/ui/shared/takeover/windowTakeoverController";
 import { createPresentationQueue } from "../../../../../../modules/ui/shared/takeover/presentationQueue";
 import type { HeadlessPlanApprovalClient } from "../../../../../../modules/ui/shared/headless/HeadlessPlanApprovalDialog";
+import type { GuidedHeadlessFileClient } from "../../../../../../modules/ui/shared/data-management/GuidedIngestionTaskPanel";
 import { UI_PRESENTATION_LIMITS, type UiPresentationContext, type UiPresentationDetail,
   type UiPresentationIntent, type UiPresentationReceipt } from "../../../../../../modules/contracts/headless";
 import { isWorkspaceId, type WorkspaceId } from "../../../../../../modules/contracts/workspace/workspace-id";
@@ -19,7 +20,8 @@ type Tab = Extract<Awaited<ReturnType<Client["register"]>>, {status: "registered
 type Scope = {readonly client: Client; readonly tab: Tab;
   readonly signal: AbortSignal; readonly isCurrent: () => boolean; readonly sameBearer: () => boolean;
   delivery: boolean; planApprovals?: ApprovalClients};
-type ApprovalClients = {readonly client: HeadlessPlanApprovalClient; readonly chatClient?: HeadlessPlanApprovalClient};
+type ApprovalClients = {readonly client: HeadlessPlanApprovalClient; readonly chatClient?: HeadlessPlanApprovalClient;
+  readonly fileClient: GuidedHeadlessFileClient};
 type PlanApprovals = ApprovalClients & {readonly workspaceId: WorkspaceId; readonly documentId: string; readonly isCurrent: () => boolean};
 const presentationViews = {
   "open-system": "system", "select-component": "component",
@@ -123,7 +125,13 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
         decide: (decision, displayed) => call(() => client.decidePlanApproval(tab, decision, displayed, signal, chat)),
         dismiss: viewId => call(() => client.dismissPlanApproval(tab, viewId, signal, chat)),
       });
-      const port = {client:getPort(false), chatClient:chatEnabled ? getPort(true) : undefined};
+      const fileClient: GuidedHeadlessFileClient = {
+        async listClients(id) {
+          return id === tab.target.workspaceId ? (await call(() => client.listPlanFileClients(tab, signal))) ?? [] : [];
+        },
+        select: file => call(() => client.selectPlanLocalFile(tab, file, signal)),
+      };
+      const port = {client:getPort(false), chatClient:chatEnabled ? getPort(true) : undefined, fileClient};
       scope.planApprovals = port;
       setPlanApprovals({workspaceId:tab.target.workspaceId, documentId:tab.target.uiIncarnationId, ...port, isCurrent});
     }

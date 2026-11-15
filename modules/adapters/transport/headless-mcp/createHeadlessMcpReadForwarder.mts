@@ -128,6 +128,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   const presentationAddress = new URL(managedWindow.MANAGED_HEADLESS_AGENT_WINDOW_PATH, origin);
   const planReviewAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PLAN_REVIEW_PATH, origin) : undefined;
   const planStepAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_PLAN_STEP_PATH, origin) : undefined;
+  const localFilePreviewAddress = enablePlanReview ? new URL(headless.MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH, origin) : undefined;
   const headers = {"x-organization-id": organizationId};
   const presentationSession = randomUUID();
   const presentationHeaders = {...headers, [managedWindow.MANAGED_HEADLESS_AGENT_SESSION_HEADER]: presentationSession};
@@ -137,6 +138,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   const guard = (input: ForwardRequest) => {
     if (isPlanReview(input)) return enablePlanReview && input.target.workspaceId === workspaceId;
     if (input.operation === "plan.run-step") return enablePlanReview && input.input.workspaceId === workspaceId;
+    if (input.operation === "data.prepare-local-file") return enablePlanReview && input.input.workspaceId === workspaceId;
     if (input.version === headless.UI_CONTROL_VERSION) {
       const target = "target" in input.input ? input.input.target : input.input;
       return !enablePlanReview && enableConsent && target.workspaceId === workspaceId &&
@@ -148,7 +150,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
         ((!enablePlanReview && isAuthoring(input)) || MANAGED_HEADLESS_READS.some(operation => operation === input.operation))));
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
-    planReviewAddress, planStepAddress, agent, authorization: `Bearer ${credential}`,
+    planReviewAddress, planStepAddress, localFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
     enableAuthoring: !enablePlanReview && enableAuthoring, enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
@@ -190,7 +192,7 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const agent = loopback.createDesktopPinnedLoopbackAgent(endpoint, fingerprint);
   const authorization = `Bearer ${credential}`;
   return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress, localFilePreviewAddress,
-    agent, authorization, enableAuthoring: !enablePlanReview && enableAuthoring,
+    agent, authorization, allowLocalFileSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
 }
 
@@ -199,6 +201,7 @@ function createForwarder(options: {
   planReviewAddress?: URL;
   planStepAddress?: URL;
   localFilePreviewAddress?: URL;
+  allowLocalFileSave?: boolean;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
@@ -236,7 +239,7 @@ function createForwarder(options: {
       try {
         const { status, raw } = await sendRead(options.planStepAddress, agent, authorization, accepted.request, signal, headers);
         const result = headless.readHeadlessPlanStepResult(raw, accepted.request.input,
-          { allowLocalFileSave: options.localFilePreviewAddress !== undefined });
+          { allowLocalFileSave: options.allowLocalFileSave === true });
         if (status === 200 && result.ok)
           return result.value.expiresAt > Date.now() ? result : unknownWrite;
         // The host can withhold a reply after it has saved the step. Only
@@ -249,7 +252,7 @@ function createForwarder(options: {
     }
     if (isPlanReview(input)) {
       if (!options.planReviewAddress) return { ok: false, code: "headless.forbidden" };
-      if (!options.localFilePreviewAddress && input.operation === "plan.submit" &&
+      if (!options.allowLocalFileSave && input.operation === "plan.submit" &&
           input.proposal.requests.some(step => step.operation === "data.save-local-source"))
         return { ok: false, code: "headless.forbidden" };
       if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;

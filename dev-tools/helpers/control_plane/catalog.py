@@ -169,6 +169,7 @@ PUBLISHED_FORM_CHECKS = {
     "managed-headless-browser-live-fixture": {
         "automatic_sources": (
             "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-plan-approval.ts",
         ),
         "sources": (
             "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
@@ -281,6 +282,8 @@ PUBLISHED_FORM_CHECKS = {
             "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
             "apps/thin-client/src/features/workspace/api/managedBrowserConsentClient.ts",
             "apps/thin-client/src/features/workspace/api/tests/managed-browser-plan-approval.unit.test.ts",
+            "apps/thin-client/src/pages/ArtifactsPage.tsx",
+            "apps/thin-client/src/features/artifact-upload/components/ArtifactIngestionFeature.tsx",
             "apps/thin-client/README.md",
             "apps/desktop/src/renderer/App.tsx",
             "apps/desktop/src/renderer/features/settings/components/HeadlessPlanApprovals.tsx",
@@ -695,6 +698,9 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case.ts",
             "modules/application/use-cases/ingestion-acquisition/ingestion-file-publication.service.ts",
             "modules/adapters/persistence/ingestion/createStructuredHeadlessLocalFilePlanStepStore.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts",
+            "modules/contracts/headless/managed-browser-plan-approval.ts",
         ),
         "sources": (
             "modules/contracts/headless/headless-data-task-status.ts",
@@ -751,6 +757,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts",
             "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
             "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--",
@@ -773,6 +780,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
             "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
             "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
         ),
     },
     "headless-system-builder-semantic-edits": {

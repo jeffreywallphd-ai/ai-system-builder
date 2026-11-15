@@ -85,6 +85,12 @@ operation it saved with the plan. If the reply is uncertain, check current
 approval and saved state first. While that approval remains current, repeat
 the exact step and revision to look up its saved receipt.
 
+The Desktop and Managed plan-review modes offer
+`aisb_preview_selected_local_file` for a local file the user stages in the
+app for that exact client. The tool receives only the copied reference and
+returns bounded file metadata. Desktop can also save through an approved
+plan. Use the Managed browser's **Add data** action to save there.
+
 If a write reply is lost, check the saved state or repeat the exact request
 with the same key. The adapter never repeats writes automatically. Cancellation
 ends the local wait but cannot undo a transaction already committed. A canceled

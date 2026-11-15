@@ -11,6 +11,7 @@ import { createContextManagementPageClient } from "../features/context-managemen
 
 import type { DatasetVersionPanelService } from "../../../../modules/ui/shared/dataset-version";
 import { useDatasetVersionReplayHandoff } from "../../../../modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff";
+import type { GuidedHeadlessFileClient } from "../../../../modules/ui/shared/data-management/GuidedIngestionTaskPanel";
 
 export interface WorkspaceScopedPageProps {
   workspaceId: string;
@@ -18,12 +19,14 @@ export interface WorkspaceScopedPageProps {
   initialSelectedStorageKey?: string;
   onInitialSelectionHandled?: () => void;
   onConvertToRag?: (artifactId: string) => void;
+  headlessFileClient?: GuidedHeadlessFileClient;
 }
 export function ArtifactsPage({
   workspaceId,
   initialSelectedStorageKey,
   onInitialSelectionHandled,
   onConvertToRag,
+  headlessFileClient,
 }: WorkspaceScopedPageProps) {
   const [activeTabId, setActiveTabId] = useState("ingestion");
   const replayHandoff = useDatasetVersionReplayHandoff(workspaceId, activeTabId === "dataset-preparation", () => setActiveTabId("dataset-preparation"));
@@ -145,6 +148,7 @@ export function ArtifactsPage({
               <ArtifactIngestionFeature
                 key={`ingest-${workspaceId}`}
                 workspaceId={workspaceId}
+                headlessFileClient={headlessFileClient}
               />
             ),
           },

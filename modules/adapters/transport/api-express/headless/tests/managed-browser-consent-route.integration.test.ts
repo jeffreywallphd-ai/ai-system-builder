@@ -6,6 +6,7 @@ import express from "express";
 
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
 import { createOrganizationId } from "../../../../../contracts/organization";
+import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../../contracts/ingestion";
 import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
   MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../../contracts/headless/managed-browser-presentation";
 import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH } from "../../../../../contracts/headless/managed-browser-plan-approval";
@@ -56,9 +57,14 @@ test("exact browser origin, purposeful authentication, framing and live request 
   let deliveryEnabled = false;
   let planEnabled = false;
   let planReplyCurrent = true;
+  let stableFileRead = true;
+  let fileSelectionCalls = 0;
   let planApprovalCalls = 0;
   const approvalChannels: string[] = [];
   const planReference = {workspaceId, registeredClientId:randomUUID(), fingerprint:"b".repeat(64), expiresAt:Date.now() + 60_000};
+  const file = { workspaceId, registeredClientId:planReference.registeredClientId, expectedSelectionRevision:0,
+    taskId:normalizeIngestionTaskId("ingestion.browser-fixture"), fileId:normalizeIngestionTaskFileId("file.browser-fixture"), taskRevision:3 };
+  const fileReceipt = {workspaceId, taskId:file.taskId, fileId:file.fileId, taskRevision:3, selectionRevision:1};
   let consentReply: typeof grant | undefined;
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
@@ -86,6 +92,16 @@ test("exact browser origin, purposeful authentication, framing and live request 
     disconnect() { registrationRetired = true; return true; },
     ...(planEnabled ? {async planApproval(document, input, _current, channel) {
       planApprovalCalls++;
+      if (input.operation === "list-file-clients" || input.operation === "select-file") {
+        fileSelectionCalls++;
+        if (document.proof !== proof || (input.operation === "select-file" &&
+          input.file.registeredClientId !== file.registeredClientId)) return;
+        return {
+          value:input.operation === "list-file-clients" ? [file.registeredClientId] : fileReceipt,
+          canPublish:() => planReplyCurrent,
+          publishIfCurrent:stableFileRead ? async (send:() => boolean) => send() : undefined,
+        };
+      }
       approvalChannels.push(channel);
       if (document.proof !== proof || input.operation !== "list") return;
       return {value:[planReference], canPublish:() => planReplyCurrent};
@@ -163,7 +179,24 @@ test("exact browser origin, purposeful authentication, framing and live request 
     assert.equal((await chatPost({...plans, channel:"app-popup"})).status, 400);
     assert.deepEqual(await (await chatPost(plans)).json(), [planReference]);
     assert.deepEqual(approvalChannels, ["app-popup", "authenticated-chat"]);
+    const listFileClients = {operation:"list-file-clients", document:target};
+    const selectFile = {operation:"select-file", document:target, file};
+    assert.equal((await chatPost(listFileClients)).status, 403);
+    assert.equal((await chatPost(selectFile)).status, 403);
+    assert.equal((await planPost(selectFile, {})).status, 403);
+    assert.equal((await planPost(selectFile, {...proofHeader, origin:"https://other.invalid"})).status, 403);
+    assert.equal((await planPost({...selectFile, file:{...file, hostIncarnationId:target.hostIncarnationId}})).status, 400);
+    assert.equal((await planPost({...selectFile, file:{...file, workspaceId:"other-workspace"}})).status, 400);
+    assert.equal((await planPost({...selectFile, file:{...file, path:"synthetic.csv"}})).status, 400);
+    assert.equal(fileSelectionCalls, 0);
+    assert.equal((await planPost({...selectFile, file:{...file, registeredClientId:randomUUID()}})).status, 403);
+    assert.deepEqual(await (await planPost(listFileClients)).json(), [file.registeredClientId]);
+    assert.deepEqual(await (await planPost(selectFile)).json(), fileReceipt);
+    stableFileRead = false;
+    assert.equal((await planPost(selectFile)).status, 403);
+    stableFileRead = true;
     planReplyCurrent = false;
+    assert.equal((await planPost(selectFile)).status, 403);
     const retiredPlanReply = await planPost(plans);
     assert.equal(retiredPlanReply.status, 403);
     assert.equal(JSON.stringify(await retiredPlanReply.json()).includes(planReference.fingerprint), false);

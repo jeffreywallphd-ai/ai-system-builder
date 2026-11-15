@@ -5,6 +5,7 @@ import {parseHeadlessBuildPlanProposal, type HeadlessHostIncarnationId} from "..
 import {MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH} from "../../../../../../../modules/contracts/headless/managed-browser-consent";
 import {MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH} from "../../../../../../../modules/contracts/headless/managed-browser-plan-approval";
 import {createWorkspaceId} from "../../../../../../../modules/contracts/workspace";
+import {normalizeIngestionTaskFileId, normalizeIngestionTaskId} from "../../../../../../../modules/contracts/ingestion";
 import {createManagedBrowserConsentClient} from "../managedBrowserConsentClient";
 
 const hostIncarnationId = "019394de-9fa1-4972-8eb2-454450a3d047" as HeadlessHostIncarnationId;
@@ -45,6 +46,38 @@ test("the signed-in chat uses its own fixed route with the same live browser pro
   expect(path).toBe(MANAGED_BROWSER_PLAN_CHAT_PATH);
   expect(request!.headers).toMatchObject({[MANAGED_BROWSER_DOCUMENT_HEADER]:tab.proof});
   expect(JSON.parse(request!.body as string)).toEqual({operation:"list",document});
+});
+
+test("file preparation retains the browser scope and accepts only a current selection receipt", async () => {
+  const file = {workspaceId, registeredClientId:selection.registeredClientId, expectedSelectionRevision:0,
+    taskId:normalizeIngestionTaskId("ingestion.browser-fixture"), fileId:normalizeIngestionTaskFileId("file.browser-fixture"), taskRevision:2};
+  const receipt = {workspaceId, taskId:file.taskId, fileId:file.fileId, taskRevision:2, selectionRevision:1};
+  const retired = new AbortController();
+  const transport = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(response([file.registeredClientId]))
+    .mockResolvedValueOnce(response([file.registeredClientId, file.registeredClientId]))
+    .mockResolvedValueOnce(response({...receipt, path:"synthetic.csv"}))
+    .mockResolvedValueOnce(response({...receipt, selectionRevision:2}))
+    .mockResolvedValueOnce(response(receipt))
+    .mockImplementationOnce(async () => {
+      retired.abort();
+      return response(receipt);
+    });
+  const client = createManagedBrowserConsentClient("fixture-org",transport);
+  expect(await client.listPlanFileClients(tab,signal)).toEqual([file.registeredClientId]);
+  expect(await client.listPlanFileClients(tab,signal)).toEqual([]);
+  expect(await client.selectPlanLocalFile(tab,{...file, workspaceId:createWorkspaceId("workspace.foreign")},signal)).toBeUndefined();
+  expect(await client.selectPlanLocalFile(tab,file,signal)).toBeUndefined();
+  expect(await client.selectPlanLocalFile(tab,file,signal)).toBeUndefined();
+  expect(await client.selectPlanLocalFile(tab,file,signal)).toEqual(receipt);
+  expect(await client.selectPlanLocalFile(tab,file,retired.signal)).toBeUndefined();
+  expect(transport).toHaveBeenCalledTimes(6);
+  for (const [path,options] of transport.mock.calls) {
+    expect(path).toBe(MANAGED_BROWSER_PLAN_APPROVAL_PATH);
+    expect(options!.headers).toMatchObject({"x-organization-id":"fixture-org",[MANAGED_BROWSER_DOCUMENT_HEADER]:tab.proof});
+  }
+  expect(JSON.parse(transport.mock.calls[0]![1]!.body as string)).toEqual({operation:"list-file-clients",document});
+  expect(JSON.parse(transport.mock.calls[2]![1]!.body as string)).toEqual({operation:"select-file",document,file});
 });
 
 test("foreign or altered views and receipts that disagree with the displayed decision are refused", async () => {

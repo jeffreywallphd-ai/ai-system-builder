@@ -119,7 +119,8 @@ export function composeManagedBrowserConsent(options: {
         const result = await options.planApprovals?.(request, authenticated.owner, authenticated.isCurrent, current, channel);
         if (!result?.ok || !authenticated.isCurrent() || !current()) return;
         const publish = "canPublish" in result ? result.canPublish : undefined;
-        return {value:result.value, canPublish:() => authenticated.isCurrent() && current() && (!publish || publish())};
+        return {value:result.value, canPublish:() => authenticated.isCurrent() && current() && (!publish || publish()),
+          ...("publishIfCurrent" in result && result.publishIfCurrent ? { publishIfCurrent: result.publishIfCurrent } : {})};
       },
     } : {}),
     async register(identity: ManagedHeadlessBrowserIdentity, workspaceId: WorkspaceId, requestIsCurrent: () => boolean) {

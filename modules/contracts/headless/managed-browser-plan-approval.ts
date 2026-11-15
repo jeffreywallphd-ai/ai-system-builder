@@ -5,6 +5,9 @@ import {
 } from "./desktop-headless-plan-approval";
 import { readHeadlessPlanReviewAgentResult } from "./headless-plan-review-wire";
 import { isUiControlId, readUiControlWindow, type UiControlWindowTarget } from "./ui-control-authority";
+import { isDesktopHeadlessClientId } from "./desktop-headless-pairing";
+import { readAppHeadlessLocalFileSelectionValue, readDesktopLocalFileSelectionRequest,
+  type DesktopLocalFileSelectionInput } from "./headless-data-app-selection";
 
 export const MANAGED_BROWSER_PLAN_APPROVAL_PATH = "/api/headless/browser/plan-approvals";
 export const MANAGED_BROWSER_PLAN_CHAT_PATH = "/api/headless/browser/plan-chat";
@@ -14,16 +17,19 @@ export type ManagedBrowserPlanApprovalRequest =
   | { readonly operation: "list"; readonly document: UiControlWindowTarget }
   | { readonly operation: "open"; readonly document: UiControlWindowTarget; readonly selection: DesktopPlanApprovalSelection }
   | { readonly operation: "decide"; readonly document: UiControlWindowTarget; readonly decision: DesktopPlanApprovalDecision }
+  | { readonly operation: "list-file-clients"; readonly document: UiControlWindowTarget }
+  | { readonly operation: "select-file"; readonly document: UiControlWindowTarget; readonly file: DesktopLocalFileSelectionInput }
   | { readonly operation: "dismiss"; readonly document: UiControlWindowTarget; readonly viewId: string };
 
 export function readManagedBrowserPlanApprovalRequest(value: unknown): ManagedBrowserPlanApprovalRequest | undefined {
   try {
     const { operation, document: input, ...fields } = readStrictPassiveRecord(copyBoundedPassiveData(value),
-      ["operation", "document", "selection", "decision", "viewId"]);
+      ["operation", "document", "selection", "decision", "viewId", "file"]);
     const document = readUiControlWindow(input);
     if (!document) return;
     switch (operation) {
       case "list":
+      case "list-file-clients":
         if (Object.keys(fields).length === 0) return { operation, document };
         return;
       case "open": {
@@ -41,6 +47,14 @@ export function readManagedBrowserPlanApprovalRequest(value: unknown): ManagedBr
       case "dismiss": {
         const { viewId } = readStrictPassiveRecord(fields, ["viewId"]);
         if (isUiControlId(viewId)) return { operation, document, viewId };
+        return;
+      }
+      case "select-file": {
+        const { file: selected } = readStrictPassiveRecord(fields, ["file"]);
+        const parsed = readDesktopLocalFileSelectionRequest(selected, document.hostIncarnationId);
+        if (!parsed.ok || parsed.request.input.workspaceId !== document.workspaceId) return;
+        const { hostIncarnationId: _boundByDocument, ...file } = parsed.request.input;
+        return { operation, document, file };
       }
     }
   } catch { return undefined; }
@@ -49,6 +63,15 @@ export function readManagedBrowserPlanApprovalRequest(value: unknown): ManagedBr
 export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanApprovalRequest, value: unknown) {
   switch (request.operation) {
     case "list": return readDesktopPlanApprovalList(value, request.document.workspaceId);
+    case "list-file-clients": {
+      try {
+        const clients = copyBoundedPassiveData(value);
+        if (Array.isArray(clients) && clients.length <= 1 && clients.every(isDesktopHeadlessClientId))
+          return clients as readonly string[];
+      } catch { return; }
+      return;
+    }
+    case "select-file": return readAppHeadlessLocalFileSelectionValue(value, request.file);
     case "open": {
       const view = readDesktopPlanApprovalView(value, request.selection, { allowLocalFileSave: false });
       return view?.preview.hostIncarnationId === request.document.hostIncarnationId ? view : undefined;

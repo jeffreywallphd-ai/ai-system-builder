@@ -8,6 +8,8 @@ import {
   HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult,
   type HeadlessPlanReviewAgentRequest, type HeadlessPlanReviewAgentResult,
   readHeadlessPlanStepRequest, readHeadlessPlanStepResult, type HeadlessPlanStepRequest, type HeadlessPlanStepResult,
+  readHeadlessLocalFileImportRequest, readHeadlessLocalFileImportResult,
+  type HeadlessLocalFileImportRequest, type HeadlessLocalFileImportResult,
 } from "../../../../contracts/headless";
 import { isManagedWindowOperation, MANAGED_HEADLESS_AGENT_SESSION_HEADER,
   readManagedWindowResult } from "../../../../contracts/headless/managed-headless-window";
@@ -46,6 +48,10 @@ export type ManagedAgentRouteHandlers<Agent> = {
     readonly result: HeadlessPlanStepResult;
     readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
   }>;
+  readonly localFilePreview?: (input: HeadlessLocalFileImportRequest, agent: Agent, current: () => boolean) => Promise<{
+    readonly result: HeadlessLocalFileImportResult;
+    readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
+  }>;
   readonly window?: {
     readonly deliveryEnabled?: boolean;
     readonly execute: (input: HeadlessWindowRequest, agent: Agent, session: string, current: () => boolean) => Promise<HeadlessWindowResult>;
@@ -73,6 +79,7 @@ export function registerManagedHeadlessAgentRoutes<Agent extends object>(
       if (kind === "window" && !handlers.window) return failure(response, 404, "headless.unavailable");
       if (kind === "plan-review" && !handlers.planReview) return failure(response, 404, "headless.unavailable");
       if (kind === "plan-step" && !handlers.planStep) return failure(response, 404, "headless.unavailable");
+      if (kind === "local-file-preview" && !handlers.localFilePreview) return failure(response, 404, "headless.unavailable");
       const agent = handlers.identify({
         auth: getExpressAuthContext(request), organization: getExpressOrganizationContext(request),
         organizationHeader: request.headers["x-organization-id"],
@@ -138,6 +145,24 @@ async function respond<Agent>(
       if (!current() || response.headersSent || result.value.expiresAt <= Date.now()) return false;
       send(response, result);
       return response.statusCode === 200 && response.headersSent;
+    });
+    if (!sent) return failure(response, 403, "headless.forbidden");
+    return;
+  }
+  if (kind === "local-file-preview") {
+    const input = readHeadlessLocalFileImportRequest(value, handlers.hostIncarnationId);
+    if (!input.ok) return failure(response, requestErrorStatus(input.code), input.code);
+    if (!handlers.localFilePreview) return failure(response, 404, "headless.unavailable");
+    const outcome = await handlers.localFilePreview(input.request, agent, current);
+    if (!current()) return failure(response, 403, "headless.forbidden");
+    const result = readHeadlessLocalFileImportResult(outcome.result, input.request.input);
+    if (!result.ok && result.code !== "headless.stale" && result.code !== "headless.source-not-ready")
+      return failure(response, requestErrorStatus(result.code), result.code);
+    const sent = await outcome.publishIfCurrent?.(() => {
+      if (!current() || response.headersSent || (result.ok && Date.now() >= result.value.checkpointExpiresAt)) return false;
+      if (result.ok) send(response, result);
+      else failure(response, 409, result.code);
+      return response.headersSent;
     });
     if (!sent) return failure(response, 403, "headless.forbidden");
     return;

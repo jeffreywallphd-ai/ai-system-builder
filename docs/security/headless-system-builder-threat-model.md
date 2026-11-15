@@ -601,6 +601,17 @@ Reject a late receipt when its app view or task has ended. A retry confirms
 the same choice without sending the file a second time. Cancelling the task
 invalidates its staged preview.
 
+The Managed browser uses the current signed-in app document and same-origin
+request for file preparation. Only the app-popup channel accepts this
+selection. It stages one file through the existing chunk upload path. The
+selection transaction checks the configured plan client and current
+workspace artifact-read and artifact-write permissions. The scoped HTTPS
+preview route accepts the issuer-verified plan registration, checks artifact
+read access and holds the selected task and active permission records through
+response release. It discloses the same bounded metadata as the Desktop
+preview. Cancellation and replacement invalidate the exact previous
+reference. Managed plan submission continues to refuse file-save steps.
+
 Desktop accepts one exact local-file save for each staged upload in a
 plan. The app’s approval channels show the file and upload references
 and the permission to save in Data. The plan, workspace permissions,
@@ -609,4 +620,4 @@ each new byte or origin write. The owner records the approval fence and
 the issue together. A repeat returns only the bound reference for a
 verified committed source. An interrupted run that entered finalizing
 without a committed source stays unconfirmed for Data task recovery.
-Managed still needs its own file staging and approval evidence.
+Managed still needs its own approved file-save evidence.

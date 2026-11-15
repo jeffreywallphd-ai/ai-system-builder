@@ -10,6 +10,7 @@ import path from "node:path";
 import { HEADLESS_CONTRACT_VERSION, HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, parseHeadlessBuildPlanProposal,
   UI_CONTROL_VERSION, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
 import { MANAGED_HEADLESS_AGENT_SESSION_HEADER } from "../../../../../contracts/headless/managed-headless-window";
+import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../../contracts/ingestion";
 import { createOrganizationId } from "../../../../../contracts/organization";
 import { type AuthContext, createSecurityApplicationError } from "../../../../../contracts/security";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../../contracts/system-builder";
@@ -20,8 +21,9 @@ import { registerManagedHeadlessAgentRoutes, type ManagedAgentRouteHandlers } fr
 
 test("managed agent routes stay exact in the central deny-by-default API", () => {
   for (const [kind, path] of Object.entries(MANAGED_HEADLESS_AGENT_PATHS)) {
-    assert.deepEqual(resolveApiRoutePolicy("POST", path), {public: false,
-      scopes: ["workspace:read", "asset:read", ...(kind === "plan-review" || kind === "plan-step" ? ["asset:write"] : [])]});
+    const scopes = kind === "local-file-preview" ? ["workspace:read", "artifact:read"] :
+      ["workspace:read", "asset:read", ...(kind === "plan-review" || kind === "plan-step" ? ["asset:write"] : [])];
+    assert.deepEqual(resolveApiRoutePolicy("POST", path), {public: false, scopes});
     for (const method of ["GET", "HEAD", "DELETE", "PATCH"])
       assert.equal(resolveApiRoutePolicy(method, path).deny, true);
     for (const variant of [path + "/", path.toUpperCase(), path.replace("agent", "%61gent"), path + "/other"])
@@ -39,6 +41,10 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let current = true;
   let calls = 0;
   let sends = 0;
+  let previewCalls = 0;
+  let previewState: "selected" | "stale" | "expired" | "malformed" = "selected";
+  let previewFence = true;
+  let previewCurrent = true;
   const expiresAt = Date.now() + 30_000;
   let stepExpiresAt = expiresAt;
   const app = express();
@@ -51,7 +57,8 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   }));
   const retire = registerManagedHeadlessAgentRoutes(app, (): ManagedAgentRouteHandlers<typeof planIdentity> => ({
     hostIncarnationId,
-    identify: (request, kind) => (kind === "plan-review" || kind === "plan-step") && request.organizationHeader === organizationId &&
+    identify: (request, kind) => (kind === "plan-review" || kind === "plan-step" || kind === "local-file-preview") &&
+      request.organizationHeader === organizationId &&
       request.auth?.oidcAccessTokenClientId === "fixture-plan" ? planIdentity : undefined,
     isCurrent: identity => identity === planIdentity && current,
     async read() { throw new Error("Unexpected plan read."); },
@@ -72,6 +79,20 @@ test("managed plan routes admit only exact proposals, status and an approved ste
           if (result) sends += 1;
           return result;
         }
+      };
+    }, async localFilePreview({input}) {
+      previewCalls += 1;
+      const {workspaceId, taskId, fileId, taskRevision} = input;
+      const value = {workspaceId, taskId, fileId, taskRevision, mediaType:"text/csv", fileBytes:22,
+        checkpointExpiresAt:previewState === "expired" ? Date.now() - 1 : expiresAt,
+        effect:"save-local-source" as const, externalProviderCalls:0 as const};
+      return {
+        result:previewState === "stale" ? {ok:false, code:"headless.stale"} :
+          {ok:true, value:previewState === "malformed" ? {...value, localPath:"private-synthetic.csv"} : value},
+        async publishIfCurrent(send) {
+          if (!previewCurrent) current = false;
+          return previewFence && send();
+        },
       };
     }} : {}),
   }));
@@ -110,6 +131,35 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     assert.deepEqual(result, {status:200, cache:"no-store", body:{ok:true,
       value:{fingerprint, revision:1, stepCount:1, approvedSteps:0, expiresAt, status:"pending"}}});
     assert.deepEqual(await request({version:HEADLESS_CONTRACT_VERSION, operation:"plan.status", input:{...scope, fingerprint}}), result);
+    const previewPath = MANAGED_HEADLESS_AGENT_PATHS["local-file-preview"];
+    const preview = {version:HEADLESS_CONTRACT_VERSION, operation:"data.prepare-local-file",
+      input:{...scope, taskId:normalizeIngestionTaskId("ingestion.preview-fixture"),
+        fileId:normalizeIngestionTaskFileId("file.preview-fixture"), taskRevision:4}};
+    const readFile = (body:object = preview, token = "fixture-plan", org = organizationId) =>
+      request(body, token, previewPath, org);
+    for (const token of ["fixture-agent", "fixture-browser"])
+      assert.equal((await readFile(preview, token)).status, 403);
+    assert.equal((await readFile(preview, "fixture-plan", createOrganizationId("other-fixture"))).status, 403);
+    assert.equal((await readFile({...preview, input:{...preview.input, name:"synthetic.csv"}})).status, 400);
+    assert.equal(previewCalls, 0);
+    const {hostIncarnationId: _boundHost, ...file} = preview.input;
+    assert.deepEqual(await readFile(), {status:200, cache:"no-store", body:{ok:true,
+      value:{...file, mediaType:"text/csv", fileBytes:22, checkpointExpiresAt:expiresAt, effect:"save-local-source",
+        externalProviderCalls:0}}});
+    const denied = {status:403, cache:"no-store", body:{ok:false, code:"headless.forbidden"}};
+    previewState = "stale";
+    assert.deepEqual(await readFile(), {status:409, cache:"no-store", body:{ok:false, code:"headless.stale"}});
+    previewFence = false;
+    assert.deepEqual(await readFile(), denied);
+    previewFence = true;
+    previewState = "expired";
+    assert.deepEqual(await readFile(), denied);
+    previewState = "malformed";
+    assert.deepEqual(await readFile(), {status:503, cache:"no-store", body:{ok:false, code:"headless.unavailable"}});
+    previewState = "selected";
+    previewCurrent = false;
+    assert.deepEqual(await readFile(), denied);
+    current = true;
     const stepPath = MANAGED_HEADLESS_AGENT_PATHS["plan-step"];
     const step = {version:HEADLESS_CONTRACT_VERSION, operation:"plan.run-step", input:{...scope, fingerprint, approvalRevision:2, step:1}};
     assert.equal((await request(step, "fixture-agent", stepPath)).status, 403);

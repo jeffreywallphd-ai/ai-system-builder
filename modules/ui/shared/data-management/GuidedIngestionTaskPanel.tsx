@@ -24,7 +24,12 @@ export interface GuidedHeadlessFileClient {
   select(input: DesktopLocalFileSelectionInput): Promise<AppHeadlessLocalFileSelectionValue | undefined>;
 }
 
+interface ChatFileScope {
+  readonly client?: GuidedHeadlessFileClient;
+}
+
 interface PreparedLocalFile {
+  readonly scope: ChatFileScope;
   readonly request: DesktopLocalFileSelectionInput;
   readonly receipt?: AppHeadlessLocalFileSelectionValue;
 }
@@ -102,10 +107,10 @@ type ProviderFilesByRepository = Readonly<
 
 export function GuidedIngestionTaskPanel(props: GuidedIngestionTaskPanelProps) {
   const [scope, setScope] = useState({ client: props.client, browser: props.sourceBrowserClient,
-    headless: props.headlessFileClient, workspaceId: props.workspaceId, key: 0 });
+    workspaceId: props.workspaceId, key: 0 });
   if (scope.client !== props.client || scope.browser !== props.sourceBrowserClient ||
-      scope.headless !== props.headlessFileClient || scope.workspaceId !== props.workspaceId) {
-    setScope({ client: props.client, browser: props.sourceBrowserClient, headless: props.headlessFileClient,
+      scope.workspaceId !== props.workspaceId) {
+    setScope({ client: props.client, browser: props.sourceBrowserClient,
       workspaceId: props.workspaceId, key: scope.key + 1 });
     return null;
   }
@@ -143,7 +148,12 @@ function ScopedIngestionTaskPanel({
     useState<ProviderTokenState>({ status: "idle" });
   const [task, setTask] = useState<IngestionTaskRecord>();
   const [error, setError] = useState<string>();
-  const [headlessClients, setHeadlessClients] = useState<readonly string[]>([]);
+  const [chatScope, setChatScope] = useState<ChatFileScope>({ client: headlessFileClient });
+  if (chatScope.client !== headlessFileClient) setChatScope({ client: headlessFileClient });
+  const currentChatScope = useRef(chatScope);
+  useLayoutEffect(() => { currentChatScope.current = chatScope; }, [chatScope]);
+  const [chatClients, setChatClients] = useState<{ scope: ChatFileScope; ids: readonly string[] }>();
+  const headlessClients = chatClients?.scope === chatScope ? chatClients.ids : [];
   const [selectedHeadlessClient, setSelectedHeadlessClient] = useState("");
   const [preparedLocalFile, setPreparedLocalFile] = useState<PreparedLocalFile>();
   const [startedForChat, setStartedForChat] = useState(false);
@@ -168,8 +178,9 @@ function ScopedIngestionTaskPanel({
   }, []);
   const canChooseChatClient = sourceKind === "files" && files.length === 1;
   useEffect(() => {
-    if (!headlessFileClient || !workspaceId || !canChooseChatClient) {
-      setHeadlessClients([]);
+    const fileClient = chatScope.client;
+    if (!fileClient || !workspaceId || !canChooseChatClient) {
+      setChatClients(undefined);
       setSelectedHeadlessClient("");
       return;
     }
@@ -177,9 +188,9 @@ function ScopedIngestionTaskPanel({
     let request = 0;
     const refresh = () => {
       const current = ++request;
-      void headlessFileClient.listClients(workspaceId).catch(() => [] as readonly string[]).then(clients => {
-        if (!active || current !== request) return;
-        setHeadlessClients(clients);
+      void fileClient.listClients(workspaceId).catch(() => [] as readonly string[]).then(clients => {
+        if (!active || current !== request || currentChatScope.current !== chatScope) return;
+        setChatClients({ scope: chatScope, ids: clients });
         setSelectedHeadlessClient(selected => clients.includes(selected) ? selected :
           clients.length === 1 ? clients[0]! : "");
       });
@@ -187,7 +198,7 @@ function ScopedIngestionTaskPanel({
     refresh();
     window.addEventListener("focus", refresh);
     return () => { active = false; window.removeEventListener("focus", refresh); };
-  }, [headlessFileClient, workspaceId, canChooseChatClient]);
+  }, [chatScope, workspaceId, canChooseChatClient]);
 
   const ownsOperation = (token: number) => mountedRef.current && activeOperationRef.current === token;
   function beginOperation(keepCurrentTask = false) {
@@ -550,20 +561,26 @@ function ScopedIngestionTaskPanel({
     onComplete?.();
   }
 
-  async function confirmPreparedFile(request: DesktopLocalFileSelectionInput, isActive: () => boolean) {
-    const selected = await headlessFileClient?.select(request);
-    if (!isActive()) return;
+  async function confirmPreparedFile(prepared: PreparedLocalFile, isActive: () => boolean) {
+    const { scope, request } = prepared;
+    if (currentChatScope.current !== scope) return;
+    const current = () => isActive() && currentChatScope.current === scope;
+    const selected = await scope.client?.select(request).catch(reason => {
+      if (current()) throw reason;
+    });
+    if (!current()) return;
     const receipt = readAppHeadlessLocalFileSelectionValue(selected, request);
     if (!receipt) throw new Error("The file is staged. Check that the chat client is still paired, then try preparing it again.");
-    setPreparedLocalFile({ request, receipt });
+    setPreparedLocalFile({ ...prepared, receipt });
   }
 
   async function retryPreparedFile() {
-    if (!client || !headlessFileClient || !preparedLocalFile || preparedLocalFile.receipt ||
+    if (!client || !headlessFileClient || !preparedLocalFile || preparedLocalFile.scope !== currentChatScope.current ||
+        preparedLocalFile.receipt ||
         activeOperationRef.current !== undefined || statusRequestRef.current || cancelledRef.current) return;
     const operation = beginOperation(true);
     try {
-      await confirmPreparedFile(preparedLocalFile.request, operation.isActive);
+      await confirmPreparedFile(preparedLocalFile, operation.isActive);
     } catch (reason) {
       if (operation.isActive()) setError(safeUiError(reason));
     } finally {
@@ -619,8 +636,9 @@ function ScopedIngestionTaskPanel({
         const request: DesktopLocalFileSelectionInput = { workspaceId: completed.workspaceId, taskId: completed.taskId,
           fileId: file.fileId, taskRevision: completed.revision, registeredClientId, expectedSelectionRevision: 0 };
         waitingForSelection = true;
-        setPreparedLocalFile({ request });
-        await confirmPreparedFile(request, operation.isActive);
+        const prepared = { scope: chatScope, request };
+        setPreparedLocalFile(prepared);
+        await confirmPreparedFile(prepared, operation.isActive);
       }
     } catch (reason) {
       if (ownsOperation(operation.token) && !cancelledRef.current) setError(safeUiError(reason));
@@ -742,19 +760,22 @@ function ScopedIngestionTaskPanel({
   );
   const canPrepareForChat = Boolean(canChooseChatClient &&
     headlessClients.length && !preparedLocalFile);
-  const preparedReference = preparedLocalFile?.receipt ? JSON.stringify({
+  const isPreparedChatCurrent = preparedLocalFile?.scope === chatScope;
+  const visibleError = !preparedLocalFile || isPreparedChatCurrent ? error : undefined;
+  const preparedReference = isPreparedChatCurrent && preparedLocalFile?.receipt ? JSON.stringify({
     workspaceId: preparedLocalFile.receipt.workspaceId, taskId: preparedLocalFile.receipt.taskId,
     fileId: preparedLocalFile.receipt.fileId, taskRevision: preparedLocalFile.receipt.taskRevision,
   }) : undefined;
 
   async function copyPreparedReference() {
-    if (!preparedReference) return;
+    if (!preparedReference || currentChatScope.current !== chatScope) return;
     try {
       await navigator.clipboard.writeText(preparedReference);
-      if (mountedRef.current && !cancelledRef.current &&
+      if (mountedRef.current && !cancelledRef.current && currentChatScope.current === chatScope &&
           currentTaskIdRef.current === preparedLocalFile?.request.taskId) setCopiedReference(true);
     } catch {
-      if (mountedRef.current && !cancelledRef.current && currentTaskIdRef.current === preparedLocalFile?.request.taskId)
+      if (mountedRef.current && !cancelledRef.current && currentChatScope.current === chatScope &&
+          currentTaskIdRef.current === preparedLocalFile?.request.taskId)
         setError("The reference could not be copied. Select the reference to copy it manually.");
     }
   }
@@ -1224,14 +1245,14 @@ function ScopedIngestionTaskPanel({
               <textarea className="ui-textarea" aria-label="File reference" readOnly rows={2} value={preparedReference} />
               <button type="button" className="ui-button ui-button--outline" disabled={working}
                 onClick={() => void copyPreparedReference()}>{copiedReference ? "Reference copied" : "Copy file reference"}</button>
-            </> : <>
+            </> : isPreparedChatCurrent ? <>
               <p>The file is staged. Chat preparation is awaiting confirmation.</p>
               <button type="button" className="ui-button ui-button--outline" disabled={working || checkingStatus}
                 onClick={() => void retryPreparedFile()}>Try preparing again</button>
-            </>}
+            </> : <p>The chat connection changed. Cancel this upload before preparing the file again.</p>}
           </div>
         ) : null}
-        {error ? <p role="alert">{error}</p> : null}
+        {visibleError ? <p role="alert">{visibleError}</p> : null}
         <div className="ui-row ui-row--wrap ui-gap-sm">
           <button
             type="button"

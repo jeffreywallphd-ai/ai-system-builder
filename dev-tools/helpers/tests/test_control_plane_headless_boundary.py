@@ -47,6 +47,16 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         data_transport_reference = "skills/control-ai-system-builder/references/mcp-tools.json"
         data_transport_test = "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts"
         self.assertIn(data_transport_test, self.plan([data_transport_reference])["headless-desktop-pinned-mcp"]["argv"])
+        managed_selection = "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts"
+        managed_preview = "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts"
+        selected_managed = self.plan([managed_selection, managed_preview])
+        managed_routes = "modules/adapters/transport/api-express/headless/tests/"
+        self.assertIn(managed_routes + "managed-headless-agent-routes.integration.test.ts", selected_managed[check]["argv"])
+        self.assertIn(managed_routes + "managed-browser-consent-route.integration.test.ts", selected_managed[check]["argv"])
+        browser = "apps/thin-client/src/features/workspace/hooks/useManagedBrowserTakeover.ts"
+        browser_data = "apps/thin-client/src/pages/ArtifactsPage.tsx"
+        browser_check = self.plan([browser, browser_data])["managed-headless-browser-consent-ui"]
+        self.assertIn("apps/thin-client/src/features/workspace/api/tests/managed-browser-plan-approval.unit.test.ts", browser_check["argv"])
         self.assertIn("focused-tests", self.plan([owner, "modules/contracts/headless/unrelated.ts"], check))
 
     def test_window_authority_check_covers_the_exact_core_and_keeps_neighbor_fallback(self):
@@ -202,7 +212,10 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         service = "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts"
         http = "managed-headless-browser-consent-http"
         transaction = "managed-headless-transactional-authoring"
-        self.assertIn("focused-tests", self.plan([route, contract, service]))
+        automatic = self.plan([route, contract, service])
+        self.assertNotIn("focused-tests", automatic)
+        self.assertIn("modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
+                      automatic["headless-data-task-status"]["argv"])
         scoped = self.plan([route, contract, service], http, transaction)
         self.assertNotIn("focused-tests", scoped)
         self.assertIn("modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts", scoped[http]["argv"])
@@ -215,6 +228,10 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         browser_fixture = "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-plan-approval.ts"
         ui = "managed-headless-browser-consent-ui"
         live = "managed-headless-browser-live-fixture"
+        automatic_live = self.plan([browser_fixture])
+        self.assertNotIn("focused-tests", automatic_live)
+        self.assertIn("dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+                      automatic_live[live]["argv"])
         selected = self.plan([popup, workspace, browser_fixture], ui, live)
         self.assertNotIn("focused-tests", selected)
         self.assertIn("apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx", selected[ui]["argv"])

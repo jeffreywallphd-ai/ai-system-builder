@@ -3,7 +3,7 @@ import {createHash, randomUUID} from "node:crypto";
 import {lstat, mkdir, open, realpath, writeFile} from "node:fs/promises";
 import path from "node:path";
 import {setTimeout as delay} from "node:timers/promises";
-import {chromium, type Browser, type Locator} from "@playwright/test";
+import {chromium, expect, type Browser, type Locator} from "@playwright/test";
 import {Client} from "@modelcontextprotocol/client";
 import {StdioClientTransport} from "@modelcontextprotocol/client/stdio";
 
@@ -207,7 +207,8 @@ async function main() {
     const toolList = await client.listTools();
     assert.deepEqual(toolList.tools.map(tool => tool.name).sort(), [
       "aisb_build_plan_approval_status", "aisb_host_describe", "aisb_list_templates", "aisb_plan_capabilities",
-      "aisb_preview_build_plan", "aisb_read_system", "aisb_request_build_plan_approval", "aisb_run_approved_build_step",
+      "aisb_preview_build_plan", "aisb_preview_selected_local_file", "aisb_read_system",
+      "aisb_request_build_plan_approval", "aisb_run_approved_build_step",
     ]);
     async function call(name:string, input:Record<string, unknown> = {}) {
       const reply = await client.callTool({name,arguments:input},undefined,{timeout:8_000});
@@ -462,6 +463,68 @@ async function main() {
       assert.equal(loaded.value.revision, reference.recordRevision);
     }
     checks.chat_individual_all_changes_in_chat = true;
+
+    stage = "prepare-local-file";
+    await page.getByRole("button",{name:"Artifacts",exact:true}).click();
+    await page.getByRole("tab",{name:"Artifact Ingestion",exact:true}).click();
+    const workflow = page.getByRole("list",{name:"Add data workflow",exact:true});
+    const fileInput = workflow.getByLabel("Choose one or more files",{exact:true});
+    const sourceName = "synthetic-managed-preview.csv";
+    const buffer = Buffer.from("name,amount\nSample,12\n");
+    await fileInput.setInputFiles({name:sourceName,mimeType:"text/csv",buffer});
+    await workflow.getByRole("region",{name:"Selected files",exact:true}).getByText("1 file selected",{exact:true}).waitFor();
+    const clients = workflow.getByRole("combobox",{name:"Chat client",exact:true});
+    await expect(clients.locator("option")).toHaveCount(2);
+    await clients.selectOption({index:1});
+    await workflow.getByRole("button",{name:"Prepare for chat",exact:true}).click();
+    const referenceField = workflow.getByRole("textbox",{name:"File reference",exact:true});
+    await expect(referenceField).toHaveValue(/^\{.+\}$/);
+    const selectedFile = JSON.parse(await referenceField.inputValue());
+    assert.deepEqual(Object.keys(selectedFile).sort(), ["fileId","taskId","taskRevision","workspaceId"]);
+    assert.equal(selectedFile.workspaceId,workspaceId);
+    checks.browser_prepared_exact_file_reference = true;
+
+    stage = "preview-exact-managed-source";
+    const preview = await call("aisb_preview_selected_local_file",{...scope,...selectedFile});
+    assert.equal(preview.ok,true);
+    assert.deepEqual(preview.value,{...selectedFile,mediaType:"text/csv",fileBytes:buffer.byteLength,
+      checkpointExpiresAt:preview.value.checkpointExpiresAt,effect:"save-local-source",externalProviderCalls:0});
+    assert.ok(Number.isSafeInteger(preview.value.checkpointExpiresAt) && preview.value.checkpointExpiresAt > Date.now());
+    checks.managed_stdio_file_preview = true;
+    stage = "deny-other-managed-credentials";
+    const previewPath = MANAGED_HEADLESS_AGENT_PATHS["local-file-preview"];
+    const wirePreview = {version:HEADLESS_CONTRACT_VERSION,operation:"data.prepare-local-file",input:{...scope,...selectedFile}};
+    for (const token of [agent.browser, agent.access])
+      assert.equal((await fixture.request(previewPath,{method:"POST",token,organizationId,body:wirePreview})).status,403);
+    const foreign = await fixture.request(previewPath,{method:"POST",token:agent.planReview,organizationId,
+      body:{...wirePreview,input:{...wirePreview.input,workspaceId:agent.workspaceId}}});
+    assert.equal(foreign.status,403);
+    assert.deepEqual(foreign.body,{ok:false,code:"headless.forbidden"});
+    checks.selected_file_metadata_and_exact_plan_client = true;
+
+    stage = "cancel-staged-local-file";
+    await workflow.getByRole("button",{name:"Cancel",exact:true}).click();
+    await expect(referenceField).toHaveCount(0);
+    const add = workflow.getByRole("button",{name:"Add data",exact:true});
+    await expect(add).toBeEnabled();
+    const canceled = await call("aisb_preview_selected_local_file",{...scope,...selectedFile});
+    assert.equal(canceled.ok,false);
+    assert.ok(["headless.forbidden","headless.stale","headless.source-not-ready"].includes(canceled.code));
+    checks.cancel_retires_preview = true;
+    stage = "canceled-file-is-absent";
+    await page.getByRole("tab",{name:"Artifact Browser",exact:true}).click();
+    const savedSource = page.getByRole("button",{name:sourceName,exact:true});
+    await expect(savedSource).toHaveCount(0);
+    stage = "ordinary-add-local-file";
+    await page.getByRole("tab",{name:"Artifact Ingestion",exact:true}).click();
+    await fileInput.setInputFiles({name:sourceName,mimeType:"text/csv",buffer});
+    await add.click();
+    const notifications = page.getByRole("dialog",{name:"Notifications",exact:true});
+    await expect(notifications.locator(".ui-notification__item").filter({hasText:"All files are ready."})).toHaveCount(1);
+    await notifications.getByRole("button",{name:"Close notifications",exact:true}).click();
+    await page.getByRole("tab",{name:"Artifact Browser",exact:true}).click();
+    await expect(savedSource).toHaveCount(1);
+    checks.cancel_retires_preview_and_ordinary_data_still_saves = true;
     passed = true;
   } catch {
     // Report only fixed stages and check outcomes.

@@ -528,7 +528,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
     { mode: "presentation", tools: [...expectedTools, ...presentationTools].sort() },
     { mode: "all", tools: [...expectedTools, ...authoringTools, conversation, ...presentationTools].sort() },
     { mode: "plan-review", tools: [...expectedTools, ...planReviewTools, desktopDataPreviewTool].sort() },
-    { mode: "managed-plan-review", tools: ["aisb_host_describe", "aisb_list_templates", "aisb_read_system", ...planReviewTools].sort() },
+    { mode: "managed-plan-review", tools: ["aisb_host_describe", "aisb_list_templates", "aisb_read_system", ...planReviewTools, desktopDataPreviewTool].sort() },
   ]);
   const schemas = new Map(reference.tools.map(({ name, inputSchema }) => [name, inputSchema]));
   const assertExactObject = (name: string, required: string[], optional: string[] = []) => {

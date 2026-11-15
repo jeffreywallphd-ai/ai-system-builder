@@ -1105,6 +1105,31 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "c8f2d4e7c7b0618d6abd4c2b3a056c879d7e22f3012b7fa7535c4d380a9f9650") {
+    const previous = JSON.parse(historicalSource("109b1b9570067bb3bc180a3d48fd00de2d07e28a", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "f5fe8fa14e17d592ac23cf1b774c3db882151b475858e96408f06b388b7d2c7e");
+    const expected = structuredClone(previous);
+    const revisedSources = [
+      ["modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx","c3919d61d596c938864c86bc266fe361816570b4eb46093e32fd261914c52d8a","e74328c1a182f7b586f2c304d23040cada3b59fe665c516cbaca2ad86581d941","0eed1bf52c133cfa978db0b771fd284bcf22fe421e5dc003f112853d3146bf79"],
+    ];
+    for (const [path, priorHash, sourceHash, factsHash] of revisedSources) {
+      const original = expected.sources.filter(row => row.path === path);
+      const revised = map.sources.find(row => row.path === path);
+      assert.equal(original.length, 1);
+      assert.equal(original[0].facts.sha256, priorHash);
+      assert.equal(revised.facts.sha256, sourceHash);
+      assert.equal(sha(JSON.stringify(revised.facts)), factsHash);
+      original[0].facts = revised.facts;
+    }
+    const beforeInventory = expected.inventories.find(row => row.source === "apps/thin-client/src/pages/ArtifactsPage.tsx");
+    assert.equal(beforeInventory.sha256, "1987ec3f29e4933d1c51edf9e5342443f06111020a231290ecd0310ede9ac5a8");
+    beforeInventory.sha256 = "d758c64cb64cce649ed2f05e07b289b78194e3dcd085c93083839b9100342189";
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
   if (sha(JSON.stringify(map)) === "f5fe8fa14e17d592ac23cf1b774c3db882151b475858e96408f06b388b7d2c7e") {
     const previous = JSON.parse(historicalSource("6eab4d03368ee2dd84213d35361b91d2a6b6f4a5", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "1370552e5f8e8955a50777fd67b91332954e69de8649b9f8c36aa48bbe8972dc");

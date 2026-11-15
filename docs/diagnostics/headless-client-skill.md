@@ -93,17 +93,25 @@ client build, approved test workspace, synthetic request, tool and resource
 limits, user decision surface, and saved-result checks before running it.
 Record that result for the tested configuration.
 
-### Preview a local file on Desktop
+### Preview a local file
 
-In the workspace's Add Data page, choose a local file and select your paired
-plan-review client. Choose **Prepare for chat**, then **Copy file reference**.
-Give that reference to your chosen client. It can preview the file type, size
-and planned save action using `aisb_preview_selected_local_file`. The preview
-leaves the file staged. To save it through chat, review the exact file in the
-approval popup or approval chat. The client can then run the approved save
-step. The saved file appears in **Data → Artifact Browser**. Before approval
-and saving, **Cancel** discards the staged transfer. Use the usual **Add
-data** action for a direct import.
+In **Artifact Ingestion**, choose a local file and select the plan-review
+client. Choose **Prepare for chat**, then **Copy file reference**. Give the
+reference to that client. It can preview the file type, size and planned save
+action using `aisb_preview_selected_local_file`. The preview leaves the
+file staged. Desktop and a Managed browser with plan review configured offer
+this preview. Managed browser preparation requires permission to add data in
+the workspace.
+
+If the browser chat connection changes during preparation, the app hides
+the old file reference. Cancel that staged upload before preparing it again.
+Ordinary uploads in the same workspace continue when the chat connection
+changes.
+
+On Desktop, review the exact file in the approval popup or approval chat to
+let the client run the approved save. In the Managed browser, use **Add
+data** for a direct import. The saved file appears in **Artifact Browser**.
+Before saving, **Cancel** discards the staged transfer.
 
 For the opt-in frontier client check, start the isolated managed reference
 database and run `managed-headless-browser-plan-approval.ts` with

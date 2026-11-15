@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { createStructuredOrganizationRepositories } from "../../../adapters/persistence/organization";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import { readStructuredHeadlessLocalFileSelection } from "../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
 import { prepareStructuredHeadlessPlanStep } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
@@ -11,9 +12,11 @@ import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import { AuthorizeWorkspaceOperationService, createOrganizationAuthorizationPolicy } from "../../../application/services/security";
 import type { TenantPlacementConfig } from "../../../contracts/config";
 import { isDesktopHeadlessClientId, readHeadlessPlanStepResult, type HeadlessHostIncarnationId,
+  type HeadlessLocalFileImportRequest, type HeadlessLocalFileImportResult,
   type HeadlessPlanReviewAgentRequest, type HeadlessPlanReviewAgentResult, type HeadlessPlanStepRequest,
   type HeadlessPlanStepResult } from "../../../contracts/headless";
 import type { WorkspaceId } from "../../../contracts/workspace";
+import type { SecurityScope } from "../../../contracts/security";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
 import { projectHeadlessPlanReview, validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
 import type { ManagedPlanReviewRegistration } from "../security/resolveManagedHeadlessClientPolicy";
@@ -31,15 +34,17 @@ export function composeManagedHeadlessPlanReview(options: {
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly placement: TenantPlacementConfig;
   readonly systems?: Pick<SystemBuilderCompositionRoot, "composeHeadlessAuthoring">;
+  readonly enableLocalFilePreview?: boolean;
 }) {
   const { hostIncarnationId, platform, rootDirectory, workspaces, contexts, authorization, placement, systems } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
     throw new Error("Managed plan review requires the platform transaction owner.");
 
-  function admit(requested: HeadlessPlanReviewAgentRequest["target"], operation: string,
-    registration: ManagedPlanReviewRegistration, isOpen: () => boolean) {
+  function admitWorkspace(requested: Pick<HeadlessPlanReviewAgentRequest["target"], "workspaceId" | "hostIncarnationId">,
+    operation: string, registration: ManagedPlanReviewRegistration, isOpen: () => boolean,
+    requiredScopes: readonly SecurityScope[] = ["workspace:read", "asset:read", "asset:write"]) {
     const { organizationId, principalId, registeredClientId } = registration;
-    const { workspaceId, fingerprint } = requested;
+    const { workspaceId } = requested;
     const current = () => {
       const active = contexts.getCurrentOrganizationContext();
       return isOpen() && registration.isCurrent() && active?.organizationId === organizationId && active?.principalId === principalId;
@@ -55,13 +60,13 @@ export function composeManagedHeadlessPlanReview(options: {
         if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== organizationId ||
             workspace.status !== "active") return false;
         await policy.authorizeWorkspaceOperation({ workspace, operation: "headless." + operation,
-          requiredScopes: ["workspace:read", "asset:read", "asset:write"] });
+          requiredScopes });
         return current();
       } catch { return false; }
     }
 
     return {
-      scope, target: { hostIncarnationId, fingerprint, scope }, current,
+      scope, current,
       async authorizeCurrent() { return authorize(workspaces, authorization); },
       async authorizeOwned(owner: StructuredDocumentStore) {
         const repository = createLocalWorkspaceRepository({ rootDirectory, documents: owner.forOrganization(organizationId) });
@@ -75,6 +80,42 @@ export function composeManagedHeadlessPlanReview(options: {
         return authorize(repository, authorizer);
       },
     };
+  }
+
+  function admit(requested: HeadlessPlanReviewAgentRequest["target"], operation: string,
+    registration: ManagedPlanReviewRegistration, isOpen: () => boolean) {
+    const access = admitWorkspace(requested, operation, registration, isOpen);
+    if (access) return { ...access, target: { hostIncarnationId, fingerprint: requested.fingerprint, scope: access.scope } };
+  }
+
+  async function previewSelectedFile(request: HeadlessLocalFileImportRequest, registration: ManagedPlanReviewRegistration,
+    isOpen: () => boolean): Promise<{ readonly result: HeadlessLocalFileImportResult;
+      readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean> }> {
+    const stableReads = platform.publishWithStableReads?.bind(platform);
+    const access = admitWorkspace(request.input, "data.local-file-preview", registration, isOpen, ["workspace:read", "artifact:read"]);
+    if (!options.enableLocalFilePreview || !stableReads || !access) return { result: forbidden };
+    const { organizationId, principalId, registeredClientId } = access.scope;
+    const selection = { organizationId, principalId, registeredClientId, target: request.input };
+    async function observe(owner: StructuredDocumentStore) {
+      if (!await access!.authorizeOwned(owner) || !access!.current()) return forbidden;
+      const value = await readStructuredHeadlessLocalFileSelection(owner.forOrganization(organizationId), selection);
+      return value && access!.current() ? value : forbidden;
+    }
+    try {
+      const result = await platform.runInOwnedTransaction!(observe, () => {});
+      if (!access.current()) return { result: forbidden };
+      if (!result.ok && result.code !== "headless.stale" && result.code !== "headless.source-not-ready") return { result };
+      return {
+        result,
+        async publishIfCurrent(publish) {
+          if (!access.current()) return false;
+          try {
+            return await stableReads(async owner => JSON.stringify(await observe(owner)) === JSON.stringify(result),
+              () => access.current() && (!result.ok || Date.now() < result.value.checkpointExpiresAt) && publish());
+          } catch { return false; }
+        },
+      };
+    } catch { return { result: access.current() ? unavailable : forbidden }; }
   }
 
   const handlers = {
@@ -146,5 +187,6 @@ export function composeManagedHeadlessPlanReview(options: {
   };
   return Object.assign(handlers.execute, {
     runStep: systems && platform.publishWithStableReads ? handlers.runStep : undefined,
+    previewSelectedFile: options.enableLocalFilePreview && platform.publishWithStableReads ? previewSelectedFile : undefined,
   });
 }

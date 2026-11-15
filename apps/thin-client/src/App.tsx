@@ -130,6 +130,7 @@ function WorkspaceAwareThinClientApp() {
           <ArtifactsPage
             workspaceId={activeWorkspace.id}
             workspaceName={activeWorkspace.displayName}
+            headlessFileClient={takeover.planApprovals?.fileClient}
             initialSelectedStorageKey={artifactDetailIntent}
             onInitialSelectionHandled={() => setArtifactDetailIntent(undefined)}
             onConvertToRag={(artifactId) => {

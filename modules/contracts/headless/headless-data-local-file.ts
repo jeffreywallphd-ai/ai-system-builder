@@ -18,6 +18,7 @@ import { readHeadlessIngestionStatusRequest, type HeadlessIngestionStatusRequest
 type TaskTarget = HeadlessIngestionStatusRequest["input"];
 
 export const HEADLESS_LOCAL_FILE_PREVIEW_PATH = "/aisb-headless/v1/data/local-file-preview";
+export const MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH = "/api/headless/agent/data/local-file-preview";
 
 export interface HeadlessLocalFileImportRequest {
   readonly version: typeof HEADLESS_CONTRACT_VERSION;
