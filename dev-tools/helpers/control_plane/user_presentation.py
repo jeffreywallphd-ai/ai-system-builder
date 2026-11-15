@@ -11,6 +11,9 @@ from .projection import bound_review_projection, project
 from .storage import confined_path
 
 REFERENCE = 'docs/operations/roadmap-user-descriptions.json'
+SUPPORT_REFERENCE = 'docs/operations/roadmap-user-support-descriptions.json'
+REFERENCE_MAX_BYTES = 1024 * 1024
+REFERENCE_MAX_ROWS = 1000
 UNAVAILABLE = 'The agent must update this description. The technical requirements and recorded result remain unchanged.'
 
 
@@ -89,7 +92,7 @@ def _admit(document, sources, known, diagnostics):
     admitted = {}
     for family in ('criteria', 'headings', 'support'):
         rows = document[family]
-        if not isinstance(rows, list) or len(rows) > 1000:
+        if not isinstance(rows, list) or len(rows) > REFERENCE_MAX_ROWS:
             raise ValueError('bounded description rows required')
         accepted, seen = {}, set()
         for row in rows:
@@ -138,6 +141,23 @@ def _admit(document, sources, known, diagnostics):
     return admitted
 
 
+def _read_support_companion(root: Path, diagnostics: set[str]) -> list:
+    try:
+        companion = confined_path(root, SUPPORT_REFERENCE)
+        if not companion.exists():
+            return []
+        additional = read_json(companion, maximum=REFERENCE_MAX_BYTES)
+        fields(additional, {'schema_version', 'support'}, {'schema_version', 'support'})
+        rows = additional['support']
+        if (additional['schema_version'] != 'roadmap-user-support-descriptions-v1' or
+                not isinstance(rows, list) or len(rows) > REFERENCE_MAX_ROWS):
+            raise ValueError('bounded companion support descriptions required')
+        return rows
+    except (ControlError, ValueError, OSError):
+        diagnostics.add('projection.user-description-unavailable')
+        return []
+
+
 def apply_user_descriptions(root: Path, value: dict) -> dict:
     """Replace display prose only; canonical source and technical CLI stay intact."""
     roadmaps = list(_roadmaps(value))
@@ -154,8 +174,21 @@ def apply_user_descriptions(root: Path, value: dict) -> dict:
     warnings = set()
     try:
         sources = _sources(root, roadmaps)
-        document = read_json(confined_path(root, REFERENCE), maximum=1024*1024)
-        admitted = _admit(document, sources, {'criteria': criteria, 'headings': headings, 'support': support}, warnings)
+        known = {'criteria': criteria, 'headings': headings, 'support': support}
+        document = read_json(confined_path(root, REFERENCE), maximum=REFERENCE_MAX_BYTES)
+        admitted = _admit(document, sources, known, warnings)
+        companion = _read_support_companion(root, warnings)
+        if companion:
+            # A companion cannot override or repair an entry reserved by
+            # the primary catalog, including an invalid primary mapping.
+            reserved = {(row.get('kind'), row.get('source_text_sha256')) for row in document['support']
+                if isinstance(row, dict) and row.get('kind') in ('support-scope', 'support-limitation')
+                and isinstance(row.get('source_text_sha256'), str)}
+            secondary = {'schema_version': 'roadmap-user-descriptions-v1', 'criteria': [], 'headings': [], 'support': companion}
+            extras = _admit(secondary, sources, known, warnings)['support']
+            if reserved.intersection(extras):
+                warnings.add('projection.user-description-unavailable')
+            admitted['support'].update((key, copy) for key, copy in extras.items() if key not in reserved)
     except (ControlError, ValueError, KeyError, TypeError, OSError):
         warnings.add('projection.user-description-unavailable')
         admitted = {'criteria': {}, 'headings': {}, 'support': {}}

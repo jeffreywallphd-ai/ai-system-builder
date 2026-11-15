@@ -8,6 +8,15 @@ Source/qualification mismatches produce a description-update diagnostic and an
 agent action, never a human blocker or a raw technical fallback. Keep original
 definitions, results, scope, human approval controls and historical evidence.
 
+When the primary file reaches its support-description limit, add new support
+copy to `docs/operations/roadmap-user-support-descriptions.json`. Use
+`roadmap-user-support-descriptions-v1` as the schema version and a `support`
+list with the same source hashes and wording rules. Each file can hold up to
+1 MiB and 1,000 support descriptions. Keep each source hash and kind unique
+across the files. A duplicate in the companion keeps the primary entry and
+raises a description diagnostic. The review response still has a separate
+2 MiB limit. Verify the protected user projection before publication.
+
 For user-directed superseded-proposal cleanup, retain exact history, map every
 former criterion to its real successor, freeze old execution with the existing
 blocker event and use only the registered bounded retirement manifest. Do not

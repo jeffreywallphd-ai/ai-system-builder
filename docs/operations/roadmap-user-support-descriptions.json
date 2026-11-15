@@ -1,0 +1,29 @@
+{
+  "schema_version": "roadmap-user-support-descriptions-v1",
+  "support": [
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b0eedc867a27638a19616713ff4a5741d015b11921a0359e8010a74fa0dd5817",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the packaged Windows app, the user approved a plan that saves a selected CSV and creates a system.",
+          "The second step waited for the file save.",
+          "The client received the same save reference on retry.",
+          "Data showed one saved CSV with the expected contents."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "249fb69d04f157f57db5716b44c92c8b361db25ddc64e0dd202a689cfa558446",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers saving a selected local file on Desktop.",
+          "Managed browser import, provider sources, dataset review and exact app reveal still need evidence."
+        ]
+      }
+    }
+  ]
+}

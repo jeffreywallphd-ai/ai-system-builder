@@ -13,7 +13,8 @@ from control_plane.common import digest
 from control_plane.projection import (CHUNK_REFERENCE_FORMAT, REVIEW_MAX_BYTES, chunk_reference,
     encode_review_projection, expanded_review_work_items, project, roadmap_chunk_work_items)
 from control_plane.records import Records
-from control_plane.user_presentation import REFERENCE, UNAVAILABLE, apply_user_descriptions, compact_user_project, user_project
+from control_plane.user_presentation import (REFERENCE, REFERENCE_MAX_BYTES, REFERENCE_MAX_ROWS, SUPPORT_REFERENCE,
+    UNAVAILABLE, apply_user_descriptions, compact_user_project, user_project)
 
 
 def hashed(value):
@@ -63,6 +64,79 @@ class UserPresentationTests(unittest.TestCase):
 
     def criterion(self, result):
         return result['roadmaps'][0]['increments'][0]['criteria'][0]
+
+    def write_companion(self, payload):
+        path = self.root/SUPPORT_REFERENCE
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload), encoding='utf-8')
+        return path
+
+    def test_support_companion_extends_a_full_primary_registry_without_changing_work(self):
+        scope = self.criterion(self.value)['supporting_work']
+        template = scope[0]
+        for index in range(REFERENCE_MAX_ROWS - len(self.document['support'])):
+            source = f'Technical support item {index:04d}'
+            scope.append({**template, 'scope': source})
+            self.document['support'].append({'kind': 'support-scope', 'source_text_sha256': hashed(source),
+                'user_description': {'owner': 'agent', 'sentences': ['Local evidence was reviewed.']}})
+        self.assertEqual(len(self.document['support']), REFERENCE_MAX_ROWS)
+        source = 'Technical activity recorded by the companion'
+        scope.append({**template, 'scope': source})
+        self.write_companion({'schema_version': 'roadmap-user-support-descriptions-v1', 'support': [
+            {'kind': 'support-scope', 'source_text_sha256': hashed(source),
+             'user_description': {'owner': 'agent', 'sentences': ['The file preview passed its check.']}}]})
+        result = self.run_copy()
+        self.assertEqual(result['diagnostics'], [])
+        self.assertEqual(result['roadmaps'][0]['title'], 'Clear roadmap')
+        rows = self.criterion(result)['supporting_work']
+        self.assertEqual(rows[0]['scope'], 'Earlier local work was checked.')
+        self.assertEqual(rows[-1]['scope'], 'The file preview passed its check.')
+        self.assertEqual(rows[-1]['status'], 'record-unavailable')
+        self.assertEqual(rows[-1]['current_qualification'], 'not-asserted')
+
+    def test_companion_cannot_replace_the_primary_text_with_a_duplicate_or_unknown_source(self):
+        duplicate = {**self.document['support'][0],
+            'user_description': {'owner': 'agent', 'sentences': ['Unproved replacement.']}}
+        self.write_companion({'schema_version': 'roadmap-user-support-descriptions-v1', 'support': [
+            duplicate, {**duplicate, 'source_text_sha256': '0'*64}]})
+        result = self.run_copy()
+        self.assertEqual(self.criterion(result)['supporting_work'][0]['scope'], 'Earlier local work was checked.')
+        self.assertEqual(self.criterion(result)['supporting_work'][0]['limitations'],
+                         ['This does not prove the current software is ready.'])
+        self.assertNotIn('Unproved replacement.', json.dumps(result))
+        self.assertTrue(result['diagnostics'])
+        self.document['support'].append(copy.deepcopy(self.document['support'][0]))
+        result = self.run_copy()
+        self.assertEqual(self.criterion(result)['supporting_work'][0]['scope'], UNAVAILABLE)
+        self.assertNotIn('Unproved replacement.', json.dumps(result))
+
+    def test_duplicate_rows_in_the_companion_quarantine_that_description_only(self):
+        source = 'Technical standalone companion scope'
+        rows = self.criterion(self.value)['supporting_work']
+        rows.append({**rows[0], 'scope': source})
+        entry = {'kind': 'support-scope', 'source_text_sha256': hashed(source),
+                 'user_description': {'owner': 'agent', 'sentences': ['One extra reviewed result.']}}
+        self.write_companion({'schema_version': 'roadmap-user-support-descriptions-v1', 'support': [entry, entry]})
+        result = self.run_copy()
+        projected = self.criterion(result)['supporting_work']
+        self.assertEqual(projected[0]['scope'], 'Earlier local work was checked.')
+        self.assertEqual(projected[1]['scope'], UNAVAILABLE)
+        self.assertTrue(result['diagnostics'])
+
+    def test_invalid_or_oversized_companion_retains_primary_copy(self):
+        schema = 'roadmap-user-support-descriptions-v1'
+        for payload in [
+            {'schema_version': 'foreign', 'support': []},
+            {'schema_version': schema, 'support': [], 'criteria': []},
+            {'schema_version': schema, 'support': 'x' * REFERENCE_MAX_BYTES},
+            {'schema_version': schema, 'support': [None] * (REFERENCE_MAX_ROWS + 1)},
+        ]:
+            with self.subTest(schema=payload['schema_version'], fields=list(payload), size=len(payload['support'])):
+                self.write_companion(payload)
+                result = self.run_copy()
+                self.assertEqual(result['roadmaps'][0]['title'], 'Clear roadmap')
+                self.assertEqual(self.criterion(result)['supporting_work'][0]['scope'], 'Earlier local work was checked.')
+                self.assertTrue(result['diagnostics'])
 
     def test_compact_user_copy_keeps_exact_references_and_expands_current_plain_headings(self):
         self.run_copy()
