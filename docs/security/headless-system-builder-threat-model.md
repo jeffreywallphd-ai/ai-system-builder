@@ -145,6 +145,11 @@ and workspace uses the existing maximum count for retained headless records.
 The repository requires the host to authorize the operation in the transaction
 and checks that the request remains current at commit. Desktop and managed hosts
 must still bind this repository to verified approval channels.
+The approval list contains at most 32 live proposal references for one
+app user, workspace and host session. Listing requires current access to
+that exact scope. The index and review record share the owned transaction.
+The list omits expired requests and removes cancelled, denied and revoked
+requests. The durable review record keeps the outcome and original deadline.
 Desktop plan-review credentials use a distinct pairing mode. A current
 registration can request plan review only when the host provides that
 capability. It carries no direct editing, conversation or window-control

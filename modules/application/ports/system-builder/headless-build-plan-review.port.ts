@@ -60,3 +60,18 @@ export interface HeadlessPlanReviewRepository extends HeadlessPlanReviewPort {
   propose(input: HeadlessPlanReviewQuery & { readonly proposal: unknown }): Promise<HeadlessPlanReviewSnapshotResult>;
   read(input: HeadlessPlanReviewQuery): Promise<HeadlessPlanReviewSnapshotResult>;
 }
+
+export interface HeadlessPlanReviewListTarget {
+  readonly hostIncarnationId: HeadlessHostIncarnationId;
+  readonly scope: Omit<HeadlessOperationScope, "registeredClientId">;
+}
+
+export interface HeadlessPlanReviewListEntry {
+  readonly registeredClientId: string;
+  readonly fingerprint: string;
+  readonly expiresAt: number;
+}
+
+export type HeadlessPlanReviewListResult =
+  | { readonly ok: true; readonly requests: readonly HeadlessPlanReviewListEntry[] }
+  | Extract<HeadlessPlanReviewResult, { ok: false }>;

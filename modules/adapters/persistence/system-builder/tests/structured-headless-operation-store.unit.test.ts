@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import type { HeadlessOperationStorePort, SystemBuilderRepositoryPort } from "../../../../application/ports/system-builder";
-import type { HeadlessPlanReviewTarget } from "../../../../application/ports/system-builder/headless-build-plan-review.port";
+import type { HeadlessPlanReviewListTarget, HeadlessPlanReviewTarget } from "../../../../application/ports/system-builder/headless-build-plan-review.port";
 import { HeadlessBuildPlanReviewUseCase } from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
 import { isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
@@ -18,7 +18,7 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createInMemoryStructuredDocumentStore, type StructuredDocumentStore } from "../../shared";
 import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../sqlite";
 import { createStructuredSystemBuilderRepository } from "../createStructuredSystemBuilderRepository";
-import { createStructuredHeadlessPlanReviewRepository } from "../createStructuredHeadlessPlanReviewRepository";
+import { createStructuredHeadlessPlanReviewRepository, listStructuredHeadlessPlanReviews } from "../createStructuredHeadlessPlanReviewRepository";
 import {
   createStructuredHeadlessOperationStore, HEADLESS_RECEIPT_TTL_MS, HEADLESS_RETAINED_SYSTEM_CHANGES, HEADLESS_SYSTEM_CHANGE_PAGE_SIZE,
 } from "../createStructuredHeadlessOperationStore";
@@ -452,6 +452,10 @@ test("persists exact plan approval and responds to competing verified decisions 
     store = createStructuredHeadlessPlanReviewRepository(db.documents, authorize, () => now);
     assert.deepEqual(await store.read(reviewQuery), afterDecision);
     assert.deepEqual(await store.propose({ ...reviewQuery, proposal: reviewProposal }), afterDecision);
+    assert.deepEqual(await listStructuredHeadlessPlanReviews(db.documents, { target: reviewTarget, isCurrent: () => true },
+      async (_owner, target) => target.scope.principalId === scope.principalId && target.scope.workspaceId === scope.workspaceId,
+      () => now), { ok: true, requests: [{ fingerprint: reviewFingerprint,
+        registeredClientId: scope.registeredClientId, expiresAt: fresh.snapshot.state.expiresAt }] });
     const partition = db.documents.forOrganization(scope.organizationId);
     assert.equal((await partition.listDocuments("headless/system-builder/plan-reviews")).length, 1);
     assert.equal((await createStructuredSystemBuilderRepository(partition).listRecords(scope.workspaceId)).length, 0);
@@ -503,4 +507,75 @@ test("rolls back a plan decision at the owned commit fence and refuses a changed
     proposal: { ...reviewProposal, steps: [{ ...reviewProposal.steps[0], name: "Changed persisted plan" }] },
   }, { expectedRevision: before.revision });
   assert.deepEqual(await store.read(reviewQuery), { ok: false, code: "unconfirmed" });
+});
+
+test("lists exact live approvals for the owning scope and rolls back list changes with their review", async () => {
+  const documents = createInMemoryStructuredDocumentStore();
+  let now = 3_000;
+  let actorCurrent = true;
+  let atCommit: () => void = () => {};
+  const wrapped: StructuredDocumentStore = {
+    ...documents, runInOwnedTransaction(work, beforeCommit) {
+      return documents.runInOwnedTransaction!(work, () => { atCommit(); beforeCommit(); });
+    },
+  };
+  const store = createStructuredHeadlessPlanReviewRepository(wrapped, async () => true, () => now);
+  const isCurrent = () => actorCurrent;
+  const listTarget = { hostIncarnationId: reviewHost, scope: {
+    organizationId: scope.organizationId, workspaceId: scope.workspaceId, principalId: scope.principalId,
+  } };
+  const allowedScope = async (_owner: StructuredDocumentStore, actual: HeadlessPlanReviewListTarget) =>
+    actual.hostIncarnationId === reviewHost && actual.scope.organizationId === scope.organizationId &&
+    actual.scope.principalId === scope.principalId && actual.scope.workspaceId === scope.workspaceId;
+  const list = (target: HeadlessPlanReviewListTarget = listTarget) =>
+    listStructuredHeadlessPlanReviews(wrapped, { target, isCurrent }, allowedScope, () => now);
+  const proposal = { ...reviewQuery, isCurrent, proposal: reviewProposal };
+  atCommit = () => { actorCurrent = false; };
+  assert.deepEqual(await store.propose(proposal), { ok: false, code: "forbidden" });
+  assert.deepEqual(await list(), { ok: false, code: "forbidden" });
+  atCommit = () => {};
+  actorCurrent = true;
+  assert.deepEqual(await list(), { ok: true, requests: [] });
+  assert.deepEqual(await store.read(reviewQuery), { ok: false, code: "forbidden" });
+  const staged = await store.propose(proposal);
+  assert.ok(staged.ok);
+  assert.deepEqual(await store.propose(proposal), staged);
+  const expected = { ok: true, requests: [{ registeredClientId: scope.registeredClientId, fingerprint: reviewFingerprint,
+    expiresAt: staged.snapshot.state.expiresAt }] };
+  assert.deepEqual(await list(), expected);
+  assert.deepEqual(await list({ ...listTarget, scope: { ...listTarget.scope, principalId: "foreign-fixture-principal" } }),
+    { ok: false, code: "forbidden" });
+  const useCase = new HeadlessBuildPlanReviewUseCase(store, () => now);
+  const actor = { organizationId: scope.organizationId, principalId: scope.principalId, channel: "app-popup" as const,
+    canDecide: async () => true, isCurrent };
+  const select = (revision: number, decision: object) =>
+    useCase.decide({ fingerprint: reviewFingerprint, expectedRevision: revision, decision }, reviewHost, scope, actor);
+  assert.ok((await select(1, { kind: "approve", mode: "whole-plan" })).ok);
+  assert.deepEqual(await list(), expected);
+  atCommit = () => { actorCurrent = false; };
+  assert.deepEqual(await select(2, { kind: "revoke" }), { ok: false, code: "forbidden" });
+  atCommit = () => {};
+  actorCurrent = true;
+  assert.deepEqual(await list(), expected);
+  const retained = await store.read(reviewQuery);
+  assert.ok(retained.ok && retained.snapshot.state.status === "approved" && retained.snapshot.state.revision === 2);
+  assert.ok((await select(2, { kind: "revoke" })).ok);
+  assert.deepEqual(await list(), { ok: true, requests: [] });
+  const revoked = await store.read(reviewQuery);
+  assert.ok(revoked.ok && revoked.snapshot.state.status === "revoked");
+
+  for (let index = 1; index <= 33; index++) {
+    const raw = { ...reviewProposal, steps: [{ ...reviewProposal.steps[0], name: "Fixture proposal " + index }] };
+    const parsed = parseHeadlessBuildPlanProposal(raw, reviewHost);
+    assert.ok(parsed.ok);
+    const digest = createHash("sha256").update(JSON.stringify(parsed.preview), "utf8").digest("hex");
+    const result = await store.propose({ target: { ...reviewTarget, fingerprint: digest }, isCurrent, proposal: raw });
+    if (index <= 32) assert.ok(result.ok);
+    else assert.deepEqual(result, { ok: false, code: "capacity" });
+  }
+  const full = await list();
+  assert.ok(full.ok && full.requests.length === 32);
+  now = staged.snapshot.state.expiresAt;
+  assert.deepEqual(await list(), { ok: true, requests: [] });
+  assert.equal((await documents.forOrganization(scope.organizationId).listDocuments("headless/system-builder/plan-reviews")).length, 33);
 });

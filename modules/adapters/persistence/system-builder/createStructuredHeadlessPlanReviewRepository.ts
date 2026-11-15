@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type {
   HeadlessPlanReviewQuery, HeadlessPlanReviewRepository, HeadlessPlanReviewResult, HeadlessPlanReviewState,
   HeadlessPlanReviewTarget,
+  HeadlessPlanReviewListEntry, HeadlessPlanReviewListResult, HeadlessPlanReviewListTarget,
 } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, isDesktopHeadlessClientId, isHeadlessHostIncarnationId,
   parseHeadlessBuildPlanProposal } from "../../../contracts/headless";
@@ -13,6 +14,8 @@ import { HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE } from "./createStructuredHeadle
 
 const REVIEWS = "headless/system-builder/plan-reviews";
 const COUNTS = "headless/system-builder/plan-review-counts";
+const APPROVAL_LIST = "headless/system-builder/plan-approval-list";
+const MAX_ACTIVE_PLAN_REVIEWS = 32;
 const REVIEW_MS = 15 * 60 * 1_000;
 const denied = { ok: false, code: "forbidden" } as const;
 const expired = { ok: false, code: "expired" } as const;
@@ -89,6 +92,9 @@ export function createStructuredHeadlessPlanReviewRepository(
         if (used >= HEADLESS_RECEIPTS_PER_CLIENT_WORKSPACE) return capacity;
         const createdAt = now();
         if (!nonnegativeInteger(createdAt) || createdAt > Number.MAX_SAFE_INTEGER - REVIEW_MS) return unconfirmed;
+        const list = await readApprovalList(store, target);
+        const currentRequests = list.requests.filter(request => request.expiresAt > createdAt);
+        if (currentRequests.length >= MAX_ACTIVE_PLAN_REVIEWS) return capacity;
         const state: HeadlessPlanReviewState = { revision: 1, stepCount: proposal.requests.length,
           expiresAt: createdAt + REVIEW_MS, status: "pending", approvedSteps: 0 };
         if (!requireFresh(state.expiresAt)) return expired;
@@ -97,6 +103,9 @@ export function createStructuredHeadlessPlanReviewRepository(
         };
         await store.writeDocument(REVIEWS, key, { version: 1, proposal: raw, state } satisfies RecordValue, { expectedRevision: 0 });
         await store.writeDocument(COUNTS, countKey, { value: used + 1 }, { expectedRevision: count?.revision ?? 0 });
+        await store.writeDocument(APPROVAL_LIST, list.key, { requests: [{
+          registeredClientId: target.scope.registeredClientId, fingerprint: target.fingerprint, expiresAt: state.expiresAt,
+        }, ...currentRequests] }, { expectedRevision: list.revision });
         return snapshot({ state, preview: proposal.preview });
       });
     },
@@ -119,6 +128,13 @@ export function createStructuredHeadlessPlanReviewRepository(
         if (state.expiresAt !== previous.expiresAt) return unconfirmed;
         await store.writeDocument(REVIEWS, key, { version: 1, proposal: review.proposal, state } satisfies RecordValue,
           { expectedRevision: previous.revision });
+        if (state.status === "cancelled" || state.status === "denied" || state.status === "revoked") {
+          const list = await readApprovalList(store, target);
+          const requests = list.requests.filter(reference => reference.fingerprint !== target.fingerprint ||
+            reference.registeredClientId !== target.scope.registeredClientId);
+          if (requests.length !== list.requests.length)
+            await store.writeDocument(APPROVAL_LIST, list.key, { requests }, { expectedRevision: list.revision });
+        }
         return { ok: true, state } as const;
       });
     },
@@ -126,12 +142,7 @@ export function createStructuredHeadlessPlanReviewRepository(
 }
 
 function validTarget(target: HeadlessPlanReviewTarget) {
-  const { organizationId, workspaceId, principalId, registeredClientId } = target.scope;
-  return isHeadlessHostIncarnationId(target.hostIncarnationId) && isOrganizationId(organizationId) &&
-    isWorkspaceId(workspaceId) && typeof principalId === "string" && principalId.length > 0 &&
-    principalId.length <= 160 && principalId === principalId.trim() &&
-    !/[\u0000-\u001f\u007f]/.test(principalId) && !hasKnownPassiveCredential(principalId) &&
-    isDesktopHeadlessClientId(registeredClientId) && typeof target.fingerprint === "string" && /^[a-f0-9]{64}$/.test(target.fingerprint);
+  return validListTarget(target) && isDesktopHeadlessClientId(target.scope.registeredClientId) && validFingerprint(target.fingerprint);
 }
 
 function scopeParts({ scope }: HeadlessPlanReviewTarget) {
@@ -183,4 +194,64 @@ function snapshot(review: { state: HeadlessPlanReviewState; preview: Proposal["p
 
 function nonnegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+export async function listStructuredHeadlessPlanReviews(
+  documents: StructuredDocumentStore,
+  input: { readonly target: HeadlessPlanReviewListTarget; readonly isCurrent: () => boolean },
+  policy: (owner: StructuredDocumentStore, target: HeadlessPlanReviewListTarget) => Promise<boolean>,
+  now: () => number = Date.now,
+): Promise<HeadlessPlanReviewListResult> {
+  const { hostIncarnationId, scope: { organizationId, workspaceId, principalId } } = input.target;
+  const target = { hostIncarnationId, scope: { organizationId, workspaceId, principalId } };
+  if (documents.organizationId !== undefined || !documents.runInOwnedTransaction) return unconfirmed;
+  if (!validListTarget(target) || !input.isCurrent()) return denied;
+  const fence = () => {
+    if (!input.isCurrent()) throw new ReviewWriteRetired();
+  };
+  try {
+    const list = await documents.runInOwnedTransaction(async owner => {
+      fence();
+      if (!await policy(owner, target)) return undefined;
+      fence();
+      return readApprovalList(owner.forOrganization(organizationId), target);
+    }, fence);
+    if (!list || !input.isCurrent()) return denied;
+    const observedAt = now();
+    return nonnegativeInteger(observedAt)
+      ? { ok: true, requests: list.requests.filter(request => request.expiresAt > observedAt) }
+      : unconfirmed;
+  } catch (error) {
+    return error instanceof ReviewWriteRetired || !input.isCurrent() ? denied : unconfirmed;
+  }
+}
+
+async function readApprovalList(store: StructuredDocumentStore, { hostIncarnationId, scope }: HeadlessPlanReviewListTarget) {
+  const key = sha256(JSON.stringify([scope.organizationId, scope.workspaceId, scope.principalId, hostIncarnationId]));
+  const document = await store.readDocument(APPROVAL_LIST, key);
+  if (!document) return { key, revision: 0, requests: [] as readonly HeadlessPlanReviewListEntry[] };
+  const { requests: stored } = readStrictPassiveRecord(document.value, ["requests"]);
+  if (!Array.isArray(stored) || stored.length > MAX_ACTIVE_PLAN_REVIEWS) throw new Error("The approval list is unavailable.");
+  const requests = stored.map(value => {
+    const { registeredClientId, fingerprint, expiresAt } = readStrictPassiveRecord(value,
+      ["registeredClientId", "fingerprint", "expiresAt"]);
+    if (!isDesktopHeadlessClientId(registeredClientId) || !validFingerprint(fingerprint) ||
+        !nonnegativeInteger(expiresAt) || expiresAt < REVIEW_MS) throw new Error("The plan reference is invalid.");
+    return { registeredClientId, fingerprint, expiresAt };
+  });
+  if (new Set(requests.map(entry => JSON.stringify([entry.registeredClientId, entry.fingerprint]))).size !== requests.length)
+    throw new Error("The approval list has duplicate references.");
+  return { key, revision: document.revision, requests } as const;
+}
+
+function validListTarget({ hostIncarnationId, scope }: HeadlessPlanReviewListTarget) {
+  const { organizationId, workspaceId, principalId } = scope;
+  return isHeadlessHostIncarnationId(hostIncarnationId) && isOrganizationId(organizationId) &&
+    isWorkspaceId(workspaceId) && typeof principalId === "string" && principalId.length > 0 &&
+    principalId.length <= 160 && principalId === principalId.trim() &&
+    !/[\u0000-\u001f\u007f]/.test(principalId) && !hasKnownPassiveCredential(principalId);
+}
+
+function validFingerprint(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 }
