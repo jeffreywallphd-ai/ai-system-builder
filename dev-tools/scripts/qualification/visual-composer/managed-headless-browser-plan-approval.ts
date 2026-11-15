@@ -1,17 +1,182 @@
 import assert from "node:assert/strict";
 import {createHash, randomUUID} from "node:crypto";
-import {writeFile} from "node:fs/promises";
+import {lstat, mkdir, open, realpath, writeFile} from "node:fs/promises";
 import path from "node:path";
+import {setTimeout as delay} from "node:timers/promises";
 import {chromium, type Browser, type Locator} from "@playwright/test";
 import {Client} from "@modelcontextprotocol/client";
 import {StdioClientTransport} from "@modelcontextprotocol/client/stdio";
 
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId,
   parseHeadlessBuildPlanProposal} from "../../../../modules/contracts/headless";
+import {copyBoundedPassiveData, normalizePassiveText, readStrictPassiveRecord} from "../../../../modules/contracts/shared";
 import {MANAGED_HEADLESS_AGENT_PATHS, MANAGED_SAVED_STATE_PATHS} from "../../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
 import {startManagedReferenceHost} from "./managed-reference-host";
 
+const FRONTIER_TASK = "Create one saved system named Facilities requests from the Secured Data Review template in the configured local test workspace.";
+const FRONTIER_NAME = "Facilities requests";
+const FRONTIER_TEMPLATE = "reference.secured-data-review@1.0.0";
+const FRONTIER_DURATION_MS = 240_000;
+const FRONTIER_INPUT_MAX_BYTES = 4_096;
+
+/** An explicit one-plan fixture. Its mailbox accepts only the expected synthetic action at each step. */
+async function runFrontierCase(options: {
+  readonly runRoot: string;
+  readonly tools: readonly { readonly name: string; readonly inputSchema: object }[];
+  readonly scope: { readonly hostIncarnationId: import("../../../../modules/contracts/headless").HeadlessHostIncarnationId;
+    readonly workspaceId: string };
+  readonly call: (name: string, input?: Record<string, unknown>) => Promise<any>;
+  readonly snapshot: () => Promise<any>;
+  readonly trigger: Locator;
+  readonly dialog: Locator;
+  readonly reportStage: (stage: string) => void;
+}) {
+  const {runRoot, tools, scope, call, snapshot, trigger, dialog, reportStage} = options;
+  const mailbox = path.join(runRoot, "frontier-choices");
+  await mkdir(mailbox);
+  const started = performance.now();
+  const before = await snapshot();
+  assert.equal(before.status, 200);
+  const trace: object[] = [];
+  let index = 0;
+  let toolCalls = 0;
+  function emit(event: object) {
+    trace.push(event);
+    process.stdout.write(JSON.stringify(event) + "\n");
+  }
+  emit({
+    kind: "frontier-ready",
+    inbox: path.relative(process.cwd(), mailbox).replaceAll(path.sep, "/"),
+    request: FRONTIER_TASK,
+    configuredWorkspaceId: scope.workspaceId,
+    tools: tools.map(({ name, inputSchema }) => ({ name, inputSchema })),
+    limits: { maximumToolCalls: 10, deadlineMs: FRONTIER_DURATION_MS },
+  });
+
+  async function choice(expected: string) {
+    const current = ++index;
+    reportStage("frontier-" + expected);
+    emit({kind: "frontier-await", index: current});
+    const file = path.join(mailbox, `choice-${current}.json`);
+    while (performance.now() - started < FRONTIER_DURATION_MS) {
+      const info = await lstat(file).catch(error => {
+        if (error.code === "ENOENT") return undefined;
+        throw error;
+      });
+      if (!info) {
+        await delay(200);
+        continue;
+      }
+      assert.ok(info.isFile() && !info.isSymbolicLink() && info.size > 0 && info.size <= FRONTIER_INPUT_MAX_BYTES);
+      assert.equal(await realpath(file), file);
+      const fileHandle = await open(file, "r");
+      const bytes = Buffer.alloc(info.size + 1);
+      try {
+        const opened = await fileHandle.stat();
+        assert.ok(opened.isFile() && opened.size === info.size && opened.ino === info.ino && opened.dev === info.dev);
+        const {bytesRead} = await fileHandle.read(bytes, 0, bytes.length, 0);
+        assert.equal(bytesRead, info.size);
+      } finally {
+        await fileHandle.close();
+      }
+      const {tool, arguments: input} = readStrictPassiveRecord(
+        JSON.parse(bytes.subarray(0, info.size).toString("utf8")), ["tool", "arguments"]);
+      assert.equal(tool, expected);
+      return copyBoundedPassiveData(input);
+    }
+    throw new Error("The synthetic frontier case exceeded its qualification deadline.");
+  }
+  async function invoke(name: string, validate: (input: Record<string, unknown>) => void) {
+    const proposed = await choice(name);
+    assert.ok(proposed && typeof proposed === "object" && !Array.isArray(proposed));
+    const input = proposed as Record<string, unknown>;
+    validate(input);
+    assert.ok(++toolCalls <= 10);
+    const result = await call(name, input);
+    assert.equal(result.ok, true);
+    emit({kind: "frontier-tool-result", index, tool: name, result});
+    return result.value;
+  }
+  function requireScope(input: Record<string, unknown>): void {
+    assert.deepEqual(input, scope);
+  }
+  const described = await invoke("aisb_host_describe", (input) => {
+    assert.deepEqual(input, {});
+  });
+  assert.equal(described.hostIncarnationId, scope.hostIncarnationId);
+  const capabilities = await invoke("aisb_plan_capabilities", requireScope);
+  assert.ok(capabilities.actions.includes("systems.create"));
+  await invoke("aisb_list_templates", requireScope);
+
+  let agreedSteps: unknown;
+  const preview = await invoke("aisb_preview_build_plan", (input) => {
+    const parsed = parseHeadlessBuildPlanProposal(input, scope.hostIncarnationId);
+    assert.ok(parsed.ok && parsed.scope.workspaceId === scope.workspaceId && parsed.requests.length === 1);
+    const [request] = parsed.requests;
+    assert.ok(request?.operation === "systems.create" && request.input.name === FRONTIER_NAME &&
+      request.input.templateId === FRONTIER_TEMPLATE);
+    agreedSteps = input.steps;
+  });
+  assert.match(preview.fingerprint, /^[a-f0-9]{64}$/);
+  const target = {...scope, fingerprint: preview.fingerprint};
+  const submitted = await invoke("aisb_request_build_plan_approval", (input) => {
+    assert.deepEqual(input, {...target, steps:agreedSteps});
+  });
+  assert.equal(submitted.status, "pending");
+  assert.equal(submitted.approvedSteps, 0);
+  const inspectApproval = (input: Record<string, unknown>): void => assert.deepEqual(input, target);
+  const pending = await invoke("aisb_build_plan_approval_status", inspectApproval);
+  assert.equal(pending.status, "pending");
+  assert.equal(pending.revision, submitted.revision);
+  assert.deepEqual((await snapshot()).body, before.body);
+
+  const message = readStrictPassiveRecord(await choice("await-app-approval"), ["fingerprint", "userMessage"]);
+  assert.equal(message.fingerprint, target.fingerprint);
+  const approvalMessage = normalizePassiveText(message.userMessage);
+  assert.ok(approvalMessage.length >= 8 && approvalMessage.length <= 500);
+  await trigger.click();
+  await dialog.getByRole("button", {name:new RegExp("^Review request " + target.fingerprint.slice(0,8) + " from Client ")}).click();
+  await dialog.getByRole("list", {name:"Permissions and limits"}).getByText("Limit of 1 saved change for this plan.").waitFor();
+  await dialog.getByRole("list", {name:"Requested changes"}).getByText("Create " + FRONTIER_NAME, {exact:false}).waitFor();
+  await dialog.getByRole("radio", {name:"Approve all listed changes"}).check();
+  await dialog.getByRole("button", {name:"Approve all changes", exact:true}).click();
+  await dialog.getByText("The change is approved.", {exact:true}).waitFor();
+  emit({kind:"frontier-app-decision", outcome:"approved-in-popup"});
+  const approved = await invoke("aisb_build_plan_approval_status", inspectApproval);
+  assert.equal(approved.status, "approved");
+  assert.equal(approved.approvedSteps, 1);
+  assert.equal(approved.expiresAt, submitted.expiresAt);
+  const saved = await invoke("aisb_run_approved_build_step", (input) => {
+    assert.deepEqual(input, {...target, approvalRevision: approved.revision, step:1});
+  });
+  assert.equal(saved.kind, "committed");
+  const reference = saved.reference;
+  const checked = await invoke("aisb_read_system", (input) => {
+    assert.deepEqual(input, {...scope, systemId: reference.systemId});
+  });
+  assert.equal(checked.name, FRONTIER_NAME);
+  assert.equal(checked.currentRevisionId, reference.revisionId);
+  assert.equal(checked.revision, reference.recordRevision);
+  const after = await snapshot();
+  assert.equal(after.status, 200);
+  assert.equal(after.body.value.systems.length, before.body.value.systems.length + 1);
+  const summary = readStrictPassiveRecord(await choice("report-saved"), ["systemId", "revisionId", "recordRevision", "userMessage"]);
+  assert.equal(summary.systemId, reference.systemId);
+  assert.equal(summary.revisionId, reference.revisionId);
+  assert.equal(summary.recordRevision, reference.recordRevision);
+  const savedMessage = normalizePassiveText(summary.userMessage);
+  assert.ok(savedMessage.length >= 8 && savedMessage.length <= 500);
+  const elapsedMs = Math.round(performance.now() - started);
+  assert.ok(elapsedMs <= FRONTIER_DURATION_MS);
+  await writeFile(path.join(runRoot,"frontier-plan-report.json"), JSON.stringify({
+    schema_version:"headless-frontier-plan-v1", status:"passed", tool_calls:toolCalls,
+    elapsed_ms:elapsedMs, synthetic_results:1, events:trace,
+    approval_message_validated:true, saved_message_validated:true,
+  },null,2) + "\n",{flag:"wx"});
+}
+
 async function main() {
+  const frontier = process.env.AISB_QUALIFY_FRONTIER_PLAN === "1";
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
     {headlessAgent:true, headlessBrowser:true, headlessPlanReview:true});
   const checks: Record<string, boolean | number> = {};
@@ -80,6 +245,13 @@ async function main() {
     const dialog = page.getByRole("dialog",{name:"Review plan requests",exact:true});
     stage = "wait-for-approval-button";
     await trigger.waitFor();
+    if (frontier) {
+      await runFrontierCase({runRoot:fixture.runRoot, tools:toolList.tools, scope, call, snapshot, trigger, dialog,
+        reportStage: value => { stage = value; }});
+      checks.frontier_agent_approved_create_and_readback = true;
+      passed = true;
+      return;
+    }
     stage = "modal-layout";
     const initial = await settings.boundingBox();
     await trigger.click();
@@ -98,6 +270,7 @@ async function main() {
     async function openProposal(fingerprint:string, panel:Locator) {
       await panel.getByRole("button",{name:new RegExp("^Review request " + fingerprint.slice(0,8) + " from Client ")}).click();
       await panel.getByRole("list",{name:"Requested changes"}).waitFor();
+      await panel.getByRole("list",{name:"Permissions and limits"}).getByText("Limit of 2 saved changes for this plan.").waitFor();
     }
     async function propose(name:string, panel = dialog, activate = () => trigger.click()) {
       const steps = [1,2].map(index => ({operation:"systems.create",name:`Synthetic ${name} ${index}`,
@@ -140,6 +313,17 @@ async function main() {
     await page.keyboard.press("Escape");
     await dialog.waitFor({state:"hidden"});
     checks.whole_plan_and_withdrawal = true;
+
+    stage = "denied-plan";
+    const denied = await propose("declined plan");
+    await dialog.getByRole("button", { name: "Deny request", exact: true }).press("Enter");
+    await dialog.getByText("Request denied.", { exact: true }).waitFor();
+    const deniedState = await status(denied, "denied", 0);
+    assert.deepEqual(await run(denied, deniedState.revision, 1), uncertain);
+    assert.deepEqual((await snapshot()).body, before.body);
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "hidden" });
+    checks.denied_plan_has_no_effect = true;
 
     stage = "per-change";
     const individual = await propose("individual step");
@@ -241,6 +425,43 @@ async function main() {
     assert.equal((await run(chatEach,chatApproved.revision,2)).value.kind,"committed");
     assert.equal((await snapshot()).body.value.systems.length,after.body.value.systems.length + 2);
     checks.chat_individual_and_stale_cross_channel_no_duplicate = true;
+    await chat.getByRole("button", { name: "Close plan approval chat", exact: true }).click();
+
+    stage = "chat-individual-submit";
+    const chatOnly = await propose("chat only approval", chat, openChat);
+    stage = "chat-individual-first-change";
+    await chat.getByRole("button", { name: "Approve change 1", exact: true }).click();
+    await chat.getByText("1 of 2 changes approved.", { exact: true }).waitFor();
+    const chatOnlyPartial = await status(chatOnly, "pending", 1);
+    assert.deepEqual(await run(chatOnly, chatOnlyPartial.revision, 2), uncertain);
+    const firstChatOnly = await run(chatOnly, chatOnlyPartial.revision, 1);
+    assert.equal(firstChatOnly.ok, true);
+    assert.equal(firstChatOnly.value.kind, "committed");
+    stage = "chat-individual-second-change";
+    await chat.getByRole("button", { name: "Approve change 2", exact: true }).click();
+    await chat.getByText("All 2 changes are approved.", { exact: true }).waitFor();
+    const chatOnlyApproved = await status(chatOnly, "approved", 2);
+    assert.equal(chatOnlyApproved.revision, chatOnlyPartial.revision + 1);
+    const secondChatOnly = await run(chatOnly, chatOnlyApproved.revision, 2);
+    assert.equal(secondChatOnly.ok, true);
+    assert.equal(secondChatOnly.value.kind, "committed");
+    stage = "chat-individual-verify-saved-records";
+    const afterChat = await snapshot();
+    assert.equal(afterChat.status, 200);
+    assert.equal(afterChat.body.value.systems.length, after.body.value.systems.length + 4);
+    assert.notEqual(firstChatOnly.value.reference.systemId, secondChatOnly.value.reference.systemId);
+    for (const [index, effect] of [firstChatOnly, secondChatOnly].entries()) {
+      const reference = effect.value.reference;
+      assert.ok(afterChat.body.value.systems.some((system: { systemId: string; recordRevision: number; revisionId: string }) =>
+        system.systemId === reference.systemId && system.recordRevision === reference.recordRevision &&
+        system.revisionId === reference.revisionId));
+      const loaded = await call("aisb_read_system", { ...scope, systemId: reference.systemId });
+      assert.equal(loaded.ok, true);
+      assert.equal(loaded.value.name, `Synthetic chat only approval ${index + 1}`);
+      assert.equal(loaded.value.currentRevisionId, reference.revisionId);
+      assert.equal(loaded.value.revision, reference.recordRevision);
+    }
+    checks.chat_individual_all_changes_in_chat = true;
     passed = true;
   } catch {
     // Report only fixed stages and check outcomes.
@@ -251,10 +472,11 @@ async function main() {
     await fixture.stop().catch(() => {passed=false;});
     const evidence = {schema_version:"managed-browser-plan-popup-v1",source_revision:fixture.sourceRevision,
       status:passed ? "passed" : "failed",stage:passed ? "complete" : stage,checks};
-    await writeFile(path.join(fixture.runRoot,"managed-headless-plan-popup-evidence.json"),JSON.stringify(evidence,null,2)+"\n",{flag:"wx"});
+    const reportName = frontier ? "managed-headless-frontier-host-evidence.json" : "managed-headless-plan-popup-evidence.json";
+    await writeFile(path.join(fixture.runRoot,reportName),JSON.stringify(evidence,null,2)+"\n",{flag:"wx"});
     process.stdout.write(JSON.stringify(evidence)+"\n");
+    if (!passed) process.exitCode = 1;
   }
-  if (!passed) process.exitCode = 1;
 }
 
 void main().catch(() => {

@@ -397,12 +397,41 @@
         "App interface tests verified the permission list. The packaged Windows and managed-browser approval journeys also passed."
       ],
       "title": "Teach and test the planning workflow in chat"
+    },
+    {
+      "areas": [
+        "Desktop and managed app approval",
+        "Scoped MCP plan execution",
+        "Exact repeat and saved-result verification"
+      ],
+      "chunkId": "plan-execute-resume",
+      "completedAt": "2026-11-15T08:36:48Z",
+      "criteriaIds": [
+        "unambiguous-plan",
+        "typed-tools-and-recovery",
+        "user-choice-and-approval-channels",
+        "security-plan-and-context"
+      ],
+      "documentation": [
+        "Written-plan qualification report",
+        "Headless delegation architecture and threat model"
+      ],
+      "feedbackAddressed": [],
+      "id": "plan-from-written-request-plan-execute-resume",
+      "incrementId": "plan-from-written-request",
+      "summary": "The packaged Windows app and the managed browser passed whole-plan and per-change approval in both the popup and the app's approval chat. The client saved only approved changes, rejected a stale decision made through the other surface, and recovered a confirmed save with the same request.",
+      "tests": [
+        "Both real app journeys ran on the same source.",
+        "The app showed permission limits and accepted keyboard decisions. Decline left saved systems unchanged.",
+        "Checked for out-of-order steps, expired approval, changed access, stale decisions and repeated saves."
+      ],
+      "title": "Approve, run, and resume the exact plan"
     }
   ],
   "completion": null,
   "completionSuite": "all",
   "createdAt": "2026-11-10T12:41:50Z",
-  "currentIncrementId": "plan-from-written-request",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "Actual user selected: Desktop first, then server/browser support (Recommended): cover both interfaces; defer cloud-to-local relay and work after the desktop host exits. This approves the strategy only, not the roadmap or implementation.",
@@ -1060,6 +1089,61 @@
       "outcome": "pending",
       "recordedAt": "2026-11-15T00:53:37Z",
       "summary": "A separate reviewed Chrome run passed the two-window revoke and denied-presentation checks. Revoke ended only the first lease, and exactly one saved change remained after retry. Final qualification still needs the browser and packaged Windows tests on the same final source."
+    },
+    {
+      "artifact": "docs/operations/headless-written-plan-qualification.json",
+      "command": "development_control_plane.py verify headless-written-plan-reviewed-qualification",
+      "criterionId": "unambiguous-plan",
+      "id": "evidence-34",
+      "incrementId": "plan-from-written-request",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-15T08:36:48Z",
+      "summary": "The skill walkthrough asked for the exact workspace and result before proposing a plan. The official client previewed an ordered plan from exact saved inputs. Tests verified the declared limits and confirmed that preview made no saved changes or provider calls."
+    },
+    {
+      "artifact": "docs/operations/headless-written-plan-qualification.json",
+      "command": "development_control_plane.py verify headless-written-plan-reviewed-qualification",
+      "criterionId": "typed-tools-and-recovery",
+      "id": "evidence-35",
+      "incrementId": "plan-from-written-request",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-15T08:36:48Z",
+      "summary": "Registered checks verified strict inputs, current workspace access, ordered steps and exact approval revisions. The real clients verified saved results. An exact repeat recovered the original receipt without saving a duplicate."
+    },
+    {
+      "artifact": "docs/operations/headless-written-plan-qualification.json",
+      "command": "development_control_plane.py verify headless-written-plan-reviewed-qualification",
+      "criterionId": "user-choice-and-approval-channels",
+      "id": "evidence-36",
+      "incrementId": "plan-from-written-request",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-15T08:36:49Z",
+      "summary": "The packaged Windows app and managed browser both passed whole-plan and individual approvals in the popup and the app's approval chat. Checks covered permission details, keyboard decline and cancel, expiry, withdrawal, changed access, and stale cross-channel decisions."
+    },
+    {
+      "artifact": "docs/operations/headless-written-plan-qualification.json",
+      "command": "development_control_plane.py verify headless-written-plan-reviewed-qualification",
+      "criterionId": "portable-quality",
+      "id": "evidence-37",
+      "incrementId": "plan-from-written-request",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-15T08:36:49Z",
+      "summary": "Seven deterministic tests checked planning, approved scope, refusal, exact recovery, saved results and budgets. In a separate live run, a Codex agent used the skill to supply exact inputs for nine MCP calls and verify the one approved saved system."
+    },
+    {
+      "artifact": "docs/operations/headless-written-plan-qualification.json",
+      "command": "development_control_plane.py verify headless-written-plan-reviewed-qualification",
+      "criterionId": "security-plan-and-context",
+      "id": "evidence-38",
+      "incrementId": "plan-from-written-request",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-15T08:36:49Z",
+      "summary": "Current tests denied unsupported or changed plans, foreign workspaces and ordinary client registrations, stale decisions and unapproved steps. Tested refusals left saved systems unchanged. Protected source data and provider credentials stayed outside the plan workflow."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1586,6 +1670,48 @@
       "recordedAt": "2026-11-15T07:49:41Z",
       "sequence": 80,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b5827e8e266f5f97d4b872ec02e530ec499994b761e0dfc842b04d1eabd7d9db",
+      "recordedAt": "2026-11-15T08:36:48Z",
+      "sequence": 81,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "5f1e3c32852bbe8265409f79ce6b1742233b29391c0f46cd3183b0d6bbb97360",
+      "recordedAt": "2026-11-15T08:36:48Z",
+      "sequence": 82,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c9d18aa828840da6ca36220600741ddca75ad449a4657762625a76023e35d324",
+      "recordedAt": "2026-11-15T08:36:48Z",
+      "sequence": 83,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7bd74f1b480fe35dfaebd6e7c9b41987bfb1ed98bd6627a07b542c61028135ac",
+      "recordedAt": "2026-11-15T08:36:49Z",
+      "sequence": 84,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e77c17392746a51d07dae17b7e38a206db1a43a6283e5d6eaa6460ed11f5014d",
+      "recordedAt": "2026-11-15T08:36:49Z",
+      "sequence": 85,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "44c6c26aaddb93078e62fb27f2348a4d5ae28059451fd9cb2f9f43a799454fd7",
+      "recordedAt": "2026-11-15T08:36:49Z",
+      "sequence": 86,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "99cb32fcabd5174ff7bc2661d6358bfa1ba7092b2c133bed4b53dc29447368c7",
+      "recordedAt": "2026-11-15T08:36:52Z",
+      "sequence": 87,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -2273,11 +2399,13 @@
         }
       ],
       "allowPendingQualification": false,
-      "completedAt": null,
+      "completedAt": "2026-11-15T08:36:52Z",
       "completedChunks": [
         "discover-capabilities",
-        "portable-skill"
+        "portable-skill",
+        "plan-execute-resume"
       ],
+      "completionSummary": "The current Desktop and managed-browser written-plan workflow passed the five criteria and received an independent review. The next increment covers source acquisition and training datasets. Verification receipt 4f98c7027f5aed8408631171cb24fb33a6ec04015cb3555eecc989f431b21742 and independent review 240ec9d2c6d97c0c11ea13938d70d8701006a05a007f5f0a70a7d046f8a5a1d0.",
       "deliverables": [
         "An approved capability and effects matrix, versioned plan and task interfaces, and separate UI presentation boundary",
         "Short skill entry with workflow references, MCP schemas and reusable evaluation harness"
@@ -2292,6 +2420,7 @@
       "id": "plan-from-written-request",
       "number": 4,
       "objective": "Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "The chat model translates the user request into strict registered inputs. Identity, permissions and approval come from the owning app.",
@@ -2386,7 +2515,7 @@
       ],
       "rollback": "Disable new capability discovery and plan execution, end presentation leases, and retain approved plan and task evidence. Existing individual app workflows remain usable.",
       "startedAt": "2026-11-15T00:28:08Z",
-      "status": "implementing",
+      "status": "completed",
       "title": "Turn a written request into a build plan",
       "verification": [
         "Run focused application, contract, client and paired desktop/browser checks for success, unsupported capabilities, current authority, exact replay, redaction and revoke. Test the named workflow through an actual stdio MCP client against each supported host."
@@ -2831,6 +2960,6 @@
   },
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
-  "status": "executing",
-  "updatedAt": "2026-11-15T07:49:41Z"
+  "status": "ready",
+  "updatedAt": "2026-11-15T08:36:52Z"
 }

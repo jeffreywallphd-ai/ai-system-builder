@@ -229,7 +229,7 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
       </button>
       <button type="button" disabled={busy} onClick={() => decide({ kind: "deny" })}>Deny request</button>
       <button type="button" disabled={busy} onClick={() => decide({ kind: "cancel" })}>Cancel request</button>
-    </> : <p>All {state.stepCount} changes are approved.</p>}
+    </> : <p>{state.stepCount === 1 ? "The change is approved." : `All ${state.stepCount} changes are approved.`}</p>}
     {state.approvedSteps > 0 ? <button type="button" disabled={busy} onClick={() => decide({ kind: "revoke" })}>
       Withdraw approval
     </button> : null}

@@ -92,3 +92,16 @@ controlled checks. To evaluate another model or client, establish the exact
 client build, approved test workspace, synthetic request, tool and resource
 limits, user decision surface, and saved-result checks before running it.
 Record that result for the tested configuration.
+
+For the opt-in frontier client check, start the isolated managed reference
+database and run `managed-headless-browser-plan-approval.ts` with
+`AISB_QUALIFY_FRONTIER_PLAN=1`. Use only the generated synthetic workspace.
+The runner prints its finite tool catalog and numbered choice directory.
+Give a separate agent the skill, synthetic request, and current tool replies.
+Write each returned `tool` and `arguments` object to the requested numbered
+choice file. The runner accepts one exact saved-system creation and requires
+the app popup's decision before it runs the approved change. It checks the
+saved record and collects the elapsed time, number of calls, and sanitized
+synthetic replies. Keep the numbered choice files local and use synthetic
+input only. The report records message validation results without copying the
+agent's prose. Model token counts need a separately measured source.

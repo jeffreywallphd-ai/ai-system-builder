@@ -2,8 +2,8 @@
 
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-11-15T07:49:41Z`
+- Status: `ready`
+- Updated: `2026-11-15T08:36:52Z`
 
 ## Objective
 
@@ -137,7 +137,7 @@ The user selected both approval modes, available in chat and in the app. The hos
 | 1: Use chat tools to author systems and keep saved data synchronized | Deliver an independently useful headless builder workflow through the existing desktop host, with revision-safe semantic edits, durable retries, normal UI refresh and protected human drafts before adding window control. | None | `completed` |
 | 2: Accept and revoke automation control of one desktop window | Let a user explicitly attach an agent to one desktop window and revoke it immediately, while headless authority, saved-data synchronization and independent tasks continue. | headless-authoring-and-synchronization | `implemented-pending-qualification` |
 | 3: Deliver the same workflow through the authenticated server and browser | Qualify shared headless/control behavior on the existing managed server and browser, with PostgreSQL durability, authenticated streaming/replay and evidenced multi-worker delivery, without introducing desktop-server synchronization or a relay. | revocable-desktop-presentation | `implemented-pending-qualification` |
-| 4: Turn a written request into a build plan | Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions. | server-browser-and-delivery-qualification | `implementing` |
+| 4: Turn a written request into a build plan | Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions. | server-browser-and-delivery-qualification | `completed` |
 | 5: Acquire source material and build training datasets | Turn user-approved local and supported provider material into reviewed, versioned datasets that can be used for fine-tuning or handed to Context. | plan-from-written-request | `pending` |
 | 6: Build and test RAG databases and context packs | Use authorized source items to create queryable RAG databases or reusable context packs with measured retrieval quality and traceable results. | data-acquisition-and-datasets | `pending` |
 | 7: Manage models, fine-tune and generate outputs | Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits. | rag-and-context | `pending` |
@@ -307,7 +307,7 @@ Disable new agent/control/change-stream route admission and revoke affected dele
 ## Increment 4: Turn a written request into a build plan
 
 - Id: `plan-from-written-request`
-- Status: `implementing`
+- Status: `completed`
 - Dependencies: `server-browser-and-delivery-qualification`
 
 Let the frontier model discover what the running app can do and propose a complete system plan with required resources, cost, effects, alternatives and user decisions.
@@ -327,11 +327,11 @@ Let the frontier model discover what the running app can do and propose a comple
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `unambiguous-plan`: A plain-language request yields a validated ordered plan with exact workspace, source, desired output, resource limits, cost estimates where available, authority, prerequisites and expected output checks. Missing information triggers a focused question. Preview has zero business or provider effects. | local | not recorded |
-| `typed-tools-and-recovery`: Use strict request/response schemas, deterministic filtered tool discovery, current host-owned policy and exact canonical IDs. Bind plan and per-step outcome to immutable approval, revision and keys. Resume a lost reply by reconciling authoritative task state. Replanning after an input change requires new scope approval. | local | not recorded |
-| `user-choice-and-approval-channels`: Let users select whole scoped plan approval or per-change approval. Both modes work in authenticated chat and an accessible desktop/browser approval popup. Every request shows the requester, exactly what the agent will be allowed to do on the user's behalf, workspace, affected sources and destinations, expected effects, resource/cost limits and expiry. The popup has Approve, Deny and Cancel with keyboard support. All channels use one immutable scoped approval record. Only a verified current human principal can approve. Agent messages, model text, and unsupported clients cannot assert approval. When chat cannot attest the user and bind the decision to the exact request, direct the user to the matching app approval. Test all four mode/channel combinations and decline, expire, revoke, cross-channel races, replay and changed permissions. | local | not recorded |
-| `portable-quality`: A versioned portable skill and generated reference select only workflow-relevant tools. Automated cases grade ambiguity handling, grounded IDs, denial recovery, user outcome, task count, runtime and token/tool budgets. Use deterministic model transcripts in regular CI and clearly scoped opt-in frontier-client qualification. | local | not recorded |
-| `security-plan-and-context`: Plan text, sources and tool outputs cannot expand authority or authorize export. Issue no ambient administrator grant. Add allow/deny/no-op tests for wrong workspace, changed approved plan, unavailable scopes and private content leaving trusted boundaries without permission. | local | not recorded |
+| `unambiguous-plan`: A plain-language request yields a validated ordered plan with exact workspace, source, desired output, resource limits, cost estimates where available, authority, prerequisites and expected output checks. Missing information triggers a focused question. Preview has zero business or provider effects. | local | passed (test) |
+| `typed-tools-and-recovery`: Use strict request/response schemas, deterministic filtered tool discovery, current host-owned policy and exact canonical IDs. Bind plan and per-step outcome to immutable approval, revision and keys. Resume a lost reply by reconciling authoritative task state. Replanning after an input change requires new scope approval. | local | passed (test) |
+| `user-choice-and-approval-channels`: Let users select whole scoped plan approval or per-change approval. Both modes work in authenticated chat and an accessible desktop/browser approval popup. Every request shows the requester, exactly what the agent will be allowed to do on the user's behalf, workspace, affected sources and destinations, expected effects, resource/cost limits and expiry. The popup has Approve, Deny and Cancel with keyboard support. All channels use one immutable scoped approval record. Only a verified current human principal can approve. Agent messages, model text, and unsupported clients cannot assert approval. When chat cannot attest the user and bind the decision to the exact request, direct the user to the matching app approval. Test all four mode/channel combinations and decline, expire, revoke, cross-channel races, replay and changed permissions. | local | passed (test) |
+| `portable-quality`: A versioned portable skill and generated reference select only workflow-relevant tools. Automated cases grade ambiguity handling, grounded IDs, denial recovery, user outcome, task count, runtime and token/tool budgets. Use deterministic model transcripts in regular CI and clearly scoped opt-in frontier-client qualification. | local | passed (test) |
+| `security-plan-and-context`: Plan text, sources and tool outputs cannot expand authority or authorize export. Issue no ambient administrator grant. Add allow/deny/no-op tests for wrong workspace, changed approved plan, unavailable scopes and private content leaving trusted boundaries without permission. | local | passed (test) |
 
 ### Verification
 

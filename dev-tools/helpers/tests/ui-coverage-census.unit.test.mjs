@@ -1105,6 +1105,23 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "54106981c207e4084f0efee420f81ab84aaf1168b73140a9099b48e41c0e2b91") {
+    const previous = JSON.parse(historicalSource("4b25161185278a29f1300d32d5c28bf84ce4f741", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "4c9b5045beb3199e76fcb56683f3e2f97b6acf2e9bc6f8dab98cf46f728fe01d");
+    const expected = structuredClone(previous);
+    const matches = expected.sources.filter(row => row.path === headlessPackagedSpec);
+    const revised = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].facts.sha256, "aab53df6cd1b746fb7659f49abd9971941cb4757479df2606bba22fc93e47d95");
+    assert.equal(revised.facts.sha256, "d32aca3aa9b8244bd69cdf6ecb71d985faba78527986bf2d26fb7721bc389839");
+    assert.equal(sha(JSON.stringify(revised.facts)), "98dded2764bc8de5ac87f7f24523ba7baf7291764874de98d893f94db2549800");
+    matches[0].facts = revised.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
   if (sha(JSON.stringify(map)) === "4c9b5045beb3199e76fcb56683f3e2f97b6acf2e9bc6f8dab98cf46f728fe01d") {
     const previous = JSON.parse(historicalSource("d259564ece0bb1d8adc32cc56005b878087c2dfa", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "d72ec82f70c7f2c552467ef75cffaee1c1e28ef23a354a43d2aa8d565b3b6541");
