@@ -12,7 +12,8 @@ import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_
 import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH, MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../modules/contracts/headless/managed-browser-presentation";
 import { HEADLESS_CONTRACT_VERSION } from "../../../../modules/contracts/headless";
 import { MANAGED_HEADLESS_AGENT_PATHS, MANAGED_SAVED_STATE_PATHS } from "../../../../modules/adapters/transport/api-express/security/apiRouteSecurityPolicy";
-import { readHeadlessAuthoringWireResult, readHeadlessWindowResult, type UiControlLeaseTarget } from "../../../../modules/contracts/headless";
+import { readHeadlessAuthoringWireResult, readHeadlessWindowResult,
+  type UiControlLeaseTarget, type UiControlWindowTarget } from "../../../../modules/contracts/headless";
 import { startManagedReferenceHost } from "./managed-reference-host";
 import { switchFunctionalWorkspace } from "./e2e/functional-host-common";
 
@@ -80,9 +81,10 @@ async function main() {
   const heldContext = process.env.MANAGED_HEADLESS_BROWSER_HELD_CONTEXT === "1";
   const leaseRaces = process.env.MANAGED_HEADLESS_BROWSER_LEASE_RACES === "1";
   const reconnect = process.env.MANAGED_HEADLESS_BROWSER_RECONNECT === "1";
+  const independentWindows = process.env.MANAGED_HEADLESS_BROWSER_INDEPENDENT_WINDOWS === "1";
   const rollback = process.env.MANAGED_HEADLESS_BROWSER_ROLLBACK === "1";
   const extended = measure || isolation || draft || loseReply || inFlightEdit || reverseRefetch || membershipLoss ||
-    heldContext || leaseRaces || reconnect;
+    heldContext || leaseRaces || reconnect || independentWindows;
   assert.ok(!(extended || rollback) || presentation);
   assert.ok(!(extended && rollback), "Managed rollback requires its own isolated run.");
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
@@ -1293,6 +1295,134 @@ async function main() {
     assert.notEqual(next.uiIncarnationId, beforeReload.uiIncarnationId);
     assert.equal(await modal.count(), 0);
     evidence.reload_requires_fresh_document = true;
+
+    if (independentWindows) {
+      stage = "independent-windows-start-second-browser";
+      assert.ok(saved && saved.revisionId);
+      const secondBrowser = await chromium.launch({channel:"chrome", headless:true,
+        args:[`--ignore-certificate-errors-spki-list=${fixture.browserPin}`]});
+      try {
+        const secondContext = await secondBrowser.newContext({
+          viewport:{width:1280, height:900}, acceptDownloads:false, serviceWorkers:"block",
+        });
+        await secondContext.route("**/*", route => new URL(route.request().url()).origin === trusted ?
+          route.continue() : route.abort());
+        await secondContext.addInitScript(({origin, value}) => {
+          if (location.origin === origin) localStorage.setItem("ai-system-builder.paired-device-token", value);
+        }, {origin:trusted, value:browserBearer});
+        const secondPage = await secondContext.newPage();
+        await secondPage.goto(`${trusted}/systems`, {waitUntil:"domcontentloaded"});
+        await secondPage.getByRole("heading", {name:"Systems", exact:true}).waitFor({timeout:20_000});
+        assert.equal(await page.evaluate(() => document.visibilityState), "visible");
+        assert.equal(await secondPage.evaluate(() => document.visibilityState), "visible");
+        stage = "independent-windows-two-distinct-registrations";
+        const windows = await until<readonly UiControlWindowTarget[]>(async () => {
+          const response = await call("aisb_list_windows", scope);
+          assert.ok(response.ok && Array.isArray(response.value.windows));
+          const listed: UiControlWindowTarget[] = response.value.windows;
+          return listed.length === 2 && listed.some(item => item.uiIncarnationId === next.uiIncarnationId) ? listed : undefined;
+        }, 50);
+        const first = windows.find(item => item.uiIncarnationId === next.uiIncarnationId);
+        const second = windows.find(item => item.uiIncarnationId !== next.uiIncarnationId);
+        assert.ok(first && second && first.windowId !== second.windowId);
+        assert.equal(first.workspaceId, activeWorkspaceId);
+        assert.equal(second.workspaceId, activeWorkspaceId);
+        const secondRevoke = secondPage.getByRole("button", {name:"Revoke automation takeover", exact:true});
+        const secondPanel = secondPage.getByRole("region", {name:"Resource shown by automation", exact:true});
+        const settings = page.locator("button.ui-shell__settings-button");
+        const secondSettings = secondPage.locator("button.ui-shell__settings-button");
+        async function attachOwnWindow(target:UiControlWindowTarget, owner:Page) {
+          const result = readHeadlessWindowResult(await call("aisb_request_window", {
+            target, requestKey:randomUUID(), taskId:randomUUID(),
+          }));
+          assert.ok(result.ok && result.value.kind === "request");
+          const attempt = result.value.request.target;
+          const dialog = owner.getByRole("dialog", {name:"Automation takeover request", exact:true});
+          await dialog.getByRole("button", {name:"Accept automation takeover", exact:true}).click();
+          const lease = await until<UiControlLeaseTarget>(async () => {
+            const reply = readHeadlessWindowResult(await call("aisb_window_status", {target:attempt}));
+            return reply.ok && reply.value.kind === "request" && reply.value.request.status === "active" ?
+              reply.value.lease : undefined;
+          });
+          return {attempt, lease};
+        }
+        async function assertActive(window:Awaited<ReturnType<typeof attachOwnWindow>>) {
+          const status = readHeadlessWindowResult(await call("aisb_window_status", {target:window.attempt}));
+          assert.ok(status.ok && status.value.kind === "request" && status.value.request.status === "active");
+          assert.deepEqual(status.value.lease, window.lease);
+        }
+        function show(target:UiControlLeaseTarget, resource:{systemId:string; revisionId:string}) {
+          return call("aisb_present_in_window", {target, commandId:randomUUID(),
+            intent:{action:"open-system", systemId:resource.systemId, revisionId:resource.revisionId}});
+        }
+        stage = "independent-windows-attach-both";
+        const began = performance.now();
+        const firstControl = await attachOwnWindow(first, page);
+        const secondControl = await attachOwnWindow(second, secondPage);
+        for (const control of [firstControl, secondControl]) {
+          const shown = readHeadlessWindowResult(await show(control.lease, saved));
+          assert.ok(shown.ok && shown.value.kind === "command" && shown.value.receipt.status === "accepted");
+        }
+        await panel.waitFor({timeout:5_000});
+        await secondPanel.waitFor({timeout:5_000});
+        assert.equal(await settings.isEnabled(), false);
+        assert.equal(await secondSettings.isEnabled(), false);
+        evidence.independently_active_managed_windows = 2;
+
+        stage = "independent-windows-revoke-first-only";
+        await assertActive(firstControl);
+        await assertActive(secondControl);
+        await revoke.click();
+        await until(async () => {
+          const status = readHeadlessWindowResult(await call("aisb_window_status", {target:firstControl.attempt}));
+          return status.ok && status.value.kind === "ended" ? true : undefined;
+        }, 20);
+        // Prove host retirement before the existing 12-second watchdog could explain it.
+        assert.ok(performance.now() - began < 8_000);
+        await assertActive(secondControl);
+        evidence.first_managed_window_ended_before_watchdog = true;
+        await panel.waitFor({state:"hidden", timeout:5_000});
+        await until(async () => await settings.isEnabled() ? true : undefined);
+        assert.ok(await secondRevoke.isVisible() && await secondPanel.isVisible() && await secondSettings.isDisabled());
+        stage = "independent-windows-save-and-denied-reveal";
+        const readOptions = {method:"POST", token:browserBearer, organizationId};
+        const snapshot = await fixture.request("/api/headless/system-builder/snapshot",
+          {...readOptions, body:{workspaceId:activeWorkspaceId}});
+        assert.equal(snapshot.status, 200);
+        const name = "Synthetic save preserved after denied presentation";
+        const input = {...scope, templateId, name, idempotencyKey:randomUUID()};
+        const created = readHeadlessAuthoringWireResult(await call("aisb_create_system", input));
+        assert.ok(created.ok && created.value.kind === "committed");
+        const {reference} = created.value;
+        const revisionId = reference.revisionId;
+        assert.ok(revisionId);
+        const resource = {systemId:reference.systemId, revisionId};
+        const denied = readHeadlessWindowResult(await show(firstControl.lease, resource));
+        assert.deepEqual(denied, {ok:false, code:"headless.forbidden"});
+        assert.equal(await panel.count(), 0);
+        const allowed = readHeadlessWindowResult(await show(secondControl.lease, resource));
+        assert.ok(allowed.ok && allowed.value.kind === "command" && allowed.value.receipt.status === "accepted");
+        const presentedId = secondPanel.locator("code").filter({hasText:resource.systemId});
+        await presentedId.waitFor({timeout:5_000});
+        assert.equal(await presentedId.textContent(), resource.systemId);
+        assert.ok(await secondRevoke.isVisible() && await secondSettings.isDisabled());
+        evidence.revoke_preserved_second_managed_window = true;
+        stage = "independent-windows-confirm-single-saved-result";
+        assert.deepEqual(await call("aisb_create_system", input), {ok:true, value:{kind:"replayed", reference}});
+        const changes = await fixture.request("/api/headless/system-builder/changes",
+          {...readOptions, body:{workspaceId:activeWorkspaceId, cursor:snapshot.body.value.cursor}});
+        assert.equal(changes.status, 200);
+        assert.deepEqual(changes.body.value.events, [{...reference, sequence:snapshot.body.value.cursor.sequence + 1}]);
+        await manage.click();
+        await management.getByRole("cell", {name:new RegExp(name)}).waitFor({timeout:5_000});
+        assert.equal(await panel.count(), 0);
+        await secondRevoke.click();
+        await secondPanel.waitFor({state:"hidden", timeout:5_000});
+        evidence.denied_managed_reveal_kept_one_saved_result = true;
+      } finally {
+        await secondBrowser.close();
+      }
+    }
 
     if (membershipLoss) {
       stage = "membership-loss-positive-control";

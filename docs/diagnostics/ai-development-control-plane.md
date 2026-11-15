@@ -250,6 +250,14 @@ API and saved system remain available. Check that the audit keeps its
 original records. Restore the options in this fixture only to verify the
 saved receipt and confirm that the old lease stays ended.
 
+Run `MANAGED_HEADLESS_BROWSER_INDEPENDENT_WINDOWS=1` as a focused Chrome
+presentation case. Two separate Chrome processes accept takeover on the same
+test server. Verify both leases before Revoke. The first must end at the host
+before its watchdog deadline while the second continues to show saved work.
+A separate save must commit once even when the
+retired window denies its presentation. The same request key returns the same
+saved result.
+
 The packaged Desktop test measures warm presentation and revoke, including
 when an ordinary dialog is open or a page is loading. The native hide test
 restores the browser's timer policy in the owned test window, measures the
