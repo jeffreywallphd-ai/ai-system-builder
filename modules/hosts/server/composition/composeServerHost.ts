@@ -80,7 +80,8 @@ import {
 import { createDefaultDatasetQualityPolicyProvider } from "../../../application/services/dataset-preparation";
 import { DatasetVersionFinalizationService } from "../../../application/services/dataset-version";
 import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
-import { createStructuredIngestionAcquisitionRepository, createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
+import { createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
+import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
 import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
 import {
@@ -1143,9 +1144,7 @@ export function composeServerHost(
       });
       const ingestionTasks = organizationDocuments && options.organizationContextProvider
         ? (() => {
-            const repository = createStructuredIngestionAcquisitionRepository(
-              organizationDocuments,
-            );
+            const repository = composeIngestionAcquisitionRepository(registerOptions.storageRootDirectory, organizationDocuments);
             const checkpoints = createFilesystemIngestionCheckpointStorage({
               rootDirectory: registerOptions.storageRootDirectory,
               organizationContextProvider: options.organizationContextProvider,

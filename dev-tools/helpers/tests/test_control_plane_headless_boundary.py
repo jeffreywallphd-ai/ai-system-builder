@@ -57,6 +57,13 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         browser_data = "apps/thin-client/src/pages/ArtifactsPage.tsx"
         browser_check = self.plan([browser, browser_data])["managed-headless-browser-consent-ui"]
         self.assertIn("apps/thin-client/src/features/workspace/api/tests/managed-browser-plan-approval.unit.test.ts", browser_check["argv"])
+        provider_host = "modules/hosts/shared/composition/composeIngestionAcquisitionRepository.ts"
+        provider_registry_test = "modules/application/use-cases/tests/register-artifact-from-repo.use-case.unit.test.ts"
+        provider_storage_test = "modules/adapters/persistence/ingestion/tests/structured-ingestion-acquisition-repository.unit.test.ts"
+        provider_checks = self.plan([provider_host, provider_registry_test, provider_storage_test])
+        self.assertNotIn("focused-tests", provider_checks)
+        self.assertIn(provider_registry_test, provider_checks[check]["argv"])
+        self.assertIn(provider_storage_test, provider_checks[check]["argv"])
         self.assertIn("focused-tests", self.plan([owner, "modules/contracts/headless/unrelated.ts"], check))
 
     def test_window_authority_check_covers_the_exact_core_and_keeps_neighbor_fallback(self):

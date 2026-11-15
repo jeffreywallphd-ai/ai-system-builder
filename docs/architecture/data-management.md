@@ -182,7 +182,11 @@ authoritative task workspace into both the artifact catalog record and the
 imported-source binding, so a successful task is immediately visible through
 the same workspace-scoped Artifact Browser. Selected `.parquet` paths retain a
 Parquet media type and the tabular artifact family even when the provider file
-listing does not supply a media type. The shared desktop/thin-client UI
+listing does not supply a media type. The host verifies repository access
+before it starts the storage transaction. The catalog record, imported-source
+binding, source snapshot and next task revision commit together. A competing
+run can confirm that same selected source without creating another artifact.
+The shared desktop/thin-client UI
 uses the existing bounded provider browser: users find a namespace, select
 datasets, and check exact files, while the browser resolves and returns each
 file's immutable revision. The renderer sends only those returned coordinates

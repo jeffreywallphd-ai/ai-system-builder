@@ -91,10 +91,8 @@ export interface GovernedIngestionTaskUseCasesDependencies {
   readonly streamStorage: ArtifactStreamStoragePort;
   readonly artifactCleanup: Pick<ArtifactStoragePort, "deleteArtifact">;
   readonly filePublication?: IngestionFilePublicationPort;
-  readonly registerArtifactFromRepo?: Pick<
-    RegisterArtifactFromRepoUseCase,
-    "execute"
-  >;
+  readonly registerArtifactFromRepo?: Pick<RegisterArtifactFromRepoUseCase, "execute"> &
+    Partial<Pick<RegisterArtifactFromRepoUseCase, "prepare">>;
   readonly website?: Pick<
     GovernedWebsiteIngestionUseCases,
     "createTask" | "runTask" | "refreshSource"
@@ -396,6 +394,9 @@ export class GovernedIngestionTaskUseCases {
         "Hugging Face ingestion is not available in this environment.",
         context,
       );
+    const repository = this.dependencies.repository;
+    const saveProviderArtifact = repository.saveTaskWithProviderArtifact?.bind(repository);
+    const prepareProviderArtifact = saveProviderArtifact && registerArtifact.prepare?.bind(registerArtifact);
     try {
       let task = await this.requireTask(
         scope.value.workspaceId,
@@ -450,13 +451,19 @@ export class GovernedIngestionTaskUseCases {
             task.revision,
           );
         }
-        const result = await registerArtifact.execute(
-          {
-            target: source,
-            mediaType: file.mediaType,
-          },
-          context,
-        );
+        const command = { target: source, mediaType: file.mediaType };
+        const result = prepareProviderArtifact
+          ? await prepareProviderArtifact(command, context)
+          : await registerArtifact.execute(command, context);
+        if (prepareProviderArtifact) {
+          const active = await this.authorize(context, "ingestion.hugging-face.run", "artifact:write");
+          if (!active.ok) return active;
+          const contexts = this.dependencies.organizationContextProvider;
+          const latest = contexts?.getCurrentOrganizationContext();
+          if (active.value.workspaceId !== task.workspaceId || context.organizationId !== task.organizationId ||
+              (contexts && (!latest || latest.organizationId !== task.organizationId || latest.principalId !== context.principalId)))
+            return failure("forbidden", "The workspace access for this provider import changed.", context);
+        }
         if (!result.ok) {
           const completedAt = this.now();
           const retryable =
@@ -488,6 +495,8 @@ export class GovernedIngestionTaskUseCases {
             context,
           );
         }
+        const prepared = "artifact" in result.value ? result.value : undefined;
+        const storedArtifactId = "registration" in result.value ? result.value.registration.artifactId : result.value.artifactId;
         const capturedAt = this.now();
         const sourceId = `source.${task.taskId}.${file.fileId}`;
         const snapshotId = `snapshot.${task.taskId}.${file.fileId}`;
@@ -508,7 +517,7 @@ export class GovernedIngestionTaskUseCases {
           },
           sizeBytes: 0,
           mediaType: file.mediaType,
-          rawArtifactKey: result.value.artifactId,
+          rawArtifactKey: storedArtifactId,
           capturedAt,
           providerRevision: source.revision,
         } as const;
@@ -516,7 +525,7 @@ export class GovernedIngestionTaskUseCases {
           ...file,
           status: "finalized",
           output: {
-            key: result.value.artifactId,
+            key: storedArtifactId,
             mediaType: file.mediaType,
             sizeBytes: 0,
             providerRevision: source.revision,
@@ -538,13 +547,12 @@ export class GovernedIngestionTaskUseCases {
             : "Provider file imported. Continuing with the remaining files.",
         });
         try {
-          task = (
-            await this.dependencies.repository.saveTaskWithSourceSnapshot(
-              nextTask,
-              task.revision,
-              snapshot,
-            )
-          ).task;
+          if (prepared) {
+            if (!saveProviderArtifact) throw new Error("Owned provider publication is unavailable.");
+            task = (await saveProviderArtifact(nextTask, task.revision, snapshot, prepared.artifact)).task;
+          } else {
+            task = (await repository.saveTaskWithSourceSnapshot(nextTask, task.revision, snapshot)).task;
+          }
         } catch {
           const current = await this.readFinalizationState(nextTask, requireFile(nextTask, file.fileId), snapshot);
           if (current.task.status === "cancelled") return createSuccessResult(current.task, context);

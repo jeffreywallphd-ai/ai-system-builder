@@ -1,4 +1,4 @@
-import type { IngestionAcquisitionRepositoryPort } from "../../../application/ports/ingestion";
+import type { IngestionAcquisitionRepositoryPort, VerifiedIngestionProviderArtifact } from "../../../application/ports/ingestion";
 import { assertPublicationOutput, normalizeIngestionFilePublication, publicationUnavailable } from "../../../application/shared/ingestion-file-publication";
 import {
   INGESTION_TASK_LIST_LIMIT,
@@ -9,8 +9,10 @@ import {
   normalizeIngestionTaskRecord,
   type IngestionSourceRefreshRecord,
   type IngestionSourceSnapshot,
+  type IngestionTaskFileRecord,
   type IngestionTaskRecord,
 } from "../../../contracts/ingestion";
+import { encodeArtifactRepoBackingLocator } from "../../../contracts/storage";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import { StructuredDocumentConflictError, cloneStructuredJson, type StructuredDocumentStore } from "../shared";
 
@@ -19,7 +21,92 @@ export const INGESTION_SOURCE_SNAPSHOT_NAMESPACE = "ingestion/source-snapshots";
 export const INGESTION_SOURCE_REFRESH_NAMESPACE = "ingestion/source-refreshes";
 export const INGESTION_FILE_PUBLICATION_NAMESPACE = "ingestion/file-publications";
 
-export function createStructuredIngestionAcquisitionRepository(documents: StructuredDocumentStore): IngestionAcquisitionRepositoryPort {
+export function createStructuredIngestionAcquisitionRepository(
+  documents: StructuredDocumentStore,
+  writeProviderArtifact?: (transaction: StructuredDocumentStore, artifact: VerifiedIngestionProviderArtifact) => Promise<void>,
+): IngestionAcquisitionRepositoryPort {
+  async function saveTaskWithSourceSnapshot(
+    input: IngestionTaskRecord, expectedRevision: number, snapshotInput: IngestionSourceSnapshot,
+    artifact?: VerifiedIngestionProviderArtifact,
+  ) {
+    const task = normalizeIngestionTaskRecord(input);
+    const snapshot = normalizeIngestionSourceSnapshot(snapshotInput);
+    assertOrganizationScope(documents, task.organizationId);
+    assertOrganizationScope(documents, snapshot.organizationId);
+    assertTaskSnapshotRelationship(task, snapshot);
+    const providerFile = artifact ? assertProviderPublication(task, snapshot, artifact) : undefined;
+    if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1 || task.revision !== expectedRevision + 1) throw new Error("Ingestion task updates require the next exact revision.");
+    const taskDocumentKey = taskKey(task.workspaceId, task.taskId);
+    const snapshotDocumentKey = snapshotKey(snapshot.workspaceId, snapshot.snapshotId);
+    async function commitSnapshot(transaction: StructuredDocumentStore) {
+      const current = await transaction.readDocument<IngestionTaskRecord>(INGESTION_TASK_NAMESPACE, taskDocumentKey);
+      if (!current) throw new Error("Ingestion task does not exist.");
+      const existing = normalizeIngestionTaskRecord(current.value);
+      if (!sameTaskIdentity(existing, task)) throw new Error("Ingestion task identity is immutable.");
+      if (existing.revision !== current.revision) throw new Error("Ingestion task revision is inconsistent.");
+      if (existing.revision !== expectedRevision) {
+        if (providerFile && existing.revision > expectedRevision) {
+          const committed = await readProviderWinner(transaction, existing, providerFile, snapshot, snapshotDocumentKey);
+          if (committed) return committed;
+        }
+        throw new StructuredDocumentConflictError(INGESTION_TASK_NAMESPACE, taskDocumentKey, expectedRevision);
+      }
+      assertTransition(existing, task);
+      if (task.kind === "file-batch") {
+        const added = task.files.filter(file => file.status === "finalized" && existing.files.find(before => before.fileId === file.fileId)?.status !== "finalized");
+        if (added.length !== 1 || added[0]!.output?.sourceSnapshotId !== snapshot.snapshotId) publicationUnavailable();
+        const file = added[0]!;
+        const publicationKey = `${task.workspaceId}/${task.taskId}/${file.fileId}`;
+        const document = await transaction.readDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, publicationKey);
+        if (!document || document.revision !== 5) publicationUnavailable();
+        const publication = normalizeIngestionFilePublication(document.value);
+        if (publication.state !== "origin-complete" || publication.revision !== document.revision) publicationUnavailable();
+        assertPublicationOutput(publication, task);
+        const expected = normalizeIngestionSourceSnapshot({
+          schemaVersion: "1.0", snapshotId: normalizeIngestionSourceSnapshotId(`snapshot.${task.taskId}.${file.fileId}`),
+          sourceId: normalizeIngestionSourceId(`source.${task.taskId}.${file.fileId}`),
+          ...(task.organizationId ? { organizationId: task.organizationId } : {}), workspaceId: task.workspaceId,
+          locator: { kind: "file", displayName: file.fileName, originalName: file.fileName },
+          contentDigest: publication.digest, sizeBytes: publication.totalBytes, mediaType: publication.mediaType,
+          rawArtifactKey: publication.key, capturedAt: publication.capturedAt,
+        });
+        if (stableJson(snapshot) !== stableJson(expected)) publicationUnavailable();
+        await transaction.writeDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, publicationKey,
+          normalizeIngestionFilePublication({ ...publication, state: "committed", revision: 6 }), { expectedRevision: 5 });
+      }
+      const currentSnapshot = await transaction.readDocument<IngestionSourceSnapshot>(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey);
+      if (artifact && providerFile) {
+        if (!writeProviderArtifact) throw new Error("Owned provider publication is unavailable.");
+        const newlyFinalized = task.files.filter(file => file.status === "finalized" &&
+          existing.files.find(before => before.fileId === file.fileId)?.status !== "finalized");
+        if (currentSnapshot || newlyFinalized.length !== 1 || newlyFinalized[0] !== providerFile)
+          throw new Error("The provider artifact does not match one new source.");
+        await writeProviderArtifact(transaction, artifact);
+      }
+      if (currentSnapshot && stableJson(normalizeIngestionSourceSnapshot(currentSnapshot.value)) !== stableJson(snapshot)) throw new StructuredDocumentConflictError(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey, 0);
+      await transaction.writeDocument(INGESTION_TASK_NAMESPACE, taskDocumentKey, cloneStructuredJson(task), { expectedRevision: current.revision });
+      if (!currentSnapshot) await transaction.writeDocument(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey, cloneStructuredJson(snapshot), { expectedRevision: 0 });
+      return { task: cloneStructuredJson(task), snapshot: cloneStructuredJson(snapshot) };
+    }
+    try {
+      return await documents.runInTransaction(commitSnapshot);
+    } catch (error) {
+      if (providerFile) {
+        // A conditional storage adapter can return a generic failure for a
+        // serialization race. Reconcile the winner without issuing new writes.
+        const committed = await documents.runInTransaction(async transaction => {
+          const current = await transaction.readDocument<IngestionTaskRecord>(INGESTION_TASK_NAMESPACE, taskDocumentKey);
+          if (!current || current.revision <= expectedRevision) return;
+          const latest = normalizeIngestionTaskRecord(current.value);
+          if (latest.revision !== current.revision || !sameTaskIdentity(latest, task)) return;
+          return readProviderWinner(transaction, latest, providerFile, snapshot, snapshotDocumentKey);
+        }).catch(() => undefined);
+        if (committed) return committed;
+      }
+      throw error;
+    }
+  }
+
   return {
     async createTask(input) {
       const task = normalizeIngestionTaskRecord(input);
@@ -93,51 +180,8 @@ export function createStructuredIngestionAcquisitionRepository(documents: Struct
         await transaction.writeDocument(INGESTION_TASK_NAMESPACE, key, cloneStructuredJson(pending), { expectedRevision });
       });
     },
-    async saveTaskWithSourceSnapshot(input, expectedRevision, snapshotInput) {
-      const task = normalizeIngestionTaskRecord(input);
-      const snapshot = normalizeIngestionSourceSnapshot(snapshotInput);
-      assertOrganizationScope(documents, task.organizationId);
-      assertOrganizationScope(documents, snapshot.organizationId);
-      assertTaskSnapshotRelationship(task, snapshot);
-      if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1 || task.revision !== expectedRevision + 1) throw new Error("Ingestion task updates require the next exact revision.");
-      const taskDocumentKey = taskKey(task.workspaceId, task.taskId);
-      const snapshotDocumentKey = snapshotKey(snapshot.workspaceId, snapshot.snapshotId);
-      return documents.runInTransaction(async (transaction) => {
-        const current = await transaction.readDocument<IngestionTaskRecord>(INGESTION_TASK_NAMESPACE, taskDocumentKey);
-        if (!current) throw new Error("Ingestion task does not exist.");
-        const existing = normalizeIngestionTaskRecord(current.value);
-        if (existing.workspaceId !== task.workspaceId || existing.taskId !== task.taskId || existing.organizationId !== task.organizationId) throw new Error("Ingestion task identity is immutable.");
-        if (existing.revision !== expectedRevision || current.revision !== expectedRevision) throw new StructuredDocumentConflictError(INGESTION_TASK_NAMESPACE, taskDocumentKey, expectedRevision);
-        assertTransition(existing, task);
-        if (task.kind === "file-batch") {
-          const added = task.files.filter(file => file.status === "finalized" && existing.files.find(before => before.fileId === file.fileId)?.status !== "finalized");
-          if (added.length !== 1 || added[0]!.output?.sourceSnapshotId !== snapshot.snapshotId) publicationUnavailable();
-          const file = added[0]!;
-          const publicationKey = `${task.workspaceId}/${task.taskId}/${file.fileId}`;
-          const document = await transaction.readDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, publicationKey);
-          if (!document || document.revision !== 5) publicationUnavailable();
-          const publication = normalizeIngestionFilePublication(document.value);
-          if (publication.state !== "origin-complete" || publication.revision !== document.revision) publicationUnavailable();
-          assertPublicationOutput(publication, task);
-          const expected = normalizeIngestionSourceSnapshot({
-            schemaVersion: "1.0", snapshotId: normalizeIngestionSourceSnapshotId(`snapshot.${task.taskId}.${file.fileId}`),
-            sourceId: normalizeIngestionSourceId(`source.${task.taskId}.${file.fileId}`),
-            ...(task.organizationId ? { organizationId: task.organizationId } : {}), workspaceId: task.workspaceId,
-            locator: { kind: "file", displayName: file.fileName, originalName: file.fileName },
-            contentDigest: publication.digest, sizeBytes: publication.totalBytes, mediaType: publication.mediaType,
-            rawArtifactKey: publication.key, capturedAt: publication.capturedAt,
-          });
-          if (stableJson(snapshot) !== stableJson(expected)) publicationUnavailable();
-          await transaction.writeDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, publicationKey,
-            normalizeIngestionFilePublication({ ...publication, state: "committed", revision: 6 }), { expectedRevision: 5 });
-        }
-        const currentSnapshot = await transaction.readDocument<IngestionSourceSnapshot>(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey);
-        if (currentSnapshot && stableJson(normalizeIngestionSourceSnapshot(currentSnapshot.value)) !== stableJson(snapshot)) throw new StructuredDocumentConflictError(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey, 0);
-        await transaction.writeDocument(INGESTION_TASK_NAMESPACE, taskDocumentKey, cloneStructuredJson(task), { expectedRevision: current.revision });
-        if (!currentSnapshot) await transaction.writeDocument(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, snapshotDocumentKey, cloneStructuredJson(snapshot), { expectedRevision: 0 });
-        return { task: cloneStructuredJson(task), snapshot: cloneStructuredJson(snapshot) };
-      });
-    },
+    saveTaskWithSourceSnapshot,
+    ...(writeProviderArtifact ? { saveTaskWithProviderArtifact: saveTaskWithSourceSnapshot } : {}),
     async createSourceSnapshot(input) {
       const snapshot = normalizeIngestionSourceSnapshot(input);
       assertOrganizationScope(documents, snapshot.organizationId);
@@ -247,6 +291,58 @@ function assertTransition(previous: IngestionTaskRecord, next: IngestionTaskReco
 function assertOrganizationScope(documents: StructuredDocumentStore, organizationId: string | undefined): void {
   if (documents.organizationId !== organizationId) throw new Error("Ingestion record organization must match the repository organization scope.");
 }
+
+function sameTaskIdentity(left: IngestionTaskRecord, right: IngestionTaskRecord) {
+  return left.taskId === right.taskId && left.workspaceId === right.workspaceId && left.organizationId === right.organizationId;
+}
+
+function assertProviderPublication(task: IngestionTaskRecord, snapshot: IngestionSourceSnapshot,
+  artifact: VerifiedIngestionProviderArtifact): IngestionTaskFileRecord {
+  const file = task.files.find(candidate => candidate.output?.sourceSnapshotId === snapshot.snapshotId);
+  const source = file?.providerSource;
+  const { catalog, binding } = artifact;
+  const { backing } = binding;
+  if (task.kind !== "hugging-face" || !file || !source || file.status !== "finalized" ||
+      snapshot.sourceId !== `source.${task.taskId}.${file.fileId}` ||
+      snapshot.snapshotId !== `snapshot.${task.taskId}.${file.fileId}` ||
+      !isProviderSnapshot(snapshot, file) ||
+      catalog.workspaceId !== task.workspaceId || binding.workspaceId !== task.workspaceId ||
+      catalog.storageKey !== snapshot.rawArtifactKey || binding.artifactId !== snapshot.rawArtifactKey ||
+      catalog.sourceKind !== "upload" || catalog.mediaType !== file.mediaType || catalog.originalName !== source.path ||
+      binding.role !== "imported-source" || backing.kind !== "artifact-repo" || backing.provider !== source.provider ||
+      backing.revision !== source.revision || backing.locator !== encodeArtifactRepoBackingLocator(source) ||
+      backing.target?.provider !== source.provider || backing.target.repository !== source.repository ||
+      backing.target.path !== source.path || backing.target.revision !== source.revision ||
+      backing.verification?.exists !== true || !backing.verification.verifiedAt ||
+      backing.verification.verifiedAt !== catalog.createdAt || binding.createdAt !== catalog.createdAt) {
+    throw new Error("The verified provider artifact does not match the selected source.");
+  }
+  return file;
+}
+
+function isProviderSnapshot(snapshot: IngestionSourceSnapshot, file: IngestionTaskFileRecord) {
+  const source = file.providerSource;
+  return source && snapshot.locator.kind === "hugging-face" &&
+    snapshot.locator.repository === source.repository && snapshot.locator.path === source.path &&
+    snapshot.locator.revision === source.revision && snapshot.providerRevision === source.revision &&
+    snapshot.locator.displayName === file.fileName && snapshot.sizeBytes === 0 && !snapshot.contentDigest;
+}
+
+async function readProviderWinner(transaction: StructuredDocumentStore, task: IngestionTaskRecord,
+  proposedFile: IngestionTaskFileRecord, proposedSnapshot: IngestionSourceSnapshot, key: string) {
+  const file = task.files.find(candidate => candidate.fileId === proposedFile.fileId);
+  if (task.kind !== "hugging-face" || file?.status !== "finalized" ||
+      stableJson(file.providerSource) !== stableJson(proposedFile.providerSource) ||
+      file.output?.sourceSnapshotId !== proposedSnapshot.snapshotId || file.output.sourceId !== proposedSnapshot.sourceId) return;
+  const stored = await transaction.readDocument<IngestionSourceSnapshot>(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, key);
+  if (!stored) return;
+  const snapshot = normalizeIngestionSourceSnapshot(stored.value);
+  if (!isProviderSnapshot(snapshot, file) || snapshot.snapshotId !== proposedSnapshot.snapshotId ||
+      snapshot.sourceId !== proposedSnapshot.sourceId) return;
+  assertTaskSnapshotRelationship(task, snapshot);
+  return { task: cloneStructuredJson(task), snapshot: cloneStructuredJson(snapshot) };
+}
+
 function assertTaskSnapshotRelationship(task: IngestionTaskRecord, snapshot: IngestionSourceSnapshot): void {
   const matchesOutput = task.files.some((file) => file.status === "finalized" && file.output?.sourceId === snapshot.sourceId
     && file.output.sourceSnapshotId === snapshot.snapshotId && file.output.key === snapshot.rawArtifactKey

@@ -7,7 +7,8 @@
 - `IngestionAcquisitionRepositoryPort` stores bounded workspace-scoped task
   state, immutable source snapshots, and append-only refresh outcomes. It
   atomically commits a finalized task with its matching snapshot and a changed
-  refresh with its new snapshot.
+  refresh with its new snapshot. An owned provider publication also commits
+  the new artifact catalog and backing records in that transaction.
 - `IngestionCheckpointStoragePort` accepts only ordered, digest-verified,
   bounded chunks and streams them back without joining a whole file in memory.
 - `GovernedWebsiteCapturePort` resolves only explicit pages or one bounded

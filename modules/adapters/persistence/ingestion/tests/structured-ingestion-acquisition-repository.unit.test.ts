@@ -1,10 +1,11 @@
 import { describe, expect, it } from "../../../../testing/node-test";
 import { createOrganizationId } from "../../../../contracts/organization";
 import type { IngestionSourceRefreshRecord, IngestionSourceSnapshot, IngestionTaskRecord } from "../../../../contracts/ingestion";
+import { encodeArtifactRepoBackingLocator } from "../../../../contracts/storage";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createInMemoryStructuredDocumentStore } from "../../shared";
 import { createStructuredIngestionFilePublicationRepository } from "../createStructuredIngestionFilePublicationRepository";
-import type { IngestionFilePublication } from "../../../../application/ports/ingestion";
+import type { IngestionFilePublication, VerifiedIngestionProviderArtifact } from "../../../../application/ports/ingestion";
 import {
   INGESTION_SOURCE_SNAPSHOT_NAMESPACE,
   INGESTION_TASK_NAMESPACE,
@@ -63,6 +64,62 @@ function refresh(organizationId?: string): IngestionSourceRefreshRecord {
 }
 
 describe("structured ingestion acquisition repository", () => {
+  it("rolls back all provider rows if publication is interrupted and reconciles the same committed source", async () => {
+    const documents = createInMemoryStructuredDocumentStore();
+    let interrupt = true;
+    let admissions = 0;
+    const repository = createStructuredIngestionAcquisitionRepository(documents, async (transaction, artifact) => {
+      admissions++;
+      const key = artifact.catalog.storageKey;
+      await transaction.writeDocument("synthetic/provider-catalog", key, artifact.catalog, {expectedRevision:0});
+      if (interrupt) throw new Error("Synthetic failure before backing write.");
+      await transaction.writeDocument("synthetic/provider-binding", key, artifact.binding, {expectedRevision:0});
+    });
+    const {workspaceId, taskId} = task();
+    const source = {provider:"huggingface" as const,repository:"example/synthetic",path:"train.jsonl",revision:"a".repeat(40)};
+    const file = {...task().files[0]!,providerSource:source,status:"pending" as const,
+      totalBytes:0,acceptedBytes:0,nextChunkIndex:0,lastChunk:undefined};
+    const start = await repository.createTask({...task(),kind:"hugging-face",cleanupPending:false,files:[file]});
+    const sourceId = "source.task-1.file-1" as IngestionSourceSnapshot["sourceId"];
+    const snapshotId = "snapshot.task-1.file-1" as IngestionSourceSnapshot["snapshotId"];
+    function prepared(artifactId: string) {
+      const output = {key:artifactId,mediaType:file.mediaType,sizeBytes:0,providerRevision:source.revision,
+        sourceId,sourceSnapshotId:snapshotId};
+      const next: IngestionTaskRecord = {...start,status:"succeeded",completedAt:now,revision:2,
+        files:[{...file,status:"finalized",output}]};
+      const captured: IngestionSourceSnapshot = {schemaVersion:"1.0",workspaceId,sourceId,snapshotId,
+        locator:{kind:"hugging-face",repository:source.repository,path:source.path,revision:source.revision,displayName:file.fileName},
+        sizeBytes:0,mediaType:file.mediaType,rawArtifactKey:artifactId,capturedAt:now,providerRevision:source.revision};
+      const artifact: VerifiedIngestionProviderArtifact = {
+        catalog:{workspaceId,storageKey:artifactId,artifactFamily:"tabular",mediaType:file.mediaType,
+          sourceKind:"upload",originalName:source.path,createdAt:now},
+        binding:{workspaceId,artifactId,role:"imported-source",createdAt:now,
+          backing:{kind:"artifact-repo",provider:source.provider,locator:encodeArtifactRepoBackingLocator(source),
+            revision:source.revision,target:source,verification:{exists:true,verifiedAt:now}}},
+      };
+      return {next,captured,artifact};
+    }
+    const commit = repository.saveTaskWithProviderArtifact!;
+    const first = prepared("artifacts/verified-provider-a");
+    const foreign = { ...first.artifact, binding:{...first.artifact.binding,workspaceId:createWorkspaceId("workspace-b")} };
+    await expect(commit(first.next,1,first.captured,foreign)).rejects.toThrow("does not match");
+    expect(admissions).toBe(0);
+    await expect(commit(first.next,1,first.captured,first.artifact)).rejects.toThrow("Synthetic failure");
+    expect(await repository.readTask(workspaceId,taskId)).toEqual(start);
+    expect(await repository.readSourceSnapshot(workspaceId,snapshotId)).toBeUndefined();
+    expect((await documents.listDocuments("synthetic/provider-catalog")).length).toBe(0);
+    expect((await documents.listDocuments("synthetic/provider-binding")).length).toBe(0);
+    interrupt = false;
+
+    const committed = await commit(first.next,1,first.captured,first.artifact);
+    const retried = prepared("artifacts/verified-provider-b");
+    expect(await commit(retried.next,1,retried.captured,retried.artifact)).toEqual(committed);
+    expect(admissions).toBe(2);
+    expect((await documents.listDocuments("synthetic/provider-catalog")).length).toBe(1);
+    expect((await documents.listDocuments("synthetic/provider-binding")).length).toBe(1);
+    expect(await repository.readSourceSnapshot(workspaceId,snapshotId)).toEqual(committed.snapshot);
+  });
+
   it("reopens cleanup only for the exact cancelled checkpoint without changing transfer data", async () => {
     const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
     const started = await repository.createTask(task());

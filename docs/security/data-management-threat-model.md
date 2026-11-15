@@ -144,6 +144,12 @@ This model covers workspace source selection, local and Hugging Face staging, st
 - A provider task cannot report success for an unscoped catalog or backing
   write. Both records retain the authoritative task workspace, and normal
   workspace-filtered Artifact Browser reads remain fail-closed.
+- For a verified provider file, the host checks workspace access again after
+  the provider reply. The storage owner matches the selected repository file
+  and immutable revision to its task, catalog record and backing. It commits
+  the catalog, backing, source snapshot and task revision together. A failed
+  write rolls back the complete set. A competing run confirms the exact
+  committed snapshot before reporting a saved source.
 - Provider localization cannot read a binding, retrieve bytes, write the local
   object/catalog record, or update source and primary bindings without the same
   authoritative workspace context. Missing scope fails before provider access.

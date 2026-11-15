@@ -48,6 +48,23 @@ describe("RegisterArtifactFromRepoUseCase", () => {
         ArtifactId.from("artifacts/20260417000000-import001"),
     });
 
+    const prepared = await useCase.prepare({
+      target: { provider: "huggingface", repository: "openai/demo", path: "images/a.png", revision: "a".repeat(40) },
+      artifactFamily: "image",
+      mediaType: "image/png",
+    }, { workspaceId: "workspace-a" });
+    expect(prepared).toMatchObject({
+      ok: true,
+      value: {
+        artifact: {
+          catalog: { workspaceId: "workspace-a", storageKey: "artifacts/20260417000000-import001" },
+          binding: { workspaceId: "workspace-a", role: "imported-source", backing: { revision: "a".repeat(40) } },
+        },
+      },
+    });
+    expect(artifactCatalogAppend.appendArtifactCatalogRecord).not.toHaveBeenCalled();
+    expect(artifactBindingStorage.upsertArtifactStorageBinding).not.toHaveBeenCalled();
+
     const result = await useCase.execute(
       {
         target: {
