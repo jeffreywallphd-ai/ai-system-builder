@@ -11,6 +11,7 @@ import { composeDesktopHeadlessAuthoring } from "./composeDesktopHeadlessAuthori
 import { composeDesktopHeadlessConversation } from "./composeDesktopHeadlessConversation";
 import { composeDesktopHeadlessPlanReview } from "./composeDesktopHeadlessPlanReview";
 import { composeDesktopHeadlessPlanApprovals } from "./composeDesktopHeadlessPlanApprovals";
+import { composeDesktopHeadlessLocalFileSelection } from "./composeDesktopHeadlessLocalFileSelection";
 import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
 import { registerDesktopHeadlessTaskList } from "./registerDesktopHeadlessTaskList";
 import { composeDesktopUiControl, type DesktopUiControlOwner } from "./composeDesktopUiControl";
@@ -356,6 +357,7 @@ export interface DesktopHostComposition {
   /** Interactive main-process entry point. Never expose the object to a renderer. */
   getHeadlessConnection: () => DesktopHeadlessConnection | undefined;
   getHeadlessPlanApprovals: () => ReturnType<typeof composeDesktopHeadlessPlanApprovals> | undefined;
+  getHeadlessLocalFileSelection: () => ReturnType<typeof composeDesktopHeadlessLocalFileSelection> | undefined;
   getUiControlOwner: () => DesktopUiControlOwner | undefined;
   disableWindowTakeover: () => void;
   registerArtifactUploadIpc: (
@@ -710,6 +712,7 @@ export function composeDesktopHost(
   let headlessReadHandler: DesktopHeadlessReadHandler | undefined;
   let headlessConnection: DesktopHeadlessConnection | undefined;
   let headlessPlanApprovals: ReturnType<typeof composeDesktopHeadlessPlanApprovals> | undefined;
+  let headlessLocalFileSelection: ReturnType<typeof composeDesktopHeadlessLocalFileSelection> | undefined;
   let headlessConversation: ReturnType<typeof composeDesktopHeadlessConversation> | undefined;
   let uiControlOwner: DesktopUiControlOwner | undefined;
   let headlessAudit: DesktopHeadlessAudit | undefined;
@@ -801,6 +804,7 @@ export function composeDesktopHost(
     getHeadlessReadHandler: () => headlessReadHandler,
     getHeadlessConnection: () => headlessConnection,
     getHeadlessPlanApprovals: () => headlessPlanApprovals,
+    getHeadlessLocalFileSelection: () => headlessLocalFileSelection,
     getUiControlOwner: () => uiControlOwner,
     disableWindowTakeover() {
       headlessConnection?.stopPresentationAdmission();
@@ -2351,6 +2355,12 @@ export function composeDesktopHost(
             });
             if (planReviewOwner) headlessPlanApprovals = composeDesktopHeadlessPlanApprovals({
               ...planReviewOwner, capturePlanReviewClients: headlessConnection.capturePlanReviewClients,
+            });
+            if (planReviewOwner) headlessLocalFileSelection = composeDesktopHeadlessLocalFileSelection({
+              ...planReviewOwner,
+              capturePlanReviewClients: headlessConnection.capturePlanReviewClients,
+              getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
+              now: () => options.now ? Date.parse(options.now()) : Date.now(),
             });
           }
         }

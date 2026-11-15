@@ -680,6 +680,9 @@ PUBLISHED_FORM_CHECKS = {
         "automatic_sources": (
             "modules/contracts/headless/headless-data-task-status.ts",
             "modules/contracts/headless/headless-data-local-file.ts",
+            "modules/contracts/headless/headless-data-app-selection.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessLocalFileSelection.ts",
+            "apps/desktop/src/main/desktopHeadlessLocalFileSelectionIpc.ts",
             "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts",
             "modules/application/use-cases/ingestion-acquisition/headless-local-file-selection.use-case.ts",
             "modules/adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository.ts",
@@ -689,6 +692,7 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "modules/contracts/headless/headless-data-task-status.ts",
             "modules/contracts/headless/headless-data-local-file.ts",
+            "modules/contracts/headless/headless-data-app-selection.ts",
             "modules/contracts/headless/index.ts",
             "modules/contracts/headless/tests/headless-data-task-status.unit.test.ts",
             "modules/contracts/headless/tests/headless-data-local-file.unit.test.ts",
@@ -702,6 +706,13 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
             "modules/application/use-cases/ingestion-acquisition/ingestion-file-publication.service.ts",
             "modules/application/ports/ingestion/ingestion-file-publication.port.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessLocalFileSelection.ts",
+            "modules/hosts/desktop/composition/composeDesktopIngestionFeature.ts",
+            "modules/hosts/desktop/composition/composeDesktopHost.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-local-file-selection.unit.test.ts",
+            "apps/desktop/src/main/desktopHeadlessLocalFileSelectionIpc.ts",
+            "apps/desktop/src/main/tests/desktop-headless-local-file-selection-ipc.unit.test.ts",
+            "apps/desktop/src/main/index.ts",
         ),
         "command": (
             "--import", "tsx", "--test", "--",
@@ -710,6 +721,10 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts",
             "modules/application/use-cases/ingestion-acquisition/tests/headless-local-file-selection.unit.test.ts",
             "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-local-file-selection.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/composeDesktopIngestionFeature.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktopStartupLazyComposition.unit.test.ts",
+            "apps/desktop/src/main/tests/desktop-headless-local-file-selection-ipc.unit.test.ts",
         ),
     },
     "headless-system-builder-semantic-edits": {

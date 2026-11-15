@@ -15,12 +15,20 @@ const namespace = "headless/data/local-file-selections";
 
 /** The file already has one stable private identity in this workspace. Keep one selection per file. */
 export function createStructuredHeadlessLocalFileSelectionRepository(
-  documents: StructuredDocumentStore, now: () => number = Date.now,
+  documents: StructuredDocumentStore,
+  now: () => number = Date.now,
+  writePolicy?: {
+    readonly platform: StructuredDocumentStore;
+    readonly allows: (owner: StructuredDocumentStore, selection: HeadlessLocalFileSelection) => Promise<boolean>;
+  },
 ): HeadlessLocalFileSelectionPort {
   const organizationId = documents.organizationId;
   if (!organizationId || !documents.runInOwnedTransaction)
     throw new Error("Local file selection requires an organization transaction owner.");
   const owned = documents.runInOwnedTransaction.bind(documents);
+  if (writePolicy && (writePolicy.platform.organizationId !== undefined || !writePolicy.platform.runInOwnedTransaction))
+    throw new Error("Local file selection policy requires the platform transaction owner.");
+  const ownWrite = writePolicy ? writePolicy.platform.runInOwnedTransaction!.bind(writePolicy.platform) : owned;
 
   async function readPreview(transaction: StructuredDocumentStore, selection: HeadlessLocalFileSelection) {
     const { workspaceId, taskId } = selection.target;
@@ -41,8 +49,10 @@ export function createStructuredHeadlessLocalFileSelectionRepository(
       if (selection.organizationId !== organizationId || !isCurrent() ||
           !Number.isSafeInteger(expectedRevision) || expectedRevision < 0 || expectedRevision >= Number.MAX_SAFE_INTEGER) return;
       const key = selectionKey(selection);
-      return owned(async transaction => {
+      return ownWrite(async owner => {
         if (!isCurrent()) return;
+        if (writePolicy && (!await writePolicy.allows(owner, selection) || !isCurrent())) return;
+        const transaction = writePolicy ? owner.forOrganization(organizationId) : owner;
         if (!(await readPreview(transaction, selection)).ok || !isCurrent()) return;
         const found = await transaction.readDocument(namespace, key);
         if (found) {

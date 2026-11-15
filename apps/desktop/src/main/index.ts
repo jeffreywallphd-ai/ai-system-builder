@@ -18,6 +18,7 @@ import { isTrustedIpcSender } from "./trustedIpcSender";
 import { DESKTOP_UI_CONTROL_RETIRED_EVENT } from "../../../../modules/contracts/headless";
 import { captureDesktopHeadlessPairingWindow, registerDesktopHeadlessPairingIpc } from "./desktopHeadlessPairingIpc";
 import { registerDesktopHeadlessPlanApprovalIpc } from "./desktopHeadlessPlanApprovalIpc";
+import { registerDesktopHeadlessLocalFileSelectionIpc } from "./desktopHeadlessLocalFileSelectionIpc";
 import { registerDesktopUiControlIpc } from "./desktopUiControlIpc";
 import { installDesktopMainWindowMenu } from "./desktopMainWindowMenu";
 import { createRevealModelPath } from "./revealModelPath";
@@ -327,19 +328,25 @@ app.whenReady().then(async () => {
       }
     },
   }).retire;
+  const resolveInteractiveHeadlessWindow = (event: unknown) => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (!window) return;
+    const isUsable = () => BrowserWindow.getFocusedWindow() === window && openWindows.has(window) &&
+      !window.isDestroyed() && window.isVisible() && !window.isMinimized() &&
+      isTrustedIpcSender(event, [window]) && !window.webContents.isLoadingMainFrame();
+    if (!isUsable()) return;
+    const frame = window.webContents.mainFrame;
+    return { key: frame, isUsable: () => isUsable() && window.webContents.mainFrame === frame };
+  };
   registerDesktopHeadlessPlanApprovalIpc({
     ipcMain,
     getApprovals: desktopHost.getHeadlessPlanApprovals,
-    resolveWindow(event) {
-      const window = BrowserWindow.getFocusedWindow();
-      if (!window) return;
-      const isUsable = () => BrowserWindow.getFocusedWindow() === window && openWindows.has(window) &&
-        !window.isDestroyed() && window.isVisible() && !window.isMinimized() &&
-        isTrustedIpcSender(event, [window]) && !window.webContents.isLoadingMainFrame();
-      if (!isUsable()) return;
-      const frame = window.webContents.mainFrame;
-      return { key: frame, isUsable: () => isUsable() && window.webContents.mainFrame === frame };
-    },
+    resolveWindow: resolveInteractiveHeadlessWindow,
+  });
+  registerDesktopHeadlessLocalFileSelectionIpc({
+    ipcMain,
+    getSelection: desktopHost.getHeadlessLocalFileSelection,
+    resolveWindow: resolveInteractiveHeadlessWindow,
   });
   registerDesktopHeadlessPairingIpc({
     ipcMain,

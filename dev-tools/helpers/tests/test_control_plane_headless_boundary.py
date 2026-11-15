@@ -32,6 +32,10 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         selection_test = "modules/application/use-cases/ingestion-acquisition/tests/headless-local-file-selection.unit.test.ts"
         self.assertIn(selection_test, self.plan([selection_owner])[check]["argv"])
         self.assertNotIn("focused-tests", self.plan([selection_owner, selection_test], check))
+        desktop_selection = "apps/desktop/src/main/desktopHeadlessLocalFileSelectionIpc.ts"
+        desktop_selection_test = "apps/desktop/src/main/tests/desktop-headless-local-file-selection-ipc.unit.test.ts"
+        self.assertIn(desktop_selection_test, self.plan([desktop_selection])[check]["argv"])
+        self.assertNotIn("focused-tests", self.plan([desktop_selection, desktop_selection_test], check))
         self.assertIn("focused-tests", self.plan([owner, "modules/contracts/headless/unrelated.ts"], check))
 
     def test_window_authority_check_covers_the_exact_core_and_keeps_neighbor_fallback(self):
