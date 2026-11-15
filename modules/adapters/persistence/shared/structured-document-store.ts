@@ -46,6 +46,13 @@ export interface StructuredDocumentStore {
    * database access. Await every operation and defer external effects until commit.
    */
   runInOwnedTransaction?<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit: () => void): Promise<T>;
+  /**
+   * Publish an already committed result while exact records used for its
+   * authorization remain locked against modification. The supplied view
+   * supports point reads only. Neither the checks nor the synchronous send
+   * are retried. The caller must handle an uncertain cleanup after sending.
+   */
+  publishWithStableReads?(check: (reader: StructuredDocumentStore) => Promise<boolean>, publish: () => boolean): Promise<boolean>;
 }
 
 export class StructuredDocumentConflictError extends Error {

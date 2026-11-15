@@ -21,11 +21,14 @@ type StepQuery = HeadlessPlanReviewQuery & {
 /** Prepare the stored request, then independently enforce the same exact plan inside the mutation transaction. */
 export async function prepareStructuredHeadlessPlanStep(
   documents: StructuredDocumentStore, query: StepQuery, authorize: Authorize, now: () => number = Date.now,
+  publication: "serialized-owner" | "stable-reads" = "serialized-owner",
 ) {
   const { approvalRevision, step, isCurrent } = query;
   const target: HeadlessPlanReviewTarget = { ...query.target, scope: { ...query.target.scope } };
   const ownedTransaction = documents.runInOwnedTransaction?.bind(documents);
+  const stableReads = documents.publishWithStableReads?.bind(documents);
   if (!ownedTransaction || documents.organizationId !== undefined || !isCurrent() ||
+      (publication === "stable-reads" && !stableReads) ||
       !Number.isSafeInteger(step) || step < 1 || !Number.isSafeInteger(approvalRevision) || approvalRevision < 1) return;
 
   const timestampBefore = (deadline: number) => {
@@ -89,12 +92,16 @@ export async function prepareStructuredHeadlessPlanStep(
     async publishIfCurrent(publish: () => boolean) {
       if (!current()) return false;
       try {
+        async function approvedForPublication(owner: StructuredDocumentStore) {
+          const latest = await select(owner);
+          return Boolean(latest && latest.expiresAt === deadline && current());
+        }
+        const send = () => current() && publish();
+        if (publication === "stable-reads")
+          return await stableReads!(approvedForPublication, send);
         // In Desktop, the SQLite owner serializes this read and synchronous
         // reply against a concurrent decision, even after the effect committed.
-        return await ownedTransaction(async owner => {
-          const latest = await select(owner);
-          return Boolean(latest && latest.expiresAt === deadline && current() && publish());
-        }, () => {});
+        return await ownedTransaction(async owner => await approvedForPublication(owner) && send(), () => {});
       } catch { return false; }
     },
   };

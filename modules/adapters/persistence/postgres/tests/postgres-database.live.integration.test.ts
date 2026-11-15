@@ -17,7 +17,7 @@ import {
   type StructuredDocumentStore,
 } from "../../shared";
 import { createPostgresPool, resolvePostgresPoolConfig } from "../client/createPostgresPool";
-import { openPostgresDatabase } from "../postgres-database";
+import { bindPostgresOrganizationContext, openPostgresDatabase } from "../postgres-database";
 import { createStructuredHeadlessOperationStore } from "../../system-builder/createStructuredHeadlessOperationStore";
 import { createStructuredSystemBuilderRepository } from "../../system-builder/createStructuredSystemBuilderRepository";
 import { createStructuredSystemDataRepository } from "../../system-data";
@@ -25,6 +25,56 @@ import { runSystemBuildPersistenceConformance } from "../../system-build/tests/s
 import { runSystemDeploymentPersistenceConformance } from "../../system-deployment/tests/system-deployment-persistence-conformance";
 
 const liveDatabaseUrl = process.env.TEST_POSTGRES_URL?.trim();
+
+test("live PostgreSQL holds exact publication rows through a one-shot decision", { skip: !liveDatabaseUrl }, async () => {
+  const config = resolvePostgresPoolConfig({
+    DATABASE_URL: liveDatabaseUrl, POSTGRES_SSL_MODE: process.env.TEST_POSTGRES_SSL_MODE ?? "disable",
+  });
+  const database = await openPostgresDatabase({ config });
+  const rival = createPostgresPool(config);
+  const org = createOrganizationId(`org-publication-${randomUUID()}`);
+  const exact = database.documents.forOrganization(org);
+  const publication = database.documents.publishWithStableReads!.bind(database.documents);
+  const client = await rival.connect();
+  const lock = () => client.query(
+    "SELECT revision FROM organization_documents WHERE organization_id = $1 AND namespace = $2 AND document_key = $3 FOR UPDATE NOWAIT",
+    [org, "plans", "current"],
+  );
+  let sends = 0;
+  const send = () => { sends++; return true; };
+  try {
+    await exact.writeDocument("plans", "current", { approved: true });
+    assert.equal(await publication(async reader => {
+      const plan = await reader.forOrganization(org).readDocument<{ approved: boolean }>("plans", "current");
+      await client.query("BEGIN");
+      try {
+        await bindPostgresOrganizationContext(client, org);
+        await assert.rejects(lock(), { code: "55P03" });
+      } finally { await client.query("ROLLBACK"); }
+      return plan?.value.approved === true;
+    }, send), true);
+    assert.equal(sends, 1);
+
+    await client.query("BEGIN");
+    await bindPostgresOrganizationContext(client, org);
+    assert.equal((await lock()).rowCount, 1);
+    await assert.rejects(publication(async reader => {
+      await assert.rejects(reader.forOrganization(org).readDocument("plans", "current"), { code: "55P03" });
+      return true;
+    }, send), /publication read failed/);
+    await client.query("ROLLBACK");
+
+    await exact.writeDocument("plans", "current", { approved: false }, { expectedRevision: 1 });
+    assert.equal(await publication(async reader =>
+      (await reader.forOrganization(org).readDocument<{ approved: boolean }>("plans", "current"))?.value.approved === true,
+    send), false);
+    assert.equal(sends, 1);
+  } finally {
+    try { await client.query("ROLLBACK"); }
+    finally { client.release(); }
+    await Promise.all([rival.end(), database.close()]);
+  }
+});
 
 test(
   "live PostgreSQL migration, transaction, health, and revision conformance",

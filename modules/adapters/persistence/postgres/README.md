@@ -17,6 +17,11 @@ retry. A missing commit acknowledgment or unconfirmed rollback discards the
 client. Headless authoring can reconcile an uncertain reply with the same
 operation identity and key.
 
+PostgreSQL can also hold the exact permission and approval rows used to send
+an already committed plan result. The publication transaction uses point reads
+with shared row locks, refuses a conflicting row immediately, and never repeats
+the send. The publication view cannot write or list records.
+
 Schema version 3 adds a partial index over active System Builder records by
 organization and workspace key range. The managed snapshot query projects only
 saved identifiers, revision and status, returning at most 129 summaries. The

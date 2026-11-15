@@ -355,6 +355,60 @@ test("a detached nested callback with only its first write done cannot commit pa
   }
 });
 
+test("one-shot PostgreSQL publication locks exact rows and disables transaction writes and retries", async () => {
+  const org = createOrganizationId("publication-fixture");
+  const { store, statements, releases } = trackedTransactions((sql, values) => {
+    if (sql.includes("FROM organization_documents")) assert.deepEqual(values, [org, "plans", "active"]);
+    if (sql === "COMMIT") throw Object.assign(new Error("serialization rejected"), { code: "40001" });
+  });
+  let retained: StructuredDocumentStore | undefined;
+  assert.equal(store.forOrganization(org).publishWithStableReads, undefined);
+  await assert.rejects(store.publishWithStableReads!(async (reader) => {
+    retained = reader.forOrganization(org);
+    assert.equal(reader.publishWithStableReads, undefined);
+    await assert.rejects(reader.listNamespaces(), /point reads only/);
+    await assert.rejects(retained.listDocuments("plans"), /point reads only/);
+    await assert.rejects(retained.writeDocument("plans", "active", {}), /point reads only/);
+    await assert.rejects(retained.deleteDocument("plans", "active"), /point reads only/);
+    await assert.rejects(reader.runInTransaction(async () => undefined), /point reads only/);
+    await reader.readDocument("directory", "org");
+    await retained.readDocument("plans", "active");
+    return true;
+  }, () => {
+    statements.push("sent");
+    assert.throws(() => retained!.forOrganization(org), /owner is not active/);
+    return true;
+  }), /serialization rejected/);
+  assert.equal(statements.filter(sql => sql.endsWith("FOR SHARE NOWAIT")).length, 2);
+  assert.equal(statements.filter(sql => sql.startsWith("BEGIN")).length, 1);
+  assert.deepEqual(statements.slice(-3), ["sent", "COMMIT", "ROLLBACK"]);
+  assert.deepEqual(releases, [false]);
+});
+
+test("a disallowed, blocked or unfinished PostgreSQL publication emits no response", async () => {
+  const closed = trackedTransactions((sql) => {
+    if (sql.endsWith("FOR SHARE NOWAIT")) throw Object.assign(new Error("row busy"), { code: "55P03" });
+  });
+  const send = () => assert.fail("the result must remain private");
+  assert.equal(await closed.store.publishWithStableReads!(async () => false, send), false);
+  await assert.rejects(closed.store.publishWithStableReads!(async reader => {
+    await reader.readDocument("plans", "busy");
+    return true;
+  }, send), /row busy/);
+  await assert.rejects(closed.store.publishWithStableReads!(async reader => {
+    await assert.rejects(reader.readDocument("plans", "busy"), /row busy/);
+    return true;
+  }, send), /publication read failed/);
+  const unfinished = trackedTransactions();
+  let abandoned: Promise<unknown> | undefined;
+  await assert.rejects(unfinished.store.publishWithStableReads!(async reader => {
+    abandoned = reader.readDocument("plans", "unfinished").catch(() => undefined);
+    return true;
+  }, send), /Unfinished PostgreSQL transaction operations/);
+  await abandoned;
+  assert.deepEqual(closed.statements.slice(-2).map(sql => sql.split(" ").at(-1)), ["NOWAIT", "ROLLBACK"]);
+});
+
 function trackedTransactions(onQuery?: (sql: string, values?: readonly unknown[]) => string | void) {
   const statements: string[] = [];
   const releases: boolean[] = [];

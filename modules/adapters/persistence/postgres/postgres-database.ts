@@ -279,7 +279,9 @@ export function createPostgresStructuredDocumentStore(
 interface PostgresTransactionOwner {
   readonly client: PostgresQueryable;
   readonly guarded: boolean;
+  readonly stableReads: boolean;
   active: boolean;
+  pointReadFailed: boolean;
   pending: number;
   tail: Promise<void>;
 }
@@ -314,6 +316,10 @@ function createStore(
     }
   }
 
+  function assertOrdinaryOperations() {
+    if (owner?.stableReads) throw new Error("A PostgreSQL publication view supports point reads only.");
+  }
+
   const executeScoped = async <T>(work: (active: PostgresQueryable) => Promise<T>): Promise<T> => {
     assertOwner();
     if (owner) {
@@ -327,6 +333,11 @@ function createStore(
           assertOwner();
         }
         return work(owner.client);
+      }).catch((error: unknown) => {
+        // A rejected statement can release the row locks by aborting the
+        // transaction. Preserve that failure even if the policy catches it.
+        if (owner.stableReads) owner.pointReadFailed = true;
+        throw error;
       }).finally(() => { owner.pending -= 1; });
       owner.tail = result.then(() => undefined, () => undefined);
       return result;
@@ -343,24 +354,44 @@ function createStore(
         return transact(work, beforeCommit);
       },
     } : {}),
+    ...(!owner && organizationId === undefined ? {
+      async publishWithStableReads(check: (reader: StructuredDocumentStore) => Promise<boolean>, publish: () => boolean) {
+        let ready = false;
+        let published = false;
+        await transact(async reader => {
+          ready = await check(reader) === true;
+        }, () => {
+          if (!ready) return;
+          const sent: unknown = publish();
+          if (typeof sent !== "boolean") {
+            if (sent instanceof Promise) void sent.catch(() => undefined);
+            throw new Error("PostgreSQL publication must be synchronous.");
+          }
+          published = sent;
+        }, true);
+        return published;
+      },
+    } : {}),
     forOrganization(requestedOrganizationId) {
       assertOwner();
       assertOrganizationScope(organizationId, requestedOrganizationId);
       return createStore(pool, now, owner, requestedOrganizationId);
     },
     async readDocument<T>(namespace: string, key: string) {
+      const lock = owner?.stableReads ? " FOR SHARE NOWAIT" : "";
       const result = await executeScoped((active) => organizationId === undefined
         ? active.query(
-          "SELECT namespace, document_key, payload_json, revision, updated_at FROM structured_documents WHERE namespace = $1 AND document_key = $2",
+          "SELECT namespace, document_key, payload_json, revision, updated_at FROM structured_documents WHERE namespace = $1 AND document_key = $2" + lock,
           [namespace, key],
         )
         : active.query(
-          "SELECT namespace, document_key, payload_json, revision, updated_at FROM organization_documents WHERE organization_id = $1 AND namespace = $2 AND document_key = $3",
+          "SELECT namespace, document_key, payload_json, revision, updated_at FROM organization_documents WHERE organization_id = $1 AND namespace = $2 AND document_key = $3" + lock,
           [organizationId, namespace, key],
         ));
       return result.rows[0] ? mapDocument<T>(result.rows[0]) : undefined;
     },
     async listNamespaces() {
+      assertOrdinaryOperations();
       const result = await executeScoped((active) => organizationId === undefined
         ? active.query<{ namespace: string }>(
           "SELECT DISTINCT namespace FROM structured_documents ORDER BY namespace",
@@ -375,6 +406,7 @@ function createStore(
       return result.rows.map((row) => row.namespace);
     },
     async listDocuments<T>(namespace: string) {
+      assertOrdinaryOperations();
       const result = await executeScoped((active) => organizationId === undefined
         ? active.query(
           "SELECT namespace, document_key, payload_json, revision, updated_at FROM structured_documents WHERE namespace = $1 ORDER BY document_key",
@@ -387,6 +419,7 @@ function createStore(
       return result.rows.map((row) => mapDocument<T>(row));
     },
     async writeDocument<T>(namespace: string, key: string, value: T, options: StructuredDocumentWriteOptions = {}) {
+      assertOrdinaryOperations();
       const { expectedRevision } = options;
       const updatedAt = options.updatedAt ?? now();
       const payload = cloneStructuredJson(value);
@@ -446,6 +479,7 @@ function createStore(
       return mapDocument<T>(result.rows[0]);
     },
     async deleteDocument(namespace: string, key: string, expectedRevision?: number) {
+      assertOrdinaryOperations();
       const result = await executeScoped((active) => organizationId === undefined
         ? expectedRevision === undefined
           ? active.query("DELETE FROM structured_documents WHERE namespace = $1 AND document_key = $2 RETURNING revision", [namespace, key])
@@ -459,6 +493,7 @@ function createStore(
       return (result.rowCount ?? 0) === 1;
     },
     async runInTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>) {
+      assertOrdinaryOperations();
       assertOwner();
       if (!owner) return transact(work);
       owner.pending += 1;
@@ -470,24 +505,29 @@ function createStore(
     },
   };
 
-  async function transact<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit?: () => void): Promise<T> {
+  async function transact<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit?: () => void,
+    stableReads = false): Promise<T> {
     assertOwner();
     if (beforeCommit && context.getStore()) throw new Error("An owned PostgreSQL transaction must start at the root.");
 
-    for (let attempt = 1; attempt <= 4; attempt += 1) {
+    const attempts = stableReads ? 1 : 4;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const client = await pool.connect();
-      const transaction = { client, guarded: beforeCommit !== undefined, active: true, pending: 0, tail: Promise.resolve() };
+      const transaction = { client, guarded: beforeCommit !== undefined, stableReads,
+        active: true, pointReadFailed: false, pending: 0, tail: Promise.resolve() };
       let began = false;
       const transactionStatus: { phase: PostgresTransactionPhase } = { phase: "work" };
       let discardClient = false;
       try {
         await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
         began = true;
+        if (stableReads) await client.query("SET LOCAL lock_timeout = '1000ms'");
         if (organizationId !== undefined) await bindPostgresOrganizationContext(client, organizationId);
         return await context.run(transaction, async () => {
           const result = await work(createStore(pool, now, transaction, organizationId));
           transaction.active = false;
           if (transaction.pending) throw new Error("Unfinished PostgreSQL transaction operations.");
+          if (transaction.pointReadFailed) throw new Error("A PostgreSQL publication read failed.");
           transactionStatus.phase = "admission";
           const admission: unknown = beforeCommit?.();
           if (admission !== undefined) {
@@ -519,7 +559,7 @@ function createStore(
           }
         }
         if (failed === "commit" && !retryable) throw new Error("The PostgreSQL transaction commit could not be confirmed.");
-        if (!retryable || attempt === 4) throw error;
+        if (!retryable || attempt === attempts) throw error;
       } finally {
         transaction.active = false;
         client.release(discardClient);
