@@ -53,6 +53,8 @@ export interface IngestionFilePublicationRepositoryPort {
 export interface IngestionFilePublicationAdmission {
   readonly stillAllowed: () => Promise<boolean>;
   readonly isCurrent: () => boolean;
+  /** Optionally link the byte/origin issue CAS to the same transaction as the host's approval. */
+  readonly issue?: (next: IngestionFilePublication, expectedRevision: 1 | 3) => Promise<IngestionFilePublication>;
 }
 
 export interface IngestionFilePublicationPort {

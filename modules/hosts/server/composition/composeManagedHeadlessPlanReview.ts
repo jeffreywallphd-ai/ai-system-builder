@@ -118,7 +118,7 @@ export function composeManagedHeadlessPlanReview(options: {
         const prepared = await prepareStructuredHeadlessPlanStep(platform, {
           target, approvalRevision, step, isCurrent: current,
         }, authorizeOwned, Date.now, "stable-reads");
-        if (!prepared || !prepared.isCurrent()) return { result: forbidden };
+        if (!prepared || prepared.kind !== "system" || !prepared.isCurrent()) return { result: forbidden };
         const active = (workspace: WorkspaceId, operation: string) =>
           workspace === scope.workspaceId && operation === prepared.request.operation && prepared.isCurrent();
         const service = systems.composeHeadlessAuthoring({

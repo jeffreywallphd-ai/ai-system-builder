@@ -122,7 +122,8 @@ export function composeManagedHeadlessPlanApprovals(options: {
         const summary = projectHeadlessPlanReview(outcome, selection.fingerprint);
         if (!summary.ok || summary.value.expiresAt <= now() ||
             (summary.value.status !== "pending" && summary.value.status !== "approved")) return forbidden;
-        const ready = readDesktopPlanApprovalView({selection, viewId:view.viewId, preview:outcome.snapshot.preview, state:summary.value}, selection);
+        const ready = readDesktopPlanApprovalView({selection, viewId:view.viewId, preview:outcome.snapshot.preview, state:summary.value},
+          selection, { allowLocalFileSave: false });
         if (!ready || createHash("sha256").update(JSON.stringify(ready.preview), "utf8").digest("hex") !== selection.fingerprint)
           return unconfirmed;
         view.revision = ready.state.revision;

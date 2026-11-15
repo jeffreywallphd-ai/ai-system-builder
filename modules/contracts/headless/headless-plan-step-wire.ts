@@ -2,6 +2,7 @@ import { copyBoundedPassiveData, readStrictPassiveRecord } from "../shared";
 import { isWorkspaceId, type WorkspaceId } from "../workspace";
 import { isDesktopHeadlessFingerprint } from "./desktop-headless-pairing";
 import { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } from "./headless-authoring-result";
+import { readHeadlessLocalFileImportRequest, type HeadlessLocalFileImportRequest } from "./headless-data-local-file";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId } from "./headless-read-request";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS } from "./headless-system-management";
 
@@ -20,8 +21,11 @@ export type HeadlessPlanStepRequest = {
   readonly input: HeadlessPlanStepTarget;
 };
 type SavedEffect = Extract<Extract<HeadlessAuthoringWireResult, { ok: true }>["value"], { kind: "committed" | "replayed" }>;
+type LocalFileReference = Pick<HeadlessLocalFileImportRequest["input"], "workspaceId" | "taskId" | "fileId" | "taskRevision">;
+type SavedLocalFileEffect = { readonly kind: "committed" | "replayed"; readonly operation: "data.save-local-source";
+  readonly reference: LocalFileReference };
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
-  { readonly ok: true; readonly value: SavedEffect & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
+  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
     { readonly expiresAt: number } };
 
 const invalid = { ok: false, code: "headless.invalid-request" } as const;
@@ -43,7 +47,8 @@ export function readHeadlessPlanStepRequest(value: unknown, expectedHost: Headle
   } catch { return invalid; }
 }
 
-export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanStepTarget): HeadlessPlanStepResult {
+export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanStepTarget,
+  options?: { readonly allowLocalFileSave: boolean }): HeadlessPlanStepResult {
   try {
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["ok", "code", "value"]);
     if (raw.ok === false && !("value" in raw)) {
@@ -51,11 +56,22 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
       return fault.ok ? unavailable : fault;
     }
     if (raw.ok !== true || "code" in raw) return unavailable;
-    const { fingerprint, step, approvalRevision, expiresAt, kind, reference } = readStrictPassiveRecord(
-      raw.value, ["fingerprint", "step", "approvalRevision", "expiresAt", "kind", "reference"],
+    const { fingerprint, step, approvalRevision, expiresAt, kind, reference, ...operationField } = readStrictPassiveRecord(
+      raw.value, ["fingerprint", "step", "approvalRevision", "expiresAt", "kind", "reference", "operation"],
     );
     if (fingerprint !== exact.fingerprint || step !== exact.step || approvalRevision !== exact.approvalRevision ||
         !strictPositiveInteger(expiresAt) || (kind !== "committed" && kind !== "replayed")) return unavailable;
+    if ("operation" in operationField) {
+      if (!options?.allowLocalFileSave || operationField.operation !== "data.save-local-source") return unavailable;
+      const fields = readStrictPassiveRecord(reference, ["workspaceId", "taskId", "fileId", "taskRevision"]);
+      const parsed = readHeadlessLocalFileImportRequest({ version: HEADLESS_CONTRACT_VERSION,
+        operation: "data.prepare-local-file", input: { ...fields, hostIncarnationId: exact.hostIncarnationId },
+      }, exact.hostIncarnationId);
+      if (!parsed.ok || parsed.request.input.workspaceId !== exact.workspaceId) return unavailable;
+      const { workspaceId, taskId, fileId, taskRevision } = parsed.request.input;
+      return { ok: true, value: { kind, operation: "data.save-local-source", fingerprint, step, approvalRevision, expiresAt,
+        reference: { workspaceId, taskId, fileId, taskRevision } } };
+    }
     const receipt = readHeadlessAuthoringWireResult({ ok: true, value: { kind, reference } });
     if (!receipt.ok || (receipt.value.kind !== "committed" && receipt.value.kind !== "replayed")) return unavailable;
     return { ok: true, value: { ...receipt.value, fingerprint, step, approvalRevision, expiresAt } };

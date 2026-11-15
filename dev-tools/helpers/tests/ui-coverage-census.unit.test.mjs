@@ -1105,6 +1105,28 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "f5fe8fa14e17d592ac23cf1b774c3db882151b475858e96408f06b388b7d2c7e") {
+    const previous = JSON.parse(historicalSource("6eab4d03368ee2dd84213d35361b91d2a6b6f4a5", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "1370552e5f8e8955a50777fd67b91332954e69de8649b9f8c36aa48bbe8972dc");
+    const expected = structuredClone(previous);
+    const revisedSources = [
+      ["dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts","5a150eb03cdfe8dc1b0dd17965cbbd1910fbcd0bb89576766aefe81de5bef116","ad10ff937df6b9568ca5845b714d438accfb16951d6e4a28e3553eae8be90ae3","5f8e7ebc5e1ffcb664f9bedea22ebf5b901159035bec55193e056d8f585c5082"],
+    ];
+    for (const [path, priorHash, sourceHash, factsHash] of revisedSources) {
+      const original = expected.sources.filter(row => row.path === path);
+      const revised = map.sources.find(row => row.path === path);
+      assert.equal(original.length, 1);
+      assert.equal(original[0].facts.sha256, priorHash);
+      assert.equal(revised.facts.sha256, sourceHash);
+      assert.equal(sha(JSON.stringify(revised.facts)), factsHash);
+      original[0].facts = revised.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
   if (sha(JSON.stringify(map)) === "1370552e5f8e8955a50777fd67b91332954e69de8649b9f8c36aa48bbe8972dc") {
     const previous = JSON.parse(historicalSource("87c2ca4890864e1ebc8225a84913d68d6630d9f0", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "f2242386ade1358e857b17cbb3b9ad19b8c6f54fcf9574b27b18248a662efb4d");

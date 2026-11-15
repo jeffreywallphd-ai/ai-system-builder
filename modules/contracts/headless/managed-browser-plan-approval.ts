@@ -50,7 +50,7 @@ export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanA
   switch (request.operation) {
     case "list": return readDesktopPlanApprovalList(value, request.document.workspaceId);
     case "open": {
-      const view = readDesktopPlanApprovalView(value, request.selection);
+      const view = readDesktopPlanApprovalView(value, request.selection, { allowLocalFileSave: false });
       return view?.preview.hostIncarnationId === request.document.hostIncarnationId ? view : undefined;
     }
     case "decide": {

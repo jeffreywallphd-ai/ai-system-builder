@@ -235,7 +235,8 @@ function createForwarder(options: {
       active++;
       try {
         const { status, raw } = await sendRead(options.planStepAddress, agent, authorization, accepted.request, signal, headers);
-        const result = headless.readHeadlessPlanStepResult(raw, accepted.request.input);
+        const result = headless.readHeadlessPlanStepResult(raw, accepted.request.input,
+          { allowLocalFileSave: options.localFilePreviewAddress !== undefined });
         if (status === 200 && result.ok)
           return result.value.expiresAt > Date.now() ? result : unknownWrite;
         // The host can withhold a reply after it has saved the step. Only
@@ -248,6 +249,9 @@ function createForwarder(options: {
     }
     if (isPlanReview(input)) {
       if (!options.planReviewAddress) return { ok: false, code: "headless.forbidden" };
+      if (!options.localFilePreviewAddress && input.operation === "plan.submit" &&
+          input.proposal.requests.some(step => step.operation === "data.save-local-source"))
+        return { ok: false, code: "headless.forbidden" };
       if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
       active++;
       try {

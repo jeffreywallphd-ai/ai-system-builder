@@ -79,6 +79,13 @@ export async function readStructuredHeadlessLocalFileSelection(
   if (await readMatch(transaction, selection)) return readPreview(transaction, selection, now);
 }
 
+/** Check the app's exact stored choice while an approved task advances its staging revision. */
+export function matchesStructuredHeadlessLocalFileSelection(
+  transaction: StructuredDocumentStore, value: HeadlessLocalFileSelection,
+): Promise<boolean> {
+  return readMatch(transaction, validate(value));
+}
+
 async function readMatch(transaction: StructuredDocumentStore, expected: HeadlessLocalFileSelection) {
   if (expected.organizationId !== transaction.organizationId) return false;
   const found = await transaction.readDocument(namespace, selectionKey(expected));

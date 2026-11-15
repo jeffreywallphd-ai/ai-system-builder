@@ -553,6 +553,54 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     await expect(fileReference).toHaveCount(0);
     await expect(ingestion.getByRole("button", { name: "Add data", exact: true })).toBeEnabled();
     expect(await previewFile()).toMatchObject({ ok: false });
+
+    const savedFilename = "synthetic-headless-import.csv";
+    await ingestion.getByLabel("Choose one or more files", { exact: true }).setInputFiles({
+      name: savedFilename, mimeType: "text/csv", buffer: contents,
+    });
+    await ingestion.getByRole("button", { name: "Prepare for chat", exact: true }).click();
+    await expect(fileReference).toBeVisible();
+    const savedInput = JSON.parse(await fileReference.inputValue()) as {
+      workspaceId: string; taskId: string; fileId: string; taskRevision: number;
+    };
+    const steps = [
+      { operation: "data.save-local-source", taskId: savedInput.taskId, fileId: savedInput.fileId,
+        taskRevision: savedInput.taskRevision, idempotencyKey: randomUUID() },
+      { operation: "systems.create", templateId, name: "Fixture data intake", idempotencyKey: randomUUID() },
+    ];
+    const proposedSave = await call(client, "aisb_preview_build_plan", { ...workspace, steps });
+    expect(proposedSave).toMatchObject({ ok: true, value: { version: "aisb-build-plan-preview-v2" } });
+    const fingerprint = (proposedSave.value as { fingerprint: string }).fingerprint;
+    const approvedTarget = { ...workspace, fingerprint };
+    expect(await call(client, "aisb_request_build_plan_approval", { ...approvedTarget, steps }))
+      .toMatchObject({ ok: true, value: { status: "pending", stepCount: 2, approvedSteps: 0 } });
+    const invokeDataStep = (step: number) => call(client, "aisb_run_approved_build_step", {
+      ...approvedTarget, approvalRevision: 2, step,
+    });
+    expect(await invokeDataStep(1)).toMatchObject({ ok: false });
+    await connectorSettings(app, page);
+    await trigger.click();
+    await dialog.getByRole("button", { name: new RegExp("^Review request " + fingerprint.slice(0, 8)) }).click();
+    await expect(dialog.getByRole("list", { name: "Permissions and limits" })).toContainText("Save the listed files");
+    await expect(dialog.getByRole("list", { name: "Requested changes" })).toContainText(savedInput.fileId);
+    await dialog.getByRole("radio", { name: "Approve all listed changes" }).check();
+    await dialog.getByRole("button", { name: "Approve all changes", exact: true }).click();
+    await expect(dialog.getByText("Plan approved.", { exact: true })).toBeVisible();
+    await dialog.getByRole("button", { name: "Close plan review" }).click();
+
+    expect(await invokeDataStep(2)).toMatchObject({ ok: false });
+    const fileCommit = await invokeDataStep(1);
+    expect(fileCommit).toMatchObject({ ok: true, value: { kind: "committed", operation: "data.save-local-source",
+      reference: { ...savedInput, taskRevision: savedInput.taskRevision + 2 } } });
+    expect(await invokeDataStep(1)).toEqual({ ...fileCommit, value: { ...(fileCommit.value as object), kind: "replayed" } });
+    await verifySavedStep(await invokeDataStep(2), "Fixture data intake");
+    await page.getByRole("button", { name: "Data", exact: true }).click();
+    await page.getByRole("tab", { name: "Artifact Browser", exact: true }).click();
+    const savedRow = page.getByRole("region", { name: "Uploaded artifacts", exact: true }).locator("article")
+      .filter({ has: page.getByRole("heading", { name: savedFilename, exact: true, level: 4 }) });
+    await expect(savedRow).toHaveCount(1);
+    await savedRow.getByRole("button", { name: "View Details", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Artifact preview", exact: true })).toContainText("triage");
   } finally {
     try { await mcp?.close(); }
     finally { await lifetime.retire(); }

@@ -129,6 +129,21 @@ The host rechecks authority before sending a result. Desktop serializes
 this check with its SQLite owner. Managed PostgreSQL locks the exact
 permission and approval records through one successful send.
 
+Desktop plan review can include a save for an exact staged file the user
+selected for that client. The saved-system plan format stays valid. A
+plan that includes a file save uses a separate version and shows the
+workspace, upload and file references in both approval surfaces.
+The plan owner checks current artifact permissions, the app selection
+and the approved plan before issuing each write. The owner records its
+approval fence with the same transaction as the byte or origin issue.
+File work continues through the existing ingestion flow after each
+acknowledged issue. An exact replay checks the committed source and
+the original issue records. If a run ends after the upload enters
+finalizing and before the source commits, the connector reports an
+unconfirmed result. Use the existing Data task recovery to inspect
+that upload. The managed connector denies this effect until its own
+staged-file flow is available.
+
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay
 state and a separate window-control lifecycle. Roll back by disabling the new

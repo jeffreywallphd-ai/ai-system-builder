@@ -198,6 +198,9 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
     <p>Requested by Client {view.selection.registeredClientId.slice(0, 8)}</p>
     <ul aria-label="Permissions and limits">
       <li>Save only the changes shown below in this workspace.</li>
+      {view.preview.steps.some(step => step.operation === "data.save-local-source") ? (
+        <li>Save the listed files in this workspace’s Data area.</li>
+      ) : null}
       <li>Limit of {state.stepCount} {state.stepCount === 1 ? "saved change" : "saved changes"} for this plan.</li>
       <li>No outside service calls or provider charges.</li>
     </ul>
@@ -206,13 +209,19 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
     </time>.</p>
     <ol aria-label="Requested changes">
       {view.preview.steps.map((step, index) => <li key={step.input.idempotencyKey}>
-        <strong>{step.operation === "systems.create" ? "Create " : step.operation === "systems.clone" ? "Copy as " : "Rename to "}
-          {step.input.name}</strong>
-        {"templateId" in step.input ? <div>Template: {step.input.templateId}</div>
-          : <div>Saved system: {step.input.systemId}. Saved revision: {step.input.baseRevisionId}.
-            Record version: {step.input.baseRecordRevision}.</div>}
-        {"description" in step.input && step.input.description !== undefined
-          ? <div>Description: {step.input.description}</div> : null}
+        {step.operation === "data.save-local-source" ? <>
+          <strong>Save the selected file in Data</strong>
+          <div>File reference {step.input.fileId}</div>
+          <div>Upload {step.input.taskId}, version {step.input.taskRevision}</div>
+        </> : <>
+          <strong>{step.operation === "systems.create" ? "Create " : step.operation === "systems.clone" ? "Copy as " : "Rename to "}
+            {step.input.name}</strong>
+          {"templateId" in step.input ? <div>Template: {step.input.templateId}</div>
+            : <div>Saved system: {step.input.systemId}. Saved revision: {step.input.baseRevisionId}.
+              Record version: {step.input.baseRecordRevision}.</div>}
+          {"description" in step.input && step.input.description !== undefined
+            ? <div>Description: {step.input.description}</div> : null}
+        </>}
         {index < state.approvedSteps ? <div>Approved</div> : null}
       </li>)}
     </ol>

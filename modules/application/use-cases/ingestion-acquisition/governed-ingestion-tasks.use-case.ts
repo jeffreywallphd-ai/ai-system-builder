@@ -1,6 +1,7 @@
 import type {
   IngestionAcquisitionRepositoryPort,
   IngestionCheckpointStoragePort,
+  IngestionFilePublicationAdmission,
   IngestionFilePublicationPort,
 } from "../../ports/ingestion";
 import { assertPublicationTask, normalizeIngestionFilePublication } from "../../shared/ingestion-file-publication";
@@ -77,6 +78,7 @@ interface ApprovedLocalFileImport {
   readonly preview: HeadlessLocalFileImportPreview;
   readonly stillAllowed: () => Promise<boolean>;
   readonly isCurrent: () => boolean;
+  readonly issuePublication?: IngestionFilePublicationAdmission["issue"];
 }
 
 type ApprovedLocalFileImportResult =
@@ -692,7 +694,7 @@ export class GovernedIngestionTaskUseCases {
     if (!await stillAllowed() || !isCurrent()) return forbidden;
     try {
       const result = await this.finalizeSelectedFile({ taskId: preview.taskId, fileId: preview.fileId }, context,
-        { preview, stillAllowed, isCurrent });
+        { preview, stillAllowed, isCurrent, issuePublication: approval.issuePublication });
       if (!await stillAllowed() || !isCurrent()) return forbidden;
       if (!result.ok) {
         if (result.error.code === "forbidden" || result.error.code === "not-found") return forbidden;
@@ -781,6 +783,7 @@ export class GovernedIngestionTaskUseCases {
       }
       const admission = approval ? {
         stillAllowed: approval.stillAllowed,
+        ...(approval.issuePublication ? { issue: approval.issuePublication } : {}),
         isCurrent: () => {
           const observedAt = Date.parse(this.now());
           return approval.isCurrent() && Number.isSafeInteger(observedAt) && observedAt < approval.preview.checkpointExpiresAt;

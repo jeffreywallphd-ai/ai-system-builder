@@ -99,8 +99,11 @@ In the workspace's Add Data page, choose a local file and select your paired
 plan-review client. Choose **Prepare for chat**, then **Copy file reference**.
 Give that reference to your chosen client. It can preview the file type, size
 and planned save action using `aisb_preview_selected_local_file`. The preview
-leaves the file staged. Choose **Cancel** to discard the staged transfer, or
-use the usual **Add data** action for a direct import.
+leaves the file staged. To save it through chat, review the exact file in the
+approval popup or approval chat. The client can then run the approved save
+step. The saved file appears in **Data → Artifact Browser**. Before approval
+and saving, **Cancel** discards the staged transfer. Use the usual **Add
+data** action for a direct import.
 
 For the opt-in frontier client check, start the isolated managed reference
 database and run `managed-headless-browser-plan-approval.ts` with

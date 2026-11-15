@@ -265,8 +265,9 @@ test("the plan-review stdio mode can run an exact approved step after the app re
   });
   const store = createStructuredHeadlessPlanReviewRepository(platform, async (_owner, target) =>
     target.scope.organizationId === organizationId && target.scope.principalId === identity.principalId &&
-    target.scope.workspaceId === workspaceId);
+    target.scope.workspaceId === workspaceId, Date.now, async () => true, true);
   let effectCount = 0;
+  let fileEffectCount = 0;
   let requestCount = 0;
   let sourceReads = 0;
   let wrongPreview = false;
@@ -295,7 +296,7 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       return { result: { ok: true, value: { ...sourceValue, taskRevision: wrongPreview ? 5 : 4 } },
         publishIfCurrent: async publish => grant.isCurrent?.() === true && publish() };
     } },
-    planReview: { hostIncarnationId, async execute(input, grant) {
+    planReview: { hostIncarnationId, allowLocalFileSave: true, async execute(input, grant) {
       const { fingerprint, workspaceId } = input.target;
       const target = { hostIncarnationId, fingerprint, scope: { workspaceId, organizationId: grant.organizationId,
         principalId: grant.principalId, registeredClientId: grant.registeredClientId } };
@@ -315,6 +316,16 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       const review = await store.read({ target: { hostIncarnationId, fingerprint, scope }, isCurrent });
       if (!review.ok || review.snapshot.state.status !== "approved" || review.snapshot.state.revision !== approvalRevision || step !== 1)
         return { result: { ok: false, code: "headless.forbidden" } };
+      if (review.snapshot.preview.steps[0]?.operation === "data.save-local-source") {
+        const kind = fileEffectCount ? "replayed" as const : "committed" as const;
+        if (!fileEffectCount) fileEffectCount++;
+        return {
+          result: { ok: true, value: { kind, operation: "data.save-local-source", fingerprint, approvalRevision, step,
+            expiresAt: review.snapshot.state.expiresAt, reference: { workspaceId, taskId: sourceTarget.taskId,
+              fileId: sourceTarget.fileId, taskRevision: sourceTarget.taskRevision + 2 } } },
+          publishIfCurrent: async publish => isCurrent() && publish(),
+        };
+      }
       // Hold the first reply after the fixture records the effect. The peer
       // must never send a second request automatically to recover it.
       const replay = effectCount > 0;
@@ -386,6 +397,33 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     } });
     assert.equal(requestCount, requestsBeforeWrite + 2);
     assert.equal(effectCount, 1);
+    const localSteps = [{ operation: "data.save-local-source", taskId: sourceTarget.taskId, fileId: sourceTarget.fileId,
+      taskRevision: sourceTarget.taskRevision, idempotencyKey: randomUUID() }];
+    assert.deepEqual(await call("aisb_preview_build_plan", { ...scope, steps: localSteps }),
+      { ok: false, code: "headless.unavailable" });
+    wrongPreview = false;
+    const local = checkedPlan(await call("aisb_preview_build_plan", { ...scope, steps: localSteps }));
+    assert.equal(local.plan.version, "aisb-build-plan-preview-v2");
+    assert.equal(fileEffectCount, 0);
+    const localTarget = { ...scope, fingerprint: local.fingerprint };
+    const localPending = readHeadlessPlanReviewAgentResult(
+      await call("aisb_request_build_plan_approval", { ...localTarget, steps: localSteps }), local.fingerprint);
+    assert.ok(localPending.ok && localPending.value.status === "pending");
+    const exactFile = { ...localTarget, approvalRevision: 2, step: 1 };
+    assert.deepEqual(await call("aisb_run_approved_build_step", exactFile), { ok: false, code: "headless.operation-unconfirmed" });
+    const fileApproval = await new HeadlessBuildPlanReviewUseCase(store, Date.now).decide({
+      fingerprint: local.fingerprint, expectedRevision: 1, decision: { kind: "approve", mode: "each-change", step: 1 },
+    }, hostIncarnationId, { workspaceId, organizationId, principalId: identity.principalId,
+      registeredClientId: registered.registeredClientId }, {
+      organizationId, principalId: identity.principalId, channel: "authenticated-chat", isCurrent, canDecide: async () => isCurrent(),
+    });
+    assert.ok(fileApproval.ok);
+    const fileReceipt = { operation: "data.save-local-source", fingerprint: local.fingerprint, approvalRevision: 2, step: 1,
+      expiresAt: fileApproval.state.expiresAt, reference: { workspaceId, taskId: sourceTarget.taskId,
+        fileId: sourceTarget.fileId, taskRevision: sourceTarget.taskRevision + 2 } };
+    assert.deepEqual(await call("aisb_run_approved_build_step", exactFile), { ok: true, value: { kind: "committed", ...fileReceipt } });
+    assert.deepEqual(await call("aisb_run_approved_build_step", exactFile), { ok: true, value: { kind: "replayed", ...fileReceipt } });
+    assert.equal(fileEffectCount, 1);
   } finally {
     await client.close();
     await connector.close();

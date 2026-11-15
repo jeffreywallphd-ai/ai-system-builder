@@ -2345,6 +2345,7 @@ export function composeDesktopHost(
               presentation: uiControlOwner,
               planReview: planReviewOwner ? composeDesktopHeadlessPlanReview({
                 ...planReviewOwner, workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+                getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
                 systems: systemBuilder, audit: headlessAudit,
               }) : undefined,
               dataPreview: planReviewOwner ? {

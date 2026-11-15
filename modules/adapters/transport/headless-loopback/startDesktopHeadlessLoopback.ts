@@ -66,6 +66,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessAuthoringWireResult>;
   };
   readonly planReview?: {
+    readonly allowLocalFileSave?: true;
     readonly hostIncarnationId: HeadlessHostIncarnationId;
     readonly execute: (request: HeadlessPlanReviewAgentRequest, grant: DesktopHeadlessAuthoringWireGrant,
       currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessPlanReviewAgentResult>;
@@ -304,7 +305,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         fail(response, 403, "headless.forbidden");
         return;
       }
-      const plan = readHeadlessPlanReviewAgentRequest(body, dependencies.planReview.hostIncarnationId);
+      const plan = readHeadlessPlanReviewAgentRequest(body, dependencies.planReview.hostIncarnationId,
+        { allowLocalFileSave: dependencies.planReview.allowLocalFileSave === true });
       if (!plan.ok) { fail(response, errorStatus(plan.code), plan.code); return; }
       const grant = await currentGrant();
       if (grant?.planReview !== true || !grantIsCurrent(grant, true) || !admitting() || response.destroyed ||
@@ -377,7 +379,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         return;
       }
       const outcome = await dependencies.planReview.runStep(decoded.request, grant, currentGrant);
-      const result = readHeadlessPlanStepResult(outcome.result, target);
+      const result = readHeadlessPlanStepResult(outcome.result, target,
+        { allowLocalFileSave: dependencies.planReview.allowLocalFileSave === true });
       const finalGrant = await currentGrant();
       if (!admitting() || response.destroyed) return;
       if (finalGrant?.planReview !== true || !grantIsCurrent(finalGrant, true)) {

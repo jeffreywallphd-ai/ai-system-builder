@@ -121,3 +121,30 @@ test("rejects forged scope or approval, reused keys, invalid order, and oversize
     { ok: false, code: "headless.host-changed" });
   assert.equal(accessed, false);
 });
+
+test("accepts an exact local file save only for an enabled host and keeps system-only previews byte stable", () => {
+  assert.ok(isHeadlessHostIncarnationId(host));
+  const opts = { allowLocalFileSave: true } as const;
+  const staged = { operation: "data.save-local-source", taskId: "ingestion.selected", fileId: "file.selected", taskRevision: 2,
+    idempotencyKey: "2810d2a4-726e-44d2-9553-db28a43d767c" };
+  const mixed = { ...proposalScope, steps: [staged, createStep] };
+  assert.deepEqual(parseHeadlessBuildPlanProposal(mixed, host), invalid);
+  assert.deepEqual(parseHeadlessBuildPlanProposal(mixed, host, { allowLocalFileSave: false }), invalid);
+  const parsed = parseHeadlessBuildPlanProposal(mixed, host, opts);
+  assert.ok(parsed.ok);
+  assert.equal(parsed.preview.version, "aisb-build-plan-preview-v2");
+  const { operation, ...fields } = staged;
+  assert.deepEqual(parsed.preview.steps[0], { operation, input: fields, effect: "save-local-source", externalProviderCalls: 0 });
+  assert.deepEqual(parsed.requests[0], request(operation, { ...proposalScope, ...fields }));
+  const old = { ...proposalScope, steps: [createStep] };
+  assert.equal(JSON.stringify(parseHeadlessBuildPlanProposal(old, host, opts)), JSON.stringify(parseHeadlessBuildPlanProposal(old, host)));
+  for (const steps of [
+    [{ ...staged, path: "unrequested" }],
+    [{ ...staged, taskRevision: 0 }],
+    [{ ...staged, taskRevision: Number.MAX_SAFE_INTEGER }],
+    [{ ...staged, fileBytes: 10 }],
+    [{ ...staged, idempotencyKey: createStep.idempotencyKey }, createStep],
+    [staged, { ...staged, idempotencyKey: savedStep.idempotencyKey }],
+    [staged, { ...staged, fileId: "file.sibling", idempotencyKey: savedStep.idempotencyKey }],
+  ]) assert.deepEqual(parseHeadlessBuildPlanProposal({ ...proposalScope, steps }, host, opts), invalid);
+});

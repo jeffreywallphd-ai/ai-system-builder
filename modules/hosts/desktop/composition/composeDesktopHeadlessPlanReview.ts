@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { prepareStructuredHeadlessPlanStep } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
+import { readStructuredHeadlessLocalFileSelection } from "../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import type { DesktopHeadlessAuthoringWireGrant, startDesktopHeadlessLoopback } from "../../../adapters/transport/headless-loopback";
@@ -14,11 +15,14 @@ import type { SystemBuilderCompositionRoot } from "../../shared/composition/comp
 import { projectHeadlessPlanReview, validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
 import type { DesktopHeadlessAudit } from "./desktopHeadlessAudit";
+import type { DesktopIngestionTaskCommands } from "./composeDesktopIngestionFeature";
 
 type LoopbackPlanReview = NonNullable<Parameters<typeof startDesktopHeadlessLoopback>[0]["planReview"]>;
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
 const unavailable = { ok: false, code: "headless.unavailable" } as const;
+const unconfirmed = { ok: false, code: "headless.operation-unconfirmed" } as const;
 const requiredScopes = ["workspace:read", "asset:read", "asset:write"] as const;
+const fileSaveScopes = [...requiredScopes, "artifact:read", "artifact:write"] as const;
 
 export function composeDesktopHeadlessPlanReview(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -29,21 +33,24 @@ export function composeDesktopHeadlessPlanReview(options: {
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly isOpen: () => boolean;
   readonly systems?: Pick<SystemBuilderCompositionRoot, "composeHeadlessAuthoring">;
+  readonly getIngestionTasks?: () => Promise<DesktopIngestionTaskCommands>;
   readonly audit?: DesktopHeadlessAudit;
 }): LoopbackPlanReview {
-  const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen, systems } = options;
+  const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen, systems, getIngestionTasks } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
     throw new Error("Desktop plan review requires the platform transaction owner.");
 
   async function authorize(
     repository: typeof workspaces, policy: WorkspaceOperationAuthorizationPort,
     workspaceId: WorkspaceId, operation: HeadlessPlanReviewAgentRequest["operation"] | "plan.run-step",
+    savesFile = false,
   ) {
     try {
       const workspace = await repository.readWorkspace(workspaceId);
       if (workspace?.organizationId !== identity.organizationId || workspace.workspaceId !== workspaceId ||
           workspace.status !== "active") return false;
-      await policy.authorizeWorkspaceOperation({ workspace, operation: `headless.${operation}`, requiredScopes });
+      await policy.authorizeWorkspaceOperation({ workspace, operation: `headless.${operation}`,
+        requiredScopes: savesFile ? fileSaveScopes : requiredScopes });
       return isOpen();
     } catch { return false; }
   }
@@ -63,18 +70,52 @@ export function composeDesktopHeadlessPlanReview(options: {
     const { organizationId, principalId } = identity;
     const scope = { organizationId, principalId, registeredClientId, workspaceId };
     const isCurrent = () => admits(initial, registeredClientId, workspaceId);
-    const canUse = async () => isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
-      await authorize(workspaces, authorization, workspaceId, request.operation) && isCurrent();
+    const canUse = async (savesFile = false) => isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
+      await authorize(workspaces, authorization, workspaceId, request.operation, savesFile) && isCurrent();
+    let savingFile = false;
+    function localFailure(result: typeof forbidden | typeof unconfirmed) {
+      options.audit?.backend("local-data-save", workspaceId, result.code === "headless.forbidden" ? "denied" : "unconfirmed");
+      return { result };
+    }
     try {
       if (!await canUse()) return { result: forbidden };
       const prepared = await prepareStructuredHeadlessPlanStep(platform, {
         target: { hostIncarnationId, fingerprint, scope }, approvalRevision, step, isCurrent,
-      }, async owner => {
+      }, async (owner, _scope, approvedRequest) => {
         const repository = createLocalWorkspaceRepository({ rootDirectory, documents: owner.forOrganization(organizationId) });
         return authorize(repository, composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }),
-          workspaceId, request.operation);
-      });
+          workspaceId, request.operation, approvedRequest?.operation === "data.save-local-source");
+      }, Date.now, "serialized-owner", Boolean(getIngestionTasks));
       if (!prepared || !await canUse() || !prepared.isCurrent()) return { result: forbidden };
+      if (prepared.kind === "local-file") {
+        savingFile = true;
+        if (!getIngestionTasks || !await canUse(true)) return localFailure(forbidden);
+        const observed = await prepared.inspect();
+        if (!observed) return localFailure(unconfirmed);
+        let kind: "committed" | "replayed" = "replayed";
+        let reference = observed.kind === "replayed" ? observed.receipt : undefined;
+        if (observed.kind === "staged") {
+          const ingestion = await getIngestionTasks();
+          if (!ingestion.finalizeApprovedLocalFile || !await canUse(true) || !await prepared.stillAllowed())
+            return localFailure(forbidden);
+          const outcome = await ingestion.finalizeApprovedLocalFile({
+            preview: observed.preview,
+            stillAllowed: async () => await canUse(true) && await prepared.stillAllowed(),
+            isCurrent: prepared.isCurrent,
+            issuePublication: prepared.issuePublication,
+          }, { organizationId, principalId, workspaceId });
+          if (!outcome.ok) return localFailure(outcome.code === "headless.forbidden" ? forbidden : unconfirmed);
+          reference = await prepared.readReceipt();
+          kind = "committed";
+        }
+        if (!reference) return localFailure(unconfirmed);
+        if (!prepared.isCurrent() || !await canUse(true) || !await prepared.stillAllowed()) return localFailure(forbidden);
+        options.audit?.backend("local-data-save", workspaceId, kind);
+        return { result: readHeadlessPlanStepResult({ ok: true, value: { kind, operation: "data.save-local-source",
+          reference, fingerprint, approvalRevision, step, expiresAt: prepared.expiresAt } }, request.input,
+          { allowLocalFileSave: true }),
+          publishIfCurrent: prepared.publishIfCurrent };
+      }
       const { operation } = prepared.request;
       const active = (workspace: WorkspaceId, requested: string) => workspace === workspaceId &&
         requested === operation && prepared.isCurrent();
@@ -102,21 +143,27 @@ export function composeDesktopHeadlessPlanReview(options: {
           step, expiresAt: prepared.expiresAt } }, request.input),
         publishIfCurrent: prepared.publishIfCurrent,
       };
-    } catch { return { result: isCurrent() ? unavailable : forbidden }; }
+    } catch {
+      if (savingFile) return localFailure(isCurrent() ? unconfirmed : forbidden);
+      return { result: isCurrent() ? unavailable : forbidden };
+    }
   };
 
   return {
     hostIncarnationId,
+    ...(getIngestionTasks ? { allowLocalFileSave: true as const } : {}),
     ...(systems ? { runStep } : {}),
     async execute(request, initialGrant, getCurrentGrant) {
       const { workspaceId, fingerprint } = request.target;
       const { registeredClientId } = initialGrant;
       const isCurrent = () => admits(initialGrant, registeredClientId, workspaceId);
+      const savesFile = request.operation === "plan.submit" &&
+        request.proposal.requests.some(step => step.operation === "data.save-local-source");
       const canUse = async () => isCurrent() && admits(await getCurrentGrant(), registeredClientId, workspaceId) &&
-        await authorize(workspaces, authorization, workspaceId, request.operation) && isCurrent();
+        await authorize(workspaces, authorization, workspaceId, request.operation, savesFile) && isCurrent();
       if (request.target.hostIncarnationId !== hostIncarnationId || !isDesktopHeadlessClientId(registeredClientId)) return forbidden;
       try {
-        if (!await canUse()) return forbidden;
+        if ((savesFile && !getIngestionTasks) || !await canUse()) return forbidden;
         const target = { hostIncarnationId, fingerprint, scope: {
           organizationId: identity.organizationId, principalId: identity.principalId, workspaceId, registeredClientId,
         } };
@@ -128,9 +175,16 @@ export function composeDesktopHeadlessPlanReview(options: {
           const documents = owner.forOrganization(identity.organizationId);
           const repository = createLocalWorkspaceRepository({ rootDirectory, documents });
           const policy = composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity });
-          return await authorize(repository, policy, workspaceId, request.operation) && isCurrent();
+          return await authorize(repository, policy, workspaceId, request.operation, savesFile) && isCurrent();
         }, Date.now, async documents => request.operation === "plan.submit" &&
-          validateHeadlessPlanSavedSources(documents, workspaceId, request.proposal.requests, isCurrent));
+          validateHeadlessPlanSavedSources(documents, workspaceId, request.proposal.requests, isCurrent, async step => {
+            const { idempotencyKey: _key, ...selected } = step.input;
+            const observed = await readStructuredHeadlessLocalFileSelection(documents, {
+              organizationId: identity.organizationId, principalId: identity.principalId, registeredClientId, target: selected,
+            });
+            if (!observed || !isCurrent()) return false;
+            return observed.ok ? true : observed.code === "headless.stale" ? "stale" : false;
+          }), Boolean(getIngestionTasks));
         const result = request.operation === "plan.submit" ?
           await reviews.propose({ target, isCurrent, proposal: {
             ...request.proposal.scope,

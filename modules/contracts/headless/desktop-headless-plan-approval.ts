@@ -87,25 +87,28 @@ export function readDesktopPlanApprovalList(value: unknown, workspaceId: Workspa
   } catch { return undefined; }
 }
 
-export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPlanApprovalSelection): DesktopPlanApprovalView | undefined {
+export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPlanApprovalSelection,
+  options: { readonly allowLocalFileSave: boolean } = { allowLocalFileSave: true }): DesktopPlanApprovalView | undefined {
   try {
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["selection", "viewId", "preview", "state"]);
     const actual = readDesktopPlanApprovalSelection(raw.selection);
     if (!actual || !sameDesktopPlanApproval(actual, selection) || !isDesktopHeadlessClientId(raw.viewId)) return;
     const { version, hostIncarnationId, workspaceId, approval, steps } = readStrictPassiveRecord(raw.preview,
       ["version", "hostIncarnationId", "workspaceId", "approval", "steps"]);
-    if (version !== "aisb-build-plan-preview-v1" || workspaceId !== selection.workspaceId || approval !== "required" ||
+    if (workspaceId !== selection.workspaceId || approval !== "required" ||
         !isHeadlessHostIncarnationId(hostIncarnationId) || !Array.isArray(steps) ||
         steps.length < 1 || steps.length > HEADLESS_MAX_BUILD_PLAN_STEPS) return;
     const decoded = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, steps: steps.map(step => {
       const { operation, input, effect, externalProviderCalls } = readStrictPassiveRecord(step,
         ["operation", "input", "effect", "externalProviderCalls"]);
-      if (effect !== "saved-system-write" || externalProviderCalls !== 0) throw new Error("Invalid approval effects.");
-      const fields = readStrictPassiveRecord(input, ["idempotencyKey", "name", "templateId", "systemId",
-        "baseRecordRevision", "baseRevisionId", "description"]);
+      const savingFile = operation === "data.save-local-source";
+      if (effect !== (savingFile ? "save-local-source" : "saved-system-write") || externalProviderCalls !== 0)
+        throw new Error("Invalid approval effects.");
+      const fields = readStrictPassiveRecord(input, savingFile ? ["idempotencyKey", "taskId", "fileId", "taskRevision"] :
+        ["idempotencyKey", "name", "templateId", "systemId", "baseRecordRevision", "baseRevisionId", "description"]);
       return { operation, ...fields };
-    }) }, hostIncarnationId);
-    if (!decoded.ok) return;
+    }) }, hostIncarnationId, options);
+    if (!decoded.ok || decoded.preview.version !== version) return;
     const state = readHeadlessPlanReviewAgentResult({ ok: true, value: raw.state }, selection.fingerprint, decoded.requests.length);
     if (state.ok) return { selection: actual, viewId: raw.viewId, preview: decoded.preview, state: state.value };
   } catch { return undefined; }

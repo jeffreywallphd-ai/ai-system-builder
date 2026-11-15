@@ -112,3 +112,17 @@ test("the scoped persisted cap survives a fresh writer and preserves earlier rec
     ["headless.system-authoring.committed", "headless.system-authoring.replayed"]);
   assert.equal(await other.readDocument(namespace, "count"), undefined);
 });
+
+test("records local file plan effects without a file, provider or connection identifier", async () => {
+  const events: SecurityEvent[] = [];
+  const connected = createDesktopHeadlessAudit({ async recordSecurityEvent(event) { events.push(event); } }, identity);
+  connected.backend("local-data-save", workspaceId, "committed");
+  connected.backend("local-data-save", workspaceId, "unconfirmed");
+  await connected.close();
+  assert.deepEqual(events.map(({ operation, outcome, resource, details }) => ({ operation, outcome, resource, details })), [
+    { operation: "headless.local-data-save.committed", outcome: "success",
+      resource: { kind: "workspace", workspaceId, organizationId }, details: undefined },
+    { operation: "headless.local-data-save.unconfirmed", outcome: "failure",
+      resource: { kind: "workspace", workspaceId, organizationId }, details: undefined },
+  ]);
+});

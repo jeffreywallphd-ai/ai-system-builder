@@ -34,6 +34,7 @@ export function createStructuredHeadlessPlanReviewRepository(
   policy: (owner: StructuredDocumentStore, target: HeadlessPlanReviewTarget, action: Action) => Promise<boolean>,
   now: () => number = Date.now,
   validateNewProposal?: (partition: StructuredDocumentStore) => Promise<true | false | "stale">,
+  allowLocalFileSave = false,
 ): HeadlessPlanReviewRepository {
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
     throw new Error("Headless plan reviews require the platform transaction owner.");
@@ -78,7 +79,7 @@ export function createStructuredHeadlessPlanReviewRepository(
 
   return {
     async propose(input) {
-      const proposal = decodeProposal(input.proposal, input.target);
+      const proposal = decodeProposal(input.proposal, input.target, allowLocalFileSave && Boolean(validateNewProposal));
       if (!proposal) return { ok: false, code: "invalid" };
       return run(input, "propose", async (store, target, key, requireFresh) => {
         const existing = await readReview(store, target, key);
@@ -158,8 +159,8 @@ function planKey(target: HeadlessPlanReviewTarget) {
 
 function sha256(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
-function decodeProposal(value: unknown, target: HeadlessPlanReviewTarget) {
-  const proposal = parseHeadlessBuildPlanProposal(value, target.hostIncarnationId);
+function decodeProposal(value: unknown, target: HeadlessPlanReviewTarget, allowLocalFileSave: boolean) {
+  const proposal = parseHeadlessBuildPlanProposal(value, target.hostIncarnationId, { allowLocalFileSave });
   if (proposal.ok && proposal.scope.workspaceId === target.scope.workspaceId &&
       sha256(JSON.stringify(proposal.preview)) === target.fingerprint) return proposal;
 }
@@ -168,7 +169,7 @@ async function readReview(store: StructuredDocumentStore, target: HeadlessPlanRe
   const document = await store.readDocument(REVIEWS, key);
   if (!document) return;
   const { version, proposal, state } = readStrictPassiveRecord(document.value, ["version", "proposal", "state"]);
-  const parsed = decodeProposal(proposal, target);
+  const parsed = decodeProposal(proposal, target, true);
   if (version !== 1 || !parsed) throw new Error("Stored plan review is unavailable.");
   return { proposal, preview: parsed.preview, requests: parsed.requests,
     state: readState(state, document.revision, parsed.requests.length) };

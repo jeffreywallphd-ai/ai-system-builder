@@ -167,10 +167,15 @@ function addSystemBuilderTools(server: McpServer) {
       inputSchema: z.strictObject({ ...base, edits, previewDigest: z.string().regex(/^[a-f0-9]{64}$/), idempotencyKey }), annotations: writeHints,
     }, (input, context) => author("systems.apply-edits", input, context.mcpReq.signal));
   }
+  const allowLocalFileSave = enablePlanReview && !managed;
+  const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
+  const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
+    taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
   const step = z.discriminatedUnion("operation", [
     z.strictObject({ operation: z.literal("systems.create"), ...create }),
     z.strictObject({ operation: z.literal("systems.rename"), ...rename }),
     z.strictObject({ operation: z.literal("systems.clone"), ...savedChange }),
+    z.strictObject({ operation: z.literal("data.save-local-source"), ...localFileTarget, idempotencyKey }),
   ]);
   server.registerTool("aisb_plan_capabilities", {
     description: "Check which saved-system operations can be proposed in one current workspace. Use the corresponding template or saved revision as input. Plan execution requires approval.",
@@ -183,12 +188,14 @@ function addSystemBuilderTools(server: McpServer) {
       input:{hostIncarnationId:input.hostIncarnationId, workspaceId:input.workspaceId}}, context.mcpReq.signal);
   });
   server.registerTool("aisb_preview_build_plan", {
-    description: "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
+    description: allowLocalFileSave
+      ? "Check proposed saved-system changes and selected local-file saves in order against the current workspace. Preview requires separate approval before execution."
+      : "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
     inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
     annotations: queryHints,
   }, async (input, context) => {
     if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId);
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave });
     if (!proposal.ok) return invalidAuthoring();
     const { scope, requests, preview } = proposal;
 
@@ -198,6 +205,13 @@ function addSystemBuilderTools(server: McpServer) {
     let templates: ReadonlySet<string> | undefined;
     const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
     for (const request of requests) {
+      if (request.operation === "data.save-local-source") {
+        const { idempotencyKey: _key, ...selected } = request.input;
+        const preview = await forward?.({ version, operation: "data.prepare-local-file", input: selected }, signal);
+        if (!preview?.ok) return toolResult(preview ?? unavailable);
+        if (!headless.readHeadlessLocalFileImportResult(preview, selected).ok) return toolResult(unavailable);
+        continue;
+      }
       if (request.operation === "systems.create") {
         if (!templates) {
           const result = await forward?.({ version, operation: "templates.list", input: scope }, signal);
@@ -230,11 +244,9 @@ function addSystemBuilderTools(server: McpServer) {
   });
   if (enablePlanReview) {
     if (!managed) {
-      const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
       server.registerTool("aisb_preview_selected_local_file", {
         description: "Preview a staged local file that the user selected for this Desktop connection. Shows file type, size, and the proposed save. A separate approval is required to save it.",
-        inputSchema: z.strictObject({ ...workspaceTarget, taskId: ingestionId, fileId: ingestionId,
-          taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) }),
+        inputSchema: z.strictObject({ ...workspaceTarget, ...localFileTarget }),
         annotations: queryHints,
       }, (input, context) => {
         if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
@@ -249,7 +261,7 @@ function addSystemBuilderTools(server: McpServer) {
     async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
       if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
       const raw = { version, operation, input };
-      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId);
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave });
       return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
     }
     server.registerTool("aisb_request_build_plan_approval", {

@@ -35,6 +35,10 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         desktop_selection = "apps/desktop/src/main/desktopHeadlessLocalFileSelectionIpc.ts"
         desktop_selection_test = "apps/desktop/src/main/tests/desktop-headless-local-file-selection-ipc.unit.test.ts"
         self.assertIn(desktop_selection_test, self.plan([desktop_selection])[check]["argv"])
+        file_plan = "modules/adapters/persistence/ingestion/createStructuredHeadlessLocalFilePlanStepStore.ts"
+        file_plan_test = "modules/adapters/persistence/ingestion/tests/structured-headless-local-file-plan-step-store.unit.test.ts"
+        self.assertIn(file_plan_test, self.plan([file_plan])[check]["argv"])
+        self.assertNotIn("focused-tests", self.plan([file_plan, file_plan_test], check))
         self.assertNotIn("focused-tests", self.plan([desktop_selection, desktop_selection_test], check))
         panel = "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx"
         panel_test = "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx"

@@ -1,17 +1,25 @@
 import { createStructuredSystemBuilderRepository } from "../../../adapters/persistence/system-builder";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import type { HeadlessPlanReviewSnapshotResult } from "../../../application/ports/system-builder/headless-build-plan-review.port";
-import type { HeadlessPlanReviewAgentResult, HeadlessSystemManagementRequest } from "../../../contracts/headless";
+import type { HeadlessBuildPlanRequest, HeadlessLocalFileSavePlanRequest, HeadlessPlanReviewAgentResult } from "../../../contracts/headless";
 import type { WorkspaceId } from "../../../contracts/workspace";
 
 /** The owning plan transaction calls this only for a new proposal. */
 export async function validateHeadlessPlanSavedSources(
   documents: StructuredDocumentStore, workspaceId: WorkspaceId,
-  requests: readonly HeadlessSystemManagementRequest[], isCurrent: () => boolean,
+  requests: readonly HeadlessBuildPlanRequest[], isCurrent: () => boolean,
+  validateLocalFile?: (request: HeadlessLocalFileSavePlanRequest) => Promise<true | false | "stale">,
 ): Promise<true | false | "stale"> {
   const systems = createStructuredSystemBuilderRepository(documents);
-  for (const { operation, input } of requests) {
+  for (const request of requests) {
+    const { operation, input } = request;
     if (!isCurrent() || input.workspaceId !== workspaceId) return false;
+    if (operation === "data.save-local-source") {
+      if (!validateLocalFile) return false;
+      const eligible = await validateLocalFile(request);
+      if (eligible !== true) return eligible;
+      continue;
+    }
     if (operation === "systems.create") continue;
     const record = await systems.readRecord(workspaceId, input.systemId);
     if (!isCurrent()) return false;

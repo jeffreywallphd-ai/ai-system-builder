@@ -42,7 +42,8 @@ export function readHeadlessPlanReviewDecisionChoice(value: unknown): HeadlessPl
   } catch { return undefined; }
 }
 
-export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost: HeadlessHostIncarnationId):
+export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost: HeadlessHostIncarnationId,
+  options?: { readonly allowLocalFileSave: boolean }):
   { readonly ok: true; readonly request: HeadlessPlanReviewAgentRequest } |
   { readonly ok: false; readonly code: "headless.invalid-request" | "headless.host-changed" } {
   try {
@@ -56,7 +57,8 @@ export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost:
     if (hostIncarnationId !== expectedHost) return { ok: false, code: "headless.host-changed" };
     const target = { hostIncarnationId, workspaceId, fingerprint };
     if (operation === "plan.status") return { ok: true, request: { operation, target } };
-    const proposal = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, ...proposalFields }, expectedHost);
+    const proposal = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, ...proposalFields }, expectedHost,
+      { allowLocalFileSave: options?.allowLocalFileSave === true });
     return proposal.ok ? { ok: true, request: { operation, target, proposal } } : invalid;
   } catch { return invalid; }
 }

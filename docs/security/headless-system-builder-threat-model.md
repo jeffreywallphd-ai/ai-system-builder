@@ -599,5 +599,14 @@ the exact task and file revision for that client. The app shows a copyable
 reference with workspace, task and file identifiers and the task revision.
 Reject a late receipt when its app view or task has ended. A retry confirms
 the same choice without sending the file a second time. Cancelling the task
-invalidates its staged preview. The managed browser flow and approved save
-still need host wiring.
+invalidates its staged preview.
+
+Desktop accepts one exact local-file save for each staged upload in a
+plan. The app’s approval channels show the file and upload references
+and the permission to save in Data. The plan, workspace permissions,
+selected client, selected upload and source expiry are checked before
+each new byte or origin write. The owner records the approval fence and
+the issue together. A repeat returns only the bound reference for a
+verified committed source. An interrupted run that entered finalizing
+without a committed source stays unconfirmed for Data task recovery.
+Managed still needs its own file staging and approval evidence.

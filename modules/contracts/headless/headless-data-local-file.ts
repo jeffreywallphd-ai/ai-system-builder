@@ -10,6 +10,7 @@ import {
 import { copyBoundedPassiveData, hasKnownPassiveCredential, readStrictPassiveRecord } from "../shared";
 import {
   HEADLESS_CONTRACT_VERSION,
+  isHeadlessHostIncarnationId,
   type HeadlessHostIncarnationId,
 } from "./headless-read-request";
 import { readHeadlessIngestionStatusRequest, type HeadlessIngestionStatusRequest } from "./headless-data-task-status";
@@ -25,6 +26,12 @@ export interface HeadlessLocalFileImportRequest {
     readonly fileId: IngestionTaskFileId;
     readonly taskRevision: number;
   };
+}
+
+export interface HeadlessLocalFileSavePlanRequest {
+  readonly version: typeof HEADLESS_CONTRACT_VERSION;
+  readonly operation: "data.save-local-source";
+  readonly input: HeadlessLocalFileImportRequest["input"] & { readonly idempotencyKey: string };
 }
 
 export interface HeadlessLocalFileImportPreview {
@@ -100,6 +107,22 @@ export function readHeadlessLocalFileImportRequest(value: unknown, currentHost: 
   } catch {
     return invalid;
   }
+}
+
+/** A proposed save refers to the app-selected upload without carrying its name, path or bytes. */
+export function readHeadlessLocalFileSavePlanRequest(value: unknown, currentHost: HeadlessHostIncarnationId) {
+  try {
+    const { version, operation, input } = readStrictPassiveRecord(copyBoundedPassiveData(value), ["version", "operation", "input"]);
+    if (version !== HEADLESS_CONTRACT_VERSION || operation !== "data.save-local-source") return invalid;
+    const { idempotencyKey, ...selection } = readStrictPassiveRecord(input,
+      ["hostIncarnationId", "workspaceId", "taskId", "fileId", "taskRevision", "idempotencyKey"]);
+    if (!isHeadlessHostIncarnationId(idempotencyKey)) return invalid;
+    const parsed = readHeadlessLocalFileImportRequest({ version, operation: "data.prepare-local-file", input: selection }, currentHost);
+    if (!parsed.ok) return parsed;
+    if (parsed.request.input.taskRevision > Number.MAX_SAFE_INTEGER - 2) return invalid;
+    const request: HeadlessLocalFileSavePlanRequest = { version, operation, input: { ...parsed.request.input, idempotencyKey } };
+    return { ok: true, request } as const;
+  } catch { return invalid; }
 }
 
 /** Inspect the verified app-owned task. The preview grants no file or write access. */

@@ -83,7 +83,8 @@ export class IngestionFilePublicationService implements IngestionFilePublication
         if (admission && (!await admission.stillAllowed() || !admission.isCurrent())) publicationUnavailable();
         // The acknowledged issue admits this byte effect. A lost issue acknowledgement grants no write authority.
         const writing = normalizeIngestionFilePublication({ ...publication, revision: 2, state: "writing" });
-        publication = normalizeIngestionFilePublication(await this.dependencies.publications.savePublication(writing, 1));
+        publication = normalizeIngestionFilePublication(await (admission?.issue
+          ? admission.issue(writing, 1) : this.dependencies.publications.savePublication(writing, 1)));
         if (!samePublicationData(publication, writing)) publicationUnavailable();
         task = await this.readTask(request, context);
         this.assertRequest(publication, task, request);
@@ -108,7 +109,8 @@ export class IngestionFilePublicationService implements IngestionFilePublication
         // The acknowledged issue admits this composite origin effect. A
         // lost CAS acknowledgement must never be reconciled into write authority.
         const issued = normalizeIngestionFilePublication({ ...publication, revision: 4, state: "origin-issued" });
-        publication = normalizeIngestionFilePublication(await this.dependencies.publications.savePublication(issued, 3));
+        publication = normalizeIngestionFilePublication(await (admission?.issue
+          ? admission.issue(issued, 3) : this.dependencies.publications.savePublication(issued, 3)));
         if (!samePublicationData(publication, issued)) publicationUnavailable();
         this.requireActive(await this.readTask(request, context), publication.fileId);
         await this.publishOrigin(publication, context);

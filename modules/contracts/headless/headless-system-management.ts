@@ -5,6 +5,7 @@ import {
 } from "../system-builder";
 import { isWorkspaceId, type WorkspaceId } from "../workspace";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId } from "./headless-read-request";
+import { readHeadlessLocalFileSavePlanRequest, type HeadlessLocalFileSavePlanRequest } from "./headless-data-local-file";
 import type { HeadlessSemanticBatchRequest } from "./headless-semantic-batch";
 
 interface ManagementTarget {
@@ -27,9 +28,11 @@ export type HeadlessSystemManagementRequest =
     | { readonly operation: "systems.clone"; readonly input: SavedTarget }
   );
 
+export type HeadlessBuildPlanRequest = HeadlessSystemManagementRequest | HeadlessLocalFileSavePlanRequest;
+
 /** Serialize the saved effect without the connection identity or its receipt key. */
 export function serializeHeadlessMutationInput(
-  request: HeadlessSystemManagementRequest | Extract<HeadlessSemanticBatchRequest, { operation: "systems.apply-edits" }>,
+  request: HeadlessBuildPlanRequest | Extract<HeadlessSemanticBatchRequest, { operation: "systems.apply-edits" }>,
 ): string {
   const { hostIncarnationId: _host, idempotencyKey: _key, ...input } = request.input;
   return JSON.stringify({ version: request.version, operation: request.operation, input }, (_name, item: unknown) => {
@@ -44,8 +47,9 @@ const invalid = { ok: false, code: "headless.invalid-request" } as const;
 
 export const HEADLESS_MAX_BUILD_PLAN_STEPS = 8;
 const PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v1";
+const LOCAL_FILE_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v2";
 const proposalFields = ["operation", "idempotencyKey", "name", "templateId", "systemId",
-  "baseRecordRevision", "baseRevisionId", "description"];
+  "baseRecordRevision", "baseRevisionId", "description", "taskId", "fileId", "taskRevision"];
 
 /** A decoded request carries data only. The running host supplies and checks identity. */
 export function parseHeadlessSystemManagementRequest(value: unknown, host: HeadlessHostIncarnationId):
@@ -95,8 +99,38 @@ function boundedText(value: unknown, limit: number, allowLineBreaks = false): va
     !hasKnownPassiveCredential(value);
 }
 
-/** Interpret passive proposals before display or policy checks. The host supplies its own incarnation. */
-export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHostIncarnationId) {
+function projectSystemPlanStep({ operation, input: { hostIncarnationId: _host, workspaceId: _workspace, ...input } }:
+  HeadlessSystemManagementRequest) {
+  return { operation, input, effect: "saved-system-write" as const, externalProviderCalls: 0 as const };
+}
+
+function projectLocalFilePlanStep({ operation, input: { hostIncarnationId: _host, workspaceId: _workspace, ...input } }:
+  HeadlessLocalFileSavePlanRequest) {
+  return { operation, input, effect: "save-local-source" as const, externalProviderCalls: 0 as const };
+}
+
+type PlanScope = { readonly hostIncarnationId: HeadlessHostIncarnationId; readonly workspaceId: WorkspaceId };
+type PlanPreview<V, Step> = PlanScope & {
+  readonly version: V;
+  readonly approval: "required";
+  readonly steps: readonly Step[];
+};
+type SystemStep = ReturnType<typeof projectSystemPlanStep>;
+type LocalFileStep = ReturnType<typeof projectLocalFilePlanStep>;
+type SystemPreview = PlanPreview<typeof PLAN_PREVIEW_VERSION, SystemStep>;
+type MixedPreview = PlanPreview<typeof LOCAL_FILE_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep>;
+type PlanSuccess<Request, Preview> = { readonly ok: true; readonly scope: PlanScope; readonly requests: readonly Request[];
+  readonly preview: Preview };
+type PlanFailure = typeof invalid | { readonly ok: false; readonly code: "headless.host-changed" };
+type SystemProposal = PlanSuccess<HeadlessSystemManagementRequest, SystemPreview>;
+type MixedProposal = PlanSuccess<HeadlessBuildPlanRequest, MixedPreview>;
+
+/** Interpret passive proposals. A host must opt in to the exact local-file effect it can enforce. */
+export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHostIncarnationId): SystemProposal | PlanFailure;
+export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHostIncarnationId,
+  options: { readonly allowLocalFileSave: boolean }): SystemProposal | MixedProposal | PlanFailure;
+export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHostIncarnationId,
+  options?: { readonly allowLocalFileSave: boolean }): SystemProposal | MixedProposal | PlanFailure {
   try {
     const { hostIncarnationId, workspaceId, steps } = readStrictPassiveRecord(
       copyBoundedPassiveData(value), ["hostIncarnationId", "workspaceId", "steps"],
@@ -106,34 +140,42 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
         steps.length === 0 || steps.length > HEADLESS_MAX_BUILD_PLAN_STEPS) return invalid;
     if (hostIncarnationId !== host) return { ok: false, code: "headless.host-changed" } as const;
     const scope = { hostIncarnationId, workspaceId };
-    const requests: HeadlessSystemManagementRequest[] = [];
+    const requests: HeadlessBuildPlanRequest[] = [];
     const keys = new Set<string>();
     const renamedSystems = new Set<SystemBuilderSystemId>();
+    const selectedUploads = new Set<string>();
     for (const step of steps) {
       const { operation, ...fields } = readStrictPassiveRecord(step, proposalFields);
-      const decoded = parseHeadlessSystemManagementRequest({
-        version: HEADLESS_CONTRACT_VERSION, operation, input: { ...scope, ...fields },
-      }, host);
+      const input = { version: HEADLESS_CONTRACT_VERSION, operation, input: { ...scope, ...fields } };
+      const decoded = operation === "data.save-local-source" && options?.allowLocalFileSave
+        ? readHeadlessLocalFileSavePlanRequest(input, host)
+        : parseHeadlessSystemManagementRequest(input, host);
       if (!decoded.ok) return invalid;
       const request = decoded.request;
       if (keys.has(request.input.idempotencyKey)) return invalid;
       keys.add(request.input.idempotencyKey);
-      if (request.operation !== "systems.create") {
+      if (request.operation === "data.save-local-source") {
+        // Saving an item advances the shared upload revision. A later step
+        // must start from the new revision and a new app selection.
+        if (selectedUploads.has(request.input.taskId)) return invalid;
+        selectedUploads.add(request.input.taskId);
+      } else if (request.operation !== "systems.create") {
         // A saved revision cannot be reused after a previous change to that system.
         if (renamedSystems.has(request.input.systemId)) return invalid;
         if (request.operation === "systems.rename") renamedSystems.add(request.input.systemId);
       }
       requests.push(request);
     }
-    const preview = {
-      version: PLAN_PREVIEW_VERSION,
-      ...scope,
-      approval: "required" as const,
-      steps: requests.map(({ operation, input: { hostIncarnationId: _host, workspaceId: _workspace, ...input } }) => ({
-        operation, input, effect: "saved-system-write" as const, externalProviderCalls: 0 as const,
-      })),
-    };
-    return { ok: true, scope, requests, preview } as const;
+    const previewScope = { ...scope, approval: "required" as const };
+    if (selectedUploads.size) return { ok: true, scope, requests, preview: {
+      version: LOCAL_FILE_PLAN_PREVIEW_VERSION, ...previewScope,
+      steps: requests.map(request => request.operation === "data.save-local-source"
+        ? projectLocalFilePlanStep(request) : projectSystemPlanStep(request)),
+    } };
+    const systems = requests.filter(request => request.operation !== "data.save-local-source");
+    return { ok: true, scope, requests: systems, preview: {
+      version: PLAN_PREVIEW_VERSION, ...previewScope, steps: systems.map(projectSystemPlanStep),
+    } };
   } catch {
     return invalid;
   }
