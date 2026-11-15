@@ -92,6 +92,29 @@
           "Provider imports from the chat client, dataset preparation and opening data from chat still need evidence."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "af98873509205d23bfc11e72bf5aa29188d733c1546fdc89096ed3c58ab438e0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Data panel test prepared one Parquet file for the selected chat client.",
+          "A paired-client test verified the file type and exact revision.",
+          "Tests refused access from another client and stopped preview after cancellation.",
+          "The packaged Windows app refused a preview for an unselected file."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f0bd81f0d9c4afbc27073d8f1b1e9dd4c77dc6dfc4d822d8f91b1b06c4613613",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider import after approval, Managed browser preview, dataset preparation and opening data from chat still need work."
+        ]
+      }
     }
   ]
 }
