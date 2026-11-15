@@ -20,7 +20,7 @@ const invalid = { ok: false, code: "headless.invalid-request" } as const;
 const unavailable = { ok: false, code: "headless.unavailable" } as const;
 const failureCodes = [
   "headless.forbidden", "headless.invalid-request", "headless.host-changed", "headless.unavailable",
-  "headless.plan-expired", "headless.operation-capacity",
+  "headless.plan-expired", "headless.operation-capacity", "headless.stale",
 ] as const;
 type FailureCode = typeof failureCodes[number];
 

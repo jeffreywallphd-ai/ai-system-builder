@@ -305,7 +305,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         fail(response, 410, "headless.plan-expired");
         return;
       }
-      send(response, result.ok ? 200 : errorStatus(result.code), result);
+      send(response, result.ok ? 200 : result.code === "headless.stale" ? 409 : errorStatus(result.code), result);
       return;
     }
     let result: HeadlessReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult;

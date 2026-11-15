@@ -155,8 +155,12 @@ status reads with the dedicated grant. It rechecks the registered client and
 workspace before dispatch and checks both current authority and the plan
 deadline before sending a successful result. It bounds the body and validates
 the exact status result. Agent requests cannot carry a decision or use the
-existing edit routes with this grant. The desktop app must still wire the
-route to its own policy.
+existing edit routes with this grant. The desktop composition binds the
+route to the current app policy and platform transaction. New proposals
+resolve exact immutable saved sources inside the owned write. An authorized
+retry can read its original proposal even after a source changes. Later
+execution still needs a current revision check. Normal desktop startup
+keeps the route disabled until the interactive approval path is connected.
 The internal operation store partitions receipts by verified organization and
 hashes the complete principal, client, workspace, operation and key scope.
 Receipts hold a fingerprint and the minimum saved revision reference; change

@@ -29,6 +29,7 @@ export function createStructuredHeadlessPlanReviewRepository(
   documents: StructuredDocumentStore,
   policy: (owner: StructuredDocumentStore, target: HeadlessPlanReviewTarget, action: Action) => Promise<boolean>,
   now: () => number = Date.now,
+  validateNewProposal?: (partition: StructuredDocumentStore) => Promise<true | false | "stale">,
 ): HeadlessPlanReviewRepository {
   if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
     throw new Error("Headless plan reviews require the platform transaction owner.");
@@ -78,6 +79,9 @@ export function createStructuredHeadlessPlanReviewRepository(
       return run(input, "propose", async (store, target, key, requireFresh) => {
         const existing = await readReview(store, target, key);
         if (existing) return requireFresh(existing.state.expiresAt) ? snapshot(existing) : expired;
+        const eligible = validateNewProposal ? await validateNewProposal(store) : true;
+        if (eligible === "stale") return { ok: false, code: "stale" } as const;
+        if (!eligible || !input.isCurrent()) return denied;
         const countKey = sha256(JSON.stringify(scopeParts(target)));
         const count = await store.readDocument(COUNTS, countKey);
         const used = count ? readStrictPassiveRecord(count.value, ["value"]).value : 0;

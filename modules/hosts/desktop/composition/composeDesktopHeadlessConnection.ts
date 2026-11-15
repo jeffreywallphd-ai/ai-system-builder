@@ -22,6 +22,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
   readonly authoring?: ReturnType<typeof composeDesktopHeadlessAuthoring>;
   readonly conversation?: ReturnType<typeof composeDesktopHeadlessConversation>;
   readonly presentation?: Parameters<typeof startDesktopHeadlessLoopback>[0]["presentation"];
+  readonly planReview?: Parameters<typeof startDesktopHeadlessLoopback>[0]["planReview"];
   /** Synthetic composition may exercise access without registering a dispatch handler. */
   readonly canRunConversation?: (workspaceId: WorkspaceId) => Promise<boolean>;
 }) {
@@ -43,8 +44,8 @@ export function composeDesktopHeadlessConnection(dependencies: {
   }
 
   async function readWorkspaceLabel(workspaceId: WorkspaceId, access: DesktopHeadlessClientAccess = "read"): Promise<string | undefined> {
-    // The desktop host exposes this mode once its plan-review route is wired.
-    if (!open || !isWorkspaceId(workspaceId) || access === "plan-review" || (access === "author" && !dependencies.authoring) ||
+    if (!open || !isWorkspaceId(workspaceId) || (access === "plan-review" && !dependencies.planReview) ||
+        (access === "author" && !dependencies.authoring) ||
         (access === "conversation" && !canRunConversation) ||
         (access === "presentation" && !presentationOpen)) return undefined;
     try {
@@ -54,7 +55,8 @@ export function composeDesktopHeadlessConnection(dependencies: {
           workspace.displayName.length < 1 || workspace.displayName.length > 200) return undefined;
       await dependencies.authorization.authorizeWorkspaceOperation({
         operation: "headless.pairing.begin", workspace,
-        requiredScopes: access === "author" ? ["workspace:read", "asset:read", "asset:write"] : ["workspace:read", "asset:read"],
+        requiredScopes: access === "author" || access === "plan-review"
+          ? ["workspace:read", "asset:read", "asset:write"] : ["workspace:read", "asset:read"],
       });
       if (access === "conversation" && await canRunConversation?.(workspaceId) !== true) return undefined;
       return open && (access !== "presentation" || presentationOpen) ? workspace.displayName : undefined;
@@ -70,6 +72,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
     canAuthorWorkspace: dependencies.authoring ? async (id) => (await readWorkspaceLabel(id, "author")) !== undefined : undefined,
     canRunConversation: canRunConversation ? async (id) => (await readWorkspaceLabel(id, "conversation")) !== undefined : undefined,
     canPresent: dependencies.presentation ? async (id) => (await readWorkspaceLabel(id, "presentation")) !== undefined : undefined,
+    canReviewPlans: dependencies.planReview ? async (id) => (await readWorkspaceLabel(id, "plan-review")) !== undefined : undefined,
   });
 
   async function startConnector(isStillApproved: () => boolean) {
@@ -86,6 +89,7 @@ export function composeDesktopHeadlessConnection(dependencies: {
         },
       }, read: dependencies.read, authoring: dependencies.authoring, conversation: dependencies.conversation,
       presentation: dependencies.presentation,
+      planReview: dependencies.planReview,
       isAdmitted: () => open && endpoint !== undefined,
     });
     let connector: DesktopHeadlessLoopback;

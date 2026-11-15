@@ -1,16 +1,23 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { request } from "node:https";
 import { test } from "node:test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import type { StructuredDocumentStore } from "../../../../adapters/persistence/shared";
-import { HEADLESS_CONTRACT_VERSION, UI_CONTROL_VERSION, isHeadlessHostIncarnationId, readHeadlessWindowResult } from "../../../../contracts/headless";
+import { HEADLESS_CONTRACT_VERSION, UI_CONTROL_VERSION, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
+  readHeadlessPlanReviewAgentRequest, readHeadlessPlanReviewAgentResult, readHeadlessWindowResult } from "../../../../contracts/headless";
 import { createStructuredOrganizationRepositories } from "../../../../adapters/persistence/organization";
 import { createLocalWorkspaceRepository } from "../../../../adapters/persistence/workspace";
+import { createStructuredSystemBuilderRepository } from "../../../../adapters/persistence/system-builder";
+import { normalizeAssetId } from "../../../../contracts/asset";
 import { createOrganizationId } from "../../../../contracts/organization";
+import { normalizeSystemBuilderSystemId, normalizeSystemBuilderRevisionId,
+  type SystemBuilderRecord, type SystemBuilderRevision } from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createDesktopPinnedLoopbackAgent } from "../../../../adapters/transport/headless-loopback";
 import { composeDesktopHeadlessConnection } from "../composeDesktopHeadlessConnection";
+import { composeDesktopHeadlessPlanReview } from "../composeDesktopHeadlessPlanReview";
+import { composeDesktopWorkspaceAuthorization } from "../composeDesktopWorkspaceAuthorization";
 import { composeDesktopUiControl } from "../composeDesktopUiControl";
 
 const workspaceId = createWorkspaceId("local-connection-workspace");
@@ -19,7 +26,7 @@ const at = "2026-11-13T00:00:00.000Z";
 const hostIncarnationId = "632cfa6b-c323-419a-b2bd-5880b1f34858";
 assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
 
-function call(connector: { endpoint: string; fingerprint: string }, path: "pair" | "read" | "window", input: object, credential?: string) {
+function call(connector: { endpoint: string; fingerprint: string }, path: "pair" | "read" | "window" | "plan-review", input: object, credential?: string) {
   const body = JSON.stringify(input);
   return new Promise<{ status: number; result: { value?: { credential?: string; registeredClientId?: string } } }>((resolve, reject) => {
     const req = request(new URL("/aisb-headless/v1/" + path, connector.endpoint), {
@@ -38,6 +45,103 @@ function call(connector: { endpoint: string; fingerprint: string }, path: "pair"
     req.on("error", reject).end(body);
   });
 }
+
+test("composes staged desktop plans with the same live workspace membership and saved revisions", { timeout: 12_000 }, async () => {
+  const platform = createInMemoryStructuredDocumentStore();
+  const documents = platform.forOrganization(organizationId);
+  const identity = { organizationId, principalId: "fixture-planning-owner", principalDisplayName: "Fixture", createdAt: at, updatedAt: at };
+  const repositories = createStructuredOrganizationRepositories(platform);
+  await repositories.organizations.saveOrganization({ organizationId, displayName: "Fixture", status: "active", createdAt: at, updatedAt: at });
+  const membership = { organizationId, principalId: identity.principalId, role: "owner" as const, createdAt: at, updatedAt: at };
+  await repositories.memberships.saveMembership({ ...membership, status: "active" });
+  const workspaces = createLocalWorkspaceRepository({ documents, rootDirectory: "." });
+  await workspaces.saveWorkspace({ organizationId, workspaceId, displayName: "Plan fixture", status: "active", createdAt: at, updatedAt: at });
+  const authorization = composeDesktopWorkspaceAuthorization({ documents: platform, localIdentity: identity });
+  let open = true;
+  const planReview = composeDesktopHeadlessPlanReview({ platform, hostIncarnationId, identity, workspaces, authorization,
+    rootDirectory: ".", isOpen: () => open });
+  const connector = composeDesktopHeadlessConnection({ documents, identity, workspaces, authorization, planReview,
+    async read() { return { ok: false, code: "headless.forbidden" }; },
+  });
+  try {
+    const pairing = await connector.beginPairing(workspaceId, () => true, "plan-review");
+    assert.equal(pairing.status, "ready");
+    const paired = await call(pairing, "pair", { pairingCode: pairing.pairingCode });
+    assert.equal(paired.status, 200);
+    const { credential, registeredClientId } = paired.result.value ?? {};
+    assert.ok(credential && registeredClientId);
+    const scope = { hostIncarnationId, workspaceId };
+    function planned(steps: readonly unknown[]) {
+      const proposed = parseHeadlessBuildPlanProposal({ ...scope, steps }, hostIncarnationId);
+      assert.ok(proposed.ok);
+      const fingerprint = createHash("sha256").update(JSON.stringify(proposed.preview), "utf8").digest("hex");
+      return { ...scope, fingerprint, steps };
+    }
+    const ordinary = planned([{ operation: "systems.create", name: "Synthetic proposed system",
+      templateId: "reference.secured-data-review@1.0.0", idempotencyKey: randomUUID() }]);
+    const invalidReference = planned([{ operation: "systems.clone", name: "Synthetic copy", systemId: "fixture-missing-system",
+      baseRecordRevision: 4, baseRevisionId: "fixture-missing-system.r2", idempotencyKey: randomUUID() }]);
+    const submit = (input: typeof ordinary) => call(pairing, "plan-review",
+      { version: HEADLESS_CONTRACT_VERSION, operation: "plan.submit", input }, credential);
+    const read = () => call(pairing, "plan-review", { version: HEADLESS_CONTRACT_VERSION, operation: "plan.status",
+      input: { ...scope, fingerprint: ordinary.fingerprint } }, credential);
+    const staged = await submit(ordinary);
+    assert.equal(staged.status, 200);
+    const pending = readHeadlessPlanReviewAgentResult(staged.result, ordinary.fingerprint);
+    assert.ok(pending.ok && pending.value.status === "pending" && pending.value.approvedSteps === 0);
+    assert.deepEqual((await read()).result, staged.result);
+    assert.equal((await submit(invalidReference)).status, 409);
+    const systems = createStructuredSystemBuilderRepository(documents);
+    function fixtureSystem(id: string) {
+      const systemId = normalizeSystemBuilderSystemId(id);
+      const revisionId = normalizeSystemBuilderRevisionId(id + ".r1");
+      const composition = { compositionId: normalizeAssetId(id + ".composition"), compositionType: "system",
+        displayName: "Fixture source", version: "0.1.0", lifecycleStatus: "draft",
+        rootInstanceRefs: [], instanceRefs: [], bindingRefs: [], provenance: { sourceKind: "human-authored" } } as const;
+      const record: SystemBuilderRecord = { systemId, targetWorkspaceId: workspaceId, name: "Fixture source", status: "draft",
+        revision: 1, currentRevisionId: revisionId, composition, createdAt: at, updatedAt: at,
+        createdBy: identity.principalId, updatedBy: identity.principalId };
+      const revision: SystemBuilderRevision = { systemId, targetWorkspaceId: workspaceId, revisionId, revisionNumber: 1,
+        composition, instances: [], bindings: [], validationIssues: [], createdAt: at, createdBy: identity.principalId };
+      return { record, revision };
+    }
+    const source = fixtureSystem("fixture-saved-source");
+    const dangling = fixtureSystem("fixture-dangling-source");
+    await systems.createRecordAndRevision(source.record, source.revision);
+    await systems.createRecord(dangling.record);
+    const cloneFields = { operation: "systems.clone", name: "Synthetic copy" };
+    const savedClone = { ...cloneFields, systemId: source.record.systemId,
+      baseRecordRevision: 1, baseRevisionId: source.revision.revisionId };
+    const validClone = planned([{ ...savedClone, idempotencyKey: randomUUID() }]);
+    const stagedClone = await submit(validClone);
+    assert.equal(stagedClone.status, 200);
+    const absentRevision = planned([{ ...cloneFields, systemId: dangling.record.systemId,
+      baseRecordRevision: 1, baseRevisionId: dangling.revision.revisionId, idempotencyKey: randomUUID() }]);
+    assert.equal((await submit(absentRevision)).status, 409);
+    await systems.updateRecord({ ...source.record, revision: 2, name: "Edited fixture" }, 1);
+    assert.deepEqual(await submit(validClone), stagedClone);
+    const newStaleClone = planned([{ ...savedClone, idempotencyKey: randomUUID() }]);
+    assert.equal((await submit(newStaleClone)).status, 409);
+    assert.equal((await submit({ ...ordinary, workspaceId: createWorkspaceId("different-fixture-workspace") })).status, 403);
+    await repositories.memberships.saveMembership({ ...membership, status: "suspended" });
+    assert.equal((await read()).status, 403);
+    assert.equal((await submit(ordinary)).status, 403);
+    // A pre-transaction policy result cannot replace the saved current membership.
+    const candidate = readHeadlessPlanReviewAgentRequest({ version: HEADLESS_CONTRACT_VERSION,
+      operation: "plan.submit", input: ordinary }, hostIncarnationId);
+    assert.ok(candidate.ok);
+    const permissiveOuter = composeDesktopHeadlessPlanReview({ platform, hostIncarnationId, identity, workspaces,
+      authorization: { async authorizeWorkspaceOperation() {} }, rootDirectory: ".", isOpen: () => open });
+    const formerlyCurrent = { organizationId, principalId: identity.principalId, registeredClientId,
+      workspaceIds: [workspaceId], operations: [], planReview: true as const, isCurrent: () => true };
+    assert.deepEqual(await permissiveOuter.execute(candidate.request, formerlyCurrent, async () => formerlyCurrent),
+      { ok: false, code: "headless.forbidden" });
+    assert.equal((await documents.listDocuments("headless/system-builder/plan-reviews")).length, 2);
+  } finally {
+    open = false;
+    await connector.close();
+  }
+});
 
 test("pinned paired agents can request and present only with an exact interactive lease", async () => {
   const platform = createInMemoryStructuredDocumentStore();
