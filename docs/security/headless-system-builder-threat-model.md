@@ -126,6 +126,8 @@ account or trusted host remains outside the protection claim. Revocation cannot
 recall context already delivered. Rollback disables the connector and
 presentation routes, invalidates their grants and preserves committed data,
 ordinary UI access and evidence.
+The read-only plan preview returns a fingerprint of the ordered steps and exact
+host and workspace scope for comparison. Approval remains an app-owned decision.
 The internal operation store partitions receipts by verified organization and
 hashes the complete principal, client, workspace, operation and key scope.
 Receipts hold a fingerprint and the minimum saved revision reference; change

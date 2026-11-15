@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod/v4";
@@ -232,14 +233,17 @@ function addAuthoringTools(server: McpServer) {
         return toolResult({ ok: false, code: "headless.stale" });
     }
     if (signal.aborted) return toolResult(unavailable);
-    return toolResult({ ok: true, value: {
+    const plan = {
       version: "aisb-build-plan-preview-v1",
       ...scope,
       approval: "required",
       steps: requests.map(({ operation, input: { hostIncarnationId: _host, workspaceId: _workspace, ...fields } }) => ({
         operation, input: fields, effect: "saved-system-write", externalProviderCalls: 0,
       })),
-    } });
+    };
+    // The management parser rebuilt each step in a fixed field order.
+    const fingerprint = createHash("sha256").update(JSON.stringify(plan), "utf8").digest("hex");
+    return toolResult({ ok: true, value: { ...plan, fingerprint } });
   });
 }
 

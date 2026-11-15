@@ -65,7 +65,9 @@ steps in one workspace. Use exact template IDs and saved revisions. Give each
 step its own retry key. A later step that uses a system already renamed in the
 plan requires a new preview against its new revision. The preview uses the
 existing authorized reads. It marks each proposed write and reports that
-approval is required before execution.
+approval is required before execution. Compare fingerprints to tell whether
+two previews contain the same ordered actions in the same workspace and host
+session. The owning app still needs to record approval before execution.
 
 If a write reply is lost, check the saved state or repeat the exact request
 with the same key. The adapter never repeats writes automatically. Cancellation

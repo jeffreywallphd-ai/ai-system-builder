@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createServer, request } from "node:https";
@@ -211,11 +211,17 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
       name: "aisb_preview_build_plan", arguments: input,
     }));
     const beforePreview = requests.length;
-    assert.deepEqual(await preview({...planBase, steps}), {ok:true, value: {
+    const identity = checkedPlan(await preview({...planBase, steps}));
+    assert.deepEqual(identity.plan, {
       version: "aisb-build-plan-preview-v1", ...planBase, approval: "required",
       steps: steps.map(({operation, ...input}) => ({operation, input, effect: "saved-system-write", externalProviderCalls: 0})),
-    }});
+    });
     assert.equal(requests.length - beforePreview, 2);
+    const shuffledFields = steps.map(step => Object.fromEntries(Object.entries(step).reverse()));
+    assert.equal(checkedPlan(await preview({...planBase, steps:shuffledFields})).fingerprint, identity.fingerprint);
+    assert.notEqual(checkedPlan(await preview({...planBase, steps:[steps[1], steps[0], steps[2]]})).fingerprint, identity.fingerprint);
+    assert.notEqual(checkedPlan(await preview({...planBase, steps:[{...steps[0], name:"Changed proposal"}, ...steps.slice(1)]})).fingerprint,
+      identity.fingerprint);
     assert.ok(requests.slice(beforePreview).every(row => row.url === "/api/headless/agent/read" && row.workspace === workspaceId));
     const beforeDenied = requests.length;
     assert.deepEqual(await preview({...planBase, workspaceId: "foreign-workspace", steps}), {ok:false, code:"headless.forbidden"});
@@ -322,6 +328,17 @@ function resultText(result: Awaited<ReturnType<Client["callTool"]>>): unknown {
   assert.equal(block?.type, "text");
   if (block?.type !== "text") throw new Error("Expected a text result.");
   return JSON.parse(block.text);
+}
+
+function checkedPlan(result: unknown) {
+  assert.ok(result && typeof result === "object" && "ok" in result && result.ok === true && "value" in result);
+  const value = result.value;
+  assert.ok(value && typeof value === "object" && "fingerprint" in value);
+  const { fingerprint, ...plan } = value;
+  assert.ok(typeof fingerprint === "string");
+  assert.match(fingerprint, /^[0-9a-f]{64}$/);
+  assert.equal(fingerprint, createHash("sha256").update(JSON.stringify(plan), "utf8").digest("hex"));
+  return { fingerprint, plan };
 }
 
 test("the opt-in stdio tool requires a separately granted, exact approved turn", { timeout: 25_000 }, async () => {
@@ -470,10 +487,10 @@ test("official stdio opt-in lists only finite authoring tools and forwards witho
       value:{workspaceId, actions:["systems.create"], approval:"required"}});
     const plan = {hostIncarnationId: planHost, workspaceId: planWorkspace, steps:[{operation: "systems.create", ...newSystem}]};
     const preview = await client.callTool({name:"aisb_preview_build_plan", arguments:plan});
-    assert.deepEqual(resultText(preview), {ok:true, value:{
+    assert.deepEqual(checkedPlan(resultText(preview)).plan, {
       version:"aisb-build-plan-preview-v1", hostIncarnationId, workspaceId, approval:"required",
       steps:[{operation:"systems.create", input:newSystem, effect:"saved-system-write", externalProviderCalls:0}],
-    }});
+    });
     const extra = await client.callTool({name:"aisb_preview_build_plan",
       arguments:{...plan, steps:[{...plan.steps[0], approval:"claimed"}]}});
     assert.equal(Boolean(extra.isError), true);
