@@ -12,7 +12,7 @@ import { isDesktopHeadlessClientId, readHeadlessPlanStepResult, type HeadlessHos
 import type { LocalIdentityProfile } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
-import { projectHeadlessPlanReview, validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
+import { projectHeadlessPlanReview, runPreparedHeadlessLocalFile, validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
 import type { DesktopHeadlessAudit } from "./desktopHeadlessAudit";
 import type { DesktopIngestionTaskCommands } from "./composeDesktopIngestionFeature";
@@ -89,32 +89,15 @@ export function composeDesktopHeadlessPlanReview(options: {
       if (!prepared || !await canUse() || !prepared.isCurrent()) return { result: forbidden };
       if (prepared.kind === "local-file") {
         savingFile = true;
-        if (!getIngestionTasks || !await canUse(true)) return localFailure(forbidden);
-        const observed = await prepared.inspect();
-        if (!observed) return localFailure(unconfirmed);
-        let kind: "committed" | "replayed" = "replayed";
-        let reference = observed.kind === "replayed" ? observed.receipt : undefined;
-        if (observed.kind === "staged") {
-          const ingestion = await getIngestionTasks();
-          if (!ingestion.finalizeApprovedLocalFile || !await canUse(true) || !await prepared.stillAllowed())
-            return localFailure(forbidden);
-          const outcome = await ingestion.finalizeApprovedLocalFile({
-            preview: observed.preview,
-            stillAllowed: async () => await canUse(true) && await prepared.stillAllowed(),
-            isCurrent: prepared.isCurrent,
-            issuePublication: prepared.issuePublication,
-          }, { organizationId, principalId, workspaceId });
-          if (!outcome.ok) return localFailure(outcome.code === "headless.forbidden" ? forbidden : unconfirmed);
-          reference = await prepared.readReceipt();
-          kind = "committed";
-        }
-        if (!reference) return localFailure(unconfirmed);
-        if (!prepared.isCurrent() || !await canUse(true) || !await prepared.stillAllowed()) return localFailure(forbidden);
-        options.audit?.backend("local-data-save", workspaceId, kind);
-        return { result: readHeadlessPlanStepResult({ ok: true, value: { kind, operation: "data.save-local-source",
-          reference, fingerprint, approvalRevision, step, expiresAt: prepared.expiresAt } }, request.input,
-          { allowLocalFileSave: true }),
-          publishIfCurrent: prepared.publishIfCurrent };
+        if (!getIngestionTasks) return localFailure(forbidden);
+        const outcome = await runPreparedHeadlessLocalFile({ prepared, request, context: { organizationId, principalId, workspaceId },
+          canUse: () => canUse(true), resolveFinalize: async () => {
+            const ingestion = await getIngestionTasks();
+            return ingestion.finalizeApprovedLocalFile?.bind(ingestion);
+          } });
+        if (!outcome.result.ok) return localFailure(outcome.result.code === "headless.forbidden" ? forbidden : unconfirmed);
+        options.audit?.backend("local-data-save", workspaceId, outcome.result.value.kind);
+        return outcome;
       }
       const { operation } = prepared.request;
       const active = (workspace: WorkspaceId, requested: string) => workspace === workspaceId &&

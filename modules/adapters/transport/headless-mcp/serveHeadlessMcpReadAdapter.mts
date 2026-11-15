@@ -167,7 +167,7 @@ function addSystemBuilderTools(server: McpServer) {
       inputSchema: z.strictObject({ ...base, edits, previewDigest: z.string().regex(/^[a-f0-9]{64}$/), idempotencyKey }), annotations: writeHints,
     }, (input, context) => author("systems.apply-edits", input, context.mcpReq.signal));
   }
-  const allowLocalFileSave = enablePlanReview && !managed;
+  const allowLocalFileSave = enablePlanReview;
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };

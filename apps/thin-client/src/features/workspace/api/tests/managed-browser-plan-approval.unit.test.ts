@@ -111,3 +111,27 @@ test("foreign or altered views and receipts that disagree with the displayed dec
   expect(await client.openPlanApproval(tab,exactSelection,signal)).toEqual(view);
   expect(await client.decidePlanApproval(tab,approval,state,signal)).toEqual(final);
 });
+
+test("both decision channels show the same exact file-save step and reject an altered revision", async () => {
+  const plan = parseHeadlessBuildPlanProposal({hostIncarnationId,workspaceId,steps:[{
+    operation:"data.save-local-source",taskId:normalizeIngestionTaskId("ingestion.browser-fixture"),
+    fileId:normalizeIngestionTaskFileId("file.browser-fixture"),taskRevision:3,
+    idempotencyKey:"d515ff1c-bb55-4984-88ce-2a2a8e9d9e9e",
+  }]},hostIncarnationId,{allowLocalFileSave:true});
+  if (!plan.ok) throw new Error("The selected-file plan fixture is invalid.");
+  const fingerprint = createHash("sha256").update(JSON.stringify(plan.preview)).digest("hex");
+  const choice = {...selection,fingerprint};
+  const state = {fingerprint,revision:1,stepCount:1,expiresAt,status:"pending",approvedSteps:0};
+  const view = {selection:choice,viewId,preview:plan.preview,state};
+  const changed = { ...view, preview:{...plan.preview,steps:plan.preview.steps.map(step =>
+    ({...step,input:{...step.input,taskRevision:4}}))}};
+  const transport = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(response(view)).mockResolvedValueOnce(response(view)).mockResolvedValueOnce(response(changed));
+  const client = createManagedBrowserConsentClient("fixture-org",transport);
+  expect(await client.openPlanApproval(tab,choice,signal)).toEqual(view);
+  expect(await client.openPlanApproval(tab,choice,signal,true)).toEqual(view);
+  expect(await client.openPlanApproval(tab,choice,signal,true)).toBeUndefined();
+  expect(transport.mock.calls.map(([path]) => path)).toEqual([
+    MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH,
+  ]);
+});

@@ -108,10 +108,10 @@ the old file reference. Cancel that staged upload before preparing it again.
 Ordinary uploads in the same workspace continue when the chat connection
 changes.
 
-On Desktop, review the exact file in the approval popup or approval chat to
-let the client run the approved save. In the Managed browser, use **Add
-data** for a direct import. The saved file appears in **Artifact Browser**.
-Before saving, **Cancel** discards the staged transfer.
+On Desktop or a configured Managed host, review the exact file in the
+approval popup or approval chat to let the client run the approved save.
+The saved file appears in **Artifact Browser**. Before saving, **Cancel**
+discards the staged transfer. Use **Add data** for a direct import.
 
 For the opt-in frontier client check, start the isolated managed reference
 database and run `managed-headless-browser-plan-approval.ts` with

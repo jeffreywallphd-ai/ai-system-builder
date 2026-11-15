@@ -8,7 +8,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import path from "node:path";
 
 import { HEADLESS_CONTRACT_VERSION, HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, parseHeadlessBuildPlanProposal,
-  UI_CONTROL_VERSION, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
+  UI_CONTROL_VERSION, type HeadlessHostIncarnationId, type HeadlessPlanStepResult } from "../../../../../contracts/headless";
 import { MANAGED_HEADLESS_AGENT_SESSION_HEADER } from "../../../../../contracts/headless/managed-headless-window";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../../contracts/ingestion";
 import { createOrganizationId } from "../../../../../contracts/organization";
@@ -45,6 +45,9 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let previewState: "selected" | "stale" | "expired" | "malformed" = "selected";
   let previewFence = true;
   let previewCurrent = true;
+  let supportsLocalSave = false;
+  let savedFile: {workspaceId:typeof workspaceId; taskId:ReturnType<typeof normalizeIngestionTaskId>;
+    fileId:ReturnType<typeof normalizeIngestionTaskFileId>; taskRevision:number} | undefined;
   const expiresAt = Date.now() + 30_000;
   let stepExpiresAt = expiresAt;
   const app = express();
@@ -57,6 +60,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   }));
   const retire = registerManagedHeadlessAgentRoutes(app, (): ManagedAgentRouteHandlers<typeof planIdentity> => ({
     hostIncarnationId,
+    allowLocalFileSave:supportsLocalSave,
     identify: (request, kind) => (kind === "plan-review" || kind === "plan-step" || kind === "local-file-preview") &&
       request.organizationHeader === organizationId &&
       request.auth?.oidcAccessTokenClientId === "fixture-plan" ? planIdentity : undefined,
@@ -68,11 +72,14 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       return {ok:true, value:{fingerprint:request.target.fingerprint, revision:1, stepCount:publish ? 1 : 2,
         approvedSteps:0, expiresAt, status:"pending"}};
     }, async planStep({input}) {
+      const shared = {kind:"committed" as const, fingerprint:input.fingerprint, step:input.step,
+        approvalRevision:input.approvalRevision, expiresAt:stepExpiresAt};
+      const result:HeadlessPlanStepResult = {ok:true, value:savedFile
+        ? {...shared, operation:"data.save-local-source", reference:savedFile}
+        : {...shared, reference:{systemId:normalizeSystemBuilderSystemId("system.fixture"),
+          revisionId:normalizeSystemBuilderRevisionId("revision.fixture"), recordRevision:1}}};
       return {
-        result: {ok:true, value:{kind:"committed", fingerprint:input.fingerprint, step:input.step,
-          approvalRevision:input.approvalRevision, expiresAt:stepExpiresAt, reference:{
-            systemId:normalizeSystemBuilderSystemId("system.fixture"),
-            revisionId:normalizeSystemBuilderRevisionId("revision.fixture"), recordRevision:1}}},
+        result,
         async publishIfCurrent(send) {
           if (!publish) current = false;
           const result = send();
@@ -177,6 +184,26 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     assert.deepEqual(await request(step, "fixture-plan", stepPath), {status:403, cache:"no-store",
       body:{ok:false, code:"headless.forbidden"}});
     assert.equal(sends,1);
+    current = true;
+    publish = true;
+    const {workspaceId: _targetWorkspace, ...selected} = file;
+    const fileSteps = [{...selected,operation:"data.save-local-source",idempotencyKey:randomUUID()}];
+    const filePlan = parseHeadlessBuildPlanProposal({...scope,steps:fileSteps},hostIncarnationId,{allowLocalFileSave:true});
+    assert.ok(filePlan.ok);
+    const fileFingerprint = createHash("sha256").update(JSON.stringify(filePlan.preview)).digest("hex");
+    const fileProposal = {...proposal,input:{...scope,steps:fileSteps,fingerprint:fileFingerprint}};
+    const fileRun = {...step,input:{...step.input,fingerprint:fileFingerprint}};
+    savedFile = {...file,taskRevision:file.taskRevision+2};
+    assert.equal((await request(fileProposal)).status,400);
+    assert.equal((await request(fileRun,"fixture-plan",stepPath)).status,503);
+    supportsLocalSave = true;
+    assert.equal((await request(fileProposal,"fixture-browser")).status,403);
+    assert.equal((await request(fileProposal)).status,200);
+    assert.equal((await request(fileRun,"fixture-agent",stepPath)).status,403);
+    assert.deepEqual(await request(fileRun,"fixture-plan",stepPath),{status:200,cache:"no-store",body:{ok:true,value:{
+      kind:"committed",operation:"data.save-local-source",fingerprint:fileFingerprint,step:1,
+      approvalRevision:2,expiresAt,reference:savedFile,
+    }}});
   } finally {
     retire();
     server.closeAllConnections();

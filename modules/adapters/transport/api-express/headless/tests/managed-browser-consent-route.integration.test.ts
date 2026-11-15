@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import test from "node:test";
 import express from "express";
 
-import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
+import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH,
+  parseHeadlessBuildPlanProposal, type HeadlessHostIncarnationId } from "../../../../../contracts/headless";
 import { createOrganizationId } from "../../../../../contracts/organization";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../../contracts/ingestion";
 import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
@@ -59,12 +60,25 @@ test("exact browser origin, purposeful authentication, framing and live request 
   let planReplyCurrent = true;
   let stableFileRead = true;
   let fileSelectionCalls = 0;
+  let hasFilePlanAccess = true;
+  let enableFilePlanPublication = true;
+  let filePlanHold: {entered:PromiseWithResolvers<void>; release:PromiseWithResolvers<void>} | undefined;
   let planApprovalCalls = 0;
   const approvalChannels: string[] = [];
   const planReference = {workspaceId, registeredClientId:randomUUID(), fingerprint:"b".repeat(64), expiresAt:Date.now() + 60_000};
   const file = { workspaceId, registeredClientId:planReference.registeredClientId, expectedSelectionRevision:0,
     taskId:normalizeIngestionTaskId("ingestion.browser-fixture"), fileId:normalizeIngestionTaskFileId("file.browser-fixture"), taskRevision:3 };
   const fileReceipt = {workspaceId, taskId:file.taskId, fileId:file.fileId, taskRevision:3, selectionRevision:1};
+  const mixed = parseHeadlessBuildPlanProposal({hostIncarnationId:target.hostIncarnationId, workspaceId, steps:[{
+    operation:"data.save-local-source",taskId:file.taskId,fileId:file.fileId,taskRevision:file.taskRevision,idempotencyKey:randomUUID(),
+  }]},target.hostIncarnationId,{allowLocalFileSave:true});
+  assert.ok(mixed.ok);
+  const filePlanFingerprint = createHash("sha256").update(JSON.stringify(mixed.preview)).digest("hex");
+  const filePlanSelection = {workspaceId, registeredClientId:file.registeredClientId, fingerprint:filePlanFingerprint};
+  const filePlanState = {fingerprint:filePlanFingerprint,revision:1,stepCount:1,expiresAt:planReference.expiresAt,
+    status:"pending" as const,approvedSteps:0};
+  const filePlanView = {selection:filePlanSelection,viewId:randomUUID(),preview:mixed.preview,state:filePlanState};
+  const filePlanDecision = {...filePlanState,revision:2,status:"approved" as const,mode:"whole-plan" as const,approvedSteps:1};
   let consentReply: typeof grant | undefined;
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
@@ -92,6 +106,18 @@ test("exact browser origin, purposeful authentication, framing and live request 
     disconnect() { registrationRetired = true; return true; },
     ...(planEnabled ? {async planApproval(document, input, _current, channel) {
       planApprovalCalls++;
+      if (document.proof === proof && (input.operation === "open" || input.operation === "decide")) {
+        return {
+          value:input.operation === "open" ? filePlanView : filePlanDecision,
+          canPublish:() => planReplyCurrent,
+          publishIfCurrent:enableFilePlanPublication ? async (send:() => boolean) => {
+            const hold = filePlanHold;
+            hold?.entered.resolve();
+            await hold?.release.promise;
+            return hasFilePlanAccess && send();
+          } : undefined,
+        };
+      }
       if (input.operation === "list-file-clients" || input.operation === "select-file") {
         fileSelectionCalls++;
         if (document.proof !== proof || (input.operation === "select-file" &&
@@ -195,6 +221,26 @@ test("exact browser origin, purposeful authentication, framing and live request 
     stableFileRead = false;
     assert.equal((await planPost(selectFile)).status, 403);
     stableFileRead = true;
+    const openFilePlan = {operation:"open",document:target,selection:filePlanSelection};
+    const decideFilePlan = {operation:"decide",document:target,decision:{selection:filePlanSelection,viewId:filePlanView.viewId,
+      expectedRevision:1,decision:{kind:"approve",mode:"whole-plan"}}};
+    enableFilePlanPublication = false;
+    assert.equal((await planPost(openFilePlan)).status,503);
+    enableFilePlanPublication = true;
+    for (const [input, expected] of [[openFilePlan,filePlanView],[decideFilePlan,filePlanDecision]] as const) {
+      assert.deepEqual(await (await planPost(input)).json(),expected);
+      const hold = {entered:Promise.withResolvers<void>(),release:Promise.withResolvers<void>()};
+      filePlanHold = hold;
+      const pending = planPost(input);
+      await hold.entered.promise;
+      hasFilePlanAccess = false;
+      hold.release.resolve();
+      const denied = await pending;
+      assert.equal(denied.status,403);
+      assert.deepEqual(await denied.json(),{error:"headless.browser-consent-unavailable"});
+      filePlanHold = undefined;
+      hasFilePlanAccess = true;
+    }
     planReplyCurrent = false;
     assert.equal((await planPost(selectFile)).status, 403);
     const retiredPlanReply = await planPost(plans);
@@ -256,5 +302,5 @@ test("exact browser origin, purposeful authentication, framing and live request 
     assert.equal(registrationRetired, true);
     retire();
     assert.equal((await post(register)).status, 404);
-  } finally { release.resolve(); retire(); server.close(); await once(server, "close"); }
+  } finally { filePlanHold?.release.resolve(); release.resolve(); retire(); server.close(); await once(server, "close"); }
 });

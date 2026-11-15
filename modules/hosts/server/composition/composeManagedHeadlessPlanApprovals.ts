@@ -29,6 +29,7 @@ type View = {
   revision?: number;
   expiresAt?: number;
   stepCount?: number;
+  fileSave?: boolean;
   deciding: boolean;
 };
 
@@ -36,6 +37,7 @@ const forbidden = {ok:false, code:"forbidden"} as const;
 const unconfirmed = {ok:false, code:"unconfirmed"} as const;
 const planScopes = ["workspace:read", "asset:read", "asset:write"] as const;
 const fileScopes = ["workspace:read", "artifact:read", "artifact:write"] as const;
+const filePlanScopes = [...planScopes, "artifact:read", "artifact:write"] as const;
 
 export function composeManagedHeadlessPlanApprovals(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -45,6 +47,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   readonly contexts: OrganizationRequestContextProviderPort;
   readonly placement: TenantPlacementConfig;
   readonly localIngestion?: ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0];
+  readonly allowLocalFileSave?: boolean;
   readonly now?: () => number;
 }) {
   const {hostIncarnationId, planClientId, platform, rootDirectory, contexts, placement, now = Date.now} = options;
@@ -52,6 +55,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
     throw new Error("Managed approval needs the current client and transaction owner.");
   const transaction = platform.runInOwnedTransaction.bind(platform);
   const stableReads = platform.publishWithStableReads?.bind(platform);
+  const allowLocalFileSave = options.allowLocalFileSave === true && stableReads !== undefined;
   const views = new Map<string, View>();
 
   async function authorize(owner: StructuredDocumentStore, identity: Identity, workspaceId: WorkspaceId, current: () => boolean,
@@ -70,9 +74,10 @@ export function composeManagedHeadlessPlanApprovals(options: {
     } catch {return false;}
   }
 
-  async function verifyAccess(identity: Identity, workspaceId: WorkspaceId, current: () => boolean) {
+  async function verifyAccess(identity: Identity, workspaceId: WorkspaceId, current: () => boolean,
+    requiredScopes: readonly SecurityScope[] = planScopes) {
     try {
-      const allowed = await transaction(owner => authorize(owner, identity, workspaceId, current), () => {
+      const allowed = await transaction(owner => authorize(owner, identity, workspaceId, current, requiredScopes), () => {
         if (!current()) throw new Error("The approval document is unavailable.");
       });
       return allowed && current();
@@ -94,6 +99,15 @@ export function composeManagedHeadlessPlanApprovals(options: {
     }
     const {organizationId, principalId} = identity;
     const baseScope = {organizationId, principalId, workspaceId};
+    function publishFilePlanReply(isFresh: () => boolean) {
+      return async (publish: () => boolean) => {
+        if (!stableReads || !isFresh()) return false;
+        try {
+          return await stableReads(owner => authorize(owner, identity, workspaceId, isFresh, filePlanScopes),
+            () => isFresh() && publish());
+        } catch {return false;}
+      };
+    }
     if (request.operation === "list-file-clients" || request.operation === "select-file") {
       const ingestion = options.localIngestion;
       if (channel !== "app-popup" || !ingestion || !stableReads) return forbidden;
@@ -173,18 +187,22 @@ export function composeManagedHeadlessPlanApprovals(options: {
       try {
         const outcome = await store.read({target, isCurrent:active});
         if (!outcome.ok || !active()) return forbidden;
-        if (!await verifyAccess(identity, workspaceId, active)) return forbidden;
         const summary = projectHeadlessPlanReview(outcome, selection.fingerprint);
         if (!summary.ok || summary.value.expiresAt <= now() ||
             (summary.value.status !== "pending" && summary.value.status !== "approved")) return forbidden;
         const ready = readDesktopPlanApprovalView({selection, viewId:view.viewId, preview:outcome.snapshot.preview, state:summary.value},
-          selection, { allowLocalFileSave: false });
+          selection, { allowLocalFileSave });
         if (!ready || createHash("sha256").update(JSON.stringify(ready.preview), "utf8").digest("hex") !== selection.fingerprint)
           return unconfirmed;
+        const fileSave = ready.preview.steps.some(step => step.operation === "data.save-local-source");
+        if (!await verifyAccess(identity, workspaceId, active, fileSave ? filePlanScopes : planScopes)) return forbidden;
         view.revision = ready.state.revision;
         view.expiresAt = ready.state.expiresAt;
         view.stepCount = ready.state.stepCount;
-        return {ok:true, value:ready, canPublish:() => active() && now() < ready.state.expiresAt} as const;
+        view.fileSave = fileSave;
+        const canPublish = () => active() && now() < ready.state.expiresAt;
+        return {ok:true, value:ready, canPublish,
+          ...(fileSave ? {publishIfCurrent:publishFilePlanReply(canPublish)} : {})} as const;
       } finally {
         if (views.get(documentKey) === view && view.revision === undefined) views.delete(documentKey);
       }
@@ -198,14 +216,15 @@ export function composeManagedHeadlessPlanApprovals(options: {
       view.expiresAt !== undefined && now() < view.expiresAt;
     if (!active()) return forbidden;
     view.deciding = true;
+    const requiredScopes = view.fileSave ? filePlanScopes : planScopes;
     const store = createStructuredHeadlessPlanReviewRepository(platform, async (owner, actual, action) =>
-      exact(actual) && action === "decide" && await authorize(owner, identity, workspaceId, active), now);
+      exact(actual) && action === "decide" && await authorize(owner, identity, workspaceId, active, requiredScopes), now);
     try {
       const outcome = await new HeadlessBuildPlanReviewUseCase(store, now).decide({
         fingerprint:selection.fingerprint, expectedRevision:request.decision.expectedRevision, decision:request.decision.decision,
       }, hostIncarnationId, scope, {
         ...identity, channel, isCurrent:active,
-        canDecide: async actual => exact(actual) && await verifyAccess(identity, workspaceId, active),
+        canDecide: async actual => exact(actual) && await verifyAccess(identity, workspaceId, active, requiredScopes),
       });
       if (!outcome.ok || !active()) return outcome.ok ? forbidden : outcome;
       const state = outcome.state;
@@ -213,7 +232,10 @@ export function composeManagedHeadlessPlanApprovals(options: {
         expiresAt:state.expiresAt, status:state.status, approvedSteps:state.approvedSteps,
         ...(state.mode === undefined ? {} : {mode:state.mode})};
       const receipt = readHeadlessPlanReviewAgentResult({ok:true, value}, selection.fingerprint, view.stepCount);
-      return receipt.ok ? {...receipt, canPublish:() => current() && now() < receipt.value.expiresAt} : unconfirmed;
+      if (!receipt.ok) return unconfirmed;
+      const canPublish = () => current() && now() < receipt.value.expiresAt;
+      return {...receipt, canPublish,
+        ...(view.fileSave ? {publishIfCurrent:publishFilePlanReply(canPublish)} : {})};
     } finally {
       if (views.get(documentKey) === view) views.delete(documentKey);
     }

@@ -504,8 +504,9 @@ export async function createServer(
           return undefined;
         },
         isCurrent: (admitted) => admitted.isCurrent(),
-        ...(planReview ? { planReview: async (input, agent, current) =>
-          agent.purpose === "plan-review" ? planReview(input, agent, current) : denied } : {}),
+        ...(planReview ? { allowLocalFileSave: planReview.allowLocalFileSave,
+          planReview: async (input, agent, current) =>
+            agent.purpose === "plan-review" ? planReview(input, agent, current) : denied } : {}),
         ...(runPlanStep ? { planStep: async (input, agent, current) =>
           agent.purpose === "plan-review" ? runPlanStep(input, agent, current) : { result: denied } } : {}),
         ...(previewSelectedFile ? { localFilePreview: async (input, agent, current) =>

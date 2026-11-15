@@ -525,6 +525,98 @@ async function main() {
     await page.getByRole("tab",{name:"Artifact Browser",exact:true}).click();
     await expect(savedSource).toHaveCount(1);
     checks.cancel_retires_preview_and_ordinary_data_still_saves = true;
+
+    stage = "stage-file-for-managed-save";
+    await page.getByRole("tab",{name:"Artifact Ingestion",exact:true}).click();
+    const managedSaveName = "synthetic-managed-approved.csv";
+    const managedSaveBytes = Buffer.from("name,amount\nManaged save,17\n");
+    await fileInput.setInputFiles({name:managedSaveName,mimeType:"text/csv",buffer:managedSaveBytes});
+    await expect(clients.locator("option")).toHaveCount(2);
+    await clients.selectOption({index:1});
+    await workflow.getByRole("button",{name:"Prepare for chat",exact:true}).click();
+    await expect(referenceField).toHaveValue(/^\{.+\}$/);
+    const fileToSave = JSON.parse(await referenceField.inputValue());
+    const {fileId,taskId,taskRevision} = fileToSave;
+    const followUpName = "Synthetic system after the Managed file save";
+    const fileStep = {operation:"data.save-local-source",fileId,taskId,taskRevision,idempotencyKey:randomUUID()};
+    const steps = [fileStep, {operation:"systems.create",name:followUpName,
+      templateId:"reference.secured-data-review@1.0.0",idempotencyKey:randomUUID()}];
+    const parsed = parseHeadlessBuildPlanProposal({...scope,steps},hostIncarnationId,{allowLocalFileSave:true});
+    assert.ok(parsed.ok);
+    const saveFingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+    stage = "refuse-altered-managed-save-reference";
+    const altered = await call("aisb_preview_build_plan",{...scope,steps:[{...fileStep,taskRevision:taskRevision+1}]});
+    assert.equal(altered.ok,false);
+    stage = "preview-exact-managed-save";
+    const savePreview = await call("aisb_preview_build_plan",{...scope,steps});
+    checks.managed_save_preview_succeeded = savePreview.ok === true;
+    assert.equal(savePreview.ok,true);
+    assert.equal(savePreview.value.fingerprint,saveFingerprint);
+    stage = "submit-exact-managed-save";
+    const saveProposal = await call("aisb_request_build_plan_approval",{...scope,fingerprint:saveFingerprint,steps});
+    checks.managed_save_proposal_succeeded = saveProposal.ok === true;
+    if (!saveProposal.ok) {
+      const direct = await fixture.request(MANAGED_HEADLESS_AGENT_PATHS["plan-review"], {method:"POST",
+        token:agent.planReview,organizationId,body:{version:HEADLESS_CONTRACT_VERSION,
+          operation:"plan.submit",input:{...scope,fingerprint:saveFingerprint,steps}}});
+      checks.managed_save_proposal_http_status = direct.status;
+      for (const [label, code] of [["invalid","headless.invalid-request"],["forbidden","headless.forbidden"],
+        ["stale","headless.stale"],["unavailable","headless.unavailable"],
+        ["capacity","headless.operation-capacity"]]) {
+        if (direct.body?.code === code) checks["managed_save_proposal_" + label] = true;
+      }
+    }
+    assert.equal(saveProposal.ok,true);
+    assert.equal(saveProposal.value.status,"pending");
+    stage = "refuse-unapproved-managed-save";
+    assert.deepEqual(await run(saveFingerprint,saveProposal.value.revision,1),uncertain);
+    const fileIsListed = async (surface:Locator) => {
+      const list = surface.getByRole("list",{name:"Requested changes"});
+      await list.getByText("Save the selected file in Data",{exact:true}).waitFor();
+      await list.getByText("File reference " + fileId,{exact:true}).waitFor();
+      await list.getByText(followUpName,{exact:false}).waitFor();
+      await surface.getByRole("list",{name:"Permissions and limits"})
+        .getByText("Save the listed files in this workspace’s Data area.",{exact:true}).waitFor();
+    };
+    stage = "show-managed-save-in-browser-chat";
+    await page.locator('button.ui-shell__settings-button[aria-label="Settings"]').click();
+    await openChat();
+    await openProposal(saveFingerprint,chat);
+    await fileIsListed(chat);
+    await chat.getByRole("button",{name:"Close plan approval chat",exact:true}).click();
+    stage = "approve-managed-save-in-popup";
+    await trigger.click();
+    await openProposal(saveFingerprint,dialog);
+    await fileIsListed(dialog);
+    await dialog.getByRole("radio",{name:"Approve all listed changes"}).check();
+    await dialog.getByRole("button",{name:"Approve all changes",exact:true}).click();
+    await dialog.getByText("All 2 changes are approved.",{exact:true}).waitFor();
+    const approvedSave = await status(saveFingerprint,"approved",2);
+    checks.both_managed_approval_surfaces_show_exact_file_and_access = true;
+
+    stage = "run-ordered-managed-save";
+    assert.deepEqual(await run(saveFingerprint,approvedSave.revision,2),uncertain);
+    const committed = await run(saveFingerprint,approvedSave.revision,1);
+    assert.equal(committed.ok,true);
+    assert.equal(committed.value.kind,"committed");
+    assert.equal(committed.value.operation,"data.save-local-source");
+    assert.deepEqual(committed.value.reference,{workspaceId,taskId,fileId,taskRevision:taskRevision+2});
+    const replay = await run(saveFingerprint,approvedSave.revision,1);
+    assert.deepEqual(replay,{ok:true,value:{...committed.value,kind:"replayed"}});
+    const followUp = await run(saveFingerprint,approvedSave.revision,2);
+    assert.equal(followUp.ok,true);
+    assert.equal(followUp.value.kind,"committed");
+    const system = await call("aisb_read_system",{...scope,systemId:followUp.value.reference.systemId});
+    assert.equal(system.ok,true);
+    assert.equal(system.value.name,followUpName);
+    checks.managed_file_save_commits_once_before_next_step = true;
+
+    stage = "confirm-managed-saved-source";
+    await page.keyboard.press("Escape");
+    await page.getByRole("button",{name:"Artifacts",exact:true}).click();
+    await page.getByRole("tab",{name:"Artifact Browser",exact:true}).click();
+    await expect(page.getByRole("button",{name:managedSaveName,exact:true})).toHaveCount(1);
+    checks.managed_approved_source_is_available_in_data = true;
     passed = true;
   } catch {
     // Report only fixed stages and check outcomes.

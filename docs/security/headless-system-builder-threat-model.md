@@ -610,14 +610,20 @@ preview route accepts the issuer-verified plan registration, checks artifact
 read access and holds the selected task and active permission records through
 response release. It discloses the same bounded metadata as the Desktop
 preview. Cancellation and replacement invalidate the exact previous
-reference. Managed plan submission continues to refuse file-save steps.
+reference.
 
-Desktop accepts one exact local-file save for each staged upload in a
-plan. The app’s approval channels show the file and upload references
+Desktop and a configured Managed host accept one exact local-file save for
+each staged upload in a plan. The app’s approval channels show the file and upload references
 and the permission to save in Data. The plan, workspace permissions,
 selected client, selected upload and source expiry are checked before
 each new byte or origin write. The owner records the approval fence and
 the issue together. A repeat returns only the bound reference for a
 verified committed source. An interrupted run that entered finalizing
 without a committed source stays unconfirmed for Data task recovery.
-Managed still needs its own approved file-save evidence.
+Managed requires both plan and artifact permissions inside the owning effect
+transaction. Overlapping transactions take effect in their serial order.
+The approval app holds current workspace and artifact permissions through
+the release of a mixed-file approval view or decision receipt. The step
+response also holds the exact approval and saved-source observations
+through its PostgreSQL response fence. The ordinary upload and existing
+saved-system plans use their original paths.

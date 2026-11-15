@@ -11,6 +11,7 @@ import { createStructuredOrganizationRepositories } from "../../../../adapters/p
 import type { StructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../../../adapters/persistence/sqlite";
 import { createStructuredHeadlessOperationStore } from "../../../../adapters/persistence/system-builder";
+import { createStructuredHeadlessPlanReviewRepository } from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { createLocalWorkspaceRepository } from "../../../../adapters/persistence/workspace";
 import { createOidcBearerTokenVerifierAdapter, getVerifiedOidcCredentialBinding } from "../../../../adapters/security/oidc/createOidcBearerTokenVerifierAdapter";
 import { registerManagedBrowserConsentRoute } from "../../../../adapters/transport/api-express/headless/registerManagedBrowserConsentRoute";
@@ -283,6 +284,67 @@ test("managed edits and retry receipts require current workspace permission with
       assert.equal(latest.value.state.approvedSteps, 2);
       assert.equal(latest.value.state.status, "approved");
       assert.equal((await systems.useCases.list.execute({workspaceId})).length, 1);
+    });
+
+    await t.test("mixed-file approval views and committed decisions require permission at publication", async () => {
+      const document = {hostIncarnationId, workspaceId, windowId:randomUUID(), uiIncarnationId:randomUUID()};
+      const scope = {organizationId, principalId, workspaceId, registeredClientId:registration.registeredClientId};
+      const proposal = {hostIncarnationId, workspaceId, steps:[{operation:"data.save-local-source", taskId:"ingestion.held",
+        fileId:"file.held", taskRevision:2, idempotencyKey:randomUUID()}]};
+      const parsed = parseHeadlessBuildPlanProposal(proposal, hostIncarnationId, {allowLocalFileSave:true});
+      assert.ok(parsed.ok);
+      const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+      const target = {hostIncarnationId, fingerprint, scope};
+      const plans = createStructuredHeadlessPlanReviewRepository(platform, async () => true, Date.now,
+        async () => true, true);
+      assert.ok((await plans.propose({target,isCurrent:() => true,proposal})).ok);
+
+      let hold: {entered:PromiseWithResolvers<void>; release:PromiseWithResolvers<void>} | undefined;
+      const checkpoint: StructuredDocumentStore = {...platform, async publishWithStableReads(check, publish) {
+        const pending = hold;
+        pending?.entered.resolve();
+        await pending?.release.promise;
+        return platform.runInOwnedTransaction!(async owner => await check(owner) && publish(), () => {});
+      }};
+      const approval = composeManagedHeadlessPlanApprovals({hostIncarnationId, planClientId:scope.registeredClientId,
+        platform:checkpoint, rootDirectory:fixture, contexts, placement, allowLocalFileSave:true});
+      const selection = {workspaceId,fingerprint,registeredClientId:scope.registeredClientId};
+      const open = () => approval({operation:"open",document,selection},{organizationId,principalId},() => true,() => true);
+      let sent = 0;
+      async function retireBeforeSend(publish: (send: () => boolean) => Promise<boolean>) {
+        const checkpoint = {entered:Promise.withResolvers<void>(),release:Promise.withResolvers<void>()};
+        hold = checkpoint;
+        const pending = publish(() => {sent++; return true;});
+        await checkpoint.entered.promise;
+        try {
+          await repositories.memberships.saveMembership({...membership,status:"removed"});
+          checkpoint.release.resolve();
+          assert.equal(await pending,false);
+          assert.equal(sent,0);
+        } finally {
+          checkpoint.release.resolve();
+          hold = undefined;
+          await repositories.memberships.saveMembership(membership);
+        }
+      }
+      const first = await open();
+      assert.ok(first.ok && "publishIfCurrent" in first && first.publishIfCurrent);
+      await retireBeforeSend(first.publishIfCurrent);
+      const second = await open();
+      assert.ok(second.ok && typeof second.value === "object" && "viewId" in second.value &&
+        "publishIfCurrent" in second && second.publishIfCurrent);
+      assert.equal(await second.publishIfCurrent(() => true),true);
+      const decision = {operation:"decide",document,decision:{selection,viewId:second.value.viewId,
+        expectedRevision:1,decision:{kind:"approve",mode:"whole-plan"}}} as const;
+      const decided = await approval(decision,{organizationId,principalId},() => true,() => true);
+      assert.ok(decided.ok && "publishIfCurrent" in decided && decided.publishIfCurrent);
+      await retireBeforeSend(decided.publishIfCurrent);
+      assert.deepEqual(await approval(decision,{organizationId,principalId},() => true,() => true),
+        {ok:false,code:"forbidden"});
+      const saved = await plans.read({target,isCurrent:() => true});
+      assert.ok(saved.ok);
+      assert.equal(saved.snapshot.state.status,"approved");
+      assert.equal(saved.snapshot.state.revision,2);
     });
 
     await t.test("managed HTTP approval hides replies that expire during delivery while retaining the committed decision", async () => {

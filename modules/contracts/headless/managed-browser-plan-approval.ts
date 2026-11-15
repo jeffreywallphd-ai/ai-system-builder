@@ -60,7 +60,8 @@ export function readManagedBrowserPlanApprovalRequest(value: unknown): ManagedBr
   } catch { return undefined; }
 }
 
-export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanApprovalRequest, value: unknown) {
+export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanApprovalRequest, value: unknown,
+  options?: { readonly allowLocalFileSave: boolean }) {
   switch (request.operation) {
     case "list": return readDesktopPlanApprovalList(value, request.document.workspaceId);
     case "list-file-clients": {
@@ -73,7 +74,7 @@ export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanA
     }
     case "select-file": return readAppHeadlessLocalFileSelectionValue(value, request.file);
     case "open": {
-      const view = readDesktopPlanApprovalView(value, request.selection, { allowLocalFileSave: false });
+      const view = readDesktopPlanApprovalView(value, request.selection, { allowLocalFileSave: options?.allowLocalFileSave === true });
       return view?.preview.hostIncarnationId === request.document.hostIncarnationId ? view : undefined;
     }
     case "decide": {

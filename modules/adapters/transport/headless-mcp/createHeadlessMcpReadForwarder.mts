@@ -151,7 +151,8 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
     planReviewAddress, planStepAddress, localFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
-    enableAuthoring: !enablePlanReview && enableAuthoring, enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
+    allowLocalFileSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
     if (!guard(input)) return {ok: false, code: "headless.forbidden"};

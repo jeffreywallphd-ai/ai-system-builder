@@ -129,8 +129,8 @@ The host rechecks authority before sending a result. Desktop serializes
 this check with its SQLite owner. Managed PostgreSQL locks the exact
 permission and approval records through one successful send.
 
-Desktop plan review can include a save for an exact staged file the user
-selected for that client. The saved-system plan format stays valid. A
+Desktop and a configured Managed host can include a save for an exact staged
+file the user selected for that client. The saved-system plan format stays valid. A
 plan that includes a file save uses a separate version and shows the
 workspace, upload and file references in both approval surfaces.
 The plan owner checks current artifact permissions, the app selection
@@ -146,8 +146,9 @@ that upload.
 A configured Managed browser can stage one local file and record the user's
 choice for the registered plan-review client. The Managed connector offers
 the same bounded preview and holds the selected task and current
-authorization through the PostgreSQL read fence. Direct **Add data** still
-uses the existing browser import. A Managed plan cannot save a staged file.
+authorization through the PostgreSQL read fence. Approved file saves reuse
+the existing ingestion protocol and its exact retry receipt. Direct **Add
+data** uses the existing browser import.
 
 Keeping one application owner preserves existing validation and allows a client
 to disconnect independently of the UI. It requires durable retry and replay

@@ -44,6 +44,7 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly read: (input: HeadlessReadRequest, agent: Agent, current: () => boolean) => Promise<HeadlessReadResult>;
   readonly author: (input: Authoring, agent: Agent, current: () => boolean) => Promise<unknown>;
   readonly planReview?: (input: HeadlessPlanReviewAgentRequest, agent: Agent, current: () => boolean) => Promise<HeadlessPlanReviewAgentResult>;
+  readonly allowLocalFileSave?: boolean;
   readonly planStep?: (input: HeadlessPlanStepRequest, agent: Agent, current: () => boolean) => Promise<{
     readonly result: HeadlessPlanStepResult;
     readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
@@ -121,7 +122,8 @@ async function respond<Agent>(
   const value = parseBody(incoming.body, kind === "plan-review" ? HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES : MAX_REQUEST_BYTES);
   if (!value) return failure(response, 400, "headless.invalid-request");
   if (kind === "plan-review") {
-    const parsed = readHeadlessPlanReviewAgentRequest(value, handlers.hostIncarnationId);
+    const parsed = readHeadlessPlanReviewAgentRequest(value, handlers.hostIncarnationId,
+      { allowLocalFileSave: handlers.allowLocalFileSave === true });
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     if (!handlers.planReview) return failure(response, 404, "headless.unavailable");
     const input = parsed.request;
@@ -139,7 +141,8 @@ async function respond<Agent>(
     if (!handlers.planStep) return failure(response, 404, "headless.unavailable");
     const outcome = await handlers.planStep(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
-    const result = readHeadlessPlanStepResult(outcome.result, parsed.request.input);
+    const result = readHeadlessPlanStepResult(outcome.result, parsed.request.input,
+      { allowLocalFileSave: handlers.allowLocalFileSave === true });
     if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
     const sent = await outcome.publishIfCurrent?.(() => {
       if (!current() || response.headersSent || result.value.expiresAt <= Date.now()) return false;
