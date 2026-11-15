@@ -162,3 +162,15 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         self.assertIn("modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts", scoped[http]["argv"])
         self.assertIn("modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts", scoped[transaction]["argv"])
         self.assertIn("focused-tests", self.plan([route, contract, service, "modules/contracts/headless/unrelated.ts"], http, transaction))
+
+    def test_browser_plan_popup_checks_the_shared_desktop_and_browser_views(self):
+        popup = "modules/ui/shared/headless/HeadlessPlanApprovalDialog.tsx"
+        workspace = "apps/thin-client/src/features/workspace/hooks/useManagedBrowserTakeover.ts"
+        browser_fixture = "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-plan-approval.ts"
+        ui = "managed-headless-browser-consent-ui"
+        live = "managed-headless-browser-live-fixture"
+        selected = self.plan([popup, workspace, browser_fixture], ui, live)
+        self.assertNotIn("focused-tests", selected)
+        self.assertIn("apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx", selected[ui]["argv"])
+        self.assertIn("apps/thin-client/src/features/workspace/api/tests/managed-browser-plan-approval.unit.test.ts", selected[ui]["argv"])
+        self.assertIn("focused-tests", self.plan([popup, workspace, browser_fixture, "modules/ui/shared/headless/unrelated.tsx"], ui, live))

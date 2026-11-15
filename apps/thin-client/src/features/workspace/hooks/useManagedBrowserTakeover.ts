@@ -2,9 +2,10 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { createWindowTakeoverController, type DraftHandoff } from "../../../../../../modules/ui/shared/takeover/windowTakeoverController";
 import { createPresentationQueue } from "../../../../../../modules/ui/shared/takeover/presentationQueue";
+import type { HeadlessPlanApprovalClient } from "../../../../../../modules/ui/shared/headless/HeadlessPlanApprovalDialog";
 import { UI_PRESENTATION_LIMITS, type UiPresentationContext, type UiPresentationDetail,
   type UiPresentationIntent, type UiPresentationReceipt } from "../../../../../../modules/contracts/headless";
-import { isWorkspaceId } from "../../../../../../modules/contracts/workspace/workspace-id";
+import { isWorkspaceId, type WorkspaceId } from "../../../../../../modules/contracts/workspace/workspace-id";
 import { isOrganizationId } from "../../../../../../modules/contracts/organization/organization-id";
 import { pairedDeviceTokenStore } from "../../../security/pairedDeviceTokenStore";
 import { createManagedBrowserConsentClient } from "../api/managedBrowserConsentClient";
@@ -17,7 +18,9 @@ type Client = ReturnType<typeof createManagedBrowserConsentClient>;
 type Tab = Extract<Awaited<ReturnType<Client["register"]>>, {status: "registered"}>["tab"];
 type Scope = {readonly client: Client; readonly tab: Tab;
   readonly signal: AbortSignal; readonly isCurrent: () => boolean; readonly sameBearer: () => boolean;
-  delivery: boolean};
+  delivery: boolean; planApprovals?: HeadlessPlanApprovalClient};
+type PlanApprovals = {readonly workspaceId: WorkspaceId; readonly documentId: string;
+  readonly client: HeadlessPlanApprovalClient; readonly isCurrent: () => boolean};
 const presentationViews = {
   "open-system": "system", "select-component": "component",
   "show-validation": "validation", "show-run": "run", "show-artifact": "artifact",
@@ -31,6 +34,7 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
   const pageActive = useRef(true);
   const [presented, setPresented] = useState<{readonly intent: UiPresentationIntent; readonly detail: UiPresentationDetail;
     readonly isCurrent: () => boolean}>();
+  const [planApprovals, setPlanApprovals] = useState<PlanApprovals>();
   const presentedElement = useRef<HTMLElement | null>(null);
   const selection = useRef<UiPresentationIntent | undefined>(undefined);
   useLayoutEffect(() => {
@@ -82,6 +86,7 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
       timer = undefined;
       const previous = currentTab.current;
       currentTab.current = undefined;
+      if (previous?.planApprovals) setPlanApprovals(undefined);
       attachment?.abort();
       attachment = undefined;
       controller.revoke();
@@ -95,6 +100,31 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
       if (!live || !pageActive.current || document.hidden) return;
       timer = setTimeout(() => {timer = undefined; attach();}, retryDelay);
       retryDelay = Math.min(MAX_RETRY_MS, retryDelay * 2);
+    }
+    function updatePlanApprovals(scope: Scope, enabled: boolean) {
+      if (!enabled) {
+        if (scope.planApprovals) {
+          scope.planApprovals = undefined;
+          setPlanApprovals(undefined);
+        }
+        return;
+      }
+      if (scope.planApprovals) return;
+      const isCurrent = () => currentTab.current === scope && scope.isCurrent() && scope.planApprovals === port;
+      const call = async <T,>(send: () => Promise<T>) => {
+        if (!isCurrent()) return;
+        const result = await send();
+        if (isCurrent()) return result;
+      };
+      const {tab, signal} = scope;
+      const port: HeadlessPlanApprovalClient = {
+        list: id => id === tab.target.workspaceId ? call(() => client.listPlanApprovals(tab, signal)) : undefined,
+        open: selection => call(() => client.openPlanApproval(tab, selection, signal)),
+        decide: (decision, displayed) => call(() => client.decidePlanApproval(tab, decision, displayed, signal)),
+        dismiss: viewId => call(() => client.dismissPlanApproval(tab, viewId, signal)),
+      };
+      scope.planApprovals = port;
+      setPlanApprovals({workspaceId:tab.target.workspaceId, documentId:tab.target.uiIncarnationId, client:port, isCurrent});
     }
     function attach() {
       if (!live || !pageActive.current || document.hidden || attachment || timer !== undefined) return;
@@ -119,6 +149,7 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
           if (!valid() || currentTab.current !== scope) return;
           if (state?.status === "ready") {
             retryDelay = RETRY_MS;
+            updatePlanApprovals(scope, state.planApprovals);
             const deliveryWasEnabled = scope.delivery;
             scope.delivery = state.delivery;
             if (deliveryWasEnabled && !scope.delivery) controller.revoke();
@@ -246,5 +277,6 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
     return () => {unsubscribe(); closeDelivery?.();};
   }, [control, workspaceId]);
 
-  return {...control, presented: presented?.isCurrent() ? presented : undefined, presentedElement};
+  return {...control, presented: presented?.isCurrent() ? presented : undefined, presentedElement,
+    planApprovals:planApprovals?.isCurrent() && planApprovals.workspaceId === workspaceId ? planApprovals : undefined};
 }

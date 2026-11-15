@@ -286,3 +286,13 @@ policy; it does not provide hostile-browser credential protection.
 Use the six-file `security-status-ui` contributor profile for local feature
 regressions. The tests use synthetic storage and responses. Actual TLS, server
 identity, managed authorization and final host qualification remain separate.
+
+## Review automation plans
+
+For a managed host that enables plan review, open **Settings** and select
+**Review plan requests**. Choose a request for the current workspace. The
+dialog shows the requesting client, each proposed change and the expiry
+time. You can approve all changes or approve them one at a time. You can
+also deny, cancel, or withdraw a request. Use Escape to close the dialog.
+Your decisions apply to the request and saved revisions shown in the
+dialog.

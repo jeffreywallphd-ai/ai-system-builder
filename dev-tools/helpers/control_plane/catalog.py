@@ -168,6 +168,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-plan-approval.ts",
             "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
             "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts",
         ),
@@ -267,6 +268,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "apps/thin-client/src/App.tsx",
+            "apps/thin-client/src/pages/SettingsPage.tsx",
             "apps/thin-client/src/components/layout/AppShell.tsx",
             "apps/thin-client/src/pages/SystemBuilderPage.tsx",
             "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
@@ -274,8 +276,12 @@ PUBLISHED_FORM_CHECKS = {
             "apps/thin-client/src/features/workspace/hooks/useManagedBrowserTakeover.ts",
             "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
             "apps/thin-client/src/features/workspace/api/managedBrowserConsentClient.ts",
+            "apps/thin-client/src/features/workspace/api/tests/managed-browser-plan-approval.unit.test.ts",
             "apps/thin-client/README.md",
             "apps/desktop/src/renderer/App.tsx",
+            "apps/desktop/src/renderer/features/settings/components/HeadlessPlanApprovals.tsx",
+            "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx",
+            "modules/ui/shared/headless/HeadlessPlanApprovalDialog.tsx",
             "modules/ui/shared/takeover/PresentedWindowResource.tsx",
         ),
         "command": (
@@ -284,6 +290,8 @@ PUBLISHED_FORM_CHECKS = {
             "apps/thin-client/src/features/workspace/tests/workspace-gate.unit.test.tsx",
             "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
             "apps/desktop/src/renderer/tests/desktop-window-takeover.ui.test.tsx",
+            "apps/thin-client/src/features/workspace/api/tests/managed-browser-plan-approval.unit.test.ts",
+            "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx",
         ),
     },
     "managed-headless-agent-window": {

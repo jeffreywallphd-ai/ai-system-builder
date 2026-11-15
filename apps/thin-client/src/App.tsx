@@ -186,7 +186,9 @@ function WorkspaceAwareThinClientApp() {
       case "security":
         return <SecurityPage />;
       case "settings":
-        return <SettingsPage />;
+        return <SettingsPage planApprovals={takeover.planApprovals && workspace.activeWorkspace ? {
+          ...takeover.planApprovals, workspaceName:workspace.activeWorkspace.displayName,
+        } : undefined} />;
       case "home":
         return <HomePage onNavigate={setRoute} />;
       default:

@@ -1,11 +1,20 @@
 import {useMemo} from "react";
 import {PageDashboardHeader,TransientNotificationPublisher} from "../../../../modules/ui/shared";
 import {SettingField} from "../../../../modules/ui/shared/settings";
+import {HeadlessPlanApprovalDialog, type HeadlessPlanApprovalClient} from "../../../../modules/ui/shared/headless/HeadlessPlanApprovalDialog";
+import type {WorkspaceId} from "../../../../modules/contracts/workspace";
 import {createApiApplicationSettingsClient} from "../features/settings/api/apiApplicationSettingsClient";
 import {useThinClientSettings} from "../features/settings/hooks/useThinClientSettings";
 import {ThinClientPageDashboard} from "../features/page-dashboard/ThinClientPageDashboard";
 
-export function SettingsPage() {
+type SettingsProps = {readonly planApprovals?: {
+  readonly workspaceId: WorkspaceId;
+  readonly workspaceName: string;
+  readonly documentId: string;
+  readonly client: HeadlessPlanApprovalClient;
+}};
+
+export function SettingsPage({planApprovals}:SettingsProps = {}) {
   const client=useMemo(()=>createApiApplicationSettingsClient(),[]),settings=useThinClientSettings(client);
   const busy=settings.busy!==undefined,disabled=settings.loading||busy||!settings.ready;
   return <section className="ui-panel ui-stack ui-stack--md settings-page">
@@ -17,6 +26,10 @@ export function SettingsPage() {
     <TransientNotificationPublisher message={settings.successMessage} title="Settings updated" tone="success" source="Settings"/>
     <TransientNotificationPublisher message={settings.errorMessage} title="Settings need attention" tone="error" source="Settings"/>
     <div className="ui-stack ui-stack--md">
+      {planApprovals ? <section className="settings-field ui-stack ui-stack--sm" aria-label="Automation plans">
+        <HeadlessPlanApprovalDialog key={planApprovals.documentId} workspaceId={planApprovals.workspaceId}
+          workspaceName={planApprovals.workspaceName} client={planApprovals.client}/>
+      </section> : null}
       <section className="settings-field ui-stack ui-stack--sm" aria-label="Server">
         <header className="ui-stack ui-stack--sm"><h3>Server</h3><p className="ui-text-muted">Restart the server process after changing settings that are applied at startup.</p></header>
         <button className="ui-button" type="button" disabled={disabled} onClick={()=>void settings.restartServer()}>{settings.busy==="restart"?"Restarting...":"Restart server"}</button>
