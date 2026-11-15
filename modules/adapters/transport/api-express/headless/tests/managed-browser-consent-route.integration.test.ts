@@ -8,7 +8,7 @@ import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_
 import { createOrganizationId } from "../../../../../contracts/organization";
 import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
   MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../../contracts/headless/managed-browser-presentation";
-import { MANAGED_BROWSER_PLAN_APPROVAL_PATH } from "../../../../../contracts/headless/managed-browser-plan-approval";
+import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH } from "../../../../../contracts/headless/managed-browser-plan-approval";
 import { createWorkspaceId } from "../../../../../contracts/workspace";
 import { resolveApiRoutePolicy } from "../../security/apiRouteSecurityPolicy";
 import { setExpressAuthContext } from "../../security/expressAuthContext";
@@ -57,6 +57,7 @@ test("exact browser origin, purposeful authentication, framing and live request 
   let planEnabled = false;
   let planReplyCurrent = true;
   let planApprovalCalls = 0;
+  const approvalChannels: string[] = [];
   const planReference = {workspaceId, registeredClientId:randomUUID(), fingerprint:"b".repeat(64), expiresAt:Date.now() + 60_000};
   let consentReply: typeof grant | undefined;
   const entered = Promise.withResolvers<void>();
@@ -83,8 +84,9 @@ test("exact browser origin, purposeful authentication, framing and live request 
     },
     async revoke() { return false; },
     disconnect() { registrationRetired = true; return true; },
-    ...(planEnabled ? {async planApproval(document, input) {
+    ...(planEnabled ? {async planApproval(document, input, _current, channel) {
       planApprovalCalls++;
+      approvalChannels.push(channel);
       if (document.proof !== proof || input.operation !== "list") return;
       return {value:[planReference], canPublish:() => planReplyCurrent};
     }} : {}),
@@ -141,7 +143,10 @@ test("exact browser origin, purposeful authentication, framing and live request 
     const plans = {operation:"list", document:target};
     const planPost = (body:unknown, headers:Record<string,string> = proofHeader) =>
       post(body, headers, "", MANAGED_BROWSER_PLAN_APPROVAL_PATH);
+    const chatPost = (body:unknown, headers:Record<string,string> = proofHeader) =>
+      post(body, headers, "", MANAGED_BROWSER_PLAN_CHAT_PATH);
     assert.equal((await planPost(plans)).status, 404);
+    assert.equal((await chatPost(plans)).status, 404);
     planEnabled = true;
     assert.equal((await planPost(plans, {...proofHeader, origin:"https://other.invalid"})).status, 403);
     assert.equal((await planPost(plans, {...proofHeader, authorization:"fixture-agent"})).status, 403);
@@ -151,7 +156,13 @@ test("exact browser origin, purposeful authentication, framing and live request 
     assert.equal(planApprovalCalls, 0);
     const readyForPlans = await post({operation:"observe", document:target}, proofHeader);
     assert.equal(readyForPlans.headers.get("x-aisb-headless-plan-approvals"), "1");
+    assert.equal(readyForPlans.headers.get("x-aisb-headless-plan-chat"), "1");
     assert.deepEqual(await (await planPost(plans)).json(), [planReference]);
+    assert.equal((await chatPost(plans, {...proofHeader, authorization:"fixture-agent"})).status, 403);
+    assert.equal((await chatPost(plans, {})).status, 403);
+    assert.equal((await chatPost({...plans, channel:"app-popup"})).status, 400);
+    assert.deepEqual(await (await chatPost(plans)).json(), [planReference]);
+    assert.deepEqual(approvalChannels, ["app-popup", "authenticated-chat"]);
     planReplyCurrent = false;
     const retiredPlanReply = await planPost(plans);
     assert.equal(retiredPlanReply.status, 403);

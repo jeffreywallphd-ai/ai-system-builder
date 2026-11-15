@@ -3,7 +3,7 @@ import {expect, test, vi} from "vitest";
 
 import {parseHeadlessBuildPlanProposal, type HeadlessHostIncarnationId} from "../../../../../../../modules/contracts/headless";
 import {MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH} from "../../../../../../../modules/contracts/headless/managed-browser-consent";
-import {MANAGED_BROWSER_PLAN_APPROVAL_PATH} from "../../../../../../../modules/contracts/headless/managed-browser-plan-approval";
+import {MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH} from "../../../../../../../modules/contracts/headless/managed-browser-plan-approval";
 import {createWorkspaceId} from "../../../../../../../modules/contracts/workspace";
 import {createManagedBrowserConsentClient} from "../managedBrowserConsentClient";
 
@@ -32,6 +32,19 @@ test("a signed-in tab uses the exact plan route and document proof", async () =>
   expect(options).toMatchObject({method:"POST",credentials:"same-origin",mode:"same-origin",cache:"no-store",redirect:"error",
     headers:{"Content-Type":"application/json","x-organization-id":"fixture-org",[MANAGED_BROWSER_DOCUMENT_HEADER]:tab.proof}});
   expect(JSON.parse(options!.body as string)).toEqual({operation:"list",document});
+});
+
+test("the signed-in chat uses its own fixed route with the same live browser proof", async () => {
+  const transport = vi.fn<typeof fetch>()
+    .mockResolvedValueOnce(response({status:"ready"}, {"X-AISB-Headless-Plan-Approvals":"1", "X-AISB-Headless-Plan-Chat":"1"}))
+    .mockResolvedValueOnce(response([{...selection,expiresAt}]));
+  const client = createManagedBrowserConsentClient("fixture-org",transport);
+  expect(await client.observe(tab,signal)).toMatchObject({status:"ready",planApprovals:true,planChat:true});
+  expect(await client.listPlanApprovals(tab,signal,true)).toEqual([{...selection,expiresAt}]);
+  const [path,request] = transport.mock.calls[1]!;
+  expect(path).toBe(MANAGED_BROWSER_PLAN_CHAT_PATH);
+  expect(request!.headers).toMatchObject({[MANAGED_BROWSER_DOCUMENT_HEADER]:tab.proof});
+  expect(JSON.parse(request!.body as string)).toEqual({operation:"list",document});
 });
 
 test("foreign or altered views and receipts that disagree with the displayed decision are refused", async () => {

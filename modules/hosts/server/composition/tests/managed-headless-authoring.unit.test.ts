@@ -266,6 +266,23 @@ test("managed edits and retry receipts require current workspace permission with
       assert.equal(after.value.state.revision, 2);
       assert.equal(after.value.state.approvedSteps, 1);
       assert.equal((await systems.useCases.list.execute({workspaceId})).length, 1);
+
+      const chat = (request:Parameters<typeof approval>[0]) => approval(request, caller, () => live, () => true, "authenticated-chat");
+      const chatView = await chat({operation:"open", document, selection});
+      assert.ok(chatView.ok && typeof chatView.value === "object" && "viewId" in chatView.value);
+      assert.notEqual(chatView.value.viewId, after.value.viewId);
+      const popupChoice = {...second, decision:{...second.decision, viewId:after.value.viewId}};
+      const chatChoice = {...second, decision:{...second.decision, viewId:chatView.value.viewId}};
+      assert.deepEqual(await chat(popupChoice), {ok:false, code:"forbidden"});
+      assert.deepEqual(await invoke(chatChoice), {ok:false, code:"forbidden"});
+      const outcomes = await Promise.all([chat(chatChoice), invoke(popupChoice)]);
+      assert.equal(outcomes.filter(outcome => outcome.ok).length, 1);
+      const latest = await open();
+      assert.ok(latest.ok && typeof latest.value === "object" && "viewId" in latest.value);
+      assert.equal(latest.value.state.revision, 3);
+      assert.equal(latest.value.state.approvedSteps, 2);
+      assert.equal(latest.value.state.status, "approved");
+      assert.equal((await systems.useCases.list.execute({workspaceId})).length, 1);
     });
 
     await t.test("managed HTTP approval hides replies that expire during delivery while retaining the committed decision", async () => {

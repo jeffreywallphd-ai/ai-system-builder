@@ -13,6 +13,7 @@ import type { WorkspaceId } from "../../../contracts/workspace";
 import type { ManagedHeadlessBrowserIdentity } from "../security/resolveManagedHeadlessClientPolicy";
 import { createManagedHeadlessBrowserDocuments } from "./createManagedHeadlessBrowserDocuments";
 import type { ManagedBrowserPlanApprovalRequest } from "../../../contracts/headless/managed-browser-plan-approval";
+import type { HeadlessPlanReviewChannel } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import type { composeManagedHeadlessPlanApprovals } from "./composeManagedHeadlessPlanApprovals";
 import {createManagedBrowserPresentation} from "./createManagedBrowserPresentation";
 import type { ManagedHeadlessAuthoringRegistration } from "./composeManagedHeadlessAuthoring";
@@ -111,10 +112,11 @@ export function composeManagedBrowserConsent(options: {
 
   return {
     ...(options.planApprovals ? {
-      async planApproval(document: AuthenticatedDocument, request: ManagedBrowserPlanApprovalRequest, current: () => boolean) {
+      async planApproval(document: AuthenticatedDocument, request: ManagedBrowserPlanApprovalRequest, current: () => boolean,
+        channel: HeadlessPlanReviewChannel = "app-popup") {
         const authenticated = await authenticate(document, current);
         if (!authenticated?.isCurrent() || !current()) return;
-        const result = await options.planApprovals?.(request, authenticated.owner, authenticated.isCurrent, current);
+        const result = await options.planApprovals?.(request, authenticated.owner, authenticated.isCurrent, current, channel);
         if (!result?.ok || !authenticated.isCurrent() || !current()) return;
         const publish = "canPublish" in result ? result.canPublish : undefined;
         return {value:result.value, canPublish:() => authenticated.isCurrent() && current() && (!publish || publish())};

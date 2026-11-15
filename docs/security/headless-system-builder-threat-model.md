@@ -192,7 +192,7 @@ registration can request plan review only when the host provides that
 capability. It carries no direct editing, conversation or window-control
 grant. The desktop host keeps the mode unavailable until it wires the plan
 route and its policy.
-The optional desktop connector route accepts only proposal submission and
+The optional desktop plan-review route accepts only proposal submission and
 status reads with the dedicated grant. It rechecks the registered client and
 workspace before dispatch and checks both current authority and the plan
 deadline before sending a successful result. It bounds the body and validates
@@ -203,37 +203,54 @@ resolve exact immutable saved sources inside the owned write. An authorized
 retry can read its original proposal even after a source changes. Later
 execution still needs a current revision check. Desktop startup connects the
 route and app approval service only when it has the platform transaction owner.
-The desktop MCP plan-review mode offers proposal and status tools through
-the pinned connector. It omits direct editing, conversation sending, and
-window control when the launcher selects this mode. The server still checks
-the dedicated registration, exact proposal and current workspace policy.
+The Desktop MCP plan-review mode uses the pinned connector to submit and
+check plans and run the next approved step. Direct editing, conversation
+sending, and window control require a separate grant. The Desktop host
+checks the dedicated registration, exact proposal and current workspace
+policy. Its SQLite owner serializes the successful reply with current
+approval and workspace access.
 
 The managed host optionally accepts proposals and reads their status through
 a third exact issuer-verified OIDC client registration. Startup rejects
 duplicate identifiers. The server recognizes the configured client from
 the verified token's signed client ID or authorized party before applying
-organization policy. That client is confined to the exact headless read
-and plan-review routes even when the signed token omits the access-token
-type. Plan requests still require an unambiguous typed access token.
+organization policy. That client is confined to exact headless read,
+plan-review and plan-step routes even when the signed token omits the
+access-token type. Plan requests still require an unambiguous typed access
+token.
 Ordinary edit, approval, and window routes do not
 accept this credential even when its user has a writer role. The authoring and
 browser registrations cannot stage a proposal for the plan client.
-The managed plan route accepts only a
-bounded passive proposal or fingerprint. The owning transaction rechecks
+The managed plan-review route accepts only a bounded passive proposal or
+fingerprint. The owning transaction rechecks
 organization membership, the active workspace and exact saved revisions
 before inserting a proposal. The result contains only the exact fingerprint,
 approval progress and expiration. Proposal submission cannot record a human
 decision or execute a change.
 
-The managed browser approval route is available only on the configured
-HTTPS origin to the separate verified browser registration. It reuses the
-live per-document proof and verifies organization, principal, active
-workspace, and current membership in the plan transaction. Each document
-holds at most one open approval view. The view binds the exact requesting
-client, plan fingerprint and displayed revision. A decision consumes that
-view once. Reopening, closing the view, losing document access or changing
-the stored revision denies a late decision. The route invokes the same plan
-state transitions as Desktop and carries no operation payload to execute.
+The managed plan-step route accepts the exact plan fingerprint, approval
+revision and next step number. It uses only the saved operation. The
+owning transaction saves the change and its retry receipt together. Before
+sending a successful reply, PostgreSQL holds point-read locks on the
+permission and approval records. The server sends at most one reply for
+that request. A failed or withdrawn reply does not authorize a new key.
+
+The managed browser has separate fixed approval routes for its popup and
+signed-in approval chat. Both require the configured HTTPS origin, a
+verified browser registration, and a live proof tied to the exact browser
+document and credential. The route fixes the channel internally. Text from
+the chat client or model has no approval authority. The plan transaction
+checks the organization, signed-in principal, active workspace, and
+current membership.
+
+Each browser document can hold one open approval view per channel. The
+global limit of 32 views covers both channels. A view binds the exact
+channel, requesting client, plan fingerprint and displayed revision. A
+decision consumes its view once. Reopening or closing that view, losing
+document access, expiry, or a change to the saved revision denies a late
+decision. Both routes use the same saved approval and its revision. A
+decision in one channel can retire a stale choice in the other. The
+browser routes carry no operation payload to execute.
 The internal operation store partitions receipts by verified organization and
 hashes the complete principal, client, workspace, operation and key scope.
 Receipts hold a fingerprint and the minimum saved revision reference; change

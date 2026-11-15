@@ -12,6 +12,7 @@ type SettingsProps = {readonly planApprovals?: {
   readonly workspaceName: string;
   readonly documentId: string;
   readonly client: HeadlessPlanApprovalClient;
+  readonly chatClient?: HeadlessPlanApprovalClient;
 }};
 
 export function SettingsPage({planApprovals}:SettingsProps = {}) {
@@ -29,6 +30,8 @@ export function SettingsPage({planApprovals}:SettingsProps = {}) {
       {planApprovals ? <section className="settings-field ui-stack ui-stack--sm" aria-label="Automation plans">
         <HeadlessPlanApprovalDialog key={planApprovals.documentId} workspaceId={planApprovals.workspaceId}
           workspaceName={planApprovals.workspaceName} client={planApprovals.client}/>
+        {planApprovals.chatClient ? <HeadlessPlanApprovalDialog key={planApprovals.documentId + "-chat"} surface="chat"
+          workspaceId={planApprovals.workspaceId} workspaceName={planApprovals.workspaceName} client={planApprovals.chatClient}/> : null}
       </section> : null}
       <section className="settings-field ui-stack ui-stack--sm" aria-label="Server">
         <header className="ui-stack ui-stack--sm"><h3>Server</h3><p className="ui-text-muted">Restart the server process after changing settings that are applied at startup.</p></header>

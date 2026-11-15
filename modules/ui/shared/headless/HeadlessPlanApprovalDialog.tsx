@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { HeadlessPlanReviewDecisionChoice } from "../../../contracts/headless";
 import type {
   DesktopPlanApprovalDecision, DesktopPlanApprovalListEntry, DesktopPlanApprovalSelection, DesktopPlanApprovalView,
@@ -24,10 +24,20 @@ function dismiss(client: HeadlessPlanApprovalClient, view: DesktopPlanApprovalVi
   if (view) void Promise.resolve().then(() => client.dismiss(view.viewId)).catch(() => {});
 }
 
-export function HeadlessPlanApprovalDialog({ workspaceId, workspaceName, client }: {
+function decisionMessage(decision: HeadlessPlanReviewDecisionChoice): string {
+  switch (decision.kind) {
+    case "approve": return decision.mode === "whole-plan" ? "Approve all listed changes." : "Approve change " + decision.step + ".";
+    case "deny": return "Deny the request.";
+    case "cancel": return "Cancel the request.";
+    case "revoke": return "Withdraw approval.";
+  }
+}
+
+export function HeadlessPlanApprovalDialog({ workspaceId, workspaceName, client, surface = "popup" }: {
   readonly client: HeadlessPlanApprovalClient;
   readonly workspaceId: WorkspaceId;
   readonly workspaceName: string;
+  readonly surface?: "popup" | "chat";
 }) {
   const [screen, setScreen] = useState<Screen>({ kind: "closed" });
   const [notice, setNotice] = useState("");
@@ -35,6 +45,13 @@ export function HeadlessPlanApprovalDialog({ workspaceId, workspaceName, client 
   const generation = useRef(0);
   const waitForDecision = useRef(false);
   const issued = useRef<DesktopPlanApprovalView | undefined>(undefined);
+  const [reply, setReply] = useState("");
+  const chatTrigger = useRef<HTMLButtonElement>(null);
+  const chatHeading = useRef<HTMLHeadingElement>(null);
+  const chatOpen = surface === "chat" && screen.kind !== "closed";
+  useEffect(() => {
+    if (chatOpen) chatHeading.current?.focus();
+  }, [chatOpen]);
   useEffect(() => () => {
     generation.current++;
     dismiss(client, issued.current);
@@ -48,6 +65,7 @@ export function HeadlessPlanApprovalDialog({ workspaceId, workspaceName, client 
     waitForDecision.current = false;
     setBusy(false);
     setScreen({ kind: "closed" });
+    if (surface === "chat") chatTrigger.current?.focus();
   }
 
   async function loadList() {
@@ -87,6 +105,7 @@ export function HeadlessPlanApprovalDialog({ workspaceId, workspaceName, client 
       return;
     }
     const ticket = ++generation.current;
+    if (surface === "chat") setReply(decisionMessage(decision));
     waitForDecision.current = true;
     setBusy(true);
     const state = await Promise.resolve().then(() => {
@@ -116,13 +135,12 @@ export function HeadlessPlanApprovalDialog({ workspaceId, workspaceName, client 
     else await loadList();
   }
 
-  return <>
-    <button type="button" onClick={() => { setNotice(""); void loadList(); }}>Review plan requests</button>
-    <ModalDialog open={screen.kind !== "closed"} title="Review plan requests" onClose={close}
-      closeLabel="Close plan review">
+  const content = (
       <div className="ui-stack ui-stack--sm">
         <p>Workspace: {workspaceName}</p>
-        {notice ? <p role="status">{notice}</p> : null}
+        {chatOpen ? <p className="ui-text-muted">Open a request from the AI client. Use the approval controls to send your decision.</p> : null}
+        {chatOpen && reply ? <p><strong>You</strong> {reply}</p> : null}
+        {notice ? <p role="status">{chatOpen ? <strong>AI System Builder </strong> : null}<span>{notice}</span></p> : null}
         {busy ? <p role="status">Recording your decision…</p> : null}
         {screen.kind === "loading" ? <p role="status">Loading requests…</p> : null}
         {screen.kind === "unavailable" ? <>
@@ -132,7 +150,7 @@ export function HeadlessPlanApprovalDialog({ workspaceId, workspaceName, client 
         {screen.kind === "list" ? <>
           {screen.entries.length ? <ul>{screen.entries.map(entry =>
             <li key={entry.registeredClientId + entry.fingerprint}>
-              <button type="button" onClick={() => { setNotice(""); void loadView({
+              <button type="button" onClick={() => { setNotice(""); setReply(""); void loadView({
                 workspaceId: entry.workspaceId, registeredClientId: entry.registeredClientId, fingerprint: entry.fingerprint,
               }); }}>
                 Review request {entry.fingerprint.slice(0, 8)} from Client {entry.registeredClientId.slice(0, 8)}
@@ -143,6 +161,23 @@ export function HeadlessPlanApprovalDialog({ workspaceId, workspaceName, client 
         {screen.kind === "view" ? <PlanApprovalDetails key={screen.view.viewId} view={screen.view} busy={busy}
           onBack={() => { setNotice(""); void loadList(); }} decide={choice => void decide(screen.view, choice)} /> : null}
       </div>
+  );
+  const open = () => { setNotice(""); setReply(""); void loadList(); };
+  if (surface === "chat") return <>
+    <button type="button" ref={chatTrigger} aria-expanded={chatOpen} onClick={chatOpen ? close : open}>
+      {chatOpen ? "Hide plan approval chat" : "Open plan approval chat"}
+    </button>
+    {chatOpen ? <section className="ui-panel ui-stack ui-stack--sm" aria-label="Plan approval chat">
+      <h3 ref={chatHeading} tabIndex={-1}>Plan approval chat</h3>
+      {content}
+      <button type="button" onClick={close}>Close plan approval chat</button>
+    </section> : null}
+  </>;
+  return <>
+    <button type="button" onClick={open}>Review plan requests</button>
+    <ModalDialog open={screen.kind !== "closed"} title="Review plan requests" onClose={close}
+      closeLabel="Close plan review">
+      {content}
     </ModalDialog>
   </>;
 }
@@ -155,6 +190,7 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
 }) {
   const { state } = view;
   const [mode, setMode] = useState<"whole-plan" | "each-change">(state.mode ?? "each-change");
+  const methodName = useId();
   const isPending = state.status === "pending";
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
@@ -179,9 +215,9 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
     {isPending ? <>
       {state.mode === undefined ? <fieldset disabled={busy}>
         <legend>Approval method</legend>
-        <label><input type="radio" name="plan-approval-method" checked={mode === "each-change"}
+        <label><input type="radio" name={methodName} checked={mode === "each-change"}
           onChange={() => setMode("each-change")} /> Approve each change separately</label>
-        <label><input type="radio" name="plan-approval-method" checked={mode === "whole-plan"}
+        <label><input type="radio" name={methodName} checked={mode === "whole-plan"}
           onChange={() => setMode("whole-plan")} /> Approve all listed changes</label>
       </fieldset> : <p>{state.approvedSteps} of {state.stepCount} changes approved.</p>}
       <button type="button" disabled={busy} onClick={() => decide(approval)}>

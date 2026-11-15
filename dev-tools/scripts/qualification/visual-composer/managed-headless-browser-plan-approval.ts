@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {createHash, randomUUID} from "node:crypto";
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
-import {chromium, type Browser} from "@playwright/test";
+import {chromium, type Browser, type Locator} from "@playwright/test";
 import {Client} from "@modelcontextprotocol/client";
 import {StdioClientTransport} from "@modelcontextprotocol/client/stdio";
 
@@ -95,7 +95,11 @@ async function main() {
     assert.equal(await trigger.evaluate(button => button === document.activeElement),true);
     checks.modal_layout_and_keyboard = true;
 
-    async function propose(name:string) {
+    async function openProposal(fingerprint:string, panel:Locator) {
+      await panel.getByRole("button",{name:new RegExp("^Review request " + fingerprint.slice(0,8) + " from Client ")}).click();
+      await panel.getByRole("list",{name:"Requested changes"}).waitFor();
+    }
+    async function propose(name:string, panel = dialog, activate = () => trigger.click()) {
       const steps = [1,2].map(index => ({operation:"systems.create",name:`Synthetic ${name} ${index}`,
         templateId:"reference.secured-data-review@1.0.0",idempotencyKey:randomUUID()}));
       const parsed = parseHeadlessBuildPlanProposal({...scope,steps},hostIncarnationId);
@@ -107,10 +111,9 @@ async function main() {
       const reply = await call("aisb_request_build_plan_approval",{...scope,fingerprint,steps});
       assert.equal(reply.ok,true);
       assert.equal(reply.value.status,"pending");
-      await trigger.click();
-      await dialog.getByRole("button",{name:new RegExp("^Review request " + fingerprint.slice(0,8) + " from Client ")}).click();
-      await dialog.getByRole("list",{name:"Requested changes"}).waitFor();
-      for (const step of steps) await dialog.getByText(step.name,{exact:false}).waitFor();
+      await activate();
+      await openProposal(fingerprint,panel);
+      for (const step of steps) await panel.getByText(step.name,{exact:false}).waitFor();
       return fingerprint;
     }
     async function status(fingerprint:string, expected:string, steps:number) {
@@ -193,6 +196,51 @@ async function main() {
     assert.deepEqual(await run(individual,approved.revision,1),uncertain);
     assert.deepEqual((await snapshot()).body,after.body);
     checks.withdrawal_preserves_saves_and_closes_replay = true;
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({state:"hidden"});
+
+    const chatTrigger = page.getByRole("button",{name:"Open plan approval chat",exact:true});
+    const chat = page.getByRole("region",{name:"Plan approval chat",exact:true});
+    const openChat = () => chatTrigger.click();
+    stage = "chat-whole-plan-and-popup-withdrawal";
+    const chatWhole = await propose("chat whole plan",chat,openChat);
+    await chat.getByRole("radio",{name:"Approve all listed changes"}).check();
+    await chat.getByRole("button",{name:"Approve all changes",exact:true}).click();
+    await chat.getByText("All 2 changes are approved.",{exact:true}).waitFor();
+    await status(chatWhole,"approved",2);
+    await chat.getByRole("button",{name:"Close plan approval chat",exact:true}).click();
+    assert.equal(await chatTrigger.evaluate(button => button === document.activeElement),true);
+    await trigger.click();
+    await openProposal(chatWhole,dialog);
+    await dialog.getByRole("button",{name:"Withdraw approval",exact:true}).click();
+    await dialog.getByText("Approval withdrawn.",{exact:true}).waitFor();
+    await status(chatWhole,"revoked",2);
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({state:"hidden"});
+    checks.chat_whole_plan_and_popup_withdrawal = true;
+
+    stage = "chat-individual-approval-and-stale-cross-channel-choice";
+    const chatEach = await propose("chat individual change",chat,openChat);
+    await chat.getByRole("button",{name:"Approve change 1",exact:true}).click();
+    await chat.getByText("1 of 2 changes approved.",{exact:true}).waitFor();
+    const chatPartial = await status(chatEach,"pending",1);
+    assert.deepEqual(await run(chatEach,chatPartial.revision,2),uncertain);
+    const firstFromChat = await run(chatEach,chatPartial.revision,1);
+    assert.equal(firstFromChat.value.kind,"committed");
+    await trigger.click();
+    await openProposal(chatEach,dialog);
+    await dialog.getByRole("button",{name:"Approve change 2",exact:true}).click();
+    await dialog.getByText("All 2 changes are approved.",{exact:true}).waitFor();
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({state:"hidden"});
+    await chat.getByRole("button",{name:"Approve change 2",exact:true}).click();
+    await chat.getByText("The app could not confirm your decision. Check the current request before trying again.",
+      {exact:true}).waitFor();
+    const chatApproved = await status(chatEach,"approved",2);
+    assert.equal(chatApproved.revision,chatPartial.revision + 1);
+    assert.equal((await run(chatEach,chatApproved.revision,2)).value.kind,"committed");
+    assert.equal((await snapshot()).body.value.systems.length,after.body.value.systems.length + 2);
+    checks.chat_individual_and_stale_cross_channel_no_duplicate = true;
     passed = true;
   } catch {
     // Report only fixed stages and check outcomes.

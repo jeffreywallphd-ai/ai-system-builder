@@ -296,3 +296,9 @@ time. You can approve all changes or approve them one at a time. You can
 also deny, cancel, or withdraw a request. Use Escape to close the dialog.
 Your decisions apply to the request and saved revisions shown in the
 dialog.
+
+Select **Open plan approval chat** in Settings to review the same requests
+as a conversation. Use the controls to send a decision. The app displays
+your choice and whether it recorded the decision. A decision made here
+also applies in the popup. Refresh the request if another view has already
+changed it.

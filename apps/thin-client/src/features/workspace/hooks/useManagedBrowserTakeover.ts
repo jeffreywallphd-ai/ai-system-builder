@@ -18,9 +18,9 @@ type Client = ReturnType<typeof createManagedBrowserConsentClient>;
 type Tab = Extract<Awaited<ReturnType<Client["register"]>>, {status: "registered"}>["tab"];
 type Scope = {readonly client: Client; readonly tab: Tab;
   readonly signal: AbortSignal; readonly isCurrent: () => boolean; readonly sameBearer: () => boolean;
-  delivery: boolean; planApprovals?: HeadlessPlanApprovalClient};
-type PlanApprovals = {readonly workspaceId: WorkspaceId; readonly documentId: string;
-  readonly client: HeadlessPlanApprovalClient; readonly isCurrent: () => boolean};
+  delivery: boolean; planApprovals?: ApprovalClients};
+type ApprovalClients = {readonly client: HeadlessPlanApprovalClient; readonly chatClient?: HeadlessPlanApprovalClient};
+type PlanApprovals = ApprovalClients & {readonly workspaceId: WorkspaceId; readonly documentId: string; readonly isCurrent: () => boolean};
 const presentationViews = {
   "open-system": "system", "select-component": "component",
   "show-validation": "validation", "show-run": "run", "show-artifact": "artifact",
@@ -101,7 +101,7 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
       timer = setTimeout(() => {timer = undefined; attach();}, retryDelay);
       retryDelay = Math.min(MAX_RETRY_MS, retryDelay * 2);
     }
-    function updatePlanApprovals(scope: Scope, enabled: boolean) {
+    function updatePlanApprovals(scope: Scope, enabled: boolean, chatEnabled: boolean) {
       if (!enabled) {
         if (scope.planApprovals) {
           scope.planApprovals = undefined;
@@ -109,7 +109,7 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
         }
         return;
       }
-      if (scope.planApprovals) return;
+      if (scope.planApprovals && Boolean(scope.planApprovals.chatClient) === chatEnabled) return;
       const isCurrent = () => currentTab.current === scope && scope.isCurrent() && scope.planApprovals === port;
       const call = async <T,>(send: () => Promise<T>) => {
         if (!isCurrent()) return;
@@ -117,14 +117,15 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
         if (isCurrent()) return result;
       };
       const {tab, signal} = scope;
-      const port: HeadlessPlanApprovalClient = {
-        list: id => id === tab.target.workspaceId ? call(() => client.listPlanApprovals(tab, signal)) : undefined,
-        open: selection => call(() => client.openPlanApproval(tab, selection, signal)),
-        decide: (decision, displayed) => call(() => client.decidePlanApproval(tab, decision, displayed, signal)),
-        dismiss: viewId => call(() => client.dismissPlanApproval(tab, viewId, signal)),
-      };
+      const getPort = (chat: boolean): HeadlessPlanApprovalClient => ({
+        list: id => id === tab.target.workspaceId ? call(() => client.listPlanApprovals(tab, signal, chat)) : undefined,
+        open: selection => call(() => client.openPlanApproval(tab, selection, signal, chat)),
+        decide: (decision, displayed) => call(() => client.decidePlanApproval(tab, decision, displayed, signal, chat)),
+        dismiss: viewId => call(() => client.dismissPlanApproval(tab, viewId, signal, chat)),
+      });
+      const port = {client:getPort(false), chatClient:chatEnabled ? getPort(true) : undefined};
       scope.planApprovals = port;
-      setPlanApprovals({workspaceId:tab.target.workspaceId, documentId:tab.target.uiIncarnationId, client:port, isCurrent});
+      setPlanApprovals({workspaceId:tab.target.workspaceId, documentId:tab.target.uiIncarnationId, ...port, isCurrent});
     }
     function attach() {
       if (!live || !pageActive.current || document.hidden || attachment || timer !== undefined) return;
@@ -149,7 +150,7 @@ export function useManagedBrowserTakeover(workspaceId: string | undefined, organ
           if (!valid() || currentTab.current !== scope) return;
           if (state?.status === "ready") {
             retryDelay = RETRY_MS;
-            updatePlanApprovals(scope, state.planApprovals);
+            updatePlanApprovals(scope, state.planApprovals, state.planChat === true);
             const deliveryWasEnabled = scope.delivery;
             scope.delivery = state.delivery;
             if (deliveryWasEnabled && !scope.delivery) controller.revoke();

@@ -1,6 +1,6 @@
 import type { OrganizationRole } from "../../../../contracts/organization";
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_OBSERVE_PATH } from "../../../../contracts/headless/managed-browser-consent";
-import { MANAGED_BROWSER_PLAN_APPROVAL_PATH } from "../../../../contracts/headless/managed-browser-plan-approval";
+import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH } from "../../../../contracts/headless/managed-browser-plan-approval";
 import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
   MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../contracts/headless/managed-browser-presentation";
 import { MANAGED_HEADLESS_AGENT_WINDOW_PATH } from "../../../../contracts/headless/managed-headless-window";
@@ -39,6 +39,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   [`POST ${MANAGED_BROWSER_CONSENT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_BROWSER_OBSERVE_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_BROWSER_PLAN_APPROVAL_PATH}`, { public: false, scopes: ["workspace:read", "asset:read", "asset:write"] }],
+  [`POST ${MANAGED_BROWSER_PLAN_CHAT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read", "asset:write"] }],
   [`POST ${MANAGED_BROWSER_DELIVERY_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_BROWSER_ACKNOWLEDGE_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
   [`POST ${MANAGED_BROWSER_CONTEXT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],

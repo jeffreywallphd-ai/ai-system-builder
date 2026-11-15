@@ -7,6 +7,7 @@ import { readHeadlessPlanReviewAgentResult } from "./headless-plan-review-wire";
 import { isUiControlId, readUiControlWindow, type UiControlWindowTarget } from "./ui-control-authority";
 
 export const MANAGED_BROWSER_PLAN_APPROVAL_PATH = "/api/headless/browser/plan-approvals";
+export const MANAGED_BROWSER_PLAN_CHAT_PATH = "/api/headless/browser/plan-chat";
 export const MANAGED_BROWSER_PLAN_APPROVAL_MAX_RESULT_BYTES = 64 * 1_024;
 
 export type ManagedBrowserPlanApprovalRequest =

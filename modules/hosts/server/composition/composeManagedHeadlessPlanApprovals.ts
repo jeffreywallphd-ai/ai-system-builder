@@ -4,7 +4,7 @@ import type { StructuredDocumentStore } from "../../../adapters/persistence/shar
 import { createStructuredHeadlessPlanReviewRepository, listStructuredHeadlessPlanReviews } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
-import type { HeadlessPlanReviewTarget } from "../../../application/ports/system-builder/headless-build-plan-review.port";
+import type { HeadlessPlanReviewChannel, HeadlessPlanReviewTarget } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import { AuthorizeWorkspaceOperationService, createOrganizationAuthorizationPolicy } from "../../../application/services/security";
 import { HeadlessBuildPlanReviewUseCase } from "../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
 import type { TenantPlacementConfig } from "../../../contracts/config";
@@ -69,8 +69,8 @@ export function composeManagedHeadlessPlanApprovals(options: {
   }
 
   return async function execute(request: ManagedBrowserPlanApprovalRequest, identity: Identity,
-    documentCurrent: () => boolean, responseCurrent: () => boolean) {
-    const documentKey = request.document.windowId;
+    documentCurrent: () => boolean, responseCurrent: () => boolean, channel: HeadlessPlanReviewChannel = "app-popup") {
+    const documentKey = `${request.document.windowId}:${channel}`;
     const {workspaceId} = request.document;
     const current = () => {
       const context = contexts.getCurrentOrganizationContext();
@@ -148,7 +148,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
       const outcome = await new HeadlessBuildPlanReviewUseCase(store, now).decide({
         fingerprint:selection.fingerprint, expectedRevision:request.decision.expectedRevision, decision:request.decision.decision,
       }, hostIncarnationId, scope, {
-        ...identity, channel:"app-popup", isCurrent:active,
+        ...identity, channel, isCurrent:active,
         canDecide: async actual => exact(actual) && await verifyAccess(identity, workspaceId, active),
       });
       if (!outcome.ok || !active()) return outcome.ok ? forbidden : outcome;
