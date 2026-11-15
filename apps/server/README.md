@@ -293,3 +293,9 @@ signed client ID for plan review. It also uses a signed client ID or
 authorized party to refuse ordinary app routes to this client.
 Staging checks the saved revisions and records the exact steps. If the
 client sends the same proposal again, it keeps the original expiration time.
+
+With the exact managed browser origin configured, the browser approval
+endpoint can list, open, approve, deny, cancel or withdraw the signed-in
+user's requests. The endpoint requires the current browser registration
+and the proof for that document. Approval applies to the exact request and
+revision the user opened. It supports the whole plan and one change at a time.

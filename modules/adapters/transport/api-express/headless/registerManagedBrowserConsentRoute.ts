@@ -8,6 +8,8 @@ import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_
 import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
   MANAGED_BROWSER_PUBLISH_CONTEXT_PATH, parseManagedBrowserPresentation,
   type ManagedBrowserPresentationOperation } from "../../../../contracts/headless/managed-browser-presentation";
+import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_APPROVAL_MAX_RESULT_BYTES, readManagedBrowserPlanApprovalRequest,
+  readManagedBrowserPlanApprovalValue, type ManagedBrowserPlanApprovalRequest } from "../../../../contracts/headless/managed-browser-plan-approval";
 import type { WorkspaceId } from "../../../../contracts/workspace";
 import { readStrictPassiveRecord } from "../../../../contracts/shared";
 import { getExpressAuthContext } from "../security/expressAuthContext";
@@ -19,7 +21,7 @@ const CALL_MS = 5_000;
 
 type Document<Identity> = { readonly identity: Identity; readonly target: unknown; readonly proof: unknown };
 type Current = () => boolean;
-type Lane = "consent" | "observe" | ManagedBrowserPresentationOperation;
+type Lane = "consent" | "observe" | "plan-approval" | ManagedBrowserPresentationOperation;
 type LeaseResponse = {readonly result: unknown; readonly canPublish: Current};
 
 export type ManagedBrowserConsentHandlers<Identity> = {
@@ -33,6 +35,7 @@ export type ManagedBrowserConsentHandlers<Identity> = {
   readonly consent: (document: Document<Identity>, target: unknown, phase: "accept" | "ready", current: Current) => Promise<UiControlTimedGrant | undefined>;
   readonly revoke: (document: Document<Identity>, target: unknown, current: Current) => Promise<boolean>;
   readonly disconnect: (document: Document<Identity>) => boolean;
+  readonly planApproval?: (document: Document<Identity>, request: ManagedBrowserPlanApprovalRequest, current: Current) => Promise<{readonly value:unknown; readonly canPublish:Current} | undefined>;
   readonly pullPresentation?: (document: Document<Identity>, input: unknown, current: Current) => Promise<LeaseResponse | undefined>;
   readonly acknowledgePresentation?: (document: Document<Identity>, input: unknown, current: Current) => Promise<LeaseResponse | undefined>;
   readonly readContextChallenge?: (document: Document<Identity>, target: unknown, current: Current) => Promise<LeaseResponse | undefined>;
@@ -50,7 +53,8 @@ export function registerManagedBrowserConsentRoute<Identity>(app: Pick<Applicati
     if (request.method !== "POST" || request.originalUrl !== path) return error(response, 400);
     const handlers = open && origin && getHandlers();
     if (!handlers) return error(response, 404);
-    if (lane !== "consent" && lane !== "observe" && !handlers.deliveryEnabled) return error(response, 404);
+    if (lane === "plan-approval" && !handlers.planApproval) return error(response, 404);
+    if (lane !== "consent" && lane !== "observe" && lane !== "plan-approval" && !handlers.deliveryEnabled) return error(response, 404);
     if (request.headers.origin !== origin || request.headers["sec-fetch-site"] !== "same-origin") return error(response, 403);
     const identity = handlers.identify({auth: getExpressAuthContext(request), organization: getExpressOrganizationContext(request),
       organizationHeader: request.headers["x-organization-id"]});
@@ -73,6 +77,7 @@ export function registerManagedBrowserConsentRoute<Identity>(app: Pick<Applicati
   };
   app.post(MANAGED_BROWSER_CONSENT_PATH, attach(MANAGED_BROWSER_CONSENT_PATH, "consent"));
   app.post(MANAGED_BROWSER_OBSERVE_PATH, attach(MANAGED_BROWSER_OBSERVE_PATH, "observe"));
+  app.post(MANAGED_BROWSER_PLAN_APPROVAL_PATH, attach(MANAGED_BROWSER_PLAN_APPROVAL_PATH, "plan-approval"));
   app.post(MANAGED_BROWSER_DELIVERY_PATH, attach(MANAGED_BROWSER_DELIVERY_PATH, "pull"));
   app.post(MANAGED_BROWSER_ACKNOWLEDGE_PATH, attach(MANAGED_BROWSER_ACKNOWLEDGE_PATH, "acknowledge"));
   app.post(MANAGED_BROWSER_CONTEXT_PATH, attach(MANAGED_BROWSER_CONTEXT_PATH, "challenge"));
@@ -96,6 +101,7 @@ async function respond<Identity>(request: Request, response: Response, handlers:
   identity: Identity, current: Current, lane: Lane) {
   if (!current()) return error(response, 403);
   const raw = readBody(request.body);
+  if (lane === "plan-approval") return respondPlanApproval(raw, request, response, handlers, identity, current);
   if (lane !== "consent" && lane !== "observe") return respondPresentation(raw, lane, request, response, handlers, identity, current);
   const input = parseManagedBrowserConsent(raw);
   if (!input || (lane === "observe") !== (input.operation === "observe")) return error(response, 400);
@@ -123,6 +129,7 @@ async function respond<Identity>(request: Request, response: Response, handlers:
     if (result.status === "ready" && (result.contextChallenge ||
       result.request && !sameManagedBrowserDocument(result.request.target, input.document))) return error(response, 503);
     if (result.status === "ready" && handlers.deliveryEnabled) response.set("X-AISB-Headless-Presentation", "1");
+    if (result.status === "ready" && handlers.planApproval) response.set("X-AISB-Headless-Plan-Approvals", "1");
     return response.json(result);
   }
   if (input.operation === "disconnect" || input.operation === "revoke") {
@@ -137,6 +144,21 @@ async function respond<Identity>(request: Request, response: Response, handlers:
     sameManagedBrowserAttempt(grant.target, input.target);
   if (!exact) return error(response, 503);
   return response.json(grant);
+}
+
+async function respondPlanApproval<Identity>(raw: unknown, request: Request, response: Response,
+  handlers: ManagedBrowserConsentHandlers<Identity>, identity: Identity, current: Current) {
+  const input = readManagedBrowserPlanApprovalRequest(raw);
+  if (!input) return error(response, 400);
+  const proof = request.headers[MANAGED_BROWSER_DOCUMENT_HEADER];
+  if (!isManagedBrowserDocumentProof(proof) || input.document.hostIncarnationId !== handlers.hostIncarnationId)
+    return error(response, 403);
+  const result = await handlers.planApproval?.({identity, target:input.document, proof}, input, current);
+  if (!current() || result === undefined) return error(response, 403);
+  const value = readManagedBrowserPlanApprovalValue(input, result.value);
+  if (value === undefined || Buffer.byteLength(JSON.stringify(value)) > MANAGED_BROWSER_PLAN_APPROVAL_MAX_RESULT_BYTES) return error(response, 503);
+  if (!current() || !result.canPublish()) return error(response, 403);
+  return response.json(value);
 }
 
 async function respondPresentation<Identity>(raw: unknown, lane: ManagedBrowserPresentationOperation, request: Request,

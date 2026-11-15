@@ -410,7 +410,7 @@ export async function createServer(
       organizationAuthorizer,
       managedSavedState: env.AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE === "1" && passiveSavedStateAuthorizer && listActiveSystems
         ? { listActiveSystems, authorize: passiveSavedStateAuthorizer } : undefined,
-      managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement, planReviewEnabled: clientPolicy.planReviewAvailable,
+      managedHeadlessAgent: clientPolicy ? {placement: security.config.tenantPlacement, planReviewClientId: clientPolicy.planReviewRegisteredClientId,
         browserObservationAuthorizer: passiveBrowserObserveAuthorizer} : undefined,
       runtimeDatabases: options.runtimeDatabases,
       pythonRuntimeEnvironmentPreparer,

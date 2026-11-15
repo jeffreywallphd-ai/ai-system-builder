@@ -12,6 +12,8 @@ import type { OrganizationRequestContext } from "../../../contracts/organization
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { ManagedHeadlessBrowserIdentity } from "../security/resolveManagedHeadlessClientPolicy";
 import { createManagedHeadlessBrowserDocuments } from "./createManagedHeadlessBrowserDocuments";
+import type { ManagedBrowserPlanApprovalRequest } from "../../../contracts/headless/managed-browser-plan-approval";
+import type { composeManagedHeadlessPlanApprovals } from "./composeManagedHeadlessPlanApprovals";
 import {createManagedBrowserPresentation} from "./createManagedBrowserPresentation";
 import type { ManagedHeadlessAuthoringRegistration } from "./composeManagedHeadlessAuthoring";
 
@@ -31,6 +33,7 @@ export function composeManagedBrowserConsent(options: {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
   readonly authorize: (principal: Principal, workspaceId: WorkspaceId) => Promise<boolean>;
   readonly authorizeObservation?: (principal: Principal, workspaceId: WorkspaceId) => Promise<boolean>;
+  readonly planApprovals?: ReturnType<typeof composeManagedHeadlessPlanApprovals>;
   readonly resolvePresentation?: (principal: Principal, workspaceId: WorkspaceId, intent: UiPresentationIntent,
     mode: {readonly passive: boolean}) => Promise<unknown>;
   readonly now?: () => number;
@@ -107,6 +110,16 @@ export function composeManagedBrowserConsent(options: {
   }
 
   return {
+    ...(options.planApprovals ? {
+      async planApproval(document: AuthenticatedDocument, request: ManagedBrowserPlanApprovalRequest, current: () => boolean) {
+        const authenticated = await authenticate(document, current);
+        if (!authenticated?.isCurrent() || !current()) return;
+        const result = await options.planApprovals?.(request, authenticated.owner, authenticated.isCurrent, current);
+        if (!result?.ok || !authenticated.isCurrent() || !current()) return;
+        const publish = "canPublish" in result ? result.canPublish : undefined;
+        return {value:result.value, canPublish:() => authenticated.isCurrent() && current() && (!publish || publish())};
+      },
+    } : {}),
     async register(identity: ManagedHeadlessBrowserIdentity, workspaceId: WorkspaceId, requestIsCurrent: () => boolean) {
       if (!open || !requestIsCurrent()) return;
       const registered = await documents.register(identity, workspaceId, requestIsCurrent);

@@ -149,3 +149,16 @@ class HeadlessReadRoutingTests(unittest.TestCase):
         self.assertIn("modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
                       selected["managed-headless-transactional-authoring"]["argv"])
         self.assertIn("focused-tests", self.plan(sources + ["apps/server/src/unrelated-route.ts"], *checks))
+
+    def test_browser_plan_approval_checks_the_http_and_transaction_boundaries(self):
+        route = "modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute.ts"
+        contract = "modules/contracts/headless/managed-browser-plan-approval.ts"
+        service = "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts"
+        http = "managed-headless-browser-consent-http"
+        transaction = "managed-headless-transactional-authoring"
+        self.assertIn("focused-tests", self.plan([route, contract, service]))
+        scoped = self.plan([route, contract, service], http, transaction)
+        self.assertNotIn("focused-tests", scoped)
+        self.assertIn("modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts", scoped[http]["argv"])
+        self.assertIn("modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts", scoped[transaction]["argv"])
+        self.assertIn("focused-tests", self.plan([route, contract, service, "modules/contracts/headless/unrelated.ts"], http, transaction))

@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
+import { once } from "node:events";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import express from "express";
 
 import { createStructuredOrganizationRepositories } from "../../../../adapters/persistence/organization";
 import type { StructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../../../adapters/persistence/sqlite";
 import { createStructuredHeadlessOperationStore } from "../../../../adapters/persistence/system-builder";
 import { createLocalWorkspaceRepository } from "../../../../adapters/persistence/workspace";
+import { createOidcBearerTokenVerifierAdapter, getVerifiedOidcCredentialBinding } from "../../../../adapters/security/oidc/createOidcBearerTokenVerifierAdapter";
+import { registerManagedBrowserConsentRoute } from "../../../../adapters/transport/api-express/headless/registerManagedBrowserConsentRoute";
 import {
   SYSTEM_FOUNDATION_PACK_MANIFEST, SYSTEM_FOUNDATION_PACK_V2_MANIFEST, SYSTEM_FOUNDATION_PACK_V3_MANIFEST,
 } from "../../../../application/services/asset-packs/system-packs";
@@ -19,10 +23,15 @@ import { createTenantPlacementConfig } from "../../../../contracts/config";
 import { HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadlessPlanReviewAgentRequest,
   type HeadlessHostIncarnationId } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
+import { createOidcBearerConfig } from "../../../../contracts/security";
+import { MANAGED_BROWSER_DOCUMENT_HEADER, parseManagedBrowserRegistration } from "../../../../contracts/headless/managed-browser-consent";
+import { MANAGED_BROWSER_PLAN_APPROVAL_PATH } from "../../../../contracts/headless/managed-browser-plan-approval";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { composeSystemBuilder } from "../../../shared/composition/composeSystemBuilder";
 import { composeManagedHeadlessAuthoring } from "../composeManagedHeadlessAuthoring";
 import { composeManagedHeadlessPlanReview } from "../composeManagedHeadlessPlanReview";
+import { composeManagedHeadlessPlanApprovals } from "../composeManagedHeadlessPlanApprovals";
+import { composeManagedBrowserConsent } from "../composeManagedBrowserConsent";
 
 const organizationId = createOrganizationId("managed-fixture");
 const workspaceId = createWorkspaceId("workspace-fixture");
@@ -182,6 +191,172 @@ test("managed edits and retry receipts require current workspace permission with
         workspaceId:"another-workspace"}), client, fresh), denied);
       assert.equal((await systems.useCases.list.execute({workspaceId})).length, 1);
       assert.equal(await createStructuredHeadlessOperationStore(root).watermark({organizationId, workspaceId}), 1);
+    });
+
+    await t.test("managed approvals use only the exact requested document and one live plan revision", async () => {
+      const client = {...registration, purpose:"plan-review" as const};
+      const review = composeManagedHeadlessPlanReview({hostIncarnationId, platform, rootDirectory:fixture,
+        contexts, workspaces, authorization, placement});
+      const approval = composeManagedHeadlessPlanApprovals({hostIncarnationId, planClientId:client.registeredClientId,
+        platform, rootDirectory:fixture, contexts, placement});
+      const document = {hostIncarnationId, workspaceId, windowId:randomUUID(), uiIncarnationId:randomUUID()};
+      const otherDocument = {...document, windowId:randomUUID(), uiIncarnationId:randomUUID()};
+      const scope = {hostIncarnationId, workspaceId};
+      const steps = ["First synthetic change", "Second synthetic change"].map(name => ({operation:"systems.create", name,
+        templateId:"reference.secured-data-review@1.0.0", idempotencyKey:randomUUID()}));
+      const proposal = parseHeadlessBuildPlanProposal({...scope, steps}, hostIncarnationId);
+      assert.ok(proposal.ok);
+      const fingerprint = createHash("sha256").update(JSON.stringify(proposal.preview)).digest("hex");
+      const target = {...scope, fingerprint};
+      const submit = readHeadlessPlanReviewAgentRequest({version:HEADLESS_CONTRACT_VERSION,
+        operation:"plan.submit", input:{...target,steps}}, hostIncarnationId);
+      assert.ok(submit.ok);
+      const staged = await review(submit.request, client, () => true);
+      assert.ok(staged.ok);
+      const selection = {workspaceId, fingerprint, registeredClientId:client.registeredClientId};
+      let live = true;
+      const caller = {organizationId, principalId};
+      const invoke = (request:Parameters<typeof approval>[0]) => approval(request, caller, () => live, () => true);
+      const listed = await invoke({operation:"list", document});
+      assert.ok(listed.ok && Array.isArray(listed.value) && listed.value.some(row =>
+        row.fingerprint === selection.fingerprint && row.registeredClientId === selection.registeredClientId &&
+        row.workspaceId === workspaceId));
+      assert.deepEqual(await invoke({operation:"open", document, selection:{...selection, registeredClientId:randomUUID()}}),
+        {ok:false, code:"forbidden"});
+      const open = () => invoke({operation:"open", document, selection});
+      const seen = await open();
+      assert.ok(seen.ok && typeof seen.value === "object" && "viewId" in seen.value);
+      const first = {operation:"decide", document, decision:{selection, viewId:seen.value.viewId,
+        expectedRevision:1, decision:{kind:"approve", mode:"each-change", step:1}}} as const;
+      assert.deepEqual(await invoke({...first, document:otherDocument}), {ok:false, code:"forbidden"});
+      assert.deepEqual(await invoke({...first, decision:{...first.decision, expectedRevision:2}}), {ok:false, code:"forbidden"});
+      const reopened = await open();
+      assert.ok(reopened.ok && typeof reopened.value === "object" && "viewId" in reopened.value);
+      assert.notEqual(reopened.value.viewId, seen.value.viewId);
+      assert.deepEqual(await invoke(first), {ok:false, code:"forbidden"});
+      const currentFirst = {...first, decision:{...first.decision, viewId:reopened.value.viewId}};
+      const decided = await invoke(currentFirst);
+      assert.ok(decided.ok && typeof decided.value === "object" && "revision" in decided.value);
+      assert.equal(decided.value.revision, 2);
+      assert.equal(decided.value.approvedSteps, 1);
+      assert.deepEqual(await invoke(currentFirst), {ok:false, code:"forbidden"});
+      const next = await open();
+      assert.ok(next.ok && typeof next.value === "object" && "viewId" in next.value);
+      const second = {...first, decision:{...first.decision, viewId:next.value.viewId, expectedRevision:2,
+        decision:{kind:"approve", mode:"each-change", step:2}}} as const;
+      await invoke({operation:"dismiss", document, viewId:next.value.viewId});
+      assert.deepEqual(await invoke(second), {ok:false, code:"forbidden"});
+      const fresh = await open();
+      assert.ok(fresh.ok && typeof fresh.value === "object" && "viewId" in fresh.value);
+      live = false;
+      assert.deepEqual(await invoke({...second, decision:{...second.decision, viewId:fresh.value.viewId}}),
+        {ok:false, code:"forbidden"});
+      live = true;
+      const beforeCommit = await open();
+      assert.ok(beforeCommit.ok && typeof beforeCommit.value === "object" && "viewId" in beforeCommit.value);
+      let commits = 0;
+      atCommit = () => { if (++commits === 2) live = false; };
+      assert.deepEqual(await invoke({...second, decision:{...second.decision, viewId:beforeCommit.value.viewId}}),
+        {ok:false, code:"forbidden"});
+      atCommit = undefined;
+      assert.equal(commits, 2);
+      live = true;
+      const after = await open();
+      assert.ok(after.ok && typeof after.value === "object" && "viewId" in after.value);
+      assert.equal(after.value.state.revision, 2);
+      assert.equal(after.value.state.approvedSteps, 1);
+      assert.equal((await systems.useCases.list.execute({workspaceId})).length, 1);
+    });
+
+    await t.test("managed HTTP approval hides replies that expire during delivery while retaining the committed decision", async () => {
+      const client = {...registration, purpose:"plan-review" as const};
+      const stage = composeManagedHeadlessPlanReview({hostIncarnationId, platform, rootDirectory:fixture,
+        contexts, workspaces, authorization, placement});
+      const scope = {hostIncarnationId, workspaceId};
+      const steps = [{operation:"systems.create", name:"Synthetic deadline case", idempotencyKey:randomUUID(),
+        templateId:"reference.secured-data-review@1.0.0"}];
+      const parsed = parseHeadlessBuildPlanProposal({...scope, steps}, hostIncarnationId);
+      assert.ok(parsed.ok);
+      const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+      const decode = (operation:"plan.submit" | "plan.status", input:object) => {
+        const result = readHeadlessPlanReviewAgentRequest({version:HEADLESS_CONTRACT_VERSION, operation, input}, hostIncarnationId);
+        assert.ok(result.ok);
+        return result.request;
+      };
+      const staged = await stage(decode("plan.submit", {...scope,fingerprint,steps}), client, () => true);
+      assert.ok(staged.ok);
+      const deadline = staged.value.expiresAt;
+      let clock = deadline - 1;
+      const approvals = composeManagedHeadlessPlanApprovals({hostIncarnationId, planClientId:client.registeredClientId,
+        platform, rootDirectory:fixture, contexts, placement, now:() => clock});
+
+      const origin = "https://fixture.invalid";
+      const clientId = "synthetic-browser";
+      const verifier = createOidcBearerTokenVerifierAdapter({
+        config:createOidcBearerConfig({issuer:origin, jwksUri:origin + "/keys", audience:"fixture", algorithms:["RS256"]}),
+        jwtVerifier:{async verify() {return {iss:origin, sub:"fixture", exp:2, accessTokenClientId:clientId};}},
+      });
+      const credentialBinding = getVerifiedOidcCredentialBinding(await verifier.verifyToken({token:"signed-test-browser", now:new Date(1_000)}));
+      assert.ok(credentialBinding);
+      const browser = {purpose:"browser" as const, organizationId, principalId, registeredClientId:randomUUID(),
+        credentialBinding, isCurrent:() => true};
+      const consent = composeManagedBrowserConsent({hostIncarnationId, authorize:async () => true,
+        planApprovals:approvals, now:() => 1_000});
+      const tab = parseManagedBrowserRegistration(await consent.register(browser, workspaceId, () => true));
+      assert.ok(tab);
+      const held = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      let commitReadyBeforeDeadline = false;
+      const app = express();
+      const retire = registerManagedBrowserConsentRoute(app, origin, () => ({
+        ...consent, hostIncarnationId, identify:() => browser, isCurrent: identity => identity.isCurrent(),
+        async planApproval(document, request, current) {
+          const result = await consent.planApproval!(document, request, current);
+          if (request.operation === "list") {
+            assert.equal(result?.canPublish(), true);
+            held.resolve();
+            await release.promise;
+          }
+          if (request.operation === "decide") {
+            commitReadyBeforeDeadline = result?.canPublish() === true;
+            clock = deadline;
+            release.resolve();
+          }
+          return result;
+        },
+      }));
+      const server = app.listen(0, "127.0.0.1");
+      try {
+        await once(server, "listening");
+        const address = server.address();
+        assert.ok(address && typeof address !== "string");
+        const url = `http://127.0.0.1:${address.port}${MANAGED_BROWSER_PLAN_APPROVAL_PATH}`;
+        const send = (request:object) => fetch(url, {method:"POST",
+          headers:{"Content-Type":"application/json", origin, "sec-fetch-site":"same-origin", [MANAGED_BROWSER_DOCUMENT_HEADER]:tab.proof},
+          body:JSON.stringify({...request, document:tab.target})});
+        const selection = {workspaceId, fingerprint, registeredClientId:client.registeredClientId};
+        const issued = await send({operation:"open", selection});
+        assert.equal(issued.status, 200);
+        const view = await issued.json();
+        const pendingList = send({operation:"list"});
+        const outcome = await Promise.race([held.promise.then(() => "held"), pendingList.then(() => "early")]);
+        assert.equal(outcome, "held");
+        const response = await send({operation:"decide",decision:{selection, viewId:view.viewId, expectedRevision:1,
+          decision:{kind:"approve", mode:"whole-plan"}}});
+        assert.equal(commitReadyBeforeDeadline,true);
+        assert.equal(response.status,403);
+        const list = await pendingList;
+        assert.equal(list.status,403);
+        assert.equal(JSON.stringify(await list.json()).includes(fingerprint),false);
+        const recorded = await stage(decode("plan.status", {...scope,fingerprint}), client, () => true);
+        assert.ok(recorded.ok && recorded.value.status === "approved" && recorded.value.revision === 2);
+      } finally {
+        release.resolve();
+        retire();
+        consent.close();
+        server.closeAllConnections();
+        await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      }
     });
   } finally {
     await db.close();

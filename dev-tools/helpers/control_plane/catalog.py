@@ -235,6 +235,7 @@ PUBLISHED_FORM_CHECKS = {
         ),
         "sources": (
             "modules/contracts/headless/managed-browser-consent.ts",
+            "modules/contracts/headless/managed-browser-plan-approval.ts",
             "modules/contracts/headless/managed-browser-presentation.ts",
             "modules/contracts/headless/index.ts",
             "modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute.ts",
@@ -242,6 +243,7 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
             "modules/adapters/transport/api-express/README.md",
             "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/composeManagedBrowserConsent.ts",
             "apps/server/src/createServer.ts",
             "apps/server/README.md",
             "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.ts",
@@ -256,6 +258,7 @@ PUBLISHED_FORM_CHECKS = {
             "apps/server/src/tests/server-postgres-selection.unit.test.ts",
             "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.unit.test.ts",
             "modules/hosts/server/security/tests/managed-saved-state-authorization-audit.unit.test.ts",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
         ),
     },
     "managed-headless-browser-consent-ui": {
@@ -425,6 +428,7 @@ PUBLISHED_FORM_CHECKS = {
         "sources": (
             "modules/hosts/server/composition/composeManagedHeadlessAuthoring.ts",
             "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts",
             "modules/hosts/shared/composition/headlessPlanReview.ts",
             "modules/hosts/desktop/composition/composeDesktopHeadlessPlanReview.ts",
             "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",

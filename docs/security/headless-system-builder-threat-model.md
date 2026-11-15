@@ -224,6 +224,16 @@ organization membership, the active workspace and exact saved revisions
 before inserting a proposal. The result contains only the exact fingerprint,
 approval progress and expiration. Proposal submission cannot record a human
 decision or execute a change.
+
+The managed browser approval route is available only on the configured
+HTTPS origin to the separate verified browser registration. It reuses the
+live per-document proof and verifies organization, principal, active
+workspace, and current membership in the plan transaction. Each document
+holds at most one open approval view. The view binds the exact requesting
+client, plan fingerprint and displayed revision. A decision consumes that
+view once. Reopening, closing the view, losing document access or changing
+the stored revision denies a late decision. The route invokes the same plan
+state transitions as Desktop and carries no operation payload to execute.
 The internal operation store partitions receipts by verified organization and
 hashes the complete principal, client, workspace, operation and key scope.
 Receipts hold a fingerprint and the minimum saved revision reference; change

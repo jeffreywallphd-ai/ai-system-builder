@@ -41,6 +41,7 @@ export function resolveManagedHeadlessClientPolicy(options: {
   };
   return Object.freeze({
     planReviewAvailable: plan !== undefined,
+    planReviewRegisteredClientId: registered["plan-review"]?.id,
     isPlanReviewCredential(auth?: AuthContext): boolean {
       return plan !== undefined && auth?.authenticated === true && auth.authMethod === "oidc-bearer" &&
         auth.principal.externalIdentity?.issuer === oidcIssuer && matchVerifiedOidcClient(auth, plan) !== undefined;

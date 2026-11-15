@@ -255,6 +255,7 @@ import { composeManagedBrowserConsent } from "./composeManagedBrowserConsent";
 import { composeManagedBrowserPresentationResources } from "./composeManagedBrowserPresentationResources";
 import { composeManagedHeadlessAuthoring } from "./composeManagedHeadlessAuthoring";
 import { composeManagedHeadlessPlanReview } from "./composeManagedHeadlessPlanReview";
+import { composeManagedHeadlessPlanApprovals } from "./composeManagedHeadlessPlanApprovals";
 import type { HeadlessHostIncarnationId } from "../../../contracts/headless";
 import type { TenantPlacementConfig } from "../../../contracts/config";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
@@ -388,7 +389,7 @@ export interface ComposeServerHostOptions {
     readonly authorize: Pick<AuthorizeOperationService, "execute">;
   };
   managedHeadlessAgent?: { readonly placement: TenantPlacementConfig; readonly browserObservationAuthorizer?: AuthorizeOperationService;
-    readonly planReviewEnabled?: boolean };
+    readonly planReviewClientId?: string };
   env?: NodeJS.ProcessEnv;
   logging?: ComposeServerHostLoggingOptions;
   logSink?: StructuredLogSink;
@@ -1687,7 +1688,7 @@ export function composeServerHost(
           rootDirectory: registerOptions.storageRootDirectory, placement: options.managedHeadlessAgent.placement, systems: systemBuilder});
         managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases}),
-          ...(options.managedHeadlessAgent.planReviewEnabled ? { planReview: composeManagedHeadlessPlanReview({
+          ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: composeManagedHeadlessPlanReview({
             ...scoped, platform: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
             placement: options.managedHeadlessAgent.placement,
           }) } : {}),
@@ -1711,7 +1712,11 @@ export function composeServerHost(
             now:options.now, documents:organizationDocuments});
           const presentation = composeManagedBrowserPresentationResources({systems:systemBuilder.repository,
             artifacts:artifactCatalog, runs:runs.executionRunRepository});
-          const browserConsent = composeManagedBrowserConsent({hostIncarnationId,
+          const planReviewClientId = options.managedHeadlessAgent.planReviewClientId;
+          const planApprovals = planReviewClientId ? composeManagedHeadlessPlanApprovals({hostIncarnationId,
+            planClientId:planReviewClientId, platform:managedDocuments, rootDirectory:registerOptions.storageRootDirectory,
+            contexts, placement:options.managedHeadlessAgent.placement}) : undefined;
+          const browserConsent = composeManagedBrowserConsent({hostIncarnationId, planApprovals,
             authorize: authorize(workspaceAuthorization),
             authorizeObservation: authorize(observation),
             async resolvePresentation(principal, workspaceId, intent, {passive}) {
