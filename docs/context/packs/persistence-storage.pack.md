@@ -50,10 +50,11 @@
   organization context. Platform/legacy records are a separate partition and
   are never an implicit fallback.
 - Shared model storage is an additional configured model source, not a replacement for workspace model storage.
-- Explicit desktop model deletion removes local files only through a canonical,
-  approved-root adapter. Hugging Face snapshots delete their owning cache
-  repository, standalone checkpoints delete only their recorded file, and
-  root, link, traversal, or outside-root targets fail before registry deletion.
+- Desktop model deletion/reveal remain unavailable until the owning native effect
+  authority is qualified under ADR-0043. Canonical paths, provider cache layout,
+  markers and read-only identity checks alone never grant deletion/reveal rights.
+  Shared/imported caches remain reference-only; unknown content is never adopted
+  or deleted. Preserve actual pending native and provenance qualification.
 
 ## Key Constraints
 

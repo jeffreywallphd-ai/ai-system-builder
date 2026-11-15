@@ -29,6 +29,13 @@ by versioned JSON. On workflow work requests, agents start or safely reuse the
 server and share its verified link. The site cannot grant approval or perform
 mutations. It is loopback-only and has fixed routes and inert rendering.
 
+Use `completed` as the canonical roadmap completion status. Final overall approval
+remains a separate `finalApproval` fact governing immutability and temporary report
+removal. User-directed legacy normalization preserves all original approval and
+qualification history; it grants no completion evidence. The local review defaults
+to dark colors and remembers only an explicit validated dark/light preference;
+its theme action cannot mutate contributor records or grant authority.
+
 ## Consequences
 
 The workflow gains explicit user outcomes, current verification, review,

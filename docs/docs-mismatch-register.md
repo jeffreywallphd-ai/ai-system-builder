@@ -115,3 +115,35 @@ Do not use this register for:
   - `modules/contracts/asset/asset-instance.ts`: records only `parentCompositionRef`, with no parent-instance, named-slot, or ordered-placement vocabulary.
 - Expected decision: Implement the approved successor slot-composer roadmap, then reconcile the original roadmap evidence and affected architecture/context documents against verified behavior.
 - Notes: `docs/system-builder-slot-composer-implementation-roadmap.md` tracks the approved architectural direction and must not be treated as implementation evidence until its increments pass.
+
+
+### DM-20261023-001
+
+- Status: open
+- Severity: medium
+- Drift type: canonical-vs-canonical
+- Primary doc: `docs/architecture/system-builder.md`
+- Compared with: `docs/architecture/system-run-workflows.md`, `docs/architecture/system-build-and-release.md`, `apps/desktop/src/renderer/pages/SystemBuilderPage.tsx`, `apps/thin-client/src/pages/SystemBuilderPage.tsx`
+- Summary: Older System Builder sections describe a mounted Run & Test presenter while the current lifecycle architecture and both host pages intentionally use Manage, Compose, and Publish.
+- Evidence:
+  - `docs/architecture/system-builder.md`: secured-reference and deployment sections describe shared Run & Test presentation in both hosts.
+  - `docs/architecture/system-run-workflows.md`: the generic workflow presenter remains available for future approved advanced diagnostics and is not mounted as a standalone Systems tab.
+  - `docs/architecture/system-build-and-release.md`: Publish owns routine published-build lifecycle controls and there is no standalone Run & Test tab.
+  - Both `SystemBuilderPage.tsx` files mount only Manage, Compose, Publish, and the focused Build & test modal.
+- Expected decision: Reconcile the older architecture wording to the current accepted Publish lifecycle and tested host wiring; retain application/API-only workflow handlers without exposing new UI by inference.
+- Notes: The proposed comprehensive UI automation discovery records host applicability and must not recreate superseded navigation to satisfy an obsolete statement.
+
+### DM-20261023-002
+
+- Status: open
+- Severity: medium
+- Drift type: canonical-vs-canonical
+- Primary doc: `docs/standards/testing-standards.md`
+- Compared with: `AGENTS.md`, `modules/ui/shared/README.md`
+- Summary: Older testing and shared-UI qualification prose still presents manual screen-reader and participant-style review as release requirements while the current contributor workflow assigns human acceptance offline and requires agent-executable technical criteria.
+- Evidence:
+  - `docs/standards/testing-standards.md`: Performance and accessibility qualification additionally requires documented screen-reader and related review on each supported surface.
+  - `modules/ui/shared/README.md`: automated checks are described as insufficient without physical screen-reader and manual review qualification.
+  - `AGENTS.md`: technical roadmap acceptance must be executable by AI agents; human studies and manual acceptance are user-owned offline, while automated UI, performance, native, runtime, and security gaps remain technical qualification.
+- Expected decision: Clarify offline human acceptance versus agent-executable technical closure in affected guidance without deleting automated accessibility, security controls, actual native/runtime measurements, or product authorization/review steps.
+- Notes: This is a documentation reconciliation finding, not evidence that any pending technical qualification passed.

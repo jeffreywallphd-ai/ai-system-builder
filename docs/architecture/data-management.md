@@ -634,6 +634,12 @@ binding denial. Failed metadata publication reports failure; retained unregister
 owned bytes and native publication/reparse races remain distinct recovery and
 qualification concerns.
 
+Prepared-row review uses the existing scoped GET endpoint with artifact-read
+authority and application workspace/task/fingerprint validation. Review loading
+and failure are distinct from a confirmed empty page. Running Dataset Preparation
+keeps its worker owned through refused cancellation or a host deadline, including
+automatic sibling recovery; real terminal state or owned exit remains decisive.
+
 Uploaded-file and provider task finalization retain stored artifacts after an
 uncertain task/snapshot acknowledgement. Error handling cannot infer destructive
 cleanup ownership. Recovery reads the existing scoped task, verifies its immutable
@@ -739,6 +745,7 @@ organization context provider together. Server application composition connects
 its authenticated request scope for explicitly injected scoped stores and for
 PostgreSQL. Missing context leaves ingestion unavailable before acquisition;
 raw or global document storage is not an ingestion fallback.
+
 
 ## Bounded replaceable OCR provider boundary
 

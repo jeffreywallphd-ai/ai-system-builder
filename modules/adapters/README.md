@@ -9,6 +9,18 @@ authority and does not qualify a managed PostgreSQL deployment.
 An unconfirmed SQLite rollback fences that connection, including queued requests,
 while preserving the original callback error; it has no automatic reset.
 
+Generated-model storage never recursively replaces an existing snapshot. Observed
+targets or unknown filesystem status deny; fresh output uses exclusive staging,
+root/child-link checks and cooperative staging identity checks. These checks do
+not provide native parent/race protection or protected ownership. Shared caches
+remain reference-only for physical deletion under ADR-0043.
+
+The shared package inspector validates/captures semantics before canonical
+hashing and verifies semantic-v2 claims. Valid-body identity failures remain
+quarantinable and ineligible; malformed/deep declarations return static errors.
+Package byte identity, evidence exclusions and independent trust gates retain
+their meaning. This does not qualify all nonsemantic resource bounds.
+
 Effective projection records, snapshots, commands, references and provenance are
 explicitly reconstructed with the shared bounded passive DTO schemas. Declared
 labels/metadata, canonical timestamps, revision identities and finite graph-summary
@@ -34,12 +46,13 @@ with aligned expected original bodies. Validate/capture before awaits, bind owne
 context, and recheck every expectation inside each retryable collection mutation.
 Never turn this optimization into an unguarded bulk overwrite or schema migration.
 
-The in-memory structured-document adapter serializes root operations and
-organization views through one FIFO queue. A callback uses only its supplied
-transaction store; nested calls reuse that owner without creating a savepoint.
-Foreign, expired and captured-root calls deny. Queued writes capture nested
-values, revision conditions and timestamps before waiting, and returned records
-are detached from stored state.
+The private model-local Windows file-identity adapter and native source are an
+uncomposed read-only prerequisite. Fixed local building and real disposable
+fixtures are described in `dev-tools/README.md`; boundaries and pending production
+authority are in `docs/architecture/runtime-model.md`. Keep it out of the public
+model barrel and host composition until protected ownership/publication and
+destructive-effect qualification exist. Read-only facts never authorize deletion,
+reveal, adoption of shared caches or recovery of an unknown offload slot.
 
 `persistence/asset-publication` binds an exact organization/workspace review to its
 definition and private commit receipt in one structured transaction. It verifies
@@ -52,6 +65,13 @@ reconciliation of the exact existing commit. The original reviewed revision or
 current published revision may request this read-only check; actor/time remain
 those of the committed record. This does not qualify filesystem
 publication, legacy authoring, live PostgreSQL or complete Assets security.
+
+The in-memory structured-document adapter serializes root operations and
+organization views through one FIFO queue. A callback uses only its supplied
+transaction store; nested calls reuse that owner without creating a savepoint.
+Foreign, expired and captured-root calls deny. Queued writes capture nested
+values, revision conditions and timestamps before waiting, and returned records
+are detached from stored state.
 
 
 ### Private Windows file-identity prerequisite

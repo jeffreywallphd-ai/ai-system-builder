@@ -59,6 +59,8 @@
   and `ui-button--outline`; the obsolete secondary modifier must not return. No
   button may use native appearance, grey fills, gradients, inset highlights,
   raised shadows, or hover translation.
+  Customization target cards also carry `ui-button`, retaining their grid layout
+  while receiving the shared visible keyboard focus ring in both hosts.
 - Artifact preview UI lives in `modules/ui/shared/artifact-preview`. Keep previews sampled and bounded: text-like previews should show only a small first-page-sized sample, image previews should prefer compressed/downscaled object URLs, video/PDF previews should be visually constrained, and full-fidelity viewing should remain a download action. Office document and spreadsheet previews should stay placeholder-only until a safe parser is added.
 - Modal headers should stay fixed at the top of the modal, use a darker header background than the body, place the clear modal title on the left, and place the red square close button on the right. Put scrollable content inside the modal body region so only the body scrolls when needed. When one modal opens from another, use the stacked modal overlay class so the newest modal is visually on top.
 - Import Assets UI lives in `modules/ui/shared/asset-package`. Keep the starter
@@ -271,12 +273,12 @@ browser; the presenter does not own an alternative visibility rule.
   paged. Record local algorithm and browser-paint observations separately from
   pending reference/manual qualification; retain failures and source identity.
 
-Dataset Preparation memory-admission errors are a notification-center outcome
-without an inline duplicate, including preflight rejection. Shared memory copy
-uses validated numeric RAM/VRAM shortfalls, subtracts permitted overflow and rounds
-upward. Missing facts never produce an invented amount or bypass a guard.
-Other contextual validation and security/readiness blockers remain unchanged.
 
+Asset customization list, history and target-detail reads are fenced by request
+sequence, workspace and client identity. A newer search can supersede a pending
+list request; stale successes and rejections cannot replace current data or
+clear its loading indicator. Rejected current reads release controls with a
+static safe retry message. Mutation and publication authority remain unchanged.
 Page dashboard metric details belong inside their description (`dd`), preserving
 valid definition-list semantics on Assets and Systems.
 
@@ -285,6 +287,21 @@ Escape, the Close button, and a workspace change that closes the panel return
 focus to the bell. When a mouse or touch action outside the panel closes it, an
 outside control keeps focus if it has focus. If focus returns to the page
 background, the bell receives it.
+
+A changed client also clears a preferred target's old details and draft. Save,
+review, publish and abandon settlements are fenced by current owner and operation;
+rejections release controls with safe retry feedback. Synchronous submission
+admission prevents duplicate same-turn writes; exact host commands and revisions
+are preserved. Earlier history reads cannot replace a confirmed mutation revision.
+The Browse-provided initial preference applies only during owner initialization;
+manual searches retain the user's current target and never reapply that preference.
+
+
+Dataset Preparation memory-admission errors are a notification-center outcome
+without an inline duplicate, including preflight rejection. Shared memory copy
+uses validated numeric RAM/VRAM shortfalls, subtracts permitted overflow and rounds
+upward. Missing facts never produce an invented amount or bypass a guard.
+Other contextual validation and security/readiness blockers remain unchanged.
 
 - Saved dataset setup validation lives in `dataset-version/datasetVersionReplay.ts`.
   It produces one complete frozen value or a fixed denial before any form change.

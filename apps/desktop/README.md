@@ -4,8 +4,10 @@
 
 ## Toolchain
 
-- Host runtime: exact original-supplier Electron 42.11.3 (Node 24), including
-  the GHSA-fw47-9c62-h3vw permission-origin fix
+- Host runtime: exact original-supplier Electron 42.11.18 (Node 24), including
+  the reviewed permission-origin and frame-geometry security fixes. See
+  `docs/security/electron-42-patch-qualification.json` for actual qualification
+  and the supplier's end-of-support limitation.
 - Build/dev system: Electron Forge (exact Vite plugin), per ADR-0044
 - Entry point orchestration: `apps/desktop/src/main` + `modules/hosts/desktop`
 

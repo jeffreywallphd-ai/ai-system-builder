@@ -1,5 +1,10 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Imported-package semantic assessment verifies mandatory entry fingerprints and
+any supplied checksum on one detached validated copy. Legacy/mismatched claims
+remain unchanged and ineligible. Creators still support immutable Foundation
+content without migrating its shipped claims. See the package authoring guide.
+
 Asset-pack semantic fingerprint helpers validate complete bounded passive input
 before producing `sha256:semantic-v2` identities. They preserve authored semantics,
 use explicit packaging/self-reference exclusions, and never use display redaction

@@ -1,5 +1,11 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Assets package, Studio and authoring IPC registrations require the desktop's
+owned-window main-frame sender policy. A fixed request/response descriptor gate
+denies absent, false or unavailable trust before reading request metadata, payload
+or resolving a deferred feature. Trusted response DTOs and actor attribution are
+unchanged. Sender admission does not establish workspace or publication authority.
+
 ## Governed ingestion HTTP admission
 
 Only exact `POST /api/ingestion/tasks/execute` is admitted, under existing

@@ -9,6 +9,28 @@ import electronPath from "electron";
 
 import { LOCAL_SQLITE_MIGRATION_0001, LOCAL_SQLITE_MIGRATION_0002 } from "../sqlite-database";
 
+test("Electron's actual SQLite runtime atomically publishes reviewed Studio and derived assets", () => {
+  const env: NodeJS.ProcessEnv = {...process.env, ELECTRON_RUN_AS_NODE: "1"};
+  delete env.NODE_TEST_CONTEXT;
+  const result = spawnSync(electronPath, [
+    "--import", "tsx", "--test", "--test-concurrency=1", "--test-reporter=tap",
+    path.resolve("modules/adapters/persistence/asset-publication/tests/asset-definition-publication.unit.test.ts"),
+  ], {cwd: path.resolve("."), env, encoding: "utf8", timeout: 30_000});
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const total = Number(/^# tests (\d+)$/m.exec(result.stdout)?.[1]);
+  const passed = Number(/^# pass (\d+)$/m.exec(result.stdout)?.[1]);
+  assert.ok(total > 0, "The publication suite must execute.");
+  assert.equal(passed, total);
+  assert.match(result.stdout, /^# fail 0$/m);
+  assert.match(result.stdout, /^# skipped 0$/m);
+  assert.match(result.stdout, /^# todo 0$/m);
+  for (const owner of ["organization", "platform"]) {
+    for (const kind of ["studio", "derived"]) {
+      assert.ok(result.stdout.includes(`sqlite/${owner}/${kind}: a failure after definition and receipt writes rolls back every publication effect`));
+    }
+  }
+});
+
 test("Electron's actual SQLite runtime isolates concurrent structured operations", () => {
   const env: NodeJS.ProcessEnv = {...process.env, ELECTRON_RUN_AS_NODE: "1"};
   delete env.NODE_TEST_CONTEXT;

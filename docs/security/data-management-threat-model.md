@@ -319,6 +319,16 @@ This model covers workspace source selection, local and Hugging Face staging, st
 
 ## Residual risk
 
+Generated-model publication no longer recursively removes a selected cache
+snapshot. Any observed existing target or uncertain filesystem state denies;
+fresh publication retains the existing cache layout. Requested source-root links
+are checked before canonicalization, copied content is revalidated, and staging
+is created exclusively with cooperative identity checks before publication or
+cleanup. Unknown/substituted staging is retained. Native parent/substitution
+races, source mutation during copying, crash-consistent owned publication and
+cross-platform atomic no-replace remain unqualified. Shared/provider caches are
+reference-only for physical deletion; a successful copy cannot confer ownership.
+
 Automated schema, language, duplicate, semantic similarity, source-support,
 critic, diversity, personal-data, credential, safety, license, consent, benchmark,
 robots parsing, and readable-text extraction can produce false positives or
@@ -438,6 +448,55 @@ different bytes from their own organizations. An ID bound only in the other
 organization is denied before object reads, provider calls or worker dispatch.
 The test uses synthetic files, in-memory records and a fake worker; it does not
 qualify a managed database, identity provider, or native filesystem races.
+
+Prepared review pages use the exact existing GET task-review endpoint with
+`artifact:read`, normal token/organization middleware and owning application
+workspace/task/report-fingerprint checks. Unknown routes and intentionally
+unsupported task APIs remain denied. The review dialog distinguishes pending,
+failed and confirmed-empty pages; a failed read cannot imply that no rows exist.
+Running Dataset Preparation also shields its shared worker from automatic
+cancellation/deadline restart, including a sibling task's recovery. Confirmed
+queued cancellation, real terminal responses and owned process-exit failure
+remain authoritative; worker resource/admission bounds remain in force.
+
+## Read-only native identity prerequisite
+
+Security impact: security-relevant filesystem, process and local build authority.
+The private Windows/NTFS model file-identity helper is not wired into production.
+It retains a no-follow handle chain from a drive root, validates exact full
+volume/file identities, rejects unsupported/reparse/multiply linked objects, and
+rechecks private owner/DACL facts before releasing. Read/list access and explicit
+sharing enforce writer/delete conflicts on inspected objects; ancestor handles
+allow writers while denying delete sharing. No write/delete right, shell command,
+privilege enablement, ownership adoption or cache mutation is available.
+
+Malformed/oversized frames, foreign child identity, changed object identity,
+preexisting writers, junction roots/ancestors/children and multiple file links
+deny. Actual newly created fixture directories cover normal release, timeout
+release, replacement before open, attempted replacement while held, finite
+non-disclosing failures and successful reopening afterward. Portable protocol and
+inert process tests additionally cover frozen facts, binary mismatch, stale
+leases and persistent unknown-exit fencing. Fixture cleanup checks its own
+absolute boundary and original directory identity; failed attempts remain failed.
+
+The fixed no-fetch MSVC/SDK build inventories source, compiler-directory files,
+selected headers and explicit libraries before/after compilation. A disposable
+output namespace is created only after each existing ancestor is admitted; an
+observed redirect cannot receive an initial directory write. This is cooperative
+admission, not qualification of hostile check/use substitutions. A disposable
+worker uses an unnamed kill-on-close job with verified 2-GiB commit and eight
+process limits. Lingering compiler descendants are stopped only after exact
+opened-handle job membership, then native exit and handle release are confirmed.
+Image names or caller PIDs never authorize termination. Native build/fixture
+results establish this installed profile only; the OS and installed toolchain
+remain trusted inputs.
+
+Residuals: binary path-to-execution integrity requires protected production
+packaging; stable tree growth/accounting, ACL protection, ownership/publication,
+cross-user and hostile races, crash recovery, destructive effects and other
+platform/filesystem profiles remain unqualified. Rollback leaves production
+deletion/reveal denied. An existing unknown offload slot is not modified or
+adopted by this mechanism, and parent roadmap criteria remain pending.
 
 ## Ingestion commit acknowledgement uncertainty
 

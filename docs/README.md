@@ -4,6 +4,10 @@
 
 This directory separates canonical system guidance from downstream task context and operational support material.
 
+The [managed reference qualification guide](operations/managed-reference-qualification.md)
+documents the bounded local database operator and the distinction between
+published-asset rediscovery, reviewed source persistence and implementation release.
+
 ## Canonical Areas
 
 - `docs/adr/`
@@ -24,6 +28,14 @@ This directory separates canonical system guidance from downstream task context 
   - Downstream context-assembly support for implementation work; it summarizes canonical sources but does not replace them.
 
 ## Supporting Areas
+
+- `docs/optional-low-memory-inference-implementation-roadmap.md` tracks the
+  reviewed, approved optional Accelerate profile, its default compatibility,
+  private resource lifecycle and actual model qualification. It preserves the
+  separate functionality and security roadmap requirements.
+- `docs/operations/optional-low-memory-inference.md` defines initial supported
+  models/tokenizers, explicit placement and process-memory semantics, ownership,
+  failure recovery and the prospective installed-model qualification protocol.
 
 - `docs/diagnostics/system-builder-canvas-testing.md` describes meaningful
   scratch-built multi-component UI journeys, failure reproductions and the

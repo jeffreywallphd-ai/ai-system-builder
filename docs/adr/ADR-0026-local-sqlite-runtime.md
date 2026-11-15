@@ -60,8 +60,13 @@ provides `node:sqlite` directly.
 
 ## Runtime compatibility update
 
-The exact original-supplier desktop pin advances to Electron 42.11.3 to address
+The original qualified Electron 42.11.3 pin addressed
 [GHSA-fw47-9c62-h3vw](https://github.com/electron/electron/security/advisories/GHSA-fw47-9c62-h3vw).
+The current same-branch patch is exactly 42.11.18; the supplier's later
+permission-origin/frame-geometry advisories, actual Windows compatibility evidence
+and 42.x end-of-support limitation are recorded in
+`docs/security/electron-42-patch-qualification.json`. This does not select or
+qualify a future supported major upgrade.
 [Electron 42](https://www.electronjs.org/blog/electron-42-0) retains Node 24 and
 the built-in SQLite boundary; the driver decision and storage format are unchanged.
 Migration, transaction, backup/restore and actual development/package qualification

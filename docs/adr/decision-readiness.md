@@ -52,6 +52,13 @@ parity. Preserve current application and organization authorization. This
 decision excludes desktop-to-server synchronization, external relay, generic
 window control and deployment scaling.
 
+ADR-0045 accepts implementation of explicit bounded model offloading through the
+existing managed Transformers/Accelerate adapter. Standard loading remains the
+default; the versioned capability must remain unavailable until its loader,
+ownership and readiness wiring exists. Preserve the reviewed resource/staging
+limits and actual technical qualification; no new engine, implicit offload,
+unsafe loading or immediate running cancellation is authorized.
+
 Desktop tooling is ready within ADR-0044: use the exactly pinned official Forge
 Vite plugin, preserve both isolated renderer/preload entries, source-confined
 loopback development and self-contained provider imports. Updates need actual

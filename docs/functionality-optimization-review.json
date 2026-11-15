@@ -2,8 +2,8 @@
   "schema_version": "feature-optimization-review-v1",
   "assessment_kind": "static-source-and-existing-evidence",
   "implementation_authorized": true,
-  "approval_status": "implementation-in-progress",
-  "baseline_measurements": "Source-bound local browse, bounded background-task observation and isolated native exact Context comparisons recorded; representative controlled qualification remains pending.",
+  "approval_status": "completed",
+  "baseline_measurements": "Source-bound local browse, bounded background-task observation and isolated native exact Context comparisons are recorded. The owning roadmap records the accepted technical scope.",
   "source_assessment": "docs/security/security-findings-refresh-assessment.json",
   "roadmap_state": ".implementation-roadmaps/functionality-optimization/state.json",
   "features": [
@@ -470,61 +470,97 @@
     }
   ],
   "implementation_progress": {
-    "status": "increments-1-through-3-implemented-pending-qualification-increment-4-verifying",
-    "locally_verified": [
-      "Immutable version transport-to-repository selection with a later version present.",
-      "Malformed reference rejection before context reads/saves.",
-      "Typed canonical authoring summary projection and IPC list envelopes.",
-      "Relationship command and route/body parity; static projection dispatch order.",
-      "Confirmed workspace recovery and structure-preserving removal/undo/redo.",
-      "1000-definition sparse compatible traversal; actual 100 individual collection reads versus one batch collection read.",
-      "Late Load more responses ignored after destination change.",
-      "Scalar summary on both transports/hosts: exact 1000-system/10000-release/model/custom-asset fixture, one read per owning collection, sub-1000-byte home response; group failure and denied sender/authority regressions.",
-      "Six owned production-path probes: five warmups/30 samples on local-win32-node24-fixture; local p95 browse187.544ms, validate20.628ms, resolve7.811ms, build129.465ms, 2MiB preview1.957ms, handoff0.360ms. These do not qualify named reference profiles.",
-      "Build baseline3066.290ms versus candidate127.638ms on the same local core environment, with fresh locked authority and cancellation denial.",
-      "Required application workspace access on10composition use cases and5read-model methods; both hosts wire persisted active workspace and organization membership authority. Only8exact existing composition route templates admitted.",
-      "Real1000-candidate sparse traversal: baseline1006detail collection reads, candidate153(84.8percent reduction); identical100compatible results and84690response bytes. Shared Composer/workspace interaction16tests and thin workspace5tests pass.",
-      "I1bounded profile passed285Node tests plus23Vitest tests in45explicit files; server/thin builds passed. Fresh source-stable six-operation run passes local fixture budgets; named controlled profiles remain pending.",
-      "Current paired browser run: both thin-client and newly packaged desktop passed real save/reopen, exact instance/reference, preview, keyboard/focus return and320CSSpixel geometry. Source-identified synthetic fixtures; manual assistive-technology and participant evidence remain pending.",
-      "I2 focused regressions: scoped session observation with 24 idle reads versus401 baseline over10minutes, 1100ms healthy-transport p95 progress; duplicate Context save/dataset approval, malformed training cleanup and transient cleanup retry; truthful ComfyUI cancellation, ambiguous submission ownership and startup/shutdown generation fences; thin image finalization retry and workspace navigation isolation.",
-      "I3 exact Context validation uses256-row native Arrow batches;17focused denial/cancellation/oracle tests pass. Source-bound1000/10000/100000-row comparison with explicit dimensions is in docs/operations/context-efficiency-qualification.json; all attempts retained, no real-model or hardware qualification claimed."
+    "status": "completed",
+    "completed_increments": [
+      "responsive-workspace-browse",
+      "efficient-reliable-task-journeys",
+      "quality-preserving-context-efficiency",
+      "qualified-user-and-model-outcomes"
     ],
-    "pending": [
-      "Personal User Library owner scoping; organization partitioning is insufficient.",
-      "Workspace-wide effective authoring summary list remains explicitly unavailable.",
-      "Dedicated performance profiles, real-model hardware, manual accessibility and participant qualification.",
-      "Projection services remain uncomposed; execution and User Library route families remain denied pending their specific resource boundaries."
-    ],
-    "qualification": "Reviewed local implementation and focused conformance. Both failed and corrected passing aggregate attempts remain historical after later security edits. Registry transmission was authorized and the audit executed: runtime affected entries0, full-tree affected entries7(all high) through retained original braces supplier after official dependency/toolchain updates. The user retained that supplier and left tooling qualification pending; the unchanged zero-advisory gate fails. Current final aggregate/review is tracked by the control-plane overall work; all15controlled criteria remain pending. No fork, advisory waiver, controlled pass or roadmap closure is implied.",
+    "completed_on": "2026-10-23",
+    "receipt_digest": "d928faf46bc8fe43a1ffa734cf435c5c00f0a6f0595e48623614d6c3e3f7dfec",
+    "review_digest": "2f0b40261e66ecb5de0832bff9fb4d8425f211cf8892120fa9868b7813295f62",
+    "human_acceptance": "User-owned offline; original requirements and approved amendments remain archived in owner state. No participant study or manual operator is required for technical closure.",
+    "qualification": "The owning roadmap completed its approved technical scope. Native lifecycle and optional offload, private-provider and restricted security checks remain tracked in their owning roadmaps.",
     "qualification_crosswalk": "docs/operations/functionality-qualification-crosswalk.json",
     "qualification_procedure": "docs/operations/functionality-outcome-qualification.md",
-    "aggregate_attempts": [
-      {
-        "status": "failed-retained",
-        "receipt_digest": "aa37c43ada61777d779281cb54779c9985006fd5e1afe540c46cc17ca1c85bf5",
-        "summary": "Standard Node37failed,3145passed,2skipped; Vitest standard1failed,430passed; E2E95passed,2skipped. AI commands completed, with unavailable model/physical qualification still pending. Observed runner/fixture/runtime diagnostic repairs are in focused verification."
-      },
-      {
-        "status": "passed-reviewed-historical-after-later-source-edits",
-        "work_id": "functionality-overall-corrected-qualification",
-        "receipt_digest": "46edc0f668fdd3e27249c494d798558c14a6923610f57766de31f3aec2256433",
-        "review_digest": "057090313c85fd9d763937f24b4fd07c7d8b701c7060bb813594c51f9d17e01f",
-        "summary": "Standard Node3201passed/2skipped, Vitest431passed; E2E Node92passed/2skipped, Vitest3passed. Opt-in Python AI command exited0 in explicit offline environment; empty Node/Vitest AI discovery delegates to Python. No controlled model/hardware qualification. Source edits after this receipt require current final qualification."
-      },
-      {
-        "status": "failed-retained-before-artifact-media-fixture-correction",
-        "work_id": "functionality-final-source-qualification",
-        "receipt_digest": "01803651ba2fe0fe97fb4763520027f8d1a5baa396381dcc97f0b9dde4cdbb99",
-        "summary": "Standard Node3282passed/2skipped; Vitest427passed/6failed of433. E2E Node92passed/2skipped and Vitest3passed. Opt-in Python AI command exited0 under explicit offline settings; unavailable model qualification remains pending. Control-plane/roadmap/docs/agent/architecture/outcomes pass; required dependency gate fails7high original-supplier affected toolchain package entries. Six headless invalid-image fixture hangs were reproduced and corrected via explicit unavailable binary read/fallback, with17exact tests and actual independent fixture review passing. Corrected final aggregate is tracked dynamically in canonical overall work records."
+    "roadmap_state": ".implementation-roadmaps/functionality-optimization/state.json",
+    "current_assessment": "docs/operations/open-roadmap-assessment.json"
+  },
+  "implementation_progress_history": [
+    {
+      "classification": "Historical assessment before Increment 4 qualification and the approved final scope.",
+      "record": {
+        "status": "increments-1-through-3-completed-increment-4-blocked",
+        "current_increment": "qualified-user-and-model-outcomes",
+        "pending": [
+          "Actual generation quality and accepted-output throughput or separately approved generation-budget comparison; Context retrieval budgets grant no generation qualification.",
+          "Missing final exact-profile automated desktop/thin-client user journeys/accessibility and current final checks/review; existing exact-target F1-F3 completion remains unchanged.",
+          "Related security/native/offload/provider gaps remain in their owning roadmaps; a blocked parent does not assert all independent support coding is complete."
+        ]
       }
-    ],
-    "dependency_requalification": "docs/security/security-findings-refresh-assessment.json#dependency_requalification",
-    "current_aggregate_lookup": {
-      "source": "local development control-plane work records",
-      "roadmap_state_path": ".implementation-roadmaps/functionality-optimization/state.json",
-      "increment_id": "overall",
-      "ordering": "creation time newest first; inspect actual receipt/review and freshness, not only work status",
-      "qualification": "A failed required dependency gate never becomes a controlled pending or a pass."
+    },
+    {
+      "classification": "Historical assessment before latest exact-target completion, human-scope amendments and retired Run/Test mapping. No current pass is inferred.",
+      "record": {
+        "status": "increments-1-through-3-implemented-pending-qualification-increment-4-verifying",
+        "locally_verified": [
+          "Immutable version transport-to-repository selection with a later version present.",
+          "Malformed reference rejection before context reads/saves.",
+          "Typed canonical authoring summary projection and IPC list envelopes.",
+          "Relationship command and route/body parity; static projection dispatch order.",
+          "Confirmed workspace recovery and structure-preserving removal/undo/redo.",
+          "1000-definition sparse compatible traversal; actual 100 individual collection reads versus one batch collection read.",
+          "Late Load more responses ignored after destination change.",
+          "Scalar summary on both transports/hosts: exact 1000-system/10000-release/model/custom-asset fixture, one read per owning collection, sub-1000-byte home response; group failure and denied sender/authority regressions.",
+          "Six owned production-path probes: five warmups/30 samples on local-win32-node24-fixture; local p95 browse187.544ms, validate20.628ms, resolve7.811ms, build129.465ms, 2MiB preview1.957ms, handoff0.360ms. These do not qualify named reference profiles.",
+          "Build baseline3066.290ms versus candidate127.638ms on the same local core environment, with fresh locked authority and cancellation denial.",
+          "Required application workspace access on10composition use cases and5read-model methods; both hosts wire persisted active workspace and organization membership authority. Only8exact existing composition route templates admitted.",
+          "Real1000-candidate sparse traversal: baseline1006detail collection reads, candidate153(84.8percent reduction); identical100compatible results and84690response bytes. Shared Composer/workspace interaction16tests and thin workspace5tests pass.",
+          "I1bounded profile passed285Node tests plus23Vitest tests in45explicit files; server/thin builds passed. Fresh source-stable six-operation run passes local fixture budgets; named controlled profiles remain pending.",
+          "Current paired browser run: both thin-client and newly packaged desktop passed real save/reopen, exact instance/reference, preview, keyboard/focus return and320CSSpixel geometry. Source-identified synthetic fixtures; manual assistive-technology and participant evidence remain pending.",
+          "I2 focused regressions: scoped session observation with 24 idle reads versus401 baseline over10minutes, 1100ms healthy-transport p95 progress; duplicate Context save/dataset approval, malformed training cleanup and transient cleanup retry; truthful ComfyUI cancellation, ambiguous submission ownership and startup/shutdown generation fences; thin image finalization retry and workspace navigation isolation.",
+          "I3 exact Context validation uses256-row native Arrow batches;17focused denial/cancellation/oracle tests pass. Source-bound1000/10000/100000-row comparison with explicit dimensions is in docs/operations/context-efficiency-qualification.json; all attempts retained, no real-model or hardware qualification claimed."
+        ],
+        "pending": [
+          "Personal User Library owner scoping; organization partitioning is insufficient.",
+          "Workspace-wide effective authoring summary list remains explicitly unavailable.",
+          "Dedicated performance profiles, real-model hardware, manual accessibility and participant qualification.",
+          "Projection services remain uncomposed; execution and User Library route families remain denied pending their specific resource boundaries."
+        ],
+        "qualification": "Reviewed local implementation and focused conformance. Both failed and corrected passing aggregate attempts remain historical after later security edits. Registry transmission was authorized and the audit executed: runtime affected entries0, full-tree affected entries7(all high) through retained original braces supplier after official dependency/toolchain updates. The user retained that supplier and left tooling qualification pending; the unchanged zero-advisory gate fails. Current final aggregate/review is tracked by the control-plane overall work; all15controlled criteria remain pending. No fork, advisory waiver, controlled pass or roadmap closure is implied.",
+        "qualification_crosswalk": "docs/operations/functionality-qualification-crosswalk.json",
+        "qualification_procedure": "docs/operations/functionality-outcome-qualification.md",
+        "aggregate_attempts": [
+          {
+            "status": "failed-retained",
+            "receipt_digest": "aa37c43ada61777d779281cb54779c9985006fd5e1afe540c46cc17ca1c85bf5",
+            "summary": "Standard Node37failed,3145passed,2skipped; Vitest standard1failed,430passed; E2E95passed,2skipped. AI commands completed, with unavailable model/physical qualification still pending. Observed runner/fixture/runtime diagnostic repairs are in focused verification."
+          },
+          {
+            "status": "passed-reviewed-historical-after-later-source-edits",
+            "work_id": "functionality-overall-corrected-qualification",
+            "receipt_digest": "46edc0f668fdd3e27249c494d798558c14a6923610f57766de31f3aec2256433",
+            "review_digest": "057090313c85fd9d763937f24b4fd07c7d8b701c7060bb813594c51f9d17e01f",
+            "summary": "Standard Node3201passed/2skipped, Vitest431passed; E2E Node92passed/2skipped, Vitest3passed. Opt-in Python AI command exited0 in explicit offline environment; empty Node/Vitest AI discovery delegates to Python. No controlled model/hardware qualification. Source edits after this receipt require current final qualification."
+          },
+          {
+            "status": "failed-retained-before-artifact-media-fixture-correction",
+            "work_id": "functionality-final-source-qualification",
+            "receipt_digest": "01803651ba2fe0fe97fb4763520027f8d1a5baa396381dcc97f0b9dde4cdbb99",
+            "summary": "Standard Node3282passed/2skipped; Vitest427passed/6failed of433. E2E Node92passed/2skipped and Vitest3passed. Opt-in Python AI command exited0 under explicit offline settings; unavailable model qualification remains pending. Control-plane/roadmap/docs/agent/architecture/outcomes pass; required dependency gate fails7high original-supplier affected toolchain package entries. Six headless invalid-image fixture hangs were reproduced and corrected via explicit unavailable binary read/fallback, with17exact tests and actual independent fixture review passing. Corrected final aggregate is tracked dynamically in canonical overall work records."
+          }
+        ],
+        "dependency_requalification": "docs/security/security-findings-refresh-assessment.json#dependency_requalification",
+        "current_aggregate_lookup": {
+          "source": "local development control-plane work records",
+          "roadmap_state_path": ".implementation-roadmaps/functionality-optimization/state.json",
+          "increment_id": "overall",
+          "ordering": "creation time newest first; inspect actual receipt/review and freshness, not only work status",
+          "qualification": "A failed required dependency gate never becomes a controlled pending or a pass."
+        }
+      }
     }
-  }
+  ],
+  "baseline_scope": "Feature baselines, proposed targets and historical implementation assessments below retain their original evidence and intent. Newer owner state supersedes participant/manual-operator acceptance and the retired standalone Run/Test direction. Current progress is separate; historical dependency counts or aggregate receipts are not current qualification."
 }

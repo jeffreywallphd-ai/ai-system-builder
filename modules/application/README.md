@@ -1,5 +1,24 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+Workspace Asset Library membership includes exact published Studio and derived
+references from private owning repositories alongside existing authoring/reuse
+and trusted packs. List/detail reads require matching published catalog versions;
+global metadata and unpublished records grant no ownership. Shared host composition
+supplies the organization-scoped readers; failures deny with bounded static
+diagnostics. See `docs/architecture/asset-kernel.md` for scope and limits.
+
+Studio proposals/drafts, package lifecycle operations and derived customization
+targets/workflows require the workspace asset access port before protected I/O.
+Both read and write operations resolve the persisted active workspace and existing
+organization membership policy; transport admission alone grants no authority.
+Missing composition and private policy failures deny with bounded diagnostics.
+Internal trusted Foundation implementation seeding retains its distinct authority.
+
+Asset-package admission repeats current inspection of verified immutable bytes
+before trust evaluation or writes. The pure semantic import assessment enforces
+bounded complete content and exact entry/optional-manifest claims; cached
+eligibility never grants trust, approval or a legacy migration.
+
 
 Asset definition reads support a bounded ordered batch (at most 250 references).
 The local repository reads one collection and preserves exact version/current
@@ -99,7 +118,6 @@ target, clock or ID effects. Public legacy list/detail methods use the eight-met
 `createWorkspaceAssetAuthoringReaders` facade, which exposes no write or unscoped
 by-ID method. Both paths retain existing safe-field and provenance semantics.
 
-
 Read-policy and repository failures settle as fixed unavailable API/IPC responses.
 Missing required fields retain validation failures. Focused tests cover every
 public read, query capture and current persisted membership. No request may
@@ -112,10 +130,3 @@ Studio application entry points require the existing current-workspace read/writ
 Derived customization workflow and target-catalog entry points use current workspace authority and own their requests before awaits. Semantic patch validation alone retains some nested values; request capture deep-copies the validated result. Shared readiness wrappers and the direct workflow/catalog retain independent admission. Exact base, source, review and revision checks remain; publication uses the transaction described above.
 
 Customization target lists use a fresh per-operation view of exact definition identities. The existing ordered repository seam reads at most 250 unique references per call; ports without it retain one in-flight single read. Only the four primitive summary fields are retained before later batch or single-read waits. The 343-definition cohort requires two batch reads, while exact detail preserves its full body/source checks and avoids a duplicate definition lookup. This is request-count evidence, not whole-host latency or live pool qualification.
-
-Workspace Asset Library membership includes exact published Studio and derived
-references from private owning repositories alongside existing authoring/reuse
-and trusted packs. List/detail reads require matching published catalog versions;
-global metadata and unpublished records grant no ownership. Shared host composition
-supplies the organization-scoped readers; failures deny with bounded static
-diagnostics. See `docs/architecture/asset-kernel.md` for scope and limits.
