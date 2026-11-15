@@ -15187,16 +15187,20 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
    "facts": {
-    "sha256": "060f2f1fe8075a1dcf46e71356206e902aba6729f724d8040b953aa1a4ed1984",
-    "bytes": 32489,
+    "sha256": "7e614fb37ffdd3720043957a53428be357faa4d94923f65b75a8774b3ff7c71b",
+    "bytes": 39735,
     "cases": [
      {
       "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart",
       "line": 144
      },
      {
-      "name": "packaged Desktop observes a running approved turn from a separately paired MCP client",
+      "name": "packaged Desktop reviews an MCP plan in the app popup and reports the exact decision",
       "line": 335
+     },
+     {
+      "name": "packaged Desktop observes a running approved turn from a separately paired MCP client",
+      "line": 439
      }
     ],
     "dynamicCases": 0,
@@ -15236,10 +15240,14 @@
      {
       "name": "saveObservation",
       "line": 128
+     },
+     {
+      "name": "stage",
+      "line": 374
      }
     ],
-    "assertionCount": 62,
-    "assertionDigest": "8b32493ca49be79f26bc4d1e2568c2419de8927470513f279b4b3f2f73c5ac87",
+    "assertionCount": 91,
+    "assertionDigest": "d50bde874bf9d2ccb33348ca7632ef8f0715085e46e651bc8c4cf6f528969570",
     "assertionExamples": [
      {
       "line": 38,
@@ -15269,8 +15277,8 @@
   {
    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
    "facts": {
-    "sha256": "a6c99d76111f916fa871cf05786ef73e24972a77395ecd67d86670973a37b8bd",
-    "bytes": 58025,
+    "sha256": "80d959d36f708c2a28e13f3bdd5200a682c413f444580785f952e3440515f264",
+    "bytes": 59443,
     "cases": [
      {
       "name": "a real paired client presents a saved Windows resource and the user revokes before continuing saved work",
@@ -15316,8 +15324,8 @@
       "line": 348
      }
     ],
-    "assertionCount": 106,
-    "assertionDigest": "54941a21070612ded664231500ad8d39a88db8e370bf53d789bc0fc3c0491f49",
+    "assertionCount": 107,
+    "assertionDigest": "3ec062752e96a7f9372d749f34338a76db9fe8a09dca94842c23dc32acd5f120",
     "assertionExamples": [
      {
       "line": 131,

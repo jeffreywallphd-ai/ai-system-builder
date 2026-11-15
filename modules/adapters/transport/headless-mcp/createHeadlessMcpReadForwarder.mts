@@ -2,7 +2,8 @@ import { Agent, request } from "node:https";
 import { randomUUID } from "node:crypto";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
-import type { HeadlessPlanReviewAgentRequest, HeadlessPlanReviewAgentResult } from "../../../contracts/headless/index.js";
+import type { HeadlessPlanReviewAgentRequest, HeadlessPlanReviewAgentResult, HeadlessPlanStepRequest,
+  HeadlessPlanStepResult } from "../../../contracts/headless/index.js";
 import type { HeadlessApprovedTurnRequest, HeadlessApprovedTurnResult, HeadlessAuthoringWireResult, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessWindowRequest, HeadlessWindowResult } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
@@ -100,11 +101,13 @@ const unavailable: ReadResult = { ok: false, code: deadlineCode };
 
 type AuthoringRequest = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
 export type HeadlessPlanReviewForwardRequest = HeadlessPlanReviewAgentRequest & { readonly version: typeof HEADLESS_CONTRACT_VERSION };
-type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest | HeadlessPlanReviewForwardRequest;
+type ForwardRequest = HeadlessReadRequest | AuthoringRequest | HeadlessApprovedTurnRequest | HeadlessWindowRequest |
+  HeadlessPlanReviewForwardRequest | HeadlessPlanStepRequest;
 const unknownWrite: HeadlessAuthoringWireResult = { ok: false, code: "headless.operation-unconfirmed" };
 const unknownTurn = { ok: false, code: "headless.operation-unconfirmed" } as const;
 export const MANAGED_HEADLESS_READS = ["host.describe", "templates.list", "systems.read", "plan.capabilities"] as const;
-type ForwardResult = ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult | HeadlessPlanReviewAgentResult;
+type ForwardResult = ReadResult | HeadlessAuthoringWireResult | HeadlessApprovedTurnResult | HeadlessWindowResult |
+  HeadlessPlanReviewAgentResult | HeadlessPlanStepResult;
 
 export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly httpsOrigin?: string;
@@ -130,7 +133,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   // Each fixed POST independently prevents proxying and redirect following.
   const agent = new Agent({rejectUnauthorized: true, keepAlive: false, maxSockets: MAX_ACTIVE});
   const guard = (input: ForwardRequest) => {
-    if (isPlanReview(input)) return false;
+    if (isPlanReview(input) || input.operation === "plan.run-step") return false;
     if (input.version === headless.UI_CONTROL_VERSION) {
       const target = "target" in input.input ? input.input.target : input.input;
       return enableConsent && target.workspaceId === workspaceId &&
@@ -177,9 +180,10 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const conversationAddress = new URL(headless.HEADLESS_APPROVED_TURN_PATH, endpoint);
   const presentationAddress = new URL(headless.HEADLESS_WINDOW_CONTROL_PATH, endpoint);
   const planReviewAddress = enablePlanReview ? new URL(headless.HEADLESS_PLAN_REVIEW_PATH, endpoint) : undefined;
+  const planStepAddress = enablePlanReview ? new URL(headless.HEADLESS_PLAN_STEP_PATH, endpoint) : undefined;
   const agent = loopback.createDesktopPinnedLoopbackAgent(endpoint, fingerprint);
   const authorization = `Bearer ${credential}`;
-  return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress,
+  return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress,
     agent, authorization, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
 }
@@ -187,6 +191,7 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
 function createForwarder(options: {
   address: URL; authoringAddress: URL; conversationAddress: URL; presentationAddress: URL;
   planReviewAddress?: URL;
+  planStepAddress?: URL;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
@@ -196,6 +201,25 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
+    if (input.operation === "plan.run-step") {
+      if (!options.planStepAddress) return { ok: false, code: "headless.forbidden" };
+      const accepted = headless.readHeadlessPlanStepRequest(input, input.input.hostIncarnationId);
+      if (!accepted.ok) return accepted;
+      if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
+      active++;
+      try {
+        const { status, raw } = await sendRead(options.planStepAddress, agent, authorization, accepted.request, signal, headers);
+        const result = headless.readHeadlessPlanStepResult(raw, accepted.request.input);
+        if (status === 200 && result.ok)
+          return result.value.expiresAt > Date.now() ? result : unknownWrite;
+        // The host can withhold a reply after it has saved the step. Only
+        // unambiguous request or host validation errors are safe to report.
+        if (!result.ok && ((status === 400 && result.code === "headless.invalid-request") ||
+            (status === 409 && result.code === "headless.host-changed"))) return result;
+        return unknownWrite;
+      } catch { return unknownWrite; }
+      finally { active--; }
+    }
     if (isPlanReview(input)) {
       if (!options.planReviewAddress) return { ok: false, code: "headless.forbidden" };
       if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;

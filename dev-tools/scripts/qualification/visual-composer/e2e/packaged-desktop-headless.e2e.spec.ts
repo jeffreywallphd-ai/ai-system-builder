@@ -363,7 +363,7 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
       "aisb_build_plan_approval_status", "aisb_host_describe", "aisb_list_systems", "aisb_list_templates",
       "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
       "aisb_preview_build_plan", "aisb_read_conversation_task", "aisb_read_system", "aisb_request_build_plan_approval",
-      "aisb_saved_system_changes", "aisb_saved_system_snapshot",
+      "aisb_run_approved_build_step", "aisb_saved_system_changes", "aisb_saved_system_snapshot",
     ]);
     const baseline = await call(client, "aisb_list_systems", workspace);
     expect(baseline.ok).toBe(true);
@@ -386,14 +386,14 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
       await dialog.getByRole("button", { name: new RegExp("^Review request " + fingerprint.slice(0, 8)) }).click();
       await expect(dialog.getByRole("list", { name: "Requested changes" }).getByRole("listitem").nth(0)).toContainText("Create " + first);
       await expect(dialog.getByRole("list", { name: "Requested changes" }).getByRole("listitem").nth(1)).toContainText("Create " + second);
-      return async () => call(client, "aisb_build_plan_approval_status", target);
+      return { target, status: async () => call(client, "aisb_build_plan_approval_status", target) };
     }
 
     const whole = await stage("Fixture review queue", "Fixture review report");
     await dialog.getByRole("radio", { name: "Approve all listed changes" }).check();
     await dialog.getByRole("button", { name: "Approve all changes", exact: true }).click();
     await expect(dialog.getByText("Plan approved.", { exact: true })).toBeVisible();
-    expect(await whole()).toMatchObject({ ok: true, value: {
+    expect(await whole.status()).toMatchObject({ ok: true, value: {
       status: "approved", mode: "whole-plan", revision: 2, approvedSteps: 2,
     } });
     await dialog.getByRole("button", { name: "Close plan review" }).click();
@@ -403,20 +403,33 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     const individual = await stage("Fixture intake", "Fixture triage");
     await dialog.getByRole("button", { name: "Approve change 1", exact: true }).click();
     await expect(dialog.getByText("1 of 2 changes approved.", { exact: true })).toBeVisible();
-    expect(await individual()).toMatchObject({ ok: true, value: {
+    expect(await individual.status()).toMatchObject({ ok: true, value: {
       status: "pending", mode: "each-change", revision: 2, approvedSteps: 1,
     } });
     await dialog.getByRole("button", { name: "Withdraw approval", exact: true }).click();
     await expect(dialog.getByText("Approval withdrawn.", { exact: true })).toBeVisible();
-    expect(await individual()).toMatchObject({ ok: true, value: { status: "revoked", revision: 3 } });
-    expect(await whole()).toMatchObject({ ok: true, value: { status: "approved", revision: 2 } });
+    expect(await individual.status()).toMatchObject({ ok: true, value: { status: "revoked", revision: 3 } });
+    expect(await whole.status()).toMatchObject({ ok: true, value: { status: "approved", revision: 2 } });
     await dialog.getByRole("button", { name: "Close plan review" }).click();
 
     const cancel = await stage("Fixture cancellation", "Fixture cleanup");
     await dialog.getByRole("button", { name: "Cancel request", exact: true }).press("Enter");
     await expect(dialog.getByText("Request canceled.", { exact: true })).toBeVisible();
-    expect(await cancel()).toMatchObject({ ok: true, value: { status: "cancelled", revision: 2, approvedSteps: 0 } });
+    expect(await cancel.status()).toMatchObject({ ok: true, value: { status: "cancelled", revision: 2, approvedSteps: 0 } });
     expect(await call(client, "aisb_list_systems", workspace)).toEqual(baseline);
+
+    const runStep = (step: number) => call(client, "aisb_run_approved_build_step", { ...whole.target, approvalRevision: 2, step });
+    expect(await runStep(2)).toMatchObject({ ok: false, code: "headless.operation-unconfirmed" });
+    expect(await call(client, "aisb_list_systems", workspace)).toEqual(baseline);
+    const firstResult = await runStep(1);
+    expect(firstResult).toMatchObject({ ok: true, value: { kind: "committed", step: 1 } });
+    if (!firstResult.value || typeof firstResult.value !== "object") throw new Error("The approved step has no saved receipt.");
+    expect(await runStep(1)).toEqual({ ...firstResult, value: { ...firstResult.value, kind: "replayed" } });
+    expect(await runStep(2)).toMatchObject({ ok: true, value: { kind: "committed", step: 2 } });
+    const final = await call(client, "aisb_list_systems", workspace);
+    expect(final.ok && Array.isArray(final.value) && final.value.map(item => item.name).sort()).toEqual([
+      "Fixture review queue", "Fixture review report",
+    ]);
   } finally {
     try { await mcp?.close(); }
     finally { await lifetime.retire(); }

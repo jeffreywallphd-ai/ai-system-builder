@@ -79,6 +79,11 @@ same fingerprint or resubmit the exact proposal. In the desktop app, open
 Settings, expand Local chat clients, and select Review plan requests. Open
 a request to see the exact changes. Approve all listed changes or approve
 each one separately. This records the decision for the plan.
+Use `aisb_run_approved_build_step` with the exact fingerprint, the current
+approval revision and the next approved step number. The app runs the
+operation it saved with the plan. If the reply is uncertain, check current
+approval and saved state first. While that approval remains current, repeat
+the exact step and revision to look up its saved receipt.
 
 If a write reply is lost, check the saved state or repeat the exact request
 with the same key. The adapter never repeats writes automatically. Cancellation

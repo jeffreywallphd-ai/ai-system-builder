@@ -120,7 +120,8 @@ const packagedHeadlessOriginalCommit="6ce8b3255a935f3a02e65f902a2989b31a417bf6";
 const packagedHeadlessLatestBaseline="a1894a3a13a013bfb25d12ddae1c074923216b34";
 const packagedTakeoverSource="dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
 const packagedTakeoverOriginalCommit="29524bbbf70785f0323a37d1f6af633517c19ad0";
-const packagedTakeoverVersions=[packagedTakeoverOriginalCommit,"888a58bbcaf2062e8f73ce54abd7dd4f50d8ebce","01b007c569e2c7a5bf819677b5c505734cdf59e4","a954b586b3c8372f45acb51dd4ddbebfd7014c97"];
+const packagedTakeoverVersions=[packagedTakeoverOriginalCommit,"888a58bbcaf2062e8f73ce54abd7dd4f50d8ebce","01b007c569e2c7a5bf819677b5c505734cdf59e4","a954b586b3c8372f45acb51dd4ddbebfd7014c97",
+  "7725f2b75edccb00e37a98f99c09a270c7fed98c"];
 const reviewReferenceSources=[
   "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs",
   "dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts",
@@ -204,6 +205,7 @@ function originalCensusRows(bundle:CensusBundle,map:CensusMap) {
           !["4af822bfed55376be4f7f81dd3924dd1ecc848726842ac8ce1ef0aa8582f8c93",
             "205d01b56f5e64bfecd6d77f0efb5b8a5d4cea232522a3e587dfdd43de7d4ae9",
             "e0bf28e6f84706bcf55d47457174fdc31946f415e5938ad852143556b38658de",
+            "eff2c4bcec59a0555daeafe0edb50e49543a7587861f8e7995b546cee37dab16",
             jsonSha(bundle.api.sourceFacts(row.path,gitSource(packagedTakeoverOriginalCommit,row.path)))].includes(jsonSha(row.facts))) {
         throw new Error("UI definition Git pin does not match its reviewed Headless source version.");
       }

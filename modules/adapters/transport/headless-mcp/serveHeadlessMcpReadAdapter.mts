@@ -4,6 +4,7 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod/v4";
 import headless from "../../../contracts/headless/index.js";
 import type { HeadlessApprovedTurnRequest, HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessSystemSummary, HeadlessWindowRequest } from "../../../contracts/headless/index.js";
+import type { HeadlessPlanStepRequest } from "../../../contracts/headless/index.js";
 import systemBuilder from "../../../contracts/system-builder/index.js";
 import type { SystemBuilderSystemId } from "../../../contracts/system-builder/index.js";
 import workspace from "../../../contracts/workspace/index.js";
@@ -46,7 +47,8 @@ function toolResult<T extends { ok: boolean }>(result:T) {
 }
 
 async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest |
-  HeadlessApprovedTurnRequest | HeadlessWindowRequest | HeadlessPlanReviewForwardRequest, signal?: AbortSignal) {
+  HeadlessApprovedTurnRequest | HeadlessWindowRequest | HeadlessPlanReviewForwardRequest | HeadlessPlanStepRequest,
+  signal?: AbortSignal) {
   return toolResult(await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" });
 }
 
@@ -243,6 +245,16 @@ function addSystemBuilderTools(server: McpServer) {
       description: "Read the app's current decision and expiry for one exact build-plan proposal.",
       inputSchema: z.strictObject(reviewTarget), annotations: queryHints,
     }, (input, context) => reviewPlan("plan.status", input, context.mcpReq.signal));
+    server.registerTool("aisb_run_approved_build_step", {
+      description: "Run the next exact approved change. Use the same step and revision to recover an uncertain reply while approval is current.",
+      inputSchema: z.strictObject({ ...reviewTarget, approvalRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+        step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
+      annotations: { ...writeHints, destructiveHint: false },
+    }, (input, context) => {
+      if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+      const decoded = headless.readHeadlessPlanStepRequest({ version, operation: "plan.run-step", input }, input.hostIncarnationId);
+      return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
+    });
   }
 }
 

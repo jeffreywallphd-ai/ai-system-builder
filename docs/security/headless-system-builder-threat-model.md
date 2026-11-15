@@ -157,7 +157,9 @@ by reference. Only the verified plan record supplies the operation and input.
 The connector sends a successful result while the desktop transaction owner
 still holds the exact current approval. A decision withdrawn before the reply
 withholds the result. The already committed effect remains in the journal.
-The managed host and portable tool also need to connect this path.
+The portable desktop client forwards only the step reference. It validates
+the exact receipt and reports an uncertain reply without issuing a second
+request. Managed execution needs its own current approval and delivery checks.
 The approval list contains at most 32 live proposal references for one
 app user, workspace and host session. Listing requires current access to
 that exact scope. The index and review record share the owned transaction.

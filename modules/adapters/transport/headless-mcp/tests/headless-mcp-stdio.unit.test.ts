@@ -11,13 +11,14 @@ import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import selfsigned from "selfsigned";
 import { createInMemoryStructuredDocumentStore } from "../../../persistence/shared";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
+import { HeadlessBuildPlanReviewUseCase } from "../../../../application/use-cases/system-builder/headless-build-plan-review.use-case";
 import { createDesktopHeadlessClientAuthority } from "../../../security/headless";
 import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "../../headless-loopback";
-import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_READ_OPERATIONS,
+import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_STEP_PATH, HEADLESS_READ_OPERATIONS,
   isHeadlessHostIncarnationId, parseHeadlessReadRequest, readHeadlessPlanReviewAgentRequest,
   readHeadlessPlanReviewAgentResult, type HeadlessChangeCursor } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
-import { normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
+import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { boundHeadlessMcpStdio } from "../boundHeadlessMcpStdio.mjs";
 
@@ -30,7 +31,8 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
   "aisb_prepare_workflow", "aisb_read_conversation_task", "aisb_read_system", "aisb_saved_system_changes", "aisb_saved_system_snapshot"];
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
-const planReviewTools = ["aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan", "aisb_request_build_plan_approval"];
+const planReviewTools = ["aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
+  "aisb_request_build_plan_approval", "aisb_run_approved_build_step"];
 const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_release_window", "aisb_renew_window",
   "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
@@ -251,7 +253,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   }
 });
 
-test("the plan-review stdio mode stages an exact pending proposal without offering direct mutations", { timeout: 25_000 }, async () => {
+test("the plan-review stdio mode can run an exact approved step after the app records approval", { timeout: 25_000 }, async () => {
   const identity = { organizationId, principalId: "mcp-plan-fixture-user" };
   const platform = createInMemoryStructuredDocumentStore();
   const registry = createDesktopHeadlessClientAuthority({
@@ -262,6 +264,8 @@ test("the plan-review stdio mode stages an exact pending proposal without offeri
   const store = createStructuredHeadlessPlanReviewRepository(platform, async (_owner, target) =>
     target.scope.organizationId === organizationId && target.scope.principalId === identity.principalId &&
     target.scope.workspaceId === workspaceId);
+  let effectCount = 0;
+  let requestCount = 0;
   const connector = await startDesktopHeadlessLoopback({
     registrations: registry,
     async read(raw, getGrant) {
@@ -286,6 +290,26 @@ test("the plan-review stdio mode stages an exact pending proposal without offeri
       if (!saved.ok) return { ok: false, code: saved.code === "invalid" ? "headless.invalid-request" : "headless.forbidden" };
       const { revision, stepCount, status, expiresAt, approvedSteps } = saved.snapshot.state;
       return { ok: true, value: { fingerprint, revision, stepCount, status, expiresAt, approvedSteps } };
+    }, async runStep(request, grant) {
+      requestCount++;
+      const { workspaceId, fingerprint, approvalRevision, step } = request.input;
+      const scope = { workspaceId, organizationId: grant.organizationId, principalId: grant.principalId,
+        registeredClientId: grant.registeredClientId };
+      const isCurrent = () => grant.isCurrent?.() === true;
+      const review = await store.read({ target: { hostIncarnationId, fingerprint, scope }, isCurrent });
+      if (!review.ok || review.snapshot.state.status !== "approved" || review.snapshot.state.revision !== approvalRevision || step !== 1)
+        return { result: { ok: false, code: "headless.forbidden" } };
+      // Hold the first reply after the fixture records the effect. The peer
+      // must never send a second request automatically to recover it.
+      const replay = effectCount > 0;
+      if (!replay) effectCount++;
+      return {
+        result: { ok: true, value: { fingerprint, approvalRevision, step, expiresAt: review.snapshot.state.expiresAt,
+          kind: replay ? "replayed" : "committed", reference: {
+            systemId, revisionId: normalizeSystemBuilderRevisionId("mcp-fixture-system.r1"), recordRevision: 1,
+          } } },
+        publishIfCurrent: async publish => replay && isCurrent() && publish(),
+      };
     } },
   });
   const client = new Client({ name: "headless-plan-review-fixture", version: "1.0.0" });
@@ -317,13 +341,36 @@ test("the plan-review stdio mode stages an exact pending proposal without offeri
     assert.deepEqual(await call("aisb_build_plan_approval_status", target), pending);
     assert.deepEqual(await call("aisb_request_build_plan_approval", { ...target, steps }), pending);
     assert.equal((await platform.forOrganization(organizationId).listDocuments("headless/system-builder/plan-reviews")).length, 1);
+    const exact = { ...target, approvalRevision: 2, step: 1 };
+    assert.deepEqual(await call("aisb_run_approved_build_step", exact), { ok: false, code: "headless.operation-unconfirmed" });
+    assert.equal(effectCount, 0);
+    const registered = await registry.verifyCredential(credential);
+    assert.ok(registered?.planReview);
+    const isCurrent = () => registered.isCurrent?.() === true;
+    const approval = await new HeadlessBuildPlanReviewUseCase(store, Date.now).decide({
+      fingerprint: target.fingerprint, expectedRevision: 1, decision: { kind: "approve", mode: "whole-plan" },
+    }, hostIncarnationId, { workspaceId, organizationId, principalId: identity.principalId,
+      registeredClientId: registered.registeredClientId }, {
+      organizationId, principalId: identity.principalId, channel: "app-popup", isCurrent, canDecide: async () => isCurrent(),
+    });
+    assert.ok(approval.ok);
+    const requestsBeforeWrite = requestCount;
+    assert.deepEqual(await call("aisb_run_approved_build_step", exact), { ok: false, code: "headless.operation-unconfirmed" });
+    assert.equal(requestCount, requestsBeforeWrite + 1);
+    assert.equal(effectCount, 1);
+    assert.deepEqual(await call("aisb_run_approved_build_step", exact), { ok: true, value: {
+      kind: "replayed", expiresAt: approval.state.expiresAt, fingerprint: exact.fingerprint,
+      approvalRevision: 2, step: 1, reference: { systemId, revisionId: "mcp-fixture-system.r1", recordRevision: 1 },
+    } });
+    assert.equal(requestCount, requestsBeforeWrite + 2);
+    assert.equal(effectCount, 1);
   } finally {
     await client.close();
     await connector.close();
   }
 });
 
-test("the pinned plan forwarder rejects a successful response with the wrong submitted step count", { timeout: 12_000 }, async () => {
+test("the pinned plan forwarder validates status and preserves uncertain writes", { timeout: 12_000 }, async () => {
   const { createHeadlessMcpReadForwarder } = await import("../createHeadlessMcpReadForwarder.mjs");
   const certificate = await selfsigned.generate([{ name: "commonName", value: "127.0.0.1" }], {
     keySize: 2048, extensions: [{ name: "subjectAltName", altNames: [{ type: 7, ip: "127.0.0.1" }] }],
@@ -331,10 +378,28 @@ test("the pinned plan forwarder rejects a successful response with the wrong sub
   const fingerprint = "7a".repeat(32);
   const expiresAt = Date.now() + 60_000;
   let reportedSteps = 1;
+  const stepReplies = [
+    {status:503, body:{ok:false, code:"headless.invalid-request"}},
+    {status:503, body:{unexpected:true}},
+    {status:404, body:{ok:false, code:"headless.invalid-request"}},
+    {status:200, body:{ok:false, code:"headless.unavailable"}},
+    {status:400, body:{ok:false, code:"headless.invalid-request"}},
+    {status:409, body:{ok:false, code:"headless.host-changed"}},
+    undefined,
+  ];
+  let stepRequests = 0;
   const listener = createServer({ key: certificate.private, cert: certificate.cert }, (incoming, response) => {
-    assert.equal(incoming.url, HEADLESS_PLAN_REVIEW_PATH);
     incoming.resume();
     incoming.once("end", () => {
+      if (incoming.url === HEADLESS_PLAN_STEP_PATH) {
+        const reply = stepReplies[stepRequests++];
+        if (!reply) { incoming.socket.destroy(); return; }
+        const value = JSON.stringify(reply.body);
+        response.writeHead(reply.status, { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(value) });
+        response.end(value);
+        return;
+      }
+      assert.equal(incoming.url, HEADLESS_PLAN_REVIEW_PATH);
       const value = JSON.stringify({ ok: true, value: {
         fingerprint, revision: 2, stepCount: reportedSteps, status: "approved", expiresAt,
         approvedSteps: reportedSteps, mode: "whole-plan",
@@ -357,6 +422,14 @@ test("the pinned plan forwarder rejects a successful response with the wrong sub
     assert.equal((await forward({ version, ...request.request })).ok, true);
     reportedSteps = 2;
     assert.deepEqual(await forward({ version, ...request.request }), { ok: false, code: "headless.unavailable" });
+    const exact = {version, operation:"plan.run-step",
+      input:{hostIncarnationId, workspaceId, fingerprint, approvalRevision:2, step:1}} as const;
+    for (const code of ["headless.operation-unconfirmed", "headless.operation-unconfirmed",
+      "headless.operation-unconfirmed", "headless.operation-unconfirmed", "headless.invalid-request", "headless.host-changed",
+      "headless.operation-unconfirmed"]) {
+      assert.deepEqual(await forward(exact), {ok:false, code});
+    }
+    assert.equal(stepRequests, stepReplies.length);
   } finally {
     await new Promise<void>(resolve => listener.close(() => resolve()));
   }
@@ -406,6 +479,7 @@ test("the portable reference matches the exact credential-free SDK discovery cat
   assertExactObject("aisb_preview_build_plan", [...workspace, "steps"]);
   assertExactObject("aisb_request_build_plan_approval", [...workspace, "fingerprint", "steps"]);
   assertExactObject("aisb_build_plan_approval_status", [...workspace, "fingerprint"]);
+  assertExactObject("aisb_run_approved_build_step", [...workspace, "fingerprint", "approvalRevision", "step"]);
   assertExactObject("aisb_preview_edits", [...base, "edits"]);
   assertExactObject("aisb_apply_edits", [...base, "edits", "previewDigest", "idempotencyKey"]);
   const turn = assertExactObject(conversation, [...workspace, "planId", "planRevision", "sessionId", "snapshotRevision", "key", "text"]);
