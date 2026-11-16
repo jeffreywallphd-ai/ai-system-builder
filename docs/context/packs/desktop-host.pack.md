@@ -25,6 +25,7 @@
 - Keep business policy and use-case orchestration in application/domain, not main/preload/IPC glue.
 - IPC contracts specialize shared transport envelopes and use operation-derived channels.
 - Desktop host composes adapters, runtime/readiness providers, credential stores, storage roots, and lifecycle behavior, then delegates inward.
+- Desktop main verifies the required local Python installation before creating the shell, persistence, or application IPC. Startup failure shows fixed guidance on a loading-only window. See the Desktop setup guide for checkout-owned development provisioning.
 - Host context passed inward should be small, JSON-serializable, and free of Electron/request/session/window objects.
 - Desktop renderer should keep using preload/IPC even when a feature later delegates to a remote server.
 

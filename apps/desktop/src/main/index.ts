@@ -3,7 +3,12 @@ import { pathToFileURL } from "node:url";
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, MenuItem, shell } from "electron";
 
-import { composeDesktopHost } from "../../../../modules/hosts/desktop";
+import {
+  checkDesktopPythonRuntimeInstallation,
+  composeDesktopHost,
+  resolveDesktopPythonRuntimeLaunch,
+} from "../../../../modules/hosts/desktop";
+import type { DesktopStartupFailure } from "../startupFailure";
 import { recordDesktopMemorySnapshot } from "../../../../modules/hosts/desktop/diagnostics";
 import {
   resolveLocalSqliteDatabasePolicy,
@@ -38,6 +43,10 @@ const openWindows = new Set<BrowserWindow>();
 let retireUiControlWindow: ((window: BrowserWindow) => void) | undefined;
 
 async function createMainWindow(): Promise<void> {
+  return createDesktopWindow();
+}
+
+async function createDesktopWindow(startupFailure?: DesktopStartupFailure): Promise<void> {
   recordDesktopMemorySnapshot({
     milestone: "desktop.window.create.before",
     component: "desktop-main",
@@ -49,7 +58,7 @@ async function createMainWindow(): Promise<void> {
     show: false,
     backgroundColor: "#06101e",
     webPreferences: {
-      preload: path.join(__dirname, "main_window_preload.cjs"),
+      ...(startupFailure ? {} : { preload: path.join(__dirname, "main_window_preload.cjs") }),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -136,10 +145,14 @@ async function createMainWindow(): Promise<void> {
     mainWindow.webContents.once("preload-error", onFailure);
     mainWindow.webContents.once("render-process-gone", onFailure);
     // Attach success/failure handlers immediately, including synchronous throws.
-    void Promise.resolve().then(() => mainWindow.loadURL(
-      MAIN_WINDOW_VITE_DEV_SERVER_URL ??
-        pathToFileURL(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)).href,
-    )).then(() => { loaded = true; check(); }, onFailure);
+    void Promise.resolve().then(() => {
+      const entry = MAIN_WINDOW_VITE_DEV_SERVER_URL ??
+        pathToFileURL(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)).href;
+      if (!startupFailure) return mainWindow.loadURL(entry);
+      const loadingPage = new URL(entry);
+      loadingPage.searchParams.set("required-python", startupFailure);
+      return mainWindow.loadURL(loadingPage.href);
+    }).then(() => { loaded = true; check(); }, onFailure);
   });
   if (outcome !== "ready" || mainWindow.isDestroyed()) {
     if (outcome === "failed") dialog.showErrorBox(
@@ -179,6 +192,14 @@ app.whenReady().then(async () => {
     milestone: "desktop.app.whenReady.ready",
     component: "desktop-main",
   });
+
+  const pythonRuntimeLaunch = resolveDesktopPythonRuntimeLaunch();
+  const pythonInstallation = checkDesktopPythonRuntimeInstallation(pythonRuntimeLaunch);
+  if (pythonInstallation !== "ready") {
+    if (process.platform === "darwin") app.once("window-all-closed", () => app.quit());
+    await createDesktopWindow(pythonInstallation);
+    return;
+  }
 
   const desktopDataRootDirectory = app.getPath("userData");
   const storageRootDirectory = path.join(desktopDataRootDirectory, "artifacts");
@@ -245,6 +266,7 @@ app.whenReady().then(async () => {
     component: "desktop-main",
   });
   const desktopHost = composeDesktopHost({
+    pythonRuntimeLaunch,
     localIdentity: localIdentityProfile,
     persistence: { documents: sqliteDatabase.documents, organizationDocuments },
     runtimeDataRootDirectory: desktopDataRootDirectory,

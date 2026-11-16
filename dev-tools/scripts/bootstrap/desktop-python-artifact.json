@@ -1,0 +1,15 @@
+{
+  "platform": "win32",
+  "arch": "x64",
+  "version": "3.14.10",
+  "supplier": "Python Software Foundation",
+  "catalog": "https://api.nuget.org/v3/catalog0/data/2026.10.26.04.37.43/python.3.14.10.json",
+  "url": "https://api.nuget.org/v3-flatcontainer/python/3.14.10/python.3.14.10.nupkg",
+  "bytes": 15589216,
+  "sha512": "7d9967d913d899f64ba1511854d69ccd009ab64b99c8b1d2ba184c863ce682d1d214ffa694286ac95a559a3af95a2da8e994375b02be074bde7eacfd902a5371",
+  "binaries": {
+    "python.exe": "d718435b892db4ad5b547d12fec61be7baa7faf7a58d857ea58053be24c7a000",
+    "python3.dll": "7bb0a7df2d5cb829319dd8d122039843e2a762361bb5a61bb5d24ca34f4040b5",
+    "python314.dll": "d8a06cc6ca3348925ea29e343e1c5c5895fe0bb433ff913e1cee44caf358aa6a"
+  }
+}

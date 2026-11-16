@@ -14,31 +14,31 @@ const PYTHON_RUNTIME_MANAGED_PORT_SPAN = 10_000;
 const PYTHON_RUNTIME_WORKER_RELATIVE_PATH =
   "modules/adapters/runtime/python/worker";
 const PYTHON_RUNTIME_PACKAGED_RESOURCE_DIRECTORY = "worker";
-const PYTHON_RUNTIME_DECODER_MIN_VERSION = [3, 10] as const;
-const PYTHON_RUNTIME_DECODER_MAX_VERSION_EXCLUSIVE = [3, 14] as const;
+const PYTHON_RUNTIME_MIN_MINOR = 10;
+const PYTHON_RUNTIME_DECODER_MAX_MINOR = 13;
+const PYTHON_RUNTIME_MAX_MINOR = 14;
 const PYTHON_RUNTIME_VERSION_PROBE =
   'import json,sys; print(json.dumps({"major":sys.version_info[0],"minor":sys.version_info[1],"executable":sys.executable}))';
 
 type PythonProbeResult = Pick<SpawnSyncReturns<string>, "status" | "stdout">;
 
-function isSupportedDecoderPythonVersion(
-  major: number,
-  minor: number,
-): boolean {
-  const [minimumMajor, minimumMinor] = PYTHON_RUNTIME_DECODER_MIN_VERSION;
-  const [maximumMajor, maximumMinor] =
-    PYTHON_RUNTIME_DECODER_MAX_VERSION_EXCLUSIVE;
-  return (
-    (major > minimumMajor ||
-      (major === minimumMajor && minor >= minimumMinor)) &&
-    (major < maximumMajor || (major === maximumMajor && minor < maximumMinor))
-  );
+export function desktopPythonProbeEnvironment(env: NodeJS.ProcessEnv, platform = process.platform): NodeJS.ProcessEnv {
+  if (platform !== "win32") return env;
+  const result = { ...env };
+  for (const key of Object.keys(result)) {
+    if (/^(?:PYLAUNCHER_(?:ALLOW|ALWAYS)_INSTALL|PYTHON_MANAGER_AUTOMATIC_INSTALL)$/iu.test(key)) delete result[key];
+    if (/^PATH$/iu.test(key)) {
+      result[key] = result[key]?.split(";").filter(entry => !/[/\\]Microsoft[/\\]WindowsApps[/\\]?$/iu.test(entry.trim().replaceAll('"', ""))).join(";");
+    }
+  }
+  result.PYTHON_MANAGER_AUTOMATIC_INSTALL = "false";
+  return result;
 }
 
 function resolveSupportedPythonExecutable(
   result: PythonProbeResult,
   exists: (path: string) => boolean,
-): string | undefined {
+): { executable: string; minor: number } | undefined {
   if (result.status !== 0 || typeof result.stdout !== "string")
     return undefined;
   try {
@@ -46,32 +46,33 @@ function resolveSupportedPythonExecutable(
     const executable =
       typeof value.executable === "string" ? value.executable.trim() : "";
     if (
-      typeof value.major !== "number" ||
+      value.major !== 3 ||
       typeof value.minor !== "number" ||
-      !Number.isInteger(value.major) ||
       !Number.isInteger(value.minor) ||
-      !isSupportedDecoderPythonVersion(value.major, value.minor) ||
+      value.minor < PYTHON_RUNTIME_MIN_MINOR ||
+      value.minor > PYTHON_RUNTIME_MAX_MINOR ||
       !isAbsolute(executable) ||
       !exists(executable)
     ) {
       return undefined;
     }
-    return executable;
+    return { executable, minor: value.minor };
   } catch {
     return undefined;
   }
 }
 
 /**
- * Prefer an installed Python version that can run the optional constrained
- * decoder. Explicit operator configuration always wins. When no supported
- * interpreter is installed, retain the platform default so the rest of the
- * Python worker remains available without pretending the decoder is ready.
+ * Prefer an installed interpreter that supports the optional constrained
+ * decoder, then one that can run the core worker. Explicit operator
+ * configuration wins. Keep the platform default as the last resort so startup
+ * can report its actual dependency failure.
  */
 export function resolveDesktopPythonRuntimeCommand(
   input: {
     configuredCommand?: string;
     platform?: NodeJS.Platform;
+    env?: NodeJS.ProcessEnv;
     exists?: (path: string) => boolean;
     spawnSyncImplementation?: typeof spawnSync;
   } = {},
@@ -83,39 +84,48 @@ export function resolveDesktopPythonRuntimeCommand(
   const defaultCommand = platform === "win32" ? "python" : "python3";
   const probe = input.spawnSyncImplementation ?? spawnSync;
   const exists = input.exists ?? existsSync;
+  const env = desktopPythonProbeEnvironment(input.env ?? process.env, platform);
   const candidates: ReadonlyArray<{
     command: string;
     versionArgument?: string;
   }> = [
     { command: defaultCommand },
     ...(platform === "win32"
-      ? (["-3.13", "-3.12", "-3.11", "-3.10"] as const).map(
+      ? (["-3.13", "-3.12", "-3.11", "-3.10", "-3.14"] as const).map(
           (versionArgument) => ({ command: "py", versionArgument }),
         )
-      : (["python3.13", "python3.12", "python3.11", "python3.10"] as const).map(
+      : (["python3.13", "python3.12", "python3.11", "python3.10", "python3.14"] as const).map(
           (command) => ({ command }),
         )),
   ];
 
+  let coreWorkerExecutable: string | undefined;
   for (const candidate of candidates) {
     const result = probe(
       candidate.command,
       [
         ...(candidate.versionArgument ? [candidate.versionArgument] : []),
+        "-I",
+        "-B",
         "-c",
         PYTHON_RUNTIME_VERSION_PROBE,
       ],
       {
         encoding: "utf8",
+        env,
         timeout: 5_000,
         windowsHide: true,
       },
     );
-    const executable = resolveSupportedPythonExecutable(result, exists);
-    if (executable) return executable;
+    const python = resolveSupportedPythonExecutable(result, exists);
+    if (!python) continue;
+    if (python.minor <= PYTHON_RUNTIME_DECODER_MAX_MINOR) return python.executable;
+    if (shouldPreparePythonRuntimeWorkerDependencies(python.executable)) {
+      coreWorkerExecutable ??= python.executable;
+    }
   }
 
-  return defaultCommand;
+  return coreWorkerExecutable ?? defaultCommand;
 }
 
 export interface DesktopPythonRuntimeFeature {

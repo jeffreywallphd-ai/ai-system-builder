@@ -1,6 +1,42 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "desktop-prerequisite-bootstrap": {
+      "test_paths": [
+        "dev-tools/scripts/bootstrap/desktop-prerequisites.unit.test.mjs",
+        "apps/desktop/src/renderer/tests/desktop-required-python.ui.test.tsx",
+        "apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-installation-guidance.ui.test.tsx",
+        "apps/desktop/tests/desktop-required-python-window.unit.test.ts",
+        "modules/hosts/desktop/composition/tests/desktopPythonRuntimeInstallation.unit.test.ts",
+        "modules/hosts/desktop/composition/tests/desktopPythonRuntimeHelpers.unit.test.ts",
+        "modules/adapters/runtime/python/tests/checkPythonRuntimeInstallation.unit.test.ts",
+        "modules/adapters/runtime/python/tests/ensurePythonRuntimeContextDependencies.unit.test.ts",
+        "modules/adapters/runtime/python/tests/ensurePythonRuntimeWorkerDependencies.unit.test.ts",
+        "modules/adapters/runtime/python/tests/preparePythonRuntimeEnvironment.unit.test.ts"
+      ],
+      "source_paths": [
+        "dev-tools/scripts/bootstrap/desktop-dev.mjs",
+        "dev-tools/scripts/bootstrap/desktop-python.mjs",
+        "dev-tools/scripts/bootstrap/desktop-python-artifact.json",
+        "dev-tools/scripts/bootstrap/desktop-prerequisites.unit.test.mjs",
+        "dev-tools/scripts/bootstrap/README.md",
+        "package.json",
+        "modules/hosts/desktop/index.ts",
+        "modules/hosts/desktop/composition/composeDesktopHost.ts",
+        "modules/hosts/desktop/composition/composeDesktopPythonRuntimeFeature.ts",
+        "modules/hosts/desktop/composition/desktopPythonRuntimeHelpers.ts",
+        "modules/hosts/desktop/composition/desktopPythonRuntimeInstallation.ts",
+        "modules/hosts/desktop/composition/tests/desktopPythonRuntimeInstallation.unit.test.ts",
+        "modules/hosts/desktop/composition/tests/desktopPythonRuntimeHelpers.unit.test.ts",
+        "modules/adapters/runtime/python/checkPythonRuntimeInstallation.ts",
+        "modules/adapters/runtime/python/ensurePythonRuntimeContextDependencies.ts",
+        "modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies.ts",
+        "modules/adapters/runtime/python/index.ts",
+        "modules/adapters/runtime/python/tests/checkPythonRuntimeInstallation.unit.test.ts",
+        "modules/adapters/runtime/python/README.md",
+        "apps/desktop/src/startupFailure.ts"
+      ]
+    },
     "artifact-confirmation-ui": {
       "test_paths": [
         "apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx",

@@ -37,6 +37,13 @@ upgrade.
   packaged PDF and useful-system journeys after changing that pin. Keep install
   scripts disabled during resolution; acquire its binary only through the reviewed
   official installer with bundled checksums. Never waive the audit for a prior pin.
+- Desktop development bootstrap can acquire the exact Windows x64 portable
+  Python package in its [artifact manifest](../../dev-tools/scripts/bootstrap/desktop-python-artifact.json).
+  Verify the Python Software Foundation package against its NuGet catalog
+  byte length and SHA-512 before extraction, and check the extracted executable
+  and interpreter DLL digests. Use the existing fixed worker requirements in
+  the checkout-owned environment. Pin review and clean-host qualification are
+  required to admit another platform artifact or version.
 
 When a patched transitive package has intentionally changed its public module
 shape, a build-tool-only compatibility package may preserve the legacy interface

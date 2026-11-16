@@ -49,11 +49,11 @@
 - The worker startup dependency probe includes the exact patched PyArrow pin
   required for bounded Parquet input/output; Parquet support must not depend on
   an uninstalled training-only requirements file.
-- Managed Python setup includes the exact Context LanceDB requirements by
-  default. Explicit RAG create/inspect/query starts repeat an asynchronous
-  one-flight exact-version/import probe and bounded install/re-probe before
-  dispatch, reporting only fixed task progress. Readiness/capability/status/list
-  reads remain no-install operations.
+- Managed Python setup includes the exact Context LanceDB requirements. Explicit
+  RAG create/inspect/query repeats the asynchronous one-flight exact-version/import
+  probe and bounded install/re-probe with fixed progress. Passive reads never install.
+- Desktop honors the configured interpreter, then prefers Python 3.10–3.13 for
+  the optional decoder or 3.14 for the core worker. Development can provision it locally. Desktop verifies it before shell admission.
 - Automatic model placement uses the exact managed Accelerate pin. Startup
   repairs it before readiness, and generation preflight reports a sanitized
   repair code instead of degrading a missing component into zero examples.

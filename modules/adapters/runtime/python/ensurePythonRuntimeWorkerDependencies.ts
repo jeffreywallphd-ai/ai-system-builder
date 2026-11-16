@@ -149,7 +149,7 @@ print(json.dumps({
 }))
 `.trim();
 
-const WORKER_DEPENDENCY_PROBE_SCRIPT = `
+export const WORKER_DEPENDENCY_PROBE_SCRIPT = `
 # asb:worker-dependency-probe
 import importlib.metadata
 import importlib.util

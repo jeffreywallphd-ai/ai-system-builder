@@ -14,6 +14,7 @@ export function PythonRuntimeFooter({ enabled, client }: PythonRuntimeFooterProp
 function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) {
   const {
     statusLabel,
+    startupDiagnostics,
     healthLabel,
     capabilitiesLabel,
     systemResources,
@@ -32,6 +33,10 @@ function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) 
     enabled,
     client,
   });
+  const unsupportedPython = statusLabel === "failed"
+    && startupDiagnostics?.outcome === "failed"
+    && startupDiagnostics.phase === "context"
+    && startupDiagnostics.reason === "unsupported-python";
 
   return (
     <footer className="ui-python-runtime-footer ui-panel ui-stack ui-stack--sm" aria-label="Python runtime controls" aria-busy={loading}>
@@ -49,6 +54,12 @@ function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) 
       <p>
         Status: <strong>{statusLabel}</strong> | Health: <strong>{healthLabel}</strong> | Capabilities: {capabilitiesLabel}
       </p>
+      {unsupportedPython ? (
+        <p role="status">
+          This Python version cannot run the model download worker. Install Python 3.14, then reopen AI System Builder and retry the download.
+          {" "}If you set a custom Python command, update it before reopening.
+        </p>
+      ) : null}
       <section className="ui-python-runtime-footer__resources" aria-label="System resource tracker">
         <h4 className="ui-python-runtime-footer__resources-title">System resources</h4>
         <ul className="ui-python-runtime-footer__resource-list">

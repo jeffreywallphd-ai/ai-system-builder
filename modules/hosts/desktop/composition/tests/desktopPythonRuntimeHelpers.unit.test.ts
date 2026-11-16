@@ -1,6 +1,7 @@
 import { describe, expect, it } from "../../../../testing/node-test";
 
 import {
+  desktopPythonProbeEnvironment,
   resolveDesktopPythonRuntimeCommand,
   resolveDesktopPythonRuntimeWorkerDirectory,
   resolvePythonRuntimeBaseUrl,
@@ -26,6 +27,20 @@ const pythonProbe = (
   }) as never;
 
 describe("desktop Python runtime endpoint ownership", () => {
+  it("prevents automatic OS Python installation during Windows discovery", () => {
+    const env = {
+      Path: "C:\\Trusted\\Tools;C:\\Fixture\\Microsoft\\WindowsApps",
+      pylauncher_allow_install: "1",
+      PYLAUNCHER_ALWAYS_INSTALL: "1",
+      PYTHON_MANAGER_AUTOMATIC_INSTALL: "true",
+    };
+    expect(desktopPythonProbeEnvironment(env, "win32")).toEqual({
+      Path: "C:\\Trusted\\Tools",
+      PYTHON_MANAGER_AUTOMATIC_INSTALL: "false",
+    });
+    expect(env.PYLAUNCHER_ALWAYS_INSTALL).toBe("1");
+  });
+
   it("uses one canonical loopback endpoint for the client and worker", () => {
     const env = { PYTHON_RUNTIME_BASE_URL: "http://localhost:45111" };
     expect(resolvePythonRuntimeBaseUrl(env)).toBe("http://127.0.0.1:45111");
@@ -65,11 +80,11 @@ describe("desktop Python runtime endpoint ownership", () => {
     ).toBe(false);
   });
 
-  it("prefers an installed decoder-compatible Python over an unsupported default", () => {
+  it("prefers an installed decoder-compatible Python over a core-only default", () => {
     const calls: Array<{ command: string; args: readonly string[] }> = [];
     const resolved = resolveDesktopPythonRuntimeCommand({
       platform: "win32",
-      exists: (candidate) => candidate === "C:\\Python312\\python.exe",
+      exists: () => true,
       spawnSyncImplementation: ((command: string, args: readonly string[]) => {
         calls.push({ command, args });
         if (command === "python") {
@@ -84,6 +99,24 @@ describe("desktop Python runtime endpoint ownership", () => {
 
     expect(resolved).toBe("C:\\Python312\\python.exe");
     expect(calls.some((call) => call.args[0] === "-3.12")).toBe(true);
+  });
+
+  it("discovers the supported core worker interpreter alongside an unsupported default", () => {
+    const coreExecutable = "C:\\Python314\\python.exe";
+    const resolved = resolveDesktopPythonRuntimeCommand({
+      platform: "win32",
+      exists: () => true,
+      spawnSyncImplementation: ((command: string, args: readonly string[]) => {
+        if (command === "python") return pythonProbe("3.15", "C:\\Python315\\python.exe");
+        if (args[0] === "-3.13") return pythonProbe("3.13", "python.exe");
+        if (args[0] === "-3.12") return pythonProbe("3.14", "C:\\Python314\\other.exe");
+        if (args[0] === "-3.14") return pythonProbe("3.14", coreExecutable);
+        return pythonProbe("0.0", "", 1);
+      }) as never,
+    });
+
+    expect(resolved).toBe(coreExecutable);
+    expect(shouldPreparePythonRuntimeWorkerDependencies(resolved)).toBe(true);
   });
 
   it("preserves an explicit command and falls back when no compatible Python is installed", () => {

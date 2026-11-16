@@ -49,6 +49,9 @@ this Desktop feature. See the shared field README and thin-client Settings READM
 for their separate boundaries.
 
 Python Runtime offers **Copy diagnostics** for its cached, normalized startup report.
+If the failed startup identifies an unsupported Python version, the panel shows
+how to install a supported interpreter, update a custom command if needed, and retry
+after reopening Desktop.
 Copy performs no status/control call, interpreter probe, setup, installation or
 provider request. It exports only closed startup/version/stage facts, excluding
 legacy logs, model inventory, paths and credentials. Fixed notification outcomes

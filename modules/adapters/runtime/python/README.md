@@ -26,6 +26,11 @@ sequence: await Context dependencies, then check Worker dependencies. A Context
 failure prevents the Worker step. Dependency commands, versions, backend checks,
 installation gates and failure results remain authoritative.
 
+Desktop shell admission runs a bounded local installed-worker probe using the
+same Context and Worker dependency predicates and requiring Torch. The probe
+reports a closed status. The development preflight uses normal environment
+preparation when a checkout-local worker environment needs packages.
+
 The optional trusted `onDiagnosticStage` callback receives frozen, closed
 `RuntimeExecutionDiagnostic` labels immediately before dispatch and on actual
 return or synchronous throw. `returned` means that the command returned; it does

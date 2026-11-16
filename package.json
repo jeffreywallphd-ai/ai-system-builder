@@ -15,7 +15,7 @@
   },
   "scripts": {
     "dev": "npm run dev:desktop",
-    "dev:desktop": "electron-forge start",
+    "dev:desktop": "node dev-tools/scripts/bootstrap/desktop-dev.mjs",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "start": "npm run dev:desktop",

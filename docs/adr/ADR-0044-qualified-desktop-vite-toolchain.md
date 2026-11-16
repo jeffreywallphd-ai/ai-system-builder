@@ -21,6 +21,13 @@ dev/package path. Keep the existing commands and makers. The official plugin is
 experimental; updates require explicit compatibility qualification rather than
 automatic minor-version adoption. See the [official plugin documentation](https://www.electronforge.io/config/plugins/vite).
 
+`npm run dev:desktop` checks the locked npm tree and Electron binary before
+Forge. It uses `npm ci --ignore-scripts` for missing npm prerequisites and
+Electron's approved installer with the checksums bundled in the locked
+package. It then verifies the selected Python environment and hands that
+command to the Desktop main process. The bootstrap owns development setup and
+keeps the existing Forge packaging and renderer boundaries.
+
 Build one self-contained CJS main and two independent, single-file CJS preloads.
 Keep product and published-runtime renderers separate, with relative packaged
 assets and no source maps. Preserve Python worker resources, context isolation,

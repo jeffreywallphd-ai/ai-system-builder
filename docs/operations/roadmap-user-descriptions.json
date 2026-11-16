@@ -2,6 +2,79 @@
   "schema_version": "roadmap-user-descriptions-v1",
   "criteria": [
     {
+      "roadmap_id": "desktop-prerequisites-and-startup",
+      "increment_id": "desktop-bootstrap-admission",
+      "criterion_id": "install-approved-prerequisites",
+      "source_description_sha256": "5872f0448e031295607a49574a20668aa82b1c5b6226304198cd67f490213a23",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Prepare required development software before opening Desktop.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test the requirements below.",
+        "completion_proof": "Check current test evidence and a separate technical review.",
+        "requirements": [
+          "Install missing approved software before Electron Forge starts. Check it again after setup.",
+          "Use the Python interpreter that passed the check to open Desktop.",
+          "Stop with a useful message if setup cannot finish. Reuse verified software on the next launch."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "desktop-prerequisites-and-startup",
+      "increment_id": "desktop-bootstrap-admission",
+      "criterion_id": "startup-requires-python",
+      "source_description_sha256": "21df6afab7bfe6554b0934e45dc1f2e3ec28948c473825c25f507bc9499d6f6e",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Keep the Desktop shell closed when required Python software is unavailable.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test the requirements below.",
+        "completion_proof": "Check current test evidence and a separate technical review.",
+        "requirements": [
+          "Open the Desktop shell after the host verifies the required Python installation.",
+          "Keep the shell inactive if the check fails or finds missing, unsupported, or incomplete software. Show a fixed reason and a recovery action.",
+          "Leave optional software outside the required checks."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "desktop-prerequisites-and-startup",
+      "increment_id": "desktop-bootstrap-admission",
+      "criterion_id": "clean-host-qualification",
+      "source_description_sha256": "6b4edbab4111bfa5441123f34f4d8661ea86bdc22cb33bfdcb66af882d59e8e2",
+      "qualification": "controlled-environment",
+      "user_description": {
+        "purpose": "Check setup and startup on an isolated clean host.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test the requirements below.",
+        "completion_proof": "Check current test evidence and a separate technical review.",
+        "requirements": [
+          "Start Desktop from an isolated Windows x64 checkout with no compatible Python. Check that setup provides the approved software.",
+          "Launch again and verify that it reuses the installed software.",
+          "Start packaged Desktop with the required runtime unavailable. Verify that the loading screen reports the failure.",
+          "Run equivalent checks on each additional approved platform before claiming support for it."
+        ]
+      }
+    },
+    {
+      "roadmap_id": "desktop-prerequisites-and-startup",
+      "increment_id": "desktop-bootstrap-admission",
+      "criterion_id": "security-impact-reviewed",
+      "source_description_sha256": "903109776f464639076df443a53f9278be598d84ee87f1bdf865f7bc77eac781",
+      "qualification": "local",
+      "user_description": {
+        "purpose": "Verify software provenance and protect the checkout and user data.",
+        "owner": "agent",
+        "next_action": "The agent must implement and test the requirements below.",
+        "completion_proof": "Check current test evidence and a separate technical review.",
+        "requirements": [
+          "Verify the exact supplier and checksum before running downloaded software.",
+          "Test that setup refuses unapproved artifacts and platforms and handles interrupted or concurrent runs safely.",
+          "Install within the checkout without administrator access. Preserve existing user data and show safe failure details."
+        ]
+      }
+    },
+    {
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "plan-from-written-request",
       "criterion_id": "unambiguous-plan",
@@ -8293,6 +8366,33 @@
     }
   ],
   "headings": [
+    {
+      "record_type": "roadmap",
+      "roadmap_id": "desktop-prerequisites-and-startup",
+      "source_title_objective_digest": "330472f3ad2e914ec3cd505be4315105412aea936173ea41495e37721285c3b0",
+      "user_description": {
+        "title": "Desktop Prerequisites and Startup",
+        "purpose": "Make the development launch establish approved required software and keep the Desktop shell unavailable when a required runtime is missing.",
+        "scope": [
+          "Prepare the exact approved prerequisites within the development checkout.",
+          "Keep Desktop closed when required software is missing."
+        ]
+      }
+    },
+    {
+      "record_type": "increment",
+      "roadmap_id": "desktop-prerequisites-and-startup",
+      "increment_id": "desktop-bootstrap-admission",
+      "source_title_objective_digest": "655c8ac31c02a5df43726c1c09c9b547382591b0b36ac6eb0a2abe6158a05b94",
+      "user_description": {
+        "title": "Check required software before opening Desktop",
+        "purpose": "Make a fresh development checkout usable with approved prerequisites and keep the Desktop shell closed when required Python components are unavailable.",
+        "scope": [
+          "Check software before starting Forge.",
+          "Show a recovery message when Desktop cannot start."
+        ]
+      }
+    },
     {
       "record_type": "increment",
       "roadmap_id": "headless-skills-ui-takeover",

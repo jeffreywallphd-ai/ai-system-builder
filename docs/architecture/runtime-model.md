@@ -1413,6 +1413,22 @@ replace later facts. Context/Worker observations preserve original setup policy 
 errors. Only the existing explicit Worker inspection reads fixed package metadata,
 without importing those packages; earlier Context failure leaves versions unknown.
 Version comparisons are observational and add no repair trigger or readiness claim.
+Desktop interpreter discovery honors an explicit command. Its automatic probes
+prefer Python 3.10–3.13, then accept a verified Python 3.14 for the core worker.
+On Windows, the `py` launcher can discover Python 3.14 installed alongside the
+default interpreter.
+When no supported candidate is found, the platform default reaches the existing
+dependency gates. Settings uses the normalized unsupported-Python failure to
+explain how to install a supported interpreter and retry after reopening.
+
+The Desktop main process checks the selected installed worker before admitting
+the shell. The bounded local check uses the Context and core Worker dependency
+predicates and requires Torch. It covers the worker entry point and rejects an
+unsupported interpreter, missing dependencies or an unsuccessful probe. The
+development command can provision prerequisites in the checkout, then passes
+the checked command to the main process. Worker process start remains owned by
+the existing feature and explicit runtime controls.
+
 Settings copies only the cached normalized report with bounded serialization, never
 legacy status/logs, local paths, credentials or model inventory. Status reads and
 Copy add no composition, interpreter, install, provider or model action. Clipboard

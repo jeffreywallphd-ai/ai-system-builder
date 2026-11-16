@@ -293,6 +293,7 @@ export interface ComposeDesktopHostLoggingOptions {
 }
 
 export interface ComposeDesktopHostOptions {
+  pythonRuntimeLaunch?: import("./desktopPythonRuntimeInstallation").DesktopPythonRuntimeLaunch;
   localIdentity?: LocalIdentityProfile;
   persistence?: {
     documents: StructuredDocumentStore;
@@ -544,6 +545,7 @@ export function composeDesktopHost(
           "desktop.host.python-runtime-foundation.compose.before",
         );
         const feature = await module.composeDesktopPythonRuntimeFeature({
+          launch: options.pythonRuntimeLaunch,
           loggingPort,
           now,
           runtimeLogs,

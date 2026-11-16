@@ -50,6 +50,10 @@ Hosts are implemented under `modules/hosts/` and surfaced through `apps/*` entry
 
 - Built on Electron with the exactly pinned Electron Forge Vite plugin as the canonical desktop dev/build/package path (ADR-0044).
 - Owns desktop lifecycle composition and desktop-specific wiring.
+- Desktop checks the selected local Python worker installation before admitting
+  application persistence, IPC and shell startup. A failed check supplies a
+  closed category to a loading-only window. Explicitly configured alternate
+  Node workers require a usable local executable and a checked entry point.
 - Uses Electron IPC as a transport boundary (via transport adapters), not as business logic location.
 - Desktop implementation is split intentionally across Electron `main`, preload, renderer, and host composition:
   - `main`: lifecycle/bootstrap/window creation only,
