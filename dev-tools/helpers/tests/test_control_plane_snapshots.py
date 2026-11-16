@@ -71,3 +71,34 @@ class SnapshotStorageTests(Fixture):
         atomic_write(target, b"new")
         self.assertEqual(target.read_bytes(), b"new")
         self.assertEqual(predictable.read_bytes(), b"unrelated")
+
+    def test_atomic_writer_retries_the_same_replace_and_preserves_permanent_denial(self):
+        target = self.root / "state.json"
+        target.write_bytes(b"old")
+        replace = os.replace
+        collision = PermissionError("synthetic Windows sharing conflict")
+        collision.winerror = 32
+        attempts = []
+
+        def replace_once_locked(source, destination):
+            attempts.append((source, destination))
+            if len(attempts) == 1:
+                raise collision
+            replace(source, destination)
+
+        with patch("control_plane.storage.os.replace", side_effect=replace_once_locked) as mocked:
+            atomic_write(target, b"new")
+            self.assertEqual(mocked.call_count, 2)
+            self.assertEqual(mocked.call_args_list[0], mocked.call_args_list[1])
+        self.assertEqual(target.read_bytes(), b"new")
+        with patch("control_plane.storage.os.replace", side_effect=collision) as denied, self.assertRaises(PermissionError):
+            atomic_write(target, b"refused")
+        self.assertEqual(denied.call_count, 4)
+        self.assertEqual(target.read_bytes(), b"new")
+        self.assertEqual(list(self.root.glob(".state.json.*.tmp")), [])
+        with patch("control_plane.storage.os.replace", side_effect=collision), patch.object(
+            Path, "unlink", side_effect=PermissionError("synthetic cleanup denial")
+        ), self.assertRaises(PermissionError) as failed:
+            atomic_write(target, b"refused")
+        self.assertIs(failed.exception, collision)
+        self.assertEqual(target.read_bytes(), b"new")

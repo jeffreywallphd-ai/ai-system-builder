@@ -350,6 +350,26 @@
       "recordedAt": "2026-11-16T17:15:19Z",
       "summary": "Candidate receipt passed the focused prerequisite and startup checks, documentation, agent support, architecture, and dependency audit. The broader controller test suite failed. An exact profile registration test passed independently. Clean installer reuse and both packaged startup cases passed, while the normal development-window test remains pending because its loopback ports are occupied.",
       "targetIncrementId": "desktop-bootstrap-admission"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "desktop-windows-qualification-handoff",
+      "impact": "environment",
+      "nextAction": "On the next Windows host, install the pinned MSVC 14.42.34433 Build Tools and Windows SDK 10.0.26100.0. Select a supported Python test environment with the locked test packages and Torch through PYTHON. Reproduce the built-in catalog result and verify the native fixture when the complete end-to-end lane executes it from source. Establish fresh local work claims and receipts, run the required combined suite and repository gates, obtain a separate technical review, and record roadmap completion. Ignored local control-plane records are checkout-local.",
+      "recordedAt": "2026-11-16T22:57:59Z",
+      "summary": "The Desktop and baseline fixes are independently reviewed and committed. The remaining Windows stability checkpoint has inspected code and focused evidence. Five Python publication tests passed. The shared JSON retry and permanent-denial test passed. A wider targeted Asset Kernel run passed 37 tests and intermittently created 16 of 17 built-in definitions. The combined runs previously failed native setup despite a passing standalone native fixture. The source-lane rerun was stopped at the requested handoff. Overall verification and separate technical disposition remain pending.",
+      "targetIncrementId": null
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "desktop-windows-handoff-e2e-result",
+      "impact": "environment",
+      "nextAction": "Inspect the two SQLite failures on the next clean Windows run together with the intermittent built-in asset seeding result. Retain the native source-lane and bounded atomic replacement checks. Then rerun the repository combined suite and request independent review.",
+      "recordedAt": "2026-11-16T22:59:00Z",
+      "summary": "The Node end-to-end report arrived at handoff. The source-lane native Windows fixture executed with no failures. The full lane reported 238 passed, four skipped and two failures in the Electron SQLite publication and local SQLite runtime integration tests. The scoped candidate receipt and overall qualification remain pending.",
+      "targetIncrementId": null
     }
   ],
   "finalApproval": null,
@@ -509,6 +529,18 @@
       "recordedAt": "2026-11-16T21:52:24Z",
       "sequence": 26,
       "type": "resumed"
+    },
+    {
+      "eventFingerprint": "11921cb91e33a461e5fb63430eb65cf606ae467320dada4aede3eec90a0a0e15",
+      "recordedAt": "2026-11-16T22:57:59Z",
+      "sequence": 27,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "168335a764584f5508105314fb3945e2c35b018c461288d4178fd227b63bd68a",
+      "recordedAt": "2026-11-16T22:59:00Z",
+      "sequence": 28,
+      "type": "feedback-recorded"
     }
   ],
   "increments": [
@@ -683,5 +715,5 @@
   "schemaVersion": 1,
   "slug": "desktop-prerequisites-and-startup",
   "status": "roadmap-ready-to-close",
-  "updatedAt": "2026-11-16T21:52:24Z"
+  "updatedAt": "2026-11-16T22:59:00Z"
 }

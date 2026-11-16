@@ -555,6 +555,9 @@ requires a successor task for corrections.
 
 ## Checkpoint reviewed work
 
+Local controller publication retries the same atomic replacement briefly after
+a Windows sharing error. Persistent denial still requires normal recovery.
+
 Use the roadmap skill's scoped commit procedure for coherent completed, tested
 and reviewed chunks. A separately reviewed local component can checkpoint while
 parent work or qualification stays pending; status alone is insufficient. Finish

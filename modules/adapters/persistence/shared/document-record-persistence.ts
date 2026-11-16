@@ -1,6 +1,7 @@
-import { readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { open, readFile, rename, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import * as path from "node:path";
+import { setTimeout } from "node:timers/promises";
 
 import {
   StructuredDocumentConflictError,
@@ -63,6 +64,20 @@ function cloneDocumentFallback<T>(fallback: T): T {
   return fallback === undefined ? fallback : cloneStructuredJson(fallback);
 }
 
+async function publishDocument(temporary: string, target: string): Promise<void> {
+  for (const delay of [25, 50, 100]) {
+    try {
+      await rename(temporary, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (process.platform !== "win32" || (code !== "EPERM" && code !== "EBUSY" && code !== "EACCES")) throw error;
+      await setTimeout(delay);
+    }
+  }
+  await rename(temporary, target);
+}
+
 export async function writeDocumentRecord<T>(
   options: DocumentRecordPersistenceOptions,
   relativeFilePath: string,
@@ -81,13 +96,14 @@ export async function writeDocumentRecord<T>(
 
   const target = path.join(options.rootDirectory, relativeFilePath);
   const temporaryPath = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  const temporary = await open(temporaryPath, "wx");
   try {
-    await writeFile(
-      temporaryPath,
-      `${JSON.stringify(safeValue, null, 2)}\n`,
-      "utf8",
-    );
-    await rename(temporaryPath, target);
+    try {
+      await temporary.writeFile(`${JSON.stringify(safeValue, null, 2)}\n`, "utf8");
+    } finally {
+      await temporary.close();
+    }
+    await publishDocument(temporaryPath, target);
   } catch (error) {
     await unlink(temporaryPath).catch(() => undefined);
     throw error;

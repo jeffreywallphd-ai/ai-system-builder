@@ -494,3 +494,7 @@ checks now pass.
 If a write is interrupted, inspect state and Markdown diffs before choosing the
 canonical version. Do not overwrite hand-authored content unless the generated
 notice proves the file belongs to this workflow.
+
+The engine retries the same atomic replacement briefly when Windows reports a
+file sharing error. A persistent denial leaves the previous file and the
+publication recovery record available.

@@ -59,6 +59,32 @@ class PublicationSecurityTest(unittest.TestCase):
                 self.assertEqual(target.read_text(), "old")
                 self.assertEqual(list(Path(directory).iterdir()), [target])
 
+    def test_windows_sharing_error_retries_only_the_owned_replace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "state.json"
+            target.write_text("old", encoding="utf-8")
+            replace = roadmap.os.replace
+            attempts = []
+            collision = PermissionError("synthetic Windows sharing conflict")
+            collision.winerror = 5
+
+            def replace_once_locked(source, destination):
+                attempts.append((source, destination))
+                if len(attempts) == 1:
+                    raise collision
+                replace(source, destination)
+
+            with mock.patch.object(roadmap.os, "replace", side_effect=replace_once_locked):
+                roadmap.atomic_write(target, "new")
+            self.assertEqual(attempts, [attempts[0], attempts[0]])
+            self.assertEqual(target.read_text(), "new")
+            with mock.patch.object(roadmap.os, "replace", side_effect=collision) as denied:
+                with self.assertRaises(roadmap.RoadmapError):
+                    roadmap.atomic_write(target, "refused")
+            self.assertEqual(denied.call_count, 4)
+            self.assertEqual(target.read_text(), "new")
+            self.assertEqual(list(Path(directory).iterdir()), [target])
+
 
 def security_impact() -> dict:
     return {

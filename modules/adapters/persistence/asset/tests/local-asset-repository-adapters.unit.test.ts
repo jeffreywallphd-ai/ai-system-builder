@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import fsPromises, { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -793,6 +794,39 @@ describe("local asset composition and binding repository adapters", () => {
       ).compositions.map((record) => record.compositionId),
       [],
     );
+  });
+
+  it("retries short Windows sharing errors while preserving a permanently denied record", { skip: process.platform !== "win32" }, async test => {
+    const repositories = createRepositories(await tempRoot());
+    await repositories.bindings.saveBinding(validBinding());
+    const rename = fsPromises.rename;
+    const attempts: [unknown, unknown][] = [];
+    let locked = true;
+    let keepLocked = false;
+    const replaced = test.mock.method(fsPromises, "rename", async (from, to) => {
+      if (String(to).endsWith("bindings.json")) {
+        attempts.push([from, to]);
+        if (locked || keepLocked) {
+          locked = false;
+          throw Object.assign(new Error("synthetic Windows sharing conflict"), { code: "EPERM" });
+        }
+      }
+      return rename(from, to);
+    });
+    syncBuiltinESMExports();
+    try {
+      await repositories.bindings.saveBinding(validBinding({ bindingId: "binding.two" }));
+      assert.equal(attempts.length, 2);
+      assert.deepEqual(attempts[0], attempts[1]);
+      keepLocked = true;
+      attempts.length = 0;
+      await assert.rejects(repositories.bindings.saveBinding(validBinding({ bindingId: "binding.three" })), { code: "EPERM" });
+      assert.equal(attempts.length, 4);
+      assert.deepEqual((await repositories.bindings.listBindings()).bindings.map(binding => binding.bindingId).sort(), ["binding.one", "binding.two"]);
+    } finally {
+      replaced.mock.restore();
+      syncBuiltinESMExports();
+    }
   });
 
   it("upserts, resolves, filters, and paginates bindings", async () => {

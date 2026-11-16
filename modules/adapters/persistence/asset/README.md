@@ -12,3 +12,7 @@ Organization scope comes from the host-owned structured document store. Query
 filters never grant workspace or organization membership. Definition identity,
 bounded exact reads, passive DTO validation and compare-and-swap registration
 remain unchanged. See `docs/architecture/asset-kernel.md`.
+
+Local JSON publication retries the same atomic rename briefly after a Windows
+sharing error. A persistent error keeps the previous record and reports a
+failed write.

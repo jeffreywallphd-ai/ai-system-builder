@@ -115,6 +115,7 @@ increment; current approval, ordering and dependencies remain mandatory.
 Requests to commit completed and tested roadmap chunks also use the roadmap
 skill. Its scoped checkpoint procedure preserves unrelated changes and pending
 parent qualification; a checkpoint grants no publication or main advancement.
+For Windows publication errors, use the roadmap skill's state recovery procedure.
 
 Use `completed` as the single current roadmap completion status. Final approval
 is the separate immutable `finalApproval` fact. For explicit legacy status
