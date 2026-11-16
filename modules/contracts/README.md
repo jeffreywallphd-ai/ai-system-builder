@@ -44,6 +44,8 @@ Current contract families include:
 
 - Import contracts from family barrels (`modules/contracts/<family>`), not deep
   internal files.
+- Give values consumed by native ESM explicit named exports at the family barrel
+  when the source TypeScript loader exposes that family through CommonJS.
 - The root contracts entry (`modules/contracts`) exposes family namespaces only
   so boundaries stay explicit instead of flattened.
 

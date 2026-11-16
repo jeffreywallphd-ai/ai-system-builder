@@ -40,7 +40,9 @@ const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_
   "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
 
-test("managed stdio binds one verified TLS origin and exact organization and workspace", { timeout: 20_000 }, async () => {
+// This fixture opens several real CLI processes with empty tsx caches and
+// waits once for the managed request deadline. Bound the whole fixture separately.
+test("managed stdio binds one verified TLS origin and exact organization and workspace", { timeout: 60_000 }, async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "managed-mcp-"));
   const certificate = await selfsigned.generate([{name: "commonName", value: "127.0.0.1"}], {
     keySize: 2048, extensions: [{name: "subjectAltName", altNames: [{type: 7, ip: "127.0.0.1"}]}],

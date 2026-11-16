@@ -1,13 +1,13 @@
 import type { OrganizationRole } from "../../../../contracts/organization";
-import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_OBSERVE_PATH } from "../../../../contracts/headless/managed-browser-consent";
-import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH } from "../../../../contracts/headless/managed-browser-plan-approval";
+import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_OBSERVE_PATH } from "../../../../contracts/headless";
+import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH } from "../../../../contracts/headless";
 import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
-  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../contracts/headless/managed-browser-presentation";
-import { MANAGED_HEADLESS_AGENT_WINDOW_PATH } from "../../../../contracts/headless/managed-headless-window";
-import { MANAGED_HEADLESS_PLAN_REVIEW_PATH } from "../../../../contracts/headless/headless-plan-review-wire";
-import { MANAGED_HEADLESS_PLAN_STEP_PATH } from "../../../../contracts/headless/headless-plan-step-wire";
-import { MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH } from "../../../../contracts/headless/headless-data-local-file";
-import { MANAGED_HEADLESS_PROVIDER_FILE_PREVIEW_PATH } from "../../../../contracts/headless/headless-data-provider-file";
+  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_AGENT_WINDOW_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_PLAN_REVIEW_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_PLAN_STEP_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_PROVIDER_FILE_PREVIEW_PATH } from "../../../../contracts/headless";
 import type { SecurityScope } from "../../../../contracts/security";
 
 export interface ApiRoutePolicy {

@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 
 import type { AuthorizeOperationService } from "../../../../application/services/security";
-import { MANAGED_BROWSER_OBSERVE_PATH } from "../../../../contracts/headless/managed-browser-consent";
-import { MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH } from "../../../../contracts/headless/managed-browser-presentation";
+import { MANAGED_BROWSER_OBSERVE_PATH } from "../../../../contracts/headless";
+import { MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH } from "../../../../contracts/headless";
 import { getExpressAuthContext } from "./expressAuthContext";
 import { getExpressOrganizationContext } from "./expressOrganizationContext";
 import { createSecurityApiFailure, mapSecurityFailure } from "./createSecurityApiFailure";

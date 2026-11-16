@@ -9,7 +9,7 @@ import { normalizeConversationMessageId, normalizeConversationSessionId, normali
 import { normalizeExecutionRunId, type ExecutionRunRecord } from "../../../../contracts/execution-runs";
 import {
   DESKTOP_HEADLESS_CHAT_TASKS_CHANNEL, DESKTOP_HEADLESS_CHAT_TASK_LIMIT, readDesktopHeadlessChatTasks,
-} from "../../../../contracts/headless/desktop-headless-chat-tasks";
+} from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { registerDesktopHeadlessTaskList } from "../registerDesktopHeadlessTaskList";

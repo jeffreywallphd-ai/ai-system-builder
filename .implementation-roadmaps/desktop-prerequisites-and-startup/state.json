@@ -1,5 +1,98 @@
 {
-  "blockers": [],
+  "blockerReclassifications": [
+    {
+      "assignment": {
+        "actionLocation": "The local contributor checkout and Windows qualification host.",
+        "actionOwner": "agent",
+        "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+        "completionCondition": "Focused contract discipline and real synthetic MCP checks pass and independent review accepts the repair.",
+        "requiredAction": "Repair the verified contract-boundary and MCP fixture regressions under the existing architecture.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+      "blockerId": "desktop-roadmap-baseline-suite-failures",
+      "originalBlocker": {
+        "actionLocation": "This roadmap review and the repository contributor workflow.",
+        "actionOwner": "human",
+        "authorityRef": "agent-guide-material-scope-decision",
+        "completionCondition": "The repository baseline repair passes the combined suite. The Desktop roadmap receives a fresh passing overall receipt and independent review.",
+        "id": "desktop-roadmap-baseline-suite-failures",
+        "kind": "decision",
+        "recordedAt": "2026-11-16T20:14:14Z",
+        "requiredAction": "Authorize a separate repair of the repository baseline failures affecting roadmap closure.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Repository owner",
+        "status": "open",
+        "summary": "The independently reviewed Desktop increment is complete. The required combined suite found headless MCP and public contract guard failures. The pre-Desktop commit reproduced both contract guard failures and the headless TLS timeout. The violations span 54 imports in 24 files outside the Desktop change."
+      },
+      "originalDigest": "a6fe3370296de91048fc7a318c0f16577e5bc217fceabc64db02b6b51914db7e",
+      "reason": "The repository owner approved the existing repair scope and the exact local toolset installation. Technical checks remain pending.",
+      "recordedAt": "2026-11-16T21:36:33Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "The local contributor checkout and Windows qualification host.",
+        "actionOwner": "agent",
+        "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+        "completionCondition": "The exact installed tools build the native fixture and the Windows native suite passes.",
+        "requiredAction": "Verify the approved side-by-side compiler installation with the native Windows identity tests.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+      "blockerId": "desktop-roadmap-native-qualification-host",
+      "originalBlocker": {
+        "actionLocation": "The approved Windows qualification host.",
+        "actionOwner": "human",
+        "authorityRef": "agent-guide-external-qualification",
+        "completionCondition": "The native qualification setup builds the fixed fixture and its end-to-end cases pass in the configured completion suite.",
+        "id": "desktop-roadmap-native-qualification-host",
+        "kind": "environment",
+        "recordedAt": "2026-11-16T20:14:14Z",
+        "requiredAction": "Provide or authorize a Windows x64 qualification environment with the pinned MSVC 14.42.34433 Build Tools and Windows SDK 10.0.26100.0.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Repository owner",
+        "status": "open",
+        "summary": "The required end-to-end suite could not build the native Windows model-file identity fixture. The pinned MSVC 14.42.34433 compiler and linker are absent at the qualification profile paths. The configured Windows SDK is present. Nine native fixture tests failed at their shared setup hook."
+      },
+      "originalDigest": "62fdfa2c7a99469b1876992c0db6f98359036494ca51c3275c53558738b448fa",
+      "reason": "The repository owner approved the existing repair scope and the exact local toolset installation. Technical checks remain pending.",
+      "recordedAt": "2026-11-16T21:36:33Z"
+    }
+  ],
+  "blockers": [
+    {
+      "actionLocation": "The local contributor checkout and Windows qualification host.",
+      "actionOwner": "agent",
+      "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+      "completionCondition": "Focused contract discipline and real synthetic MCP checks pass and independent review accepts the repair.",
+      "id": "desktop-roadmap-baseline-suite-failures",
+      "kind": "decision",
+      "recordedAt": "2026-11-16T20:14:14Z",
+      "requiredAction": "Repair the verified contract-boundary and MCP fixture regressions under the existing architecture.",
+      "resolution": "The contract-family and MCP source-fixture repairs passed focused verification and independent review. The scoped receipt retains all fourteen fixed checks.",
+      "resolvedAt": "2026-11-16T21:52:24Z",
+      "responsibleRole": "Coding agent",
+      "status": "resolved",
+      "summary": "The independently reviewed Desktop increment is complete. The required combined suite found headless MCP and public contract guard failures. The pre-Desktop commit reproduced both contract guard failures and the headless TLS timeout. The violations span 54 imports in 24 files outside the Desktop change."
+    },
+    {
+      "actionLocation": "The local contributor checkout and Windows qualification host.",
+      "actionOwner": "agent",
+      "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+      "completionCondition": "The exact installed tools build the native fixture and the Windows native suite passes.",
+      "id": "desktop-roadmap-native-qualification-host",
+      "kind": "environment",
+      "recordedAt": "2026-11-16T20:14:14Z",
+      "requiredAction": "Verify the approved side-by-side compiler installation with the native Windows identity tests.",
+      "resolution": "The Microsoft-signed side-by-side MSVC 14.42.34433 toolset and existing Windows SDK built the native fixture. All nine Windows native identity integration tests passed.",
+      "resolvedAt": "2026-11-16T21:37:36Z",
+      "responsibleRole": "Coding agent",
+      "status": "resolved",
+      "summary": "The required end-to-end suite could not build the native Windows model-file identity fixture. The pinned MSVC 14.42.34433 compiler and linker are absent at the qualification profile paths. The configured Windows SDK is present. Nine native fixture tests failed at their shared setup hook."
+    }
+  ],
   "chunks": [
     {
       "areas": [
@@ -380,6 +473,42 @@
       "recordedAt": "2026-11-16T19:45:26Z",
       "sequence": 20,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "571456fa87012b054be7d0bed3997be8c592f7fab10cd567fc44c8257c70963d",
+      "recordedAt": "2026-11-16T20:14:14Z",
+      "sequence": 21,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "d8a587912ead9593a1efa6454e073782d370b90b96c7fca31fa75c478c0ce800",
+      "recordedAt": "2026-11-16T20:14:14Z",
+      "sequence": 22,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "ec8b4e1a142bffb380cbea86d31508437d8f51ae261336fc66d298807fb3199b",
+      "recordedAt": "2026-11-16T21:36:33Z",
+      "sequence": 23,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "ad645946e52d95caeb5ce224aab5d548b7084fa8e57f3b67ddd90b7f94050d25",
+      "recordedAt": "2026-11-16T21:36:33Z",
+      "sequence": 24,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "a0e16c6272ccdf96a53174f1af31ebe8e75c2530dff05a69fa4ec5dcfd5baa50",
+      "recordedAt": "2026-11-16T21:37:36Z",
+      "sequence": 25,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "712859f5ea67d876d1d147b95511b5432586b0836517a7882e9f9d5619dac3da",
+      "recordedAt": "2026-11-16T21:52:24Z",
+      "sequence": 26,
+      "type": "resumed"
     }
   ],
   "increments": [
@@ -534,7 +663,18 @@
     "roadmap": "docs/desktop-prerequisites-and-startup-implementation-roadmap.md",
     "state": ".implementation-roadmaps/desktop-prerequisites-and-startup/state.json"
   },
-  "resumeAudits": [],
+  "resumeAudits": [
+    {
+      "blockerId": "desktop-roadmap-native-qualification-host",
+      "reconciliation": "Verified the fixed compiler and linker installation, executed the real Windows identity test file with the qualified Python interpreter, and retained the overall suite requirement.",
+      "recordedAt": "2026-11-16T21:37:36Z"
+    },
+    {
+      "blockerId": "desktop-roadmap-baseline-suite-failures",
+      "reconciliation": "Retained the failed overall receipt, linked reviewed component evidence to the roadmap and confirmed the Windows native fixture already passed. Run the required combined suite on the new source.",
+      "recordedAt": "2026-11-16T21:52:24Z"
+    }
+  ],
   "roadmapApproval": {
     "approvedAt": "2026-11-16T16:21:01Z",
     "fingerprint": "f06ca2ebf49f3c12c532064830d0b0526792896101d45e664644ed04ad5e0d39",
@@ -543,5 +683,5 @@
   "schemaVersion": 1,
   "slug": "desktop-prerequisites-and-startup",
   "status": "roadmap-ready-to-close",
-  "updatedAt": "2026-11-16T19:45:26Z"
+  "updatedAt": "2026-11-16T21:52:24Z"
 }

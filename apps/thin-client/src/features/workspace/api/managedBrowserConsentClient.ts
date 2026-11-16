@@ -1,15 +1,15 @@
-import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, parseManagedBrowserRegistration } from "../../../../../../modules/contracts/headless/managed-browser-consent";
+import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, parseManagedBrowserRegistration } from "../../../../../../modules/contracts/headless";
 import { isUiControlId, readUiControlObservation, readUiControlTimedGrant,
-  type UiControlAttempt, type UiControlLeaseTarget } from "../../../../../../modules/contracts/headless/ui-control-authority";
+  type UiControlAttempt, type UiControlLeaseTarget } from "../../../../../../modules/contracts/headless";
 import { readUiPresentationPullResult, sameUiControlLease, type UiPresentationReceipt,
-  type UiPresentationContext } from "../../../../../../modules/contracts/headless/ui-control-delivery";
+  type UiPresentationContext } from "../../../../../../modules/contracts/headless";
 import { MANAGED_BROWSER_DELIVERY_PATH, MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH,
-  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../../../modules/contracts/headless/managed-browser-presentation";
+  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../../../modules/contracts/headless";
 import { readStrictPassiveRecord } from "../../../../../../modules/contracts/shared";
 import { MANAGED_BROWSER_PLAN_APPROVAL_MAX_RESULT_BYTES, MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH,
-  readManagedBrowserPlanApprovalValue, type ManagedBrowserPlanApprovalRequest } from "../../../../../../modules/contracts/headless/managed-browser-plan-approval";
-import type { DesktopPlanApprovalDecision, DesktopPlanApprovalListEntry, DesktopPlanApprovalSelection, DesktopPlanApprovalView } from "../../../../../../modules/contracts/headless/desktop-headless-plan-approval";
-import { readAppHeadlessLocalFileSelectionValue, type DesktopLocalFileSelectionInput } from "../../../../../../modules/contracts/headless/headless-data-app-selection";
+  readManagedBrowserPlanApprovalValue, type ManagedBrowserPlanApprovalRequest } from "../../../../../../modules/contracts/headless";
+import type { DesktopPlanApprovalDecision, DesktopPlanApprovalListEntry, DesktopPlanApprovalSelection, DesktopPlanApprovalView } from "../../../../../../modules/contracts/headless";
+import { readAppHeadlessLocalFileSelectionValue, type DesktopLocalFileSelectionInput } from "../../../../../../modules/contracts/headless";
 import { secureFetch } from "../../../security/secureFetch";
 
 const MAX_RESPONSE = 4_096;

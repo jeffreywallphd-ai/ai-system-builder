@@ -3,6 +3,27 @@
   "support": [
     {
       "kind": "support-scope",
+      "source_text_sha256": "c94669eb05f0d8d3c992d69a53fcfaaaf8139834b98a81c005b3ac83c73118a6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The shared contracts and MCP test launcher were repaired.",
+          "The focused tests passed for secure connections, request scope, and public replies."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4ef02b6e691fff5653c7a487ab0c1a2f6cb0b5d088423eb6a139c7d9898bdada",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The roadmap still needs the combined repository tests and independent review."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
       "source_text_sha256": "b0eedc867a27638a19616713ff4a5741d015b11921a0359e8010a74fa0dd5817",
       "user_description": {
         "owner": "agent",

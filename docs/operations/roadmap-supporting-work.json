@@ -47,6 +47,22 @@
   ],
   "links": [
     {
+      "roadmap_id": "desktop-prerequisites-and-startup",
+      "increment_id": "desktop-bootstrap-admission",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "desktop-roadmap-baseline-final",
+      "work_criteria": [
+        "family-contract-imports",
+        "source-mcp-verification"
+      ],
+      "receipt_digest": "8de304b6eb5cb8de1793fe3522909fe3419fbbfa08584fd7c2c87d997de9f7d5",
+      "review_digest": "72078507e7603f6f11f954e3e1ddd20576da8312e1bee59556d9f2bbde6347f2",
+      "scope": "The reviewed repair restored family-level imports and the source-based MCP fixture. The fixed checks passed for scoped requests, TLS and sanitized replies.",
+      "limitations": [
+        "Parent closure still requires the full combined suite and its own current independent review."
+      ]
+    },
+    {
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "revocable-desktop-presentation",
       "criterion_id": "desktop-takeover-real-host",

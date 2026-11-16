@@ -27,8 +27,8 @@ import { HEADLESS_CONTRACT_VERSION, parseHeadlessBuildPlanProposal, readHeadless
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../contracts/ingestion";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createOidcBearerConfig } from "../../../../contracts/security";
-import { MANAGED_BROWSER_DOCUMENT_HEADER, parseManagedBrowserRegistration } from "../../../../contracts/headless/managed-browser-consent";
-import { MANAGED_BROWSER_PLAN_APPROVAL_PATH } from "../../../../contracts/headless/managed-browser-plan-approval";
+import { MANAGED_BROWSER_DOCUMENT_HEADER, parseManagedBrowserRegistration } from "../../../../contracts/headless";
+import { MANAGED_BROWSER_PLAN_APPROVAL_PATH } from "../../../../contracts/headless";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { composeSystemBuilder } from "../../../shared/composition/composeSystemBuilder";
 import { composeManagedHeadlessAuthoring } from "../composeManagedHeadlessAuthoring";

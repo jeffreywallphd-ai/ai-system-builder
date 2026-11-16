@@ -8,7 +8,7 @@ import {
   DESKTOP_HEADLESS_CHAT_TASKS_CHANNEL, DESKTOP_HEADLESS_CHAT_TASKS_UNAVAILABLE as unavailable,
   DESKTOP_HEADLESS_CHAT_TASK_LIMIT, readDesktopHeadlessChatTaskRequest, readDesktopHeadlessChatTasks,
   type DesktopHeadlessChatTask, type DesktopHeadlessChatTasks,
-} from "../../../contracts/headless/desktop-headless-chat-tasks";
+} from "../../../contracts/headless";
 import type { LocalIdentityProfile } from "../../../contracts/organization";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
 

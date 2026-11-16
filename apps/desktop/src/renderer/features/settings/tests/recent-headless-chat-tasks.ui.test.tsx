@@ -1,8 +1,8 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
-import type { DesktopHeadlessChatTasks } from "../../../../../../../modules/contracts/headless/desktop-headless-chat-tasks";
-import type { DesktopPlanApprovalView } from "../../../../../../../modules/contracts/headless/desktop-headless-plan-approval";
+import type { DesktopHeadlessChatTasks } from "../../../../../../../modules/contracts/headless";
+import type { DesktopPlanApprovalView } from "../../../../../../../modules/contracts/headless";
 import { isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal } from "../../../../../../../modules/contracts/headless";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
 import { HeadlessClientSettings } from "../components/HeadlessClientSettings";

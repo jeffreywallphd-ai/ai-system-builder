@@ -9,6 +9,11 @@ the app or a runtime, own a database, or add window-control tools.
 The local client starts the adapter with Node.js 24, `--import tsx`, and the
 repository-relative entry point
 `modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts`.
+
+The standard suite runs the MCP stdio fixture from source. The fixture launches
+the `.mts` entry through `tsx` and checks the actual SDK tool catalog and
+synthetic loopback TLS behavior. Its outer test timeout includes child startup
+and the real request deadline.
 Set `AISB_HEADLESS_ENDPOINT` and `AISB_HEADLESS_FINGERPRINT` to the current
 HTTPS address and certificate fingerprint shown by the app. The adapter
 checks the certificate on each connection before sending a bearer. A changed

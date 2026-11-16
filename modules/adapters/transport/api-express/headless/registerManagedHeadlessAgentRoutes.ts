@@ -14,7 +14,7 @@ import {
   type HeadlessProviderFileImportRequest, type HeadlessProviderFileImportResult,
 } from "../../../../contracts/headless";
 import { isManagedWindowOperation, MANAGED_HEADLESS_AGENT_SESSION_HEADER,
-  readManagedWindowResult } from "../../../../contracts/headless/managed-headless-window";
+  readManagedWindowResult } from "../../../../contracts/headless";
 import { hasKnownPassiveCredential, readStrictPassiveRecord } from "../../../../contracts/shared";
 import { SYSTEM_BUILDER_TEMPLATE_IDS, isSystemBuilderStatus, isSystemBuilderSystemId, normalizeSystemBuilderRevisionId } from "../../../../contracts/system-builder";
 import { isWorkspaceId } from "../../../../contracts/workspace";

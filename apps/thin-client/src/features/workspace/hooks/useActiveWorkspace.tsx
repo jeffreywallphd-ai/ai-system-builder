@@ -13,7 +13,7 @@ import {
   type ActiveWorkspaceSelection,
   type WorkspaceRecord,
 } from "../../../../../../modules/contracts/workspace";
-import {isOrganizationId, type OrganizationId} from "../../../../../../modules/contracts/organization/organization-id";
+import {isOrganizationId, type OrganizationId} from "../../../../../../modules/contracts/organization";
 import { parseApiEnvelope } from "../../../security/apiErrorEnvelope";
 import { secureFetch } from "../../../security/secureFetch";
 

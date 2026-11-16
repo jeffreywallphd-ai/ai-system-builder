@@ -7,7 +7,7 @@ import {
   readDesktopPlanApprovalDecision, readDesktopPlanApprovalList,
   readDesktopPlanApprovalSelection, readDesktopPlanApprovalView, sameDesktopPlanApproval,
   type DesktopPlanApprovalSelection,
-} from "../../../../modules/contracts/headless/desktop-headless-plan-approval";
+} from "../../../../modules/contracts/headless";
 import type { composeDesktopHeadlessPlanApprovals, DesktopPlanReviewCaller } from "../../../../modules/hosts/desktop/composition/composeDesktopHeadlessPlanApprovals";
 
 type Approvals = ReturnType<typeof composeDesktopHeadlessPlanApprovals>;

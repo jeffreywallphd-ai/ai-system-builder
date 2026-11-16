@@ -7,12 +7,12 @@ import {
   type HeadlessHostIncarnationId, type HeadlessWindowRequest, type HeadlessWindowResult, type HeadlessWindowValue,
   type UiControlLease, type UiControlLeaseTarget, type UiControlObservation, type UiControlTimedGrant, type UiPresentationIntent,
 } from "../../../contracts/headless";
-import { sameManagedBrowserAttempt } from "../../../contracts/headless/managed-browser-consent";
+import { sameManagedBrowserAttempt } from "../../../contracts/headless";
 import type { OrganizationRequestContext } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { ManagedHeadlessBrowserIdentity } from "../security/resolveManagedHeadlessClientPolicy";
 import { createManagedHeadlessBrowserDocuments } from "./createManagedHeadlessBrowserDocuments";
-import type { ManagedBrowserPlanApprovalRequest } from "../../../contracts/headless/managed-browser-plan-approval";
+import type { ManagedBrowserPlanApprovalRequest } from "../../../contracts/headless";
 import type { HeadlessPlanReviewChannel } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import type { composeManagedHeadlessPlanApprovals } from "./composeManagedHeadlessPlanApprovals";
 import {createManagedBrowserPresentation} from "./createManagedBrowserPresentation";

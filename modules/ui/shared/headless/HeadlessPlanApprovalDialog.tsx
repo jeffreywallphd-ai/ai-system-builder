@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { HeadlessPlanReviewDecisionChoice } from "../../../contracts/headless";
 import type {
   DesktopPlanApprovalDecision, DesktopPlanApprovalListEntry, DesktopPlanApprovalSelection, DesktopPlanApprovalView,
-} from "../../../contracts/headless/desktop-headless-plan-approval";
+} from "../../../contracts/headless";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import { ModalDialog } from "../components/ModalDialog";
 

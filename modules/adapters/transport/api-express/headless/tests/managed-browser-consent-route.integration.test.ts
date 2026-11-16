@@ -9,8 +9,8 @@ import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_
 import { createOrganizationId } from "../../../../../contracts/organization";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../../contracts/ingestion";
 import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
-  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../../contracts/headless/managed-browser-presentation";
-import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH } from "../../../../../contracts/headless/managed-browser-plan-approval";
+  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../../contracts/headless";
+import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH } from "../../../../../contracts/headless";
 import { createWorkspaceId } from "../../../../../contracts/workspace";
 import { resolveApiRoutePolicy } from "../../security/apiRouteSecurityPolicy";
 import { setExpressAuthContext } from "../../security/expressAuthContext";

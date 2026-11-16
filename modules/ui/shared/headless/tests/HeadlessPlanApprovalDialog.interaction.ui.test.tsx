@@ -8,8 +8,8 @@ import { createRoot } from "react-dom/client";
 import {
   isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal,
 } from "../../../../contracts/headless";
-import { readDesktopPlanApprovalView, type DesktopPlanApprovalDecision } from "../../../../contracts/headless/desktop-headless-plan-approval";
-import { readManagedBrowserPlanApprovalRequest, readManagedBrowserPlanApprovalValue } from "../../../../contracts/headless/managed-browser-plan-approval";
+import { readDesktopPlanApprovalView, type DesktopPlanApprovalDecision } from "../../../../contracts/headless";
+import { readManagedBrowserPlanApprovalRequest, readManagedBrowserPlanApprovalValue } from "../../../../contracts/headless";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { HeadlessPlanApprovalDialog, type HeadlessPlanApprovalClient } from "../HeadlessPlanApprovalDialog";
 

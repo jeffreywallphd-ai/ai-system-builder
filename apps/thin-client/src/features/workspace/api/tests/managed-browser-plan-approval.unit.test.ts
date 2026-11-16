@@ -2,8 +2,8 @@ import {createHash} from "node:crypto";
 import {expect, test, vi} from "vitest";
 
 import {parseHeadlessBuildPlanProposal, type HeadlessHostIncarnationId} from "../../../../../../../modules/contracts/headless";
-import {MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH} from "../../../../../../../modules/contracts/headless/managed-browser-consent";
-import {MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH} from "../../../../../../../modules/contracts/headless/managed-browser-plan-approval";
+import {MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH} from "../../../../../../../modules/contracts/headless";
+import {MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH} from "../../../../../../../modules/contracts/headless";
 import {createWorkspaceId} from "../../../../../../../modules/contracts/workspace";
 import {normalizeIngestionTaskFileId, normalizeIngestionTaskId} from "../../../../../../../modules/contracts/ingestion";
 import {createManagedBrowserConsentClient} from "../managedBrowserConsentClient";

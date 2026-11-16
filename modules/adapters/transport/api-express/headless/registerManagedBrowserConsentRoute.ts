@@ -4,12 +4,12 @@ import { isUiControlId, readUiControlObservation, readUiControlTimedGrant, readU
   type HeadlessHostIncarnationId, type UiControlObservation, type UiControlTimedGrant } from "../../../../contracts/headless";
 import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_DOCUMENT_HEADER, MANAGED_BROWSER_OBSERVE_PATH, isManagedBrowserDocumentProof,
   parseManagedBrowserConsent, parseManagedBrowserRegistration, sameManagedBrowserAttempt,
-  sameManagedBrowserDocument } from "../../../../contracts/headless/managed-browser-consent";
+  sameManagedBrowserDocument } from "../../../../contracts/headless";
 import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
   MANAGED_BROWSER_PUBLISH_CONTEXT_PATH, parseManagedBrowserPresentation,
-  type ManagedBrowserPresentationOperation } from "../../../../contracts/headless/managed-browser-presentation";
+  type ManagedBrowserPresentationOperation } from "../../../../contracts/headless";
 import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH, MANAGED_BROWSER_PLAN_APPROVAL_MAX_RESULT_BYTES, readManagedBrowserPlanApprovalRequest,
-  readManagedBrowserPlanApprovalValue, type ManagedBrowserPlanApprovalRequest } from "../../../../contracts/headless/managed-browser-plan-approval";
+  readManagedBrowserPlanApprovalValue, type ManagedBrowserPlanApprovalRequest } from "../../../../contracts/headless";
 import type { WorkspaceId } from "../../../../contracts/workspace";
 import { readStrictPassiveRecord } from "../../../../contracts/shared";
 import { getExpressAuthContext } from "../security/expressAuthContext";

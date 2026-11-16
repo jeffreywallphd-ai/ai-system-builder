@@ -1,7 +1,7 @@
 import { DESKTOP_RUNTIME_READINESS_READ_LATEST_FOR_COMPOSITION_PLAN_REQUEST_CHANNEL, DESKTOP_RUNTIME_READINESS_READ_DETAIL_REQUEST_CHANNEL } from "../../../../modules/contracts/ipc";
 import { DESKTOP_HEADLESS_CHAT_TASKS_CHANNEL, DESKTOP_HEADLESS_CHAT_TASKS_UNAVAILABLE,
   readDesktopHeadlessChatTaskRequest, readDesktopHeadlessChatTasks, type DesktopHeadlessChatTasks,
-} from "../../../../modules/contracts/headless/desktop-headless-chat-tasks";
+} from "../../../../modules/contracts/headless";
 import { DESKTOP_HEADLESS_PAIRING_CHANNELS, DESKTOP_SYSTEM_CHANGE_POLL_CHANNEL, readDesktopHeadlessPairingStatus, readDesktopSystemChangePoll, readDesktopSystemChangeWatermark, type DesktopHeadlessClientAccess, type DesktopHeadlessPairingResult, type DesktopHeadlessPairingStatus, type DesktopHeadlessRevokeResult, type DesktopHeadlessStartResult, type DesktopSystemChangeWatermark } from "../../../../modules/contracts/headless";
 import {
   DESKTOP_UI_CONTROL_CHANNELS, readUiControlAttempt, readUiControlLeaseTarget, readUiControlObservation,
@@ -16,12 +16,12 @@ import { isDesktopHeadlessClientId, readHeadlessPlanReviewAgentResult } from "..
 import { DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL, DESKTOP_HEADLESS_PROVIDER_FILE_SELECTION_CHANNEL,
   readAppHeadlessLocalFileSelectionValue,
   type AppHeadlessLocalFileSelectionValue, type DesktopLocalFileSelectionInput,
-} from "../../../../modules/contracts/headless/headless-data-app-selection";
+} from "../../../../modules/contracts/headless";
 import { DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS, DESKTOP_HEADLESS_PLAN_CHAT_CHANNELS,
   readDesktopPlanApprovalDecision, readDesktopPlanApprovalList,
   readDesktopPlanApprovalSelection, readDesktopPlanApprovalView, type DesktopPlanApprovalDecision,
   type DesktopPlanApprovalListEntry, type DesktopPlanApprovalSelection, type DesktopPlanApprovalView,
-} from "../../../../modules/contracts/headless/desktop-headless-plan-approval";
+} from "../../../../modules/contracts/headless";
 import { createDesktopWorkspaceSummaryRequest, DESKTOP_WORKSPACE_SUMMARY_OPERATION, DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, type DesktopWorkspaceSummaryResponse } from "../../../../modules/contracts/ipc";
 import {
   DESKTOP_ARTIFACT_BROWSE_OPERATION,

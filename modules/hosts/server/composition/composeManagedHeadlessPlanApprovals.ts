@@ -20,8 +20,8 @@ import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cas
 import type { TenantPlacementConfig } from "../../../contracts/config";
 import { HEADLESS_CONTRACT_VERSION, isDesktopHeadlessClientId, readHeadlessPlanReviewAgentResult,
   type HeadlessHostIncarnationId } from "../../../contracts/headless";
-import { readDesktopPlanApprovalView, sameDesktopPlanApproval, type DesktopPlanApprovalSelection } from "../../../contracts/headless/desktop-headless-plan-approval";
-import type { ManagedBrowserPlanApprovalRequest } from "../../../contracts/headless/managed-browser-plan-approval";
+import { readDesktopPlanApprovalView, sameDesktopPlanApproval, type DesktopPlanApprovalSelection } from "../../../contracts/headless";
+import type { ManagedBrowserPlanApprovalRequest } from "../../../contracts/headless";
 import type { OrganizationRequestContext } from "../../../contracts/organization";
 import type { SecurityScope } from "../../../contracts/security";
 import type { WorkspaceId } from "../../../contracts/workspace";

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ExecutionRunStatus } from "../../../../../../../modules/contracts/execution-runs";
 import {
   DESKTOP_HEADLESS_CHAT_TASKS_UNAVAILABLE as unavailable, readDesktopHeadlessChatTasks, type DesktopHeadlessChatTasks,
-} from "../../../../../../../modules/contracts/headless/desktop-headless-chat-tasks";
+} from "../../../../../../../modules/contracts/headless";
 import type { WorkspaceId } from "../../../../../../../modules/contracts/workspace";
 import { getDesktopApi } from "../../../lib/desktopApi";
 

@@ -1,8 +1,8 @@
-import { parseHeadlessChangeCursor, type HeadlessChangeCursor } from "../../../../../../modules/contracts/headless/headless-read-request";
-import { readStrictPassiveRecord } from "../../../../../../modules/contracts/shared/passive-data";
-import { isSystemBuilderSystemId } from "../../../../../../modules/contracts/system-builder/system-builder-id";
-import { normalizeSystemBuilderRevisionId } from "../../../../../../modules/contracts/system-builder/system-builder-revision";
-import { isWorkspaceId } from "../../../../../../modules/contracts/workspace/workspace-id";
+import { parseHeadlessChangeCursor, type HeadlessChangeCursor } from "../../../../../../modules/contracts/headless";
+import { readStrictPassiveRecord } from "../../../../../../modules/contracts/shared";
+import { isSystemBuilderSystemId } from "../../../../../../modules/contracts/system-builder";
+import { normalizeSystemBuilderRevisionId } from "../../../../../../modules/contracts/system-builder";
+import { isWorkspaceId } from "../../../../../../modules/contracts/workspace";
 import { pairedDeviceTokenStore } from "../../../security/pairedDeviceTokenStore";
 import { secureFetch } from "../../../security/secureFetch";
 

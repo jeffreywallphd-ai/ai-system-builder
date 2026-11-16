@@ -4,7 +4,7 @@ import { test } from "node:test";
 import type { IpcMainHandlePort } from "../../../../../modules/adapters/transport/ipc-electron/ipcMainHandlePort";
 import { DESKTOP_HEADLESS_PAIRING_CHANNELS, isHeadlessHostIncarnationId, parseHeadlessBuildPlanProposal } from "../../../../../modules/contracts/headless";
 import { DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS, DESKTOP_HEADLESS_PLAN_CHAT_CHANNELS,
-  type DesktopPlanApprovalView } from "../../../../../modules/contracts/headless/desktop-headless-plan-approval";
+  type DesktopPlanApprovalView } from "../../../../../modules/contracts/headless";
 import { createWorkspaceId } from "../../../../../modules/contracts/workspace";
 import type { composeDesktopHeadlessPlanApprovals } from "../../../../../modules/hosts/desktop/composition/composeDesktopHeadlessPlanApprovals";
 import { createDesktopPreloadApi } from "../../preload/exposedApi";

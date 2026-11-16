@@ -9,7 +9,7 @@ import path from "node:path";
 
 import { HEADLESS_CONTRACT_VERSION, HEADLESS_PLAN_REVIEW_MAX_REQUEST_BYTES, parseHeadlessBuildPlanProposal,
   UI_CONTROL_VERSION, type HeadlessHostIncarnationId, type HeadlessPlanStepResult } from "../../../../../contracts/headless";
-import { MANAGED_HEADLESS_AGENT_SESSION_HEADER } from "../../../../../contracts/headless/managed-headless-window";
+import { MANAGED_HEADLESS_AGENT_SESSION_HEADER } from "../../../../../contracts/headless";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../../contracts/ingestion";
 import { createOrganizationId } from "../../../../../contracts/organization";
 import { type AuthContext, createSecurityApplicationError } from "../../../../../contracts/security";

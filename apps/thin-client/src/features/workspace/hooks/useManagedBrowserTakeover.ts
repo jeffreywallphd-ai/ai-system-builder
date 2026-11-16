@@ -6,8 +6,8 @@ import type { HeadlessPlanApprovalClient } from "../../../../../../modules/ui/sh
 import type { GuidedHeadlessFileClient } from "../../../../../../modules/ui/shared/data-management/GuidedIngestionTaskPanel";
 import { UI_PRESENTATION_LIMITS, type UiPresentationContext, type UiPresentationDetail,
   type UiPresentationIntent, type UiPresentationReceipt } from "../../../../../../modules/contracts/headless";
-import { isWorkspaceId, type WorkspaceId } from "../../../../../../modules/contracts/workspace/workspace-id";
-import { isOrganizationId } from "../../../../../../modules/contracts/organization/organization-id";
+import { isWorkspaceId, type WorkspaceId } from "../../../../../../modules/contracts/workspace";
+import { isOrganizationId } from "../../../../../../modules/contracts/organization";
 import { pairedDeviceTokenStore } from "../../../security/pairedDeviceTokenStore";
 import { createManagedBrowserConsentClient } from "../api/managedBrowserConsentClient";
 

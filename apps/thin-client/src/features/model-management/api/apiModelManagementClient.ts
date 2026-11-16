@@ -1,5 +1,5 @@
 import { secureFetch } from "../../../security/secureFetch";
-import { normalizeListModelFilesResult } from "../../../../../../modules/contracts/model/model-management-operations";
+import { normalizeListModelFilesResult } from "../../../../../../modules/contracts/model";
 import { type BrowseModelsRequest, type BrowseModelsResult, type CancelModelDownloadTaskRequest, type CancelModelDownloadTaskResult, type DeleteModelRecordRequest, type DeleteModelRecordResult, type DownloadModelRequest, type DownloadModelResult, type GetModelDetailsRequest, type GetModelDetailsResult, type ListModelDownloadTasksRequest, type ListModelDownloadTasksResult, type ListModelFilesRequest, type ListModelFilesResult, type ListModelsRequest, type ListModelsResult, type ReadModelDownloadTaskRequest, type ReadModelDownloadTaskResult, type SaveModelReferenceRequest, type SaveModelReferenceResult, type StartModelDownloadTaskResult, type PublishModelRequest, type PublishModelResult, type UpdateModelRecordRequest, type UpdateModelRecordResult, type ValidateModelRequest, type ValidateModelResult } from "../../../../../../modules/contracts/model";
 
 import { logThinClientDiagnostic } from "../../../diagnostics/thinClientDiagnostics";
