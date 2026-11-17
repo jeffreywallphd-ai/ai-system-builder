@@ -26,7 +26,7 @@ describe('thin user-library ui', () => {
     expect(container.textContent).toContain('Created in this workspace');
     expect(container.textContent).toContain('Detached copy actions are unavailable in Phase 7 UI.');
     const linkButton = container.querySelector('button');
-    await act(async () => { linkButton?.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    await act(async () => { linkButton?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
     const linkRequest = (globalThis as any).fetch.mock.calls.find((call: any[]) => String(call[0]).includes('/workspace-links'));
     expect(linkRequest[1].body).toContain('"targetWorkspaceId":"ws-1"');
     expect(linkRequest[1].body).toContain('"propagationPolicy":"pinned-version"');
