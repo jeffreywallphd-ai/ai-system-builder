@@ -35,6 +35,21 @@ class DatasetPreviewRoutingTests(unittest.TestCase):
                          ["dev-tools/helpers/run_vitest_checks.mjs", "--", source])
         self.assertIn("focused-tests", self.selected([source, "dev-tools/scripts/qualification/unmapped.ts"]))
 
+    def test_owned_start_runs_new_denials_and_existing_pipeline_regressions(self):
+        source = "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts"
+        port = "modules/application/ports/runtime/local-dataset-preparation-admission.port.ts"
+        selected = self.selected([source, port, "modules/application/ports/runtime/index.ts"])
+        self.assertNotIn("focused-tests", selected)
+        command = selected["headless-dataset-owned-start"]["argv"]
+        for name in ["prepare-training-dataset-local-admission.unit.test.ts",
+                     "prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+                     "prepare-training-dataset-quality-policy.unit.test.ts",
+                     "prepare-training-dataset-source-isolation.integration.test.ts",
+                     "prepare-training-dataset-version-finalization.unit.test.ts"]:
+            self.assertIn("modules/application/use-cases/tests/" + name, command)
+        self.assertIn("focused-tests", self.selected([source, "modules/application/ports/runtime/unknown.port.ts"]))
+        self.assertIn("focused-tests", self.selected([source], ["focused-tests"]))
+
 
 if __name__ == "__main__":
     unittest.main()

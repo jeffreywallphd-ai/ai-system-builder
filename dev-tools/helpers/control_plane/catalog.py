@@ -824,6 +824,33 @@ PUBLISHED_FORM_CHECKS = {
             "modules/application/use-cases/ingestion-acquisition/tests/headless-dataset-preparation.unit.test.ts",
         ),
     },
+    "headless-dataset-owned-start": {
+        "automatic_sources": (
+            "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-local-admission.unit.test.ts",
+            "modules/application/ports/runtime/local-dataset-preparation-admission.port.ts",
+        ),
+        "sources": (
+            "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-local-admission.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-quality-policy.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts",
+            "modules/application/ports/runtime/local-dataset-preparation-admission.port.ts",
+            "modules/application/ports/runtime/index.ts",
+            "modules/application/ports/runtime/README.md",
+            "modules/application/use-cases/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/application/use-cases/tests/prepare-training-dataset-local-admission.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-quality-policy.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts",
+        ),
+    },
     "headless-data-definition-witnesses": {
         "automatic_sources": ("dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts",),
         "sources": (

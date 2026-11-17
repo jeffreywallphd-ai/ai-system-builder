@@ -42,6 +42,23 @@ Clients obtain the current task revision from `data.ingestion-status` before
 preview. An immutable save receipt can contain an earlier effect revision;
 successful transfer-checkpoint cleanup can advance the mutable task separately.
 
+The processor also has a private `startAdmittedLocalProvidedDataset` entry point.
+Its trusted admission parameter is separate from command data and request context.
+It admits only provided instruction rows from at most four local structured
+sources of 4 MiB each, local JSONL output and required workspace quality review.
+Exact local bindings, bounded content reads and copied bytes must match expected
+format, media, digest and size. Runtime names use the fixed admitted format;
+mutable adapter descriptors and source captions are not worker authority.
+The existing lifecycle service reserves capacity before staging. Four retained
+attempts exhaust this profile's capacity. Current permission protects source
+reads and durable issue. Only acknowledged one-use issuance permits runtime
+warming and the exact host-issued task request. Shutdown fences both warming
+admission and the final task call. Unknown issue/start replies or failed cleanup
+retain staging and capacity; no task is adopted or cancelled by a guessed ID.
+The owning host's successful runtime-stop proof and confirmed cleanup release
+unknown attempts. This method supplies no durable issuer, public dispatch,
+output-save approval or host-exit recovery. The normal app entry is unchanged.
+
 The private [provided-data version qualification](../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md)
 composes the real packaged processor and local SQLite adapter for two-host
 save, compare, setup reuse and restart journeys. The browser test closes and

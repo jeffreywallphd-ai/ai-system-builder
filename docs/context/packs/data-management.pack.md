@@ -5,7 +5,7 @@
 ## Purpose
 
 - Route work involving ingestion, staged source artifacts, dataset preparation, split integrity, curation, versioning, or dataset publication.
-- Summarize the implemented boundary without replacing canonical guidance. Real provided-data host tests: `dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md`; source checks grant no host or parent pass. Headless plan-review clients have metadata-only task progress, at most 16 selected-version point reads, exact comparisons and bounded local dataset-preparation preview through current artifact read authority; see canonical Data architecture and Headless threat guidance. These queries start no model runtime, history scan or dataset mutation; private compiled commands never cross a transport.
+- Summarize the implemented boundary without replacing canonical guidance. Real provided-data host tests: `dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md`; source checks grant no host or parent pass. Headless plan-review clients have metadata-only task progress, at most 16 selected-version point reads, exact comparisons and bounded local dataset-preparation preview through current artifact read authority; see canonical Data architecture and Headless threat guidance. These queries start no model runtime, history scan or dataset mutation; private commands never cross a transport. The private provided-row processing entry checks exact bounded local bytes and one-use issue before runtime warming; it retains unknown effects/cleanup until stop proof, but composes no issuer or public dispatch.
 
 ## Use When
 

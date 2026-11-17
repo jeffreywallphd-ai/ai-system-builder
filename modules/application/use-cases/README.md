@@ -18,6 +18,16 @@ and preserves workspace quality policy and review. Its preview contains no
 source content or storage key. This metadata-only compiler grants no public
 transport, runtime admission or dataset save authority.
 
+`startAdmittedLocalProvidedDataset` reuses the existing dataset processor through
+a separate trusted admission parameter. It verifies bounded local bindings and
+copied source bytes against expected format, media, digest and size. Worker
+filenames are internal and descriptor metadata cannot retarget parsing. Source
+denial starts no runtime; acknowledged issuance precedes warming and the exact
+host-issued task call. Changed app authority gates future transport replies,
+while host shutdown prevents new runtime calls. Uncertain effects and failed
+cleanup retain their lifecycle slot until successful owned-runtime stop and
+cleanup. No durable issuer or public host/MCP execution is provided by this method.
+
 Training start failures can carry a fixed `MODEL_TRAINING_START_*` diagnostic code
 for request validation, runtime readiness, base-model lookup, dataset resolution,
 task dispatch or task registration. The original error object, message and cause

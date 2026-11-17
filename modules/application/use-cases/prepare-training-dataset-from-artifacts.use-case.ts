@@ -61,6 +61,7 @@ import type {
 } from "../../contracts/runtime";
 import {
   DEFAULT_DATASET_PREPARATION_TASK_TYPE,
+  DATASET_PREPARATION_SOURCE_CAPABILITIES,
   DATASET_QUALITY_REASON_CODES,
   DATASET_PREPARATION_OCR_MAX_SOURCE_BYTES,
   DATASET_PREPARATION_OCR_PROTOCOL,
@@ -90,6 +91,8 @@ import type { DatasetVersionHasherPort } from "../ports/dataset-version";
 import type { RuntimeTaskRegistryPort } from "../ports/runtime";
 import type { DatasetQualityPolicyProviderPort } from "../ports/runtime";
 import type { DatasetPreparationSourceHasherPort } from "../ports/runtime";
+import {LOCAL_DATASET_ADMISSION_MAX_PENDING, LOCAL_DATASET_ADMISSION_MAX_SOURCES,
+  LOCAL_DATASET_ADMISSION_MAX_SOURCE_BYTES, type LocalDatasetPreparationAdmission} from "../ports/runtime";
 import type { ArtifactCatalogReadPort } from "../ports/artifact-catalog";
 import type {
   ArtifactStorageBindingPort,
@@ -1746,7 +1749,54 @@ function validateAdaptiveAdvancedSettings(
   }
 }
 
+interface LocalDatasetStart {
+  readonly admission: LocalDatasetPreparationAdmission;
+  readonly lease: OwnedTaskLease;
+  root?: string;
+  leaseStarted: boolean;
+  retained: boolean;
+}
+
+async function localAdmissionCurrent(admission: LocalDatasetPreparationAdmission): Promise<boolean> {
+  try {return admission.isCurrent() === true && await admission.stillAllowed() === true && admission.isCurrent() === true;}
+  catch {return false;}
+}
+
+function validLocalProvidedAdmission(command: PrepareTrainingDatasetFromArtifactsCommand,
+  admission: LocalDatasetPreparationAdmission, sources: LocalDatasetPreparationAdmission["sources"]): boolean {
+  const exact = (value: unknown, fields: readonly string[]) => isRecord(value) &&
+    isDeepStrictEqual(Object.keys(value).sort(), [...fields].sort());
+  const task = command.recipe?.task;
+  const policy = command.quality?.policy;
+  const split = command.split;
+  return /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(admission.taskId) &&
+    typeof admission.isCurrent === "function" && typeof admission.stillAllowed === "function" && typeof admission.issue === "function" &&
+    exact(command, ["sourceArtifactIds", "recipe", "split", "output", "quality"]) &&
+    Array.isArray(command.sourceArtifactIds) && sources.length >= 1 && sources.length <= LOCAL_DATASET_ADMISSION_MAX_SOURCES &&
+    command.sourceArtifactIds.length === sources.length && new Set(sources.map(source => source.artifactId)).size === sources.length &&
+    new Set(sources.map(source => source.storageKey)).size === sources.length && sources.every((source, index) =>
+      source.artifactId === command.sourceArtifactIds[index] && typeof source.storageKey === "string" && source.storageKey.length > 0 &&
+      typeof source.mediaType === "string" && source.mediaType.length > 0 && source.mediaType.length <= 200 &&
+      DATASET_PREPARATION_SOURCE_CAPABILITIES.some(capability => capability.kind === "structured" && capability.format === source.format &&
+        capability.mediaTypes.some(media => media === source.mediaType.split(";", 1)[0].trim().toLowerCase())) &&
+      Number.isSafeInteger(source.sizeBytes) && source.sizeBytes > 0 && source.sizeBytes <= LOCAL_DATASET_ADMISSION_MAX_SOURCE_BYTES &&
+      /^sha256:[a-f0-9]{64}$/.test(source.digest)) &&
+    exact(command.recipe, ["task"]) && exact(task, ["taskType", "textInputMode", "promptStyle", "inputField", "outputField", "sourceContextPolicy"]) &&
+    task?.taskType === "llm-instruction" && task.textInputMode === "provided" && task.promptStyle === "instruction-response" &&
+    task.sourceContextPolicy === "omit" && typeof task.inputField === "string" && typeof task.outputField === "string" &&
+    task.inputField.length > 0 && task.inputField.length <= 64 && task.outputField.length > 0 && task.outputField.length <= 64 &&
+    task.inputField !== task.outputField && exact(split, ["trainRatio", "validationRatio", "testRatio", "seed", "shuffle"]) &&
+    split.shuffle === true && Number.isSafeInteger(split.seed) && split.seed! >= 0 &&
+    exact(command.output, ["format", "destinations"]) && command.output.format === "jsonl" &&
+    exact(command.output.destinations, ["local"]) && exact(command.output.destinations?.local, ["enabled"]) &&
+    command.output.destinations?.local?.enabled === true && exact(command.quality, ["policy", "reviewRequired"]) &&
+    command.quality?.reviewRequired === true && exact(policy, ["preset", "maxRowsPerSource"]) &&
+    (policy?.preset === "recommended" || policy?.preset === "strict") && policy.maxRowsPerSource === 1000;
+}
+
 export class PrepareTrainingDatasetFromArtifactsUseCase {
+  private readonly localDatasetStarts = new Set<LocalDatasetStart>();
+  private readonly localDatasetStartsByTask = new Map<string, LocalDatasetStart>();
   private readonly approvals = new Map<string, { signature: string; operation: Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performApprovePreparedTrainingDataset"]>>> }>();
   private readonly approvedSignatures = new Map<string, string>();
   private readonly taskActions = new Map<string, Promise<unknown>>();
@@ -1824,10 +1874,62 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     return this.taskReconciler ? this.taskReconciler.withLease("python", (lease) => this.startOwned(command, context, lease)) : this.startOwned(command, context);
   }
 
+  /** Internal restricted path; the host must compose durable one-use issuance. */
+  public async startAdmittedLocalProvidedDataset(
+    rawCommand: PrepareTrainingDatasetFromArtifactsCommand, rawContext: ApplicationRequestContext,
+    admission: LocalDatasetPreparationAdmission,
+  ): Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["startOwned"]>>> {
+    const context = {...rawContext};
+    const fail = (code: "validation" | "unavailable" | "forbidden" | "conflict") => createFailureResult(
+      createContractError(code, "The selected local dataset task could not be admitted safely."), context);
+    let state: LocalDatasetStart | undefined;
+    try {
+      const command = structuredClone(rawCommand);
+      const sources = admission.sources.map(source => ({...source}));
+      if (!isWorkspaceId(context.workspaceId) || !context.organizationId || !context.principalId || !this.taskReconciler ||
+          !this.sourceIntegrityHasher || !validLocalProvidedAdmission(command, admission, sources) ||
+          this.localDatasetStarts.size >= LOCAL_DATASET_ADMISSION_MAX_PENDING ||
+          [...this.localDatasetStarts].some(value => value.admission.taskId === admission.taskId)) return fail("unavailable");
+      const trusted = {...admission, sources};
+      state = {admission: trusted, lease: this.taskReconciler.reserve("python"), leaseStarted: false, retained: false};
+      this.localDatasetStarts.add(state);
+      if (!await localAdmissionCurrent(trusted)) return fail("forbidden");
+      const result = await this.startOwned(command, context, state.lease, state);
+      if (result.ok) return result;
+      const code = result.error.code;
+      return fail(code === "forbidden" || code === "conflict" || code === "validation" ? code : "unavailable");
+    } catch {
+      return fail("unavailable");
+    } finally {
+      if (state?.root && !state.retained) {
+        try {await rm(state.root, {recursive: true, force: true}); state.root = undefined;}
+        catch {this.retainUnconfirmedLocalDatasetStart(state);}
+      }
+      if (state && !state.retained) {
+        this.localDatasetStarts.delete(state);
+        if (!state.leaseStarted) state.lease.release();
+      }
+    }
+  }
+
+  private retainUnconfirmedLocalDatasetStart(state: LocalDatasetStart): void {
+    state.retained = true;
+    if (state.leaseStarted) return;
+    // No status lookup or cancellation can adopt a task from an uncertain reply.
+    // Only the host's existing successful runtime-stop proof permits retirement.
+    state.lease.start(async () => false, async () => undefined, async () => {
+      if (state.root) await rm(state.root, {recursive: true, force: true});
+      this.localDatasetStarts.delete(state);
+      this.localDatasetStartsByTask.delete(state.admission.taskId);
+    });
+    state.leaseStarted = true;
+  }
+
   private async startOwned(
     command: PrepareTrainingDatasetFromArtifactsCommand,
     context?: ApplicationRequestContext,
     lease?: OwnedTaskLease,
+    localStart?: LocalDatasetStart,
   ): Promise<
     ContractResult<{
       requestId: string;
@@ -1862,7 +1964,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     }
 
     try {
-      await this.runtimeCapabilityGuard?.requireCapabilityReady(
+      if (!localStart) await this.runtimeCapabilityGuard?.requireCapabilityReady(
         "dataset-preparation",
       );
     } catch (error) {
@@ -1964,10 +2066,11 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         );
       }
     }
-    const staged = await this.stageRuntimeInputs(normalizedCommand, context);
+    const staged = await this.stageRuntimeInputs(normalizedCommand, context, localStart);
     if (!staged.ok) {
       return staged;
     }
+    if (localStart) localStart.root = staged.value.runtimeWorkingDir;
 
     try {
       normalizedCommand = resolveAdaptiveCommandForStagedSources(
@@ -1978,6 +2081,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       const retired = staged.value.ocrOwner
         ? await retireOcrStage(staged.value.ocrOwner)
         : (await rm(staged.value.runtimeWorkingDir, { recursive: true, force: true }), true);
+      if (localStart && retired) localStart.root = undefined;
       return createFailureResult(
         createContractError(
           retired ? "validation" : "unavailable",
@@ -1995,6 +2099,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       const retired = staged.value.ocrOwner
         ? await retireOcrStage(staged.value.ocrOwner)
         : (await rm(staged.value.runtimeWorkingDir, { recursive: true, force: true }), true);
+      if (localStart && retired) localStart.root = undefined;
       return createFailureResult(
         createContractError(retired ? "validation" : "unavailable",
           retired ? runtimeStructuredOutput.message : OCR_CLEANUP_UNCONFIRMED),
@@ -2027,10 +2132,35 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     };
 
     try {
+      if (localStart) {
+        if (!await localAdmissionCurrent(localStart.admission)) {
+          await rm(staged.value.runtimeWorkingDir, {recursive: true, force: true});
+          localStart.root = undefined;
+          return createFailureResult(createContractError("forbidden", "Dataset processing permission changed."), context);
+        }
+        let issued: "issued" | "denied" | "unconfirmed";
+        try {issued = await localStart.admission.issue();} catch {issued = "unconfirmed";}
+        if (issued !== "issued") {
+          if (issued === "denied") {
+            await rm(staged.value.runtimeWorkingDir, {recursive: true, force: true});
+            localStart.root = undefined;
+          }
+          else this.retainUnconfirmedLocalDatasetStart(localStart);
+          return createFailureResult(createContractError(issued === "denied" ? "forbidden" : "unavailable",
+            "Dataset processing admission was not confirmed."), context);
+        }
+        // Durable acknowledged issuance is the start-admission point. Later
+        // withdrawal affects replies and remaining steps, not this owned effect.
+        localStart.retained = true;
+        this.taskReconciler!.assertAccepting();
+        // Runtime warming belongs to the acknowledged processing effect too.
+        // Source denial must never initialize a runtime through readiness.
+        await this.runtimeCapabilityGuard?.requireCapabilityReady("dataset-preparation");
+      }
       const startRequest: Parameters<RuntimeTaskRegistryPort["startTask"]>[0] = {
         // OCR keeps a host-issued identity even if the start acknowledgement
         // is lost. A caller correlation id cannot select an existing task.
-        requestId: staged.value.ocrOwner ? randomUUID() : context?.requestId,
+        requestId: localStart?.admission.taskId ?? (staged.value.ocrOwner ? randomUUID() : context?.requestId),
         taskType: TaskType.DATASET_PREPARATION,
         payload: runtimeRequest,
         workspaceId: context.workspaceId,
@@ -2044,6 +2174,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       if (staged.value.ocrOwner) {
         staged.value.ocrOwner.startAttempt = { request: startRequest, lease };
       }
+      // A previously issued task cannot restart a runtime after host shutdown.
+      // This is an owned lifecycle refusal, not a second permission decision.
+      if (localStart) this.taskReconciler!.assertAccepting();
       const startOperation = this.runtimeTaskRegistry.startTask(startRequest);
       if (staged.value.ocrOwner?.startAttempt) {
         staged.value.ocrOwner.startAttempt.operation = startOperation;
@@ -2052,8 +2185,14 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       if (
         typeof started.requestId !== "string" ||
         started.requestId.trim().length === 0 ||
+        (localStart && (started.requestId !== localStart.admission.taskId ||
+          (started.status !== "queued" && started.status !== "running"))) ||
         (staged.value.ocrOwner && started.requestId !== startRequest.requestId)
       ) {
+        if (localStart) {
+          this.retainUnconfirmedLocalDatasetStart(localStart);
+          return createFailureResult(createContractError("unavailable", "Dataset processing start was not confirmed."), context);
+        }
         if (staged.value.ocrOwner) {
           retainUnconfirmedOcrStart(staged.value.ocrOwner);
           return createFailureResult(createContractError("internal",
@@ -2076,6 +2215,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         started.requestId,
         staged.value.runtimeWorkingDir,
       );
+      if (localStart) this.localDatasetStartsByTask.set(started.requestId, localStart);
       if (staged.value.ocrOwner) {
         this.runtimeOcrStageOwnersByRequestId.set(started.requestId, staged.value.ocrOwner);
       }
@@ -2114,6 +2254,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         await this.taskPowerLifecycle.completeTask(started.requestId, "failed");
         if (!this.pendingQualityReviewsByRequestId.has(started.requestId)) await this.cleanupRuntimeWorkingDir(started.requestId);
       });
+      if (localStart) localStart.leaseStarted = true;
       if (staged.value.ocrOwner && lease) staged.value.ocrOwner.leaseStarted = true;
       return createSuccessResult(
         {
@@ -2125,6 +2266,10 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         context,
       );
     } catch (error) {
+      if (localStart) {
+        if (localStart.retained) this.retainUnconfirmedLocalDatasetStart(localStart);
+        return createFailureResult(createContractError("unavailable", "Dataset processing start was not confirmed."), context);
+      }
       if (staged.value.ocrOwner) {
         if (staged.value.ocrOwner.startAttempt) {
           // A rejected RPC does not prove that no worker started. Retain the
@@ -3521,6 +3666,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     this.commandByRequestId.delete(requestId);
     this.runtimeQualityByRequestId.delete(requestId);
     this.sourceVersionLineageByRequestId.delete(requestId);
+    const localStart = this.localDatasetStartsByTask.get(requestId);
+    if (localStart) this.localDatasetStarts.delete(localStart);
+    this.localDatasetStartsByTask.delete(requestId);
 
   }
 
@@ -3569,6 +3717,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
   private async stageRuntimeInputs(
     command: PrepareTrainingDatasetFromArtifactsCommand,
     context?: ApplicationRequestContext,
+    localStart?: LocalDatasetStart,
   ): Promise<
     ContractResult<{
       runtimeWorkingDir: string;
@@ -3582,6 +3731,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       return createFailureResult(createContractError("validation", "Workspace context is required for source staging."), context);
     }
     const workspaceId = createWorkspaceId(context.workspaceId);
+    const admission = localStart?.admission;
+    if (admission && !await localAdmissionCurrent(admission))
+      return createFailureResult(createContractError("forbidden", "Dataset processing permission changed."), context);
     const ocrEnabled = command.advanced?.content?.ocrEnabled === true;
     let ocrOwner: OcrTaskStageOwner | undefined;
     let runtimeWorkingDir: string;
@@ -3603,6 +3755,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     } else {
       runtimeWorkingDir = await mkdtemp(join(tmpdir(), "ai-system-builder-runtime-"));
     }
+    if (localStart) localStart.root = runtimeWorkingDir;
     const sourceInputs: PrepareTrainingDatasetRequest["sourceInputs"] = [];
     const sourceVersionLineage: DatasetVersionSource[] = [];
     const ocrSources: DatasetPreparationRuntimeOcrSources = {
@@ -3619,6 +3772,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           }
         } else {
           await rm(runtimeWorkingDir, { recursive: true, force: true });
+          if (localStart) localStart.root = undefined;
         }
         return createFailureResult(error, context);
       };
@@ -3626,6 +3780,8 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         sourceIndex,
         artifactId,
       ] of command.sourceArtifactIds.entries()) {
+        if (admission && !await localAdmissionCurrent(admission))
+          return failAndCleanup(createContractError("forbidden", "Dataset processing permission changed."));
         const bindingsResult = resolveArtifactBindingsReadFailureAsEmpty(
           await this.storageBindings.readArtifactStorageBindings(
             { artifactId, workspaceId },
@@ -3635,12 +3791,20 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         if (!bindingsResult.ok) {
           return failAndCleanup(bindingsResult.error);
         }
+        if (admission && !await localAdmissionCurrent(admission))
+          return failAndCleanup(createContractError("forbidden", "Dataset processing permission changed."));
         const bindings = bindingsResult.value.bindings;
         if (bindings.some((binding) => binding.workspaceId !== workspaceId || binding.artifactId !== artifactId)) {
           return failAndCleanup(createContractError("not-found", "Source is not available in this workspace."));
         }
         let storageKey = resolveLocalStorageKeyForArtifact(bindings);
         const importedSource = resolveImportedSourceBinding(bindings);
+        const expected = admission?.sources[sourceIndex];
+        if (admission && (!expected || expected.artifactId !== artifactId || storageKey !== expected.storageKey ||
+            !bindings.some(binding => binding.workspaceId === workspaceId && binding.artifactId === artifactId &&
+              binding.role === "primary" && binding.backing.kind === "artifact-object" &&
+              binding.backing.provider === "local-filesystem" && binding.backing.locator === expected.storageKey)))
+          return failAndCleanup(createContractError("validation", "The selected local source changed."));
         if (!storageKey.trim() && !importedSource) {
           return failAndCleanup(
             createContractError(
@@ -3652,9 +3816,11 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         // Remote-only bindings authorize provider localization, never a guessed
         // local storage key. Every denied/missing binding exits before I/O.
         let retrieveResult = storageKey
-          ? await this.storage.retrieveArtifact(createRetrieveArtifactRequest(storageKey), context)
+          ? await this.storage.retrieveArtifact(createRetrieveArtifactRequest(storageKey,
+              expected ? {maximumBytes: expected.sizeBytes} : undefined), context)
           : createFailureResult(createContractError("not-found", "Source requires localization."), context);
         if (!retrieveResult.ok) {
+          if (admission) return failAndCleanup(createContractError("unavailable", "The selected local source is unavailable."));
           const importedTarget = importedSource?.backing.target;
           if (retrieveResult.error.code !== "not-found" || !importedTarget) {
             return failAndCleanup(retrieveResult.error);
@@ -3737,6 +3903,19 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         // Own the exact authorized bytes before any further awaited metadata
         // operation. The storage-returned buffer may be reused by its adapter.
         let ocrBytes: Buffer | undefined;
+        let admittedBytes: Buffer | undefined;
+        if (expected) {
+          const content = retrieveResult.value.content;
+          if (!(content instanceof Uint8Array) || content.byteLength !== expected.sizeBytes ||
+              retrieveResult.value.descriptor.key !== expected.storageKey ||
+              retrieveResult.value.descriptor.mediaType !== expected.mediaType)
+            return failAndCleanup(createContractError("validation", "The selected local source changed."));
+          admittedBytes = Buffer.from(content);
+          if (this.sourceIntegrityHasher?.digest(admittedBytes) !== expected.digest)
+            return failAndCleanup(createContractError("validation", "The selected local source changed."));
+          if (!await localAdmissionCurrent(admission!))
+            return failAndCleanup(createContractError("forbidden", "Dataset processing permission changed."));
+        }
         if (ocrEnabled) {
           const content = retrieveResult.value.content;
           if (!(content instanceof Uint8Array) || content.byteLength < 1 ||
@@ -3747,8 +3926,10 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           }
           ocrBytes = Buffer.from(content);
         }
-        const descriptorMediaType = retrieveResult.value.descriptor.mediaType;
-        const descriptorMetadata = retrieveResult.value.descriptor.metadata;
+        // The admitted snapshot fixes format and media. Adapter-owned descriptor
+        // objects and private filename/metadata cannot retarget worker parsing.
+        const descriptorMediaType = expected?.mediaType ?? retrieveResult.value.descriptor.mediaType;
+        const descriptorMetadata = expected ? undefined : retrieveResult.value.descriptor.metadata;
         const metadataOriginalName =
           descriptorMetadata &&
           typeof descriptorMetadata === "object" &&
@@ -3763,10 +3944,12 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
               .readArtifactCatalogRecord({ workspaceId, storageKey }, context)
               .then((result) => (result.ok ? result.value.record : undefined))
           : undefined;
+        if (admission && !await localAdmissionCurrent(admission))
+          return failAndCleanup(createContractError("forbidden", "Dataset processing permission changed."));
         if (catalogRecord && (catalogRecord.workspaceId !== workspaceId || catalogRecord.storageKey !== storageKey)) {
           return failAndCleanup(createContractError("validation", "Source catalog metadata does not match the selected workspace artifact."));
         }
-        const resolvedOriginalName =
+        const resolvedOriginalName = expected ? "source." + expected.format :
           metadataOriginalName ?? catalogRecord?.originalName;
         const sourceMediaType = descriptorMediaType ?? catalogRecord?.mediaType;
         const taskType =
@@ -3808,12 +3991,12 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             sourceArtifactId: artifactId,
             artifactKey: storageKey,
             digest: this.datasetVersionHasher.digest(
-              ocrBytes ?? retrieveResult.value.content as Uint8Array,
+              admittedBytes ?? ocrBytes ?? retrieveResult.value.content as Uint8Array,
             ),
             mediaType,
           });
         }
-        const localPath = buildRuntimeSourceInputPath(
+        const localPath = expected ? join(runtimeWorkingDir, `${sourceIndex + 1}-source.${expected.format}`) : buildRuntimeSourceInputPath(
           runtimeWorkingDir,
           artifactId,
           mediaType,
@@ -3840,7 +4023,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         }
         await writeFile(
           localPath,
-          ocrBytes ?? Buffer.from(retrieveResult.value.content as Uint8Array),
+          admittedBytes ?? ocrBytes ?? Buffer.from(retrieveResult.value.content as Uint8Array),
         );
         sourceInputs.push({
           artifactId,
@@ -3867,6 +4050,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         }
       } else {
         await rm(runtimeWorkingDir, { recursive: true, force: true });
+        if (localStart) localStart.root = undefined;
       }
       return createFailureResult(
         createContractError(

@@ -7,6 +7,9 @@ the refreshed UI definition. Neither check asserts host execution or parent
 qualification. The catalog removes generic ownership fallback only for declared
 sources covered by selected checks; unknown neighbors and an explicitly requested
 generic check keep that fallback. The packaged Desktop journey remains separate.
+The `headless-dataset-owned-start` check exercises the private provided-row
+start admission and existing processing, quality, isolation and version-save
+regressions. Its fake runtime tests grant no actual host dispatch qualification.
 
 For clear user wording, update the versioned
 `docs/operations/roadmap-user-descriptions.json` with the technical source in the

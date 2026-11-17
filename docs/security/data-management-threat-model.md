@@ -9,6 +9,16 @@ command. The preview reads no source bytes and conveys no execution permission.
 Public dispatch, source-byte verification at execution, retry ownership and
 dataset saving require their own integration and qualification.
 
+The separate private local provided-row processor entry now verifies selected
+source bytes and requires trusted durable one-use issue before runtime warming
+or task dispatch. The host must supply that issuer; no public execution route is
+added by the entry. It denies provider fallback, document formats, generation
+and external output. Exact copied bytes and frozen expected format/media control
+worker parsing. Source denial cannot activate the general readiness service.
+Four retained attempts bound capacity. Unknown acknowledgements, shutdown and
+failed cleanup retain owned staging until runtime-stop proof and confirmed
+retirement. They never authorize a task adoption, cancellation or automatic retry.
+
 The private provided-data version fixture accepts only its small synthetic
 provided-row classification source and production review path. It denies
 generation, OCR, downloads, other tasks and linked or external source paths.

@@ -48,6 +48,19 @@ initialize the compiler or runtime. A source-not-ready failure carries no privat
 diagnostics. This is metadata admission only; execution must still verify current
 source bytes and approval.
 
+The private local provided-row processing entry receives trusted admission
+callbacks outside serialized request data. Its issuer must atomically bind the
+exact plan, actor, sources and host-issued task ID; the method supplies no issuer
+or public dispatch. Current authority surrounds exact source reads. Bounded owned
+bytes, format, media, digest and local binding checks precede acknowledged issue.
+General readiness may activate a runtime, so this path delays readiness until
+that issuance. Final lifecycle fences prevent dispatch after host shutdown.
+Local output and required quality review preserve existing policy. External
+fallback, document parsing and model generation cannot enter this profile.
+Unknown starts never authorize task lookup/cancellation or automatic retry.
+Retained staging stays counted, including cleanup failures, until owned runtime
+stop proof and confirmed retirement. Lost authority alone proves no worker exit.
+
 Plan-review clients can propose one immutable Hugging Face source selected for
 that client in the app. The version 3 preview declares required provider reads.
 Both human decision channels display use of the saved provider access. The
