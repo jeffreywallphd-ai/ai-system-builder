@@ -1105,6 +1105,22 @@ const browserTakeoverCensus = {
   inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
 };
 function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "b6603ce551b19d11e29ffc6acc763f3799b3ee2844262596fc4f9129d23cd037") {
+    // The added Data status tool changes only the exact packaged catalog witness.
+    // Retain every earlier definition, source pin and unqualified drift gap.
+    const saved = JSON.parse(historicalSource("02603eee738eb54e7bc57bd72ed331fcb848b6af", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "5d232df9dd9bd4f4a77bdaa41edab1a8d6778b37b9b66d108b2435618d9ebc0d");
+    const expected = structuredClone(saved);
+    const changed = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(changed.facts.sha256, "d8e1407ef4cec76b55ee2de1b15ae9a9c124e7a6388bfd4b816725846881656f");
+    assert.equal(sha(JSON.stringify(changed.facts)), "d979c3ca1623d029523e0108a5411235608d3af07b8fb975ec480b91a463c087");
+    expected.sources.find(row => row.path === headlessPackagedSpec).facts = changed.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(saved, {...result,
+      gaps: [...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
   if (sha(JSON.stringify(map)) === "5d232df9dd9bd4f4a77bdaa41edab1a8d6778b37b9b66d108b2435618d9ebc0d") {
     const previous = JSON.parse(historicalSource("33ac7e58e741ef3631847e81fcd22a7bd317678a", censusDocument));
     assert.equal(sha(JSON.stringify(previous)), "c8f2d4e7c7b0618d6abd4c2b3a056c879d7e22f3012b7fa7535c4d380a9f9650");
@@ -2527,6 +2543,21 @@ test("the browser controls checkpoint retains its unqualified source drift and e
   const forged=structuredClone(current);
   forged.inventories.find(row=>row.source===browserTakeoverCensus.view).values.reverse();
   assert.throws(()=>assertCompleteCurrentSourceDrift(forged,result));
+});
+
+test("the Data status catalog witness preserves the complete previous census and every pending gap", () => {
+  const map = JSON.parse(fs.readFileSync(censusDocument, "utf8"));
+  const result = {gaps: sourceDrift(map)};
+  assert.doesNotThrow(() => assertCompleteCurrentSourceDrift(map, result));
+  assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps: result.gaps.filter(row => row.source !== headlessPackagedSpec)}));
+  for (const mutate of [
+    copy => {copy.sources.find(row => row.path === headlessPackagedSpec).facts.assertionCount++;},
+    copy => {copy.scenarios[0].execution_status = "passed";},
+    copy => {copy.sources[0].committed_sha256 = "0".repeat(64);},
+  ]) {
+    const changed = structuredClone(map); mutate(changed);
+    assert.throws(() => assertCompleteCurrentSourceDrift(changed, result));
+  }
 });
 
 test("the reviewed Desktop step definitions keep the same scope and qualification gaps", () => {

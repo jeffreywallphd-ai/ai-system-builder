@@ -2257,6 +2257,7 @@ export function composeDesktopHost(
             authorization: workspaceAuthorization,
             workspaceRepository: startupWorkspaceShell.workspaceRepository,
             getUseCases: () => systemBuilder.useCases,
+            getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
             committedChanges,
             workflows,
             readWorkflowRole,

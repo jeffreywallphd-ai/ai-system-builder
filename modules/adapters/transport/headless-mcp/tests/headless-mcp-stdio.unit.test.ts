@@ -33,9 +33,10 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
 const planReviewTools = ["aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
-  "aisb_request_build_plan_approval", "aisb_run_approved_build_step"];
+  "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
+const dataStatusTool = "aisb_ingestion_status";
 const presentationTools = ["aisb_list_windows", "aisb_present_in_window", "aisb_release_window", "aisb_renew_window",
   "aisb_request_window", "aisb_window_context", "aisb_window_status"];
 const entrypoint = path.resolve("modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts");
@@ -61,6 +62,7 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let sourceArchived = false;
   let displacedCapabilities = false;
   let displacedProviderReply = false;
+  let invalidStatusReply = false;
   const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
     let body = "";
     request.on("data", (chunk: Buffer) => {body += chunk.toString();});
@@ -106,6 +108,15 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           actions:["systems.rename"], approval:"required",
         }});
         response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "data.ingestion-status") {
+        const payload = JSON.stringify({ok: true, operation: input.operation, value: {
+          taskId: input.input.taskId, state: "queued", sourceKind: "hugging-face", revision: 3,
+          progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 16},
+          ...(invalidStatusReply ? {diagnostic: "private-provider-detail"} : {}),
+        }});
+        response.writeHead(200, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
       if (input.operation === "data.prepare-provider-file") {
@@ -265,6 +276,19 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     assert.ok(tool);
     const selected = {...planBase, taskId:normalizeIngestionTaskId("ingestion.managed-synthetic"),
       fileId:normalizeIngestionTaskFileId("file.managed-synthetic"), taskRevision:3};
+    const statusTarget = {hostIncarnationId, workspaceId, taskId: selected.taskId};
+    const readStatus = async (input = statusTarget) => resultText(await planner.callTool({name: dataStatusTool, arguments: input}));
+    assert.deepEqual(await readStatus(), {ok: true, operation: "data.ingestion-status", value: {
+      taskId: selected.taskId, state: "queued", sourceKind: "hugging-face", revision: 3,
+      progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 16},
+    }});
+    invalidStatusReply = true;
+    assert.deepEqual(await readStatus(), {ok: false, code: "headless.unavailable"});
+    invalidStatusReply = false;
+    const statusCalls = requests.length;
+    assert.deepEqual(await readStatus({...statusTarget, workspaceId: createWorkspaceId("foreign-workspace")}),
+      {ok: false, code: "headless.forbidden"});
+    assert.equal(requests.length, statusCalls);
     const readProvider = async (input = selected) =>
       resultText(await planner.callTool({name:desktopProviderPreviewTool, arguments:input}));
     const requested = requests.length;
@@ -306,6 +330,8 @@ test("the plan-review stdio mode can run an exact approved step after the app re
   let providerReads = 0;
   let wrongPreview = false;
   let discloseProviderPath = false;
+  let statusExtra = false;
+  let wrongStatusTask = false;
   const sourceTarget = { hostIncarnationId, workspaceId, taskId: normalizeIngestionTaskId("ingestion.fixture"),
     fileId: normalizeIngestionTaskFileId("file.fixture"), taskRevision: 4 };
   const sourceValue = { workspaceId, taskId: sourceTarget.taskId, fileId: sourceTarget.fileId, taskRevision: 4,
@@ -325,6 +351,13 @@ test("the plan-review stdio mode can run an exact approved step after the app re
         return { ok: true, operation: "templates.list", value: [{ templateId: "reference.secured-data-review@1.0.0", displayName: "Fixture template" }] };
       if (decoded.request.operation === "plan.capabilities")
         return { ok: true, operation: "plan.capabilities", value: { workspaceId, actions: ["systems.create"], approval: "required" } };
+      if (decoded.request.operation === "data.ingestion-status")
+        return {ok: true, operation: "data.ingestion-status", value: {
+          taskId: wrongStatusTask ? normalizeIngestionTaskId("wrong-task") : sourceTarget.taskId,
+          state: "queued", sourceKind: "hugging-face", revision: 4,
+          progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 16},
+          ...(statusExtra ? {path: "private-synthetic.parquet"} : {}),
+        }};
       return { ok: false, code: "headless.unsupported-operation" };
     },
     dataPreview: { hostIncarnationId, async execute(request, grant) {
@@ -407,6 +440,16 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     assert.deepEqual((await client.listTools()).tools.map(tool => tool.name).sort(),
       [...expectedTools, ...planReviewTools, desktopDataPreviewTool, desktopProviderPreviewTool].sort());
     const call = async (name: string, args: Record<string, unknown>) => resultText(await client.callTool({ name, arguments: args }));
+    const statusTarget = {hostIncarnationId, workspaceId, taskId: sourceTarget.taskId};
+    assert.deepEqual(await call(dataStatusTool, statusTarget), {ok: true, operation: "data.ingestion-status", value: {
+      taskId: sourceTarget.taskId, state: "queued", sourceKind: "hugging-face", revision: 4,
+      progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 16},
+    }});
+    statusExtra = true;
+    assert.deepEqual(await call(dataStatusTool, statusTarget), {ok: false, code: "headless.unavailable"});
+    statusExtra = false; wrongStatusTask = true;
+    assert.deepEqual(await call(dataStatusTool, statusTarget), {ok: false, code: "headless.unavailable"});
+    wrongStatusTask = false;
     assert.deepEqual(await call(desktopDataPreviewTool, sourceTarget), { ok: true, value: sourceValue });
     wrongPreview = true;
     assert.deepEqual(await call(desktopDataPreviewTool, sourceTarget), { ok: false, code: "headless.unavailable" });

@@ -1,5 +1,12 @@
 # Local desktop tools over MCP
 
+In plan-review mode, `aisb_ingestion_status` reads the state, revision and
+progress counts for one known task in the approved workspace. It returns no
+filenames, source contents, provider paths or credentials. Check for
+`data.ingestion-status` in the running host's operation list first. An ordinary
+read, editing or conversation client has no Data grant. This tool starts no task
+and does not approve, cancel or retry an import.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 This stdio process uses the official [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/releases/tag/%40modelcontextprotocol%2Fserver%402.4.0).

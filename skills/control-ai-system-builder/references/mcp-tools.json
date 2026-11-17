@@ -134,6 +134,7 @@
       "tools": [
         "aisb_build_plan_approval_status",
         "aisb_host_describe",
+        "aisb_ingestion_status",
         "aisb_list_systems",
         "aisb_list_templates",
         "aisb_list_workflows",
@@ -156,6 +157,7 @@
       "tools": [
         "aisb_build_plan_approval_status",
         "aisb_host_describe",
+        "aisb_ingestion_status",
         "aisb_list_templates",
         "aisb_plan_capabilities",
         "aisb_preview_build_plan",
@@ -537,6 +539,33 @@
       "inputSchema": {
         "type": "object",
         "properties": {},
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_ingestion_status",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "taskId"
+        ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false
       }

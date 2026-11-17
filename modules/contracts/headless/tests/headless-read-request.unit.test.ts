@@ -33,6 +33,7 @@ test("accepts only the declared finite read inputs and returns a detached reques
     } },
     "conversation-tasks.read": { ...scope, sessionId: "session.1", turnId: "turn.1" },
     "plan.capabilities": scope,
+    "data.ingestion-status": { ...scope, taskId: "intake.fixture" },
   };
   assert.deepEqual([...HEADLESS_READ_OPERATIONS].sort(), Object.keys(inputs).sort());
   for (const operation of HEADLESS_READ_OPERATIONS) {
@@ -44,6 +45,17 @@ test("accepts only the declared finite read inputs and returns a detached reques
       assert.notStrictEqual(result.request.input, original.input);
     }
   }
+});
+
+test("Data status uses exact opaque task IDs and rejects payload or authority extensions", () => {
+  const input = { ...scope, taskId: "intake.fixture" };
+  for (const invalidInput of [ { ...input, taskId: "intake.fixture " }, { ...input, taskId: "../private" },
+    { ...input, taskId: "https://example.invalid/source" }, { ...input, path: "private.txt" },
+    { ...input, token: "synthetic" }, { ...input, organizationId: "other" } ]) {
+    assert.deepEqual(parseHeadlessReadRequest({version, operation: "data.ingestion-status", input: invalidInput}, host), invalid);
+  }
+  assert.deepEqual(parseHeadlessReadRequest({version, operation: "data.ingestion-status",
+    input: {...input, hostIncarnationId: previousHost}}, host), stale);
 });
 
 test("detaches cursors and rejects extra authority data or malformed sequences", () => {

@@ -6,7 +6,63 @@ import {HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId} from "../../.
 import {createOrganizationId} from "../../../../contracts/organization";
 import {systemBuilderSuccess, normalizeSystemBuilderSystemId, normalizeSystemBuilderTemplateId} from "../../../../contracts/system-builder";
 import {createWorkspaceId} from "../../../../contracts/workspace";
+import {normalizeIngestionTaskId, normalizeIngestionTaskFileId, type IngestionTaskRecord} from "../../../../contracts/ingestion";
 import {composeManagedAgentReads} from "../composeManagedAgentReads";
+
+test("Managed Data reads require the planner registration and current tenant artifact permission", async () => {
+  const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
+  const organizationId = createOrganizationId("fixture-org");
+  const workspaceId = createWorkspaceId("fixture-workspace");
+  const taskId = normalizeIngestionTaskId("intake.synthetic");
+  const identity = {organizationId, principalId: "fixture-principal"};
+  const planner = {...identity, purpose: "plan-review" as const};
+  const at = "2026-11-17T00:00:00Z";
+  let current = true;
+  let allowed = true;
+  let afterRead: (() => void) | undefined;
+  let calls = 0;
+  let task: IngestionTaskRecord = {schemaVersion: "1.0", organizationId, workspaceId, taskId,
+    kind: "file-batch", status: "queued", revision: 1, cleanupPending: false, createdAt: at, updatedAt: at,
+    files: [{fileId: normalizeIngestionTaskFileId("file.synthetic"), checkpointId: "private-checkpoint",
+      fileName: "private-name.txt", mediaType: "text/plain", totalBytes: 4, status: "pending", acceptedBytes: 0, nextChunkIndex: 0}],
+    progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 4, percent: 0, message: "private-message"}};
+  const read = composeManagedAgentReads({hostIncarnationId,
+    contexts: {getCurrentOrganizationContext: () => identity},
+    workspaces: {async readWorkspace(id) {return {workspaceId: id, organizationId, displayName: "Fixture", status: "active", createdAt: at, updatedAt: at};}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      assert.deepEqual(requiredScopes, ["workspace:read", "artifact:read"]);
+      if (!allowed) throw new Error("private denial");
+    }},
+    systems: {read: {async execute() {assert.fail();}}, listTemplates: {async execute() {assert.fail();}}},
+    ingestionTasks: {async executeCommand(command, context) {
+      assert.deepEqual(command, {action: "read", taskId});
+      assert.deepEqual(context, {...identity, workspaceId}); calls++; afterRead?.();
+      return {ok: true, value: {kind: "task", task}};
+    }},
+  });
+  const version = HEADLESS_CONTRACT_VERSION;
+  const request = {version, operation: "data.ingestion-status" as const, input: {hostIncarnationId, workspaceId, taskId}};
+  const denied = {ok: false, code: "headless.forbidden"};
+  const described = await read({version, operation: "host.describe", input: {}}, identity, () => current);
+  assert.ok(described.ok && described.operation === "host.describe" && !described.value.operations.includes("data.ingestion-status"));
+  assert.equal(calls, 0);
+  assert.deepEqual(await read(request, identity, () => current), denied);
+  allowed = false;
+  assert.deepEqual(await read(request, planner, () => current), denied);
+  assert.equal(calls, 0);
+  allowed = true;
+  assert.deepEqual(await read(request, planner, () => current), {ok: true, operation: "data.ingestion-status",
+    value: {taskId, state: "queued", sourceKind: "file-batch", revision: 1,
+      progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 4}}});
+  afterRead = () => {current = false;};
+  assert.deepEqual(await read(request, planner, () => current), denied);
+  current = true; afterRead = () => {allowed = false;};
+  assert.deepEqual(await read(request, planner, () => current), denied);
+  allowed = true; afterRead = undefined;
+  task = {...task, organizationId: createOrganizationId("foreign")};
+  assert.deepEqual(await read(request, planner, () => current), denied);
+  assert.equal(calls, 4);
+});
 
 test("managed discovery and saved reads remain scoped to the same host, principal and workspace", async () => {
   const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;

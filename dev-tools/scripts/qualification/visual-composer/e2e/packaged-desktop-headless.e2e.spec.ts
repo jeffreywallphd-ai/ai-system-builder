@@ -360,7 +360,7 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     const workspace = { hostIncarnationId: await hostId(client), workspaceId };
     const names = (await client.listTools()).tools.map(tool => tool.name).sort();
     expect(names).toEqual([
-      "aisb_build_plan_approval_status", "aisb_host_describe", "aisb_list_systems", "aisb_list_templates",
+      "aisb_build_plan_approval_status", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
       "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
       "aisb_preview_build_plan", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
       "aisb_read_conversation_task", "aisb_read_system",

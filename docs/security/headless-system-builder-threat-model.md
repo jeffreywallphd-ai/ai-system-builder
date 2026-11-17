@@ -7,6 +7,16 @@ review; the first contract alone does not qualify any live host.
 
 ## Approved provider source registration
 
+The finite Data status read is restricted to plan-review registrations and the
+current workspace artifact read policy. Desktop and Managed hosts recheck the
+exact principal, organization, workspace and grant around the owning task read.
+Foreign task records, revoked authority and missing access do not return task
+metadata. Discovery does not enumerate tasks or initialize the Data feature.
+Transport egress validates the exact task and finite state and count fields.
+Extra source metadata, counter overflow, mismatched IDs and private diagnostics
+fail closed. SDK tools are available only in plan-review mode. Synthetic host,
+route and SDK checks do not qualify the complete live two-host Data journey.
+
 Plan-review clients can propose one immutable Hugging Face source selected for
 that client in the app. The version 3 preview declares required provider reads.
 Both human decision channels display use of the saved provider access. The

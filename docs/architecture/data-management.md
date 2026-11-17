@@ -1,5 +1,13 @@
 # Data Management
 
+Headless Data progress reads reuse `ReadHeadlessIngestionStatusUseCase` and the
+governed ingestion owner. Both hosts require a current plan-review registration,
+the exact workspace and task, and `workspace:read` plus `artifact:read` before
+and after the read. Desktop resolves the ingestion feature lazily on the first
+admitted task read; discovery starts no Data feature or runtime. The finite
+`data.ingestion-status` protocol projects state, revision and progress counts.
+It exposes no filenames, provider coordinates, content or internal messages.
+
 The private [provided-data version qualification](../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md)
 composes the real packaged processor and local SQLite adapter for two-host
 save, compare, setup reuse and restart journeys. The browser test closes and

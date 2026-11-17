@@ -2,6 +2,7 @@ import { raw, type Application, type Request, type Response } from "express";
 
 import {
   HEADLESS_CONTRACT_VERSION, parseHeadlessReadRequest, parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest,
+  readHeadlessIngestionStatusValue,
   readHeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadOperation,
   isUiControlId, readHeadlessWindowRequest, type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
@@ -203,7 +204,8 @@ async function respond<Agent>(
   if (kind === "read") {
     const parsed = parseHeadlessReadRequest(value, handlers.hostIncarnationId);
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
-    if (parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
+    const dataStatus = parsed.request.operation === "data.ingestion-status" && Boolean(handlers.planReview);
+    if (!dataStatus && parsed.request.operation !== "plan.capabilities" && !availableReads.includes(parsed.request.operation))
       return failure(response, 400, "headless.unsupported-operation");
     const result = await handlers.read(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
@@ -219,7 +221,13 @@ async function respond<Agent>(
           !Array.isArray(workspaces) || workspaces.length > 128 || workspaces.some(id => !isWorkspaceId(id) || hasKnownPassiveCredential(id)))
         return failure(response, 503, "headless.unavailable");
       return send(response, {ok: true, operation: result.operation,
-        value: {version, hostIncarnationId, workspaces, operations: availableReads}});
+        value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
+          ...(handlers.planReview && result.value.operations.includes("data.ingestion-status") ? ["data.ingestion-status"] : [])]}});
+    }
+    if (result.operation === "data.ingestion-status") {
+      if (parsed.request.operation !== "data.ingestion-status") return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessIngestionStatusValue(result.value, parsed.request.input.taskId);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
     }
     if (result.operation === "templates.list") {
       if (!Array.isArray(result.value) || result.value.length > 128 ||

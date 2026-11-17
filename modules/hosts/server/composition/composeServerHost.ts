@@ -1693,7 +1693,7 @@ export function composeServerHost(
           "finalizeApprovedProviderFile" in ingestionTasks && typeof ingestionTasks.finalizeApprovedProviderFile === "function"
           ? ingestionTasks.finalizeApprovedProviderFile.bind(ingestionTasks) : undefined;
         managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
-          read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases}),
+          read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases, ingestionTasks}),
           ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: composeManagedHeadlessPlanReview({
             ...scoped, platform: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
             placement: options.managedHeadlessAgent.placement, systems: systemBuilder,

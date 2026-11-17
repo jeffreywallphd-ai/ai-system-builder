@@ -55,6 +55,18 @@ const field = z.strictObject({ fieldId: workflowId, kind: z.enum(["text", "multi
   required: z.boolean(), minimum: z.number().optional(), maximum: z.number().optional(),
   maximumLength: z.number().int().positive().optional(), options: z.array(workflowId).min(1).max(32).optional() });
 const resultValue = {
+  "data.ingestion-status": z.strictObject({
+    taskId: z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
+    state: z.enum(["queued", "transferring", "finalizing", "succeeded", "failed", "cancelled"]),
+    sourceKind: z.enum(["file-batch", "hugging-face", "website"]),
+    revision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    progress: z.strictObject({
+      completedItems: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+      totalItems: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+      acceptedBytes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+      totalBytes: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    }).refine(p => p.completedItems <= p.totalItems && p.acceptedBytes <= p.totalBytes),
+  }),
   "host.describe": z.strictObject({
     version: z.literal(HEADLESS_CONTRACT_VERSION),
     hostIncarnationId: z.string().refine(isHeadlessHostIncarnationId),
@@ -117,6 +129,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   readonly workspaceId?: string;
 }, enableAuthoring = false, enableConsent = false, enableDelivery = false, enablePlanReview = false) {
   const {httpsOrigin, credential, organizationId, workspaceId} = configuration;
+  const allowedReads = [...MANAGED_HEADLESS_READS, ...(enablePlanReview ? ["data.ingestion-status"] as const : [])];
   if (typeof httpsOrigin !== "string" || httpsOrigin.length > 256 ||
       typeof credential !== "string" || credential.length < 1 || credential.length > 8_192 ||
       !/^[A-Za-z0-9._~+/=-]+$/.test(credential) ||
@@ -150,7 +163,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
     return input.version === HEADLESS_CONTRACT_VERSION &&
     (input.operation === "host.describe" ||
       ("workspaceId" in input.input && input.input.workspaceId === workspaceId &&
-        ((!enablePlanReview && isAuthoring(input)) || MANAGED_HEADLESS_READS.some(operation => operation === input.operation))));
+        ((!enablePlanReview && isAuthoring(input)) || allowedReads.some(operation => operation === input.operation))));
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
     planReviewAddress, planStepAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
@@ -169,7 +182,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
     if (resultHasOperation(result, "host.describe")) {
       const described = resultValue["host.describe"].safeParse(result.value);
       if (!described.success || described.data.workspaces.some(id => id !== workspaceId) ||
-          described.data.operations.some(operation => !MANAGED_HEADLESS_READS.some(allowed => allowed === operation)))
+          described.data.operations.some(operation => !allowedReads.some(allowed => allowed === operation)))
         return unavailable;
     }
     return result;
@@ -219,6 +232,7 @@ function createForwarder(options: {
     agent, authorization, headers, presentationHeaders, enableAuthoring, enableConversation, enablePresentation} = options;
   let active = 0;
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
+    if (input.operation === "data.ingestion-status" && !options.planReviewAddress) return {ok: false, code: "headless.forbidden"};
     if (input.operation === "data.prepare-local-file" || input.operation === "data.prepare-provider-file") {
       const provider = input.operation === "data.prepare-provider-file";
       const previewAddress = provider ? options.providerFilePreviewAddress : options.localFilePreviewAddress;
@@ -354,6 +368,9 @@ function createForwarder(options: {
       if (input.operation === "plan.capabilities") {
         const result = resultValue["plan.capabilities"].safeParse(parsed.data.value);
         if (!result.success || result.data.workspaceId !== input.input.workspaceId) return unavailable;
+      }
+      if (input.operation === "data.ingestion-status") {
+        if (!headless.readHeadlessIngestionStatusValue(parsed.data.value, input.input.taskId)) return unavailable;
       }
       if (input.operation === "systems.snapshot") {
         const result = resultValue["systems.snapshot"].safeParse(parsed.data.value);

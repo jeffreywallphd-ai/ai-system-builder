@@ -1,6 +1,7 @@
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
+import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
 import { HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId, type HeadlessReadRequest,
   type HeadlessReadResult, type HeadlessSystemManagementRequest } from "../../../contracts/headless";
 import type { OrganizationRequestContext } from "../../../contracts/organization";
@@ -16,8 +17,10 @@ export function composeManagedAgentReads(options: {
   readonly contexts: OrganizationRequestContextProviderPort;
   readonly authorization: WorkspaceOperationAuthorizationPort;
   readonly systems: Pick<SystemBuilderCompositionRoot["useCases"], "listTemplates" | "read">;
+  readonly ingestionTasks?: ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0];
 }) {
-  return async (request: HeadlessReadRequest, identity: Pick<OrganizationRequestContext, "principalId" | "organizationId">,
+  return async (request: HeadlessReadRequest, identity: Pick<OrganizationRequestContext, "principalId" | "organizationId"> &
+    { readonly purpose?: "agent" | "plan-review" },
     isCurrent: () => boolean): Promise<HeadlessReadResult> => {
     const current = () => {
       const context = options.contexts.getCurrentOrganizationContext();
@@ -29,10 +32,13 @@ export function composeManagedAgentReads(options: {
       // Discovery gives the host identity only. Operator configuration supplies
       // the exact workspace for later requests without enumerating tenant data.
       return {ok: true, operation, value: {version: HEADLESS_CONTRACT_VERSION, hostIncarnationId: options.hostIncarnationId,
-        workspaces: [], operations: ["host.describe", "templates.list", "systems.read"]}};
+        workspaces: [], operations: ["host.describe", "templates.list", "systems.read",
+          ...(identity.purpose === "plan-review" && options.ingestionTasks ? ["data.ingestion-status" as const] : [])]}};
     }
-    if (operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities")
+    if (operation !== "templates.list" && operation !== "systems.read" && operation !== "plan.capabilities" &&
+        operation !== "data.ingestion-status")
       return {ok: false, code: "headless.unsupported-operation"};
+    if (operation === "data.ingestion-status" && identity.purpose !== "plan-review") return denied;
     if (input.hostIncarnationId !== options.hostIncarnationId) return {ok: false, code: "headless.host-changed"};
     const authorized = async (workspaceId: WorkspaceId,
       requestedOperation: HeadlessReadRequest["operation"] | HeadlessSystemManagementRequest["operation"] = operation,
@@ -44,13 +50,23 @@ export function composeManagedAgentReads(options: {
       try {
         await options.authorization.authorizeWorkspaceOperation({
           workspace, operation: `headless.${requestedOperation}`,
-          requiredScopes: requiresEdit ? ["workspace:read", "asset:read", "asset:write"] : ["workspace:read", "asset:read"],
+          requiredScopes: requiresEdit ? ["workspace:read", "asset:read", "asset:write"]
+            : operation === "data.ingestion-status" ? ["workspace:read", "artifact:read"] : ["workspace:read", "asset:read"],
         });
         return current();
       } catch { return false; }
     };
     try {
       if (!await authorized(input.workspaceId) || !current()) return denied;
+      if (operation === "data.ingestion-status") {
+        if (!options.ingestionTasks) return {ok: false, code: "headless.unsupported-operation"};
+        const result = await new ReadHeadlessIngestionStatusUseCase(options.ingestionTasks).execute(request, {
+          context: {workspaceId: input.workspaceId, organizationId: identity.organizationId, principalId: identity.principalId},
+          stillAllowed: () => authorized(input.workspaceId),
+        });
+        if (!await authorized(input.workspaceId) || !current()) return denied;
+        return result.ok ? {ok: true, operation, value: result.value} : result;
+      }
       if (operation === "plan.capabilities") {
         const actions: HeadlessSystemManagementRequest["operation"][] = [];
         for (const action of ["systems.create", "systems.rename", "systems.clone"] as const) {

@@ -1,4 +1,6 @@
 import {
+  INGESTION_TASK_MAXIMUM_FILES,
+  INGESTION_TASK_MAXIMUM_TOTAL_BYTES,
   normalizeIngestionTaskId,
   normalizeIngestionTaskRecord,
   type IngestionTaskId,
@@ -39,6 +41,26 @@ export interface HeadlessIngestionStatus {
 
 const invalid = { ok: false, code: "headless.invalid-request" } as const;
 const unavailable = { ok: false, code: "headless.unavailable" } as const;
+
+/** Read a content-free host reply. Do not normalize invalid counters into a pass. */
+export function readHeadlessIngestionStatusValue(value: unknown, expectedTaskId: IngestionTaskId): HeadlessIngestionStatus | undefined {
+  try {
+    const record = readStrictPassiveRecord(copyBoundedPassiveData(value), ["taskId", "state", "sourceKind", "revision", "progress"]);
+    const {taskId, state, sourceKind, revision} = record;
+    if (!isExactTaskId(taskId) || taskId !== expectedTaskId ||
+        (state !== "queued" && state !== "transferring" && state !== "finalizing" && state !== "succeeded" && state !== "failed" && state !== "cancelled") ||
+        (sourceKind !== "file-batch" && sourceKind !== "hugging-face" && sourceKind !== "website") ||
+        typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 1) return undefined;
+    const progress = readStrictPassiveRecord(record.progress, ["completedItems", "totalItems", "acceptedBytes", "totalBytes"]);
+    const {completedItems, totalItems, acceptedBytes, totalBytes} = progress;
+    if (typeof completedItems !== "number" || typeof totalItems !== "number" || typeof acceptedBytes !== "number" || typeof totalBytes !== "number" ||
+        ![completedItems, totalItems, acceptedBytes, totalBytes].every(count => Number.isSafeInteger(count) && count >= 0) ||
+        totalItems < 1 || totalItems > INGESTION_TASK_MAXIMUM_FILES || totalBytes > INGESTION_TASK_MAXIMUM_TOTAL_BYTES ||
+        completedItems > totalItems || acceptedBytes > totalBytes ||
+        (state === "succeeded" && (completedItems !== totalItems || acceptedBytes !== totalBytes))) return undefined;
+    return {taskId, state, sourceKind, revision, progress: {completedItems, totalItems, acceptedBytes, totalBytes}};
+  } catch { return undefined; }
+}
 
 export function readHeadlessIngestionStatusRequest(
   value: unknown,

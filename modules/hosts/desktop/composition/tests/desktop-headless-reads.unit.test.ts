@@ -13,6 +13,7 @@ import { createDesktopSystemBuilderRequest, DESKTOP_SYSTEM_BUILDER_CHANNELS } fr
 import { createOrganizationId } from "../../../../contracts/organization";
 import type { OrganizationRole } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { normalizeIngestionTaskId, normalizeIngestionTaskFileId, type IngestionTaskRecord } from "../../../../contracts/ingestion";
 import { composeDesktopHeadlessReads, type DesktopHeadlessReadGrant } from "../composeDesktopHeadlessReads";
 import { composeDesktopHost } from "../composeDesktopHost";
 
@@ -29,6 +30,66 @@ const grant: DesktopHeadlessReadGrant = {
   organizationId, principalId, registeredClientId: "fixture-client",
   workspaceIds: [workspaceId], operations: HEADLESS_READ_OPERATIONS,
 };
+
+test("Data status needs plan-review and current artifact permission without warming Data on discovery", async () => {
+  let opens = 0;
+  let reads = 0;
+  let canRead = true;
+  let currentGrant = { ...grant, planReview: true as const } as DesktopHeadlessReadGrant;
+  let afterRead: (() => void) | undefined;
+  const taskId = normalizeIngestionTaskId("intake.synthetic");
+  let task: IngestionTaskRecord = {
+    schemaVersion: "1.0", organizationId, workspaceId, taskId, kind: "file-batch", status: "queued", revision: 1,
+    files: [{fileId: normalizeIngestionTaskFileId("file.synthetic"), checkpointId: "private-checkpoint",
+      fileName: "private-source.txt", mediaType: "text/plain", totalBytes: 4, status: "pending", acceptedBytes: 0, nextChunkIndex: 0}],
+    cleanupPending: false, createdAt: at, updatedAt: at,
+    progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 4, percent: 0, message: "private-detail"},
+  };
+  const handler = composeDesktopHeadlessReads({
+    hostIncarnationId, identity: {organizationId, principalId},
+    workspaceRepository: {async readWorkspace(id) {
+      return {workspaceId: id, organizationId, displayName: "Fixture", status: "active", createdAt: at, updatedAt: at};
+    }},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      if (requiredScopes.includes("artifact:read") && !canRead) throw new Error("private policy detail");
+    }},
+    getUseCases() {assert.fail("No system use case is needed.");}, isOpen: () => true,
+    async getIngestionTasks() { opens++; return {async executeCommand(command, context) {
+      assert.deepEqual(command, {action: "read", taskId});
+      assert.deepEqual(context, {workspaceId, organizationId, principalId});
+      reads++; afterRead?.(); return {ok: true, value: {kind: "task", task}};
+    }}; },
+  });
+  const source = request("data.ingestion-status", {hostIncarnationId, workspaceId, taskId});
+  const described = await handler(request("host.describe", {}), async () => grant);
+  assert.ok(described.ok && described.operation === "host.describe" && !described.value.operations.includes("data.ingestion-status"));
+  const ready = await handler(request("host.describe", {}), async () => currentGrant);
+  assert.ok(ready.ok && ready.operation === "host.describe" && ready.value.operations.includes("data.ingestion-status"));
+  assert.equal(opens, 0);
+  assert.deepEqual(await handler(source, async () => grant), forbidden);
+  assert.equal(opens, 0);
+  canRead = false;
+  assert.deepEqual(await handler(source, async () => currentGrant), forbidden);
+  assert.equal(opens, 0);
+  canRead = true;
+  assert.deepEqual(await handler(source, async () => currentGrant), {ok: true, operation: "data.ingestion-status",
+    value: {taskId, state: "queued", sourceKind: "file-batch", revision: 1,
+      progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 4}}});
+  afterRead = () => {currentGrant = grant;};
+  assert.deepEqual(await handler(source, async () => currentGrant), forbidden);
+  currentGrant = {...grant, planReview: true};
+  afterRead = () => {canRead = false;};
+  assert.deepEqual(await handler(source, async () => currentGrant), forbidden);
+  afterRead = undefined; canRead = true;
+  task = {...task, organizationId: createOrganizationId("foreign")};
+  assert.deepEqual(await handler(source, async () => currentGrant), forbidden);
+  task = {...task, organizationId, workspaceId: otherWorkspaceId};
+  assert.deepEqual(await handler(source, async () => currentGrant), {ok: false, code: "headless.unavailable"});
+  task = {...task, workspaceId};
+  afterRead = () => {currentGrant = {...grant, planReview: true, isCurrent: () => false};};
+  assert.deepEqual(await handler(source, async () => currentGrant), forbidden);
+  assert.equal(reads, 6);
+});
 
 test("denies missing, mismatched, stale, or narrowed authority before invoking the builder", async () => {
   let providers = 0;

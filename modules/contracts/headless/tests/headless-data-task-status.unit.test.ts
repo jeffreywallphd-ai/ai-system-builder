@@ -10,7 +10,7 @@ import {
   type IngestionTaskFileRecord,
 } from "../../ingestion";
 import { HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId } from "../headless-read-request";
-import { projectHeadlessIngestionStatus, readHeadlessIngestionStatusRequest } from "../headless-data-task-status";
+import { projectHeadlessIngestionStatus, readHeadlessIngestionStatusRequest, readHeadlessIngestionStatusValue } from "../headless-data-task-status";
 
 const hostIncarnationId = "54133645-536c-43d2-8309-30701194add7" as HeadlessHostIncarnationId;
 const otherHost = "818a563f-1a38-4718-b25d-7ca7243bfb6f" as HeadlessHostIncarnationId;
@@ -18,6 +18,20 @@ const workspaceId = createWorkspaceId("workspace.data-fixture");
 const taskId = normalizeIngestionTaskId("intake.fixture");
 const input = { hostIncarnationId, workspaceId, taskId };
 const request = { version: HEADLESS_CONTRACT_VERSION, operation: "data.ingestion-status", input };
+
+test("status replies cannot add source data, replace the task, or normalize invalid progress", () => {
+  const value = {taskId, state: "queued", sourceKind: "file-batch", revision: 1,
+    progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 4}};
+  assert.deepEqual(readHeadlessIngestionStatusValue(value, taskId), value);
+  for (const invalid of [ {...value, taskId: "other-task"}, {...value, sourcePath: "private"}, {...value, state: "private-error"},
+    {...value, revision: 0}, {...value, progress: {...value.progress, totalBytes: -1}},
+    {...value, progress: {...value.progress, acceptedBytes: 5}}, {...value, progress: {...value.progress, completedItems: 2}},
+    {...value, progress: {...value.progress, message: "private"}}, {...value, state: "succeeded"},
+    {...value, progress: {...value.progress, totalItems: 0}}, {...value, progress: {...value.progress, totalItems: 129}},
+    {...value, progress: {...value.progress, totalBytes: 16 * 1024 ** 3 + 1}} ]) {
+    assert.equal(readHeadlessIngestionStatusValue(invalid, taskId), undefined);
+  }
+});
 
 test("a scoped ingestion status request accepts only the exact current host, workspace, and task identifiers", () => {
   assert.deepEqual(readHeadlessIngestionStatusRequest(request, hostIncarnationId), { ok: true, request });

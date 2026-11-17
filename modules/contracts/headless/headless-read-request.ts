@@ -1,5 +1,8 @@
 import { isSystemBuilderSystemId, type SystemBuilderSystemId } from "../system-builder";
 import { isWorkspaceId, type WorkspaceId } from "../workspace";
+import { normalizeIngestionTaskId } from "../ingestion";
+import { hasKnownPassiveCredential } from "../shared";
+import type { HeadlessIngestionStatusRequest } from "./headless-data-task-status";
 
 export const HEADLESS_CONTRACT_VERSION = "aisb-headless-v1";
 
@@ -15,6 +18,7 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
   "workflows.prepare",
   "conversation-tasks.read",
   "plan.capabilities",
+  "data.ingestion-status",
 ] as const);
 
 export type HeadlessReadOperation = (typeof HEADLESS_READ_OPERATIONS)[number];
@@ -49,6 +53,7 @@ type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
 };
 
 export type HeadlessReadRequest =
+  | HeadlessIngestionStatusRequest
   | ReadRequest<"host.describe", Record<string, never>>
   | ReadRequest<"workspaces.list", HostTarget>
   | ReadRequest<"systems.list", WorkspaceTarget>
@@ -160,12 +165,23 @@ export function parseHeadlessReadRequest(
         : operation === "workflows.list" ? ["hostIncarnationId", "workspaceId", "sourceKind"]
         : operation === "workflows.prepare" ? ["hostIncarnationId", "workspaceId", "profileId", "source"]
         : operation === "conversation-tasks.read" ? ["hostIncarnationId", "workspaceId", "sessionId", "turnId"]
+        : operation === "data.ingestion-status" ? ["hostIncarnationId", "workspaceId", "taskId"]
         : ["hostIncarnationId", "workspaceId"];
   const input = exactDataRecord(record.input, fields);
   if (!input || !isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalid();
   const { hostIncarnationId, workspaceId, systemId } = input;
   let request: HeadlessReadRequest;
   switch (operation) {
+    case "data.ingestion-status": {
+      const { taskId } = input;
+      if (!isWorkspaceId(workspaceId) || typeof taskId !== "string" || hasKnownPassiveCredential(taskId)) return invalid();
+      try {
+        const normalized = normalizeIngestionTaskId(taskId);
+        if (normalized !== taskId) return invalid();
+        request = { version, operation, input: { hostIncarnationId, workspaceId, taskId: normalized } };
+      } catch { return invalid(); }
+      break;
+    }
     case "workspaces.list":
       request = { version, operation, input: { hostIncarnationId } };
       break;

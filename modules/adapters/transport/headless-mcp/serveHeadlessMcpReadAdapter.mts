@@ -172,6 +172,13 @@ function addSystemBuilderTools(server: McpServer) {
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
+  if (enablePlanReview) server.registerTool("aisb_ingestion_status", {
+    description: "Read progress for one known ingestion task in the approved workspace. Returns counts and state without source contents, paths, or credentials.",
+    inputSchema: z.strictObject({ ...workspaceTarget, taskId: ingestionId }), annotations: queryHints,
+  }, (input, context) => {
+    const parsed = headless.parseHeadlessReadRequest({version, operation: "data.ingestion-status", input}, input.hostIncarnationId as HeadlessHostIncarnationId);
+    return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+  });
   const step = z.discriminatedUnion("operation", [
     z.strictObject({ operation: z.literal("systems.create"), ...create }),
     z.strictObject({ operation: z.literal("systems.rename"), ...rename }),

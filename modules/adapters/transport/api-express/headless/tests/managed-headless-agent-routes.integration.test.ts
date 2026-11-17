@@ -47,6 +47,10 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let previewFence = true;
   let previewCurrent = true;
   let supportsLocalSave = false;
+  let statusMismatch = false;
+  let statusExtra = false;
+  let withdrawStatus = false;
+  let statusCalls = 0;
   let savedFile: {workspaceId:typeof workspaceId; taskId:ReturnType<typeof normalizeIngestionTaskId>;
     fileId:ReturnType<typeof normalizeIngestionTaskFileId>; taskRevision:number} | undefined;
   const expiresAt = Date.now() + 30_000;
@@ -63,11 +67,24 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     hostIncarnationId,
     allowLocalFileSave:supportsLocalSave,
     identify: (request, kind) => (kind === "plan-review" || kind === "plan-step" ||
-      kind === "local-file-preview" || kind === "provider-file-preview") &&
+      kind === "local-file-preview" || kind === "provider-file-preview" || kind === "read") &&
       request.organizationHeader === organizationId &&
       request.auth?.oidcAccessTokenClientId === "fixture-plan" ? planIdentity : undefined,
     isCurrent: identity => identity === planIdentity && current,
-    async read() { throw new Error("Unexpected plan read."); },
+    async read(request) {
+      if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
+        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["data.ingestion-status"],
+      }};
+      if (request.operation !== "data.ingestion-status") throw new Error("Unexpected plan read.");
+      statusCalls++;
+      if (withdrawStatus) current = false;
+      return {ok: true, operation: request.operation, value: {
+        taskId: statusMismatch ? normalizeIngestionTaskId("wrong-task") : request.input.taskId,
+        state: "queued", sourceKind: "file-batch", revision: 1,
+        progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 4},
+        ...(statusExtra ? {filename: "private-source.csv"} : {}),
+      }};
+    },
     async author() { throw new Error("Unexpected direct write."); },
     ...(enabled ? {async planReview(request) {
       calls += 1;
@@ -140,6 +157,28 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       });
       return {status:response.status, cache:response.headers.get("cache-control"), body:await response.json()};
     }
+    const readRoute = MANAGED_HEADLESS_AGENT_PATHS.read;
+    const statusRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "data.ingestion-status",
+      input: {...scope, taskId: normalizeIngestionTaskId("task.synthetic")}};
+    const dataStatus = await request(statusRequest, "fixture-plan", readRoute);
+    assert.equal(dataStatus.status, 200);
+    assert.deepEqual(dataStatus.body.value, {taskId: "task.synthetic", state: "queued", sourceKind: "file-batch", revision: 1,
+      progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 4}});
+    statusMismatch = true;
+    assert.equal((await request(statusRequest, "fixture-plan", readRoute)).status, 503);
+    statusMismatch = false; statusExtra = true;
+    assert.equal((await request(statusRequest, "fixture-plan", readRoute)).status, 503);
+    statusExtra = false; withdrawStatus = true;
+    assert.equal((await request(statusRequest, "fixture-plan", readRoute)).status, 403);
+    withdrawStatus = false; current = true;
+    assert.equal(statusCalls, 4);
+    assert.equal((await request(statusRequest, "fixture-agent", readRoute)).status, 403);
+    enabled = false;
+    assert.equal((await request(statusRequest, "fixture-plan", readRoute)).status, 400);
+    assert.equal(statusCalls, 4);
+    enabled = true;
+    const discovery = await request({version: HEADLESS_CONTRACT_VERSION, operation: "host.describe", input: {}}, "fixture-plan", readRoute);
+    assert.ok(discovery.body.value.operations.includes("data.ingestion-status"));
     assert.equal((await request(proposal, "fixture-agent")).status, 403);
     assert.equal((await request(proposal, "fixture-browser")).status, 403);
     assert.equal((await request(proposal, "fixture-plan", MANAGED_HEADLESS_AGENT_PATHS.author)).status, 403);

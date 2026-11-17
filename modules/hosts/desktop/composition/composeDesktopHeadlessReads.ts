@@ -1,5 +1,6 @@
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
+import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
 import type { HeadlessCommittedChangesUseCase } from "../../../application/use-cases/system-builder/headless-committed-changes.use-case";
 import type { HeadlessConversationStatusUseCase } from "../../../application/use-cases/system-run-workflow/headless-conversation-status.use-case";
 import type { HeadlessWorkflowMetadataUseCase } from "../../../application/use-cases/system-run-workflow/headless-workflow-metadata.use-case";
@@ -57,12 +58,14 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly workflows?: Pick<HeadlessWorkflowMetadataUseCase, "list" | "prepare">;
   readonly readWorkflowRole?: () => Promise<OrganizationRole | undefined>;
   readonly conversationStatus?: Pick<HeadlessConversationStatusUseCase, "read">;
+  readonly getIngestionTasks?: () => Promise<ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0]>;
   readonly isOpen: () => boolean;
 }): DesktopHeadlessReadHandler {
   const { hostIncarnationId, identity, workspaceRepository, authorization, getUseCases, committedChanges,
-    workflows, readWorkflowRole, conversationStatus, isOpen } = dependencies;
+    workflows, readWorkflowRole, conversationStatus, getIngestionTasks, isOpen } = dependencies;
 
   const supports = (operation: HeadlessReadOperation) => {
+    if (operation === "data.ingestion-status") return Boolean(getIngestionTasks);
     if (operation === "systems.snapshot" || operation === "systems.changes") return Boolean(committedChanges);
     if (operation === "workflows.list" || operation === "workflows.prepare") return Boolean(workflows && readWorkflowRole);
     if (operation === "conversation-tasks.read") return Boolean(conversationStatus);
@@ -80,6 +83,7 @@ export function composeDesktopHeadlessReads(dependencies: {
         operation: `headless.${operation}`,
         requiredScopes: requiresEdit
           ? ["workspace:read", "asset:read", "asset:write"]
+          : operation === "data.ingestion-status" ? ["workspace:read", "artifact:read"]
           : operation === "workspaces.list" ? ["workspace:read"]
           : operation === "workflows.list" || operation === "workflows.prepare" || operation === "conversation-tasks.read"
             ? ["workspace:read", "asset:read", "runtime:read"] : ["workspace:read", "asset:read"],
@@ -105,11 +109,13 @@ export function composeDesktopHeadlessReads(dependencies: {
       if (!parsed.ok) return parsed;
       const { operation, input } = parsed.request;
       if (!grant.operations.includes(operation)) return forbidden;
+      if (operation === "data.ingestion-status" && grant.planReview !== true) return forbidden;
       if (!supports(operation)) return { ok: false, code: "headless.unsupported-operation" };
       const clientId = grant.registeredClientId;
       const currentScopedGrant = async (workspaces: readonly WorkspaceId[]) => {
         const latest = await current();
         return latest?.registeredClientId === clientId && latest.operations.includes(operation) &&
+          (operation !== "data.ingestion-status" || latest.planReview === true && latest.isCurrent?.() !== false) &&
           workspaces.every((id) => latest.workspaceIds.includes(id)) ? latest : undefined;
       };
       if (operation === "host.describe" || operation === "workspaces.list") {
@@ -131,7 +137,8 @@ export function composeDesktopHeadlessReads(dependencies: {
           value: {
             version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: workspaceIds,
             operations: HEADLESS_READ_OPERATIONS.filter((op) =>
-              op !== "plan.capabilities" && latest.operations.includes(op) && supports(op)),
+              op !== "plan.capabilities" && latest.operations.includes(op) && supports(op) &&
+              (op !== "data.ingestion-status" || latest.planReview === true)),
           },
         };
         if (!workspaces.every((workspace) => boundedDisplayName(workspace.displayName))) return tooLarge;
@@ -143,6 +150,17 @@ export function composeDesktopHeadlessReads(dependencies: {
       let response: HeadlessReadResult;
       let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
+        case "data.ingestion-status": {
+          if (!getIngestionTasks) return unavailable;
+          const ingestion = await getIngestionTasks();
+          const result = await new ReadHeadlessIngestionStatusUseCase(ingestion).execute(parsed.request, {
+            context: { workspaceId, organizationId: identity.organizationId, principalId: identity.principalId },
+            stillAllowed: async () => Boolean(await authorizedWorkspace(workspaceId, operation) &&
+              await currentScopedGrant([workspaceId])),
+          });
+          response = result.ok ? { ok: true, operation, value: result.value } : result;
+          break;
+        }
         case "systems.list": {
           const records = await getUseCases().list.execute({ workspaceId, includeArchived: false });
           response = records.length > MAX_READ_ROWS ? tooLarge

@@ -1,5 +1,11 @@
 # Headless client skill
 
+A plan-review client can use `aisb_ingestion_status` to check one known Data
+task in its approved workspace. The result contains the state, revision and
+progress counts. It contains no filenames, paths, source contents or diagnostic
+messages. The current host must advertise `data.ingestion-status`. An ordinary
+read, editing or conversation registration does not grant access to Data.
+
 Use [Control AI System Builder](../../skills/control-ai-system-builder/SKILL.md)
 to inspect or edit saved systems, check task status, or send one requested turn
 to an approved conversation through a paired desktop app. Copy the entire skill
