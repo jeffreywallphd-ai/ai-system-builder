@@ -84,6 +84,11 @@ const providerLicenseLabel: Record<DatasetLicenseCategory, string> = {
   "non-open": "Non-open license",
   unknown: "License unknown",
 };
+function providerLicenseText(license: ReturnType<typeof describeHuggingFaceDatasetLicense>) {
+  const declared = license.ids.filter((id) => id !== "unknown");
+  const label = providerLicenseLabel[license.category];
+  return declared.length ? `${label} (${declared.join(", ")})` : label;
+}
 type HuggingFaceDatasetFile = Awaited<
   ReturnType<
     NonNullable<
@@ -146,6 +151,9 @@ function ScopedIngestionTaskPanel({
   const [providerTokenState, setProviderTokenState] =
     useState<ProviderTokenState>({ status: "idle" });
   const [task, setTask] = useState<IngestionTaskRecord>();
+  const [lastProviderImport, setLastProviderImport] = useState<readonly {
+    id: string; name: string; license: string;
+  }[]>([]);
   const [error, setError] = useState<string>();
   const [chatScope, setChatScope] = useState<ChatFileScope>({ client: headlessFileClient });
   if (chatScope.client !== headlessFileClient) setChatScope({ client: headlessFileClient });
@@ -550,6 +558,16 @@ function ScopedIngestionTaskPanel({
   };
 
   function completeSuccessfully(): void {
+    const completed = latestTaskRef.current;
+    if (completed?.kind === "hugging-face" && completed.status === "succeeded") {
+      setLastProviderImport(completed.files.map(file => ({
+        id: file.fileId,
+        name: file.providerSource
+          ? `${file.providerSource.repository} · ${file.providerSource.path}`
+          : file.fileName,
+        license: providerLicenseText(describeHuggingFaceDatasetLicense(file.output?.providerLicenseIds)),
+      })));
+    }
     providerFilesCurrentRef.current = false;
     setSourceKind("files");
     setFiles([]);
@@ -613,6 +631,7 @@ function ScopedIngestionTaskPanel({
     if (sourceKind === "hugging-face" && (providerBrowseRef.current !== undefined || !providerFilesCurrentRef.current)) return;
     const operation = beginOperation();
     setTask(undefined);
+    setLastProviderImport([]);
     setPreparedLocalFile(undefined);
     setStartedForChat(Boolean(registeredClientId));
     setCopiedReference(false);
@@ -1119,9 +1138,7 @@ function ScopedIngestionTaskPanel({
                         <span>
                           {dataset.repository}{" "}
                           <small id={`${providerLicenseDescriptionId}-${index}`}>
-                            {providerLicenseLabel[dataset.license.category]}
-                            {dataset.license.ids.some((id) => id !== "unknown")
-                              ? ` (${dataset.license.ids.filter((id) => id !== "unknown").join(", ")})` : ""}
+                            {providerLicenseText(dataset.license)}
                           </small>
                         </span>
                       </label>
@@ -1265,6 +1282,14 @@ function ScopedIngestionTaskPanel({
             </p>
           </div>
         ) : null}
+        {lastProviderImport.length > 0 && (
+          <details className="ui-stack ui-stack--xs">
+            <summary>Imported file licenses ({lastProviderImport.length})</summary>
+            <ul className="ui-stack ui-stack--xs">
+              {lastProviderImport.map(file => <li key={file.id}>{file.name} — {file.license}</li>)}
+            </ul>
+          </details>
+        )}
         {canPrepareForChat ? (
           <div className="ui-row ui-row--wrap ui-gap-sm">
             <label className="ui-field">

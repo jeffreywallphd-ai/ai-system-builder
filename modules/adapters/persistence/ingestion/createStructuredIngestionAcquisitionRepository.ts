@@ -339,15 +339,18 @@ async function readProviderWinner(transaction: StructuredDocumentStore, task: In
   const snapshot = normalizeIngestionSourceSnapshot(stored.value);
   if (!isProviderSnapshot(snapshot, file) || snapshot.snapshotId !== proposedSnapshot.snapshotId ||
       snapshot.sourceId !== proposedSnapshot.sourceId) return;
-  assertTaskSnapshotRelationship(task, snapshot);
+  assertTaskSnapshotRelationship(task, snapshot, { allowLegacyLicenseOmission: true });
   return { task: cloneStructuredJson(task), snapshot: cloneStructuredJson(snapshot) };
 }
 
-function assertTaskSnapshotRelationship(task: IngestionTaskRecord, snapshot: IngestionSourceSnapshot): void {
+function assertTaskSnapshotRelationship(task: IngestionTaskRecord, snapshot: IngestionSourceSnapshot,
+  options?: { readonly allowLegacyLicenseOmission: boolean }): void {
   const matchesOutput = task.files.some((file) => file.status === "finalized" && file.output?.sourceId === snapshot.sourceId
     && file.output.sourceSnapshotId === snapshot.snapshotId && file.output.key === snapshot.rawArtifactKey
     && file.output.mediaType === snapshot.mediaType && file.output.sizeBytes === snapshot.sizeBytes
     && file.output.digest === snapshot.contentDigest && file.output.providerRevision === snapshot.providerRevision
+    && ((options?.allowLegacyLicenseOmission && file.output.providerLicenseIds === undefined) ||
+      stableJson(file.output.providerLicenseIds ?? null) === stableJson(snapshot.providerLicenseIds ?? null))
     && stableJson(file.output.derivedArtifactKeys ?? []) === stableJson(snapshot.derivedArtifactKeys ?? []));
   if (task.workspaceId !== snapshot.workspaceId || task.organizationId !== snapshot.organizationId || !matchesOutput) throw new Error("Ingestion task snapshot must match a finalized task output in the same scope.");
 }

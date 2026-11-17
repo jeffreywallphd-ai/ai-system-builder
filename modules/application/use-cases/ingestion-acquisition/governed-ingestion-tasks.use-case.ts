@@ -551,6 +551,7 @@ export class GovernedIngestionTaskUseCases {
             mediaType: file.mediaType,
             sizeBytes: 0,
             providerRevision: source.revision,
+            ...(providerLicenseIds === undefined ? {} : { providerLicenseIds }),
             sourceId,
             sourceSnapshotId: snapshotId,
           },

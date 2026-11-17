@@ -126,6 +126,13 @@ describe("acquisition task contracts", () => {
       completedAt: now,
     });
     expect(complete.progress).toMatchObject({ completedItems: 1, totalItems: 1, percent: 100 });
+    const finalized = complete.files[0]!;
+    const output = { ...finalized.output!, sourceSnapshotId: "snapshot-1", providerLicenseIds: ["cc-by-nc-4.0", "UNTRUSTED"] };
+    const withLicense = normalizeIngestionTaskRecord({ ...complete, files: [{ ...finalized, output }] });
+    expect(withLicense.files[0]!.output?.providerLicenseIds).toEqual(["cc-by-nc-4.0", "unknown"]);
+    expect(() => normalizeIngestionTaskRecord({ ...complete, files: [{
+      ...finalized, output: { ...output, providerRevision: "b".repeat(40) },
+    }] })).toThrow("exact finalized provider snapshot");
   });
 
   it("models unchanged, changed, unavailable, and removed refreshes honestly", () => {

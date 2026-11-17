@@ -306,6 +306,9 @@ It preserves provider, repository, path and immutable revision in scoped binding
 and source snapshots; it does not download provider bytes. A retry skips completed
 files and retries only unfinished items. Localization remains a separate existing
 application action. UI selection never grants provider or workspace authority.
+After a provider import finishes, Add Data shows the reported license for each
+saved file. The task and source snapshot retain the same exact-revision codes.
+Add Data shows an unknown license if the provider supplied no usable declaration.
 
 Composed desktop and browser scenarios use actual clients, preload/registered IPC
 or owned local HTTP, application browse/registration/task code, new JSON catalog

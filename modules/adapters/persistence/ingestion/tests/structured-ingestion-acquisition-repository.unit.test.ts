@@ -84,12 +84,13 @@ describe("structured ingestion acquisition repository", () => {
     const snapshotId = "snapshot.task-1.file-1" as IngestionSourceSnapshot["snapshotId"];
     function prepared(artifactId: string) {
       const output = {key:artifactId,mediaType:file.mediaType,sizeBytes:0,providerRevision:source.revision,
-        sourceId,sourceSnapshotId:snapshotId};
+        providerLicenseIds:["cc-by-nc-4.0"],sourceId,sourceSnapshotId:snapshotId};
       const next: IngestionTaskRecord = {...start,status:"succeeded",completedAt:now,revision:2,
         files:[{...file,status:"finalized",output}]};
       const captured: IngestionSourceSnapshot = {schemaVersion:"1.0",workspaceId,sourceId,snapshotId,
         locator:{kind:"hugging-face",repository:source.repository,path:source.path,revision:source.revision,displayName:file.fileName},
-        sizeBytes:0,mediaType:file.mediaType,rawArtifactKey:artifactId,capturedAt:now,providerRevision:source.revision};
+        sizeBytes:0,mediaType:file.mediaType,rawArtifactKey:artifactId,capturedAt:now,providerRevision:source.revision,
+        providerLicenseIds:["cc-by-nc-4.0"]};
       const artifact: VerifiedIngestionProviderArtifact = {
         catalog:{workspaceId,storageKey:artifactId,artifactFamily:"tabular",mediaType:file.mediaType,
           sourceKind:"upload",originalName:source.path,createdAt:now},
@@ -101,8 +102,14 @@ describe("structured ingestion acquisition repository", () => {
     }
     const commit = repository.saveTaskWithProviderArtifact!;
     const first = prepared("artifacts/verified-provider-a");
+    const { providerLicenseIds: _omitted, ...legacyOutput } = first.next.files[0]!.output!;
+    const legacyFile = { ...first.next.files[0]!, output: legacyOutput };
     const foreign = { ...first.artifact, binding:{...first.artifact.binding,workspaceId:createWorkspaceId("workspace-b")} };
     await expect(commit(first.next,1,first.captured,foreign)).rejects.toThrow("does not match");
+    await expect(commit(first.next,1,{ ...first.captured, providerLicenseIds:["mit"] },first.artifact))
+      .rejects.toThrow("snapshot must match");
+    await expect(commit({ ...first.next, files:[legacyFile] },1,first.captured,first.artifact))
+      .rejects.toThrow("snapshot must match");
     expect(admissions).toBe(0);
     await expect(commit(first.next,1,first.captured,first.artifact)).rejects.toThrow("Synthetic failure");
     expect(await repository.readTask(workspaceId,taskId)).toEqual(start);
@@ -118,6 +125,14 @@ describe("structured ingestion acquisition repository", () => {
     expect((await documents.listDocuments("synthetic/provider-catalog")).length).toBe(1);
     expect((await documents.listDocuments("synthetic/provider-binding")).length).toBe(1);
     expect(await repository.readSourceSnapshot(workspaceId,snapshotId)).toEqual(committed.snapshot);
+
+    // Older imports recorded the declaration only in the immutable snapshot.
+    const legacy = { ...committed.task, revision: 3,
+      files:[{ ...committed.task.files[0]!, output: legacyOutput }] };
+    await documents.writeDocument(INGESTION_TASK_NAMESPACE, `${workspaceId}/${taskId}`, legacy, {expectedRevision:2});
+    expect(await commit(retried.next,1,retried.captured,retried.artifact))
+      .toEqual({ task: legacy, snapshot: committed.snapshot });
+    expect(admissions).toBe(2);
   });
 
   it("reopens cleanup only for the exact cancelled checkpoint without changing transfer data", async () => {

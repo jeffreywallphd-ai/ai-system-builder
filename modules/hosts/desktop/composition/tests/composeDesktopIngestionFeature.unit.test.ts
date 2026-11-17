@@ -98,6 +98,7 @@ describe("composeDesktopIngestionFeature", () => {
       expect(result.value.task.status).toBe("succeeded");
       const repository = composeIngestionAcquisitionRepository("artifacts/tmp/desktop-ingestion-context-tests", documents);
       for (const file of result.value.task.files) {
+        expect(file.output?.providerLicenseIds).toEqual(["cc-by-nc-4.0"]);
         const snapshotId = normalizeIngestionSourceSnapshotId(file.output!.sourceSnapshotId!);
         expect(await repository.readSourceSnapshot(workspaceId, snapshotId)).toMatchObject({
           locator: { repository: source.repository, revision: source.revision },
