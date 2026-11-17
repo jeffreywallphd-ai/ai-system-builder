@@ -4,6 +4,10 @@
 
 This directory separates canonical system guidance from downstream task context and operational support material.
 
+The [managed reference qualification guide](operations/managed-reference-qualification.md)
+documents the bounded local database operator and the distinction between
+published-asset rediscovery, reviewed source persistence and implementation release.
+
 ## Canonical Areas
 
 - `docs/adr/`
@@ -25,6 +29,14 @@ This directory separates canonical system guidance from downstream task context 
 
 ## Supporting Areas
 
+- `docs/optional-low-memory-inference-implementation-roadmap.md` tracks the
+  reviewed, approved optional Accelerate profile, its default compatibility,
+  private resource lifecycle and actual model qualification. It preserves the
+  separate functionality and security roadmap requirements.
+- `docs/operations/optional-low-memory-inference.md` defines initial supported
+  models/tokenizers, explicit placement and process-memory semantics, ownership,
+  failure recovery and the prospective installed-model qualification protocol.
+
 - `docs/diagnostics/system-builder-canvas-testing.md` describes meaningful
   scratch-built multi-component UI journeys, failure reproductions and the
   distinction between preview controls and qualified runtime outcomes.
@@ -44,6 +56,8 @@ This directory separates canonical system guidance from downstream task context 
     loops under `dev-tools/helpers/`.
   - `implementation-roadmap-skill.md` documents the cross-agent repository
     skill, durable roadmap/report artifacts, installation, and maintenance.
+  - [Headless client skill](diagnostics/headless-client-skill.md) explains how to
+    connect a local agent and inspect or edit saved systems.
 - `docs/tmp/`
   - Ignored local-only implementation report summaries. Roadmap state keeps the
     complete evidence history; generated reports are removed after explicit

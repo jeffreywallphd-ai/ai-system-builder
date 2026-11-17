@@ -414,7 +414,14 @@ contained ComfyUI input root. Randomized staging names are deleted after
 terminal task status and after preparation, submission, or runtime-read
 failures; callers cannot supply host paths or staging filenames.
 
-Configured shared model storage is host-owned runtime-adjacent input, not a runtime install root and not workspace persistence. The model registry/checkpoint resolver may scan the configured host-local folder for Hugging Face cache directories and checkpoint files, then resolve selected shared models for the executing host's ComfyUI/Python runtime. Desktop uses the desktop machine's configured folder; server/thin-client mode uses a folder readable by the server process. Thin clients must not assume the browser's local filesystem path is usable by the server. An explicitly confirmed desktop model deletion may remove the stored model's local files only through an adapter that canonicalizes the target beneath the generated-model cache or configured shared model root, rejects links and root/outside/traversal targets, and fails before removing the registry record when file deletion is unsafe or unsuccessful. Hugging Face snapshot deletion removes the owning models cache repository directory so unreferenced snapshot blobs are not left behind; a standalone checkpoint record deletes only its recorded checkpoint file.
+Configured shared model storage is host-owned runtime-adjacent input, not a runtime install root and not workspace persistence. The model registry/checkpoint resolver may scan the configured host-local folder for Hugging Face cache directories and checkpoint files, then resolve selected shared models for the executing host's ComfyUI/Python runtime. Desktop uses the desktop machine's configured folder; server/thin-client mode uses a folder readable by the server process. Thin clients must not assume the browser's local filesystem path is usable by the server.
+
+Physical model deletion and reveal accept identity only and require their own
+qualified native capability. Shared/provider caches and imported locations are
+reference-only; lexical containment cannot establish exclusive ownership. The
+current authority adapter denies physical effects before registry removal while
+native identity and protected owned publication/recovery remain unimplemented.
+ADR-0043 governs those implementation and qualification obligations.
 
 Generated-model storage preserves the HF cache layout for fresh outputs but
 never recursively removes a selected target. Observed existing targets and
@@ -606,6 +613,41 @@ retains ownership, with exact removal-progress retry and no ambient slot adoptio
 The owning limits, support matrix and qualification boundaries are in
 `docs/operations/optional-low-memory-inference.md`. These cooperative controls do
 not qualify pending native filesystem/ACL races or impose a kernel memory quota.
+
+## Private Windows file-identity prerequisite
+
+The private model adapter includes a source-built Windows x64/NTFS read-only
+inspection mechanism. It is deliberately absent from feature composition and the
+model barrel. The existing production model-location authority remains unavailable.
+The fixed installed compiler/SDK builder and actual disposable tests are documented
+in `dev-tools/README.md`; no package or model download is involved.
+
+The helper opens a drive root, then at most 128 ancestor components relative to
+retained directory handles, rejecting reparse points. Ancestors permit write
+sharing but deny delete sharing. The inspected root and at most 63 children deny
+write/delete sharing. Read-data/list access makes those Windows sharing checks
+effective; no bytes are read and no write/delete access is requested. Children
+are strict single ASCII components opened with `NtCreateFile` and
+`FILE_OPEN_REPARSE_POINT`. Each object must have the expected full volume/file
+identity, supported type and single-link regular-file status. Owner and complete
+DACL observations remain private and are compared again before reverse release.
+Owner equality and DACL protection flags are observations, never authorization.
+
+The TypeScript lease requires an expected identity and binary SHA-256, uses fixed
+argv with no shell, checks the hello against its actual direct child PID, and
+bounds input, output, handles and time. Its 10-second lease and 2-second shutdown
+require actual native close; unconfirmed close fences further admission across
+adapter instances. Synchronous pipe-write errors reject the adopted response
+promise through the same shutdown path without orphan rejections. The executable independently bounds framing and has a
+60-second watchdog. All facts are private and frozen.
+
+This qualifies the local read-only mechanism on the tested Windows/NTFS profile,
+not production binary protection or a hostile path-to-execution race. Cooperative
+hash checks cannot replace protected packaging. Retained handles do not prevent
+new descendants or guarantee stable tree size, immutable ACLs, content ownership,
+byte integrity, durable provenance, crash recovery, deletion or reveal. Other
+platforms/filesystems and those higher-level controls remain pending. Existing
+unknown offload staging and shared/provider/imported caches are never adopted.
 
 ## Automatic recovery and admission ordering
 
@@ -1371,6 +1413,22 @@ replace later facts. Context/Worker observations preserve original setup policy 
 errors. Only the existing explicit Worker inspection reads fixed package metadata,
 without importing those packages; earlier Context failure leaves versions unknown.
 Version comparisons are observational and add no repair trigger or readiness claim.
+Desktop interpreter discovery honors an explicit command. Its automatic probes
+prefer Python 3.10–3.13, then accept a verified Python 3.14 for the core worker.
+On Windows, the `py` launcher can discover Python 3.14 installed alongside the
+default interpreter.
+When no supported candidate is found, the platform default reaches the existing
+dependency gates. Settings uses the normalized unsupported-Python failure to
+explain how to install a supported interpreter and retry after reopening.
+
+The Desktop main process checks the selected installed worker before admitting
+the shell. The bounded local check uses the Context and core Worker dependency
+predicates and requires Torch. It covers the worker entry point and rejects an
+unsupported interpreter, missing dependencies or an unsuccessful probe. The
+development command can provision prerequisites in the checkout, then passes
+the checked command to the main process. Worker process start remains owned by
+the existing feature and explicit runtime controls.
+
 Settings copies only the cached normalized report with bounded serialization, never
 legacy status/logs, local paths, credentials or model inventory. Status reads and
 Copy add no composition, interpreter, install, provider or model action. Clipboard

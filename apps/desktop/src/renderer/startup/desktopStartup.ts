@@ -1,8 +1,15 @@
+import type { DesktopStartupFailure } from "../../startupFailure";
+
 // This controller has no host, preload, provider or React dependencies.
 const MINIMUM_VISIBLE_MS = 1_500;
 const DELAY_NOTICE_MS = 20_000;
 const TIP_INTERVAL_MS = 6_500;
 const SHOWN_EVENT = "desktop-window-shown";
+const PYTHON_RECOVERY: Record<DesktopStartupFailure, string> = {
+  missing: "Python is required. Install Python 3.14 and the worker dependencies, then close and reopen AI System Builder.",
+  unsupported: "This Python version is unsupported. Set up Python 3.14 and the worker dependencies, then close and reopen AI System Builder.",
+  incomplete: "The Python worker installation could not be verified. Set up the worker dependencies, then close and reopen AI System Builder.",
+};
 const TIPS = [
   "Switch workspaces with Current Workspace in the header, then choose Change.",
   "In Data, use Artifact Ingestion to add sources and Artifact Browser to inspect them.",
@@ -182,7 +189,7 @@ export function createDesktopStartupController(document: Document, host: Desktop
     shellReady = true;
     updateActivity();
   }
-  function fail() {
+  function fail(reason?: DesktopStartupFailure) {
     if (state === "failed" || state === "retired") return;
     state = "failed";
     retire();
@@ -196,8 +203,10 @@ export function createDesktopStartupController(document: Document, host: Desktop
     const message = e("desktop-startup-message");
     const stage = e("desktop-startup-stage");
     if (title) title.textContent = "The app couldn't start";
-    if (message) message.textContent = "Reload the app to try again.";
-    if (stage) stage.textContent = "Startup stopped";
+    if (message) message.textContent = reason ? PYTHON_RECOVERY[reason] : "Reload the app to try again.";
+    if (stage) stage.textContent = reason ? "Python runtime unavailable" : "Startup stopped";
+    const reload = e("desktop-startup-reload");
+    if (reason && reload) reload.hidden = true;
     const progress = e("desktop-startup-progress");
     if (progress) progress.hidden = true;
     const controls = e("desktop-startup-tip-controls");
@@ -206,9 +215,10 @@ export function createDesktopStartupController(document: Document, host: Desktop
     document.addEventListener("visibilitychange", updateActivity);
     focusElement(title);
   }
-  async function start(load: () => Promise<unknown>) {
+  async function start(load: () => Promise<unknown>, reason?: DesktopStartupFailure) {
     if (state === "retired") return;
     initialize();
+    if (reason) { fail(reason); return; }
     try { await load(); } catch { fail(); }
   }
   function dispose() {
@@ -232,7 +242,7 @@ function current() {
     reload: () => window.location.reload(),
   });
 }
-export const startDesktopRenderer = (load: () => Promise<unknown>) => current().start(load);
+export const startDesktopRenderer = (load: () => Promise<unknown>, reason?: DesktopStartupFailure) => current().start(load, reason);
 export const markDesktopRendererLoaded = () => current().loaded();
 export const markDesktopRendererReady = () => current().ready();
 export const showDesktopStartupFailure = () => current().fail();

@@ -19,6 +19,12 @@ It uses the real packaged processor with synthetic supplied rows and a durable
 test-only server composition. Source verification and actual bounded native
 execution are separate; neither may be inferred from the other.
 
+Restore an absent disposable PostgreSQL qualification fixture with the bounded
+`scripts/qualification/visual-composer/managed-reference-database.mjs` operator.
+It uses only the pinned cached image and a local engine, with private synthetic
+credentials and no host mounts. See [managed reference qualification](../docs/operations/managed-reference-qualification.md)
+for acquisition, exact owned shutdown and evidence limits.
+
 To run cached model tests after closing the coding agent, use
 `scripts/qualification/run-model-tests.cmd` from Command Prompt, or
 `scripts/qualification/run-model-tests.ps1` from PowerShell. Both preserve incremental JSON
@@ -64,6 +70,13 @@ stay private, failures are retained and forced cleanup never counts as graceful
 shutdown. See `docs/operations/functionality-outcome-qualification.md` for exact
 profiles, finite worker scenarios, existing budgets and qualification limits.
 
+Optional generation qualification uses an early native identity/observer
+acknowledgement before semantic preflight, followed by exact-worker ready/run.
+Startup remains bounded across both phases. Private failed-run evidence retains
+finite supervisor reasons, actual exits and reader/termination observations;
+termination is never model cleanup. Context's default protocol stays compatible.
+See `docs/operations/optional-low-memory-inference.md` for bounds and limits.
+
 Owned task visibility timing captures the fixture's fixed initial 10-percent
 progress and timestamp before navigation. Reload/recovery time stays in the
 sample; a later authoritative update cannot retimestamp older rendered progress.
@@ -74,6 +87,11 @@ Installed generation comparisons admit only the two explicitly pinned Qwen
 profiles documented in the outcome qualification procedure. Native precision is
 fixed per profile for both variants and devices, and propagated to every fresh
 child; changing a profile cannot overwrite another model's failed evidence.
+
+For Standard-only comparisons independent of native/offload recovery, use
+`scripts/qualification/run_standard_generation_qualification.py`. Plan and review
+its exact source/digest before execution; preserve current guards, numerical
+targets and failed history. See the [protocol](../docs/operations/standard-generation-qualification.md).
 
 User-invoked cross-agent workflows are different: their canonical definitions
 live under `skills/`. The implementation-roadmap skill may describe when to
@@ -117,6 +135,54 @@ one epoch, and fixed tiny Hugging Face snapshots at immutable revisions. Each
 case must reach the staged generated-model candidate used by Save/Discard; the
 suite never invokes model save or registration. It is intentionally outside
 `test:e2e`, `test:ai`, and `test:all`.
+
+## Private Windows file-identity build and fixtures
+
+`python -B dev-tools/scripts/native/build_windows_model_file_identity.py --plan`
+checks the fixed installed `windows-x64-msvc1442-sdk26100-v1` profile without
+building. Omit `--plan` to build the repository C++ source in an exclusive ignored
+UUID output directory. The helper accepts no compiler, source, destination or flag
+override and performs no fetch. It inventories the selected compiler files,
+headers, explicit libraries and source before/after building and records real
+source/binary hashes and compiler/native exit in its manifest/result.
+Existing output ancestors are admitted before directory creation, missing
+components are created exclusively beneath admitted parents, and observed
+redirects fail before a target write. Hostile check/use races remain unqualified.
+
+The disposable worker runs compilation in a private unnamed job (2-GiB process/
+job commit, eight processes, kill on last handle close), checks limits back, and
+bounds compiler time/logs. MSVC may leave a telemetry child; teardown checks exact
+opened-handle membership in this job before stopping it and observing its native
+exit. It never stops a preexisting app or infers ownership from an image name.
+Failed builds remain diagnostic failures. Ignored compiler diagnostics contain
+local tool/include paths; do not publish them as portable evidence.
+
+With the repository qualification Python explicitly selected through `PYTHON`,
+the source-owned `security-authority` profile builds and exercises only disposable
+Windows/NTFS fixture directories, including junction ancestors, hard links,
+substitution, writer conflicts, invalid framing and normal/timeout release. The
+native integration test is `modules/adapters/model/local/tests/windows-model-file-identity.native.integration.test.ts`;
+portable protocol/lifecycle and builder failure tests accompany it. Unsupported
+native hosts are explicit skips, not qualifications. Build artifacts are retained
+under `artifacts/tmp/native-model-identity/`; no model/cache/user data is inspected.
+
+This mechanism is read-only and uncomposed. Production ownership, protected
+packaging, stable tree-size accounting, crash recovery, deletion/reveal and other
+platforms/filesystems remain pending. The security boundary is documented in
+`docs/security/data-management-threat-model.md`. Native API references:
+[NtCreateFile](https://learn.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntcreatefile)
+and [CRT binary translation mode](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/setmode).
+
+`python -B dev-tools/scripts/qualification/offload_guarded_restart.py --plan`
+prints current guarded-restart readiness with no stage/model/process effect.
+Current real admission is pending because the read-only native mechanism does not
+provide stable tree/security protection. Unknown retained usage reserves the full
+existing 12 GiB ceiling. Its bounded immutable ledger/JSON are arithmetic only;
+they cannot grant capacity, ownership or native authority. The source-owned
+`functionality-outcomes` profile covers accounting/denial and the actual native
+fixture showing that directory identity alone does not prevent new child bytes.
+See `docs/operations/optional-low-memory-inference.md` for remaining guard/journal/
+job/model implementation and qualification. No old-slot recovery has occurred.
 
 The model-free owned-job fixture is separate from real offload admission:
 `python -B dev-tools/helpers/control_plane/qualification_job.py --self-test`.

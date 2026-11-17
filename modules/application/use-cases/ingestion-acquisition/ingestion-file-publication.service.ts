@@ -29,7 +29,11 @@ type Request = Parameters<IngestionFilePublicationPort["publishFile"]>[0];
 export class IngestionFilePublicationService implements IngestionFilePublicationPort {
   public constructor(private readonly dependencies: Dependencies) {}
 
-  public async publishFile(input: Request, supplied: ApplicationRequestContext): Promise<IngestionFilePublicationOutcome> {
+  public async publishFile(
+    input: Request,
+    supplied: ApplicationRequestContext,
+    admission?: Parameters<IngestionFilePublicationPort["publishFile"]>[2],
+  ): Promise<IngestionFilePublicationOutcome> {
     try {
       const request = { ...input };
       const context = { ...supplied, workspaceId: createWorkspaceId(supplied.workspaceId!) };
@@ -44,6 +48,7 @@ export class IngestionFilePublicationService implements IngestionFilePublication
             expectedChunkCount: file.nextChunkIndex, expectedSizeBytes: file.acceptedBytes }, context),
           maximumBytes: file.totalBytes, expectedSizeBytes: file.totalBytes, expectedSha256: request.expectedSha256,
         }, context);
+        if (admission && (!await admission.stillAllowed() || !admission.isCurrent())) publicationUnavailable();
         // This rejection happens before any reservation or target effect; a
         // corrected checksum can still use the normal failed/resume workflow.
         if (!checked.ok) return { kind: "content-rejected" };
@@ -75,9 +80,11 @@ export class IngestionFilePublicationService implements IngestionFilePublication
       if (publication.state === "writing") publicationUnavailable();
       if (publication.state === "reserved") {
         await this.requireAbsentOrigin(publication, context);
-        // Never reconcile a lost writing acknowledgement into write authority.
+        if (admission && (!await admission.stillAllowed() || !admission.isCurrent())) publicationUnavailable();
+        // The acknowledged issue admits this byte effect. A lost issue acknowledgement grants no write authority.
         const writing = normalizeIngestionFilePublication({ ...publication, revision: 2, state: "writing" });
-        publication = normalizeIngestionFilePublication(await this.dependencies.publications.savePublication(writing, 1));
+        publication = normalizeIngestionFilePublication(await (admission?.issue
+          ? admission.issue(writing, 1) : this.dependencies.publications.savePublication(writing, 1)));
         if (!samePublicationData(publication, writing)) publicationUnavailable();
         task = await this.readTask(request, context);
         this.assertRequest(publication, task, request);
@@ -98,10 +105,12 @@ export class IngestionFilePublicationService implements IngestionFilePublication
       this.assertRequest(publication, task, request);
       this.requireActive(task, request.fileId);
       if (publication.state === "bytes-acknowledged") {
-        // Exactly one acknowledged invocation may attempt origin effects. A
+        if (admission && (!await admission.stillAllowed() || !admission.isCurrent())) publicationUnavailable();
+        // The acknowledged issue admits this composite origin effect. A
         // lost CAS acknowledgement must never be reconciled into write authority.
         const issued = normalizeIngestionFilePublication({ ...publication, revision: 4, state: "origin-issued" });
-        publication = normalizeIngestionFilePublication(await this.dependencies.publications.savePublication(issued, 3));
+        publication = normalizeIngestionFilePublication(await (admission?.issue
+          ? admission.issue(issued, 3) : this.dependencies.publications.savePublication(issued, 3)));
         if (!samePublicationData(publication, issued)) publicationUnavailable();
         this.requireActive(await this.readTask(request, context), publication.fileId);
         await this.publishOrigin(publication, context);

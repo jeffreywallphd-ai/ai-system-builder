@@ -771,7 +771,54 @@ const reviewedBrowserModalCensus = Object.freeze({
   })]),
 });
 
+// The new Composer case changes an existing drift row only. Reconstruct the
+// predecessor for the earlier witnesses; the published gap stays visible.
+const reviewedHeadlessDraftCensus = Object.freeze({
+  priorCommit: "9f1a77f5057652a891c00597d668aebab2fc8bb5",
+  before: reviewedBrowserModalCensus.after,
+  after: "2ffea6c2f0995a85712fe87c6eb57aa4c531ae7799f2ce4bf959f55d5e4de56b",
+  pins: Object.freeze([Object.freeze({
+    path: "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+    source: "8b09340db67d2b7a5bc212e3dca036ed02337ca322e865cd76aab8930bd78837",
+    facts: "97f6a1fbc047da6b7e42a032cd01f5d448144798cae0b1a0f1a9d9fcb9d9cdec",
+  })]),
+});
+
+const reviewedHeadlessPassiveRefreshCensus = Object.freeze({
+  priorCommit: "52cdfb540cf922e1a18d23bea6be36edc1e3cdd1",
+  before: reviewedHeadlessDraftCensus.after,
+  after: "8a87cf9b4d77278592d2d5ce2e2bb198ce4b023d067210b4fe7cdadbac7ace5e",
+  pins: Object.freeze([Object.freeze({
+    path: "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+    source: "ed59a408278047f9c6909fb2f33127285ca0a81ffd08d48bcc19ffbf4798ef6a",
+    facts: "ced3e1f7ce9edae9a2234e36ddbf4b7f84524335cc822621ad2f6e4ed294535e",
+  })]),
+});
+
 function beforeDesktopImageLabelCensus(map, result) {
+  ({map, result} = headlessPackagedCensusLegacyView(map, result));
+  // This page changed how it refreshes, but its tabs and qualifications did not.
+  if (sha(JSON.stringify(map)) === "0e3adf3631d4f9dc03f0021e75685037f343ec8f03fd297753665875e99149d7") {
+    const previous = JSON.parse(historicalSource("507533ef743355842cb5ce4e4038d801926bf5df", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), reviewedHeadlessPassiveRefreshCensus.after);
+    const expected = structuredClone(previous);
+    const row = expected.inventories.find(item => item.source === "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx");
+    assert.equal(row.sha256, "18fa6e8023f6e607273455aab60c6a8dd2eab35ad68505d45d074ad61a101216");
+    row.sha256 = "b45ee0b19c41634bf3d912a950f1f24d699a358823e07470f5cefb910a11e0d0";
+    const path = "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx";
+    const original = expected.sources.find(item => item.path === path);
+    const actual = map.sources.find(item => item.path === path);
+    assert.equal(actual.committed_sha256, original.committed_sha256);
+    assert.equal(actual.facts.sha256, "a94eff0f66dc41d0fb446425aeabaf0564cbfd8bd3deebf80686cbe27f814f59");
+    assert.equal(sha(JSON.stringify(actual.facts)), "199153abe35ff4fbfb5c4568a6f5f10c32ad6e7b9b857a24a7aab2f85f3aca9d");
+    original.facts = structuredClone(actual.facts);
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    map = previous;
+    result = {...result, gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(previous)]};
+  }
+  ({map, result} = verifyExactLayoutCensus(map, result, reviewedHeadlessPassiveRefreshCensus));
+  ({map, result} = verifyExactLayoutCensus(map, result, reviewedHeadlessDraftCensus));
   if (sha(JSON.stringify(map)) === reviewedBrowserModalCensus.after) {
     const previous = JSON.parse(historicalSource(reviewedDesktopImageLabelCensus.priorCommit, censusDocument));
     assert.equal(sha(JSON.stringify(previous)), reviewedDesktopImageLabelCensus.before);
@@ -1047,7 +1094,394 @@ function navigationCensusLegacyView(map,result){
   return{map:structuredClone(navigationPriorCensus),result:{...result,gaps:result.gaps.filter(row=>!(row.kind==="unreviewed-source-drift"&&names.has(row.source)))}};
 }
 let committedCensusWitness;
+const headlessPackagedSpec = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts";
+const browserTakeoverCensus = {
+  priorCommit: "f98e3f25d31f386598dcf0f761f72f600cf6e2a2",
+  before: "0e1e0993aded066e4061ffbdbf7f4ccfa490b12f68f7416a4505a9a8a0e7377b",
+  after: "e2a4827c41f146e11a5ebbd5f5409a1dd74fc49aa6ef7de3e43e0ec54bbef3a9",
+  test: "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+  facts: "6e948152c97208843b71a8789efabf5dc3991ff5289f19ba755d24b5aec85acb",
+  view: "apps/thin-client/src/pages/SystemBuilderPage.tsx",
+  inventory: "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
+};
+function browserTakeoverCensusLegacyView(map,result) {
+  if (sha(JSON.stringify(map)) === "5d232df9dd9bd4f4a77bdaa41edab1a8d6778b37b9b66d108b2435618d9ebc0d") {
+    const previous = JSON.parse(historicalSource("33ac7e58e741ef3631847e81fcd22a7bd317678a", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "c8f2d4e7c7b0618d6abd4c2b3a056c879d7e22f3012b7fa7535c4d380a9f9650");
+    const expected = structuredClone(previous);
+    const revisedSources = [
+      ["dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts","ad10ff937df6b9568ca5845b714d438accfb16951d6e4a28e3553eae8be90ae3","bd8cdff82f575f919caa9182faa2897e778fe34ccab805d6c4dce1e1bc0fa9c1","40aeb2a8d19707b49ad016526199c4bb6c463018a8ba72bcc9ad33ac0533d7d3"],
+      ["modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx","e74328c1a182f7b586f2c304d23040cada3b59fe665c516cbaca2ad86581d941","cac26e33c2495022d9d0a47171c9f57f1e6b8cd299d825b1648f7eef3cd1fc70","dd7b42b71690584fa6e2000214381c73b7c7eb6c7893a888765ab88db6843942"],
+    ];
+    for (const [path, priorHash, sourceHash, factsHash] of revisedSources) {
+      const original = expected.sources.filter(row => row.path === path);
+      const revised = map.sources.find(row => row.path === path);
+      assert.equal(original.length, 1);
+      assert.equal(original[0].facts.sha256, priorHash);
+      assert.equal(revised.facts.sha256, sourceHash);
+      assert.equal(sha(JSON.stringify(revised.facts)), factsHash);
+      original[0].facts = revised.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
+  if (sha(JSON.stringify(map)) === "c8f2d4e7c7b0618d6abd4c2b3a056c879d7e22f3012b7fa7535c4d380a9f9650") {
+    const previous = JSON.parse(historicalSource("109b1b9570067bb3bc180a3d48fd00de2d07e28a", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "f5fe8fa14e17d592ac23cf1b774c3db882151b475858e96408f06b388b7d2c7e");
+    const expected = structuredClone(previous);
+    const revisedSources = [
+      ["modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx","c3919d61d596c938864c86bc266fe361816570b4eb46093e32fd261914c52d8a","e74328c1a182f7b586f2c304d23040cada3b59fe665c516cbaca2ad86581d941","0eed1bf52c133cfa978db0b771fd284bcf22fe421e5dc003f112853d3146bf79"],
+    ];
+    for (const [path, priorHash, sourceHash, factsHash] of revisedSources) {
+      const original = expected.sources.filter(row => row.path === path);
+      const revised = map.sources.find(row => row.path === path);
+      assert.equal(original.length, 1);
+      assert.equal(original[0].facts.sha256, priorHash);
+      assert.equal(revised.facts.sha256, sourceHash);
+      assert.equal(sha(JSON.stringify(revised.facts)), factsHash);
+      original[0].facts = revised.facts;
+    }
+    const beforeInventory = expected.inventories.find(row => row.source === "apps/thin-client/src/pages/ArtifactsPage.tsx");
+    assert.equal(beforeInventory.sha256, "1987ec3f29e4933d1c51edf9e5342443f06111020a231290ecd0310ede9ac5a8");
+    beforeInventory.sha256 = "d758c64cb64cce649ed2f05e07b289b78194e3dcd085c93083839b9100342189";
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
+  if (sha(JSON.stringify(map)) === "f5fe8fa14e17d592ac23cf1b774c3db882151b475858e96408f06b388b7d2c7e") {
+    const previous = JSON.parse(historicalSource("6eab4d03368ee2dd84213d35361b91d2a6b6f4a5", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "1370552e5f8e8955a50777fd67b91332954e69de8649b9f8c36aa48bbe8972dc");
+    const expected = structuredClone(previous);
+    const revisedSources = [
+      ["dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts","5a150eb03cdfe8dc1b0dd17965cbbd1910fbcd0bb89576766aefe81de5bef116","ad10ff937df6b9568ca5845b714d438accfb16951d6e4a28e3553eae8be90ae3","5f8e7ebc5e1ffcb664f9bedea22ebf5b901159035bec55193e056d8f585c5082"],
+    ];
+    for (const [path, priorHash, sourceHash, factsHash] of revisedSources) {
+      const original = expected.sources.filter(row => row.path === path);
+      const revised = map.sources.find(row => row.path === path);
+      assert.equal(original.length, 1);
+      assert.equal(original[0].facts.sha256, priorHash);
+      assert.equal(revised.facts.sha256, sourceHash);
+      assert.equal(sha(JSON.stringify(revised.facts)), factsHash);
+      original[0].facts = revised.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
+  if (sha(JSON.stringify(map)) === "1370552e5f8e8955a50777fd67b91332954e69de8649b9f8c36aa48bbe8972dc") {
+    const previous = JSON.parse(historicalSource("87c2ca4890864e1ebc8225a84913d68d6630d9f0", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "f2242386ade1358e857b17cbb3b9ad19b8c6f54fcf9574b27b18248a662efb4d");
+    const expected = structuredClone(previous);
+    const revisedSources = [
+      ["dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts","93092fae455ce459a99a97b18957d110ab062b5109a4ca3c827f624f2bf7750b","5a150eb03cdfe8dc1b0dd17965cbbd1910fbcd0bb89576766aefe81de5bef116","6fc3efc2bfd5b8d8b9f2a0f513b28c676e2aa5e777619c122911b3006576e768"],
+      ["modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx","77f66d4014e8f50732b79bf5183f60a6994b0d89d90306028225c80f89c622e8","c3919d61d596c938864c86bc266fe361816570b4eb46093e32fd261914c52d8a","ca0d3a314bc2369e35049f0da07659d4e54b30ba36ca34867803c3e4bd6f8f1c"],
+    ];
+    for (const [path, priorHash, sourceHash, factsHash] of revisedSources) {
+      const original = expected.sources.filter(row => row.path === path);
+      const revised = map.sources.find(row => row.path === path);
+      assert.equal(original.length, 1);
+      assert.equal(original[0].facts.sha256, priorHash);
+      assert.equal(revised.facts.sha256, sourceHash);
+      assert.equal(sha(JSON.stringify(revised.facts)), factsHash);
+      original[0].facts = revised.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
+  if (sha(JSON.stringify(map)) === "f2242386ade1358e857b17cbb3b9ad19b8c6f54fcf9574b27b18248a662efb4d") {
+    const previous = JSON.parse(historicalSource("06e7ba6e321b97a5a3d0005e8dbfed96eff4cd6c", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "54106981c207e4084f0efee420f81ab84aaf1168b73140a9099b48e41c0e2b91");
+    const expected = structuredClone(previous);
+    const matches = expected.sources.filter(row => row.path === headlessPackagedSpec);
+    const revised = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].facts.sha256, "d32aca3aa9b8244bd69cdf6ecb71d985faba78527986bf2d26fb7721bc389839");
+    assert.equal(revised.facts.sha256, "93092fae455ce459a99a97b18957d110ab062b5109a4ca3c827f624f2bf7750b");
+    assert.equal(sha(JSON.stringify(revised.facts)), "b7ac63949ecdd58f8fbe0af61fd3c842ee60391c8595a5263a87c9bbd40499b2");
+    matches[0].facts = revised.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
+  if (sha(JSON.stringify(map)) === "54106981c207e4084f0efee420f81ab84aaf1168b73140a9099b48e41c0e2b91") {
+    const previous = JSON.parse(historicalSource("4b25161185278a29f1300d32d5c28bf84ce4f741", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "4c9b5045beb3199e76fcb56683f3e2f97b6acf2e9bc6f8dab98cf46f728fe01d");
+    const expected = structuredClone(previous);
+    const matches = expected.sources.filter(row => row.path === headlessPackagedSpec);
+    const revised = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].facts.sha256, "aab53df6cd1b746fb7659f49abd9971941cb4757479df2606bba22fc93e47d95");
+    assert.equal(revised.facts.sha256, "d32aca3aa9b8244bd69cdf6ecb71d985faba78527986bf2d26fb7721bc389839");
+    assert.equal(sha(JSON.stringify(revised.facts)), "98dded2764bc8de5ac87f7f24523ba7baf7291764874de98d893f94db2549800");
+    matches[0].facts = revised.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
+  if (sha(JSON.stringify(map)) === "4c9b5045beb3199e76fcb56683f3e2f97b6acf2e9bc6f8dab98cf46f728fe01d") {
+    const previous = JSON.parse(historicalSource("d259564ece0bb1d8adc32cc56005b878087c2dfa", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "d72ec82f70c7f2c552467ef75cffaee1c1e28ef23a354a43d2aa8d565b3b6541");
+    const expected = structuredClone(previous);
+    const revised = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(sha(JSON.stringify(revised.facts)), "e01271428f783a8f80816f953cbe22324bfc195877c0dd041fe37e35d1a7d10b");
+    const matches = expected.sources.filter(row => row.path === headlessPackagedSpec);
+    assert.equal(matches.length, 1);
+    matches[0].facts = revised.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
+  if (sha(JSON.stringify(map)) === "d72ec82f70c7f2c552467ef75cffaee1c1e28ef23a354a43d2aa8d565b3b6541") {
+    const approvedStepCommit = "d259564ece0bb1d8adc32cc56005b878087c2dfa";
+    const previous = JSON.parse(historicalSource("67f91d8f279da39bd7b15e383c08fe73313aa029", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), "84a405091b232742ef6ceba41e1663b9c988fd9d61df2eb0d3bc033a2a68c7bb");
+    const expected = structuredClone(previous);
+    for (const source of [headlessPackagedSpec, "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts"]) {
+      const matches = expected.sources.filter(row => row.path === source);
+      assert.equal(matches.length, 1);
+      matches[0].facts = sourceFacts(source, historicalSource(approvedStepCommit, source));
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous, {...result, gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
+  if (sha(JSON.stringify(map)) === "84a405091b232742ef6ceba41e1663b9c988fd9d61df2eb0d3bc033a2a68c7bb") {
+    const source = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
+    const previous = JSON.parse(historicalSource("8a783d664ada27cf55d363e87d29817e08c0665e", censusDocument));
+    assert.equal(sha(JSON.stringify(previous)), browserTakeoverCensus.after);
+    const expected = structuredClone(previous);
+    const facts = map.sources.find(row => row.path === source).facts;
+    assert.equal(sha(JSON.stringify(facts)), "88ce3a00face14e426dcaa5636ecce61dd69f7a0bcab244ab15eff86af62e863");
+    expected.sources.find(row => row.path === source).facts = facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return browserTakeoverCensusLegacyView(previous,{...result,gaps:[
+      ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(previous),
+    ]});
+  }
+  if (sha(JSON.stringify(map)) !== browserTakeoverCensus.after) return {map,result};
+  const {priorCommit,before,test,facts,view,inventory} = browserTakeoverCensus;
+  const saved = JSON.parse(historicalSource(priorCommit,censusDocument));
+  assert.equal(sha(JSON.stringify(saved)),before);
+  const expected = structuredClone(saved);
+  const source = map.sources.find(row => row.path === test);
+  assert.equal(sha(JSON.stringify(source.facts)),facts);
+  expected.sources.find(row => row.path === test).facts = source.facts;
+  expected.inventories.find(row => row.source === view).sha256 = inventory;
+  assert.deepEqual(map,expected);
+  assert.deepEqual(result.gaps.filter(row => row.kind === "unreviewed-source-drift"),sourceDrift(expected));
+  return {map:saved,result:{...result,gaps:[
+    ...result.gaps.filter(row => row.kind !== "unreviewed-source-drift"), ...sourceDrift(saved),
+  ]}};
+}
+function headlessPackagedCensusLegacyView(map, result) {
+  ({map,result}=browserTakeoverCensusLegacyView(map,result));
+  if (sha(JSON.stringify(map)) === "0e1e0993aded066e4061ffbdbf7f4ccfa490b12f68f7416a4505a9a8a0e7377b") {
+    // Preserve the previous definition witness and record newly changed test definitions as drift.
+    const commit = "d27ed7bacd55d3dd0578216de7f044899b906b00";
+    const saved = JSON.parse(historicalSource(commit, censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "ea3adbe2ef7dbcaff5dba0cf18952c0472c35047784ae6b5c7b70190c4501a68");
+    const expected = structuredClone(saved);
+    const source = "apps/thin-client/src/pages/SystemBuilderPage.tsx";
+    const previous = expected.inventories.find(row => row.source === source);
+    assert.equal(previous.sha256, sha(historicalSource(commit, source)));
+    const candidate = map.inventories.find(row => row.source === source);
+    assert.equal(candidate.sha256, "ab5aaf109db3c782222634f06645f92e0c5c2fcc2d3c01f8330e3866d0db162d");
+    previous.sha256 = candidate.sha256;
+    const browserReadTests = [
+      ["apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
+        "728ceb0147a088ec16119f4b27be3ea08fbddafe634f021a49ced7ed723c0d01"],
+      ["modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+        "1c9d25c6ce10fc1d3a8496823a2146550532a3250ba9b6587b64963fc9114f9b"],
+      ["modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+        "0b240cb61d4d61116243016ee2893bcd76f61ca2450ca4ff8220198d878ac18a"],
+    ];
+    for (const [path, factsDigest] of browserReadTests) {
+      const next = map.sources.find(row => row.path === path);
+      assert.equal(sha(JSON.stringify(next.facts)), factsDigest);
+      expected.sources.find(row => row.path === path).facts = next.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
+  if (sha(JSON.stringify(map)) === "ea3adbe2ef7dbcaff5dba0cf18952c0472c35047784ae6b5c7b70190c4501a68") {
+    const saved = JSON.parse(historicalSource("888a58bbcaf2062e8f73ce54abd7dd4f50d8ebce", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "28ab82bf208625907ad018011ef3e145bb6ca418d478d36f67773e1c46d67962");
+    const expected = structuredClone(saved);
+    for (const [path, candidate, digest] of [
+      ["apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
+        "3430093b56e7419b9f7108c462daead18068bb83f4287adc19d2a810cea37165",
+        "ee3ca78cc599714c75f8a658cf9deb85696f53dd01a190f1af78cfc029b2e84f"],
+      ["dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+        "b3e4b436caf4189fbbfe29d5a5c4d4ce81de0f91e599d8fafbf41581aff2c07e",
+        "2c513ad04c6c79e887e0c2b735c5c647a8f2f1f8b1e064ebb28525a58dc7f553"],
+    ]) {
+      const changed = map.sources.find(row => row.path === path);
+      assert.equal(changed.facts.sha256, candidate);
+      assert.equal(sha(JSON.stringify(changed.facts)), digest);
+      expected.sources.find(row => row.path === path).facts = changed.facts;
+    }
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
+  if (sha(JSON.stringify(map)) === "28ab82bf208625907ad018011ef3e145bb6ca418d478d36f67773e1c46d67962") {
+    // Replace the packaged test inventory while retaining its unreviewed drift.
+    const saved = JSON.parse(historicalSource("29524bbbf70785f0323a37d1f6af633517c19ad0", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "501a499558e742b246095d9ec0c63a474d1bd3a48a94a9f727ae224c5118d291");
+    const expected = structuredClone(saved);
+    const path = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
+    const changed = map.sources.find(row => row.path === path);
+    assert.equal(changed.facts.sha256, "2c5759d24f918a9cd53cec1792aef58de1a699fc67aef3a8793674f41e7f4bf5");
+    assert.equal(sha(JSON.stringify(changed.facts)), "cfe3a18d5bf91d2abbdac27d980155df73a0c0f5f26a248ea6b9468ef790dcae");
+    expected.sources.find(row => row.path === path).facts = changed.facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, result);
+  }
+  if (sha(JSON.stringify(map)) === "501a499558e742b246095d9ec0c63a474d1bd3a48a94a9f727ae224c5118d291") {
+    // Inventory the real Desktop takeover journey without granting a census pass.
+    const saved = JSON.parse(historicalSource("9621eb610466530fd7911b135bf8cc8208b2a9e3", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "77554fccca0bac50e567ff948714215df3ca0e9bc16873d040fe980479650b16");
+    const expected = structuredClone(saved);
+    const before = expected.sources.find(row => row.path === headlessPackagedSpec);
+    const changed = map.sources.find(row => row.path === headlessPackagedSpec);
+    assert.equal(changed.facts.sha256, "060f2f1fe8075a1dcf46e71356206e902aba6729f724d8040b953aa1a4ed1984");
+    assert.equal(sha(JSON.stringify(changed.facts)), "a6a93b5871630e0744715950c37d3701c6e40bb29dfcaa17000344b3c089efea");
+    before.facts = changed.facts;
+    const newPath = "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
+    const added = map.sources.find(row => row.path === newPath);
+    assert.equal(added.facts.sha256, "0187949b6bece23f8f036fc0beed178ef07fc147cf42fd6e2cda0a24d51b6887");
+    assert.equal(added.committed_sha256, "0".repeat(64));
+    assert.equal(sha(JSON.stringify(added.facts)), "55415c9ad75ec7a5dece5b391d2b2188d88c5a4cf271c8ba41b00944148494dd");
+    expected.sources.splice(expected.sources.indexOf(before) + 1, 0, added);
+    expected.host_spec_files = [...expected.host_spec_files, newPath].sort();
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
+  if (sha(JSON.stringify(map)) === "77554fccca0bac50e567ff948714215df3ca0e9bc16873d040fe980479650b16") {
+    // The draft test uses the actual consent portal. Keep all earlier witnesses.
+    const saved = JSON.parse(historicalSource("b1ecfb1323e0fddfd47769e450507a2c4bf374a8", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "9ffbb7fd0b0a331e63a3e7294219d5b97a9fcfc68e7e6e414b804ca0109e14bb");
+    const expected = structuredClone(saved);
+    const path = "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx";
+    const facts = map.sources.find(row => row.path === path).facts;
+    assert.equal(facts.sha256, "edca9539380a3e3c52de448862eb3b5d56fca637900735f04fa8d3384010e5ce");
+    assert.equal(sha(JSON.stringify(facts)), "be9ef37a87f7ad7b0ef8a417a97e418379ee57952f0006043f9cd5ebea675326");
+    expected.sources.find(row => row.path === path).facts = facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
+  if (sha(JSON.stringify(map)) === "9ffbb7fd0b0a331e63a3e7294219d5b97a9fcfc68e7e6e414b804ca0109e14bb") {
+    // The existing startup fixture now verifies that closing its window
+    // retires the exact takeover owner.
+    const saved = JSON.parse(historicalSource("95b92b2abf34dde147c09a1eddaaa0ff888035ba", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "d87c96feb11029c8e7f0f646d2fdf20ec704bc7658952a9ca99b6aeb110c0edd");
+    const expected = structuredClone(saved);
+    const path = "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts";
+    const facts = map.sources.find(row => row.path === path).facts;
+    assert.equal(facts.sha256, "56407da8dcc0bf336e33fe19069a50e0fb933aa6f5a58002cb0f929f767fa642");
+    assert.equal(sha(JSON.stringify(facts)), "74f7211e94344823202c0e0b248eac989f8c13c626df820d29b7a8c96c49c52d");
+    expected.sources.find(row => row.path === path).facts = facts;
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, { ...result,
+      gaps: [...result.gaps.filter(item => item.kind !== "unreviewed-source-drift"), ...sourceDrift(saved)],
+    });
+  }
+  if (sha(JSON.stringify(map)) === "d87c96feb11029c8e7f0f646d2fdf20ec704bc7658952a9ca99b6aeb110c0edd") {
+    // The shell checkpoint changes the Composer witness and the declared desktop
+    // Systems tab source. Preserve the previously recorded facts and all gaps.
+    const saved = JSON.parse(historicalSource("0baea36a22df6de28d8759755ef77d69a38e92d3", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "5e9727914522e563808c3953caef4009d15f2e0ca6c69d73ee0ecfbd2220e1aa");
+    const expected = structuredClone(saved);
+    const path = "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx";
+    const facts = map.sources.find(row => row.path === path).facts;
+    assert.equal(facts.sha256, "8e359ed1b5d7759cdeb178241becea39c6eacf97d111d8359aa701c56bccb568");
+    assert.equal(sha(JSON.stringify(facts)), "5b202bf97c51129092c27bb7ddfcfc789a40fa8b797e81581232ba5f02478feb");
+    expected.sources.find(row => row.path === path).facts = facts;
+    expected.inventories.find(row => row.source === "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx").sha256 =
+      "386ed64832e05e9ed43e0182e8c2447bea798a893d70b4c1c731177d8817591e";
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, result);
+  }
+  const source = map.sources.find(row => row.path === headlessPackagedSpec);
+  if (!source) return {map, result};
+  if (sha(JSON.stringify(map)) === "5e9727914522e563808c3953caef4009d15f2e0ca6c69d73ee0ecfbd2220e1aa") {
+    const saved = JSON.parse(historicalSource("a1894a3a13a013bfb25d12ddae1c074923216b34", censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "e20baf59bdd2461036c73745b83bcad0566fae507541c9d9cd313b57c5962bc9");
+    const expected = structuredClone(saved);
+    expected.sources[expected.sources.findIndex(row => row.path === headlessPackagedSpec)].facts = source.facts;
+    assert.equal(source.facts.sha256, "79c74599ccba86000973045e9b4f7cd89eb7e3e1381378b0a8f278c3d2be1f8a");
+    assert.equal(sha(JSON.stringify(source.facts)), "e0bf28e6f84706bcf55d47457174fdc31946f415e5938ad852143556b38658de");
+    assert.deepEqual(map, expected);
+    assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(expected));
+    return headlessPackagedCensusLegacyView(saved, result);
+  }
+  if (sha(JSON.stringify(map)) === "e20baf59bdd2461036c73745b83bcad0566fae507541c9d9cd313b57c5962bc9") {
+    const commit = "6ce8b3255a935f3a02e65f902a2989b31a417bf6";
+    const saved = JSON.parse(historicalSource(commit, censusDocument));
+    assert.equal(sha(JSON.stringify(saved)), "3cca8c5a8478e7355c5b88e930875f2979f074d3e2fd9e1f89fbc788db2fc133");
+    const prior = saved.sources.find(row => row.path === headlessPackagedSpec);
+    const committed = sourceFacts(headlessPackagedSpec, historicalSource(commit, headlessPackagedSpec));
+    assert.deepEqual(prior.facts, committed);
+    assert.equal(prior.committed_sha256, committed.sha256);
+    assert.equal(source.committed_sha256, committed.sha256);
+    assert.equal(source.facts.sha256, "8f78b003b93d10cd55fa7a26045d9e9e7f1d64901e946fabbe22cc4e01634e38");
+    assert.equal(sha(JSON.stringify(source.facts)), "205d01b56f5e64bfecd6d77f0efb5b8a5d4cea232522a3e587dfdd43de7d4ae9");
+    const expected = structuredClone(saved);
+    expected.sources[expected.sources.findIndex(row => row.path === headlessPackagedSpec)].facts = source.facts;
+    assert.deepEqual(map, expected);
+    const isPending = item => item.kind === "unreviewed-source-drift" && item.source === headlessPackagedSpec;
+    assert.equal(result.gaps.filter(isPending).length, 1);
+    const priorResult = {...result, gaps:result.gaps.filter(item => !isPending(item))};
+    assert.deepEqual(priorResult.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(saved));
+    return headlessPackagedCensusLegacyView(saved, priorResult);
+  }
+  const prior = JSON.parse(historicalSource("2ae9ccfd296d7dfa9c4f7465d81145a776081309", censusDocument));
+  assert.equal(sha(JSON.stringify(prior)), "0e3adf3631d4f9dc03f0021e75685037f343ec8f03fd297753665875e99149d7");
+  assert.equal(source.facts.sha256, "798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd");
+  assert.equal(source.committed_sha256, source.facts.sha256);
+  assert.equal(sha(JSON.stringify(source.facts)), "4af822bfed55376be4f7f81dd3924dd1ecc848726842ac8ce1ef0aa8582f8c93");
+  const expected = structuredClone(prior);
+  expected.sources.push(source);
+  expected.host_spec_files = [...expected.host_spec_files, headlessPackagedSpec].sort();
+  assert.deepEqual(map, expected);
+  assert.deepEqual(result.gaps.filter(item => item.kind === "unreviewed-source-drift"), sourceDrift(prior));
+  return {map: prior, result};
+}
 function committedCensusLegacyView(map,result){
+  ({map,result}=headlessPackagedCensusLegacyView(map,result));
   ({map,result}=navigationCensusLegacyView(map,result));
   if(map.source_baseline!==committedCensusDefinition.baseline){
     assert.equal(map.source_baseline,"608679a6095ef5617921e504bf208858df6a7c49");
@@ -1254,7 +1688,7 @@ test("checks the current repository map against original scope and actual source
   const result=validateCensus({mapText:read("docs/operations/comprehensive-ui-automation-current-census.json").toString(),
     ledgerText:read("docs/operations/comprehensive-ui-automation-coverage.json").toString(),
     discoveryText:read("docs/operations/comprehensive-ui-automation-discovery.json").toString(),readSource:read,hostSpecPaths});
-  assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,31);
+  assert.equal(result.scenario_count,39);assert.equal(result.behavior_links,131);assert.equal(result.current_host_spec_files,33);
   assert.equal(result.inventory_groups,16);assert.equal(result.executed_tests,0);assert.equal(result.parent_qualification_granted,false);
   const map=JSON.parse(read("docs/operations/comprehensive-ui-automation-current-census.json"));
   const committedHistory=committedCensusLegacyView(map,result);
@@ -1495,7 +1929,7 @@ test("preserves exact historical versions without inheriting their current cover
   const ledger=JSON.parse(read("docs/operations/comprehensive-ui-automation-coverage.json"));
   assert.equal(ledger.current_definition_census.historical_source_archive,"docs/operations/comprehensive-ui-automation-census-source-history.json");
   assert.equal(ledger.full_testing_status,"deferred-by-user");assert(ledger.scenarios.every(s=>s.actual_host_qualification==="pending"));
-  assert.equal(CENSUS_LIMITS.files,194);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
+  assert.equal(CENSUS_LIMITS.files,196);assert.equal(CENSUS_LIMITS.documentBytes,512*1024);assert.equal(CENSUS_LIMITS.totalBytes,32*1024*1024);
 });
 
 test("reintroduced oracle coverage refuses old, missing, duplicate, future or unrelated versions",()=>{
@@ -1969,10 +2403,27 @@ test("pending notification definitions preserve raw gaps and every earlier sourc
 });
 
 test("current published form checkpoint preserves its complete source gaps and original notification witness",()=>{
-  const map=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
+  const published=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
+  const publishedResult={gaps:sourceDrift(published)};
+  const {map}=browserTakeoverCensusLegacyView(published,publishedResult);
   const result={gaps:sourceDrift(map)};
   const before=JSON.stringify({map,result});
-  assert.equal(result.gaps.length,31);
+  assert.equal(result.gaps.length,35);
+  const isChangedTokenTest = row => row.kind === "unreviewed-source-drift" &&
+    row.source === "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts";
+  assert.equal(result.gaps.filter(isChangedTokenTest).length, 1);
+  assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps: result.gaps.filter(row => !isChangedTokenTest(row))}));
+  const isNewTakeoverSpec = row => row.kind === "unreviewed-source-drift" &&
+    row.source === "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts";
+  assert.equal(result.gaps.filter(isNewTakeoverSpec).length, 1);
+  assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>!isNewTakeoverSpec(row))}));
+  const isPendingDesktopStartup = row => row.kind === "unreviewed-source-drift" &&
+    row.source === "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts";
+  assert.equal(result.gaps.filter(isPendingDesktopStartup).length, 1);
+  assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>!isPendingDesktopStartup(row))}));
+  const isPendingHeadless = row => row.kind === "unreviewed-source-drift" && row.source === headlessPackagedSpec;
+  assert.equal(result.gaps.filter(isPendingHeadless).length,1);
+  assert.throws(()=>assertCompleteCurrentSourceDrift(map,{gaps:result.gaps.filter(row=>!isPendingHeadless(row))}));
   const imageLabelPrior = beforeDesktopImageLabelCensus(map,result);
   assert.equal(imageLabelPrior.result.gaps.length,30);
   assert.equal(sha(JSON.stringify(imageLabelPrior.map)),reviewedDesktopImageLabelCensus.before);
@@ -2064,4 +2515,29 @@ test("current published form checkpoint preserves its complete source gaps and o
   const [pin]=publishedFormTabInventory;
   stale.inventories.find(row=>row.source===pin.source&&row.property==="label").sha256=pin.before;
   assert.throws(()=>assertCompleteCurrentSourceDrift(stale,result));
+});
+
+test("the browser controls checkpoint retains its unqualified source drift and exact prior census",()=>{
+  const current=JSON.parse(fs.readFileSync(censusDocument,"utf8"));
+  const result={gaps:sourceDrift(current)};
+  const candidate=browserTakeoverCensusLegacyView(current,result);
+  assert.equal(sha(JSON.stringify(candidate.map)),browserTakeoverCensus.before);
+  assert.doesNotThrow(()=>assertCompleteCurrentSourceDrift(current,result));
+  assert.throws(()=>assertCompleteCurrentSourceDrift(current,{gaps:result.gaps.filter(row=>row.source!==browserTakeoverCensus.test)}));
+  const forged=structuredClone(current);
+  forged.inventories.find(row=>row.source===browserTakeoverCensus.view).values.reverse();
+  assert.throws(()=>assertCompleteCurrentSourceDrift(forged,result));
+});
+
+test("the reviewed Desktop step definitions keep the same scope and qualification gaps", () => {
+  const map = JSON.parse(historicalSource("d259564ece0bb1d8adc32cc56005b878087c2dfa", censusDocument));
+  const result = {gaps:sourceDrift(map)};
+  assert.doesNotThrow(() => assertCompleteCurrentSourceDrift(map, result));
+  for (const source of [headlessPackagedSpec, "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts"]) {
+    const forged = structuredClone(map);
+    forged.sources.find(row => row.path === source).facts.assertionCount++;
+    assert.throws(() => assertCompleteCurrentSourceDrift(forged, result));
+    assert.equal(result.gaps.filter(row => row.source === source).length, 1);
+    assert.throws(() => assertCompleteCurrentSourceDrift(map, {gaps:result.gaps.filter(row => row.source !== source)}));
+  }
 });

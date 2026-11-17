@@ -78,7 +78,764 @@ MANAGED_ASSETS_RESTART_LOADER_FILES = (
     "dev-tools/scripts/qualification/tests/managed-assets-restart-loader.unit.test.mjs",
 )
 
+HEADLESS_DESKTOP_READ_SOURCES = (
+    "modules/contracts/README.md",
+    "modules/contracts/headless/index.ts",
+    "modules/contracts/headless/headless-read-request.ts",
+    "modules/contracts/headless/tests/headless-read-request.unit.test.ts",
+    "modules/contracts/headless/headless-read-result.ts",
+    "modules/hosts/shared/composition/composeSystemBuilder.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts",
+    "modules/hosts/desktop/composition/composeDesktopHost.ts",
+    "modules/hosts/desktop/composition/README.md",
+    "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
+)
+HEADLESS_DESKTOP_READ_CHECK = "headless-desktop-read-provider"
+HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES = (
+    "modules/contracts/headless/headless-read-request.ts",
+    "modules/contracts/headless/tests/headless-read-request.unit.test.ts",
+    "modules/contracts/headless/headless-read-result.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessReads.ts",
+    "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
+)
+HEADLESS_DESKTOP_ACTIVATION_CHECK = "headless-desktop-activation"
+HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES = (
+    "apps/desktop/src/main/desktopHeadlessPairingIpc.ts",
+    "apps/desktop/src/main/tests/desktop-headless-pairing-ipc.unit.test.ts",
+    "apps/desktop/src/renderer/features/settings/components/HeadlessClientSettings.tsx",
+    "modules/contracts/headless/desktop-headless-pairing.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessConnection.ts",
+    "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+)
+HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES = HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES + (
+    "apps/desktop/src/renderer/features/system-builder/api/observeDesktopSavedSystems.ts",
+    "apps/desktop/src/renderer/features/system-builder/api/observeDesktopSavedSystems.unit.test.ts",
+    "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+    "modules/contracts/headless/desktop-system-change-poll.ts",
+    "modules/hosts/desktop/composition/registerDesktopSystemChangePoll.ts",
+    "modules/hosts/desktop/composition/tests/desktop-system-change-poll.unit.test.ts",
+    "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
+    "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+    "modules/adapters/persistence/system-builder/createStructuredSystemBuilderRepository.ts",
+    "modules/adapters/persistence/system-builder/structuredSystemChangeJournal.ts",
+    "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+    "modules/adapters/persistence/system-builder/createStructuredHeadlessOperationStore.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessAuthoring.ts",
+    "modules/hosts/desktop/composition/composeDesktopHost.ts",
+    "modules/hosts/desktop/composition/registerDesktopHeadlessTaskList.ts",
+    "modules/hosts/desktop/composition/tests/desktop-headless-task-list.unit.test.ts",
+    "modules/contracts/headless/desktop-headless-chat-tasks.ts",
+    "modules/hosts/desktop/composition/tests/desktop-headless-authoring.unit.test.ts",
+    "modules/hosts/desktop/composition/composeDesktopHeadlessConversation.ts",
+    "modules/hosts/desktop/composition/tests/desktop-headless-conversation.unit.test.ts",
+    "modules/contracts/headless/index.ts",
+    "apps/desktop/src/main/index.ts",
+    "apps/desktop/src/preload/exposedApi.ts",
+    "apps/desktop/src/renderer/lib/desktopApi.ts",
+    "apps/desktop/src/renderer/pages/SettingsPage.tsx",
+    "modules/adapters/security/headless/createDesktopHeadlessClientAuthority.ts",
+    "modules/adapters/security/headless/tests/desktop-headless-client-authority.unit.test.ts",
+    "modules/adapters/transport/headless-loopback/startDesktopHeadlessLoopback.ts",
+    "modules/adapters/transport/headless-loopback/createDesktopPinnedLoopbackAgent.ts",
+    "modules/adapters/transport/headless-loopback/index.ts",
+    "modules/adapters/transport/headless-loopback/README.md",
+    "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
+)
+HEADLESS_MCP_CHECK = "headless-desktop-pinned-mcp"
+HEADLESS_PACKAGED_CHECK = "headless-packaged-desktop-journey"
+HEADLESS_PACKAGED_SOURCES = (
+    "dev-tools/scripts/qualification/visual-composer/e2e/headless-desktop-fixture.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+    "dev-tools/scripts/qualification/visual-composer/headless-approved-conversation-seed.ts",
+    "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs",
+)
+HEADLESS_MCP_SOURCES = (
+    "modules/contracts/headless/headless-approved-turn.ts",
+    "modules/contracts/headless/headless-data-local-file.ts",
+    "modules/contracts/headless/headless-data-provider-file.ts",
+    "modules/adapters/transport/headless-loopback/startDesktopHeadlessLoopback.ts",
+    "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
+    "modules/adapters/transport/headless-mcp/README.md",
+    "modules/adapters/transport/headless-mcp/boundHeadlessMcpStdio.mts",
+    "modules/adapters/transport/headless-mcp/createHeadlessMcpReadForwarder.mts",
+    "modules/adapters/transport/headless-mcp/generateHeadlessMcpToolReference.mts",
+    "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
+    "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+    "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts",
+    "skills/control-ai-system-builder/references/mcp-tools.json",
+)
+
 PUBLISHED_FORM_CHECKS = {
+    "managed-headless-browser-live-fixture": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-plan-approval.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-browser-plan-approval.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
+        ),
+    },
+    "managed-headless-live-fixture": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-agent.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-agent.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-plan-staging.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+            "apps/server/src/createServer.ts",
+            "apps/server/README.md",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/composeManagedSavedState.ts",
+            "modules/hosts/server/composition/composeManagedAgentReads.ts",
+            "modules/adapters/transport/headless-mcp/createHeadlessMcpReadForwarder.mts",
+            "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+        ),
+    },
+    "managed-headless-browser-documents": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/createManagedHeadlessBrowserDocuments.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/composition/createManagedHeadlessBrowserDocuments.ts",
+            "modules/hosts/server/composition/tests/managed-headless-browser-documents.unit.test.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-headless-browser-documents.unit.test.ts",
+            "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+        ),
+    },
+    "managed-headless-browser-consent": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/composeManagedBrowserConsent.ts",
+        ),
+        "sources": (
+            "modules/application/services/ui-control/ui-control-authority.service.ts",
+            "modules/hosts/server/composition/composeManagedBrowserConsent.ts",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+            "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+        ),
+    },
+    "managed-headless-browser-consent-http": {
+        "automatic_sources": (
+            "modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/managed-browser-consent.ts",
+            "modules/contracts/headless/managed-browser-plan-approval.ts",
+            "modules/contracts/headless/managed-browser-presentation.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/adapters/transport/api-express/headless/registerManagedBrowserConsentRoute.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+            "modules/adapters/transport/api-express/README.md",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/composeManagedBrowserConsent.ts",
+            "apps/server/src/createServer.ts",
+            "apps/server/README.md",
+            "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.ts",
+            "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.unit.test.ts",
+            "modules/hosts/server/security/createManagedSavedStateAuthorizationAudit.ts",
+            "modules/hosts/server/security/tests/managed-saved-state-authorization-audit.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
+            "modules/adapters/transport/api-express/security/security-enforcement.unit.test.ts",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.unit.test.ts",
+            "modules/hosts/server/security/tests/managed-saved-state-authorization-audit.unit.test.ts",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+        ),
+    },
+    "managed-headless-browser-consent-ui": {
+        "automatic_sources": (
+            "apps/thin-client/src/features/workspace/hooks/useManagedBrowserTakeover.ts",
+        ),
+        "sources": (
+            "apps/thin-client/src/App.tsx",
+            "apps/thin-client/src/pages/SettingsPage.tsx",
+            "apps/thin-client/src/components/layout/AppShell.tsx",
+            "apps/thin-client/src/pages/SystemBuilderPage.tsx",
+            "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+            "apps/thin-client/src/features/workspace/hooks/useActiveWorkspace.tsx",
+            "apps/thin-client/src/features/workspace/hooks/useManagedBrowserTakeover.ts",
+            "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
+            "apps/thin-client/src/features/workspace/api/managedBrowserConsentClient.ts",
+            "apps/thin-client/src/features/workspace/api/tests/managed-browser-plan-approval.unit.test.ts",
+            "apps/thin-client/src/pages/ArtifactsPage.tsx",
+            "apps/thin-client/src/features/artifact-upload/components/ArtifactIngestionFeature.tsx",
+            "apps/thin-client/README.md",
+            "apps/desktop/src/renderer/App.tsx",
+            "apps/desktop/src/renderer/features/settings/components/HeadlessPlanApprovals.tsx",
+            "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx",
+            "modules/ui/shared/headless/HeadlessPlanApprovalDialog.tsx",
+            "modules/ui/shared/takeover/PresentedWindowResource.tsx",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "apps/thin-client/src/features/workspace/hooks/tests/managed-browser-takeover.ui.test.tsx",
+            "apps/thin-client/src/features/workspace/tests/workspace-gate.unit.test.tsx",
+            "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+            "apps/desktop/src/renderer/tests/desktop-window-takeover.ui.test.tsx",
+            "apps/thin-client/src/features/workspace/api/tests/managed-browser-plan-approval.unit.test.ts",
+            "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx",
+        ),
+    },
+    "managed-headless-agent-window": {
+        "automatic_sources": (
+            "modules/contracts/headless/managed-headless-window.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/managed-headless-window.ts",
+            "modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+            "modules/adapters/transport/headless-mcp/createHeadlessMcpReadForwarder.mts",
+            "modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts",
+            "modules/adapters/transport/headless-mcp/README.md",
+            "apps/server/src/createServer.ts",
+            "apps/server/README.md",
+            "modules/hosts/server/composition/composeManagedBrowserConsent.ts",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+            "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+        ),
+    },
+    "managed-headless-browser-presentation": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/createManagedBrowserPresentation.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/composition/createManagedBrowserPresentation.ts",
+            "modules/hosts/server/composition/tests/managed-browser-presentation.unit.test.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-browser-presentation.unit.test.ts",
+            "modules/application/services/ui-control/tests/ui-control-delivery.unit.test.ts",
+        ),
+    },
+    "managed-headless-browser-presentation-host": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/composeManagedBrowserPresentationResources.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/composition/composeManagedBrowserPresentationResources.ts",
+            "modules/hosts/server/composition/composeManagedBrowserConsent.ts",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-browser-consent.unit.test.ts",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+        ),
+    },
+    "managed-headless-agent-server": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/composeManagedAgentReads.ts",
+        ),
+        "sources": (
+            "apps/server/src/createServer.ts",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "apps/server/README.md",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/composeManagedSavedState.ts",
+            "modules/hosts/server/composition/composeManagedAgentReads.ts",
+            "modules/hosts/server/composition/tests/managed-headless-agent-reads.unit.test.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessAuthoring.ts",
+            "modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "modules/hosts/server/composition/tests/managed-headless-agent-reads.unit.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-saved-state-routes.integration.test.ts",
+        ),
+    },
+    "managed-saved-state-browser": {
+        "automatic_sources": (
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.ts",
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.unit.test.ts",
+        ),
+        "sources": (
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.ts",
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.unit.test.ts",
+            "apps/thin-client/src/pages/SystemBuilderPage.tsx",
+            "apps/thin-client/README.md",
+            "apps/thin-client/src/features/model-management/api/apiModelManagementClient.ts",
+            "dev-tools/helpers/tests/test_control_plane.py",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.unit.test.ts",
+            "apps/thin-client/tests/api-model-management-client-timeout.unit.test.ts",
+        ),
+    },
+    "managed-saved-state-browser-ui": {
+        "automatic_sources": (
+            "apps/thin-client/src/features/system-builder/api/observeManagedSavedSystems.ts",
+        ),
+        "sources": (
+            "apps/thin-client/src/security/pairedDeviceTokenStore.ts",
+            "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
+            "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
+            "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+            "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+            "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+        ),
+    },
+    "managed-headless-client-policy": {
+        "automatic_sources": (
+            "modules/hosts/server/security/resolveManagedHeadlessClientPolicy.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/security/resolveManagedHeadlessClientPolicy.ts",
+            "modules/hosts/server/security/tests/managed-headless-client-policy.unit.test.ts",
+            "modules/adapters/security/oidc/createOidcBearerTokenVerifierAdapter.ts",
+            "modules/adapters/security/oidc/tests/oidc-bearer-token-verifier.unit.test.ts",
+            "modules/hosts/server/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/security/tests/managed-headless-client-policy.unit.test.ts",
+            "modules/adapters/security/oidc/tests/oidc-bearer-token-verifier.unit.test.ts",
+        ),
+    },
+    "managed-headless-transactional-authoring": {
+        "automatic_sources": (
+            "modules/hosts/server/composition/composeManagedHeadlessAuthoring.ts",
+        ),
+        "sources": (
+            "modules/hosts/server/composition/composeManagedHeadlessAuthoring.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts",
+            "modules/hosts/shared/composition/headlessPlanReview.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessPlanReview.ts",
+            "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
+            "modules/hosts/server/composition/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/headless-system-authoring.unit.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+        ),
+    },
+    "managed-headless-agent-routes": {
+        "automatic_sources": (
+            "modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes.ts",
+        ),
+        "sources": (
+            "modules/adapters/transport/api-express/headless/registerManagedHeadlessAgentRoutes.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+            "modules/adapters/transport/api-express/README.md",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/security/security-enforcement.unit.test.ts",
+        ),
+    },
+    "managed-saved-state-replay": {
+        "automatic_sources": (
+            "modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes.ts",
+            "modules/hosts/server/composition/composeManagedSavedState.ts",
+            "modules/hosts/server/security/createManagedSavedStateAuthorizationAudit.ts",
+        ),
+        "sources": (
+            "apps/server/src/createServer.ts",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+            "modules/adapters/transport/api-express/security/createExpressOrganizationAuthorizationMiddleware.ts",
+            "modules/adapters/transport/api-express/headless/registerManagedSavedStateRoutes.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-saved-state-routes.integration.test.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/composeManagedSavedState.ts",
+            "modules/hosts/server/composition/README.md",
+            "modules/hosts/server/security/createManagedSavedStateAuthorizationAudit.ts",
+            "modules/hosts/server/security/tests/managed-saved-state-authorization-audit.unit.test.ts",
+            "modules/adapters/persistence/postgres/postgres-database.ts",
+            "modules/adapters/persistence/postgres/tests/postgres-database.unit.test.ts",
+            "modules/adapters/persistence/postgres/tests/postgres-database.live.integration.test.ts",
+            "modules/adapters/persistence/postgres/README.md",
+            "modules/adapters/persistence/system-builder/createStructuredSystemBuilderRepository.ts",
+            "modules/application/use-cases/system-builder/headless-committed-changes.use-case.ts",
+            "dev-tools/helpers/tests/test_control_plane.py",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/server/src/tests/server-postgres-selection.unit.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-saved-state-routes.integration.test.ts",
+            "modules/hosts/server/security/tests/managed-saved-state-authorization-audit.unit.test.ts",
+            "modules/adapters/persistence/postgres/tests/postgres-database.unit.test.ts",
+            "modules/adapters/persistence/postgres/tests/postgres-database.live.integration.test.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-system-builder-repository.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/headless-committed-changes.unit.test.ts",
+        ),
+    },
+    "managed-headless-delivery-fixture": {
+        "automatic_sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-delivery.ts",
+        ),
+        "sources": (
+            "dev-tools/scripts/qualification/visual-composer/managed-headless-delivery.ts",
+            "dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts",
+        ),
+        "command": (
+            "--test", "--",
+            "dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+            "dev-tools/scripts/qualification/tests/managed-assets-restart-loader.unit.test.mjs",
+        ),
+    },
+    "headless-desktop-window-renderer": {
+        "companion_to": "headless-desktop-takeover-controls",
+        "sources": (
+            "apps/desktop/src/renderer/tests/desktop-window-takeover.ui.test.tsx",
+            "apps/desktop/src/renderer/features/workspace/hooks/useActiveWorkspaceTakeover.ts",
+            "apps/desktop/src/renderer/App.tsx",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "apps/desktop/src/renderer/tests/desktop-window-takeover.ui.test.tsx",
+        ),
+    },
+    "headless-desktop-takeover-controls": {
+        "automatic_sources": (
+            "apps/desktop/src/main/desktopUiControlIpc.ts",
+            "apps/desktop/src/main/tests/desktop-ui-control-ipc.unit.test.ts",
+            "modules/ui/shared/takeover/windowTakeoverController.ts",
+            "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
+        ),
+        "sources": (
+            "apps/desktop/src/main/desktopUiControlIpc.ts",
+            "apps/desktop/src/main/tests/desktop-ui-control-ipc.unit.test.ts",
+            "apps/desktop/src/renderer/App.tsx",
+            "apps/desktop/src/renderer/components/layout/AppShell.tsx",
+            "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+            "apps/desktop/src/renderer/features/workspace/hooks/useActiveWorkspaceTakeover.ts",
+            "modules/hosts/desktop/composition/composeDesktopUiControl.ts",
+            "modules/hosts/desktop/composition/desktopHeadlessAudit.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-audit.unit.test.ts",
+            "modules/application/services/ui-control/ui-control-delivery.service.ts",
+            "modules/ui/shared/components/ModalDialog.tsx",
+            "modules/ui/shared/styles/components/shell.css",
+            "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
+            "modules/ui/shared/takeover/windowTakeoverController.ts",
+            "modules/ui/shared/takeover/WindowTakeoverControls.tsx",
+            "modules/ui/shared/takeover/WindowTakeoverContext.tsx",
+            "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
+            "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/desktop/src/main/tests/desktop-ui-control-ipc.unit.test.ts",
+            "modules/ui/shared/takeover/tests/window-takeover-controller.unit.test.ts",
+            "modules/ui/shared/takeover/tests/window-takeover-controls.interaction.test.tsx",
+            "modules/ui/shared/components/tests/ModalDialog.unit.test.tsx",
+            "modules/hosts/desktop/composition/tests/desktop-headless-audit.unit.test.ts",
+        ),
+    },
+    "headless-desktop-takeover-startup": {
+        "companion_to": "headless-desktop-takeover-controls",
+        "sources": (
+            "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
+            "apps/desktop/src/main/index.ts",
+            "apps/desktop/src/main/desktopMainWindowMenu.ts",
+            "apps/desktop/src/main/tests/desktop-main-window-menu.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
+            "apps/desktop/src/main/tests/desktop-main-window-menu.unit.test.ts",
+        ),
+    },
+    "headless-desktop-takeover-draft": {
+        "companion_to": "headless-desktop-takeover-controls",
+        "sources": (
+            "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+            "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+        ),
+        "command": (
+            "dev-tools/helpers/run_vitest_checks.mjs", "--",
+            "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+        ),
+    },
+    "headless-ui-control-authority": {
+        "sources": (
+            "modules/contracts/headless/ui-control-authority.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/contracts/headless/tests/ui-control-authority-contract.unit.test.ts",
+            "modules/application/services/ui-control/ui-control-authority.service.ts",
+            "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+        ),
+        "automatic_sources": (
+            "modules/contracts/headless/ui-control-authority.ts",
+            "modules/contracts/headless/tests/ui-control-authority-contract.unit.test.ts",
+            "modules/application/services/ui-control/ui-control-authority.service.ts",
+            "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/ui-control-authority-contract.unit.test.ts",
+            "modules/application/services/ui-control/tests/ui-control-authority.unit.test.ts",
+        ),
+    },
+    "desktop-headless-chat-task-settings": {
+        "sources": (
+            "apps/desktop/src/renderer/features/settings/components/RecentHeadlessChatTasks.tsx",
+            "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx",
+        ),
+        "automatic_sources": (
+            "apps/desktop/src/renderer/features/settings/components/RecentHeadlessChatTasks.tsx",
+            "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx",
+        ),
+        "command": ("dev-tools/helpers/run_vitest_checks.mjs", "--",
+                    "apps/desktop/src/renderer/features/settings/tests/recent-headless-chat-tasks.ui.test.tsx"),
+    },
+    "headless-workflow-metadata": {
+        "sources": (
+            "modules/application/services/system-run-workflow/conversation-workflow-handler.service.ts",
+            "modules/application/services/system-run-workflow/tests/conversation-workflow-handler.unit.test.ts",
+            "modules/application/ports/system-run-workflow/headless-turn-reservation.port.ts",
+            "modules/application/use-cases/system-run-workflow/headless-approved-conversation-dispatch.use-case.ts",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessTurnReservation.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-turn-reservation.unit.test.ts",
+            "modules/application/ports/conversations/conversation-operation-repository.port.ts",
+            "modules/application/ports/execution-runs/execution-run-repository.port.ts",
+            "modules/adapters/persistence/execution-runs/createLocalExecutionRunRepositoryAdapters.ts",
+            "modules/contracts/execution-runs/execution-run-normalization.ts",
+            "modules/contracts/execution-runs/execution-run-provenance.ts",
+            "modules/application/ports/conversations/delegated-conversation-turn-admission.port.ts",
+            "modules/application/ports/conversations/conversation-session-repository.port.ts",
+            "modules/application/ports/conversational-execution/conversation-turn-invocation.port.ts",
+            "modules/adapters/persistence/conversations/createLocalDelegatedConversationTurnAdmission.ts",
+            "modules/adapters/persistence/conversations/createLocalConversationRepositoryAdapters.ts",
+            "modules/adapters/persistence/conversations/local-conversation-record-store.ts",
+            "modules/adapters/persistence/conversations/tests/local-conversation-repositories.unit.test.ts",
+            "modules/adapters/persistence/conversations/tests/local-delegated-turn-admission.unit.test.ts",
+            "modules/adapters/runtime/conversational-text-generation/python-conversational-text-generation.adapter.ts",
+            "modules/adapters/runtime/conversational-text-generation/tests/python-conversational-text-generation.adapter.unit.test.ts",
+            "modules/application/use-cases/conversations/submit-conversation-turn.use-case.ts",
+            "modules/application/use-cases/conversations/tests/conversation-turn-phase13-prompt7.unit.test.ts",
+            "modules/application/services/conversational-execution/conversation-turn-invocation-orchestrator.service.ts",
+            "modules/application/services/conversational-execution/tests/conversational-execution-services.unit.test.ts",
+            "modules/application/use-cases/system-run-workflow/headless-workflow-metadata.use-case.ts",
+            "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
+            "modules/application/use-cases/system-run-workflow/headless-conversation-status.use-case.ts",
+            "modules/application/use-cases/system-run-workflow/tests/headless-conversation-status.unit.test.ts",
+        ),
+        "automatic_sources": (
+            "modules/application/services/system-run-workflow/conversation-workflow-handler.service.ts",
+            "modules/application/services/system-run-workflow/tests/conversation-workflow-handler.unit.test.ts",
+            "modules/application/use-cases/system-run-workflow/headless-workflow-metadata.use-case.ts",
+            "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-turn-reservation.unit.test.ts",
+            "modules/application/services/system-run-workflow/tests/conversation-workflow-handler.unit.test.ts",
+            "modules/adapters/persistence/conversations/tests/local-conversation-repositories.unit.test.ts",
+            "modules/adapters/persistence/conversations/tests/local-delegated-turn-admission.unit.test.ts",
+            "modules/adapters/runtime/conversational-text-generation/tests/python-conversational-text-generation.adapter.unit.test.ts",
+            "modules/application/use-cases/conversations/tests/conversation-turn-phase13-prompt7.unit.test.ts",
+            "modules/application/services/conversational-execution/tests/conversational-execution-services.unit.test.ts",
+            "modules/application/use-cases/system-run-workflow/tests/headless-workflow-metadata.unit.test.ts",
+            "modules/application/use-cases/system-run-workflow/tests/headless-conversation-status.unit.test.ts",
+            "modules/application/use-cases/system-run-workflow/tests/system-run-workflow-use-cases.unit.test.ts",
+        ),
+    },
+    "headless-data-task-status": {
+        "automatic_sources": (
+            "modules/contracts/headless/headless-data-task-status.ts",
+            "modules/contracts/headless/headless-data-local-file.ts",
+            "modules/contracts/headless/headless-data-provider-file.ts",
+            "modules/contracts/headless/headless-data-app-selection.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessLocalFileSelection.ts",
+            "apps/desktop/src/main/desktopHeadlessLocalFileSelectionIpc.ts",
+            "apps/desktop/src/renderer/features/artifact-upload/components/ArtifactIngestionFeature.tsx",
+            "apps/desktop/src/renderer/features/artifact-upload/api/desktopIngestionTaskClient.ts",
+            "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+            "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/headless-local-file-selection.use-case.ts",
+            "modules/adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository.ts",
+            "modules/application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/ingestion-file-publication.service.ts",
+            "modules/adapters/persistence/ingestion/createStructuredHeadlessLocalFilePlanStepStore.ts",
+            "modules/application/use-cases/register-artifact-from-repo.use-case.ts",
+            "modules/application/ports/ingestion/ingestion-acquisition-repository.port.ts",
+            "modules/adapters/persistence/ingestion/createStructuredIngestionAcquisitionRepository.ts",
+            "modules/hosts/shared/composition/composeIngestionAcquisitionRepository.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts",
+            "modules/contracts/headless/managed-browser-plan-approval.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/headless-data-task-status.ts",
+            "modules/contracts/headless/headless-data-local-file.ts",
+            "modules/contracts/headless/headless-data-provider-file.ts",
+            "modules/contracts/headless/headless-data-app-selection.ts",
+            "modules/contracts/headless/index.ts",
+            "modules/contracts/headless/tests/headless-data-task-status.unit.test.ts",
+            "modules/contracts/headless/tests/headless-data-local-file.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts",
+            "modules/application/ports/ingestion/headless-local-file-selection.port.ts",
+            "modules/application/use-cases/ingestion-acquisition/headless-local-file-selection.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/headless-local-file-selection.unit.test.ts",
+            "modules/adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository.ts",
+            "modules/application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
+            "modules/application/use-cases/register-artifact-from-repo.use-case.ts",
+            "modules/application/use-cases/tests/register-artifact-from-repo.use-case.unit.test.ts",
+            "modules/application/ports/ingestion/ingestion-acquisition-repository.port.ts",
+            "modules/application/ports/ingestion/README.md",
+            "modules/adapters/persistence/ingestion/createStructuredIngestionAcquisitionRepository.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-ingestion-acquisition-repository.unit.test.ts",
+            "modules/hosts/shared/composition/composeIngestionAcquisitionRepository.ts",
+            "modules/application/use-cases/ingestion-acquisition/ingestion-file-publication.service.ts",
+            "modules/application/ports/ingestion/ingestion-file-publication.port.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessLocalFileSelection.ts",
+            "modules/hosts/desktop/composition/composeDesktopIngestionFeature.ts",
+            "modules/hosts/desktop/composition/tests/composeDesktopIngestionFeature.unit.test.ts",
+            "modules/hosts/desktop/composition/composeDesktopHost.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessConnection.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-local-file-selection.unit.test.ts",
+            "apps/desktop/src/main/desktopHeadlessLocalFileSelectionIpc.ts",
+            "apps/desktop/src/main/tests/desktop-headless-local-file-selection-ipc.unit.test.ts",
+            "apps/desktop/src/main/index.ts",
+            "apps/desktop/src/preload/exposedApi.ts",
+            "apps/desktop/src/renderer/lib/desktopApi.ts",
+            "apps/desktop/src/renderer/features/artifact-upload/components/ArtifactIngestionFeature.tsx",
+            "apps/desktop/src/renderer/features/artifact-upload/api/desktopIngestionTaskClient.ts",
+            "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+            "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
+            "modules/adapters/persistence/ingestion/createStructuredHeadlessLocalFilePlanStepStore.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-headless-local-file-plan-step-store.unit.test.ts",
+            "modules/contracts/headless/headless-system-management.ts",
+            "modules/contracts/headless/headless-plan-review-wire.ts",
+            "modules/contracts/headless/headless-plan-step-wire.ts",
+            "modules/contracts/headless/desktop-headless-plan-approval.ts",
+            "modules/contracts/headless/managed-browser-plan-approval.ts",
+            "modules/contracts/headless/tests/headless-system-management.unit.test.ts",
+            "modules/ui/shared/headless/HeadlessPlanApprovalDialog.tsx",
+            "modules/ui/shared/headless/tests/HeadlessPlanApprovalDialog.interaction.ui.test.tsx",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository.ts",
+            "modules/adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore.ts",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+            "modules/adapters/persistence/ingestion/createStructuredIngestionFilePublicationRepository.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-ingestion-file-publication-repository.unit.test.ts",
+            "modules/hosts/shared/composition/headlessPlanReview.ts",
+            "modules/hosts/desktop/composition/composeDesktopHeadlessPlanReview.ts",
+            "modules/hosts/desktop/composition/desktopHeadlessAudit.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-audit.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanReview.ts",
+            "modules/hosts/server/composition/composeManagedHeadlessPlanApprovals.ts",
+            "modules/hosts/server/composition/composeServerHost.ts",
+            "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/headless-data-task-status.unit.test.ts",
+            "modules/contracts/headless/tests/headless-data-local-file.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/headless-ingestion-status.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/headless-local-file-selection.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
+            "modules/application/use-cases/tests/register-artifact-from-repo.use-case.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-ingestion-acquisition-repository.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-local-file-selection.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/composeDesktopIngestionFeature.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktopStartupLazyComposition.unit.test.ts",
+            "apps/desktop/src/main/tests/desktop-headless-local-file-selection-ipc.unit.test.ts",
+            "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
+            "modules/adapters/persistence/ingestion/tests/structured-headless-local-file-plan-step-store.unit.test.ts",
+            "modules/contracts/headless/tests/headless-system-management.unit.test.ts",
+            "modules/ui/shared/headless/tests/HeadlessPlanApprovalDialog.interaction.ui.test.tsx",
+            "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-ingestion-file-publication-repository.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-audit.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+            "modules/hosts/server/composition/tests/managed-headless-authoring.unit.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-headless-agent-routes.integration.test.ts",
+            "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
+        ),
+    },
+    "headless-data-desktop-plan-qualification": {
+        "companion_to": "headless-data-task-status",
+        "sources": ("dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",),
+        "command": (
+            "--preserve-symlinks", "--preserve-symlinks-main", "node_modules/@playwright/test/cli.js", "test",
+            "--config=dev-tools/config/playwright.visual-composer.config.ts", "--project=packaged-desktop",
+            "--workers=1", "--grep", "reviews an MCP plan in the app popup and reports the exact decision",
+            "packaged-desktop-headless.e2e.spec.ts",
+        ),
+        "timeout": 420,
+    },
+    "headless-system-builder-semantic-edits": {
+        "sources": (
+            "modules/application/ports/system-builder/headless-operation-store.port.ts",
+            "modules/application/use-cases/system-builder/headless-system-authoring.use-case.ts",
+            "modules/application/use-cases/system-builder/tests/headless-system-authoring.unit.test.ts",
+            "modules/hosts/shared/composition/composeSystemBuilder.ts",
+            "modules/application/use-cases/system-builder/headless-committed-changes.use-case.ts",
+            "modules/application/use-cases/system-builder/tests/headless-committed-changes.unit.test.ts",
+            "modules/application/use-cases/system-builder/headless-semantic-edit-draft.ts",
+            "modules/application/use-cases/system-builder/headless-semantic-edit.use-case.ts",
+            "modules/application/use-cases/system-builder/index.ts",
+            "modules/application/use-cases/system-builder/system-builder-use-cases.ts",
+            "modules/application/use-cases/system-builder/tests/headless-semantic-edit.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/headless-semantic-batch.unit.test.ts",
+            "modules/contracts/headless/tests/headless-system-management.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/headless-committed-changes.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/headless-semantic-edit.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/headless-system-authoring.unit.test.ts",
+            "modules/application/use-cases/system-builder/tests/system-builder-use-cases.unit.test.ts",
+        ),
+    },
     "managed-assets-restart-loader": {
         "automatic_sources": MANAGED_ASSETS_RESTART_LOADER_FILES,
         "sources": MANAGED_ASSETS_RESTART_LOADER_FILES,
@@ -126,6 +883,20 @@ PUBLISHED_FORM_CHECKS = {
             "modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
             "modules/ui/shared/system-builder/tests/SystemFormComposerStyling.interaction.ui.test.tsx",
             "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+        ),
+    },
+    "headless-composer-draft-witnesses": {
+        "sources": (
+            "modules/ui/shared/notifications/tests/notificationMigrationInventory.ts",
+            "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
+            "docs/operations/comprehensive-ui-automation-current-census.json",
+            "dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs",
+            "dev-tools/helpers/ui_coverage_census.mjs",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
+            "dev-tools/helpers/tests/ui-coverage-census.unit.test.mjs",
         ),
     },
     "published-form-editor-styles": {
@@ -249,6 +1020,9 @@ QUALIFICATION_PROFILES = (
     "model-file-delete-ack",
     "model-download-ownership",
     "notification-dismiss-focus",
+    "desktop-prerequisite-bootstrap",
+    "headless-data-license-discovery",
+    "headless-data-license-provenance",
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
     "functional-host-ui", "review-site", "settings-ui", "security-status-ui", "operational-ui", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "system-runtime-conversation-ui", "system-canvas-authoring-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy", "comfyui-host-policy",
@@ -256,6 +1030,17 @@ QUALIFICATION_PROFILES = (
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "headless-data-license-discovery": [
+        "modules/contracts/storage/huggingface-dataset-license.ts",
+    ],
+    "desktop-prerequisite-bootstrap": [
+        "dev-tools/scripts/bootstrap/desktop-dev.mjs",
+        "dev-tools/scripts/bootstrap/desktop-python.mjs",
+        "dev-tools/scripts/bootstrap/desktop-python-artifact.json",
+        "dev-tools/scripts/bootstrap/desktop-prerequisites.unit.test.mjs",
+        "modules/hosts/desktop/composition/desktopPythonRuntimeInstallation.ts",
+        "modules/adapters/runtime/python/checkPythonRuntimeInstallation.ts",
+    ],
     "artifact-confirmation-ui": [
         "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
         "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
@@ -505,8 +1290,38 @@ def definitions(root: Path) -> list[dict]:
         *[{"id": name, "patterns": [],
            "argv": [py, "-B", "dev-tools/helpers/run_focused_checks.py", "--regression-test", test],
            "timeout": 120} for name, (_, test) in OPT_IN_REGRESSION_CHECKS.items()],
-        *[{"id": name, "patterns": [], "argv": [node, *check["command"]], "timeout": 120}
+        *[{"id": name, "patterns": [], "argv": [node, *check["command"]], "timeout": check.get("timeout", 120)}
           for name, check in PUBLISHED_FORM_CHECKS.items()],
+        {"id": HEADLESS_DESKTOP_READ_CHECK, "patterns": [],
+         "argv": [node, "--import", "tsx", "--test", "--",
+                  "modules/hosts/desktop/composition/tests/desktop-headless-reads.unit.test.ts",
+                  "modules/contracts/headless/tests/headless-read-request.unit.test.ts"],
+         "timeout": 120},
+        {"id": HEADLESS_DESKTOP_ACTIVATION_CHECK, "patterns": [],
+         "argv": [node, "--import", "tsx", "--test", "--",
+                  "apps/desktop/src/main/tests/desktop-headless-pairing-ipc.unit.test.ts",
+                  "modules/hosts/desktop/composition/tests/desktop-headless-connection.unit.test.ts",
+                  "modules/hosts/desktop/composition/tests/desktop-headless-task-list.unit.test.ts",
+                  "modules/hosts/desktop/composition/tests/desktop-headless-authoring.unit.test.ts",
+                  "modules/hosts/desktop/composition/tests/desktop-headless-conversation.unit.test.ts",
+                  "modules/hosts/desktop/composition/tests/desktop-system-change-poll.unit.test.ts",
+                  "apps/desktop/src/renderer/features/system-builder/api/observeDesktopSavedSystems.unit.test.ts",
+                  "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+                  "modules/adapters/persistence/system-builder/tests/structured-system-builder-repository.unit.test.ts",
+                  "modules/adapters/security/headless/tests/desktop-headless-client-authority.unit.test.ts",
+                  "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts"],
+         "timeout": 120},
+        {"id": HEADLESS_MCP_CHECK, "patterns": list(HEADLESS_MCP_SOURCES),
+         "argv": [node, "--import", "tsx", "--test", "--",
+                  "modules/adapters/transport/headless-loopback/tests/desktop-headless-loopback.unit.test.ts",
+                  "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
+                  "dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts"],
+         "timeout": 120},
+        {"id": HEADLESS_PACKAGED_CHECK, "patterns": [],
+         "argv": [node, "node_modules/@playwright/test/cli.js", "test",
+                  "--config=dev-tools/config/playwright.visual-composer.config.ts", "--project=packaged-desktop",
+                  "packaged-desktop-headless.e2e.spec.ts", "packaged-desktop-ui-takeover.e2e.spec.ts"],
+         "timeout": 720},
         {"id": "asset-defensive-acceptance", "patterns": [],
          "argv": [node, "--import", "tsx", "--test", "--test-concurrency=1", "--", *ASSET_DEFENSIVE_TESTS],
          "timeout": 180},
@@ -524,6 +1339,9 @@ def definitions(root: Path) -> list[dict]:
         {"id": "dependencies", "patterns": ["package.json", "package-lock.json", "apps/*/package.json", ".github/workflows/*", "deployments/*", "dev-tools/vendor/*", "dev-tools/helpers/requirements-tests.txt", "*webpack*", "*tsconfig*", "dev-tools/scripts/native/build_windows_ocr.py", "dev-tools/scripts/native/build_windows_ocr.cjs", "dev-tools/scripts/native/build_windows_model_file_identity.py", "apps/desktop/forge.config.js"], "argv": [node, "dev-tools/scripts/security/check-dependency-security.mjs"], "timeout": 300},
         {"id": "evaluation", "patterns": ["dev-tools/agent-evals/*"], "argv": [py, "-B", "-m", "unittest", "discover", "-s", "dev-tools/helpers/tests", "-p", "test_control_plane_evaluations.py"], "timeout": 120},
         {"id": "repository-policy", "patterns": [".gitignore", ".gitattributes", "dev-tools/helpers/*.json"], "argv": [node, "dev-tools/scripts/agent-support/check-agent-support.mjs"], "timeout": 120},
+        {"id": "managed-saved-state-postgres-migration", "patterns": ["migrations/postgres/0003-index-workspace-saved-state.sql"],
+         "argv": [node, "--import", "tsx", "--test", "--", "modules/adapters/persistence/postgres/tests/postgres-database.unit.test.ts"],
+         "timeout": 120},
     ]
 
 
@@ -548,6 +1366,14 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
     # A form-only UI check never claims coverage of the shared Canvas CSS.
     # Include its existing stylesheet contracts only for the explicit Form slice.
     required = set(required)
+    headless_explicit = HEADLESS_DESKTOP_READ_CHECK in required
+    headless_sources = HEADLESS_DESKTOP_READ_SOURCES if headless_explicit else HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES
+    activation_explicit = HEADLESS_DESKTOP_ACTIVATION_CHECK in required
+    activation_sources = HEADLESS_DESKTOP_ACTIVATION_SCOPED_SOURCES if activation_explicit else HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES
+    if set(paths).intersection(HEADLESS_DESKTOP_READ_AUTOMATIC_SOURCES):
+        required.add(HEADLESS_DESKTOP_READ_CHECK)
+    if set(paths).intersection(HEADLESS_DESKTOP_ACTIVATION_AUTOMATIC_SOURCES):
+        required.add(HEADLESS_DESKTOP_ACTIVATION_CHECK)
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
                     if set(paths).intersection(check.get("automatic_sources", ())))
     required.update(name for name, check in PUBLISHED_FORM_CHECKS.items()
@@ -556,6 +1382,9 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
                    if any(fnmatch.fnmatchcase(p, pat) for pat in c["patterns"])
                    or (c["id"] in required and (
                        p in OPT_IN_REGRESSION_CHECKS.get(c["id"], ()) or
+                       (c["id"] == HEADLESS_DESKTOP_READ_CHECK and p in headless_sources) or
+                       (c["id"] == HEADLESS_DESKTOP_ACTIVATION_CHECK and p in activation_sources) or
+                       (c["id"] == HEADLESS_PACKAGED_CHECK and p in HEADLESS_PACKAGED_SOURCES) or
                        p in PUBLISHED_FORM_CHECKS.get(c["id"], {}).get("sources", ()) or
                        (c["id"] == "standard-source-fixture-runner" and p in STANDARD_RUNNER_SOURCES) or
                        (c["id"] == "asset-browser-qualification-contract" and p in ASSET_BROWSER_SOURCES)
@@ -576,6 +1405,14 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
         declared_sources.update(STANDARD_RUNNER_SOURCES)
     if "asset-browser-qualification-contract" in required:
         declared_sources.update(ASSET_BROWSER_SOURCES)
+    if HEADLESS_DESKTOP_READ_CHECK in required:
+        declared_sources.update(headless_sources)
+    if HEADLESS_DESKTOP_ACTIVATION_CHECK in required:
+        declared_sources.update(activation_sources)
+    if HEADLESS_MCP_CHECK in selected_ids:
+        declared_sources.update(HEADLESS_MCP_SOURCES)
+    if HEADLESS_PACKAGED_CHECK in required:
+        declared_sources.update(HEADLESS_PACKAGED_SOURCES)
     selected_profiles = [name for name in QUALIFICATION_PROFILES if name in selected_ids]
     if selected_profiles:
         data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))

@@ -19,7 +19,7 @@ export function createControlledConversationRuntimeWorker(options) {
   const port = Number(options.port);
   const token = String(options.token ?? "").trim();
   const scenario = options.scenario ?? "immediate";
-  if (!["immediate", "observed-download", "worker-failure-download", "disconnect-download", "dataset-profile", "structured-output-controls"].includes(scenario)) throw new Error("Unsupported fixed qualification scenario.");
+  if (!["immediate", "observed-download", "worker-failure-download", "disconnect-download", "dataset-profile", "structured-output-controls", "headless-conversation"].includes(scenario)) throw new Error("Unsupported fixed qualification scenario.");
   if (host !== LOOPBACK_HOST) {
     throw new Error(
       "Controlled runtime qualification must remain on loopback.",
@@ -173,6 +173,17 @@ export function createControlledConversationRuntimeWorker(options) {
         const task = await createCompletedTask(body, options.modelCacheRoot);
         if (stopped) throw new Error("runtime admission closed");
         if (tasks.size >= MAX_TASKS) tasks.delete(tasks.keys().next().value);
+        if (scenario === "headless-conversation" && task.taskType === "conversation-text-generation") {
+          const { data: _result, completedAt: _completedAt, ...running } = task;
+          tasks.set(task.requestId, { ...running, status: "running" });
+          const timer = setTimeout(() => {
+            if (!stopped && pending.has(task.requestId)) tasks.set(task.requestId, { ...task, updatedAt: new Date().toISOString(), completedAt: new Date().toISOString() });
+            pending.delete(task.requestId);
+          }, 5_000);
+          pending.set(task.requestId, [timer]);
+          return sendJson(response, 200, { requestId: task.requestId, taskType: task.taskType, accepted: true,
+            status: "running", startedAt: task.startedAt, updatedAt: task.updatedAt });
+        }
         tasks.set(task.requestId, task);
         return sendJson(response, 200, {
           requestId: task.requestId,

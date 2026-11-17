@@ -33,6 +33,25 @@ describe("private pairing read ownership", () => {
     expect(request.hasToken).toBe(false); expect(request.isCurrent()).toBe(false);
     expect(request.clearIfCurrent()).toBe(false); expect(pairedDeviceTokenStore.hasToken()).toBe(true);
   });
+  it("retires an owned response even if the previous token is restored", () => {
+    pairedDeviceTokenStore.setToken("synthetic-first-token");
+    const request = pairedDeviceTokenStore.captureToken();
+    const notified = vi.fn();
+    const unsubscribe = pairedDeviceTokenStore.subscribe(notified);
+    pairedDeviceTokenStore.clearToken();
+    pairedDeviceTokenStore.setToken("synthetic-first-token");
+    expect(request.isCurrent()).toBe(false);
+    expect(request.clearIfCurrent()).toBe(false);
+    expect(notified).toHaveBeenCalledTimes(2);
+    const next = pairedDeviceTokenStore.captureToken();
+    window.dispatchEvent(new StorageEvent("storage", { key: "unrelated" }));
+    expect(next.isCurrent()).toBe(true);
+    window.dispatchEvent(new StorageEvent("storage", { key: "ai-system-builder.paired-device-token" }));
+    expect(next.isCurrent()).toBe(false);
+    unsubscribe();
+    pairedDeviceTokenStore.clearToken();
+    expect(notified).toHaveBeenCalledTimes(3);
+  });
   it("treats absent or blocked read storage as no readable credential", () => {
     for (const storage of [undefined, { getItem: () => { throw new Error("synthetic-private-storage-error"); } }]) {
       vi.stubGlobal("localStorage", storage);

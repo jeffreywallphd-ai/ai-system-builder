@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   INGESTION_TASK_RECOMMENDED_CHUNK_BYTES,
@@ -7,6 +7,10 @@ import {
   type IngestionTaskTransportCommand,
   type IngestionTaskTransportValue,
 } from "../../../contracts/ingestion";
+import { readAppHeadlessLocalFileSelectionValue, type AppHeadlessLocalFileSelectionValue,
+  type DesktopLocalFileSelectionInput } from "../../../contracts/headless";
+import { describeHuggingFaceDatasetLicense, type DatasetLicenseCategory,
+  type HuggingFaceDatasetSummary } from "../../../contracts/storage";
 import { useOptionalNotificationCenter } from "../notifications/NotificationProvider";
 import { WorkflowSequence, WorkflowStep } from "../components/WorkflowSequence";
 
@@ -15,6 +19,23 @@ export interface GuidedIngestionTaskClient {
     workspaceId: string;
     command: IngestionTaskTransportCommand;
   }): Promise<IngestionTaskTransportValue>;
+}
+
+export interface GuidedHeadlessFileClient {
+  listClients(workspaceId: string): Promise<readonly string[]>;
+  select(input: DesktopLocalFileSelectionInput): Promise<AppHeadlessLocalFileSelectionValue | undefined>;
+  selectProvider?(input: DesktopLocalFileSelectionInput): Promise<AppHeadlessLocalFileSelectionValue | undefined>;
+}
+
+interface ChatFileScope {
+  readonly client?: GuidedHeadlessFileClient;
+}
+
+interface PreparedLocalFile {
+  readonly scope: ChatFileScope;
+  readonly source: "files" | "hugging-face";
+  readonly request: DesktopLocalFileSelectionInput;
+  readonly receipt?: AppHeadlessLocalFileSelectionValue;
 }
 
 export interface GuidedHuggingFaceBrowserClient {
@@ -32,12 +53,7 @@ export interface GuidedHuggingFaceBrowserClient {
   }>;
   browseHuggingFaceNamespaceDatasets?: (input: {
     namespace: string;
-  }) => Promise<
-    readonly {
-      readonly namespace: string;
-      readonly repository: string;
-    }[]
-  >;
+  }) => Promise<readonly HuggingFaceDatasetSummary[]>;
   browseHuggingFaceDatasetParquetFiles?: (input: {
     repository: string;
     revision?: string;
@@ -54,19 +70,25 @@ export interface GuidedHuggingFaceBrowserClient {
 export interface GuidedIngestionTaskPanelProps {
   readonly client?: GuidedIngestionTaskClient;
   readonly sourceBrowserClient?: GuidedHuggingFaceBrowserClient;
+  readonly headlessFileClient?: GuidedHeadlessFileClient;
   readonly workspaceId?: string;
   readonly onComplete?: () => void;
 }
 
 type SourceKind = "files" | "website" | "hugging-face";
 type WebsiteScope = "pages" | "sitemap";
-type HuggingFaceDataset = Awaited<
-  ReturnType<
-    NonNullable<
-      GuidedHuggingFaceBrowserClient["browseHuggingFaceNamespaceDatasets"]
-    >
-  >
->[number];
+type ProviderLicenseFilter = "all" | "creative-commons" | "other-open";
+const providerLicenseLabel: Record<DatasetLicenseCategory, string> = {
+  "creative-commons": "Open Creative Commons",
+  "other-open": "Other open license",
+  "non-open": "Non-open license",
+  unknown: "License unknown",
+};
+function providerLicenseText(license: ReturnType<typeof describeHuggingFaceDatasetLicense>) {
+  const declared = license.ids.filter((id) => id !== "unknown");
+  const label = providerLicenseLabel[license.category];
+  return declared.length ? `${label} (${declared.join(", ")})` : label;
+}
 type HuggingFaceDatasetFile = Awaited<
   ReturnType<
     NonNullable<
@@ -88,9 +110,12 @@ type ProviderFilesByRepository = Readonly<
 >;
 
 export function GuidedIngestionTaskPanel(props: GuidedIngestionTaskPanelProps) {
-  const [scope, setScope] = useState({ client: props.client, browser: props.sourceBrowserClient, workspaceId: props.workspaceId, key: 0 });
-  if (scope.client !== props.client || scope.browser !== props.sourceBrowserClient || scope.workspaceId !== props.workspaceId) {
-    setScope({ client: props.client, browser: props.sourceBrowserClient, workspaceId: props.workspaceId, key: scope.key + 1 });
+  const [scope, setScope] = useState({ client: props.client, browser: props.sourceBrowserClient,
+    workspaceId: props.workspaceId, key: 0 });
+  if (scope.client !== props.client || scope.browser !== props.sourceBrowserClient ||
+      scope.workspaceId !== props.workspaceId) {
+    setScope({ client: props.client, browser: props.sourceBrowserClient,
+      workspaceId: props.workspaceId, key: scope.key + 1 });
     return null;
   }
   return <ScopedIngestionTaskPanel key={scope.key} {...props} />;
@@ -99,6 +124,7 @@ export function GuidedIngestionTaskPanel(props: GuidedIngestionTaskPanelProps) {
 function ScopedIngestionTaskPanel({
   client,
   sourceBrowserClient,
+  headlessFileClient,
   workspaceId,
   onComplete,
 }: GuidedIngestionTaskPanelProps) {
@@ -109,9 +135,9 @@ function ScopedIngestionTaskPanel({
   const [websiteInput, setWebsiteInput] = useState("");
   const [maximumPages, setMaximumPages] = useState(10);
   const [providerNamespace, setProviderNamespace] = useState("");
-  const [providerDatasets, setProviderDatasets] = useState<
-    readonly HuggingFaceDataset[]
-  >([]);
+  const [providerDatasets, setProviderDatasets] = useState<readonly HuggingFaceDatasetSummary[]>([]);
+  const [providerLicenseFilter, setProviderLicenseFilter] = useState<ProviderLicenseFilter>("all");
+  const providerLicenseDescriptionId = useId();
   const [selectedProviderRepositories, setSelectedProviderRepositories] =
     useState<ReadonlySet<string>>(() => new Set());
   const [providerFilesByRepository, setProviderFilesByRepository] =
@@ -125,7 +151,20 @@ function ScopedIngestionTaskPanel({
   const [providerTokenState, setProviderTokenState] =
     useState<ProviderTokenState>({ status: "idle" });
   const [task, setTask] = useState<IngestionTaskRecord>();
+  const [lastProviderImport, setLastProviderImport] = useState<readonly {
+    id: string; name: string; license: string;
+  }[]>([]);
   const [error, setError] = useState<string>();
+  const [chatScope, setChatScope] = useState<ChatFileScope>({ client: headlessFileClient });
+  if (chatScope.client !== headlessFileClient) setChatScope({ client: headlessFileClient });
+  const currentChatScope = useRef(chatScope);
+  useLayoutEffect(() => { currentChatScope.current = chatScope; }, [chatScope]);
+  const [chatClients, setChatClients] = useState<{ scope: ChatFileScope; ids: readonly string[] }>();
+  const headlessClients = chatClients?.scope === chatScope ? chatClients.ids : [];
+  const [selectedHeadlessClient, setSelectedHeadlessClient] = useState("");
+  const [preparedLocalFile, setPreparedLocalFile] = useState<PreparedLocalFile>();
+  const [startedForChat, setStartedForChat] = useState(false);
+  const [copiedReference, setCopiedReference] = useState(false);
   const [working, setWorking] = useState(false);
   const [statusNeedsConfirmation, setStatusNeedsConfirmation] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
@@ -144,13 +183,38 @@ function ScopedIngestionTaskPanel({
     mountedRef.current = true;
     return () => { mountedRef.current = false; cancelledRef.current = true; };
   }, []);
+  const canChooseChatClient = (sourceKind === "files" && files.length === 1) ||
+    (sourceKind === "hugging-face" && headlessFileClient?.selectProvider !== undefined &&
+      selectedProviderFileKeys.size === 1);
+  useEffect(() => {
+    const fileClient = chatScope.client;
+    if (!fileClient || !workspaceId || !canChooseChatClient) {
+      setChatClients(undefined);
+      setSelectedHeadlessClient("");
+      return;
+    }
+    let active = true;
+    let request = 0;
+    const refresh = () => {
+      const current = ++request;
+      void fileClient.listClients(workspaceId).catch(() => [] as readonly string[]).then(clients => {
+        if (!active || current !== request || currentChatScope.current !== chatScope) return;
+        setChatClients({ scope: chatScope, ids: clients });
+        setSelectedHeadlessClient(selected => clients.includes(selected) ? selected :
+          clients.length === 1 ? clients[0]! : "");
+      });
+    };
+    refresh();
+    window.addEventListener("focus", refresh);
+    return () => { active = false; window.removeEventListener("focus", refresh); };
+  }, [chatScope, workspaceId, canChooseChatClient]);
 
   const ownsOperation = (token: number) => mountedRef.current && activeOperationRef.current === token;
-  function beginOperation() {
+  function beginOperation(keepCurrentTask = false) {
     const token = ++operationSequenceRef.current;
     activeOperationRef.current = token;
     cancelledRef.current = false;
-    latestTaskRef.current = undefined;
+    if (!keepCurrentTask) latestTaskRef.current = undefined;
     setStatusNeedsConfirmation(false);
     setWorking(true);
     setError(undefined);
@@ -169,10 +233,10 @@ function ScopedIngestionTaskPanel({
       isActive: () => ownsOperation(token) && !cancelledRef.current,
     };
   }
-  function finishOperation(token: number) {
+  function finishOperation(token: number, waitingForSelection = false) {
     if (!ownsOperation(token)) return;
     const latest = latestTaskRef.current;
-    if (latest && !isTerminalTask(latest)) {
+    if (latest && !isTerminalTask(latest) && (!waitingForSelection || cancelledRef.current)) {
       setStatusNeedsConfirmation(true);
       setWorking(true);
     } else {
@@ -181,12 +245,18 @@ function ScopedIngestionTaskPanel({
     }
   }
   const websiteUrls = useMemo(() => lines(websiteInput), [websiteInput]);
+  const visibleProviderDatasets = useMemo(
+    () => providerDatasets
+      .map((dataset) => ({ ...dataset, license: describeHuggingFaceDatasetLicense(dataset.licenseIds) }))
+      .filter(({ license }) => providerLicenseFilter === "all" || license.category === providerLicenseFilter),
+    [providerDatasets, providerLicenseFilter],
+  );
   const selectedProviderDatasets = useMemo(
     () =>
-      providerDatasets.filter((dataset) =>
+      visibleProviderDatasets.filter((dataset) =>
         selectedProviderRepositories.has(dataset.repository),
       ),
-    [providerDatasets, selectedProviderRepositories],
+    [visibleProviderDatasets, selectedProviderRepositories],
   );
   const loadedProviderFiles = useMemo(
     () => Object.values(providerFilesByRepository).flat(),
@@ -200,8 +270,8 @@ function ScopedIngestionTaskPanel({
     [loadedProviderFiles, selectedProviderFileKeys],
   );
   const allProviderDatasetsSelected =
-    providerDatasets.length > 0 &&
-    providerDatasets.every((dataset) =>
+    visibleProviderDatasets.length > 0 &&
+    visibleProviderDatasets.every((dataset) =>
       selectedProviderRepositories.has(dataset.repository),
     );
   const allProviderFilesSelected =
@@ -317,11 +387,19 @@ function ScopedIngestionTaskPanel({
     changeProviderDatasets(new Set());
   }
 
+  function changeProviderLicenseFilter(value: string): void {
+    if (providerBrowseRef.current !== undefined || activeOperationRef.current !== undefined ||
+        preparedLocalFile || value === providerLicenseFilter ||
+        (value !== "all" && value !== "creative-commons" && value !== "other-open")) return;
+    setProviderLicenseFilter(value);
+    changeProviderDatasets(new Set());
+  }
+
   function toggleAllProviderDatasets(): void {
     changeProviderDatasets(
       allProviderDatasetsSelected
         ? new Set()
-        : new Set(providerDatasets.map((dataset) => dataset.repository)),
+        : new Set(visibleProviderDatasets.map((dataset) => dataset.repository)),
     );
   }
 
@@ -480,6 +558,16 @@ function ScopedIngestionTaskPanel({
   };
 
   function completeSuccessfully(): void {
+    const completed = latestTaskRef.current;
+    if (completed?.kind === "hugging-face" && completed.status === "succeeded") {
+      setLastProviderImport(completed.files.map(file => ({
+        id: file.fileId,
+        name: file.providerSource
+          ? `${file.providerSource.repository} · ${file.providerSource.path}`
+          : file.fileName,
+        license: providerLicenseText(describeHuggingFaceDatasetLicense(file.output?.providerLicenseIds)),
+      })));
+    }
     providerFilesCurrentRef.current = false;
     setSourceKind("files");
     setFiles([]);
@@ -495,6 +583,9 @@ function ScopedIngestionTaskPanel({
     setProviderBrowseState({ status: "idle" });
     setProviderToken("");
     setTask(undefined);
+    setPreparedLocalFile(undefined);
+    setStartedForChat(false);
+    setCopiedReference(false);
     setError(undefined);
     currentTaskIdRef.current = undefined;
     latestTaskRef.current = undefined;
@@ -503,16 +594,53 @@ function ScopedIngestionTaskPanel({
     onComplete?.();
   }
 
-  async function start(): Promise<void> {
-    if (!client || !workspaceId || activeOperationRef.current !== undefined) return;
+  async function confirmPreparedFile(prepared: PreparedLocalFile, isActive: () => boolean) {
+    const { scope, request, source } = prepared;
+    if (currentChatScope.current !== scope) return;
+    const current = () => isActive() && currentChatScope.current === scope;
+    const pending = source === "files" ? scope.client?.select(request) : scope.client?.selectProvider?.(request);
+    const selected = await pending?.catch(reason => {
+      if (current()) throw reason;
+    });
+    if (!current()) return;
+    const receipt = readAppHeadlessLocalFileSelectionValue(selected, request);
+    if (!receipt) throw new Error("The file is staged. Check that the chat client is still paired, then try preparing it again.");
+    setPreparedLocalFile({ ...prepared, receipt });
+  }
+
+  async function retryPreparedFile() {
+    if (!client || !headlessFileClient || !preparedLocalFile || preparedLocalFile.scope !== currentChatScope.current ||
+        preparedLocalFile.receipt ||
+        activeOperationRef.current !== undefined || statusRequestRef.current || cancelledRef.current) return;
+    const operation = beginOperation(true);
+    try {
+      await confirmPreparedFile(preparedLocalFile, operation.isActive);
+    } catch (reason) {
+      if (operation.isActive()) setError(safeUiError(reason));
+    } finally {
+      finishOperation(operation.token, true);
+    }
+  }
+
+  async function start(registeredClientId?: string): Promise<void> {
+    if (!client || !workspaceId || activeOperationRef.current !== undefined ||
+        statusRequestRef.current || preparedLocalFile) return;
+    if (registeredClientId && (!canChooseChatClient ||
+        (sourceKind === "hugging-face" && selectedProviderFiles.length !== 1) ||
+        !headlessClients.includes(registeredClientId))) return;
     if (sourceKind === "hugging-face" && (providerBrowseRef.current !== undefined || !providerFilesCurrentRef.current)) return;
     const operation = beginOperation();
     setTask(undefined);
+    setLastProviderImport([]);
+    setPreparedLocalFile(undefined);
+    setStartedForChat(Boolean(registeredClientId));
+    setCopiedReference(false);
     currentTaskIdRef.current = undefined;
+    let waitingForSelection = false;
     try {
       const completed =
         sourceKind === "files"
-          ? await addFiles(operation.client, workspaceId, files, operation.accept, cancelledRef)
+          ? await addFiles(operation.client, workspaceId, files, operation.accept, cancelledRef, !registeredClientId)
           : sourceKind === "website"
             ? await addWebsite(
                 operation.client,
@@ -529,24 +657,43 @@ function ScopedIngestionTaskPanel({
                 selectedProviderFiles,
                 operation.accept,
                 operation.isActive,
+                !registeredClientId,
               );
-      if (!ownsOperation(operation.token)) return;
+      if (!operation.isActive()) return;
       if (completed.status === "failed")
         throw new Error(
           completed.files.find((file) => file.error)?.error?.message ??
             "Some data could not be added.",
         );
       if (completed.status === "succeeded") completeSuccessfully();
+      else if (registeredClientId && (completed.status === "queued" || completed.status === "transferring")) {
+        const file = completed.files[0];
+        if (!file || completed.files.length !== 1 || file.acceptedBytes !== file.totalBytes)
+          throw new Error("The file transfer did not finish. Check the upload before preparing it for chat.");
+        if (sourceKind === "website" || (sourceKind === "hugging-face" && completed.status !== "queued"))
+          throw new Error("The selected repository file could not be prepared for chat.");
+        const request: DesktopLocalFileSelectionInput = { workspaceId: completed.workspaceId, taskId: completed.taskId,
+          fileId: file.fileId, taskRevision: completed.revision, registeredClientId, expectedSelectionRevision: 0 };
+        waitingForSelection = true;
+        const prepared = { scope: chatScope, request, source: sourceKind };
+        setPreparedLocalFile(prepared);
+        await confirmPreparedFile(prepared, operation.isActive);
+      }
     } catch (reason) {
       if (ownsOperation(operation.token) && !cancelledRef.current) setError(safeUiError(reason));
     } finally {
-      finishOperation(operation.token);
+      finishOperation(operation.token, waitingForSelection);
     }
   }
 
   async function cancel(): Promise<void> {
     if (!mountedRef.current || statusRequestRef.current) return;
     cancelledRef.current = true;
+    if (preparedLocalFile) {
+      setPreparedLocalFile(undefined);
+      setCopiedReference(false);
+      setWorking(true);
+    }
     const taskId = currentTaskIdRef.current;
     if (!client || !workspaceId || !taskId) {
       setStatusNeedsConfirmation(true);
@@ -571,6 +718,8 @@ function ScopedIngestionTaskPanel({
         setWorking(false);
         setStatusNeedsConfirmation(false);
         setError(undefined);
+        setPreparedLocalFile(undefined);
+        setCopiedReference(false);
         if (confirmed.status === "succeeded") completeSuccessfully();
       } else {
         setStatusNeedsConfirmation(true);
@@ -590,7 +739,8 @@ function ScopedIngestionTaskPanel({
   }
 
   async function resume(): Promise<void> {
-    if (!client || !workspaceId || !task || task.status !== "failed" || activeOperationRef.current !== undefined) return;
+    if (!client || !workspaceId || !task || task.status !== "failed" || startedForChat ||
+        activeOperationRef.current !== undefined) return;
     const operation = beginOperation();
     try {
       if (task.kind === "file-batch") normalizedSelectedFiles(files);
@@ -640,12 +790,34 @@ function ScopedIngestionTaskPanel({
     client &&
     workspaceId &&
     !working &&
+    !preparedLocalFile &&
     (sourceKind === "files"
       ? files.length > 0
       : sourceKind === "website"
         ? websiteUrls.length > 0
         : selectedProviderFiles.length > 0),
   );
+  const canPrepareForChat = Boolean(canChooseChatClient &&
+    headlessClients.length && !preparedLocalFile);
+  const isPreparedChatCurrent = preparedLocalFile?.scope === chatScope;
+  const visibleError = !preparedLocalFile || isPreparedChatCurrent ? error : undefined;
+  const preparedReference = isPreparedChatCurrent && preparedLocalFile?.receipt ? JSON.stringify({
+    workspaceId: preparedLocalFile.receipt.workspaceId, taskId: preparedLocalFile.receipt.taskId,
+    fileId: preparedLocalFile.receipt.fileId, taskRevision: preparedLocalFile.receipt.taskRevision,
+  }) : undefined;
+
+  async function copyPreparedReference() {
+    if (!preparedReference || currentChatScope.current !== chatScope) return;
+    try {
+      await navigator.clipboard.writeText(preparedReference);
+      if (mountedRef.current && !cancelledRef.current && currentChatScope.current === chatScope &&
+          currentTaskIdRef.current === preparedLocalFile?.request.taskId) setCopiedReference(true);
+    } catch {
+      if (mountedRef.current && !cancelledRef.current && currentChatScope.current === chatScope &&
+          currentTaskIdRef.current === preparedLocalFile?.request.taskId)
+        setError("The reference could not be copied. Select the reference to copy it manually.");
+    }
+  }
   return (
     <WorkflowSequence ariaLabel="Add data workflow">
       <WorkflowStep
@@ -653,7 +825,7 @@ function ScopedIngestionTaskPanel({
         description="Choose where the data is coming from. Recommended limits are applied automatically."
         active
       >
-        <fieldset className="ui-choice-group" disabled={working}>
+        <fieldset className="ui-choice-group" disabled={working || Boolean(preparedLocalFile)}>
           <legend className="ui-sr-only">Data source</legend>
           <div className="ui-choice-list">
             <label className="ui-choice">
@@ -699,7 +871,7 @@ function ScopedIngestionTaskPanel({
                 className="ui-file-input"
                 type="file"
                 multiple
-                disabled={working}
+                disabled={working || Boolean(preparedLocalFile)}
                 accept=".csv,.json,.jsonl,.parquet,.pdf,text/csv,application/json,application/jsonl,application/vnd.apache.parquet,application/pdf"
                 onChange={(event) =>
                   setFiles(Array.from(event.target.files ?? []))
@@ -914,7 +1086,8 @@ function ScopedIngestionTaskPanel({
                     type="button"
                     aria-pressed={allProviderDatasetsSelected}
                     disabled={
-                      working || providerBrowseState.status === "loading"
+                      working || providerBrowseState.status === "loading" ||
+                      !visibleProviderDatasets.length
                     }
                     onClick={toggleAllProviderDatasets}
                   >
@@ -923,13 +1096,29 @@ function ScopedIngestionTaskPanel({
                       : "Select all"}
                   </button>
                 </div>
+                <label className="ui-field">
+                  Dataset license
+                  <select
+                    value={providerLicenseFilter}
+                    disabled={working || providerBrowseState.status === "loading" || Boolean(preparedLocalFile)}
+                    onChange={(event) => changeProviderLicenseFilter(event.currentTarget.value)}
+                  >
+                    <option value="all">All data</option>
+                    <option value="creative-commons">Open Creative Commons</option>
+                    <option value="other-open">Other open licenses</option>
+                  </select>
+                </label>
+                <p>License labels come from the Hugging Face listing.</p>
+                {!visibleProviderDatasets.length && <p role="status">No datasets match this license filter.</p>}
                 <fieldset className="ui-choice-group">
                   <legend className="ui-sr-only">Select datasets</legend>
                   <div className="ui-choice-list">
-                    {providerDatasets.map((dataset) => (
+                    {visibleProviderDatasets.map((dataset, index) => (
                       <label className="ui-choice" key={dataset.repository}>
                         <input
                           type="checkbox"
+                          aria-label={dataset.repository}
+                          aria-describedby={`${providerLicenseDescriptionId}-${index}`}
                           checked={selectedProviderRepositories.has(
                             dataset.repository,
                           )}
@@ -946,7 +1135,12 @@ function ScopedIngestionTaskPanel({
                             )
                           }
                         />
-                        <span>{dataset.repository}</span>
+                        <span>
+                          {dataset.repository}{" "}
+                          <small id={`${providerLicenseDescriptionId}-${index}`}>
+                            {providerLicenseText(dataset.license)}
+                          </small>
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -1088,7 +1282,48 @@ function ScopedIngestionTaskPanel({
             </p>
           </div>
         ) : null}
-        {error ? <p role="alert">{error}</p> : null}
+        {lastProviderImport.length > 0 && (
+          <details className="ui-stack ui-stack--xs">
+            <summary>Imported file licenses ({lastProviderImport.length})</summary>
+            <ul className="ui-stack ui-stack--xs">
+              {lastProviderImport.map(file => <li key={file.id}>{file.name} — {file.license}</li>)}
+            </ul>
+          </details>
+        )}
+        {canPrepareForChat ? (
+          <div className="ui-row ui-row--wrap ui-gap-sm">
+            <label className="ui-field">
+              <span className="ui-label">Chat client</span>
+              <select aria-label="Chat client" value={selectedHeadlessClient} disabled={working}
+                onChange={event => setSelectedHeadlessClient(event.currentTarget.value)}>
+                <option value="">Choose a chat client</option>
+                {headlessClients.map(id => <option value={id} key={id}>Client {id.slice(0, 8)} ({id.slice(-4)})</option>)}
+              </select>
+            </label>
+            <button type="button" className="ui-button ui-button--outline"
+              disabled={!canStart || !selectedHeadlessClient}
+              onClick={() => void start(selectedHeadlessClient)}>
+              Prepare for chat
+            </button>
+          </div>
+        ) : null}
+        {preparedLocalFile ? (
+          <div className="ui-stack ui-stack--xs" aria-live="polite">
+            {preparedReference ? <>
+              <p>{preparedLocalFile.source === "hugging-face"
+                ? "Ready for the selected chat client to preview the repository file."
+                : "Ready for the selected chat client to preview."}</p>
+              <textarea className="ui-textarea" aria-label="File reference" readOnly rows={2} value={preparedReference} />
+              <button type="button" className="ui-button ui-button--outline" disabled={working}
+                onClick={() => void copyPreparedReference()}>{copiedReference ? "Reference copied" : "Copy file reference"}</button>
+            </> : isPreparedChatCurrent ? <>
+              <p>The file is staged. Chat preparation is awaiting confirmation.</p>
+              <button type="button" className="ui-button ui-button--outline" disabled={working || checkingStatus}
+                onClick={() => void retryPreparedFile()}>Try preparing again</button>
+            </> : <p>The chat connection changed. Cancel this upload before preparing the file again.</p>}
+          </div>
+        ) : null}
+        {visibleError ? <p role="alert">{visibleError}</p> : null}
         <div className="ui-row ui-row--wrap ui-gap-sm">
           <button
             type="button"
@@ -1098,7 +1333,7 @@ function ScopedIngestionTaskPanel({
           >
             {working ? "Adding data…" : "Add data"}
           </button>
-          {working ? (
+          {working || preparedLocalFile ? (
             <button
               type="button"
               className="ui-button ui-button--outline"
@@ -1114,7 +1349,7 @@ function ScopedIngestionTaskPanel({
               Check task status
             </button>
           ) : null}
-          {task?.status === "failed" &&
+          {task?.status === "failed" && !startedForChat &&
           task.files.some((file) => file.error?.retryable) ? (
             <button
               type="button"
@@ -1164,6 +1399,7 @@ async function addFiles(
   files: readonly File[],
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
   cancelled: { current: boolean },
+  finalize = true,
 ): Promise<IngestionTaskRecord> {
   // Use the contract's canonical names for both admission and byte selection.
   // Raw File names can differ while the server normalizes them to one name.
@@ -1181,6 +1417,7 @@ async function addFiles(
     task,
     accept,
     cancelled,
+    finalize,
   );
 }
 async function transferFilesToTask(
@@ -1190,6 +1427,7 @@ async function transferFilesToTask(
   startingTask: IngestionTaskRecord,
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
   cancelled: { current: boolean },
+  finalize = true,
 ): Promise<IngestionTaskRecord> {
   if (isTerminalTask(startingTask)) return startingTask;
   const { byIdentity } = normalizedSelectedFiles(files);
@@ -1232,6 +1470,7 @@ async function transferFilesToTask(
       offset = end;
       chunkIndex += 1;
     }
+    if (!finalize) continue;
     task = accept(
       await client.execute({
         workspaceId,
@@ -1280,6 +1519,7 @@ async function addProviderFiles(
   files: readonly HuggingFaceDatasetFile[],
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
   isActive: () => boolean,
+  run = true,
 ): Promise<IngestionTaskRecord> {
   const task = accept(
     await client.execute({
@@ -1294,7 +1534,7 @@ async function addProviderFiles(
       },
     }),
   );
-  if (["succeeded", "failed", "cancelled"].includes(task.status)) return task;
+  if (!run || ["succeeded", "failed", "cancelled"].includes(task.status)) return task;
   return runWithPolling(
     client,
     workspaceId,

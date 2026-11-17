@@ -75,6 +75,8 @@ const declarationFilePattern = /\.d\.[cm]?ts$/i;
 const sourceBoundTests = new Set([
   "apps/desktop/src/renderer/tests/app-lazy-pages.ui.test.tsx",
   "apps/thin-client/src/features/system-builder/api/thinClientSystemPublishedFormClient.unit.test.ts",
+  "modules/adapters/model/local/tests/windows-model-file-identity.native.integration.test.ts",
+  "modules/adapters/transport/headless-mcp/tests/headless-mcp-stdio.unit.test.ts",
   "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
   "dev-tools/scripts/qualification/tests/form-composer-host-definitions.unit.test.mjs",
   "dev-tools/scripts/qualification/tests/managed-assets-restart-loader.unit.test.mjs",

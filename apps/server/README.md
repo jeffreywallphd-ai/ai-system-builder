@@ -33,6 +33,19 @@ configuration and schema, imports only allowlisted legacy JSON before API
 registration, and never falls back to JSON after a managed shape is selected.
 Production also requires `AI_SYSTEM_BUILDER_SECURITY_MODE=oidc-bearer`.
 
+Set `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN` to the exact HTTPS
+origin that serves the thin client and its same-origin API paths to enable
+browser consent. Enable the managed agent registrations and saved-state feed
+first. Leave the setting unset where browser consent is unavailable. A path,
+trailing slash, plain HTTP origin or unverified client configuration prevents
+startup with this setting. Use browsers that send `Sec-Fetch-Site`.
+The separate agent window route accepts requests only from the verified
+agent registration. Consent and revoke belong to the browser document.
+Set `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION=1` on a
+consent-enabled host to enable saved-resource delivery, fresh context and
+lease renewal. Leave it unset for consent-only operation. Presentation
+still requires the user's approval in the exact browser tab.
+
 Use `GET /health/live` for process liveness and `GET /health/ready` for sanitized
 PostgreSQL plus artifact-storage readiness. SIGINT/SIGTERM stop the listener and
 drain the database pool idempotently. Deployment templates live under
@@ -253,3 +266,40 @@ The opt-in disabled-development security toggle uses the existing nonpublic
 unauthenticated; once `lan-token-enforced` is enabled, missing/invalid tokens
 and nonadmin scopes cannot change the mode. Listener/TLS posture remains
 startup-owned, and LAN/OIDC startup does not enable this development toggle.
+## Managed headless system authoring
+
+The managed server holds the System Builder and saved-state feed used by
+the browser and the headless agent. To enable the agent routes on a configured
+OIDC/PostgreSQL deployment, enable `AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE=1`
+and specify the issuer's separate client IDs with
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID` and
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID`. With both client
+bindings unset, the agent routes are unavailable.
+
+Agent requests use the already configured issuer, an exact organization
+selection and an explicitly chosen workspace. Discovery provides a host
+identifier and available read operations without enumerating workspaces.
+The existing application membership and workspace policies control reads,
+edits and receipt replay. Enabling the route does not enable document takeover.
+
+To let a managed headless client send a plan for a person to review, set
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_PLAN_REVIEW_CLIENT_ID` to a third client
+ID from the same issuer. It must differ from the agent and browser client
+  IDs. The plan client can read workspace information, submit or check a
+  proposal, and run the next approved change. Direct authoring, approval
+  decisions, and window control require separate authority.
+Configure the issuer to identify this client in each token it issues for
+the registration. The server accepts only a typed access token with an exact
+signed client ID for plan review. It also uses a signed client ID or
+authorized party to refuse ordinary app routes to this client.
+Staging checks the saved revisions and records the exact steps. If the
+client sends the same proposal again, it keeps the original expiration time.
+  Execution reads the exact plan and approval revision from PostgreSQL. It
+  returns a saved reference once and recovers the same reference on an exact
+  retry while approval stays current.
+
+With the exact managed browser origin configured, the browser approval
+endpoint can list, open, approve, deny, cancel or withdraw the signed-in
+user's requests. The endpoint requires the current browser registration
+and the proof for that document. Approval applies to the exact request and
+revision the user opened. It supports the whole plan and one change at a time.

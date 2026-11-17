@@ -13,6 +13,23 @@ separate from portable source checks.
 
 ## Current preparation source-list admission
 
+The Hugging Face namespace request reads one JSON listing from its configured
+provider endpoint. It refuses redirects, uses a 15-second fetch deadline, and
+limits the response to 512 KiB and 100 rows. It returns safe repository identities
+and at most eight recognized license codes. Unrecognized provider strings become
+an unknown marker and conflicting duplicate repository rows are omitted.
+License labels and filters do not grant repository access, extend acquisition
+authority, or verify reuse rights. Existing exact file revision and task admission
+checks remain authoritative. Repository-level labels do not bind terms to
+collected files. On import, an optional lookup uses the verified repository and
+full selected commit. The response must identify both exactly. The task reuses
+one result per repository and commit and gives its metadata reads a shared
+five-second budget. Each read accepts at most 64 KiB. After reading credentials,
+the host observes the task revision and rechecks workspace access before
+dispatching the request. A missing or mismatched reply supplies no license
+metadata. A request already sent can finish after access changes. The final
+authority recheck and the atomic task compare-and-save govern publication.
+
 Desktop retires source reads with an exact workspace/client scope and a monotonic
 request identity. Thin-client source effects capture their own lifetime rather
 than accepting the current value of a mutable mounted flag. Scope changes,
@@ -144,6 +161,12 @@ This model covers workspace source selection, local and Hugging Face staging, st
 - A provider task cannot report success for an unscoped catalog or backing
   write. Both records retain the authoritative task workspace, and normal
   workspace-filtered Artifact Browser reads remain fail-closed.
+- For a verified provider file, the host checks workspace access again after
+  the provider reply. The storage owner matches the selected repository file
+  and immutable revision to its task, catalog record and backing. It commits
+  the catalog, backing, source snapshot and task revision together. A failed
+  write rolls back the complete set. A competing run confirms the exact
+  committed snapshot before reporting a saved source.
 - Provider localization cannot read a binding, retrieve bytes, write the local
   object/catalog record, or update source and primary bindings without the same
   authoritative workspace context. Missing scope fails before provider access.
@@ -313,6 +336,16 @@ This model covers workspace source selection, local and Hugging Face staging, st
 
 ## Residual risk
 
+Generated-model publication no longer recursively removes a selected cache
+snapshot. Any observed existing target or uncertain filesystem state denies;
+fresh publication retains the existing cache layout. Requested source-root links
+are checked before canonicalization, copied content is revalidated, and staging
+is created exclusively with cooperative identity checks before publication or
+cleanup. Unknown/substituted staging is retained. Native parent/substitution
+races, source mutation during copying, crash-consistent owned publication and
+cross-platform atomic no-replace remain unqualified. Shared/provider caches are
+reference-only for physical deletion; a successful copy cannot confer ownership.
+
 Automated schema, language, duplicate, semantic similarity, source-support,
 critic, diversity, personal-data, credential, safety, license, consent, benchmark,
 robots parsing, and readable-text extraction can produce false positives or
@@ -432,6 +465,55 @@ different bytes from their own organizations. An ID bound only in the other
 organization is denied before object reads, provider calls or worker dispatch.
 The test uses synthetic files, in-memory records and a fake worker; it does not
 qualify a managed database, identity provider, or native filesystem races.
+
+Prepared review pages use the exact existing GET task-review endpoint with
+`artifact:read`, normal token/organization middleware and owning application
+workspace/task/report-fingerprint checks. Unknown routes and intentionally
+unsupported task APIs remain denied. The review dialog distinguishes pending,
+failed and confirmed-empty pages; a failed read cannot imply that no rows exist.
+Running Dataset Preparation also shields its shared worker from automatic
+cancellation/deadline restart, including a sibling task's recovery. Confirmed
+queued cancellation, real terminal responses and owned process-exit failure
+remain authoritative; worker resource/admission bounds remain in force.
+
+## Read-only native identity prerequisite
+
+Security impact: security-relevant filesystem, process and local build authority.
+The private Windows/NTFS model file-identity helper is not wired into production.
+It retains a no-follow handle chain from a drive root, validates exact full
+volume/file identities, rejects unsupported/reparse/multiply linked objects, and
+rechecks private owner/DACL facts before releasing. Read/list access and explicit
+sharing enforce writer/delete conflicts on inspected objects; ancestor handles
+allow writers while denying delete sharing. No write/delete right, shell command,
+privilege enablement, ownership adoption or cache mutation is available.
+
+Malformed/oversized frames, foreign child identity, changed object identity,
+preexisting writers, junction roots/ancestors/children and multiple file links
+deny. Actual newly created fixture directories cover normal release, timeout
+release, replacement before open, attempted replacement while held, finite
+non-disclosing failures and successful reopening afterward. Portable protocol and
+inert process tests additionally cover frozen facts, binary mismatch, stale
+leases and persistent unknown-exit fencing. Fixture cleanup checks its own
+absolute boundary and original directory identity; failed attempts remain failed.
+
+The fixed no-fetch MSVC/SDK build inventories source, compiler-directory files,
+selected headers and explicit libraries before/after compilation. A disposable
+output namespace is created only after each existing ancestor is admitted; an
+observed redirect cannot receive an initial directory write. This is cooperative
+admission, not qualification of hostile check/use substitutions. A disposable
+worker uses an unnamed kill-on-close job with verified 2-GiB commit and eight
+process limits. Lingering compiler descendants are stopped only after exact
+opened-handle job membership, then native exit and handle release are confirmed.
+Image names or caller PIDs never authorize termination. Native build/fixture
+results establish this installed profile only; the OS and installed toolchain
+remain trusted inputs.
+
+Residuals: binary path-to-execution integrity requires protected production
+packaging; stable tree growth/accounting, ACL protection, ownership/publication,
+cross-user and hostile races, crash recovery, destructive effects and other
+platform/filesystem profiles remain unqualified. Rollback leaves production
+deletion/reveal denied. An existing unknown offload slot is not modified or
+adopted by this mechanism, and parent roadmap criteria remain pending.
 
 ## Ingestion commit acknowledgement uncertainty
 

@@ -1,0 +1,391 @@
+import { createHash } from "node:crypto";
+import { McpServer } from "@modelcontextprotocol/server";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
+import { z } from "zod/v4";
+import headless from "../../../contracts/headless/index.js";
+import type { HeadlessApprovedTurnRequest, HeadlessHostIncarnationId, HeadlessReadRequest, HeadlessSemanticBatchRequest, HeadlessSystemManagementRequest, HeadlessSystemSummary, HeadlessWindowRequest } from "../../../contracts/headless/index.js";
+import type { HeadlessPlanStepRequest, HeadlessLocalFileImportRequest, HeadlessProviderFileImportRequest } from "../../../contracts/headless/index.js";
+import systemBuilder from "../../../contracts/system-builder/index.js";
+import type { SystemBuilderSystemId } from "../../../contracts/system-builder/index.js";
+import workspace from "../../../contracts/workspace/index.js";
+import type { WorkspaceId } from "../../../contracts/workspace/index.js";
+import { createHeadlessMcpReadForwarder, createManagedHeadlessMcpReadForwarder,
+  type HeadlessPlanReviewForwardRequest } from "./createHeadlessMcpReadForwarder.mjs";
+import { boundHeadlessMcpStdio } from "./boundHeadlessMcpStdio.mjs";
+
+const hostIncarnationId = z.string().refine(headless.isHeadlessHostIncarnationId, "Invalid host ID");
+const workspaceId = z.string().refine(workspace.isWorkspaceId, "Invalid workspace ID");
+const systemId = z.string().refine(systemBuilder.isSystemBuilderSystemId, "Invalid system ID");
+const workflowId = z.string().refine(headless.isHeadlessWorkflowId, "Invalid workflow ID");
+const workflowSource = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("approved-release"), sourceId: workflowId, sourceDigest: z.string().length(71).regex(/^sha256:[a-f0-9]{64}$/) }),
+  z.strictObject({ kind: z.literal("reviewed-execution-plan"), sourceId: workflowId, sourceRevision: workflowId }),
+]);
+const version = headless.HEADLESS_CONTRACT_VERSION;
+const requestedMode = process.env.AISB_HEADLESS_MODE;
+const managed = requestedMode === "managed";
+const enablePlanReview = process.env.AISB_HEADLESS_ENABLE_PLAN_REVIEW === "1";
+const enableAuthoring = !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_AUTHORING === "1";
+const enableConversation = !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_CONVERSATION === "1";
+const enableManagedConsent = managed && !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_MANAGED_CONSENT === "1";
+const enableManagedDelivery = enableManagedConsent && process.env.AISB_HEADLESS_ENABLE_MANAGED_PRESENTATION === "1";
+const enablePresentation = managed ? enableManagedConsent : !enablePlanReview && process.env.AISB_HEADLESS_ENABLE_PRESENTATION === "1";
+const forward = managed ? createManagedHeadlessMcpReadForwarder({
+  httpsOrigin: process.env.AISB_HEADLESS_MANAGED_ORIGIN,
+  credential: process.env.AISB_HEADLESS_MANAGED_CREDENTIAL,
+  organizationId: process.env.AISB_HEADLESS_MANAGED_ORGANIZATION_ID,
+  workspaceId: process.env.AISB_HEADLESS_MANAGED_WORKSPACE_ID,
+}, enableAuthoring, enableManagedConsent, enableManagedDelivery, enablePlanReview) : requestedMode === undefined || requestedMode === "desktop" ? createHeadlessMcpReadForwarder(
+  process.env.AISB_HEADLESS_ENDPOINT, process.env.AISB_HEADLESS_FINGERPRINT, process.env.AISB_HEADLESS_CREDENTIAL,
+  enableAuthoring, enableConversation, enablePresentation, enablePlanReview,
+) : undefined;
+delete process.env.AISB_HEADLESS_CREDENTIAL;
+delete process.env.AISB_HEADLESS_MANAGED_CREDENTIAL;
+
+function toolResult<T extends { ok: boolean }>(result:T) {
+  return { content: [{ type: "text" as const, text: JSON.stringify(result) }], isError: !result.ok };
+}
+
+async function invoke(request: HeadlessReadRequest | HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest |
+  HeadlessApprovedTurnRequest | HeadlessWindowRequest | HeadlessPlanReviewForwardRequest | HeadlessPlanStepRequest |
+  HeadlessLocalFileImportRequest | HeadlessProviderFileImportRequest,
+  signal?: AbortSignal) {
+  return toolResult(await forward?.(request, signal) ?? { ok: false, code: "headless.unavailable" });
+}
+
+function invalidAuthoring() {
+  return toolResult({ ok: false, code: "headless.invalid-request" });
+}
+
+function addPresentationTools(server: McpServer) {
+  const id = z.string().refine(headless.isUiControlId, "Invalid window control ID");
+  const window = { hostIncarnationId, workspaceId, windowId: id, uiIncarnationId: id };
+  const attempt = { ...window, requestId: id, attemptId: id };
+  const lease = z.strictObject({ ...attempt, leaseId: id, generation: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) });
+  const destructiveHint = false;
+  const openWorldHint = false;
+  const read = { readOnlyHint: true, destructiveHint, openWorldHint };
+  const action = { readOnlyHint: false, destructiveHint, openWorldHint, idempotentHint: true };
+  const exactResource = z.string().min(1).max(160);
+  const intent = z.discriminatedUnion("action", [
+    z.strictObject({ action: z.literal("open-system"), systemId, revisionId: exactResource }),
+    z.strictObject({ action: z.literal("select-component"), systemId, revisionId: exactResource, instanceId: exactResource }),
+    z.strictObject({ action: z.literal("show-validation"), systemId, revisionId: exactResource }),
+    z.strictObject({ action: z.literal("show-run"), runId: exactResource }),
+    z.strictObject({ action: z.literal("show-artifact"), artifactId: z.string().min(1).max(512) }),
+  ]);
+  const call = (operation: HeadlessWindowRequest["operation"], input: unknown, signal?: AbortSignal) => {
+    const request = headless.readHeadlessWindowRequest({ version: headless.UI_CONTROL_VERSION, operation, input });
+    return request ? invoke(request, signal) : invalidAuthoring();
+  };
+  server.registerTool("aisb_list_windows", {
+    description: "List current application window identities in the authorized workspace.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId }), annotations: read,
+  }, (input, context) => call("window.list", input, context.mcpReq.signal));
+  server.registerTool("aisb_request_window", {
+    description: "Ask the user to attach a single identified window. Reuse the request key after an uncertain reply.",
+    inputSchema: z.strictObject({ target: z.strictObject(window), taskId: id, requestKey: id }), annotations: action,
+  }, (input, context) => call("window.request", input, context.mcpReq.signal));
+  server.registerTool("aisb_window_status", {
+    description: "Read the exact request status. Only an active request has a lease. Ended requests require fresh user direction.",
+    inputSchema: z.strictObject({ target: z.strictObject(attempt) }), annotations: read,
+  }, (input, context) => call("window.status", input, context.mcpReq.signal));
+  server.registerTool("aisb_release_window", {
+    description: "Dismiss the exact attempt or release its exact lease. Independent chat work continues.",
+    inputSchema: z.strictObject({ target: z.union([lease, z.strictObject(attempt)]) }), annotations: action,
+  }, (input, context) => call("window.release", input, context.mcpReq.signal));
+  if (managed && !enableManagedDelivery) return;
+  server.registerTool("aisb_renew_window", {
+    description: "Keep the same active lease current. Failed and ended leases stay detached.",
+    inputSchema: z.strictObject({ target: lease }), annotations: { ...action, idempotentHint: false },
+  }, (input, context) => call("window.renew", input, context.mcpReq.signal));
+  server.registerTool("aisb_present_in_window", {
+    description: "Show one exact saved resource in the active window. Retry the same command ID and target to read the outcome without repeating the effect.",
+    inputSchema: z.strictObject({ target: lease, commandId: id, intent }), annotations: action,
+  }, (input, context) => call("window.present", input, context.mcpReq.signal));
+  server.registerTool("aisb_window_context", {
+    description: "Read the current allowed view and saved resource identifiers from one active lease.",
+    inputSchema: z.strictObject({ target: lease }), annotations: read,
+  }, (input, context) => call("window.context", input, context.mcpReq.signal));
+}
+
+function addSystemBuilderTools(server: McpServer) {
+  const displayName = z.string().min(1).max(120);
+  const idempotencyKey = z.string().refine(headless.isHeadlessHostIncarnationId, "Invalid retry key");
+  const workspaceTarget = { hostIncarnationId, workspaceId };
+  const savedRevision = {
+    systemId, baseRecordRevision: z.number().int().positive(),
+    baseRevisionId: z.string().min(1).max(160),
+  };
+  const base = { ...workspaceTarget, ...savedRevision };
+  const create = { templateId: z.enum(systemBuilder.SYSTEM_BUILDER_TEMPLATE_IDS), name: displayName, idempotencyKey };
+  const savedChange = { ...savedRevision, idempotencyKey, name: displayName };
+  const rename = { ...savedChange, description: z.string().min(1).max(1_000).optional() };
+  const target = { ...workspaceTarget, ...savedChange };
+  const id = z.string().min(1).max(160);
+  const place = { parentInstanceId: id, slotId: id, order: z.number().int().nonnegative().max(511) };
+  const configuration = z.record(z.string().min(1).max(64), z.unknown());
+  const edits = z.array(z.discriminatedUnion("kind", [
+    z.strictObject({ kind: z.literal("add"), instanceId: id, definitionId: id, version: z.string().min(1).max(128), configuration, ...place }),
+    z.strictObject({ kind: z.literal("configure"), instanceId: id, values: configuration }),
+    z.strictObject({ kind: z.literal("connect"), bindingId: id, bindingKind: z.enum(["input", "output", "event", "control"]),
+      sourceInstanceId: id, sourcePortId: id, targetInstanceId: id, targetPortId: id }),
+    z.strictObject({ kind: z.literal("move"), instanceId: id, ...place }),
+    z.strictObject({ kind: z.literal("remove"), instanceId: id }),
+  ])).min(1).max(headless.HEADLESS_MAX_SEMANTIC_EDITS);
+  const writeHints = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false };
+  const queryHints = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
+  async function author(operation: HeadlessSemanticBatchRequest["operation"] | HeadlessSystemManagementRequest["operation"],
+    input: { hostIncarnationId: string }, signal?: AbortSignal) {
+    if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+    const raw = { version, operation, input };
+    const edit = headless.parseHeadlessSemanticBatchRequest(raw, input.hostIncarnationId);
+    if (edit.ok) return invoke(edit.request, signal);
+    const management = headless.parseHeadlessSystemManagementRequest(raw, input.hostIncarnationId);
+    return management.ok ? invoke(management.request, signal) : invalidAuthoring();
+  }
+  if (enableAuthoring) {
+    server.registerTool("aisb_create_system", {
+      description: "Create one saved system from an exact template in the approved workspace. Reuse the same key after a lost reply.",
+      inputSchema: z.strictObject({ ...workspaceTarget, ...create }),
+      annotations: { ...writeHints, destructiveHint: false },
+    }, (input, context) => author("systems.create", input, context.mcpReq.signal));
+    server.registerTool("aisb_rename_system", {
+      description: "Rename one saved system against both revisions. If omitted, the existing description is preserved.",
+      inputSchema: z.strictObject({ ...workspaceTarget, ...rename }), annotations: writeHints,
+    }, (input, context) => author("systems.rename", input, context.mcpReq.signal));
+    server.registerTool("aisb_clone_system", {
+      description: "Copy one exact saved system revision in its approved workspace.",
+      inputSchema: z.strictObject(target), annotations: { ...writeHints, destructiveHint: false },
+    }, (input, context) => author("systems.clone", input, context.mcpReq.signal));
+    server.registerTool("aisb_preview_edits", {
+      description: "Validate a bounded edit batch and list what it removes. This does not change saved state.",
+      inputSchema: z.strictObject({ ...base, edits }), annotations: queryHints,
+    }, (input, context) => author("systems.preview-edits", input, context.mcpReq.signal));
+    server.registerTool("aisb_apply_edits", {
+      description: "Apply the exact preview to the same saved revision. Reuse the same key after a lost reply; do not repeat with a new key.",
+      inputSchema: z.strictObject({ ...base, edits, previewDigest: z.string().regex(/^[a-f0-9]{64}$/), idempotencyKey }), annotations: writeHints,
+    }, (input, context) => author("systems.apply-edits", input, context.mcpReq.signal));
+  }
+  const allowLocalFileSave = enablePlanReview;
+  const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
+  const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
+    taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
+  const step = z.discriminatedUnion("operation", [
+    z.strictObject({ operation: z.literal("systems.create"), ...create }),
+    z.strictObject({ operation: z.literal("systems.rename"), ...rename }),
+    z.strictObject({ operation: z.literal("systems.clone"), ...savedChange }),
+    z.strictObject({ operation: z.literal("data.save-local-source"), ...localFileTarget, idempotencyKey }),
+  ]);
+  server.registerTool("aisb_plan_capabilities", {
+    description: "Check which saved-system operations can be proposed in one current workspace. Use the corresponding template or saved revision as input. Plan execution requires approval.",
+    inputSchema: z.strictObject(workspaceTarget),
+    annotations: queryHints,
+  }, (input, context) => {
+    if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId) || !workspace.isWorkspaceId(input.workspaceId))
+      return invalidAuthoring();
+    return invoke({version, operation:"plan.capabilities",
+      input:{hostIncarnationId:input.hostIncarnationId, workspaceId:input.workspaceId}}, context.mcpReq.signal);
+  });
+  server.registerTool("aisb_preview_build_plan", {
+    description: allowLocalFileSave
+      ? "Check proposed saved-system changes and selected local-file saves in order against the current workspace. Preview requires separate approval before execution."
+      : "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
+    inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
+    annotations: queryHints,
+  }, async (input, context) => {
+    if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave });
+    if (!proposal.ok) return invalidAuthoring();
+    const { scope, requests, preview } = proposal;
+
+    const unavailable = { ok: false, code: "headless.unavailable" } as const;
+    const deadline = AbortSignal.timeout(12_000);
+    const signal = context.mcpReq.signal ? AbortSignal.any([deadline, context.mcpReq.signal]) : deadline;
+    let templates: ReadonlySet<string> | undefined;
+    const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
+    for (const request of requests) {
+      if (request.operation === "data.save-local-source") {
+        const { idempotencyKey: _key, ...selected } = request.input;
+        const preview = await forward?.({ version, operation: "data.prepare-local-file", input: selected }, signal);
+        if (!preview?.ok) return toolResult(preview ?? unavailable);
+        if (!headless.readHeadlessLocalFileImportResult(preview, selected).ok) return toolResult(unavailable);
+        continue;
+      }
+      if (request.operation === "systems.create") {
+        if (!templates) {
+          const result = await forward?.({ version, operation: "templates.list", input: scope }, signal);
+          if (!result?.ok) return toolResult(result ?? unavailable);
+          if (!("operation" in result) || result.operation !== "templates.list" || !Array.isArray(result.value))
+            return toolResult(unavailable);
+          templates = new Set(result.value.map(({ templateId }) => templateId));
+        }
+        if (!templates.has(request.input.templateId)) return toolResult({ ok: false, code: "headless.not-found" });
+        continue;
+      }
+      const { systemId, baseRecordRevision, baseRevisionId } = request.input;
+      let record = records.get(systemId);
+      if (!record) {
+        const result = await forward?.({ version, operation: "systems.read", input: { ...scope, systemId } }, signal);
+        if (!result?.ok) return toolResult(result ?? unavailable);
+        if (!("operation" in result) || result.operation !== "systems.read") return toolResult(unavailable);
+        // The existing read forwarder validates this response and its target.
+        record = result.value as HeadlessSystemSummary;
+        records.set(systemId, record);
+      }
+      if (record.systemId !== systemId || record.status === "archived")
+        return toolResult({ ok: false, code: "headless.not-found" });
+      if (record.revision !== baseRecordRevision || record.currentRevisionId !== baseRevisionId)
+        return toolResult({ ok: false, code: "headless.stale" });
+    }
+    if (signal.aborted) return toolResult(unavailable);
+    const fingerprint = createHash("sha256").update(JSON.stringify(preview), "utf8").digest("hex");
+    return toolResult({ ok: true, value: { ...preview, fingerprint } });
+  });
+  if (enablePlanReview) {
+    server.registerTool("aisb_preview_selected_local_file", {
+      description: "Preview the type and size of a staged local file the user selected for this plan-review client. Preview leaves the file staged.",
+      inputSchema: z.strictObject({ ...workspaceTarget, ...localFileTarget }),
+      annotations: queryHints,
+    }, (input, context) => {
+      if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+      const decoded = headless.readHeadlessLocalFileImportRequest({ version, operation: "data.prepare-local-file", input },
+        input.hostIncarnationId);
+      return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
+    });
+    server.registerTool("aisb_preview_selected_provider_file", {
+      description: "Preview the file type and immutable revision of one repository file selected for this plan-review client. Import requires approval.",
+      inputSchema: z.strictObject({ ...workspaceTarget, ...localFileTarget }),
+      annotations: queryHints,
+    }, (input, context) => {
+      if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+      const decoded = headless.readHeadlessProviderFileImportRequest({ version, operation: "data.prepare-provider-file", input },
+        input.hostIncarnationId);
+      return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
+    });
+    const fingerprint = z.string().length(64).regex(/^[a-f0-9]{64}$/);
+    const reviewTarget = { ...workspaceTarget, fingerprint };
+    const submit = { ...reviewTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) };
+    async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
+      if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+      const raw = { version, operation, input };
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave });
+      return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
+    }
+    server.registerTool("aisb_request_build_plan_approval", {
+      description: "Send the exact preview for human review in the app. An exact retry returns the current decision and original deadline.",
+      inputSchema: z.strictObject(submit), annotations: { ...writeHints, destructiveHint: false },
+    }, (input, context) => reviewPlan("plan.submit", input, context.mcpReq.signal));
+    server.registerTool("aisb_build_plan_approval_status", {
+      description: "Read the app's current decision and expiry for one exact build-plan proposal.",
+      inputSchema: z.strictObject(reviewTarget), annotations: queryHints,
+    }, (input, context) => reviewPlan("plan.status", input, context.mcpReq.signal));
+    server.registerTool("aisb_run_approved_build_step", {
+      description: "Run the next exact approved change. Use the same step and revision to recover an uncertain reply while approval is current.",
+      inputSchema: z.strictObject({ ...reviewTarget, approvalRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+        step: z.number().int().min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
+      annotations: { ...writeHints, destructiveHint: false },
+    }, (input, context) => {
+      if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
+      const decoded = headless.readHeadlessPlanStepRequest({ version, operation: "plan.run-step", input }, input.hostIncarnationId);
+      return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
+    });
+  }
+}
+
+serveStdio(() => {
+  const host = managed ? "managed" : "desktop";
+  const mode = enablePlanReview ? "plan-review" : enableAuthoring ? "authoring" : "read";
+  const server = new McpServer({ name: `ai-system-builder-${host}-${mode}`, version: "1.0.0" }, { capabilities: { tools: {} } });
+  const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
+  server.registerTool("aisb_host_describe", {
+    description: managed ? "Read the configured managed server's version, current ID, and granted operations."
+      : "Read the connected desktop host's version, current ID, and granted operations.",
+    inputSchema: z.strictObject({}), annotations,
+  }, (_input, context) => invoke({ version, operation: "host.describe", input: {} }, context.mcpReq.signal));
+  if (!managed) server.registerTool("aisb_list_workspaces", {
+    description: "List the workspaces this paired client can read.",
+    inputSchema: z.strictObject({ hostIncarnationId }), annotations,
+  }, (input, context) => invoke({ version, operation: "workspaces.list", input: {
+    hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId,
+  } }, context.mcpReq.signal));
+  if (!managed) server.registerTool("aisb_list_systems", {
+    description: "List saved systems in one authorized workspace.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId }), annotations,
+  }, (input, context) => invoke({ version, operation: "systems.list", input: {
+    hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
+  server.registerTool("aisb_read_system", {
+    description: "Read one saved system's name, status, and revision from its workspace.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, systemId }), annotations,
+  }, (input, context) => invoke({ version, operation: "systems.read", input: {
+    hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+    systemId: input.systemId as SystemBuilderSystemId,
+  } }, context.mcpReq.signal));
+  server.registerTool("aisb_list_templates", {
+    description: "List the supported System Builder templates in one authorized workspace.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId }), annotations,
+  }, (input, context) => invoke({ version, operation: "templates.list", input: {
+    hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
+  if (!managed) server.registerTool("aisb_saved_system_snapshot", {
+    description: "Read saved system references and a replay cursor in one authorized workspace. Does not read or change the UI.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId }), annotations,
+  }, (input, context) => invoke({ version, operation: "systems.snapshot", input: {
+    hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
+  if (!managed) server.registerTool("aisb_saved_system_changes", {
+    description: "Read a bounded page of committed system changes. Use a fresh snapshot when the host says resync.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, cursor: z.strictObject({
+      hostIncarnationId, scopeTag: z.string().length(64).regex(/^[a-f0-9]{64}$/), sequence: z.number().int().nonnegative(),
+    }) }), annotations,
+  }, (input, context) => {
+    const cursor = headless.parseHeadlessChangeCursor(input.cursor);
+    if (!cursor) return invalidAuthoring();
+    return invoke({ version, operation: "systems.changes", input: {
+      hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId, cursor,
+    } }, context.mcpReq.signal);
+  });
+  if (!managed) server.registerTool("aisb_list_workflows", {
+    description: "Read the supported workflow metadata in the exact workspace; starts no work.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, sourceKind: z.enum(headless.HEADLESS_WORKFLOW_SOURCE_KINDS) }), annotations,
+  }, (input, context) => invoke({ version, operation: "workflows.list", input: {
+    ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
+  if (!managed) server.registerTool("aisb_prepare_workflow", {
+    description: "Read exact source readiness, snapshot revision and approved read-field metadata. Does not invoke any action.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, profileId: workflowId, source: workflowSource }), annotations,
+  }, (input, context) => invoke({ version, operation: "workflows.prepare", input: {
+    ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
+  if (!managed) server.registerTool("aisb_read_conversation_task", {
+    description: "Read the saved status of one exact conversation turn and its run; never starts or cancels it.",
+    inputSchema: z.strictObject({ hostIncarnationId, workspaceId, sessionId: workflowId, turnId: workflowId }), annotations,
+  }, (input, context) => invoke({ version, operation: "conversation-tasks.read", input: {
+    ...input, hostIncarnationId: input.hostIncarnationId as HeadlessHostIncarnationId, workspaceId: input.workspaceId as WorkspaceId,
+  } }, context.mcpReq.signal));
+  if (enableAuthoring || enablePlanReview) addSystemBuilderTools(server);
+  if (enablePresentation) addPresentationTools(server);
+  if (!managed && enableConversation) server.registerTool("aisb_send_approved_turn", {
+    description: "Send one message to an already approved conversation at its exact saved revisions. An uncertain reply never authorizes a new key; reconcile before retrying the same request.",
+    inputSchema: z.strictObject({
+      hostIncarnationId, workspaceId, planId: workflowId, planRevision: workflowId, sessionId: workflowId,
+      snapshotRevision: workflowId, key: z.string().refine(headless.isHeadlessHostIncarnationId, "Invalid retry key"),
+      text: z.string().min(1).max(2_000),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  }, (input, context) => {
+    const decoded = headless.parseHeadlessApprovedTurnRequest({ version, operation: headless.HEADLESS_APPROVED_TURN_OPERATION, input });
+    return decoded.ok ? invoke(decoded.request, context.mcpReq.signal) : invalidAuthoring();
+  });
+  return server;
+}, {
+  transport: boundHeadlessMcpStdio(process.stdin, process.stdout, () => {
+    process.exitCode = 1;
+    process.stdin.destroy();
+    process.stdout.destroy();
+  }),
+  maxSubscriptions: 1,
+  // Keep SDK diagnostics out of protocol/stdout and do not print untrusted errors.
+  onerror: () => {},
+});

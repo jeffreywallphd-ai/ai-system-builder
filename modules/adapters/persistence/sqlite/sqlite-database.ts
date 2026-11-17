@@ -326,8 +326,31 @@ function createStore(
   organizationId?: OrganizationId,
 ): StructuredDocumentStore {
   const queue = operationQueue(database);
+  function transact<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit?: () => void): Promise<T> {
+    return serializeOperation(queue, async lease => {
+      database.exec("BEGIN IMMEDIATE;");
+      try {
+        const result = await work(createStore(database, now, lease, organizationId));
+        beforeCommit?.();
+        database.exec("COMMIT;");
+        return result;
+      } catch (error) {
+        try { database.exec("ROLLBACK;"); }
+        catch {
+          queue.rollbackUnconfirmed = true;
+          if (beforeCommit) throw new Error("The owned transaction rollback could not be confirmed.");
+        }
+        throw error;
+      }
+    });
+  }
   return {
     organizationId,
+    ...(!owner ? {
+      runInOwnedTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit: () => void) {
+        return transact(work, beforeCommit);
+      },
+    } : {}),
     forOrganization(requestedOrganizationId) {
       assertOperationOwner(queue, owner);
       assertOrganizationScope(organizationId, requestedOrganizationId);
@@ -458,18 +481,7 @@ function createStore(
     async runInTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>): Promise<T> {
       assertOperationOwner(queue, owner);
       if (owner) return work(this);
-      return serializeOperation(queue, async lease => {
-        database.exec("BEGIN IMMEDIATE;");
-        try {
-          const result = await work(createStore(database, now, lease, organizationId));
-          database.exec("COMMIT;");
-          return result;
-        } catch (error) {
-          try {database.exec("ROLLBACK;");}
-          catch { queue.rollbackUnconfirmed = true; }
-          throw error;
-        }
-      });
+      return transact(work);
     },
   };
 }

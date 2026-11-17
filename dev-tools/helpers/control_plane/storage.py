@@ -95,9 +95,21 @@ def atomic_write(path: Path, payload: bytes) -> None:
             stream.write(payload)
             stream.flush()
             os.fsync(stream.fileno())
+        for delay in (0.025, 0.05, 0.1):
+            try:
+                os.replace(temporary, path)
+                return
+            except OSError as error:
+                if getattr(error, "winerror", None) not in (5, 32, 33):
+                    raise
+                time.sleep(delay)
         os.replace(temporary, path)
-    finally:
-        temporary.unlink(missing_ok=True)
+    except BaseException:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 @contextmanager

@@ -5,16 +5,16 @@ import { PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES } from "../../
 import {
   resolvePythonRuntimeBaseUrl,
   resolvePythonRuntimeHostAndPort,
-  resolveDesktopPythonRuntimeCommand,
-  resolveDesktopPythonRuntimeWorkerDirectory,
   classifyPythonRuntimeStdioLogLevel,
   shouldPreparePythonRuntimeWorkerDependencies,
   type DesktopPythonRuntimeFeature,
 } from "./desktopPythonRuntimeHelpers";
+import { resolveDesktopPythonRuntimeLaunch, type DesktopPythonRuntimeLaunch } from "./desktopPythonRuntimeInstallation";
 
 const PYTHON_RUNTIME_STARTUP_TIMEOUT_MS_DEFAULT = 60_000;
 
 export interface ComposeDesktopPythonRuntimeFeatureOptions {
+  launch?: DesktopPythonRuntimeLaunch;
   startupDiagnostics?: ReturnType<typeof createPythonRuntimeStartupDiagnostics>;
   loggingPort: LoggingPort;
   now: () => string;
@@ -57,25 +57,15 @@ export async function composeDesktopPythonRuntimeFeature(
     HF_HUB_DISABLE_SYMLINKS_WARNING:
       process.env.HF_HUB_DISABLE_SYMLINKS_WARNING ?? "1",
   };
-  const pythonRuntimeCommand = resolveDesktopPythonRuntimeCommand({
-    configuredCommand: process.env.PYTHON_RUNTIME_COMMAND,
-  });
-
-  const pythonRuntimeWorkerDirectory =
-    resolveDesktopPythonRuntimeWorkerDirectory({
-      configuredWorkerDirectory: process.env.PYTHON_RUNTIME_WORKER_DIR,
-      resourcesPath: (process as NodeJS.Process & { resourcesPath?: string })
-        .resourcesPath,
-    });
+  const { command: pythonRuntimeCommand, cwd: pythonRuntimeWorkerDirectory, args } =
+    options.launch ?? resolveDesktopPythonRuntimeLaunch();
   const shouldPrepareDependencies =
     shouldPreparePythonRuntimeWorkerDependencies(pythonRuntimeCommand);
   const foundation = createPythonRuntimeAdapterFoundation({
     client: { baseUrl: pythonRuntimeBaseUrl },
     supervisor: {
       command: pythonRuntimeCommand,
-      args: process.env.PYTHON_RUNTIME_ARGS?.split(" ").filter(Boolean) ?? [
-        "main.py",
-      ],
+      args: [...args],
       cwd: pythonRuntimeWorkerDirectory,
       env: pythonRuntimeEnvironment,
       startupTimeoutMs: pythonRuntimeStartupTimeoutMs,

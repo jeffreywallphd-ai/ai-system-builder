@@ -115,6 +115,7 @@ increment; current approval, ordering and dependencies remain mandatory.
 Requests to commit completed and tested roadmap chunks also use the roadmap
 skill. Its scoped checkpoint procedure preserves unrelated changes and pending
 parent qualification; a checkpoint grants no publication or main advancement.
+For Windows publication errors, use the roadmap skill's state recovery procedure.
 
 Use `completed` as the single current roadmap completion status. Final approval
 is the separate immutable `finalApproval` fact. For explicit legacy status
@@ -143,6 +144,12 @@ requested and the roadmap is approved, continue through every approved increment
 by default; do not insert routine per-increment approval pauses. Stop only when the
 skill's scope, authority, security, blocker, controlled-environment, or final
 approval gates apply.
+
+Requests to plan a system from a written description, inspect or edit saved
+systems, check a conversation task, send an approved turn, or show a saved
+resource in a consented app window through MCP route to
+`skills/control-ai-system-builder/SKILL.md`. Repository development and roadmap
+implementation continue to use the contributor workflow.
 
 For the accepted Asset Experience contextual Form clarification, use the roadmap
 skill's fixed alignment event. Preserve prior evidence and obtain fresh focused

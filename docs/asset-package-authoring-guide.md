@@ -70,6 +70,20 @@ payloads out of semantic definitions and general metadata.
 An implementation may only reference a definition that is present in the same
 package. Definitions without an implementation remain semantic-only assets.
 
+Every entry requires a `sha256:semantic-v2:` fingerprint of its complete validated
+semantic content. Use `createAssetPackEntryFingerprint` from the application
+asset-pack services before attaching that entry's self-referential fingerprint.
+After finalizing all entries, use `createAssetPackManifestFingerprint` if declaring
+the optional manifest `checksum`. Recompute these claims after semantic edits;
+legacy SHA/FNV claims require revalidation and are rejected during import.
+Checksum omission and the empty starter remain supported. These Node application
+helpers are authoring utilities; do not import them into a browser contract.
+
+Semantic fingerprints are separate from package byte digests, signatures and
+approval. Changed content requires fresh inspection and explicit admission;
+existing approval never transfers through a recomputed fingerprint. Shipped
+Foundation identities are immutable and are not migration targets.
+
 ### 3. Add bounded entries and implementations
 
 For every entry:

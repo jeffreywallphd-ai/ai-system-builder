@@ -26,6 +26,11 @@ Introduce a generic **Runtime Installer** abstraction.
   probe/install/re-probe, and sanitized task progress. Normal runtime setup and
   explicit Context starts may invoke it; passive readiness and task reads may
   not. This does not add a user-configurable generic package-manager source.
+- Desktop development may provision the interpreter from the exact reviewed
+  Windows x64 portable CPython artifact in the checkout, then invoke the
+  existing worker dependency stage in a checkout-owned virtual environment.
+  The application startup gate reads the installed environment. It reports
+  a fixed failure before application IPC when required software is unavailable.
 
 ## Layering
 

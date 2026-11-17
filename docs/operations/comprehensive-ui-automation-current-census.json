@@ -2701,8 +2701,8 @@
   {
    "path": "apps/desktop/tests/forge-packaging-boundaries.unit.test.ts",
    "facts": {
-    "sha256": "77533f21ce788b2c98bc1c05cdf86ca6d0c01cf3aa312eddaa221014b8f3932e",
-    "bytes": 24385,
+    "sha256": "3430093b56e7419b9f7108c462daead18068bb83f4287adc19d2a810cea37165",
+    "bytes": 25047,
     "cases": [
      {
       "name": "desktop packaging includes the complete managed Python worker resource",
@@ -2742,23 +2742,27 @@
      },
      {
       "name": "closing a still-hidden window retires startup without a failure dialog",
-      "line": 350
+      "line": 353
+     },
+     {
+      "name": "native hide and minimize retire the same owned window without affecting startup",
+      "line": 361
      },
      {
       "name": "visible documents receive only the fixed presentation cue, including a minimized menu reload",
-      "line": 357
-     },
-     {
-      "name": "a live document's failed presentation cue shows fixed recovery and retires its unusable window",
       "line": 371
      },
      {
+      "name": "a live document's failed presentation cue shows fixed recovery and retires its unusable window",
+      "line": 385
+     },
+     {
       "name": "a superseded loading document can reject its cue and replay it after the new load",
-      "line": 379
+      "line": 393
      },
      {
       "name": "production Vite rewrites the real startup document, styles and controller to local packaged assets",
-      "line": 389
+      "line": 403
      }
     ],
     "dynamicCases": 2,
@@ -2772,8 +2776,8 @@
       "line": 245
      }
     ],
-    "assertionCount": 109,
-    "assertionDigest": "2b996e140fe70f35f9d84890dfa6e863cb91a4bc3ac0608b58d0ab123b776c6f",
+    "assertionCount": 114,
+    "assertionDigest": "47ae8d6c3eeb59d1f373b3dfcba37396df90b37ae6ba6ef7f3e866fee4fcebc1",
     "assertionExamples": [
      {
       "line": 14,
@@ -4193,8 +4197,8 @@
   {
    "path": "apps/thin-client/src/security/tests/paired-device-token-store.unit.test.ts",
    "facts": {
-    "sha256": "3ae3e2b9b1316a91a10b72c80f93510a54e7b27e0fd77fe94abc4e061372975d",
-    "bytes": 3662,
+    "sha256": "c7a10f3edad4a66f957f3fbf425a16a5fd87a4b8d86bbf1ca30ca0d0c00a9ac3",
+    "bytes": 4641,
     "cases": [
      {
       "name": "preserves ordinary set, read and clear",
@@ -4213,18 +4217,22 @@
       "line": 29
      },
      {
-      "name": "treats absent or blocked read storage as no readable credential",
+      "name": "retires an owned response even if the previous token is restored",
       "line": 36
      },
      {
+      "name": "treats absent or blocked read storage as no readable credential",
+      "line": 55
+     },
+     {
       "name": "preserves the actual thin-client secureFetch header and fails closed on blocked storage",
-      "line": 45
+      "line": 64
      }
     ],
     "dynamicCases": 0,
     "functions": [],
-    "assertionCount": 28,
-    "assertionDigest": "5a1416236ff3b69582e440faa58fa9cee0cd48a35eb25d5409c00418fab19a7b",
+    "assertionCount": 34,
+    "assertionDigest": "a0ba11df52ddc98db9678250c6869bdefed2fe26a2f814971fed52ccc3fd3809",
     "assertionExamples": [
      {
       "line": 9,
@@ -4468,79 +4476,83 @@
   {
    "path": "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
    "facts": {
-    "sha256": "ee7ac136609383765406bf8cb6ee15cf52cdb573ccc2285880cad00689d938bb",
-    "bytes": 9122,
+    "sha256": "7bdcaef1c6a2859e1d518d5cf71d4e5c39e306e37f6c08830bbc48908ac8eb03",
+    "bytes": 11651,
     "cases": [
      {
+      "name": "enables browser navigation again before the exact revoke request returns",
+      "line": 58
+     },
+     {
       "name": "opens from the trigger and moves to the first item by keyboard",
-      "line": 65
+      "line": 111
      },
      {
       "name": "closes on Escape and returns focus from a menu item",
-      "line": 71
+      "line": 117
      },
      {
       "name": "wraps arrows and supports Home End and a label key without changing the current page",
-      "line": 76
+      "line": 122
      },
      {
       "name": "opens at the last enabled item with Arrow Up and toggles from the trigger with Space",
-      "line": 87
+      "line": 133
      },
      {
       "name": "closes on Tab without canceling native traversal (shift %s)",
-      "line": 93
+      "line": 139
      },
      {
       "name": "activates exactly the selected route once and returns focus",
-      "line": 98
+      "line": 144
      },
      {
       "name": "retains the native %s default-action contract without premature navigation",
-      "line": 102
+      "line": 148
      },
      {
       "name": "outside %s closes without taking focus or navigating",
-      "line": 109
+      "line": 155
      },
      {
       "name": "removes owned document dismissal listeners on unmount",
-      "line": 113
+      "line": 159
      },
      {
       "name": "does not mark a pending workspace-required route active while setup is visible",
-      "line": 123
+      "line": 169
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "mountedMenu",
-      "line": 54
+      "line": 100
      }
     ],
-    "assertionCount": 48,
-    "assertionDigest": "34f6ddc2aae3536ee81527214fd65a86017537192482d34e92a67fc9d558e1e4",
+    "assertionCount": 56,
+    "assertionDigest": "a2a2d3d20fd4a4db7756c792baf90435a086fcd3e0df2419e66283e3092d8ef2",
     "assertionExamples": [
      {
-      "line": 67,
+      "line": 79,
       "kind": "expect",
-      "sha256": "e5edf7c9c85966a7662c352c8fee0d621a1de70f1f410dc7b0a846c05ba82ea6"
+      "sha256": "de928746624800f1d4dc638d745ec24385c8d604f15cdf63c2de9663ffdc5e65"
      },
      {
-      "line": 67,
+      "line": 84,
       "kind": "expect",
-      "sha256": "ef24c307f2916942d4bbec618ea549810b31c5bfc79aa4b8e85efab1ad2ba00a"
+      "sha256": "c3b660dd932ab3fb208363a9eef336073cdb2e85643c9283532f4fbd559ee355"
      },
      {
-      "line": 68,
+      "line": 85,
       "kind": "expect",
-      "sha256": "62443ce1e51b198693fa01819e8a3258d617f935ed38e448bbb046ebd5b34029"
+      "sha256": "179b3da9720869d2a03df1d555f238ae33ad72845fe283bf1d36e8f36e94872c"
      },
      {
-      "line": 69,
+      "line": 87,
       "kind": "expect",
-      "sha256": "24b71b66d1772036b3ba23c696a6c2bcc0c78b009a69aa198bf53259682e200c"
+      "sha256": "87b00bdd8d4336953f0e00d7cbf519ca986e7754c0b3fba8b5608033e9a85360"
      }
     ],
     "modifiers": []
@@ -11098,177 +11110,78 @@
   {
    "path": "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "77f66d4014e8f50732b79bf5183f60a6994b0d89d90306028225c80f89c622e8",
-    "bytes": 68403,
+    "sha256": "cac26e33c2495022d9d0a47171c9f57f1e6b8cd299d825b1648f7eef3cd1fc70",
+    "bytes": 86482,
     "cases": [
-     {
-      "name": "coverage census: preserves all approved scenario families and matches the current literal route declarations",
-      "line": 295
-     },
-     {
-      "name": "acquisition race: admits only one start before React commits the busy state",
-      "line": 417
-     },
-     {
-      "name": "acquisition race: retires a removed session before deferred passive cleanup",
-      "line": 453
-     },
-     {
-      "name": "acquisition race: rejects a foreign task before progress, notification or completion",
-      "line": 488
-     },
-     {
-      "name": "acquisition race: stops before append when unmounted during a file slice",
-      "line": 500
-     },
-     {
-      "name": "acquisition race: failed cancellation keeps admission closed until an explicit status check",
-      "line": 516
-     },
-     {
-      "name": "acquisition race: nonterminal cancellation is not accepted as confirmation",
-      "line": 538
-     },
-     {
-      "name": "acquisition race: confirmed cancellation cannot be replaced by late older progress",
-      "line": 552
-     },
-     {
-      "name": "acquisition race: changing the source browser also retires a pending acquisition session",
-      "line": 565
-     },
-     {
-      "name": "acquisition race: unmount stops polling without pretending the accepted host task was cancelled",
-      "line": 578
-     },
-     {
-      "name": "acquisition race: a foreign task identity cannot finish or release the current task",
-      "line": 592
-     },
-     {
-      "name": "acquisition race: an old run cannot reset a newly admitted task after confirmed cancellation",
-      "line": 607
-     },
-     {
-      "name": "acquisition race: cancellation requested before task creation is sent once identity arrives",
-      "line": 627
-     },
-     {
-      "name": "acquisition race: duplicate cancel clicks issue one request and failed status checks stay locked",
-      "line": 642
-     },
-     {
-      "name": "acquisition race: a retry admits only one resume before the busy render",
-      "line": 667
-     },
-     {
-      "name": "acquisition workflow: transfers two distinct files across chunk boundaries without whole-file reads",
-      "line": 685
-     },
-     {
-      "name": "offers PDFs and transfers a PDF with missing browser MIME through the bounded file workflow",
-      "line": 742
-     },
-     {
-      "name": "renders the plain-language ordered source workflow with technical limits under Advanced settings",
-      "line": 775
-     },
-     {
-      "name": "refuses a newly ambiguous normalized selection before resuming a failed file task",
-      "line": 898
-     },
-     {
-      "name": "refuses an ambiguous saved task before transferring any selected bytes",
-      "line": 931
-     },
-     {
-      "name": "streams a selected file in a bounded chunk and finalizes with server-computed integrity",
-      "line": 951
-     },
-     {
-      "name": "creates and runs a bounded website task from the simple source workflow",
-      "line": 1040
-     },
-     {
-      "name": "keeps source inputs stable while working and confirms cancellation",
-      "line": 1092
-     },
-     {
-      "name": "offers a plain retry action for a retryable website failure",
-      "line": 1158
-     },
-     {
-      "name": "browses Hugging Face datasets and imports only checked files at the returned immutable revision",
-      "line": 1220
-     },
-     {
-      "name": "does not expose provider credentials or local paths when dataset browsing fails",
-      "line": 1350
-     },
-     {
-      "name": "saves a token-only Hugging Face Step 2 card through the shared settings client",
-      "line": 1404
-     }
+     { "name": "coverage census: preserves all approved scenario families and matches the current literal route declarations", "line": 297 },
+     { "name": "stages one file for the chosen chat client, retries only selection and can cancel the staged file", "line": 370 },
+     { "name": "discards the prepared reference if the workspace changes while selection is in flight", "line": 428 },
+     { "name": "keeps an ordinary upload running while the browser's chat connection changes", "line": 458 },
+     { "name": "hides a retired chat receipt and still allows the staged upload to be canceled", "line": 494 },
+     { "name": "replaces a retired selection error with the available cancellation action", "line": 529 },
+     { "name": "refreshes paired chat clients on focus after an unavailable status read", "line": 552 },
+     { "name": "keeps a failed chat transfer out of the ordinary publishing retry", "line": 574 },
+     { "name": "acquisition race: admits only one start before React commits the busy state", "line": 658 },
+     { "name": "acquisition race: retires a removed session before deferred passive cleanup", "line": 694 },
+     { "name": "acquisition race: rejects a foreign task before progress, notification or completion", "line": 729 },
+     { "name": "acquisition race: stops before append when unmounted during a file slice", "line": 741 },
+     { "name": "acquisition race: failed cancellation keeps admission closed until an explicit status check", "line": 757 },
+     { "name": "acquisition race: nonterminal cancellation is not accepted as confirmation", "line": 779 },
+     { "name": "acquisition race: confirmed cancellation cannot be replaced by late older progress", "line": 793 },
+     { "name": "acquisition race: changing the source browser also retires a pending acquisition session", "line": 806 },
+     { "name": "acquisition race: unmount stops polling without pretending the accepted host task was cancelled", "line": 819 },
+     { "name": "acquisition race: a foreign task identity cannot finish or release the current task", "line": 833 },
+     { "name": "acquisition race: an old run cannot reset a newly admitted task after confirmed cancellation", "line": 848 },
+     { "name": "acquisition race: cancellation requested before task creation is sent once identity arrives", "line": 868 },
+     { "name": "acquisition race: duplicate cancel clicks issue one request and failed status checks stay locked", "line": 883 },
+     { "name": "acquisition race: a retry admits only one resume before the busy render", "line": 908 },
+     { "name": "acquisition workflow: transfers two distinct files across chunk boundaries without whole-file reads", "line": 926 },
+     { "name": "offers PDFs and transfers a PDF with missing browser MIME through the bounded file workflow", "line": 983 },
+     { "name": "renders the plain-language ordered source workflow with technical limits under Advanced settings", "line": 1016 },
+     { "name": "refuses a newly ambiguous normalized selection before resuming a failed file task", "line": 1139 },
+     { "name": "refuses an ambiguous saved task before transferring any selected bytes", "line": 1172 },
+     { "name": "streams a selected file in a bounded chunk and finalizes with server-computed integrity", "line": 1192 },
+     { "name": "creates and runs a bounded website task from the simple source workflow", "line": 1281 },
+     { "name": "keeps source inputs stable while working and confirms cancellation", "line": 1333 },
+     { "name": "offers a plain retry action for a retryable website failure", "line": 1399 },
+     { "name": "browses Hugging Face datasets and imports only checked files at the returned immutable revision", "line": 1629 },
+     { "name": "prepares only one checked repository file for the selected chat client without starting the import", "line": 1632 },
+     { "name": "does not expose provider credentials or local paths when dataset browsing fails", "line": 1635 },
+     { "name": "saves a token-only Hugging Face Step 2 card through the shared settings client", "line": 1689 }
     ],
     "dynamicCases": 4,
     "functions": [
-     {
-      "name": "ActiveNotificationWorkspace",
-      "line": 58
-     },
-     {
-      "name": "task",
-      "line": 79
-     },
-     {
-      "name": "websiteTask",
-      "line": 141
-     },
-     {
-      "name": "huggingFaceTask",
-      "line": 218
-     },
-     {
-      "name": "chooseWebsiteAndEnterPage",
-      "line": 275
-     },
-     {
-      "name": "deferredResponse",
-      "line": 348
-     },
-     {
-      "name": "button",
-      "line": 353
-     },
-     {
-      "name": "mountAcquisition",
-      "line": 358
-     },
-     {
-      "name": "RetirementProbe",
-      "line": 457
-     }
+     { "name": "ActiveNotificationWorkspace", "line": 60 },
+     { "name": "task", "line": 81 },
+     { "name": "websiteTask", "line": 143 },
+     { "name": "huggingFaceTask", "line": 220 },
+     { "name": "chooseWebsiteAndEnterPage", "line": 277 },
+     { "name": "deferredResponse", "line": 350 },
+     { "name": "button", "line": 355 },
+     { "name": "mountAcquisition", "line": 360 },
+     { "name": "RetirementProbe", "line": 698 },
+     { "name": "verifyProviderImport", "line": 1461 }
     ],
-    "assertionCount": 151,
-    "assertionDigest": "2f3efcdec8fbcd17e2b19c31bcface5b350ec0ce9737e0f28c5efe3d88325196",
+    "assertionCount": 206,
+    "assertionDigest": "a1f030d37e22db9c3af90f8b748c5d62c2157309a424dd3be3f512a71234f5d2",
     "assertionExamples": [
      {
-      "line": 299,
+      "line": 301,
       "kind": "expect",
       "sha256": "ad83c54bafa3de9a3fec028ddb37272c53be789aa29412483d3b3be299406f43"
      },
      {
-      "line": 304,
+      "line": 306,
       "kind": "expect",
       "sha256": "3ac1fa161978630ecb5ffe2d9bd707b78f56460e87b5dec645dbf0f79e4dd2f0"
      },
      {
-      "line": 305,
+      "line": 307,
       "kind": "expect",
       "sha256": "23438fe394ca124211e6ecca54f74384e6e1471b628ff0311686a5f4db17d739"
      },
      {
-      "line": 306,
+      "line": 308,
       "kind": "expect",
       "sha256": "134f7bdaebed2ca7d9e2316fb0f5033e3cdcd52674d712b9cd4cd85ad7e0e825"
      }
@@ -12155,137 +12068,141 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "d94ea9bd27cc2b6fac7aa7ed133b6a423a3874d38b675aacc7d40d3b945de8e5",
-    "bytes": 110777,
+    "sha256": "e9d0715777f7429b8272cd25ae93245a854a951042345fadba9ff9368476470b",
+    "bytes": 125189,
     "cases": [
      {
       "name": "submits a published form only after valid answers and reuses the same request on retry",
-      "line": 47
+      "line": 50
      },
      {
       "name": "clears a previous release and rejects malformed form data before rendering controls",
-      "line": 87
+      "line": 90
      },
      {
       "name": "keeps oversized answers editable and allows closing after sending",
-      "line": 129
+      "line": 132
      },
      {
       "name": "keeps radio labels and required-error focus distinct from similar field IDs",
-      "line": 158
+      "line": 161
      },
      {
       "name": "does not offer submission mapping for an ambiguous Create Record setup",
-      "line": 185
+      "line": 188
      },
      {
       "name": "edits the exact selected form when two forms share a Canvas page",
-      "line": 212
+      "line": 215
      },
      {
       "name": "reopens the saved empty first form from Manage without adding a field or saving",
-      "line": 698
+      "line": 765
      },
      {
       "name": "defers the layout catalog until Create system is submitted and then shows the loading wheel",
-      "line": 796
+      "line": 863
      },
      {
       "name": "requests active systems and defensively omits archived records from Compose",
-      "line": 839
+      "line": 906
      },
      {
       "name": "refreshes the active picker after a Manage lifecycle change",
-      "line": 935
+      "line": 1002
      },
      {
       "name": "creates a named system with the implicit Minimal layout",
-      "line": 996
+      "line": 1063
      },
      {
       "name": "requires a name and uses the primary action when creating from a template",
-      "line": 1048
+      "line": 1115
      },
      {
       "name": "prefers the nested page content region over an already-full application content region",
-      "line": 1104
+      "line": 1171
      },
      {
       "name": "loads layouts on demand, applies one to the Canvas, exposes unassigned assets in the scoped modal, and undoes",
-      "line": 1193
+      "line": 1260
      },
      {
       "name": "requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system",
-      "line": 1564
+      "line": 1631
      },
      {
       "name": "opens and closes a modal for the current safe frontend composition",
-      "line": 1767
+      "line": 1834
      },
      {
       "name": "previews a v2 Foundation upgrade before explicit confirmation",
-      "line": 1887
+      "line": 1954
      },
      {
       "name": "preserves canonical structure and placements when saving configuration",
-      "line": 2014
+      "line": 2081
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
+      "name": "FixtureComposer",
+      "line": 369
+     },
+     {
       "name": "Systems",
-      "line": 754
+      "line": 821
      },
      {
       "name": "instance",
-      "line": 2384
+      "line": 2612
      },
      {
       "name": "composerDefinition",
-      "line": 2404
+      "line": 2632
      },
      {
       "name": "layoutDefinition",
-      "line": 2476
+      "line": 2704
      },
      {
       "name": "withoutComposerDetail",
-      "line": 2494
+      "line": 2722
      },
      {
       "name": "button",
-      "line": 2505
+      "line": 2733
      },
      {
       "name": "setInputValue",
-      "line": 2512
+      "line": 2740
      },
      {
       "name": "clientFor",
-      "line": 2519
+      "line": 2747
      }
     ],
-    "assertionCount": 274,
-    "assertionDigest": "6ef91ad08a57a2be3221f37ceb9a52a4c99aaf3ea311a1d92e3788b226a3b3f0",
+    "assertionCount": 326,
+    "assertionDigest": "712cf6592eafeefb0e14774a64dde874e3a43dbbea76bb78f87dd659cd186037",
     "assertionExamples": [
      {
-      "line": 66,
+      "line": 69,
       "kind": "expect",
       "sha256": "8ebc59f30d97d5099fb07687a63fa2063bd319aaf9aa59813944f8d7ac459b67"
      },
      {
-      "line": 68,
+      "line": 71,
       "kind": "expect",
       "sha256": "b8516f67d7716b8f35d1f5e631cf0b36f9e9b0ce0797bc82ef2421e46b3a6867"
      },
      {
-      "line": 69,
+      "line": 72,
       "kind": "expect",
       "sha256": "a570fc51e01e9dd237fc13d5987d0431fa8b071fd0e9246421b626feddcdf981"
      },
      {
-      "line": 71,
+      "line": 74,
       "kind": "expect",
       "sha256": "7209b01251cf906c324cb4589aa6176cac8c8a32efd97228cc62c42bc5bcb2a8"
      }
@@ -12521,171 +12438,187 @@
   {
    "path": "modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
    "facts": {
-    "sha256": "455fe02945d95f943385111e118e0b3da92abcf50874d96102c6f80c0f1ff2a4",
-    "bytes": 36766,
+    "sha256": "80c43f46a13f5e57ba04f6776b0227c257cdf47795300fec5bd18c63db4ec2da",
+    "bytes": 42571,
     "cases": [
      {
-      "name": "reports a rejected initial read through notifications and can retry",
+      "name": "keeps a focused row and a user preview during a passive saved-state refresh",
       "line": 55
      },
      {
+      "name": "does not remove an expanded page or shift its focus during a passive refresh",
+      "line": 83
+     },
+     {
+      "name": "keeps a focused system when a passive page would push its row out of view",
+      "line": 103
+     },
+     {
+      "name": "reports a rejected initial read through notifications and can retry",
+      "line": 119
+     },
+     {
       "name": "does not append an old workspace page into the new workspace",
-      "line": 65
+      "line": 129
      },
      {
       "name": "admits only one clone command before the busy render",
-      "line": 86
+      "line": 150
      },
      {
       "name": "recovers from a rejected %s request without losing retry",
-      "line": 107
+      "line": 171
      },
      {
       "name": "retries a failed page with its exact cursor and deduplicates returned systems",
-      "line": 137
+      "line": 201
      },
      {
       "name": "rejects a held page after %s replacement",
-      "line": 155
+      "line": 219
      },
      {
       "name": "does not open a former preview after %s replacement",
-      "line": 180
+      "line": 244
      },
      {
       "name": "keeps a late %s acknowledgement out of the replacement workspace",
-      "line": 196
+      "line": 260
+     },
+     {
+      "name": "discards a held passive list when its authority ends and applies a fresh list",
+      "line": 281
      },
      {
       "name": "does not describe a saved clone as failed when the refresh callback throws",
-      "line": 217
+      "line": 310
      },
      {
       "name": "does not let an obsolete page failure clear a newer paging request",
-      "line": 229
+      "line": 322
      },
      {
       "name": "retains an accepted restore across a search change in the same workspace",
-      "line": 255
+      "line": 348
      },
      {
       "name": "keeps the accepted %s confirmation locked before busy state renders",
-      "line": 275
+      "line": 368
      },
      {
       "name": "retires an old mutation at commit before passive cleanup runs",
-      "line": 296
+      "line": 389
      },
      {
       "name": "retires an old preview at query commit before passive effects run",
-      "line": 312
+      "line": 405
      },
      {
       "name": "keeps a committed pending clone when a client replacement render is abandoned",
-      "line": 327
+      "line": 420
      },
      {
       "name": "does not dispatch an initial read after retirement before the first promise turn",
-      "line": 353
+      "line": 446
      },
      {
       "name": "does not dispatch preview reads after retirement before the first promise turn",
-      "line": 364
+      "line": 457
      },
      {
       "name": "contains synchronous and parallel preview failures and permits retry",
-      "line": 372
+      "line": 465
      },
      {
       "name": "preserves an actionable typed revision denial and keeps archive retry available",
-      "line": 386
+      "line": 479
      },
      {
       "name": "lists systems, previews the exact revision, and hands a system to Compose",
-      "line": 400
+      "line": 493
      },
      {
       "name": "duplicates and archive-deletes without discarding immutable history",
-      "line": 439
+      "line": 532
      },
      {
       "name": "restores an archived system from the same management list",
-      "line": 484
+      "line": 577
      }
     ],
     "dynamicCases": 0,
     "functions": [
      {
       "name": "renderWorkspace",
-      "line": 508
+      "line": 601
      },
      {
       "name": "renderScope",
-      "line": 516
+      "line": 609
      },
      {
       "name": "deferred",
-      "line": 524
+      "line": 619
      },
      {
       "name": "button",
-      "line": 530
+      "line": 625
      },
      {
       "name": "dialogContaining",
-      "line": 538
+      "line": 633
      },
      {
       "name": "managementItem",
-      "line": 548
+      "line": 643
      },
      {
       "name": "systemRevision",
-      "line": 580
+      "line": 675
      },
      {
       "name": "managementPage",
-      "line": 606
+      "line": 701
      },
      {
       "name": "systemClient",
-      "line": 621
+      "line": 716
      },
      {
       "name": "systemRecord",
-      "line": 648
+      "line": 743
      },
      {
       "name": "searchFor",
-      "line": 664
+      "line": 759
      },
      {
       "name": "SuspendReplacement",
-      "line": 670
+      "line": 765
      }
     ],
-    "assertionCount": 101,
-    "assertionDigest": "6c0cc688188fb9f10d827b1e5f7013eca4ddb0017bd40566e271e996ea87b2ac",
+    "assertionCount": 122,
+    "assertionDigest": "c8a0f538f56622ea71ca7675d679b940c2651c61d303e3cd14cfa2addf8f6772",
     "assertionExamples": [
      {
-      "line": 59,
-      "kind": "expect",
-      "sha256": "9e8b43a8a3d5634562824a024a40305a40ba79f7b657c166a9e21e8a10117292"
-     },
-     {
       "line": 60,
-      "kind": "expect",
-      "sha256": "8a9df415c02f3a0d904f8e205e3175ec67ad85544956dfedef0ab14d605f43b7"
-     },
-     {
-      "line": 62,
       "kind": "expect",
       "sha256": "d803dc3a60a748fb9f17fefa75c93a516625695f8a2c61dd6c316e8fe492312a"
      },
      {
-      "line": 79,
+      "line": 68,
       "kind": "expect",
-      "sha256": "1947bce10fa8459e45ec36b637b7ba24898ddc38e4478d4834e91919104aec4d"
+      "sha256": "f6dcb8abd1749b66a12773ccb901f4477a8eedc4494061bef88c11a6eb613bc9"
+     },
+     {
+      "line": 69,
+      "kind": "expect",
+      "sha256": "37ca3b2397de19afb47eee1c7a9a4e13697ab67ad7de2efc6748ae82bd55577f"
+     },
+     {
+      "line": 71,
+      "kind": "expect",
+      "sha256": "2d61159d3dbf454f33652f0f080f90391d5c04fad23e519876cae91ad38b3c26"
      }
     ],
     "modifiers": []
@@ -15151,6 +15084,136 @@
     "modifiers": []
    },
    "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+   "facts": {
+    "sha256": "bd8cdff82f575f919caa9182faa2897e778fe34ccab805d6c4dce1e1bc0fa9c1",
+    "bytes": 52899,
+    "cases": [
+     { "name": "packaged Desktop pairs a real MCP client, observes its saved edit, and replays after restart", "line": 144 },
+     { "name": "packaged Desktop reviews an MCP plan in the app popup and reports the exact decision", "line": 335 },
+     { "name": "packaged Desktop observes a running approved turn from a separately paired MCP client", "line": 614 }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     { "name": "call", "line": 17 },
+     { "name": "connectorSettings", "line": 24 },
+     { "name": "runningAddress", "line": 37 },
+     { "name": "hostId", "line": 44 },
+     { "name": "readVisibleSystemFeed", "line": 51 },
+     { "name": "canvasCompetition", "line": 60 },
+     { "name": "apply", "line": 90 },
+     { "name": "timings", "line": 122 },
+     { "name": "saveObservation", "line": 128 },
+     { "name": "stage", "line": 382 },
+     { "name": "verifySavedStep", "line": 447 }
+    ],
+    "assertionCount": 135,
+    "assertionDigest": "0035de1959b95c2f1613cb0210323c3b812b3df988aaf693690557b471dc4fe1",
+    "assertionExamples": [
+     {
+      "line": 38,
+      "kind": "expect",
+      "sha256": "ddda5a711b2e3497f1be9c2fb51362ed5af24f23da2f4a8170002f7525f86f86"
+     },
+     {
+      "line": 74,
+      "kind": "expect",
+      "sha256": "a18914c717eb55722082ea8a53df6400cdb234e9d2d9200fe76b12005e516fc6"
+     },
+     {
+      "line": 75,
+      "kind": "expect",
+      "sha256": "a20b8ee8026adf836fb79ec6223314d9692db7f4c43e150669109bc921077438"
+     },
+     {
+      "line": 79,
+      "kind": "expect",
+      "sha256": "cbeeb56369e8307a64536d5180a185cb2bbf00645e6a47d365fbb6c9adcf1627"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "798835bf3f41179646d5bb79269f21ad9c7e9d116a967c0590db2d57598486dd"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
+   "facts": {
+    "sha256": "80d959d36f708c2a28e13f3bdd5200a682c413f444580785f952e3440515f264",
+    "bytes": 59443,
+    "cases": [
+     {
+      "name": "a real paired client presents a saved Windows resource and the user revokes before continuing saved work",
+      "line": 235
+     },
+     {
+      "name": "the native File menu opens a separately controlled window",
+      "line": 494
+     }
+    ],
+    "dynamicCases": 0,
+    "functions": [
+     {
+      "name": "call",
+      "line": 20
+     },
+     {
+      "name": "distribution",
+      "line": 29
+     },
+     {
+      "name": "saveTimingObservation",
+      "line": 35
+     },
+     {
+      "name": "checkStoredAudit",
+      "line": 55
+     },
+     {
+      "name": "measureRevocation",
+      "line": 143
+     },
+     {
+      "name": "withModelsPageLoading",
+      "line": 167
+     },
+     {
+      "name": "suppressFixtureRevoke",
+      "line": 212
+     },
+     {
+      "name": "sample",
+      "line": 348
+     }
+    ],
+    "assertionCount": 107,
+    "assertionDigest": "3ec062752e96a7f9372d749f34338a76db9fe8a09dca94842c23dc32acd5f120",
+    "assertionExamples": [
+     {
+      "line": 131,
+      "kind": "expect",
+      "sha256": "2f47d3c091fad6759fa7f2c7598f0c0ab834d018baa92c6bd73ff878b8535e85"
+     },
+     {
+      "line": 132,
+      "kind": "expect",
+      "sha256": "392b564c10994f4459b92e5cba0accff36acd1cb664f4d92f9be297d90e31149"
+     },
+     {
+      "line": 138,
+      "kind": "expect",
+      "sha256": "e94ce9a28f3faddb50b82270466ab17a2a137708ab612459b2a6a41d4a365050"
+     },
+     {
+      "line": 201,
+      "kind": "expect",
+      "sha256": "a7c6f9ef99e25321ee116a37f5bcf865575c60b022698354bc872321473f358a"
+     }
+    ],
+    "modifiers": []
+   },
+   "committed_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
   }
  ],
  "scenarios": [
@@ -17374,7 +17437,7 @@
     "Dataset Preparation",
     "Dataset Review"
    ],
-   "sha256": "1987ec3f29e4933d1c51edf9e5342443f06111020a231290ecd0310ede9ac5a8",
+   "sha256": "d758c64cb64cce649ed2f05e07b289b78194e3dcd085c93083839b9100342189",
    "surface_key": "dataTabs"
   },
   {
@@ -17426,7 +17489,7 @@
     "Compose",
     "Publish"
    ],
-   "sha256": "18fa6e8023f6e607273455aab60c6a8dd2eab35ad68505d45d074ad61a101216",
+   "sha256": "386ed64832e05e9ed43e0182e8c2447bea798a893d70b4c1c731177d8817591e",
    "surface_key": "systemsTabs"
   },
   {
@@ -17438,7 +17501,7 @@
     "Compose",
     "Publish"
    ],
-   "sha256": "9db0bd657c3118ec5719603df1de739bf6b709f559e7aac2f88236a794870105",
+   "sha256": "21e14912e66fee622fe18fde7db66b3d09a5dc41a17c96345cc693fdd5d044fa",
    "surface_key": "systemsTabs"
   },
   {
@@ -17531,6 +17594,7 @@
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-cold-canvas.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-form-composer.e2e.spec.ts",
+  "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ingestion.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
@@ -17540,6 +17604,7 @@
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-pdf-preview.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-reference-performance.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-structured-output.e2e.spec.ts",
+  "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-ui-takeover.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-worker-recovery.e2e.spec.ts",
   "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts",

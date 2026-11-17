@@ -37,6 +37,22 @@ export interface StructuredDocumentStore {
   ): Promise<StructuredDocument<T>>;
   deleteDocument(namespace: string, key: string, expectedRevision?: number): Promise<boolean>;
   runInTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>): Promise<T>;
+  /**
+   * Optional root-owned transaction with a synchronous check immediately before
+   * commit. Transaction views must omit it. Never reports a callback error as
+   * confirmed when rollback itself was not confirmed.
+   * A Serializable implementation can retry the complete callback and check.
+   * Keep each attempt's state local and use only the supplied transaction for
+   * database access. Await every operation and defer external effects until commit.
+   */
+  runInOwnedTransaction?<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit: () => void): Promise<T>;
+  /**
+   * Publish an already committed result while exact records used for its
+   * authorization remain locked against modification. The supplied view
+   * supports point reads only. Neither the checks nor the synchronous send
+   * are retried. The caller must handle an uncertain cleanup after sending.
+   */
+  publishWithStableReads?(check: (reader: StructuredDocumentStore) => Promise<boolean>, publish: () => boolean): Promise<boolean>;
 }
 
 export class StructuredDocumentConflictError extends Error {

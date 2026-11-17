@@ -3,7 +3,7 @@ import type { WorkspaceOperationAuthorizationPort } from "../../../application/p
 import type { ArtifactStoragePort, ArtifactStreamStoragePort } from "../../../application/ports/storage";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import type { ArtifactCatalogDeletePort } from "../../../application/ports/artifact-catalog";
-import { createStructuredIngestionAcquisitionRepository, createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
+import { createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import { createWebsiteHtmlAcquisitionPort, GovernedWebsiteCaptureAdapter } from "../../../adapters/ingestion";
 import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
@@ -19,10 +19,12 @@ import {
 import type { ApplicationRequestContext } from "../../../application/ports";
 import type { IngestionTaskTransportCommand, IngestionTaskTransportValue } from "../../../contracts/ingestion";
 import { createContractError, createFailureResult, type ContractResult } from "../../../contracts/shared";
+import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 
 export interface ComposeDesktopIngestionFeatureOptions {
   readonly artifacts: { readonly storage: ArtifactStoragePort & ArtifactStreamStoragePort; readonly artifactCatalog?: ArtifactCatalogDeletePort };
-  readonly remoteArtifacts: { readonly registerArtifactFromRepoUseCase: Pick<RegisterArtifactFromRepoUseCase, "execute"> };
+  readonly remoteArtifacts: { readonly registerArtifactFromRepoUseCase: Pick<RegisterArtifactFromRepoUseCase, "execute"> &
+    Partial<Pick<RegisterArtifactFromRepoUseCase, "prepare">> };
   readonly storageRootDirectory: string;
   readonly documents?: StructuredDocumentStore;
   readonly workspaceRepository: Pick<WorkspaceRepository, "readWorkspace">;
@@ -33,6 +35,7 @@ export interface ComposeDesktopIngestionFeatureOptions {
 
 export interface DesktopIngestionTaskCommands {
   executeCommand(command: IngestionTaskTransportCommand, context?: ApplicationRequestContext): Promise<ContractResult<IngestionTaskTransportValue>>;
+  readonly finalizeApprovedLocalFile?: GovernedIngestionTaskUseCases["finalizeApprovedLocalFile"];
 }
 
 export interface DesktopIngestionFeature {
@@ -49,7 +52,7 @@ export function composeDesktopIngestionFeature(options: ComposeDesktopIngestionF
   const ingestWebsitePageUseCase = new IngestWebsitePageUseCase({ acquisition: websiteHtmlAcquisition, storage: options.artifacts.storage, now: options.now });
   const ingestionTasks: DesktopIngestionTaskCommands = options.documents
     ? (() => {
-        const repository = createStructuredIngestionAcquisitionRepository(options.documents!);
+        const repository = composeIngestionAcquisitionRepository(options.storageRootDirectory, options.documents!);
         const checkpoints = createFilesystemIngestionCheckpointStorage({
           rootDirectory: options.storageRootDirectory,
           organizationContextProvider: options.organizationContextProvider,

@@ -36,6 +36,11 @@ export function createInMemoryStructuredDocumentStore(
     organizationId?: OrganizationId,
   ): StructuredDocumentStore => ({
     organizationId,
+    ...(!owner ? {
+      runInOwnedTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit: () => void) {
+        return transact(work, beforeCommit, organizationId);
+      },
+    } : {}),
     forOrganization(requestedOrganizationId) {
       assertOwner(owner);
       assertOrganizationScope(organizationId, requestedOrganizationId);
@@ -89,15 +94,19 @@ export function createInMemoryStructuredDocumentStore(
     async runInTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>) {
       assertOwner(owner);
       if (owner) return work(this);
-      return serialize(async lease => {
-        const snapshot = new Map([...target.entries()].map(([key, value]) => [key, cloneDocument(value)]));
-        const result = await work(createStore(snapshot, lease, organizationId));
-        target.clear();
-        for (const [key, value] of snapshot) target.set(key, value);
-        return result;
-      });
+      return transact(work, undefined, organizationId);
     },
   });
+  function transact<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit?: () => void, organizationId?: OrganizationId) {
+    return serialize(async lease => {
+      const snapshot = new Map([...state.entries()].map(([key, value]) => [key, cloneDocument(value)]));
+      const result = await work(createStore(snapshot, lease, organizationId));
+      beforeCommit?.();
+      state.clear();
+      for (const [key, value] of snapshot) state.set(key, value);
+      return result;
+    });
+  }
   return createStore(state);
 }
 

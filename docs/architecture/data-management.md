@@ -182,10 +182,26 @@ authoritative task workspace into both the artifact catalog record and the
 imported-source binding, so a successful task is immediately visible through
 the same workspace-scoped Artifact Browser. Selected `.parquet` paths retain a
 Parquet media type and the tabular artifact family even when the provider file
-listing does not supply a media type. The shared desktop/thin-client UI
+listing does not supply a media type. The host verifies repository access
+before it starts the storage transaction. The catalog record, imported-source
+binding, source snapshot and next task revision commit together. A competing
+run can confirm that same selected source without creating another artifact.
+The shared desktop/thin-client UI
 uses the existing bounded provider browser: users find a namespace, select
 datasets, and check exact files, while the browser resolves and returns each
-file's immutable revision. The renderer sends only those returned coordinates
+file's immutable revision. The dataset results show provider-declared license
+identifiers and default to All data. Open Creative Commons and Other open
+licenses filters admit only recognized declarations in the selected group.
+Declared restrictions, unknown terms and ambiguous mixtures remain visible
+under All data. Changing the filter clears dataset and file selections.
+The listing reads [Hugging Face dataset card metadata](https://huggingface.co/docs/hub/en/datasets-cards)
+and uses the [Creative Commons distinction between open and restricted terms](https://creativecommons.org/public-domain/freeworks/).
+These labels describe repository discovery. During import, the host checks
+access to each selected file and looks up license metadata at its exact commit.
+The source snapshot retains the bounded provider identifiers, including
+non-open ones. A reply without a usable declaration records an empty list.
+If the host cannot confirm the metadata for that commit, the list is absent.
+Older snapshots also omit it. The renderer sends only the returned coordinates
 to the governed acquisition task and does not treat the visible selection as
 authorization. A Hugging Face user or organization is provider provenance
 only; it is never used as the application's organization scope. Before any
@@ -630,6 +646,12 @@ binding denial. Failed metadata publication reports failure; retained unregister
 owned bytes and native publication/reparse races remain distinct recovery and
 qualification concerns.
 
+Prepared-row review uses the existing scoped GET endpoint with artifact-read
+authority and application workspace/task/fingerprint validation. Review loading
+and failure are distinct from a confirmed empty page. Running Dataset Preparation
+keeps its worker owned through refused cancellation or a host deadline, including
+automatic sibling recovery; real terminal state or owned exit remains decisive.
+
 Uploaded-file and provider task finalization retain stored artifacts after an
 uncertain task/snapshot acknowledgement. Error handling cannot infer destructive
 cleanup ownership. Recovery reads the existing scoped task, verifies its immutable
@@ -667,6 +689,16 @@ ordinary task saves cannot bypass publication. Desktop preserves its existing
 unprefixed object mapping; server retains organization-prefixed bytes and current
 HTTP task admission denials. Preparation queries exact workspace/key metadata and
 rejects a mismatched returned record before runtime admission.
+
+The application can record an explicit local-file selection for a paired
+agent. It checks the existing upload before recording the exact file and
+task version. One private selection belongs to each uploaded file. The
+record binds the current host, workspace, app user, and agent connection in
+the organization's store. Preview checks that selection and the current
+upload and returns a short description of the local save. File contents,
+names, and checkpoint identifiers stay in Data. The ordinary upload workflow
+continues to use the same task and publication owners. App and agent
+connections to the selection operation still need host wiring.
 
 These cooperative controls do not qualify native byte integrity after publication,
 hostile parent races, protected crash recovery or filesystem/metadata atomicity.
@@ -725,6 +757,7 @@ organization context provider together. Server application composition connects
 its authenticated request scope for explicitly injected scoped stores and for
 PostgreSQL. Missing context leaves ingestion unavailable before acquisition;
 raw or global document storage is not an ingestion fallback.
+
 
 ## Bounded replaceable OCR provider boundary
 

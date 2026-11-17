@@ -1,0 +1,728 @@
+{
+  "blockerReclassifications": [
+    {
+      "assignment": {
+        "actionLocation": "The local contributor checkout and Windows qualification host.",
+        "actionOwner": "agent",
+        "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+        "completionCondition": "Focused contract discipline and real synthetic MCP checks pass and independent review accepts the repair.",
+        "requiredAction": "Repair the verified contract-boundary and MCP fixture regressions under the existing architecture.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+      "blockerId": "desktop-roadmap-baseline-suite-failures",
+      "originalBlocker": {
+        "actionLocation": "This roadmap review and the repository contributor workflow.",
+        "actionOwner": "human",
+        "authorityRef": "agent-guide-material-scope-decision",
+        "completionCondition": "The repository baseline repair passes the combined suite. The Desktop roadmap receives a fresh passing overall receipt and independent review.",
+        "id": "desktop-roadmap-baseline-suite-failures",
+        "kind": "decision",
+        "recordedAt": "2026-11-16T20:14:14Z",
+        "requiredAction": "Authorize a separate repair of the repository baseline failures affecting roadmap closure.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Repository owner",
+        "status": "open",
+        "summary": "The independently reviewed Desktop increment is complete. The required combined suite found headless MCP and public contract guard failures. The pre-Desktop commit reproduced both contract guard failures and the headless TLS timeout. The violations span 54 imports in 24 files outside the Desktop change."
+      },
+      "originalDigest": "a6fe3370296de91048fc7a318c0f16577e5bc217fceabc64db02b6b51914db7e",
+      "reason": "The repository owner approved the existing repair scope and the exact local toolset installation. Technical checks remain pending.",
+      "recordedAt": "2026-11-16T21:36:33Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "The local contributor checkout and Windows qualification host.",
+        "actionOwner": "agent",
+        "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+        "completionCondition": "The exact installed tools build the native fixture and the Windows native suite passes.",
+        "requiredAction": "Verify the approved side-by-side compiler installation with the native Windows identity tests.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+      "blockerId": "desktop-roadmap-native-qualification-host",
+      "originalBlocker": {
+        "actionLocation": "The approved Windows qualification host.",
+        "actionOwner": "human",
+        "authorityRef": "agent-guide-external-qualification",
+        "completionCondition": "The native qualification setup builds the fixed fixture and its end-to-end cases pass in the configured completion suite.",
+        "id": "desktop-roadmap-native-qualification-host",
+        "kind": "environment",
+        "recordedAt": "2026-11-16T20:14:14Z",
+        "requiredAction": "Provide or authorize a Windows x64 qualification environment with the pinned MSVC 14.42.34433 Build Tools and Windows SDK 10.0.26100.0.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Repository owner",
+        "status": "open",
+        "summary": "The required end-to-end suite could not build the native Windows model-file identity fixture. The pinned MSVC 14.42.34433 compiler and linker are absent at the qualification profile paths. The configured Windows SDK is present. Nine native fixture tests failed at their shared setup hook."
+      },
+      "originalDigest": "62fdfa2c7a99469b1876992c0db6f98359036494ca51c3275c53558738b448fa",
+      "reason": "The repository owner approved the existing repair scope and the exact local toolset installation. Technical checks remain pending.",
+      "recordedAt": "2026-11-16T21:36:33Z"
+    }
+  ],
+  "blockers": [
+    {
+      "actionLocation": "The local contributor checkout and Windows qualification host.",
+      "actionOwner": "agent",
+      "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+      "completionCondition": "Focused contract discipline and real synthetic MCP checks pass and independent review accepts the repair.",
+      "id": "desktop-roadmap-baseline-suite-failures",
+      "kind": "decision",
+      "recordedAt": "2026-11-16T20:14:14Z",
+      "requiredAction": "Repair the verified contract-boundary and MCP fixture regressions under the existing architecture.",
+      "resolution": "The contract-family and MCP source-fixture repairs passed focused verification and independent review. The scoped receipt retains all fourteen fixed checks.",
+      "resolvedAt": "2026-11-16T21:52:24Z",
+      "responsibleRole": "Coding agent",
+      "status": "resolved",
+      "summary": "The independently reviewed Desktop increment is complete. The required combined suite found headless MCP and public contract guard failures. The pre-Desktop commit reproduced both contract guard failures and the headless TLS timeout. The violations span 54 imports in 24 files outside the Desktop change."
+    },
+    {
+      "actionLocation": "The local contributor checkout and Windows qualification host.",
+      "actionOwner": "agent",
+      "authorityRef": "user-approved-baseline-repair-and-pinned-msvc",
+      "completionCondition": "The exact installed tools build the native fixture and the Windows native suite passes.",
+      "id": "desktop-roadmap-native-qualification-host",
+      "kind": "environment",
+      "recordedAt": "2026-11-16T20:14:14Z",
+      "requiredAction": "Verify the approved side-by-side compiler installation with the native Windows identity tests.",
+      "resolution": "The Microsoft-signed side-by-side MSVC 14.42.34433 toolset and existing Windows SDK built the native fixture. All nine Windows native identity integration tests passed.",
+      "resolvedAt": "2026-11-16T21:37:36Z",
+      "responsibleRole": "Coding agent",
+      "status": "resolved",
+      "summary": "The required end-to-end suite could not build the native Windows model-file identity fixture. The pinned MSVC 14.42.34433 compiler and linker are absent at the qualification profile paths. The configured Windows SDK is present. Nine native fixture tests failed at their shared setup hook."
+    }
+  ],
+  "chunks": [
+    {
+      "areas": [
+        "Development bootstrap",
+        "Python runtime adapter and Desktop host",
+        "Electron startup loading screen",
+        "Supplier manifest and setup documentation"
+      ],
+      "chunkId": "desktop-prerequisite-and-loading-flow",
+      "completedAt": "2026-11-16T16:47:30Z",
+      "criteriaIds": [
+        "install-approved-prerequisites",
+        "startup-requires-python",
+        "security-impact-reviewed",
+        "clean-host-qualification"
+      ],
+      "documentation": [
+        "Desktop setup and loading behavior",
+        "Runtime installer and Forge decisions",
+        "Dependency provenance policy"
+      ],
+      "feedbackAddressed": [],
+      "id": "desktop-bootstrap-admission-desktop-prerequisite-and-loading-flow",
+      "incrementId": "desktop-bootstrap-admission",
+      "summary": "Implemented checkout-local prerequisite verification and provisioning, plus an installed-worker gate before the Desktop shell.",
+      "tests": [
+        "Exact desktop-prerequisite-bootstrap profile passed",
+        "Exact desktop-startup-ui profile passed",
+        "Fresh Windows package showed missing-Python recovery without admitting application preload or persistence"
+      ],
+      "title": "Desktop prerequisite and loading flow"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-11-17T03:55:57Z",
+    "summary": "Approved Windows x64 scope fully qualified. The recorded clean development checkout installed verified prerequisites and reused them on repeat. Packaged Desktop admitted a verified Python runtime and showed recovery before the application shell, preload, and persistence when Python was unavailable. On commit 200060304, the fresh combined suite using installed Node 24.22.1 passed 7,619 tests with six skips and zero failures. Desktop type checking and all six repository gates passed. Earlier failed attempts remain recorded. Overall receipt 4b708110d3d33d43f40fa9e31183c33f9083b12f7aaccbb3c8018eda80ea59f4; separate accepted review 2917a445fe4a8cdd56f9ad62af59b74c37b447379f6081dbfef01aebdc4ea2ab."
+  },
+  "completionSuite": "standardande2e",
+  "createdAt": "2026-11-16T14:40:26Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "The user selected installation for this checkout.",
+      "approvedAt": "2026-11-16T14:44:02Z",
+      "approvedFingerprint": "d4a529681216c1f852541bf7bcc2685b63d238156f1bcf6128fb0eaa7d6d1a78",
+      "context": "Both options reuse a compatible installed interpreter, use the existing reviewed Electron and Python package setup, and keep the Desktop shell closed when a required component is unavailable. Automatic installation is available only where an exact platform artifact is approved and tested.",
+      "id": "python-bootstrap-ownership",
+      "options": [
+        {
+          "consequences": [
+            "Supports repeatable per-checkout tests and rollback.",
+            "Stops with setup guidance on platforms without an approved distribution."
+          ],
+          "id": "checkout-owned",
+          "label": "Checkout-owned Python",
+          "recommended": true,
+          "summary": "Install an exact approved Python distribution into a location owned by the development checkout. Run Desktop with that interpreter.",
+          "tradeoffs": [
+            "Isolates the development installation from system defaults and other projects.",
+            "Needs a qualified full Python distribution for each supported platform."
+          ]
+        },
+        {
+          "consequences": [
+            "Uses the platform's reviewed install and uninstall flow.",
+            "Stops with setup guidance on platforms without an approved installer."
+          ],
+          "id": "account-owned",
+          "label": "User-account Python",
+          "recommended": false,
+          "summary": "Use an exact approved supplier installer to add Python for the current user without elevation.",
+          "tradeoffs": [
+            "Can reuse the installer and launcher behavior verified on Windows.",
+            "Adds an installed application to the user account and may affect discovery by other projects."
+          ]
+        }
+      ],
+      "proposalFingerprint": "d4a529681216c1f852541bf7bcc2685b63d238156f1bcf6128fb0eaa7d6d1a78",
+      "question": "Where should the development command install an approved interpreter when no compatible Python is available?",
+      "selectedOptionId": "checkout-owned",
+      "status": "approved",
+      "title": "Python installation for Desktop development"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Node 24 and npm must be present to invoke npm. Run preflight before Forge and reuse the same selected interpreter in Desktop.",
+      "Only explicitly approved prerequisites and platform-specific artifacts are eligible. A missing or unverified required prerequisite prevents shell admission. Optional software and model acquisition stay on their existing feature paths.",
+      "Use a bounded local installation check at Desktop startup. Keep installers and process execution in the developer or host boundary and expose only closed failure facts to the loading screen."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-11-16T14:40:26Z",
+    "securityImpact": {
+      "abuseCases": [
+        "Installer substitution, unapproved platform or executable, partial or concurrent installs, an unavailable network, and raw failure details leaking to the renderer"
+      ],
+      "assets": [
+        "Developer account and checkout integrity",
+        "Pinned dependencies, executable provenance, and protected settings and model data"
+      ],
+      "controls": [
+        "Review exact supplier provenance and content hashes before execution. Reuse the existing dependency and installer gates.",
+        "Use bounded argument lists and time limits, no elevation, idempotent missing-only setup, and an atomic readiness outcome. Failure keeps the app shell closed and exposes fixed recovery guidance."
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Platform-specific installer trust and clean-host qualification remain pending. Installer rollback must preserve account settings, managed versions, and user data."
+      ],
+      "summary": "Installing executable prerequisites and using them to admit Desktop startup changes the supply-chain and host execution boundary.",
+      "trustBoundaries": [
+        "An explicit development launch authorizes the fixed prerequisite set",
+        "Official executable sources to the installer and host process",
+        "Main-owned prerequisite result to the inert startup renderer"
+      ],
+      "verification": [
+        "Use owned synthetic fixtures for ready, missing, unsupported, denied and interrupted prerequisites. Prove positive and negative development launch and Desktop shell admission on each approved platform.",
+        "Run the dependency security and relevant build and startup checks. Require real clean-machine setup before claiming availability on a platform."
+      ]
+    },
+    "sources": [
+      {
+        "note": "Defines the current Forge development launch.",
+        "title": "Desktop launch entry",
+        "url": "package.json"
+      },
+      {
+        "note": "The lockfile and official checksum-backed Electron installer own dependency acquisition.",
+        "title": "Desktop supply chain and Forge",
+        "url": "docs/standards/dependency-supply-chain-standards.md"
+      },
+      {
+        "note": "Fixed worker dependency setup is allowed. Interpreter provisioning needs an explicit reviewed source and ownership design.",
+        "title": "Runtime installer architecture",
+        "url": "docs/adr/ADR-0014-runtime-installer.md"
+      },
+      {
+        "note": "The loading screen already has a closed failure state and an inert application root.",
+        "title": "Desktop startup controller",
+        "url": "apps/desktop/src/renderer/startup/desktopStartup.ts"
+      },
+      {
+        "note": "The official release publishes a Windows installer and matching SHA-256 checksum. An exact approved bootstrap manifest still needs review.",
+        "title": "Official Windows runtime reference",
+        "url": "https://www.python.org/downloads/release/python-31410/"
+      }
+    ],
+    "summary": "Development launches Forge directly. The approved dependency mechanisms are the npm lockfile, Electron's exact installer, and the managed worker's pinned Python dependency setup. None provisions the interpreter. Desktop shell admission currently depends on renderer commit and minimum visible time. A live worker using a separately installed Python 3.14 completed a fresh model download."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "python dev-tools/helpers/run_focused_checks.py --profile desktop-prerequisite-bootstrap",
+      "criterionId": "install-approved-prerequisites",
+      "id": "evidence-1",
+      "incrementId": "desktop-bootstrap-admission",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-16T16:47:31Z",
+      "summary": "The fixed prerequisite profile passed. It exercised npm and Electron verification, verified existing runtime reuse, exact archive denial, interruption, concurrent setup, and invalid setup records. The real development preflight handed off to Forge with existing prerequisites."
+    },
+    {
+      "artifact": null,
+      "command": "python dev-tools/helpers/run_focused_checks.py --profile desktop-startup-ui",
+      "criterionId": "startup-requires-python",
+      "id": "evidence-2",
+      "incrementId": "desktop-bootstrap-admission",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-16T16:47:31Z",
+      "summary": "The fixed startup profile passed. A real packaged Desktop launch with a missing configured Python displayed recovery before React, application preload, and persistence."
+    },
+    {
+      "artifact": null,
+      "command": "npm run security:dependencies",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-3",
+      "incrementId": "desktop-bootstrap-admission",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-16T16:47:32Z",
+      "summary": "Security-relevant. The released archive matched the original supplier catalog. Verification covered digest and length mismatch, a foreign executable, redirected setup storage, lock refusal, and secret-free failure reasons. The dependency audit and production SBOM gate passed. The checkout is trusted against modification by its owner, and separate technical review remains required."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "clean-host-qualification",
+      "id": "evidence-4",
+      "incrementId": "desktop-bootstrap-admission",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-11-16T16:47:32Z",
+      "summary": "The real packaged missing-runtime case passed. The fresh Windows checkout prepared locked npm packages and Electron and is still preparing its checkout-local Python worker. Development shell and repeat launch evidence remain pending."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "clean-host-qualification",
+      "id": "evidence-5",
+      "incrementId": "desktop-bootstrap-admission",
+      "kind": "external",
+      "outcome": "failed",
+      "recordedAt": "2026-11-16T17:09:34Z",
+      "summary": "The first isolated Windows checkout run installed locked npm packages, official Electron and the checksum-verified portable Python. Core worker package setup failed with the original development install limit. A longer bounded diagnostic replay verified the worker packages."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "clean-host-qualification",
+      "id": "evidence-6",
+      "incrementId": "desktop-bootstrap-admission",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-11-16T17:09:36Z",
+      "summary": "The corrected Windows npm preflight installed and verified checkout-local worker packages and reused the same published environment on repeat. The rebuilt packaged app displayed missing-Python recovery without application preload or persistence. An existing Forge process owns the canonical development ports, so a full isolated development UI launch remains pending."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "clean-host-qualification",
+      "id": "evidence-7",
+      "incrementId": "desktop-bootstrap-admission",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-11-16T17:10:37Z",
+      "summary": "The isolated Windows x64 checkout, with no compatible interpreter discoverable, installed approved npm dependencies, Electron, portable Python and the worker packages through the real npm preflight. The next run reused the same verified worker. Packaged Desktop opened with that worker and displayed closed recovery for missing Python without exposing application preload or persistence. A separate full development-window launch remains pending because an existing Forge instance owns its fixed loopback ports."
+    },
+    {
+      "artifact": null,
+      "command": "node .local-codex/desktop-prerequisite-host-smoke.mjs development",
+      "criterionId": "clean-host-qualification",
+      "id": "evidence-8",
+      "incrementId": "desktop-bootstrap-admission",
+      "kind": "external",
+      "outcome": "passed",
+      "recordedAt": "2026-11-16T17:21:26Z",
+      "summary": "The isolated Windows x64 checkout with no compatible interpreter discoverable installed the approved npm packages, Electron, portable Python and the required worker packages through the real npm preflight. A repeat preflight reused the verified worker. With the development ports available, a full npm development launch reached the ready Desktop shell and kept the same worker record. Packaged Desktop opened with that worker and showed its recovery screen without application preload or persistence when required Python was unavailable."
+    },
+    {
+      "artifact": null,
+      "command": "npm run dev:desktop; npm run package; local isolated development and packaged startup smoke cases",
+      "criterionId": "clean-host-qualification",
+      "id": "evidence-9",
+      "incrementId": "desktop-bootstrap-admission",
+      "kind": "external",
+      "outcome": "passed",
+      "recordedAt": "2026-11-16T19:19:12Z",
+      "summary": "The original clean Windows x64 checkout installed the approved npm packages, Electron, portable Python and worker packages without a compatible interpreter on PATH. On the final candidate, deleting a required transitive manifest from the disposable installation caused preflight to reinstall its exact locked version and the approved Electron contract. The next full development launch reached the shell and reused the checked worker after recovery from an empty interrupted-setup lock. The rebuilt Windows package admitted the checked worker and blocked the shell, preload and persistence when Python was unavailable."
+    }
+  ],
+  "evidencePolicy": "control-plane-v1",
+  "feedback": [
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "desktop-bootstrap-final-verification",
+      "impact": "within-increment",
+      "nextAction": "Resolve the controller test environment failures and run the full development launch when its fixed ports are available. Obtain the required separate technical review before closing the increment.",
+      "recordedAt": "2026-11-16T17:15:19Z",
+      "summary": "Candidate receipt passed the focused prerequisite and startup checks, documentation, agent support, architecture, and dependency audit. The broader controller test suite failed. An exact profile registration test passed independently. Clean installer reuse and both packaged startup cases passed, while the normal development-window test remains pending because its loopback ports are occupied.",
+      "targetIncrementId": "desktop-bootstrap-admission"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "desktop-windows-qualification-handoff",
+      "impact": "environment",
+      "nextAction": "On the next Windows host, install the pinned MSVC 14.42.34433 Build Tools and Windows SDK 10.0.26100.0. Select a supported Python test environment with the locked test packages and Torch through PYTHON. Reproduce the built-in catalog result and verify the native fixture when the complete end-to-end lane executes it from source. Establish fresh local work claims and receipts, run the required combined suite and repository gates, obtain a separate technical review, and record roadmap completion. Ignored local control-plane records are checkout-local.",
+      "recordedAt": "2026-11-16T22:57:59Z",
+      "summary": "The Desktop and baseline fixes are independently reviewed and committed. The remaining Windows stability checkpoint has inspected code and focused evidence. Five Python publication tests passed. The shared JSON retry and permanent-denial test passed. A wider targeted Asset Kernel run passed 37 tests and intermittently created 16 of 17 built-in definitions. The combined runs previously failed native setup despite a passing standalone native fixture. The source-lane rerun was stopped at the requested handoff. Overall verification and separate technical disposition remain pending.",
+      "targetIncrementId": null
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "desktop-windows-handoff-e2e-result",
+      "impact": "environment",
+      "nextAction": "Inspect the two SQLite failures on the next clean Windows run together with the intermittent built-in asset seeding result. Retain the native source-lane and bounded atomic replacement checks. Then rerun the repository combined suite and request independent review.",
+      "recordedAt": "2026-11-16T22:59:00Z",
+      "summary": "The Node end-to-end report arrived at handoff. The source-lane native Windows fixture executed with no failures. The full lane reported 238 passed, four skipped and two failures in the Electron SQLite publication and local SQLite runtime integration tests. The scoped candidate receipt and overall qualification remain pending.",
+      "targetIncrementId": null
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "e568cb23bea9d551077136c43b756155aa732720e93bd94e8bfe5e0ea3337631",
+      "recordedAt": "2026-11-16T14:40:26Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "b59ac7c9bf5c5d0d742c491938a5102cb1f1f9c6fe49eb3d636ceb62b0063bb3",
+      "recordedAt": "2026-11-16T14:40:27Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "735e36f12fc46702748f6e3580c5c7f224d1391bf737c708f59a7378645fa5fe",
+      "recordedAt": "2026-11-16T14:44:02Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "e3bf6d82f0063b197305cc095b94702187ba21303882a7e1e8a09afd4a856874",
+      "recordedAt": "2026-11-16T14:44:02Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "9f592935e38970d324abc77f8a66d7a051956511e96c762355b0c2fd4bf8ed4a",
+      "recordedAt": "2026-11-16T16:21:01Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "a21df042f9833b7a8af15ba3343d8587595d003a944ef1d67da074aeec340572",
+      "recordedAt": "2026-11-16T16:21:02Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "19ebca24bf1c3e4f670fed0abe3af674bdb4e551e342920d375d256705f7c866",
+      "recordedAt": "2026-11-16T16:21:02Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "437ddcf94bc330444c368a8d33b8f3b133f5cbd7253a160d85188d80fd11924a",
+      "recordedAt": "2026-11-16T16:21:03Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "4d1caddda1f4be62bb521b63e410e64556deb17bc10bca8e3c14d10cf94d54af",
+      "recordedAt": "2026-11-16T16:47:30Z",
+      "sequence": 9,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "8c24264b0558806ece924f46450d7f4532b0ac8bb2706ad3595ca574c6b13bcf",
+      "recordedAt": "2026-11-16T16:47:31Z",
+      "sequence": 10,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "efdf21363dee04c00f63997aa1b6c5df37f5211a503fa61694a4567e5482c6ad",
+      "recordedAt": "2026-11-16T16:47:31Z",
+      "sequence": 11,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c0c6ccb12e0e2870eff766ebb863dd471ac07e80da0a97ac7992da368f02d047",
+      "recordedAt": "2026-11-16T16:47:32Z",
+      "sequence": 12,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "00cce85502f3c03aca9b6199a153e26be642821ffb60b4fa774988892d5209cb",
+      "recordedAt": "2026-11-16T16:47:32Z",
+      "sequence": 13,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b780ed8fceff6d332ee9a813355eb3baaa7fe93507a6cadf6f96178d7580bb3f",
+      "recordedAt": "2026-11-16T17:09:34Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5665630104413889f41f0805ed5eb4ca0915fe02a31b24d01dc8b6e965f1c8bd",
+      "recordedAt": "2026-11-16T17:09:36Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e3d76b9aebfd6509afb75bec826a7a776102851ff24813bce6a39e0dad4f6a9d",
+      "recordedAt": "2026-11-16T17:10:37Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e1959caba9af68be77824550715d5fc34f9a063a6fe84880b829d7b25510ca7a",
+      "recordedAt": "2026-11-16T17:15:19Z",
+      "sequence": 17,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "3fac24e8497c4780bae257ff0d98d838d3cd9c91de6191ac3c489b61c8c22063",
+      "recordedAt": "2026-11-16T17:21:26Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "521d4c3c6bfe65e0e161c3a334bb5f550cace387b06714edf7088d8b58e0e283",
+      "recordedAt": "2026-11-16T19:19:12Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b4b8cadc35ccff7dfb62795e7e6f63e3ca88900198fddd1869c4500185a01770",
+      "recordedAt": "2026-11-16T19:45:26Z",
+      "sequence": 20,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "571456fa87012b054be7d0bed3997be8c592f7fab10cd567fc44c8257c70963d",
+      "recordedAt": "2026-11-16T20:14:14Z",
+      "sequence": 21,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "d8a587912ead9593a1efa6454e073782d370b90b96c7fca31fa75c478c0ce800",
+      "recordedAt": "2026-11-16T20:14:14Z",
+      "sequence": 22,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "ec8b4e1a142bffb380cbea86d31508437d8f51ae261336fc66d298807fb3199b",
+      "recordedAt": "2026-11-16T21:36:33Z",
+      "sequence": 23,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "ad645946e52d95caeb5ce224aab5d548b7084fa8e57f3b67ddd90b7f94050d25",
+      "recordedAt": "2026-11-16T21:36:33Z",
+      "sequence": 24,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "a0e16c6272ccdf96a53174f1af31ebe8e75c2530dff05a69fa4ec5dcfd5baa50",
+      "recordedAt": "2026-11-16T21:37:36Z",
+      "sequence": 25,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "712859f5ea67d876d1d147b95511b5432586b0836517a7882e9f9d5619dac3da",
+      "recordedAt": "2026-11-16T21:52:24Z",
+      "sequence": 26,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "11921cb91e33a461e5fb63430eb65cf606ae467320dada4aede3eec90a0a0e15",
+      "recordedAt": "2026-11-16T22:57:59Z",
+      "sequence": 27,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "168335a764584f5508105314fb3945e2c35b018c461288d4178fd227b63bd68a",
+      "recordedAt": "2026-11-16T22:59:00Z",
+      "sequence": 28,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b2018dc411d605e139ba8b2de32cd1f9d5023df6126165ed0f4d3884de87dce1",
+      "recordedAt": "2026-11-17T03:55:57Z",
+      "sequence": 29,
+      "type": "roadmap-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "The development command establishes only missing approved prerequisites before Forge, rechecks them, passes the selected interpreter to Desktop, and exits safely with a useful reason when setup cannot complete. A second run reuses a verified installation.",
+          "id": "install-approved-prerequisites",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop opens its shell only after the host verifies required Python installation. Missing, unsupported, incomplete and failed checks keep the shell inert and show a fixed, actionable message. Optional software stays outside this required check.",
+          "id": "startup-requires-python",
+          "qualification": "local"
+        },
+        {
+          "description": "An isolated Windows x64 development checkout with no compatible Python establishes the approved prerequisites and opens Desktop. A repeat launch reuses them. A packaged Desktop startup with a deliberately unavailable required runtime keeps the loading screen in its failure state. Exercise equivalent cases for each additional approved platform before claiming support for it.",
+          "id": "clean-host-qualification",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Verify exact supplier and digest before execution. Prove refusal of unapproved artifacts and platforms, interruption and concurrent setup behavior, non-elevated checkout ownership, preservation of existing user data, and redacted failure outputs.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-11-16T19:45:26Z",
+      "completedChunks": [
+        "desktop-prerequisite-and-loading-flow"
+      ],
+      "completionSummary": "The Desktop prerequisite and startup increment passed all four criteria. The locked dependency, startup, documentation, architecture, agent support, dependency security and controller gates passed on the final candidate. Independent review accepted the receipt and the Windows development and packaged startup evidence.",
+      "deliverables": [
+        "Exact platform prerequisite manifest with supplier, version, digest and installation ownership",
+        "Development preflight wired to npm run dev:desktop and the existing dependency setup",
+        "Host-owned required-runtime installation check and loading-screen failure state",
+        "Source regression, build and clean-environment smoke tests",
+        "Updated Desktop setup, runtime architecture and supply-chain guidance"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "System-wide Python installation and automatic upgrades",
+        "Optional feature runtimes, model downloads during startup, and production deployment",
+        "Automatic provision on a platform without an approved and qualified artifact"
+      ],
+      "id": "desktop-bootstrap-admission",
+      "number": 1,
+      "objective": "Make a fresh development checkout usable with approved prerequisites and keep the Desktop shell closed when required Python components are unavailable.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Node and npm are already available to execute npm. Windows x64 is the initial automatic interpreter acquisition target. Other supported platforms can reuse a compatible installed Python.",
+          "The gate tests local installation only and leaves managed worker process start to explicit feature execution.",
+          "Earlier uncommitted interpreter discovery and diagnostics work is the current inspected baseline."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "install-approved-prerequisites",
+              "startup-requires-python",
+              "security-impact-reviewed",
+              "clean-host-qualification"
+            ],
+            "id": "desktop-prerequisite-and-loading-flow",
+            "outcome": "A verified development environment is handed to Desktop. A missing required installation keeps the app shell closed.",
+            "title": "Desktop prerequisite and loading flow"
+          }
+        ],
+        "completionTests": [
+          "Run Desktop type check, documentation, architecture, and dependency security gates.",
+          "Exercise the fresh Windows checkout launch, repeat launch and packaged missing-runtime flow using owned fixture state before asserting clean-host qualification."
+        ],
+        "documentation": [
+          "Desktop contributor setup, runtime adapter, host architecture, renderer startup, prerequisite supplier policy and reviewed user descriptions."
+        ],
+        "fingerprint": "19519a12f9f5465f1c99e7a4a7bc46c9691203cb423f621913a2878fda3d409c",
+        "focusedTests": [
+          "Bootstrap fixture tests cover ready, missing, corrupt, unsupported, interrupted, and concurrent setup.",
+          "Local worker installation and loading-screen regressions cover missing Python, incompatible setup, closed failure text and successful startup."
+        ],
+        "recordedAt": "2026-11-16T16:21:03Z",
+        "rollback": "Revert the integration as a single change. Preserve account Python, model data, and workspace files. Any cleanup is confined to checkout-owned prerequisite staging.",
+        "steps": [
+          "Add a read-only installed Python worker probe using the existing dependency predicates.",
+          "Wire the missing-only checkout-local prerequisite setup to the development command.",
+          "Gate shell admission in the main process and display fixed loading-screen recovery text.",
+          "Exercise focused success, refusal and reuse cases, then qualify isolated clean Windows development and packaged startup."
+        ],
+        "summary": "Establish the development prerequisites and check the selected runtime before either development or packaged Desktop opens its shell."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-11-16T16:21:02Z",
+          "risks": [
+            "Security-relevant: checksum substitution and unexpected redirects could execute foreign software. Use a reviewed exact manifest, bounded download and reject mismatches before extraction.",
+            "Checkout startup may encounter junctions or concurrent or interrupted setup. Own exclusive staging and publication, reject linked managed locations, and keep an earlier usable environment until replacement verifies.",
+            "Packaged startup may lack the interpreter or required dependencies. Use a local bounded probe in the main process and a closed failure status on an isolated loading-only window.",
+            "Existing qualification hosts supply explicit controlled worker commands. Preserve those configured launch paths using positive local executable and entrypoint checks rather than adding a production bypass flag."
+          ],
+          "sources": [
+            {
+              "note": "Keep Forge, both renderers, preload isolation, and checksum-verified Electron acquisition.",
+              "title": "Qualified Desktop toolchain",
+              "url": "docs/adr/ADR-0044-qualified-desktop-vite-toolchain.md"
+            },
+            {
+              "note": "Reuse the existing Context and Worker dependency checks without starting the worker.",
+              "title": "Managed Python dependency preparation",
+              "url": "modules/adapters/runtime/python/README.md"
+            },
+            {
+              "note": "Reuse the existing accessible failure and inert root.",
+              "title": "Desktop loading screen",
+              "url": "apps/desktop/src/renderer/README.md"
+            },
+            {
+              "note": "CPython documents a fixed-version NuGet package for build environments.",
+              "title": "Official portable Python distribution",
+              "url": "https://docs.python.org/3.14/using/windows.html#the-nuget-org-packages"
+            }
+          ],
+          "summary": "The root npm script invokes Forge directly. Electron has a reviewed automatic downloader with bundled checksums. The Python supervisor owns worker dependency preparation and lazily starts on demand. The renderer already supplies an inert loading screen. The official CPython NuGet distribution can be extracted to a checkout-owned directory on Windows x64 without an account install."
+        }
+      ],
+      "rollback": "Revert the bootstrap and startup integration as one candidate. Retire only checkout-owned prerequisite files after verifying their ownership. Preserve existing Python installations, model caches, and workspace data.",
+      "startedAt": "2026-11-16T16:21:02Z",
+      "status": "completed",
+      "title": "Check required software before opening Desktop",
+      "verification": [
+        "Run focused bootstrap and Desktop startup tests for present, missing, unsupported, corrupt, interrupted and concurrent inputs.",
+        "Run Desktop typecheck, dependency security, documentation and architecture checks after the change.",
+        "Qualify the approved development and packaged Windows paths on isolated clean fixtures. Run the final standard and end-to-end suites once after implementation."
+      ],
+      "workPackages": [
+        {
+          "id": "development-setup",
+          "outcome": "Before Forge starts, the development command reuses verified software or establishes the exact approved npm, Electron, and Python prerequisites, then verifies the selected interpreter and worker dependencies.",
+          "title": "Development prerequisite setup"
+        },
+        {
+          "id": "startup-admission",
+          "outcome": "The Desktop host checks the required installation. The loading screen provides a fixed reason and recovery action when the check fails. A passing check permits normal startup.",
+          "title": "Desktop startup gate"
+        }
+      ]
+    }
+  ],
+  "name": "Desktop Prerequisites and Startup",
+  "objective": "Make the development launch establish approved required software and keep the Desktop shell unavailable when a required runtime is missing.",
+  "paths": {
+    "report": "docs/tmp/desktop-prerequisites-and-startup-implementation-report.md",
+    "roadmap": "docs/desktop-prerequisites-and-startup-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/desktop-prerequisites-and-startup/state.json"
+  },
+  "resumeAudits": [
+    {
+      "blockerId": "desktop-roadmap-native-qualification-host",
+      "reconciliation": "Verified the fixed compiler and linker installation, executed the real Windows identity test file with the qualified Python interpreter, and retained the overall suite requirement.",
+      "recordedAt": "2026-11-16T21:37:36Z"
+    },
+    {
+      "blockerId": "desktop-roadmap-baseline-suite-failures",
+      "reconciliation": "Retained the failed overall receipt, linked reviewed component evidence to the roadmap and confirmed the Windows native fixture already passed. Run the required combined suite on the new source.",
+      "recordedAt": "2026-11-16T21:52:24Z"
+    }
+  ],
+  "roadmapApproval": {
+    "approvedAt": "2026-11-16T16:21:01Z",
+    "fingerprint": "f06ca2ebf49f3c12c532064830d0b0526792896101d45e664644ed04ad5e0d39",
+    "note": "The user explicitly approved the published checkout-local prerequisite and Desktop startup roadmap."
+  },
+  "schemaVersion": 1,
+  "slug": "desktop-prerequisites-and-startup",
+  "status": "completed",
+  "updatedAt": "2026-11-17T03:55:57Z"
+}

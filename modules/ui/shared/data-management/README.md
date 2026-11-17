@@ -27,7 +27,12 @@ selected file names before import. Hugging Face Step 2 includes
 a token-only settings card backed by the same persisted Hugging Face setting
 used elsewhere; public datasets do not require a token, while private or gated
 datasets may. Selection asks for a user or organization, lists bounded
-datasets, and then lists importable files with checkboxes. The provider browser
+datasets, and then lists importable files with checkboxes. Dataset rows show
+the provider's declared license. All data includes non-open and unknown
+licenses. Choose Open Creative Commons or Other open licenses to narrow the list.
+Changing filters clears the previous selection. Run
+`python dev-tools/helpers/run_focused_checks.py --profile headless-data-license-discovery`
+to check the provider adapter, host transports, and shared picker. The provider browser
 returns the immutable revision for every file; the guided task imports only
 checked files and records those exact revisions without asking users to type
 repository paths or commit identifiers. Desktop and thin client mount only this
@@ -301,6 +306,9 @@ It preserves provider, repository, path and immutable revision in scoped binding
 and source snapshots; it does not download provider bytes. A retry skips completed
 files and retries only unfinished items. Localization remains a separate existing
 application action. UI selection never grants provider or workspace authority.
+After a provider import finishes, Add Data shows the reported license for each
+saved file. The task and source snapshot retain the same exact-revision codes.
+Add Data shows an unknown license if the provider supplied no usable declaration.
 
 Composed desktop and browser scenarios use actual clients, preload/registered IPC
 or owned local HTTP, application browse/registration/task code, new JSON catalog

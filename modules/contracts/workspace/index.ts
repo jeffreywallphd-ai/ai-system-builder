@@ -1,4 +1,5 @@
 export * from "./workspace-id";
+export { isWorkspaceId } from "./workspace-id";
 export * from "./workspace-status";
 export * from "./workspace-role";
 export * from "./workspace-actor-reference";

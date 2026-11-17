@@ -13,7 +13,11 @@ before(async () => {
   if (!supported) return;
   assert.ok(process.env.PYTHON, "Select the repository qualification Python explicitly.");
   const build = spawnSync(process.env.PYTHON!, ["-B", "dev-tools/scripts/native/build_windows_model_file_identity.py"], { encoding: "utf8", timeout: 240_000, maxBuffer: 1024 * 1024, windowsHide: true });
-  assert.equal(build.error, undefined); assert.equal(build.status, 0, "Fixed installed native profile must build successfully.");
+  assert.equal(build.error, undefined);
+  const failure = build.stderr.match(/^(?:ValueError|RuntimeError|TimeoutError): [A-Za-z .]{1,120}$/mu)?.[0]
+    ?? build.stderr.match(/^(?:PermissionError|OSError|FileNotFoundError): \[WinError \d+\]/mu)?.[0]
+    ?? build.stderr.match(/^queue\.Empty$/mu)?.[0];
+  assert.equal(build.status, 0, `Fixed installed native profile must build successfully.${failure ? ` ${failure}` : ""}`);
   const result = JSON.parse(build.stdout.trim().split(/\r?\n/).at(-1)!);
   assert.equal(result.physical_exit_code, 0); assert.equal(result.cleanup_passed, true);
   assert.match(result.build, /^artifacts\/tmp\/native-model-identity\/[a-f0-9]{32}$/);

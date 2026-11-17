@@ -2,6 +2,15 @@
 
 # Runtime adapters
 
+Standard CPU memory admission has user-directed trial estimates of3GiB for the
+pinned Qwen2.5-0.5B Float32 weights and3.5GiB for pinned Qwen2.5-1.5B BF16 weights.
+Exact safe-weight/config SHA256, loaded-weight size, explicit CPU/chat/Standard settings
+and absence of adapters gate these estimates; mismatch keeps the conservative
+guard. CUDA, auto device, other precisions/models and offload are unchanged.
+These are free-physical-RAM estimates, not process quotas or model qualification.
+See the [offline testing guide](../../../docs/operations/model-blocker-testing.md)
+for remaining-only tests, failure logs and unresolved native/offload boundaries.
+
 Runtime repair preserves explicit host authority: both ComfyUI and Git reject
 missing/false `allowUpdate` before I/O, and `forceRepair` never grants permission.
 Targeted and full fallbacks retain host flags and source. Automatic no-update

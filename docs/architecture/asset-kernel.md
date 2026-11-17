@@ -24,6 +24,11 @@ The Asset Kernel does not replace storage, runtime, host, transport, or security
 
 Executable source, implementation bundles, build evidence, and system releases are also outside Asset Kernel records. ADR-0030 and `docs/architecture/asset-implementations-and-packages.md` define the separate implementation-release family and its exact bindings to semantic definitions.
 
+Imported package inspection enforces complete bounded semantic-v2 entry identities
+and any declared manifest checksum before admission. Semantic identity cannot
+grant trust, transfer approval or replace immutable package byte verification.
+Foundation releases retain their shipped identities.
+
 ## Canonical Terminology
 
 | Concept                      | Kernel status                             | Canonical meaning                                                                                                                                                           |
@@ -295,6 +300,19 @@ The resolver is pure and non-destructive. It accepts explicit candidate definiti
 
 Workspace Asset Library reads require explicit workspace context. Missing workspace context must fail safely and must not fall back to global Asset Registry records.
 
+Studio and derived publications additionally become visible through their
+organization-scoped workflow repositories. The shared composition passes only
+these two private published-reference readers to the workspace facade. List and
+detail membership requires the exact published definition identity/version and
+published lifecycle; global existence, user metadata and an unpublished draft
+cannot establish ownership. Floating definition reads may resolve only to an
+actually owned exact published version. Reader failure or malformed/oversized
+ownership data fails closed with a static error. The request-local identity set
+is bounded to 25,000 references per reader; it grants read visibility only and
+does not inspect source bytes, execute code, activate an asset or replace the
+existing transport/workspace authorization. Legacy authoring, reuse and trusted
+pack membership retain their separate rules.
+
 A workspace can see `system.foundation@1.0.0` definitions only when it has an active trusted system-pack activation reference. A bare `sourcePackId` is not sufficient authority, and detail reads must not bypass the workspace effective view.
 
 Workspace creation can create a reference activation for `system.foundation@1.0.0`; it must not copy pack manifests, asset entries, or definitions and must not invoke system pack install behavior.
@@ -460,6 +478,15 @@ not close parent security increments or establish protected physical-file effect
 
 ## Bounded Foundation bootstrap
 
+Customization target listing takes a fresh exact-definition snapshot through the
+existing ordered repository batch seam in groups of at most250. It deduplicates
+exact identities within that operation and never caches across requests or
+organizations. Ports without the seam read sequentially. Missing definitions
+retain ineligible targets; malformed or mismatched batch responses deny. Scoped
+release/backing reads, revocation checks, filtering and paging remain authoritative.
+This avoids launching hundreds of full-collection reads against the PostgreSQL
+connection pool. Detail reads resolve their exact definition once.
+
 Foundation reconciliation uses ordered exact reads in groups of at most250 and
 optional atomic definition registration under the existing collection schema. Every
 member validates before persistence; expected original bodies are rechecked inside
@@ -479,17 +506,3 @@ between fields, before sorting/paging. Definition facade reads consume at most
 their remaining output capacity; oversampling cannot advance an opaque cursor
 past compatible rows that were never returned. Final scoped membership and
 compatibility checks remain authoritative.
-
-
-Studio and derived publications additionally become visible through their
-organization-scoped workflow repositories. The shared composition passes only
-these two private published-reference readers to the workspace facade. List and
-detail membership requires the exact published definition identity/version and
-published lifecycle; global existence, user metadata and an unpublished draft
-cannot establish ownership. Floating definition reads may resolve only to an
-actually owned exact published version. Reader failure or malformed/oversized
-ownership data fails closed with a static error. The request-local identity set
-is bounded to 25,000 references per reader; it grants read visibility only and
-does not inspect source bytes, execute code, activate an asset or replace the
-existing transport/workspace authorization. Legacy authoring, reuse and trusted
-pack membership retain their separate rules.

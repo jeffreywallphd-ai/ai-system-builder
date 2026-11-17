@@ -119,7 +119,10 @@ export function createLocalExecutionRunRepositoryAdapters(o: {
           x.workspaceId === q.workspaceId &&
           (!q.status || x.status === q.status) &&
           (!q.sourceExecutionPlanId ||
-            x.sourceExecutionPlanId === q.sourceExecutionPlanId),
+            x.sourceExecutionPlanId === q.sourceExecutionPlanId) &&
+          (!q.delegatedConversationOnly || (x.sourceContextKind === "conversation-turn" && !x.archivedAt &&
+            x.status !== "archived" && x.provenance.some((entry) =>
+              entry.kind === "execution-run-delegated-conversation" && entry.actorId === "application"))),
       );
       const p = pageRecords(f.sort(byUpdated), q.limit, q.cursor);
       return { runs: p.records, nextCursor: p.nextCursor };

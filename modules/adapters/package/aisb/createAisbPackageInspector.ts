@@ -2,7 +2,7 @@ import { ASSET_PACKAGE_DEFAULT_MAX_BYTES } from "../../../contracts/asset-packag
 import { createHash } from "node:crypto";
 
 import type { AssetPackageInspectorPort } from "../../../application/ports/asset-package";
-import { validateAssetPackManifest } from "../../../application/services/asset-packs";
+import { assessAssetPackSemanticIdentityForImport } from "../../../application/services/asset-packs";
 import {
   ASSET_PACKAGE_FORMAT_VERSION,
   ASSET_PACKAGE_MEDIA_TYPE,
@@ -99,109 +99,131 @@ export function createAisbPackageInspector(
         return empty(input, digest(input.bytes), issues);
       }
 
-      const container = candidate as unknown as AssetPackageContainerV1;
-      if (container.mediaType !== ASSET_PACKAGE_MEDIA_TYPE) {
-        issues.push(
-          issue(
-            "error",
-            "package.media-type.unsupported",
-            "Package media type is unsupported.",
-            "mediaType",
-          ),
-        );
-      }
-      if (!isRecord(container.manifest) || !Array.isArray(container.entries)) {
-        issues.push(
-          issue(
-            "error",
-            "package.shape.invalid",
-            "Package manifest and entries are required.",
-          ),
-        );
-        return empty(input, digest(input.bytes), issues);
-      }
+      try {
+        let container = candidate as unknown as AssetPackageContainerV1;
+        if (container.mediaType !== ASSET_PACKAGE_MEDIA_TYPE) {
+          issues.push(
+            issue(
+              "error",
+              "package.media-type.unsupported",
+              "Package media type is unsupported.",
+              "mediaType",
+            ),
+          );
+        }
+        if (!isRecord(container.manifest) || !Array.isArray(container.entries)) {
+          issues.push(
+            issue(
+              "error",
+              "package.shape.invalid",
+              "Package manifest and entries are required.",
+            ),
+          );
+          return empty(input, digest(input.bytes), issues);
+        }
 
-      const packageDigest = digestCanonical(container);
-      validateManifest(container, issues);
-      const decodedEntries = validateEntries(container, limits, issues);
-      validateImplementationReferences(container, decodedEntries, issues);
+        const semantic = assessAssetPackSemanticIdentityForImport(container.manifest.semanticManifest);
+        if (semantic.status === "invalid") {
+          return empty(input, digest(input.bytes), [issue("error", "package.semantic.invalid", "Semantic asset manifest is invalid.")]);
+        }
+        container = { ...container, manifest: { ...container.manifest, semanticManifest: semantic.manifest } };
+        if (!hasTraversableDeclarations(container)) {
+          return empty(input, digest(input.bytes), [issue("error", "package.shape.invalid", "Package declaration structure is invalid.")]);
+        }
+        if (semantic.status === "identity-invalid") {
+          issues.push(issue("error", `package.semantic.identity.${semantic.issue.reason}`,
+            "Semantic identity requires revalidation before admission.",
+            semantic.issue.field === "entry-fingerprint"
+              ? `manifest.semanticManifest.assets.${semantic.issue.entryIndex}.fingerprint`
+              : "manifest.semanticManifest.checksum"));
+        }
+        issues.push(...semantic.validationIssues.map((entry) => issue(
+          entry.severity, `package.semantic.${entry.category}`, entry.message, entry.path?.join("."),
+        )));
+        const packageDigest = digestCanonical(container);
+        validateManifest(container, issues);
+        const decodedEntries = validateEntries(container, limits, issues);
+        validateImplementationReferences(container, decodedEntries, issues);
 
-      const semanticIssues = safelyValidateSemanticManifest(container);
-      issues.push(...semanticIssues);
-      if (
-        container.manifest.semanticManifest?.sourceKind === "system" ||
-        container.manifest.semanticManifest?.trustStatus === "system-trusted"
-      ) {
-        issues.push(
-          issue(
-            "error",
-            "package.trust.claim-forbidden",
-            "Imported packages cannot claim system trust.",
-          ),
+        if (
+          container.manifest.semanticManifest?.sourceKind === "system" ||
+          container.manifest.semanticManifest?.trustStatus === "system-trusted"
+        ) {
+          issues.push(
+            issue(
+              "error",
+              "package.trust.claim-forbidden",
+              "Imported packages cannot claim system trust.",
+            ),
+          );
+        }
+
+        const expandedSizeBytes = decodedEntries.reduce(
+          (total, entry) => total + entry.bytes.byteLength,
+          0,
         );
+        const signatureStatus = container.signature ? "unverified" : "missing";
+        const provenanceStatus = hasEntry(
+          container.manifest.provenanceEntryPath,
+          decodedEntries,
+        )
+          ? "unverified"
+          : "missing";
+        const sbomStatus = hasEntry(
+          container.manifest.sbomEntryPath,
+          decodedEntries,
+        )
+          ? "unverified"
+          : "missing";
+        const safeIssues = uniqueIssues(issues);
+        return {
+          container,
+          entries: decodedEntries,
+          summary: {
+            inspectionId: input.inspectionId,
+            workspaceId: input.workspaceId,
+            packageDigest,
+            packageId: safeText(container.manifest.packageId),
+            version: safeText(container.manifest.version),
+            displayName: safeText(container.manifest.displayName),
+            publisher: safeText(container.manifest.publisher),
+            formatVersion: safeText(container.manifest.formatVersion),
+            definitionCount: Array.isArray(
+              container.manifest.semanticManifest?.assets,
+            )
+              ? container.manifest.semanticManifest.assets.length
+              : 0,
+            implementationCount: Array.isArray(container.manifest.implementations)
+              ? container.manifest.implementations.length
+              : 0,
+            entryCount: decodedEntries.length,
+            expandedSizeBytes,
+            requestedCapabilities: safeStringArray(
+              container.manifest.requestedCapabilities,
+            ),
+            supportedDeploymentProfiles: Array.isArray(
+              container.manifest.supportedDeploymentProfiles,
+            )
+              ? container.manifest.supportedDeploymentProfiles.filter((value) =>
+                  ASSET_IMPLEMENTATION_DEPLOYMENT_PROFILES.includes(value),
+                )
+              : [],
+            signatureStatus,
+            provenanceStatus,
+            sbomStatus,
+            conflicts: [],
+            issues: safeIssues,
+            eligibleForAdmission: !safeIssues.some(
+              (entry) => entry.severity === "error",
+            ),
+            inspectedAt: input.inspectedAt,
+          },
+        };
+      } catch {
+        // Parsed nonsemantic fields are still untrusted. Never let a malformed
+        // declaration or recursive serializer publish partial eligible state.
+        return empty(input, digest(input.bytes), [issue("error", "package.shape.invalid", "Package declaration structure is invalid.")]);
       }
-
-      const expandedSizeBytes = decodedEntries.reduce(
-        (total, entry) => total + entry.bytes.byteLength,
-        0,
-      );
-      const signatureStatus = container.signature ? "unverified" : "missing";
-      const provenanceStatus = hasEntry(
-        container.manifest.provenanceEntryPath,
-        decodedEntries,
-      )
-        ? "unverified"
-        : "missing";
-      const sbomStatus = hasEntry(
-        container.manifest.sbomEntryPath,
-        decodedEntries,
-      )
-        ? "unverified"
-        : "missing";
-      const safeIssues = uniqueIssues(issues);
-      return {
-        container,
-        entries: decodedEntries,
-        summary: {
-          inspectionId: input.inspectionId,
-          workspaceId: input.workspaceId,
-          packageDigest,
-          packageId: safeText(container.manifest.packageId),
-          version: safeText(container.manifest.version),
-          displayName: safeText(container.manifest.displayName),
-          publisher: safeText(container.manifest.publisher),
-          formatVersion: safeText(container.manifest.formatVersion),
-          definitionCount: Array.isArray(
-            container.manifest.semanticManifest?.assets,
-          )
-            ? container.manifest.semanticManifest.assets.length
-            : 0,
-          implementationCount: Array.isArray(container.manifest.implementations)
-            ? container.manifest.implementations.length
-            : 0,
-          entryCount: decodedEntries.length,
-          expandedSizeBytes,
-          requestedCapabilities: safeStringArray(
-            container.manifest.requestedCapabilities,
-          ),
-          supportedDeploymentProfiles: Array.isArray(
-            container.manifest.supportedDeploymentProfiles,
-          )
-            ? container.manifest.supportedDeploymentProfiles.filter((value) =>
-                ASSET_IMPLEMENTATION_DEPLOYMENT_PROFILES.includes(value),
-              )
-            : [],
-          signatureStatus,
-          provenanceStatus,
-          sbomStatus,
-          conflicts: [],
-          issues: safeIssues,
-          eligibleForAdmission: !safeIssues.some(
-            (entry) => entry.severity === "error",
-          ),
-          inspectedAt: input.inspectedAt,
-        },
-      };
     },
   };
 }
@@ -586,29 +608,13 @@ function validateImplementationReferences(
   }
 }
 
-function safelyValidateSemanticManifest(
-  container: AssetPackageContainerV1,
-): AssetPackageInspectionIssue[] {
-  try {
-    return validateAssetPackManifest(
-      container.manifest.semanticManifest,
-    ).issues.map((entry) =>
-      issue(
-        entry.severity,
-        `package.semantic.${entry.category}`,
-        entry.message,
-        entry.path?.join("."),
-      ),
-    );
-  } catch {
-    return [
-      issue(
-        "error",
-        "package.semantic.invalid",
-        "Semantic asset manifest is invalid.",
-      ),
-    ];
-  }
+function hasTraversableDeclarations(container: AssetPackageContainerV1): boolean {
+  return container.entries.every(isRecord)
+    && (container.manifest.dependencies === undefined
+      || (Array.isArray(container.manifest.dependencies) && container.manifest.dependencies.every(isRecord)))
+    && Array.isArray(container.manifest.implementations)
+    && container.manifest.implementations.every((entry) => isRecord(entry)
+      && isRecord(entry.definitionRef) && Array.isArray(entry.facets) && entry.facets.every(isRecord));
 }
 
 function normalizeEntryPath(value: unknown): string | undefined {

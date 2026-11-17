@@ -50,6 +50,10 @@ Hosts are implemented under `modules/hosts/` and surfaced through `apps/*` entry
 
 - Built on Electron with the exactly pinned Electron Forge Vite plugin as the canonical desktop dev/build/package path (ADR-0044).
 - Owns desktop lifecycle composition and desktop-specific wiring.
+- Desktop checks the selected local Python worker installation before admitting
+  application persistence, IPC and shell startup. A failed check supplies a
+  closed category to a loading-only window. Explicitly configured alternate
+  Node workers require a usable local executable and a checked entry point.
 - Uses Electron IPC as a transport boundary (via transport adapters), not as business logic location.
 - Desktop implementation is split intentionally across Electron `main`, preload, renderer, and host composition:
   - `main`: lifecycle/bootstrap/window creation only,
@@ -74,6 +78,45 @@ Hosts are implemented under `modules/hosts/` and surfaced through `apps/*` entry
   context or application contracts.
 
 ## Server host
+
+The [approved headless host boundary](../adr/ADR-0047-headless-system-builder-delegation.md)
+keeps one owning host per client connection. The optional desktop connector
+must reuse the running app's lazy application providers, and the managed
+adapter must use the existing authenticated server API. An adapter does not
+start a second host or own a data store. Workspace access and window
+presentation remain separate. The desktop's internal read dispatcher uses
+the same System Builder read use cases as IPC. It requires a verified grant
+and current workspace policy. Desktop Settings can start the optional loopback
+connector after an explicit native confirmation. A new editing client needs a
+separate confirmation and current workspace write permission. Desktop dispatch
+shares the System Builder repository. Its owning SQLite transaction rereads
+the workspace and membership before writing or returning a stored receipt.
+The transaction saves the record, receipt and change together. The connector
+closes before platform persistence.
+The stdio MCP adapter forwards its finite read catalog and optional authoring
+and approved conversation tools to the running connector. It authenticates
+the endpoint with the certificate fingerprint from desktop Settings. A
+separate conversation registration permits requests in one workspace.
+The host checks the exact approved session on each turn. The desktop's existing conversation provider
+owns the saved run and worker lifecycle. The connector can return its
+handle before execution completes. Ending the request does not cancel the
+task, and desktop shutdown does not close persistence before retirement.
+Managed parity remains pending.
+
+Paired desktop clients can read a saved-system snapshot and replay bounded
+pages of committed changes when the owning host advertises those operations.
+The host binds each cursor to its incarnation, registered client, organization,
+and workspace. A restart, expired cursor, or different scope requires a new
+snapshot. A snapshot reads its watermark first; clients may see a concurrent
+saved revision again in replay and should merge it by system and record revision.
+
+The visible desktop Systems view polls only its authorized workspace's
+committed change sequence. It refreshes Manage and Compose when the sequence
+changes. It stops polling in hidden views and does not choose a system,
+change focus or send draft data. IPC rechecks workspace and frame authority
+before returning the sequence. A passive update leaves expanded Manage pages
+and a focused row that would disappear in place. The next explicit search
+or refresh loads the current first page.
 
 - Owns server process lifecycle and composition.
 - Uses transport adapters (default: Express) for API exposure.

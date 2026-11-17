@@ -8,7 +8,8 @@
     "data-management-quality-and-usability",
     "optional-constrained-json-generation",
     "optional-low-memory-inference",
-    "comprehensive-ui-automation"
+    "comprehensive-ui-automation",
+    "headless-skills-ui-takeover"
   ],
   "criterion_labels": [
     {
@@ -45,6 +46,208 @@
     }
   ],
   "links": [
+    {
+      "roadmap_id": "desktop-prerequisites-and-startup",
+      "increment_id": "desktop-bootstrap-admission",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "desktop-roadmap-baseline-final",
+      "work_criteria": [
+        "family-contract-imports",
+        "source-mcp-verification"
+      ],
+      "receipt_digest": "8de304b6eb5cb8de1793fe3522909fe3419fbbfa08584fd7c2c87d997de9f7d5",
+      "review_digest": "72078507e7603f6f11f954e3e1ddd20576da8312e1bee59556d9f2bbde6347f2",
+      "scope": "The reviewed repair restored family-level imports and the source-based MCP fixture. The fixed checks passed for scoped requests, TLS and sanitized replies.",
+      "limitations": [
+        "Parent closure still requires the full combined suite and its own current independent review."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "desktop-takeover-real-host",
+      "work_id": "headless-win32-window-lifecycle-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "a11c53613951d675494b61d120264bc94023c8c53933d54ed06cf1140206d64d",
+      "review_digest": "e31130762c072036bb24cabf185ee79aff7171d71a06111dc6f173c109a96aeb",
+      "scope": "Four packaged Windows journeys passed. Across 100 revokes during normal use, loading and dialogs, p95 was 6.2 ms and maximum was 6.5 ms. The saved audit entries and independent windows passed their checks.",
+      "limitations": [
+        "The remaining Windows work covers native background expiry, held context responses and a complete rollback test."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "revocation-and-delivery-targets",
+      "work_id": "headless-win32-window-lifecycle-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "a11c53613951d675494b61d120264bc94023c8c53933d54ed06cf1140206d64d",
+      "review_digest": "e31130762c072036bb24cabf185ee79aff7171d71a06111dc6f173c109a96aeb",
+      "scope": "Four packaged Windows journeys passed. Across 100 revokes during normal use, loading and dialogs, p95 was 6.2 ms and maximum was 6.5 ms. The saved audit entries and independent windows passed their checks.",
+      "limitations": [
+        "The remaining Windows work covers native background expiry, held context responses and a complete rollback test."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "backend-continuity-and-lifecycle-isolation",
+      "work_id": "headless-win32-window-lifecycle-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "a11c53613951d675494b61d120264bc94023c8c53933d54ed06cf1140206d64d",
+      "review_digest": "e31130762c072036bb24cabf185ee79aff7171d71a06111dc6f173c109a96aeb",
+      "scope": "Four packaged Windows journeys passed. Across 100 revokes during normal use, loading and dialogs, p95 was 6.2 ms and maximum was 6.5 ms. The saved audit entries and independent windows passed their checks.",
+      "limitations": [
+        "The remaining Windows work covers native background expiry, held context responses and a complete rollback test."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "backend-continuity-and-lifecycle-isolation",
+      "work_id": "headless-native-window-visibility-fence",
+      "work_criteria": [
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "cb3fd9bd4b91cc8940906d137a31106fc7af84cf64c0f3228f5c783961151936",
+      "review_digest": "c7b88f4890a03fbb5218da5d72d60ad8db8d9bcdec63bb3350983c22accca392",
+      "scope": "Commit 9e5da225b retires the exact main-frame takeover on native hide or minimize and requires a fresh window registration on restore.",
+      "limitations": [
+        "This focused receipt verifies main-process retirement. Renderer cancellation of responses already in transit and packaged timing are separate checks."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "desktop-takeover-real-host",
+      "work_id": "headless-win32-takeover-native-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "5e6ecd01a6eb9f665255df9ec0bd54c6deede3c95f0e4e37a8932e05380b08dc",
+      "review_digest": "4cd61d5f307ee4c007e54ef511e6efad3484783b4ada346c69261dbbf3d93f88",
+      "scope": "Three packaged Windows journeys in commit 29524bbbf. The user can revoke window control while an approved chat task continues.",
+      "limitations": [
+        "The foreground run measured 80 ordinary and 20 preview-dialog revokes. Warm presentation p95 was 142.9 ms. Revoke p95 was 6.2 ms and maximum was 6.8 ms.",
+        "This receipt covers one window and the controlled local worker. Further desktop lifecycle, loading and rollback checks are pending."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "revocation-and-delivery-targets",
+      "work_id": "headless-win32-takeover-native-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "5e6ecd01a6eb9f665255df9ec0bd54c6deede3c95f0e4e37a8932e05380b08dc",
+      "review_digest": "4cd61d5f307ee4c007e54ef511e6efad3484783b4ada346c69261dbbf3d93f88",
+      "scope": "Three packaged Windows journeys in commit 29524bbbf. The user can revoke window control while an approved chat task continues.",
+      "limitations": [
+        "The foreground run measured 80 ordinary and 20 preview-dialog revokes. Warm presentation p95 was 142.9 ms. Revoke p95 was 6.2 ms and maximum was 6.8 ms.",
+        "This receipt covers one window and the controlled local worker. Further desktop lifecycle, loading and rollback checks are pending."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "backend-continuity-and-lifecycle-isolation",
+      "work_id": "headless-win32-takeover-native-witnesses",
+      "work_criteria": [
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "backend-continuity-and-lifecycle-isolation"
+      ],
+      "receipt_digest": "5e6ecd01a6eb9f665255df9ec0bd54c6deede3c95f0e4e37a8932e05380b08dc",
+      "review_digest": "4cd61d5f307ee4c007e54ef511e6efad3484783b4ada346c69261dbbf3d93f88",
+      "scope": "Three packaged Windows journeys in commit 29524bbbf. The user can revoke window control while an approved chat task continues.",
+      "limitations": [
+        "The foreground run measured 80 ordinary and 20 preview-dialog revokes. Warm presentation p95 was 142.9 ms. Revoke p95 was 6.2 ms and maximum was 6.8 ms.",
+        "This receipt covers one window and the controlled local worker. Further desktop lifecycle, loading and rollback checks are pending."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "security-ui-control-reviewed",
+      "work_id": "headless-desktop-window-audit",
+      "work_criteria": [
+        "security-ui-control-reviewed"
+      ],
+      "receipt_digest": "26a6dc9fbdf9562e72907a6ba74fa6902cd45e39cc6b05e0ff1600d49889a2b8",
+      "review_digest": "f30b9e4417e60bbe06f1be7cbae966f79956319cb70bd9c01830378a25af0e14",
+      "scope": "The reviewed bounded local audit in commit f238010b4 records window authority and backend outcomes separately.",
+      "limitations": [
+        "Automated tests verified fixed audit fields, denied foreign scope, a persisted entry cap, and safe handling of a slow or failed writer.",
+        "The focused receipt uses an in-memory store. Packaged Windows audit and rollback evidence remain pending."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "dirty-handoff-and-reachable-controls",
+      "work_id": "headless-desktop-takeover-consent-dialog",
+      "work_criteria": [
+        "dirty-handoff-and-reachable-controls"
+      ],
+      "receipt_digest": "e9c6f9290b5c3948f8524875fec27e992ecb8374084ed7585d0e01c1b52c77de",
+      "review_digest": "1a6373d498e3b02e8ef54ad8c6ebed6759cc8d77b97bac5fdc400090beb4e431",
+      "scope": "The reviewed Windows takeover dialog, fixed revoke control, and unchanged page layout in commit 4bfa28a7c.",
+      "limitations": [
+        "The consent and draft tests cover Escape, close, exact local approval, nested dialogs, and restored scrollbar space.",
+        "The packaged Windows tests cover revocation from a normal window or system preview and checking saved work after restart. Loading, connection loss, and complete audit verification still need evidence."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "presentation-effect-fencing",
+      "work_id": "headless-desktop-presentation-checkpoint",
+      "work_criteria": [
+        "presentation-effect-fencing",
+        "context-minimization-and-revoke-fence"
+      ],
+      "receipt_digest": "2c1ded9f2a65bff243c1d32df51d2e983d09b67d3453c05852e4e7de95ddf6d2",
+      "review_digest": "c13868f81d829563467c724ed46217db811c9fda3a1cc8dda9fa1208d25a23ee",
+      "scope": "Paired desktop window presentation and fresh context in commit e1423a8e3",
+      "limitations": [
+        "The tests and review cover approved window requests, ordered resource display, and stopping new context after revoke.",
+        "An isolated Windows test passed for 100 revokes in a normal window. Revoke during loading or a dialog, restart, and security audit still need separate evidence."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "dirty-handoff-and-reachable-controls",
+      "work_id": "headless-desktop-window-handoff-reviewed",
+      "work_criteria": [
+        "dirty-handoff-and-reachable-controls",
+        "immediate-local-revocation-and-exact-retry"
+      ],
+      "receipt_digest": "3446919b14a707804102e38a4a60e9dd4b83ee13ec28c454fd62eb49c4199d32",
+      "review_digest": "39681b169e4285698e985f89427fd0d2d213cd81b3546734253cfcfd38d0be3c",
+      "scope": "Desktop consent, draft handling, and revoke controls in commit ac41444fc",
+      "limitations": [
+        "The focused tests cover local draft handling, dialog focus, and exact frame and workspace checks.",
+        "Live command delivery, native timing, and full host qualification are pending. The receipts are stored with the isolated verification checkout."
+      ]
+    },
     {
       "roadmap_id": "security-findings-refresh",
       "increment_id": "file-and-workspace-authority",
@@ -13273,6 +13476,213 @@
       "limitations": [
         "The contrast checks and overall browser qualification remain open."
       ]
-    }
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "revocable-desktop-presentation",
+      "criterion_id": "revocation-and-delivery-targets",
+      "work_id": "headless-desktop-increment-implementation-qualification",
+      "work_criteria": [
+        "exact-window-acceptance-and-reservation",
+        "dirty-handoff-and-reachable-controls",
+        "immediate-local-revocation-and-exact-retry",
+        "presentation-effect-fencing",
+        "serial-delivery-and-independent-deduplication",
+        "context-minimization-and-revoke-fence",
+        "backend-continuity-and-lifecycle-isolation",
+        "desktop-takeover-real-host",
+        "revocation-and-delivery-targets",
+        "security-ui-control-reviewed"
+      ],
+      "receipt_digest": "b6e4201cd41bd455cf0b9870cb12e7dcca746531f757c7e4dfc016523e2acf29",
+      "review_digest": "4aab46f88222758a526c3317f52e9608aa67c4df47cbd459bf9271e3d51f528c",
+      "scope": "The combined packaged Windows run passed all four journeys. In 100 foreground revokes, 95 percent restored control within 6.3 ms. The slowest took 8 ms.",
+      "limitations": [
+        "The tests used held replies to verify that an unresponsive window loses its lease. Timing under natural Windows background throttling and complete queue measurements are still pending.",
+        "In separate phases, the test held a display reply and a context reply. The native menu test then disabled takeover and confirmed that a separately paired editor could still save."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "postgres-atomicity-and-worker-delivery",
+      "work_id": "headless-managed-owned-postgres-transaction",
+      "work_criteria": [
+        "managed-owned-transaction-boundary",
+        "managed-headless-receipt-rollback"
+      ],
+      "receipt_digest": "41bbf3712627efcfed59a88ff2f59b3866a27ba479cd470e7a77eb822df2ee76",
+      "review_digest": "08ce333cc1be9f20772b562e034b46ff0595995acd53e45ec1030db403a4fb7a",
+      "scope": "Two PostgreSQL connections tried the same save. The database kept one saved result and returned that result on retry.",
+      "limitations": [
+        "The test also confirmed rollback after permission was withdrawn before commit. Delivery to browsers connected to separate servers still needs a live test."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "authenticated-browser-stream-and-refresh",
+      "work_id": "headless-managed-qualified-scoped-replay",
+      "work_criteria": [
+        "managed-local-scoped-replay"
+      ],
+      "receipt_digest": "4bcccfc7aa11bc1391d9bdca9c9f2abccc6b9e0e1f66a89e15f8bb4130b4cd1d",
+      "review_digest": "eea9cb27851dc470eaac0892b52e9ec401bdaab90ba8d1df050fd8b211c0fa3d",
+      "scope": "The server can provide a small list of saved systems and changes to an authorized workspace member. Successful checks add no audit log entry.",
+      "limitations": [
+        "The isolated tests confirmed workspace limits and access denial. An automated browser journey still needs to verify this behavior through the complete app."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "authenticated-browser-stream-and-refresh",
+      "work_id": "headless-managed-saved-state-stream",
+      "work_criteria": [
+        "managed-authenticated-stream-bounds"
+      ],
+      "receipt_digest": "5932c65aff9ac554ff37b925c25f5b86c5a29098695b779a8e0a2d094f8ec016",
+      "review_digest": "5fd523dc8c09f6fceca271e9c18130987e66d99cba0a85f3a3c85c925d3579bd",
+      "scope": "The server sends saved system changes over an authenticated connection. It closes the connection if access ends or it cannot keep up with sending updates.",
+      "limitations": [
+        "A local HTTP test verified access loss and connection limits. Browser refresh, browser takeover and recovery across separate servers still need qualification."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "authenticated-browser-stream-and-refresh",
+      "work_id": "headless-browser-saved-refresh-with-read-ownership-current",
+      "work_criteria": ["thin-client-saved-state-fences"],
+      "receipt_digest": "47b6592fa0e2fe838157c11cda0053c0ae205b1d6f031ee5e2018491e9a917da",
+      "review_digest": "3f0c989156fd5644f7baef09fdd3b33d78e79e316674e8f61113d73b36e93220",
+      "scope": "Browser refresh keeps an open Composer and its focus if another client archives the system. A delayed reply cannot update the view after the browser connection changes.",
+      "limitations": ["The browser feature tests passed. The complete journey with the built browser app, authenticated server and chat adapter is still pending."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "same-server-authority-and-route-parity",
+      "work_id": "headless-managed-client-purpose-admission-current",
+      "work_criteria": ["managed-client-purpose-distinct"],
+      "receipt_digest": "41c605da02318b2385f221c5bc83024b5570386490e6abe2ad714f753aa94927",
+      "review_digest": "25d52a3b3ec95f2e3d9d7c7a1e5e16256725feaa7b4690cafa0fae85a68415f6",
+      "scope": "Focused tests confirmed that the server can tell the registered chat client and browser apart and reject a request with the wrong credentials.",
+      "limitations": ["This check covers client identity. The shared server routes and browser consent still need qualification."]
+    },
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "postgres-atomicity-and-worker-delivery", "work_id": "headless-managed-two-server-delivery-witness-current", "work_criteria": ["managed-two-server-delivery-evidence"], "receipt_digest": "b5d39209b78696975c844b182e5152d9472ae55e76fdd8d4f6d416c76d81ec4a", "review_digest": "ac4a8075a57861ac308123a0f5ed92ba2831fff1c8ef17e661791a0d00d8441e", "scope": "Two test servers sharing PostgreSQL delivered a saved change. After the test abruptly stopped one server, a replacement recovered both saved changes in about four seconds.", "limitations": ["This was one local recovery test. Browser timing and production deployments remain outside this result."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "same-server-authority-and-route-parity", "work_id": "headless-managed-stdio-postgres-live-witness", "work_criteria": ["managed-stdio-same-running-server-live"], "receipt_digest": "358aa8a4c4d47a211657852fcce0ef513f3f9a2ed58f196cd9a8257690d0b9fb", "review_digest": "9f82f7326cde75164fcaa5df4faa1a70c272bd025f1f7721969fe0e15a531775", "scope": "The official chat adapter saved a system on the running test server. Retrying returned the original result, and the browser credential saw one saved change.", "limitations": ["This test did not interrupt the first reply. The full browser interaction and recovery from a lost reply still need tests."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "security-managed-parity-reviewed", "work_id": "headless-managed-browser-document-credential-ownership", "work_criteria": ["managed-document-possession-and-isolation"], "receipt_digest": "aa52de6e2ac4080555dabfbe86fb27ecfe2d29f42ff3ad7df463c5fffd411d05", "review_digest": "c4e389b2101afea5bef490c8cb577b912d6dd3878e242febb633adc6de9be567", "scope": "The server rejected a second valid credential for the same user when it tried to reuse the first tab’s proof. The test kept both credentials valid.", "limitations": ["This test covers ownership on the server. The complete browser permission and revoke interaction still needs a live test."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-browser-consent-live-current", "work_criteria": ["browser-real-host-consent-journey"], "receipt_digest": "e22d4378d534584178e3e4b9d4741ab5259dc8a867dcc30d673882c6e2a30ab6", "review_digest": "e85b2096ea88d98da17f34c2176d99d1fcec61726a01fdcff6d6651bf00320b6", "scope": "The built Chrome app opened the consent dialog without moving the Systems heading. The test accepted, revoked and reloaded the exact tab on the same server as the chat client.", "limitations": ["Saved-resource presentation and performance still need separate tests."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-browser-consent-capacity-lifecycle", "work_criteria": ["managed-browser-capacity-and-lifecycle"], "receipt_digest": "9a9ed6af5ab4e437e2384e13e4b8495eded4c48a7009dcf8ec5fee86d6b1790e", "review_digest": "70be1c86bbaeec558f450382da6a85290926aaa6cb43b26c0c7e834bd37b2f8b", "scope": "A focused browser UI test reached the consent dialog after retrying with the same credential when the test server reported it was full.", "limitations": ["These checks cover tab consent recovery. They do not measure saved-state delivery."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "security-managed-parity-reviewed", "work_id": "headless-managed-browser-passive-audit-current", "work_criteria": ["managed-observation-passive-bounded"], "receipt_digest": "4d17730d4d824f1365a86bd6e760e1582bbeb2b472ce38b26a497ee1ceda8925", "review_digest": "faa91b93b682dcdd2f53192a650c5060a4c8732e1bfe67e22f9c2fc91e38081e", "scope": "The server still checks access on every tab observation. The test confirmed that routine successful checks do not add audit records and consent actions keep their standard audit.", "limitations": ["The audit tests cover the consent observation route."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "same-server-authority-and-route-parity", "work_id": "headless-managed-stdio-window-consent-exact", "work_criteria": ["managed-agent-tab-consent-route"], "receipt_digest": "8d80b40071cc2d68670cf7e855d9f8958a1ca7724b86f15c7373219db910209c", "review_digest": "8f60197627d3ef1283b84428dffc5f2606c7013b3a44c92105acaedd2b138de4", "scope": "The managed chat client can request, check or release an eligible browser tab. Only the browser user can accept the request.", "limitations": ["This review covers the four consent tools. Saved-resource delivery and live context remain pending."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "same-server-authority-and-route-parity", "work_id": "headless-managed-browser-delivery-final-source", "work_criteria": ["managed-browser-delivery-wire-contract"], "receipt_digest": "06be64af957168b83dad141c9ef735ab3d3244ae1115f20a03015c868b2a957a", "review_digest": "82b875bfea4e5b26f8595877b6c777e134afe1045be9f8487158074d24be6e6a", "scope": "The server checks permission again before it sends saved item details to the tab that accepted control. The tab answers a short-lived request before chat can read its current view and saved item identifiers.", "limitations": ["This review covers the server routes and access checks. The full browser and Windows comparison has separate requirements."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-browser-presentation-ui", "work_criteria": ["managed-browser-exact-presentation-and-revoke"], "receipt_digest": "0b91102f554a9676b4ca96a4594178591198c5dcc7f2e63d7cdb28c9c11c7404", "review_digest": "4dafb0b68c1a2ed27d27e83cd016aa40c53cde4044496a0a50196bba1572e779", "scope": "The browser displays the chosen saved item after consent. Revoke closes it immediately. Focused tests confirm that late replies cannot display an item or share fresh context after revoke.", "limitations": ["These tests cover the browser interface and delayed replies. They use simulated server responses."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "host-specific-targets-and-bounds", "work_id": "headless-managed-browser-saved-resource-qualification-fixture-current", "work_criteria": ["actual-managed-saved-presentation-fixture"], "receipt_digest": "8a91c0c201dee19fe8b7c8bcf12ca85710f2cbf78879ef54c17aea2ed9a56ebc", "review_digest": "0c58eb05ec1c2833957119ced263930bc946e4d1a982b9dd4aed61367ec8f234", "scope": "The reviewed Chrome test script checks that saved changes appear, the selected item displays in the resource panel, and the user can revoke control. Its optional timing mode collects 100 samples per action.", "limitations": ["The linked review covers the test script. Hidden tabs and the final host comparison still need separate checks."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-browser-background-queue-parity", "work_criteria": ["managed-browser-actual-isolation-and-recovery-fixture"], "receipt_digest": "42b586b52c890cd89e775440b7c02cfbce935661b699f3298146a21360316fc8", "review_digest": "b3cc3f2d2eab0e32bd35a45825279ad1bace44acb0386670be0ca20f18e01858", "scope": "The managed server refused the other Chrome tab’s attempt to accept the first tab’s control request. Revoking control left zero stale displays after the held reply was released. The first tab showed the latest save when it became visible again.", "limitations": ["This test used the local managed server and PostgreSQL. The combined browser and Windows qualification is still open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-browser-controls-portal-submit", "work_criteria": ["browser-manual-control-state-fence"], "receipt_digest": "3d7ae2b9117e9219a1f277c08447fe24ef041fab8e96a9504cd7f68fd82ece7e", "review_digest": "18e8cb330d2ed932ef96269417f707d8fe523e5bd3fad043ee33f3dbe2307903", "scope": "A dialog that is already open pauses clicks and form submissions while control starts or is active. Revoke remains available and restores manual actions.", "limitations": ["Focused interface tests cover this behavior."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "complete-contract-and-final-qualification", "work_id": "headless-executable-design-crosswalk", "work_criteria": ["all-headless-design-assertions-map-to-executable-evidence"], "receipt_digest": "92b38b769bd3648cb17f30dbbda044d641837c5b832fcde2b96f4b3ab7f58754", "review_digest": "0647c900a43ada69034229305a81869df6b8007b5c452033b5f1da47d529592a", "scope": "All 59 design requirements point to current test files and named checks. The record lists where a live browser or Windows test is still needed.", "limitations": ["The links identify test coverage. The final test run is still open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "revocable-desktop-presentation", "criterion_id": "revocation-and-delivery-targets", "work_id": "headless-windows-native-queue-audit-and-timing", "work_criteria": ["native-queue-audit-and-timing"], "receipt_digest": "3ee75b4cea9fb8fd5039bc5e0a0e249bdffc7053017ab6e53a101cc9a61e435c", "review_digest": "d4217be92e39705f891f0f88c8603e8d65dfdb5beea503f6d639161ac549145a", "scope": "Packaged Windows passed four journeys. It recorded 100 presentations, 105 revokes, a real background timer slowdown, and all 32 command outcomes during a held reply. No stale display appeared.", "limitations": ["The test measured retirement when the window became hidden. It checked timer expiry separately in a visible window. The check for those deadlines under background throttling is still open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-semantic-write-window-and-real-draft", "work_criteria": ["real-managed-chrome-draft-conflict"], "receipt_digest": "3e4c5c1b6e34704d12d91a832baf3f99c7e89a7fe45fb0c8bdbb171eb55d1b05", "review_digest": "319fae66539b9fd18715890fc9ff1c214a63ba1c615f60b7a7c0bc0f5df8e045", "scope": "Chrome showed a saved change from another client. On the next external save, it kept the user's unsaved edit and reported the conflict. The newer saved revision stayed intact.", "limitations": ["This run covered draft conflicts on the local managed server. The combined Chrome and Windows qualification is still open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-lost-committed-reply-and-browser-update", "work_criteria": ["managed-lost-create-reply-recovers-one-existing-write"], "receipt_digest": "d7f065d61f50ad880c224337b617e175d3c8fab6e44a7bccd16cdf2e8bffc47e", "review_digest": "7ceb269fa4a03496b70e4345aae0f47b24798431ac9d8d2b76fe27e379df5bce", "scope": "Chrome showed the new system after the automation client lost the save reply. Retrying the same request returned the original result. The database recorded one change.", "limitations": ["A separate, already connected client retried with the same registered identity on the running server. Server restart has separate evidence."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-in-flight-save-across-browser-revoke", "work_criteria": ["actual-managed-save-continues-without-reviving-presentation"], "receipt_digest": "a8ddd3cd9c419c88e4a7abc62715b506d948fd4b390673f0d0fab1e1df31ad64", "review_digest": "ff606eb47557fcfa9e00139927d966b44bcadffce35c686b830dd8909987fd3a", "scope": "Chrome revoked takeover and switched workspaces while a save was running. The save finished once in the original workspace. When Chrome returned, it showed the saved field and kept the takeover panel closed.", "limitations": ["This test used a system save and two workspaces on the local managed server. Model and conversation jobs have separate coverage."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "revocable-desktop-presentation", "criterion_id": "revocation-and-delivery-targets", "work_id": "headless-native-queue-census-exact-checkpoint", "work_criteria": ["native-checkpoint-preserves-source-history"], "receipt_digest": "7421eb9ecbdea14f1df81fd46ffeadaece8cd9c2d2d9aad5149fe162d02400a4", "review_digest": "1fc179738c62e9a4035d768cfd1013f6b48e3ce191f53bb47b053e2cef427b80", "scope": "Four packaged Windows journeys passed again. In 105 revokes, the slowest took 11.5 ms. The test matched all 32 queued commands to recorded outcomes and saw no stale presentation.", "limitations": ["Hiding the window retired its lease. The check for deadlines while the window runs in the background is still open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "authenticated-browser-stream-and-refresh", "work_id": "headless-managed-chrome-out-of-order-refresh", "work_criteria": ["managed-real-older-refresh-cannot-replace-newer"], "receipt_digest": "bf2b194db52f08771b6ad05bc9f14ad93edfdb055a1f88cdedc4118f0c6eedd1", "review_digest": "bd282e539c6938fa7ac27ed88d174296f47e3b1c5793f02d04ff0de067cc3a7b", "scope": "Chrome read an older list reply after showing a newer save. The Manage table kept the newer result and the takeover panel stayed closed.", "limitations": ["This run tested the Manage table. Draft edits and delivery after a workspace change have separate checks."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "security-managed-parity-reviewed", "work_id": "headless-managed-chrome-membership-loss", "work_criteria": ["managed-real-revoked-member-cannot-read-replay-write-or-control"], "receipt_digest": "d6fe5a5642299148596702c287671d0fc6fcf74428ad1f6cee3850ce50759a2f", "review_digest": "5a80f0fe555c2a06ced811227525a9dfacf5ab3df95b7a65505f3213a353b851", "scope": "When the test account lost access, Chrome returned control to the user. The server denied saved-state reads, new changes and retries. Restoring access kept the original save and did not restore takeover.", "limitations": ["The test used a synthetic account on the local server. The test did not verify signing in again after access was restored."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-chrome-save-before-accept-conflict", "work_criteria": ["managed-conflicting-save-keeps-control-and-never-grants"], "receipt_digest": "911f77c2320e1d051d1d78394213809622d8ff855a30d93b43850a980a1e374d", "review_digest": "a5bce34d0a9dc6f3695e152e367a4d5f824055d2ffa4e462f2923636a5d19a18", "scope": "Chrome tried to save a stale draft from the takeover popup. The unsaved field stayed intact. Manual controls returned when the request ended. The newer saved revision stayed intact, and the browser sent no request to grant takeover.", "limitations": ["This run covered a save conflict. The timeout check for a hidden window remains open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-managed-live-context-reply-after-revoke", "work_criteria": ["managed-held-context-response-sends-nothing-after-revoke"], "receipt_digest": "ac15cf74523cccf06f33a71bc5d887b165ad8a24386292b6e3b336fc14e7f607", "review_digest": "5442ca8dd9088e218653b18a8066cc39fb7edf2ad00211704759f2ce7a5e3e2a", "scope": "Chrome finished reading a delayed server reply after the user selected Revoke. The browser sent no context, and neither agent request returned context.", "limitations": ["This run checked a held reply. It did not measure the context deadline."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "server-browser-and-delivery-qualification", "criterion_id": "browser-real-host-and-parity", "work_id": "headless-exact-source-matched-windows-and-chrome-evidence", "work_criteria": ["matched-host-windows-and-chrome-source-evidence"], "receipt_digest": "f7ff6b028e53626f465598e93c1b68d880c71302b8628f1f2b14a387ac72c115", "review_digest": "1cff849981bf36ab415da8893012d64cb3124081b6bf7eebd8051008d8b8642b", "scope": "Four packaged Windows tests and three Chrome runs passed on the same source. The Chrome runs covered timing, tab isolation, and save behavior. The report records counts, timing, and the exact file hashes.", "limitations": ["Chrome used a local managed server. Both hosts used synthetic data. Background deadlines and final roadmap qualification have separate checks."]},
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "authenticated-browser-stream-and-refresh",
+      "work_id": "headless-managed-recovery-combined",
+      "work_criteria": ["managed-reconnect-and-rollback-coexist"],
+      "receipt_digest": "084710215f902fff5781aa21369374c34991ac38dd8f965229540834627b02dc",
+      "review_digest": "936fd2ba4cc7db347895b763dc80a8c8dcd8c3a402ba616b338a0cf701b8f9a2",
+      "scope": "After an interruption, Chrome received the exact saved change, displayed the new revision, and restored the connection in 1.35 seconds.",
+      "limitations": ["The test used the local managed server and a disposable database."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "browser-real-host-and-parity",
+      "work_id": "headless-managed-recovery-combined",
+      "work_criteria": ["managed-reconnect-and-rollback-coexist"],
+      "receipt_digest": "084710215f902fff5781aa21369374c34991ac38dd8f965229540834627b02dc",
+      "review_digest": "936fd2ba4cc7db347895b763dc80a8c8dcd8c3a402ba616b338a0cf701b8f9a2",
+      "scope": "Chrome received a delayed reply after Revoke. The takeover panel stayed closed, and Chrome kept the user's focus and current page.",
+      "limitations": ["The current combined run tested Chrome. The packaged Windows test uses its own run."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "server-browser-and-delivery-qualification",
+      "criterion_id": "security-managed-parity-reviewed",
+      "work_id": "headless-managed-recovery-combined",
+      "work_criteria": ["managed-reconnect-and-rollback-coexist"],
+      "receipt_digest": "084710215f902fff5781aa21369374c34991ac38dd8f965229540834627b02dc",
+      "review_digest": "936fd2ba4cc7db347895b763dc80a8c8dcd8c3a402ba616b338a0cf701b8f9a2",
+      "scope": "Rollback disabled all 12 optional routes and returned control to the user. The saved system, open draft, audit history, and record of the original save survived.",
+      "limitations": ["The test covered already-open Chrome pages. Opening a new page during rollback remains unverified."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "plan-from-written-request",
+      "criterion_id": "unambiguous-plan",
+      "work_id": "headless-canonical-build-plan-preview-identity",
+      "work_criteria": ["preview-fingerprint-binds-ordered-proposal"],
+      "receipt_digest": "6499f1406e789aa6b278c718da0b5a71e53ac802310378732da56159ee606470",
+      "review_digest": "af33d9a1294fcd3731cb6699593b16635a4e0fbe6f7011a16ef7d1f274f1fcbc",
+      "scope": "The managed app previewed three proposed changes and returned an identifier for their exact order and inputs. The saved systems stayed unchanged. The app refused a stale saved revision and a different workspace.",
+      "limitations": ["This verifies the preview only. Approval and execution still need implementation and testing."]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "plan-from-written-request",
+      "criterion_id": "security-plan-and-context",
+      "work_id": "headless-shared-build-plan-validation",
+      "work_criteria": ["shared-canonical-proposal"],
+      "receipt_digest": "556f956740542f3fd12a0e6a0c18439f5e1c14c1e00dd6459b47b9bfb02751bb",
+      "review_digest": "40bc9fea684d632afe5f6744f1af23742b87cc1c233d9c5c738087720f87a258",
+      "scope": "Shared preview checks reject proposed steps that claim approval, add a workspace, reuse a retry key, or use a saved revision after an earlier step changes it.",
+      "limitations": ["The checks cover preview inputs. The app still needs separate checks for approval decisions, changes to authority, and recovery after a lost response."]
+    },
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-plan-review-decisions", "work_criteria": ["exact-app-plan-decision"], "receipt_digest": "285632faafbd4b1919356c43229b37388443e174a03a879b140b4dcc29b62ab5", "review_digest": "af7d1ae92613afeba147569a5d6d14a7619234581083ed12d0550df74e46176c", "scope": "Application tests use simulated app popup and chat callers for whole-plan and per-step approval. They update one exact test record.", "limitations": ["The tests simulate verified callers. App popup and authenticated chat wiring and tests remain open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "typed-tools-and-recovery", "work_id": "headless-durable-review-expiry-and-storage", "work_criteria": ["durable-exact-approval-transaction"], "receipt_digest": "70da2ffe8349fb375c168ac7a2d1a76db694fb2057af1ef7df7a130e1082e1bd", "review_digest": "6749b458880aef21ef787bfbe92a08e07d34541d373646bc561df9d00efd8e5c", "scope": "Actual SQLite preserved one decision from two competing requests and recovered the decision on reopen. A separate in-memory transaction test checked rollback at deadline or caller retirement.", "limitations": ["This proves local storage behavior. Approved step execution and managed server qualification remain open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "security-plan-and-context", "work_id": "headless-desktop-approval-only-registration", "work_criteria": ["planning-separate-from-authoring"], "receipt_digest": "a68574ce58f34a159f91b3fb043d6b74c31ec4b74f03b0aeccd76b3ffc829aae", "review_digest": "232e529b5ee1a425ee9dd0ea6487abb7561585f6575e0f58480d8360dfbdb28c", "scope": "Separate desktop pairing grants plan review only in the authorized workspace. The grant has no direct editing, conversation or window control permissions.", "limitations": ["The standard app keeps this pairing mode unavailable until the plan approval interface is connected."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "security-plan-and-context", "work_id": "headless-desktop-plan-review-transport", "work_criteria": ["paired-plan-submission-and-status-only"], "receipt_digest": "c1398cdf98681bbc5e7f580a97bf1a83414498ffed49bb11ecee872787622026", "review_digest": "9d47405265d5d2629a2d7c663f2c415cacbf0024a4ba6d721f1c9a3e2d19cd51", "scope": "A pinned desktop connector test staged one plan despite retries. The route denied direct edits and agent-supplied decisions. It withheld results after expiry or retired authority.", "limitations": ["This test used an isolated pinned TLS connector with an in-memory store. Normal Desktop approval and request wiring still need implementation."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "typed-tools-and-recovery", "work_id": "headless-desktop-plan-proposal-validation-and-replay", "work_criteria": ["desktop-plan-ownership-and-revisions"], "receipt_digest": "ff1bb54bbe81eb145825291a1913c92203ddbc66f80317ecaec5a2a3ed98c878", "review_digest": "1bfc74170515a8f007666fc956afd5013b1d263da4b5ab385e50488dc3bd7d7a", "scope": "A local pinned desktop fixture with in-memory storage verifies that new clone proposals use the exact saved source. It refuses missing and stale clone revisions. An authorized exact retry preserves the first proposal after a saved edit.", "limitations": ["The normal desktop approval screen and approved execution remain open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "typed-tools-and-recovery", "work_id": "headless-desktop-plan-review-mcp", "work_criteria": ["official-sdk-plan-review-only-catalog"], "receipt_digest": "86f7f26f6f7ef6a77efc25ee48a89bdf1456034b5e1bf71fc7a2f6b589c05d06", "review_digest": "545c01a4bfe321d95a1479717d9a11ecc3275afa19176fedd3df1ab5d379ccc6", "scope": "The actual stdio SDK used pinned local HTTPS and an in-memory record to stage and find one exact pending proposal. A separate pinned response test rejected a mismatched step count.", "limitations": ["These tests used local fixtures. Normal app activation and the managed plan-review tools remain open."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-scoped-plan-approval-list", "work_criteria": ["bounded-current-approval-list"], "receipt_digest": "7dc51a82ccda6a3cdfe278b04ce4e7fc66a9e3dce142d64994f13e11dc561962", "review_digest": "96c339eba5576a3e2b40b5fdea86310f117e97443cabd96beb3b03f638e100e0", "scope": "The exact user approval list survived SQLite reopen. Separate in-memory tests proved scope, expiry, the 32-live-request limit and rollback with the plan record.", "limitations": ["The desktop and browser approval screens still need to use this list through their authenticated app ports."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-desktop-human-review-live-requester", "work_criteria": ["desktop-human-approval-service-policy"], "receipt_digest": "244fc7fb8036c109ecb281f59093ecf9e0ce0acf3ae8f7c5e25d34f9e821ea70", "review_digest": "9e76a156cd5fc688e9697b3be8b8e1923f0f9195267a232fe684553b73df5278", "scope": "The desktop approval service checks the live requesting client and active workspace through the owned transaction. Local tests hold scope retirement and expiry before commit or before reply.", "limitations": ["The evidence is scoped to the approval service. It does not establish managed browser or authenticated chat behavior."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-desktop-plan-approval-ipc", "work_criteria": ["desktop-approval-ipc-exact-reviewed-view"], "receipt_digest": "2b9cac3e6d9f5c8435feceff8db0bc4f871cb1dae72e547bb865824ea528b26c", "review_digest": "cb82381f3299da9a39d3fb97d34d39f19306a3d5c2a8785224366cec546db997", "scope": "The desktop bridge binds approval to the exact view seen in one window. Tests refuse an old view ID when reopening the same proposal, suppress an ineligible open and retire only the exact dismissed view.", "limitations": ["The bridge fixture checks exact view validation. It does not exercise the managed host or execute a proposed change."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-desktop-plan-approval-popup", "work_criteria": ["desktop-app-displays-and-records-an-explicit-plan-decision"], "receipt_digest": "5ff176c2f725d1daa465038ecd422b2a93e63e6a7eaadefe93ece375e1bf91a2", "review_digest": "ce7e7c8b4c49659dce8dea6dbec2322e5bb95d7aca4b2f897a900499d52bc735", "scope": "Desktop Settings now opens the shared approval dialog. Focused UI and preload tests cover whole-plan and individual approval, exact saved revisions, cancellation, closing with an outstanding reply, and moving to another workspace.", "limitations": ["Focused popup and preload verification do not close native end-to-end or cross-channel qualification."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-packaged-desktop-plan-and-window-consent", "work_criteria": ["packaged-desktop-plan-approval-roundtrip", "separate-desktop-windows-show-consent-after-native-readiness"], "receipt_digest": "c68d3a9f5f8170eeff3b0bc467b60f8c4215d40ce0a50867bc65eb86073d5bd8", "review_digest": "0de035638b4ba4b770af73259caa2c3394b6a7a74fcfbb2ca62b7a927858985a", "scope": "All five packaged Windows headless journeys passed. The desktop app and its paired client agreed on whole-plan, first-change, withdrawn and canceled decisions. The independent-window journey checked native focus, separate consent and withdrawal.", "limitations": ["The test driver answered the Windows pairing dialog. This evidence covers the Windows app and its local connector. The managed browser and authenticated chat path still need implementation and testing."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "typed-tools-and-recovery", "work_id": "headless-desktop-run-exact-approved-plan-step", "work_criteria": ["approved-next-step-and-replay-under-owned-transaction", "approved-plan-step-pinned-local-host-roundtrip"], "receipt_digest": "399160b5a93d6a6072af1b091f37fe3232bf6eba1d4ea0c486e9166e2c05163e", "review_digest": "98628ef2bde6478b81c02b1e54693781958c07247c7dbf0c56371687a86c054f", "scope": "The Desktop host executes the next approved step from the stored plan. Its receipt and saved system commit together. Tests checked ordered execution, exact repeat under current approval and client access, reopening storage, and revocation before the reply.", "limitations": ["This is local Desktop execution evidence. Managed execution and cross-channel approval need separate checks."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "typed-tools-and-recovery", "work_id": "headless-desktop-mcp-step-and-current-ui-census", "work_criteria": ["portable-client-runs-exact-approved-step", "packaged-source-inventory-current"], "receipt_digest": "5beb5770109fdc8de9fa4586641bf4768ebb77c727279a1eb7718445eff1a0d6", "review_digest": "91f2117d21f45aac4ccd367e0e4cdfcd10c010e4ce7be5aed8c2f224c0722cf6", "scope": "The portable client can run one exact approved Desktop step. A separate packaged Windows test created two named systems in order. Pinned transport tests cover lost or invalid replies and exact recovery under current approval without an automatic retry.", "limitations": ["This covers the Desktop step tool and two current UI test inventory rows. It does not qualify managed execution or the full portable workflow."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "security-plan-and-context", "work_id": "headless-managed-stage-issuer-with-census-witness", "work_criteria": ["managed-plan-client-separated", "managed-staged-plan-exact-and-transactional"], "receipt_digest": "d06121b95c56aebbd4edb77e23531b2b00413c1f14a8e1818b85207e2e3488fa", "review_digest": "65cd7b238992efbd29786e76d3076e2c026728ac4e5d77c9d7b6d598173afd70", "scope": "The managed host accepts exact plan proposals over HTTPS. A disposable PostgreSQL test used signed credentials and confirmed the dedicated client could submit and check proposals and use the approved read-only route. Ordinary edits and release approvals were refused. An exact retry kept the first deadline and staging left saved systems unchanged.", "limitations": ["This scope stages and reads proposals. Browser and authenticated chat approval and managed execution still need work."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-managed-plan-popup-authority", "work_criteria": ["managed-exact-in-app-plan-approval-boundary"], "receipt_digest": "4b04628cc1878831c0314940572f147512276c8ca5f7c134cbc2b9675deed78e", "review_digest": "d7ec46865920b25cc965cb8655c6db30556e878ab72f0dba530a2462c1cc7f83", "scope": "The managed server records whole-plan, individual-change, and withdrawal decisions in the same plan record. A temporary database test used signed test credentials and separate browser documents. The server rejected decisions from stale or expired views. Approval left saved systems unchanged.", "limitations": ["This evidence covers the managed server approval route. The agent still needs to qualify decisions made from authenticated chat and approved changes on the managed server."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-managed-browser-plan-dialog", "work_criteria": ["managed-user-can-review-both-approval-modes", "browser-approval-remains-bound-to-the-active-workspace"], "receipt_digest": "a324ab3c9c96027e725d7791f4dc6d9302ec6aaa09f239c1eec127964cf39c25", "review_digest": "22bc968263b4606ac0620b8eb82005a996bc34ad08c5063ce890c4631e5a91a3", "scope": "The built browser app and packaged Windows app passed their approval journeys. The Settings heading stayed in place when the Chrome popup opened. The user could approve the whole plan, approve each change individually, withdraw approval, or close with Escape and return focus to the button. The browser checked that the displayed plan and decision reply matched the request.", "limitations": ["The browser test used a local managed test server. The agent still needs to connect authenticated chat and verify that chat and the app can review the same approval."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "typed-tools-and-recovery", "work_id": "headless-managed-postgres-stable-reply", "work_criteria": ["managed-step-egress-is-one-shot-and-current"], "receipt_digest": "bce3e7258296bc74b914ca6c6e244ddc10deb9549c0e7bb79fc2af275540133c", "review_digest": "08ee798e4e4a0056e9a51f40b7b2217f16c5a1b878dd7dcc68b3134929137868", "scope": "A test used two connections to a temporary PostgreSQL database. The first connection held the exact synthetic approval record while it checked whether a reply could be sent. A conflicting lock or withdrawn approval prevented the test reply.", "limitations": ["This direct database test used a test administrator. The separate managed execution test used the restricted server role."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "typed-tools-and-recovery", "work_id": "headless-managed-run-exact-approved-step", "work_criteria": ["managed-approved-step-is-exact-and-recovers", "managed-plan-client-remains-isolated"], "receipt_digest": "d773b62f6fa9fc40779b52cc2bddbd3a5257ddbf726c11f88088ee4390bd2262", "review_digest": "531347a532f9b66c5e4fe10a3f93647c1eaa85543ca36d4994d28d82f013dacf", "scope": "The official client staged a plan and waited for approval in Chrome. The managed test server saved two approved changes in order. Repeating an exact request returned the saved result and did not create a duplicate. Requests with the wrong client, workspace, revision or step order left saved systems unchanged. After withdrawal, the server refused an exact retry and both saves remained unchanged.", "limitations": ["The live run checked an exact repeat after a normal reply. Separate focused client tests cover a lost or invalid reply.", "The agent still needs to connect and qualify authenticated chat approvals."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-managed-authenticated-plan-chat-threat-aligned", "work_criteria": ["managed-chat-supports-both-approval-modes", "managed-chat-and-popup-share-current-authority"], "receipt_digest": "df62782df95b85f617feafd7f635e23a1f0fffef1c68190bb3a4c1e5b626ed7e", "review_digest": "4ba1d0f8242a726cd827adf4eb4aa21682c0009eb31592328c65e80b7b49d539", "scope": "In the signed-in browser, the test approved a whole plan in chat and withdrew it in the popup. A separate plan received its first individual approval in chat and its second in the popup. The server refused the stale second chat approval, and the official client saved only the two approved changes.", "limitations": ["This test used the app's approval chat, a local HTTPS server, and a restricted test database role. An external chat client still needs its own way to verify the user or send the user to the matching app popup."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "plan-from-written-request", "criterion_id": "user-choice-and-approval-channels", "work_id": "headless-desktop-authenticated-plan-chat-notification-aligned", "work_criteria": ["desktop-chat-uses-the-exact-current-plan", "desktop-chat-requires-trusted-frame-and-channel"], "receipt_digest": "c8ea1d158834a0d2e4de048c6f0f3c47a270919aadcc0c009c3dc92a1be1f052", "review_digest": "62cc056b004a8bc58c910b325bec4598c6c5cd87fbd70e84e06c997e6b872099", "scope": "The packaged Windows app passed the chat and popup journey with the paired official client. Chat approved a whole plan, which the popup then withdrew. In another plan, chat approved the first change and the popup approved the second. The app refused the stale chat choice, and the client verified one saved change from that plan.", "limitations": ["This test covers the app's approval chat. The agent still needs to finish the portable skill and qualify the completed increment."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-admission-contract", "work_criteria": ["exact-ingestion-read-wire", "trusted-data-read-boundary"], "receipt_digest": "e84b9caf312f7e35f599893ddea30642456c41ad6f1728cef2bd86a04c7d02cf", "review_digest": "5de98ee73e18f4ca58297cbdc20e92940880abb4138edec9a31b0b27689d4055", "scope": "Tests checked that Data reports progress for the selected task in the correct workspace. When permission ended during the read, the test received no status.", "limitations": ["The agent connection still needs access to the exact file selected in the app."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-local-file-admission", "work_criteria": ["exact-staged-source-request", "ready-owned-local-preview"], "receipt_digest": "4cea34b6bdcfdacfa8a161351927a608b4b8f48aa9ec0e44ff54f1c36af8d047", "review_digest": "684a4b9f138fd8f31c6ff23829afa15b1b44bcc0603d969c8f1bcc21ffb08c8e", "scope": "Tests checked that a preview refers to one complete upload. They covered empty files and rejected incomplete, changed, or expired transfers.", "limitations": ["The preview tests checked metadata only. The approved import still needs a live app journey."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-local-file-publication-boundary", "work_criteria": ["exact-owned-effect", "preserved-app-finalization"], "scope": "Tests checked that two requests to save the same approved file produced one source. They covered workspace access, withdrawal during verification, and recovery of a write that had already started.", "limitations": ["The approval must still be connected to the selected file in Desktop and the browser. The tests cover the existing app upload and the internal save operation."], "receipt_digest": "59ad8ef9d0f6980e6f24b4273db671d5201e6fe7a88de7c30956cf5ce7fa642b", "review_digest": "ef6f7164aab06cffa1cf343b416d7aea710a68f87b7e67e9ac27fd93e5b9d195"},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-app-local-selection", "work_criteria": ["app-owned-exact-local-selection", "selection-is-read-only"], "receipt_digest": "622f9821c7b5a8b0574d73bbf367ea061866734fc3224d5f81b0308507fd501e", "review_digest": "507423e6ec43b61a3cb008233270447a21e254a99b45eed8d15d1cbb62717048", "scope": "Tests checked that the app can link a staged file to one user and agent connection. An old retry cannot restore a choice after the user replaces it.", "limitations": ["This evidence covers the app's saved selection and preview rules. The end-to-end Data journey remains pending."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "security-data-boundaries", "work_id": "headless-data-desktop-selection-owned", "work_criteria": ["trusted-desktop-selection-entry", "current-selection-preserves-existing-data"], "receipt_digest": "d28857aa852d86e9abf6548cc6ee768bceedc38bd7b1b29ba24614217142531a", "review_digest": "2eb131efe422728ac3862409c3d94ea5d99ec7657074002f24d63b0b3b9d4aa7", "scope": "Desktop checks workspace access and the chosen client before it saves a file choice. A test revoked access just before the save and verified that no choice was recorded. Another test checked that the app withholds its receipt when the connection ends.", "limitations": ["The user still needs a file-preparation action in Add Data. The managed browser and save approval remain pending."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-desktop-preview-qualified", "work_criteria": ["scoped-desktop-preview-publication", "official-client-safe-data-preview"], "scope": "The packaged Windows app kept its existing plan approval workflow and rejected an unselected file reference. Focused tests also checked that the correct paired client can preview a staged file after the app selects it.", "limitations": ["The Windows test used an unselected reference. The selected-file success test used the isolated application and client fixtures. The full Desktop Data journey and managed browser coverage remain pending."], "receipt_digest": "55a5e009803e4b807792442aaed034aad12f6c21b8990bc314746c8d4bad39c1", "review_digest": "964c6de0b840c4fb9e4217b2ad609cbb29b01ddb330bba66bdacd45be71203cc"},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-desktop-prepare-file-action", "work_criteria": ["prepare-exact-file-in-ui", "preserve-ordinary-add-and-cancellation"], "scope": "In the packaged Windows app, the user prepared a file for their paired chat client. The client previewed its type, size and exact upload reference. After cancellation was confirmed, the client could no longer preview that file. Focused tests checked ordinary Add Data, retry and workspace changes.", "limitations": ["This evidence covers the app's saved selection and preview rules. The end-to-end Data journey remains pending."], "receipt_digest": "bc3559fb62dd3dfae286fdee24a0b22b9b058ca717ee8b326fc087a20cd337a9", "review_digest": "25fe6b765074cd6a6f190788f327a31e66a3889d5005caa9e878f1c8ae99b00c"},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-owned-local-source-save", "work_criteria": ["approve-exact-staged-source", "issue-once-and-reconcile"], "receipt_digest": "c7df6c3f29bca75d3653c2864496d0c5ff740dde12e7600a29a8dc67bc890754", "review_digest": "8f02623538dbe5315edfe21107fad876877df24b3a1320b0d31fe50f7fea8ecd", "scope": "In the packaged Windows app, the user approved a plan that saves a selected CSV and creates a system. The second step waited for the file save. The client received the same save reference on retry. Data showed one saved CSV with the expected contents.", "limitations": ["This result covers saving a selected local file on Desktop. Managed browser import, provider sources, dataset review and exact app reveal still need evidence."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-managed-preview-verified-upload", "work_criteria": ["managed-app-owns-file-choice", "managed-client-reads-exact-file-metadata"], "receipt_digest": "170603342e8ab52e70334d368f167241054b98527a3b47bbcf97c5b851b19e32", "review_digest": "6d76c3d5b777e54e1a0baba3497ce843cefbd00b1cec4a49407bcb60ee11c674", "scope": "In the Managed browser, the user prepared one CSV for the configured chat client. The client read the file type and size. Cancel removed access to the preview. The usual Add data action saved one copy.", "limitations": ["Saving through an approved Managed plan, importing provider sources, preparing datasets and opening them from chat still need evidence."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-managed-approved-save-fenced", "work_criteria": ["review-exact-managed-file-save", "managed-file-save-owned-once"], "receipt_digest": "37d08767d74e026eaf806cee59dd8b7cf1cd61fe82d2546b90942eca2fcc2d7c", "review_digest": "58232da4bf9f7bdb6dd310dcd714cef03fc20c21f4495ff6cf4a56277572a68b", "scope": "Both Managed approval screens showed the selected file and permission to save it. The user approved the plan in the app popup. The client saved one CSV and received the same reference on retry. The next step waited for the file save.", "limitations": ["Provider imports, dataset preparation and opening the exact dataset from chat still need evidence."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-provider-registration-once", "work_criteria": ["exact-provider-publication", "provider-retry-preserves-existing-data"], "receipt_digest": "0cf5def103d32eaf64fd71ee6aa30dbb4a54c92cf765b3d0db1f17b521fa4f7d", "review_digest": "39f8aecd62a7f9857587adb084c15f91f2c4808ed7f8a064e812c93a2d27f98f", "scope": "In the database test, two imports of the same selected file returned the same saved source. An error while saving the source details left no partial records. The test used a simulated provider reply.", "limitations": ["Provider imports from the chat client, dataset preparation and opening data from chat still need evidence."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-desktop-provider-file-preview", "work_criteria": ["prepare-one-provider-source", "read-paired-provider-file-preview"], "receipt_digest": "f8b8e17853481f38b91518e78cc07996d4d2e2c6e7bf85809ec1f4d4291d48ee", "review_digest": "b8bd898c10ac35cb03d19dd2c6c599bc5602e23a0dffad192a2b3ec6b15d7464", "scope": "The Data panel test prepared one Parquet file for the selected chat client. A paired-client test verified the file type and exact revision. Tests refused access from another client and stopped preview after cancellation. The packaged Windows app refused a preview for an unselected file.", "limitations": ["Provider import after approval, Managed browser preview, dataset preparation and opening data from chat still need work."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-data-managed-provider-file-preview", "work_criteria": ["managed-prepared-provider-file-is-exact", "managed-provider-preview-fails-closed"], "receipt_digest": "7f2ba601c8a4a52872882e6f3952aa5fac5e863960cce2ed7553575fbe65f4fb", "review_digest": "f3f2ac5e83b5e875b055561b3dbcb9809a88e010894a3a5280e7f7c3ab09f030", "scope": "The Managed browser test prepared one Parquet file for the configured chat client. The chat client read the exact revision and could no longer preview that file after cancellation. The test used Chrome over local HTTPS, with PostgreSQL and a simulated repository listing.", "limitations": ["Provider import after approval, dataset preparation and opening data from chat still need work."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-licensed-source-discovery-current", "work_criteria": ["provider-declared-license-filter"], "receipt_digest": "0308aaa53552c0bd48dbce79a2d472c9abc40a23291358b034262dfa27e586fe", "review_digest": "5590a75a3af6df1a6be91ddfff4730b2aecc2a0b2d4b5236b1e065ba06c8532d", "scope": "The Data picker shows the license declared in the provider listing. The open-license filters keep matching datasets and clear earlier file choices.", "limitations": ["This test used a simulated listing. Saved-revision license evidence and full Data journeys have separate checks."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-license-provenance-rechecked", "work_criteria": ["license-bound-to-saved-source"], "receipt_digest": "fa2de6f9925a6cabf163c62c17101f4ca29a1834baff6abd938ac2936eb0ef7a", "review_digest": "7ff6d2584fcf76b70abd16969f4823dc629ab6870600b6cc3c11332289cac525", "scope": "The Desktop and Server tests saved provider-declared license codes with the exact imported revision. Tests also kept an authorized import usable when license metadata was unavailable.", "limitations": ["The tests used a simulated provider. Chat approval for provider import and the full Desktop and browser Data journeys still need work."]},
+    {"roadmap_id": "headless-skills-ui-takeover", "increment_id": "data-acquisition-and-datasets", "criterion_id": "source-admission", "work_id": "headless-imported-license-outcomes", "work_criteria": ["saved-license-visible-per-file"], "receipt_digest": "504c5ba444222c9ae7c3961c121f635f2f07348dc248fff4dc4b78c30901159c", "review_digest": "a25ecd6f666e5908e587bca278cd0f1162bf3c93307194585dd8aa204793410d", "scope": "Tests use Add Data to import two files and display the declared license at the saved revision or show that it is unknown. Storage tests reject new mismatched license records and keep older imports readable.", "limitations": ["This work uses synthetic provider replies and the shared Add Data interface fixture. The full chat import and Data takeover still need qualification."]}
   ]
 }

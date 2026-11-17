@@ -95,7 +95,7 @@ const SUPPORTED_PLATFORMS = new Set<NodeJS.Platform>([
 ]);
 const activeEnsures = new Map<string, ActiveEnsure>();
 
-const CONTEXT_DEPENDENCY_PROBE_SCRIPT = `
+export const CONTEXT_DEPENDENCY_PROBE_SCRIPT = `
 # asb:context-dependency-probe
 import importlib.metadata
 import importlib.util

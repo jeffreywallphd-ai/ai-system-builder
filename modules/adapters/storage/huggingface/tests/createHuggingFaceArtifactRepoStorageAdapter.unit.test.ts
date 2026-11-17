@@ -804,10 +804,14 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
 
   it("lists namespace datasets through Hugging Face datasets API", async () => {
     const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify([
-      { id: "OpenFinAL/financial-news" },
+      { id: "OpenFinAL/financial-news", cardData: { license: " CC-BY-4.0 ", description: "PRIVATE_LISTING_CANARY" } },
       { id: "OpenFinAL/other-dataset" },
+      { id: "OpenFinAL/restricted", cardData: { license: ["cc-by-nc-4.0", "PRIVATE_LISTING_CANARY", "CC-BY-NC-4.0"] } },
+      { id: "OpenFinAL/duplicate", cardData: { license: "mit" } },
+      { id: "OpenFinAL/duplicate", cardData: { license: "cc-by-nc-4.0" } },
       { id: "OtherOrg/not-included" },
-    ]), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+      null,
+    ]), { status: 200, headers: { "content-type": "application/json" } })) as unknown as HuggingFaceFetchImplementation;
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient: createHubClientDouble(),
       fetchImplementation,
@@ -821,10 +825,87 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     }
 
     expect(result.value.datasets).toEqual([
-      { namespace: "OpenFinAL", repository: "OpenFinAL/financial-news" },
+      { namespace: "OpenFinAL", repository: "OpenFinAL/financial-news", licenseIds: ["cc-by-4.0"] },
       { namespace: "OpenFinAL", repository: "OpenFinAL/other-dataset" },
+      { namespace: "OpenFinAL", repository: "OpenFinAL/restricted", licenseIds: ["cc-by-nc-4.0", "unknown"] },
     ]);
-    expect(fetchImplementation).toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain("PRIVATE_LISTING_CANARY");
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      "https://huggingface.co/api/datasets?author=OpenFinAL&limit=100&expand=cardData",
+      expect.objectContaining({ redirect: "error", signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it("refuses oversized and non-JSON namespace metadata without returning provider content", async () => {
+    for (const response of [
+      new Response("PRIVATE_LISTING_CANARY", { headers: { "content-type": "text/html" } }),
+      new Response(JSON.stringify("PRIVATE_LISTING_CANARY".repeat(30_000)), {
+        headers: { "content-type": "application/json" },
+      }),
+      new Response(JSON.stringify(Array.from({ length: 101 }, () => ({ id: "OpenFinAL/demo" }))), {
+        headers: { "content-type": "application/json" },
+      }),
+    ]) {
+      const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+        hubClient: createHubClientDouble(), fetchImplementation: async () => response,
+      });
+      const result = await adapter.listNamespaceDatasets("OpenFinAL");
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).not.toContain("PRIVATE_LISTING_CANARY");
+    }
+  });
+
+  it("accepts a license declaration only at the exact dataset commit", async () => {
+    const repository = "example/synthetic";
+    const revision = "a".repeat(40);
+    const signal = new AbortController().signal;
+    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify({
+      id: repository, sha: revision, cardData: { license: ["cc-by-nd-4.0", "UNTRUSTED-DECLARATION"] },
+    }), { headers: { "content-type": "application/json" } })) as unknown as HuggingFaceFetchImplementation;
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({ fetchImplementation });
+    const stillAllowed = async () => true;
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision: "main" }, signal, stillAllowed)).toBeUndefined();
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision }, AbortSignal.abort(), stillAllowed)).toBeUndefined();
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision }, signal, async () => false)).toBeUndefined();
+    expect(fetchImplementation).not.toHaveBeenCalled();
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision }, signal, stillAllowed)).toEqual({
+      repository, revision, licenseIds: ["cc-by-nd-4.0", "unknown"],
+    });
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      `https://huggingface.co/api/datasets/${repository}/revision/${revision}?expand=sha&expand=cardData`,
+      expect.objectContaining({ signal, redirect: "error" }),
+    );
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision: "b".repeat(40) }, signal, stillAllowed)).toBeUndefined();
+    expect(await adapter.readDatasetRevisionLicense!({ repository: "other/synthetic", revision }, signal, stillAllowed)).toBeUndefined();
+  });
+
+  it("checks metadata authority again after waiting for provider credentials", { timeout: 5_000 }, async () => {
+    const credentialRead = Promise.withResolvers<void>();
+    const releaseCredential = Promise.withResolvers<void>();
+    const fetchImplementation = testDouble.fn(async () => new Response()) as unknown as HuggingFaceFetchImplementation;
+    let allowed = true;
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      fetchImplementation,
+      accessTokenProvider: async () => {
+        credentialRead.resolve();
+        await releaseCredential.promise;
+        return undefined;
+      },
+    });
+    const observation = adapter.readDatasetRevisionLicense!(
+      { repository: "example/synthetic", revision: "a".repeat(40) },
+      new AbortController().signal,
+      async () => allowed,
+    );
+    try {
+      await credentialRead.promise;
+      allowed = false;
+      releaseCredential.resolve();
+      expect(await observation).toBeUndefined();
+      expect(fetchImplementation).not.toHaveBeenCalled();
+    } finally {
+      releaseCredential.resolve();
+    }
   });
 
   it("lists only bounded dataset parquet files at an immutable converted revision", async () => {

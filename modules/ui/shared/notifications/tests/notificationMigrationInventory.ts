@@ -90,6 +90,26 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     rationale: "Inline feedback is required to validate, unblock, retry, inspect, or follow active task progress in this surface.",
   })),
   {
+    path: "apps/desktop/src/renderer/features/settings/components/HeadlessClientSettings.tsx",
+    classification: "contextual-only",
+    rationale: "Pairing and client access outcomes tell the user whether to retry, enter the one-time code, or check the current client list. Code and credential material are never part of the status.",
+  },
+  {
+    path: "apps/desktop/src/renderer/features/settings/components/RecentHeadlessChatTasks.tsx",
+    classification: "contextual-only",
+    rationale: "This read-only panel reports loading, absence, and availability for the scoped task list. It does not announce task outcomes or publish notifications.",
+  },
+  {
+    path: "modules/ui/shared/headless/HeadlessPlanApprovalDialog.tsx",
+    classification: "contextual-only",
+    rationale: "The current approval view shows loading and decision feedback for the exact request. This lets the user open the current request again when a decision could not be confirmed.",
+  },
+  {
+    path: "modules/ui/shared/takeover/WindowTakeoverControls.tsx",
+    classification: "contextual-only",
+    rationale: "The live window control region tells the user who controls the current window and keeps revoke available. Its status is separate from independent chat task outcomes.",
+  },
+  {
     path: "modules/ui/shared/system-builder/SystemFormComposerView.tsx",
     classification: "contextual-only",
     rationale: "A preview readiness error belongs to the current form draft and disappears when that draft changes.",

@@ -1,4 +1,4 @@
-import { ANONYMOUS_AUTH_CONTEXT, AUTH_METHODS, createSecurityError, type AuthContext } from "../../../contracts/security";
+import { ANONYMOUS_AUTH_CONTEXT, AUTH_METHODS, createSecurityError, isOidcAccessTokenClientId, type AuthContext } from "../../../contracts/security";
 import type { SecurityAuditLogPort, TokenVerifierPort } from "../../ports/security";
 
 export class VerifyTransportAuthenticationService {
@@ -50,6 +50,7 @@ function isAuthenticatedContext(context: AuthContext | undefined): context is Au
   const principal = context?.principal;
   return context?.authenticated === true &&
     AUTH_METHODS.includes(context.authMethod) && context.authMethod !== "none" &&
+    (context.oidcAccessTokenClientId === undefined || context.authMethod === "oidc-bearer" && isOidcAccessTokenClientId(context.oidcAccessTokenClientId)) &&
     !!principal && ["device", "user", "service"].includes(principal.kind) &&
     typeof principal.principalId === "string" && !!principal.principalId.trim() &&
     principal.principalId === principal.principalId.trim() && principal.principalId !== "anonymous" &&

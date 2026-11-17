@@ -70,7 +70,8 @@ Glossary help buttons set an explicit unit line height: inherited body line
 height can place their small glyph outside the button's opaque background.
 
 The custom file chooser retains an opaque, correctly spaced label backing and
-shows a focus ring when its native input receives keyboard focus.
+shows a focus ring when its native input receives keyboard focus. A named set of
+customization target buttons uses an explicit group role.
 
 Workflow numbers use outlined pills over opaque step cards. The dashed connector
 paints behind those cards, preserving the steps' existing stacking order and

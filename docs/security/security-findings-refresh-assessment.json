@@ -23,9 +23,8 @@
       "informational": 34
     },
     "dispositions_in_repository": {
-      "mitigated-reverify": 16,
-      "partial": 6,
-      "validated": 17,
+      "mitigated-reverify": 27,
+      "partial": 12,
       "functional": 24,
       "security-adjacent": 3,
       "partial-functional": 1
@@ -392,7 +391,7 @@
       "source_roadmap": "security-vulnerability-remediation",
       "legacy_unfinished_criteria": 10,
       "current_criteria": 26,
-      "effect": "One execution backlog; all original finding identities and pending owners retained. This metadata checkpoint includes no product/native implementation and transfers no closure, qualification or approval."
+      "effect": "One execution backlog; full legacy history preserved; remaining concerns inspected against source. No closure, qualification or approval transferred."
     }
   },
   "security_impact": {
@@ -550,8 +549,8 @@
       "disposition": "mitigated-reverify",
       "priority": "P1",
       "owner": "file-and-workspace-authority",
-      "assessment": "Model updates preserve stored location/storage scope. Local deletion uses an identity-only port whose composed adapter denies unavailable before filesystem effects. Native identity-preserving deletion and atomic provenance qualification remain blocked; registry-only management is distinct from file deletion.",
-      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "assessment": "Model updates preserve stored location/storage scope. Local deletion uses an identity-only port whose composed adapter denies unavailable before filesystem effects. Native identity-preserving deletion and atomic provenance qualification remain blocked; registry-only management is distinct from file deletion. The seven-criterion authority Work completed independent local qualification at its recorded snapshot; it is no longer merely planned. Current whole-candidate and the named native/environment boundaries remain unqualified.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -569,12 +568,33 @@
       "planning_assessment": "Model record patches still merge caller localPath, deletion roots still include mutable shared storage, and recursive deletion trusts the resulting location. Existing containment does not establish host-owned model provenance.",
       "planning_disposition": "validated",
       "implementation": {
-        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "qualification_work_id": "security-existing-authority-controls-qualification",
         "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
         "unqualified_hold_work_id": "model-file-effects-safe-hold",
-        "retained_failed_receipt_digest": "5f664a681fa9f2125454bb9d1ed680b9b48e72e42af10032e66120b7adaf95f2"
-      }
+        "retained_failed_receipt_digest": "5f664a681fa9f2125454bb9d1ed680b9b48e72e42af10032e66120b7adaf95f2",
+        "historical_status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualified_component_support": [
+          {
+            "work_id": "security-existing-authority-controls-qualification",
+            "completed_at": "2026-10-21T10:35:50Z",
+            "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+            "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+            "source_digest": "0628938511edf536dc024eb92d7b75d9c544da2ac63ffec1440ed0bb24293e48",
+            "criteria": [
+              "local-model-effects-held",
+              "local-dataset-source-isolation",
+              "local-write-owned-download-completion",
+              "local-authentication-result-invariant",
+              "local-workspace-revision-integrity",
+              "local-library-create-conflicts",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned"
     },
     {
       "id": "R03",
@@ -587,8 +607,8 @@
       "disposition": "mitigated-reverify",
       "priority": "P1",
       "owner": "file-and-workspace-authority",
-      "assessment": "Dataset resolution checks workspace-scoped binding/catalog identity before source I/O and removes raw artifact-ID fallback. Remote localization uses generated immutable storage keys. Current local authority qualification is tracked separately; production storage qualification remains separate.",
-      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "assessment": "Dataset resolution checks workspace-scoped binding/catalog identity before source I/O and removes raw artifact-ID fallback. Remote localization uses generated immutable storage keys. Current local authority qualification is tracked separately; production storage qualification remains separate. The seven-criterion authority Work completed independent local qualification at its recorded snapshot; it is no longer merely planned. Current whole-candidate and the named native/environment boundaries remain unqualified.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -606,13 +626,34 @@
       "planning_assessment": "Dataset staging reads bindings by artifactId without request workspaceId and retains the unbound artifact-to-storage-key fallback. Passing context alone does not scope this binding adapter.",
       "planning_disposition": "validated",
       "implementation": {
-        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "qualification_work_id": "security-existing-authority-controls-qualification",
         "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
         "historical_supporting_work_id": "functionality-task-journeys-cross-host-qualification",
         "historical_supporting_receipt_digest": "4f44d26e0df1df4aca053bc69b48d0ad5b3c4ac9d7f792447196347f96dfda2f",
-        "historical_supporting_review_digest": "22c25dfece330fda5dffd12c7298508d66a54c180eb6282606c6d7daa53dd41e"
-      }
+        "historical_supporting_review_digest": "22c25dfece330fda5dffd12c7298508d66a54c180eb6282606c6d7daa53dd41e",
+        "historical_status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualified_component_support": [
+          {
+            "work_id": "security-existing-authority-controls-qualification",
+            "completed_at": "2026-10-21T10:35:50Z",
+            "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+            "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+            "source_digest": "0628938511edf536dc024eb92d7b75d9c544da2ac63ffec1440ed0bb24293e48",
+            "criteria": [
+              "local-model-effects-held",
+              "local-dataset-source-isolation",
+              "local-write-owned-download-completion",
+              "local-authentication-result-invariant",
+              "local-workspace-revision-integrity",
+              "local-library-create-conflicts",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned"
     },
     {
       "id": "R04",
@@ -733,8 +774,8 @@
       "disposition": "partial",
       "priority": "P1",
       "owner": "runtime-execution-integrity",
-      "assessment": "Authentication now protects generation, but the workflow mapper still forwards dimensions, steps and batch size without upper limits. Queue visibility, admission and effective cancellation remain part of the unresolved runtime control.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Authentication, strict passive request admission, effective default validation and explicit prompt/dimension/pixel/steps/batch/CFG bounds exist. Retain partial disposition for aggregate authenticated principal/organization admission/storage, queue/cancellation/recovery and actual physical resource qualification. Historical unauthenticated and missing-upper-limit claims are stale.",
+      "evidence_level": "current-source-inspection-local-support-technical-qualification-pending",
       "legacy_findings": [
         "F11",
         "F38",
@@ -742,9 +783,19 @@
       ],
       "evidence": [
         {
+          "path": "modules/contracts/image-generation/image-generation-request-validation.ts",
+          "sha256": "706b0a8e3488a52e2d499ad495e0be4d6f531ce045f05b4ad7e8a0fdfcf4f580",
+          "line": 1
+        },
+        {
           "path": "modules/adapters/runtime/comfyui/comfyUiImageGenerationWorkflowMapper.ts",
-          "sha256": "882a047261f00a4f700209b9e2ebefaa05b4d52f81c035a03259b565e65ffd88",
-          "line": 27
+          "sha256": "2ef1c5d88083fe412f62c767c6ab2b8c28c9ef301af3660f8e56fc7b1d25e6d1",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/runtime/comfyui/tests/comfyUiImageGenerationWorkflowMapper.unit.test.ts",
+          "sha256": "cdca3af963499d6de2d4b294b190eed65b6ed5dccfb8ab5b5b16f758a4f505c5",
+          "line": 1
         }
       ],
       "closure": "not-claimed",
@@ -752,7 +803,21 @@
         "status": "implemented-local-evidence-in-linked-work",
         "work_id": "security-r08-generation-boundary-bounds",
         "summary": "Shared existing request caps apply to application and effective runtime/mapper values before startup, reference or submission effects. No batch flooring; selected defaults, malformed/nonfinite primitives and bounded hint data checked. Physical resource/GPU combinations and fairness qualification remain pending; no full scanner closure claimed."
-      }
+      },
+      "assessment_history": [
+        {
+          "assessment": "Authentication now protects generation, but the workflow mapper still forwards dimensions, steps and batch size without upper limits. Queue visibility, admission and effective cancellation remain part of the unresolved runtime control.",
+          "evidence_level": "source-inspection-not-requalified",
+          "evidence": [
+            {
+              "path": "modules/adapters/runtime/comfyui/comfyUiImageGenerationWorkflowMapper.ts",
+              "sha256": "882a047261f00a4f700209b9e2ebefaa05b4d52f81c035a03259b565e65ffd88",
+              "line": 27
+            }
+          ],
+          "reason": "Superseded by source reinspection during explicit roadmap consolidation; previous evidence and no-closure state retained."
+        }
+      ]
     },
     {
       "id": "R09",
@@ -1052,11 +1117,11 @@
       "title": "Parquet review page can exhaust the Python runtime",
       "reported_severity": "medium",
       "observed_revision": "8e134cbcdd925ec177ced9becaf2778ca810ab3f",
-      "disposition": "validated",
+      "disposition": "partial",
       "priority": "P1",
       "owner": "runtime-execution-integrity",
-      "assessment": "Review retrieves whole artifact bytes and high-offset Parquet reads scan/decode preceding batches. Small returned pages do not bound input bytes, decompression work, scan cost or concurrent requests.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Encoded retrieval/source/staged/worker/revised-output bytes are bounded, and footer-directed Parquet row groups convert only requested page slices. Completed local component qualification covers those controls and exact review fingerprints. Decoded/decompression memory, concurrent fairness, native resource behavior and current integrated runtime qualification remain pending; a small returned page alone does not prove these bounds.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -1067,10 +1132,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-partial-expanded-memory-qualification-pending",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r25-bounded-parquet-review",
-        "summary": "Existing64MiB retrieval/source bounds enforced before downstream effects, staging and worker parse; revised output reads bounded. Footer-directed group selection and page slicing eliminate preceding Python row conversion. Exact fingerprints and curation preserved. Decoded-cell memory, host fairness and native/resource qualification remain pending; no full scanner closure claimed."
-      }
+        "summary": "Existing64MiB retrieval/source bounds enforced before downstream effects, staging and worker parse; revised output reads bounded. Footer-directed group selection and page slicing eliminate preceding Python row conversion. Exact fingerprints and curation preserved. Decoded-cell memory, host fairness and native/resource qualification remain pending; no full scanner closure claimed.",
+        "historical_status": "implemented-local-partial-expanded-memory-qualification-pending",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r25-bounded-parquet-review",
+            "completed_at": "2026-10-21T09:22:24Z",
+            "receipt_digest": "ecaef8a3d7888626823c45d0acd1ba98fa5ce1ff12e41a69f0e88ad2b13a1eb5",
+            "review_digest": "447de965f7ce662b79a1a9947fe5d621325b41e0189fbc6b6d1beb4a118b98bf",
+            "source_digest": "73c7efa36cc0fb0631d6ce5c14017f17bb24e3f4b19e1da0b067e42da2a576ac",
+            "criteria": [
+              "bounded-review-bytes",
+              "bounded-page-conversion",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Review retrieves whole artifact bytes and high-offset Parquet reads scan/decode preceding batches. Small returned pages do not bound input bytes, decompression work, scan cost or concurrent requests.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R26",
@@ -1083,8 +1167,8 @@
       "disposition": "mitigated-reverify",
       "priority": "P1",
       "owner": "file-and-workspace-authority",
-      "assessment": "Desktop reveal uses an identity-only location port, currently unavailable before shell effects. Path/network checks remain defense in depth; qualified identity-preserving native reveal remains pending.",
-      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "assessment": "Desktop reveal uses an identity-only location port, currently unavailable before shell effects. Path/network checks remain defense in depth; qualified identity-preserving native reveal remains pending. The seven-criterion authority Work completed independent local qualification at its recorded snapshot; it is no longer merely planned. Current whole-candidate and the named native/environment boundaries remain unqualified.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -1097,12 +1181,33 @@
       "planning_assessment": "Model reveal accepts an absolute registry path and invokes the host shell after normalization. Registry paths remain mutable; model ownership, no-network-path policy and canonical containment are missing from this boundary.",
       "planning_disposition": "validated",
       "implementation": {
-        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "qualification_work_id": "security-existing-authority-controls-qualification",
         "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
         "unqualified_hold_work_id": "model-file-effects-safe-hold",
-        "retained_failed_receipt_digest": "5f664a681fa9f2125454bb9d1ed680b9b48e72e42af10032e66120b7adaf95f2"
-      }
+        "retained_failed_receipt_digest": "5f664a681fa9f2125454bb9d1ed680b9b48e72e42af10032e66120b7adaf95f2",
+        "historical_status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualified_component_support": [
+          {
+            "work_id": "security-existing-authority-controls-qualification",
+            "completed_at": "2026-10-21T10:35:50Z",
+            "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+            "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+            "source_digest": "0628938511edf536dc024eb92d7b75d9c544da2ac63ffec1440ed0bb24293e48",
+            "criteria": [
+              "local-model-effects-held",
+              "local-dataset-source-isolation",
+              "local-write-owned-download-completion",
+              "local-authentication-result-invariant",
+              "local-workspace-revision-integrity",
+              "local-library-create-conflicts",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned"
     },
     {
       "id": "R27",
@@ -1115,8 +1220,8 @@
       "disposition": "mitigated-reverify",
       "priority": "P1",
       "owner": "file-and-workspace-authority",
-      "assessment": "Read/list paths perform no model-registration writes. Explicit completion requires matching write authority and frozen organization/principal/workspace ownership, with in-process deduplication and explicit retry. Durable restart recovery and native provenance remain unqualified. Independent injected-port review reproduced a mismatched returned task id reaching projection/registration. The bounded successor now requires exact returned task id/type/workspace, filters wrong-type list results and denies substituted cancellation acknowledgements; regressions and fresh independent qualification are required.",
-      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "assessment": "Model task read/list perform no registration writes. Explicit completion requires frozen organization/principal/workspace write authority and exact returned download task identity/type/workspace; substituted list/cancel results deny. Independent local authority and exact-task successor Work are complete at their recorded snapshots. In-process replay deduplication is supported; durable restart recovery, native provenance and current complete parent qualification remain pending.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -1129,15 +1234,48 @@
       "planning_assessment": "Read/list task conversion still calls finalize on success and persists model registration. The route requires only model:read, while descriptors and finalization are keyed by request/workspace without immutable organization/principal execution authority.",
       "planning_disposition": "validated",
       "implementation": {
-        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "qualification_work_id": "security-existing-authority-controls-qualification",
         "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
         "historical_supporting_work_id": "functionality-task-journeys-cross-host-qualification",
         "historical_supporting_receipt_digest": "4f44d26e0df1df4aca053bc69b48d0ad5b3c4ac9d7f792447196347f96dfda2f",
         "historical_supporting_review_digest": "22c25dfece330fda5dffd12c7298508d66a54c180eb6282606c6d7daa53dd41e",
         "identity_correction_work_id": "security-r27-exact-download-task-identity",
-        "identity_reproduction": "Independent inert wrong-task probe and durable red regression retained; no real provider or filesystem effects."
-      }
+        "identity_reproduction": "Independent inert wrong-task probe and durable red regression retained; no real provider or filesystem effects.",
+        "historical_status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualified_component_support": [
+          {
+            "work_id": "security-existing-authority-controls-qualification",
+            "completed_at": "2026-10-21T10:35:50Z",
+            "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+            "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+            "source_digest": "0628938511edf536dc024eb92d7b75d9c544da2ac63ffec1440ed0bb24293e48",
+            "criteria": [
+              "local-model-effects-held",
+              "local-dataset-source-isolation",
+              "local-write-owned-download-completion",
+              "local-authentication-result-invariant",
+              "local-workspace-revision-integrity",
+              "local-library-create-conflicts",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          },
+          {
+            "work_id": "security-r27-exact-download-task-identity",
+            "completed_at": "2026-10-21T10:33:01Z",
+            "receipt_digest": "28d8f18863491e60c04b248bb86cb4ee0d613bac1287e86952d5790946f0ee10",
+            "review_digest": "e61d8036ade4f574e4f33fe748c594a9e2424ad942ed57fea1d8a7874db7dada",
+            "source_digest": "0628938511edf536dc024eb92d7b75d9c544da2ac63ffec1440ed0bb24293e48",
+            "criteria": [
+              "exact-requested-task-admission",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned"
     },
     {
       "id": "R28",
@@ -1199,11 +1337,11 @@
       "title": "Dataset runtime accepts unsafe filesystem paths",
       "reported_severity": "medium",
       "observed_revision": "dbc9c40d1050bff6d5c6359df79262630b011285",
-      "disposition": "validated",
+      "disposition": "partial",
       "priority": "P1",
       "owner": "runtime-execution-integrity",
-      "assessment": "Dataset worker source paths remain plain strings read directly, and output baseName still reaches temporary-file prefixes. Launch authentication reduces reachability but does not validate host-to-worker path authority.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Worker entry and model admission capture a primitive, bounded safe output name before planning, source/model/generation and output effects, preserving host UTF-16/name-policy parity. Completed local naming qualification does not establish source-path authority, parent/reparse identity, native filesystem effects or complete runtime qualification; those remain pending.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F48"
       ],
@@ -1216,10 +1354,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-naming-partial-source-native-qualification-pending",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r30-worker-output-name-admission",
-        "summary": "Worker model and task-entry naming admission mirror existing host save-name policy: ECMAScript whitespace trim,128UTF16-code-unit limit, path punctuation/control/trailing-period denial; primitive strings only. Entry revalidates constructed/mutated models and captures name before planning/source/model/generation/output effects; dataset and JSON reports use captured name. Existing absolute/canonical/non-symlink output directory check retained. Source paths, parent substitution and native identity remain separate pending authority/qualification work; no scanner closure."
-      }
+        "summary": "Worker model and task-entry naming admission mirror existing host save-name policy: ECMAScript whitespace trim,128UTF16-code-unit limit, path punctuation/control/trailing-period denial; primitive strings only. Entry revalidates constructed/mutated models and captures name before planning/source/model/generation/output effects; dataset and JSON reports use captured name. Existing absolute/canonical/non-symlink output directory check retained. Source paths, parent substitution and native identity remain separate pending authority/qualification work; no scanner closure.",
+        "historical_status": "implemented-local-naming-partial-source-native-qualification-pending",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r30-worker-output-name-admission",
+            "completed_at": "2026-10-21T09:47:05Z",
+            "receipt_digest": "cd4f3cde2880abc8211651379e291b6677ea112e514d8f75275102294aba05ee",
+            "review_digest": "0f998e3d23f78f63c6b6ff97898861b444722813c357ba16a5c3911c4b9ab39f",
+            "source_digest": "8a1942d701852e3c52a3271b12627cdd717fdc33ee5495968f88f71c3ad1c8ed",
+            "criteria": [
+              "worker-name-admission",
+              "captured-output-name",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Dataset worker source paths remain plain strings read directly, and output baseName still reaches temporary-file prefixes. Launch authentication reduces reachability but does not validate host-to-worker path authority.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R31",
@@ -1254,11 +1411,11 @@
       "title": "ComfyUI auto-repair can silently update runtime code",
       "reported_severity": "medium",
       "observed_revision": "feebbb64ef0833330cb6ad4e2154d8a66c918cfd",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P1",
       "owner": "runtime-execution-integrity",
-      "assessment": "Supervisor requests no update, but ComfyUI repair paths still force allowUpdate true and can reach Git repair. A dependency repair can still change runtime code without the original caller authorizing that change.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Git and ComfyUI repair now require explicit allowUpdate:true before status or filesystem/Git/Python/pip effects; forceRepair and fallback cannot manufacture permission. Automatic no-update supervisor repair remains denied and needs explicit recovery. Completed current local successor qualification covers supported inert flows and zero-effect denials. Original failed R32 Work remains preserved and incomplete. Initial-install authority, executable-tree/immutable-source provenance, native identity and current parent qualification remain separate.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F37"
       ],
@@ -1271,10 +1428,36 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
-        "work_id": "security-r32-explicit-repair-authority",
-        "summary": "Both repair layers deny absent explicit update approval before I/O; forceRepair cannot grant updates. Initial installation, unmanaged provenance and parent runtime qualification remain separate."
-      }
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
+        "work_id": "security-r32-r33-current-local-qualification",
+        "summary": "Git and ComfyUI repair now require explicit allowUpdate:true before status or filesystem/Git/Python/pip effects; forceRepair and fallback cannot manufacture permission. Automatic no-update supervisor repair remains denied and needs explicit recovery. Completed current local successor qualification covers supported inert flows and zero-effect denials. Original failed R32 Work remains preserved and incomplete. Initial-install authority, executable-tree/immutable-source provenance, native identity and current parent qualification remain separate.",
+        "historical_component_work": {
+          "status": "implemented-local-evidence-in-linked-work",
+          "work_id": "security-r32-explicit-repair-authority",
+          "summary": "Both repair layers deny absent explicit update approval before I/O; forceRepair cannot grant updates. Initial installation, unmanaged provenance and parent runtime qualification remain separate."
+        },
+        "related_work_ids": [
+          "security-r32-explicit-repair-authority"
+        ],
+        "qualified_component_support": [
+          {
+            "work_id": "security-r32-r33-current-local-qualification",
+            "completed_at": "2026-10-22T08:15:50Z",
+            "receipt_digest": "42647a9fde00f7e4dc0c4ff8aa5e813515123644932e8b2f7d79c9a06ad895fb",
+            "review_digest": "e93051cc41b0f1b97d8dd8f366d8ac6530e7d471b6b65d2aa02f7db37ee2c03e",
+            "source_digest": "5caa7491f8655720d3be1924b642ce3f90d13920fa94d175da49c7755d868c7b",
+            "criteria": [
+              "explicit-repair-authority-qualified",
+              "unmanaged-adoption-denial-qualified",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Supervisor requests no update, but ComfyUI repair paths still force allowUpdate true and can reach Git repair. A dependency repair can still change runtime code without the original caller authorizing that change.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R33",
@@ -1284,11 +1467,11 @@
       "title": "Unmanaged Git adoption trusts spoofable origin",
       "reported_severity": "medium",
       "observed_revision": "41149ab065f4122358f99d499f89f99c44deb5c9",
-      "disposition": "validated",
+      "disposition": "partial",
       "priority": "P1",
       "owner": "runtime-execution-integrity",
-      "assessment": "Unmanaged checkout adoption still trusts matching origin configuration and current HEAD while recording requested ref as resolvedRef. Approved commit provenance and dirty-tree rejection are absent from adoption.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Nonempty unmanaged Git roots cannot be adopted from mutable matching origin. Managed reuse/repair requires consistent exact target, normalized root and canonical source; unknown or non-ENOENT filesystem/status uncertainty denies before effects. Completed local successor qualification covers these denials and supported inert paths. Original R33 Work remains incomplete. Marker authenticity, current tree bytes/approved commit provenance, native substitution races, initial-install trust and current parent qualification remain pending.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F34"
       ],
@@ -1301,10 +1484,36 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-focused-evidence-required-audit-pending",
-        "work_id": "security-r33-deny-unmanaged-adoption",
-        "summary": "Matching mutable Git origin cannot adopt an unmanaged tree. Target/root/canonical source consistency is required, and ComfyUI status authority precedes all targeted/fallback repair effects. Initial missing/empty installation remains separate. Full current-byte/provenance/native proof and dependency audit remain pending; no scanner closure is claimed."
-      }
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
+        "work_id": "security-r32-r33-current-local-qualification",
+        "summary": "Nonempty unmanaged Git roots cannot be adopted from mutable matching origin. Managed reuse/repair requires consistent exact target, normalized root and canonical source; unknown or non-ENOENT filesystem/status uncertainty denies before effects. Completed local successor qualification covers these denials and supported inert paths. Original R33 Work remains incomplete. Marker authenticity, current tree bytes/approved commit provenance, native substitution races, initial-install trust and current parent qualification remain pending.",
+        "historical_component_work": {
+          "status": "implemented-local-focused-evidence-required-audit-pending",
+          "work_id": "security-r33-deny-unmanaged-adoption",
+          "summary": "Matching mutable Git origin cannot adopt an unmanaged tree. Target/root/canonical source consistency is required, and ComfyUI status authority precedes all targeted/fallback repair effects. Initial missing/empty installation remains separate. Full current-byte/provenance/native proof and dependency audit remain pending; no scanner closure is claimed."
+        },
+        "related_work_ids": [
+          "security-r33-deny-unmanaged-adoption"
+        ],
+        "qualified_component_support": [
+          {
+            "work_id": "security-r32-r33-current-local-qualification",
+            "completed_at": "2026-10-22T08:15:50Z",
+            "receipt_digest": "42647a9fde00f7e4dc0c4ff8aa5e813515123644932e8b2f7d79c9a06ad895fb",
+            "review_digest": "e93051cc41b0f1b97d8dd8f366d8ac6530e7d471b6b65d2aa02f7db37ee2c03e",
+            "source_digest": "5caa7491f8655720d3be1924b642ce3f90d13920fa94d175da49c7755d868c7b",
+            "criteria": [
+              "explicit-repair-authority-qualified",
+              "unmanaged-adoption-denial-qualified",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Unmanaged checkout adoption still trusts matching origin configuration and current HEAD while recording requested ref as resolvedRef. Approved commit provenance and dirty-tree rejection are absent from adoption.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R34",
@@ -1416,11 +1625,11 @@
       "title": "Runtime diagnostics are written to shared temp with loose perms",
       "reported_severity": "low",
       "observed_revision": "f57b2a5cb866e1cdb45052040fdc24f2dff0f829",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P2",
       "owner": "runtime-execution-integrity",
-      "assessment": "Dependency setup persists only versioned finite operation/platform/backend/stage outcomes, safe exit codes, grouped retry/failure counts and explicit overall success. Raw commands, arguments, environment paths, index URLs, subprocess output and exception details are not accumulated or serialized. Shared temporary default, directory ownership/ACLs, link-safe publication and retention remain unqualified; no full finding closure.",
-      "evidence_level": "local-source-and-focused-tests-controlled-qualification-pending",
+      "assessment": "Dependency setup now exposes only bounded immutable session outcomes and performs no implicit diagnostic-file writes. Finite stage/backend/outcome fields and truthful overall setup status exclude raw commands, paths, URLs, environment, subprocess output and exception details; callback failure does not alter setup. Completed session-outcomes/original-supplier Vitest successor qualification supersedes the old failed audit for that narrow component. Earlier minimal-persistence Work and its failure remain historical. An explicitly injected external persistent sink, native platform guarantees and complete parent qualification are not established.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F68",
         "F76"
@@ -1434,26 +1643,54 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "work_id": "security-r40-minimal-install-outcomes",
-        "status": "implemented-independently-inspected-required-dependency-qualification-failed",
-        "controls": [
-          "explicit-field-outcome-projection",
-          "finite-stage-backend-grouping",
-          "truthful-overall-setup-success",
-          "best-effort-diagnostics-io-independent-of-setup"
+        "work_id": "security-session-vitest-patch-qualification",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
+        "receipt_digest": "9efca7ed6727b25a734fef4941456a46366562530d0502fe784b59b6c8e54a28",
+        "review_digest": "3c4582d79e84281e45ec9a0e79dc811ff119a4851d09d300f9b6dd4d9ebc5f81",
+        "qualified_component_support": [
+          {
+            "work_id": "security-session-vitest-patch-qualification",
+            "completed_at": "2026-10-22T00:35:30Z",
+            "receipt_digest": "9efca7ed6727b25a734fef4941456a46366562530d0502fe784b59b6c8e54a28",
+            "review_digest": "3c4582d79e84281e45ec9a0e79dc811ff119a4851d09d300f9b6dd4d9ebc5f81",
+            "source_digest": "709324ef580ec35730d84d1a03137ed23adb24e2ce20c26679349342192c2701",
+            "criteria": [
+              "session-outcomes-only",
+              "official-vitest-patch-compatible"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
         ],
         "remaining": [
-          "original-supplier-dependency-gate-failed",
-          "private-directory-ownership-and-permissions",
-          "native-link-safe-publication",
-          "retention-policy",
-          "supported-platform-qualification"
+          "current-parent-and-supported-platform-qualification",
+          "explicit-external-persistent-sink-if-configured-not-qualified"
         ],
-        "receipt_digest": "05a9b6261642c490e2ca14de86be1fc763898d2959fbc81a65612c5f58cca3e4",
-        "review_kind": "local-security-review-v1-not-qualifying-technical-acceptance",
-        "local_review_ref": ".local-codex/security-execution/r40-local-review.json",
-        "local_evidence": "22focused tests and28independent persisted-outcome cases passed; desktop TypeScript check passed. No raw synthetic command/path/index/output/error markers persisted; deterministic I/O failure preserves original setup result."
-      }
+        "historical_minimal_persistence_work": {
+          "work_id": "security-r40-minimal-install-outcomes",
+          "status": "implemented-independently-inspected-required-dependency-qualification-failed",
+          "controls": [
+            "explicit-field-outcome-projection",
+            "finite-stage-backend-grouping",
+            "truthful-overall-setup-success",
+            "best-effort-diagnostics-io-independent-of-setup"
+          ],
+          "remaining": [
+            "original-supplier-dependency-gate-failed",
+            "private-directory-ownership-and-permissions",
+            "native-link-safe-publication",
+            "retention-policy",
+            "supported-platform-qualification"
+          ],
+          "receipt_digest": "05a9b6261642c490e2ca14de86be1fc763898d2959fbc81a65612c5f58cca3e4",
+          "review_kind": "local-security-review-v1-not-qualifying-technical-acceptance",
+          "local_review_ref": ".local-codex/security-execution/r40-local-review.json",
+          "local_evidence": "22focused tests and28independent persisted-outcome cases passed; desktop TypeScript check passed. No raw synthetic command/path/index/output/error markers persisted; deterministic I/O failure preserves original setup result."
+        },
+        "scope": "Completed session-only successor; earlier persisted-minimization implementation, failed receipt and local nonqualifying review stay historical and are not promoted."
+      },
+      "planning_assessment": "Dependency setup persists only versioned finite operation/platform/backend/stage outcomes, safe exit codes, grouped retry/failure counts and explicit overall success. Raw commands, arguments, environment paths, index URLs, subprocess output and exception details are not accumulated or serialized. Shared temporary default, directory ownership/ACLs, link-safe publication and retention remain unqualified; no full finding closure.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "local-source-and-focused-tests-controlled-qualification-pending"
     },
     {
       "id": "R41",
@@ -1494,11 +1731,11 @@
       "title": "Thin-client dev server now exposed on all interfaces",
       "reported_severity": "low",
       "observed_revision": "12ee15f0d83ccd59d3ac87eccf18d4f10d946df2",
-      "disposition": "validated",
+      "disposition": "partial",
       "priority": "P2",
       "owner": "development-and-tooling-security",
-      "assessment": "Thin-client Vite configuration still binds all interfaces by default. Explicit LAN operation must be an operator choice with secure transport rather than an ambient development default.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Thin-client server and preview default to loopback. Explicit LAN operation requires frontend HTTPS and HTTPS API targets after final CLI resolution; remote certificate verification remains enabled. Completed tooling reconciliation covers fixed configuration/denial tests at its recorded snapshot. The original listener Work remains incomplete. Actual LAN deployment/browser trust and current parent qualification remain pending; no scanner closure is claimed.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F69"
       ],
@@ -1511,13 +1748,39 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-controls-requalification-linked-lan-environment-pending",
-        "work_id": "security-r42-r46-development-listener-posture",
-        "summary": "Default server/preview loopback; explicit LAN profile requires frontend HTTPS and HTTPS API targets after final CLI configuration. Remote HTTPS verifies certificates; development trust applies only to exact loopback. Production builds do not resolve unused listener keys. The linked tooling reconciliation work owns current fixed checks and the explicitly authorized dependency audit. Actual LAN/browser trust qualification remains pending; no scanner closure is claimed.",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
+        "work_id": "security-local-tooling-evidence-reconciliation",
+        "summary": "Thin-client server and preview default to loopback. Explicit LAN operation requires frontend HTTPS and HTTPS API targets after final CLI resolution; remote certificate verification remains enabled. Completed tooling reconciliation covers fixed configuration/denial tests at its recorded snapshot. The original listener Work remains incomplete. Actual LAN deployment/browser trust and current parent qualification remain pending; no scanner closure is claimed.",
         "related_work_ids": [
-          "security-local-tooling-evidence-reconciliation"
+          "security-r42-r46-development-listener-posture"
+        ],
+        "historical_component_work": {
+          "status": "implemented-local-controls-requalification-linked-lan-environment-pending",
+          "work_id": "security-r42-r46-development-listener-posture",
+          "summary": "Default server/preview loopback; explicit LAN profile requires frontend HTTPS and HTTPS API targets after final CLI configuration. Remote HTTPS verifies certificates; development trust applies only to exact loopback. Production builds do not resolve unused listener keys. The linked tooling reconciliation work owns current fixed checks and the explicitly authorized dependency audit. Actual LAN/browser trust qualification remains pending; no scanner closure is claimed.",
+          "related_work_ids": [
+            "security-local-tooling-evidence-reconciliation"
+          ]
+        },
+        "qualified_component_support": [
+          {
+            "work_id": "security-local-tooling-evidence-reconciliation",
+            "completed_at": "2026-10-21T18:09:07Z",
+            "receipt_digest": "a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40",
+            "review_digest": "8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098",
+            "source_digest": "81dd9d5518ee1ae0bb9135a5f2ef6c04fbdfc17ec2bd5a69d8486222ece0b0d4",
+            "criteria": [
+              "available-tooling-checks-executed",
+              "qualified-dispositions-traceable",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
         ]
-      }
+      },
+      "planning_assessment": "Thin-client Vite configuration still binds all interfaces by default. Explicit LAN operation must be an operator choice with secure transport rather than an ambient development default.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R43",
@@ -1527,11 +1790,11 @@
       "title": "Model asset views can expose task IDs and nested metadata",
       "reported_severity": "low",
       "observed_revision": "fb68d918a71c8a56c0df090662c48a5da09a4376",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Model resource views still copy generatedFromRunId and recursively project caller metadata. Existing denylist sanitization does not establish an explicit safe diagnostic schema or opaque source identity.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "List/detail model view and backing projections omit generatedFromRunId and all arbitrary model metadata. Only declared summary fields remain; caller metadata cannot substitute identity or numerical summaries, and omitted metadata is never accessed, including outer or nested getters. Exact scoped detail/read-only behavior preserved; other identity/provenance and parent qualification remain separate.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F63"
       ],
@@ -1544,10 +1807,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r43-minimal-model-views",
-        "summary": "List/detail model view and backing projections omit generatedFromRunId and all arbitrary model metadata. Only declared summary fields remain; caller metadata cannot substitute identity or numerical summaries, and omitted metadata is never accessed, including outer or nested getters. Exact scoped detail/read-only behavior preserved; other identity/provenance and parent qualification remain separate."
-      }
+        "summary": "List/detail model view and backing projections omit generatedFromRunId and all arbitrary model metadata. Only declared summary fields remain; caller metadata cannot substitute identity or numerical summaries, and omitted metadata is never accessed, including outer or nested getters. Exact scoped detail/read-only behavior preserved; other identity/provenance and parent qualification remain separate.",
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r43-minimal-model-views",
+            "completed_at": "2026-10-21T08:23:50Z",
+            "receipt_digest": "19abc035bf90345fa9cf97f6aa771bf3cd7d1140584d0071cdbcb8bec9c2ee1d",
+            "review_digest": "60c2943181bcb8742380c176eb2a21f952ccaded52dcc0ce8fa92bc324d0254c",
+            "source_digest": "dc6228f9112804cb2d69d50e372d14bcdebb6a04a90ba9821ceb61d17f207536",
+            "criteria": [
+              "minimal-model-summary",
+              "read-only-detail-preserved",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Model resource views still copy generatedFromRunId and recursively project caller metadata. Existing denylist sanitization does not establish an explicit safe diagnostic schema or opaque source identity.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R44",
@@ -1557,11 +1839,11 @@
       "title": "Raw image IDs leak through resource-backed view IDs",
       "reported_severity": "low",
       "observed_revision": "5400770d201268f2c4632756a832440b79008116",
-      "disposition": "validated",
+      "disposition": "partial",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Image/generated-output public view identifiers still embed direct source identifiers when syntactically safe. Source/request identity non-disclosure requires an opaque stable mapping, not syntax filtering.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Random persisted image/output/artifact/cursor aliases replace source-derived public identities. Private indexed organization/workspace CAS reservation/inverse/commit publication is invisible until consistent, survives authorized retry and denies corrupted committed pairs. Exact source rereads reauthorize each detail without list fallback; legacy refs/unassigned stores deny without automatic reassignment. Focused privacy/pagination/reconstruction/revocation/isolation and real production-SQLite concurrency regressions are implemented. Explicit legacy-reference migration, native persistence/ACL and parent qualification remain pending; scanner closure is not claimed. Actual separate-invocation review accepted all three component criteria after67focused tests,7actualElectron SQLite tests and server build/registered gates passed. These local controls do not establish native ACL or hostile-database integrity.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F64"
       ],
@@ -1574,10 +1856,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-qualified-native-and-legacy-reference-migration-pending",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r44-persisted-opaque-image-identities",
-        "summary": "Random persisted image/output/artifact/cursor aliases replace source-derived public identities. Private indexed organization/workspace CAS reservation/inverse/commit publication is invisible until consistent, survives authorized retry and denies corrupted committed pairs. Exact source rereads reauthorize each detail without list fallback; legacy refs/unassigned stores deny without automatic reassignment. Focused privacy/pagination/reconstruction/revocation/isolation and real production-SQLite concurrency regressions are implemented. Explicit legacy-reference migration, native persistence/ACL and parent qualification remain pending; scanner closure is not claimed. Actual separate-invocation review accepted all three component criteria after67focused tests,7actualElectron SQLite tests and server build/registered gates passed. These local controls do not establish native ACL or hostile-database integrity."
-      }
+        "summary": "Random persisted image/output/artifact/cursor aliases replace source-derived public identities. Private indexed organization/workspace CAS reservation/inverse/commit publication is invisible until consistent, survives authorized retry and denies corrupted committed pairs. Exact source rereads reauthorize each detail without list fallback; legacy refs/unassigned stores deny without automatic reassignment. Focused privacy/pagination/reconstruction/revocation/isolation and real production-SQLite concurrency regressions are implemented. Explicit legacy-reference migration, native persistence/ACL and parent qualification remain pending; scanner closure is not claimed. Actual separate-invocation review accepted all three component criteria after67focused tests,7actualElectron SQLite tests and server build/registered gates passed. These local controls do not establish native ACL or hostile-database integrity.",
+        "historical_status": "implemented-local-qualified-native-and-legacy-reference-migration-pending",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r44-persisted-opaque-image-identities",
+            "completed_at": "2026-10-21T18:01:29Z",
+            "receipt_digest": "1954b181fe1560013c5edc318b0656dc374efeb4127f99dd428b564bfa06628b",
+            "review_digest": "d8d1842c51c321af39fb2e9ccfad69a9b00cbee4d8f512456cea07db462ca3bb",
+            "source_digest": "d2c418479ddafe68042beb55cef4f4bf85bc6fb83279c99855d4a38cfbbd532d",
+            "criteria": [
+              "opaque-private-identities",
+              "indexed-source-reauthorization",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Image/generated-output public view identifiers still embed direct source identifiers when syntactically safe. Source/request identity non-disclosure requires an opaque stable mapping, not syntax filtering.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R45",
@@ -1590,8 +1891,8 @@
       "disposition": "partial",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Built-in markers now require seedVersion and fingerprint strings and catalog matching includes version, but caller-supplied marker strings still directly grant builtIn true without verifying trusted source and content.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Complete code-owned read classification remains in place. Separately scoped seed/install reuse now captures repository records before marker access and compares exact complete bodies with expected content plus permitted operational timestamps. Edited content with unchanged legacy markers cannot be already current; malformed active records deny without callbacks, user changes are preserved and explicit same-pack refresh remains supported. Legacy immutable hashes are retained, not promoted; package-integrity migration, native and parent qualification remain pending. Registered focused checks/server build and actual separate-invocation review passed in the independently completed reuse work; no scanner or parent closure is claimed.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F65"
       ],
@@ -1604,13 +1905,45 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-read-and-reuse-qualified-integrity-migration-and-native-pending",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r45-code-owned-asset-classification",
         "summary": "Complete code-owned read classification remains in place. Separately scoped seed/install reuse now captures repository records before marker access and compares exact complete bodies with expected content plus permitted operational timestamps. Edited content with unchanged legacy markers cannot be already current; malformed active records deny without callbacks, user changes are preserved and explicit same-pack refresh remains supported. Legacy immutable hashes are retained, not promoted; package-integrity migration, native and parent qualification remain pending. Registered focused checks/server build and actual separate-invocation review passed in the independently completed reuse work; no scanner or parent closure is claimed.",
         "related_work_ids": [
           "security-r45-installed-content-revalidation"
+        ],
+        "historical_status": "implemented-local-read-and-reuse-qualified-integrity-migration-and-native-pending",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r45-code-owned-asset-classification",
+            "completed_at": "2026-10-21T09:40:25Z",
+            "receipt_digest": "5d6daeef94c4d14cbd8ab61624f16327eff66b1503a20338d179063cbdce4db8",
+            "review_digest": "8c8f644c00a8a313256de61b889009f2968096cbe71f021416fe1e015f99604f",
+            "source_digest": "de51f196269719f9d60ed3dc719baeb1a69cf3e5133b75609b33d3690fd2f9b5",
+            "criteria": [
+              "code-owned-definition-match",
+              "consistent-read-cues",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          },
+          {
+            "work_id": "security-r45-installed-content-revalidation",
+            "completed_at": "2026-10-21T17:48:00Z",
+            "receipt_digest": "fb7b7b5087cfd8fbe91a8ba72ee9b706f719fe477cf2a78e823692ed5cf1860d",
+            "review_digest": "9cc750529eb0c2dc9f5ff4314ce885ac0c1572e410601910306fad4e490f3c1e",
+            "source_digest": "7c719d50a4b591c9e26aa8a506a83fb27b162b7ede936fd3332c47dd14a08baf",
+            "criteria": [
+              "stored-content-is-revalidated",
+              "supported-install-and-seed-compatibility",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
         ]
-      }
+      },
+      "planning_assessment": "Built-in markers now require seedVersion and fingerprint strings and catalog matching includes version, but caller-supplied marker strings still directly grant builtIn true without verifying trusted source and content.",
+      "planning_disposition": "partial",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R46",
@@ -1623,8 +1956,8 @@
       "disposition": "partial",
       "priority": "P2",
       "owner": "development-and-tooling-security",
-      "assessment": "Vite can now serve HTTPS through an explicit separate flag, but LAN token mode alone does not require that frontend transport and default bind remains non-loopback. Backend HTTPS does not protect the browser-to-proxy leg.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Local development defaults bind loopback; explicit LAN configuration requires frontend HTTPS and HTTPS API targets after resolved CLI configuration. Remote targets retain certificate verification; narrowly configured loopback development trust does not become remote trust. Completed tooling reconciliation covers fixed configuration checks at its recorded snapshot. The original listener Work remains incomplete and is not promoted; actual LAN deployment/browser trust and current parent qualification remain pending.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F67"
       ],
@@ -1637,13 +1970,32 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-controls-requalification-linked-lan-environment-pending",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r42-r46-development-listener-posture",
         "summary": "Default server/preview loopback; explicit LAN profile requires frontend HTTPS and HTTPS API targets after final CLI configuration. Remote HTTPS verifies certificates; development trust applies only to exact loopback. Production builds do not resolve unused listener keys. The linked tooling reconciliation work owns current fixed checks and the explicitly authorized dependency audit. Actual LAN/browser trust qualification remains pending; no scanner closure is claimed.",
         "related_work_ids": [
           "security-local-tooling-evidence-reconciliation"
+        ],
+        "historical_status": "implemented-local-controls-requalification-linked-lan-environment-pending",
+        "qualified_component_support": [
+          {
+            "work_id": "security-local-tooling-evidence-reconciliation",
+            "completed_at": "2026-10-21T18:09:07Z",
+            "receipt_digest": "a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40",
+            "review_digest": "8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098",
+            "source_digest": "81dd9d5518ee1ae0bb9135a5f2ef6c04fbdfc17ec2bd5a69d8486222ece0b0d4",
+            "criteria": [
+              "available-tooling-checks-executed",
+              "qualified-dispositions-traceable",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
         ]
-      }
+      },
+      "planning_assessment": "Vite can now serve HTTPS through an explicit separate flag, but LAN token mode alone does not require that frontend transport and default bind remains non-loopback. Backend HTTPS does not protect the browser-to-proxy leg.",
+      "planning_disposition": "partial",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R47",
@@ -1653,11 +2005,11 @@
       "title": "Public dev-mode endpoint can disable auth enforcement",
       "reported_severity": "low",
       "observed_revision": "8b3a96bf0229817a689c6449ae0fb39b29eff7f5",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P2",
       "owner": "development-and-tooling-security",
-      "assessment": "Development mode mutation is still public when the opt-in enforcement toggle is wired. This is limited to the explicitly enabled development configuration, not a managed OIDC production bypass.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Development-mode POST uses existing nonpublic security:admin policy and thin-client secureFetch. Enforced mode denies missing/invalid/nonadmin downgrade before setMode/body effects; deliberate disabled-dev bootstrap and startup-disabled LAN/OIDC toggle semantics are preserved. Controlled deployment/operator qualification remains pending.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F66"
       ],
@@ -1670,13 +2022,45 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r47-enforced-toggle-authority",
         "summary": "Development-mode POST uses existing nonpublic security:admin policy and thin-client secureFetch. Enforced mode denies missing/invalid/nonadmin downgrade before setMode/body effects; deliberate disabled-dev bootstrap and startup-disabled LAN/OIDC toggle semantics are preserved. Controlled deployment/operator qualification remains pending.",
         "related_work_ids": [
           "security-local-tooling-evidence-reconciliation"
+        ],
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r47-enforced-toggle-authority",
+            "completed_at": "2026-10-21T08:31:49Z",
+            "receipt_digest": "54e1ed32f94cb1b59cbd5836ce40ecb97cd3be65894bb019d78732e412cb5f80",
+            "review_digest": "bf96e7c32abcd1d513128ccfb2fe94993efcbceabb585da78db9259d04c982c7",
+            "source_digest": "b7352ea9a983e33d41a4cb56150f08ea23a769834b50dac4b47d764373caee5f",
+            "criteria": [
+              "enforced-toggle-authority",
+              "authenticated-client-and-host-evidence",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          },
+          {
+            "work_id": "security-local-tooling-evidence-reconciliation",
+            "completed_at": "2026-10-21T18:09:07Z",
+            "receipt_digest": "a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40",
+            "review_digest": "8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098",
+            "source_digest": "81dd9d5518ee1ae0bb9135a5f2ef6c04fbdfc17ec2bd5a69d8486222ece0b0d4",
+            "criteria": [
+              "available-tooling-checks-executed",
+              "qualified-dispositions-traceable",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
         ]
-      }
+      },
+      "planning_assessment": "Development mode mutation is still public when the opt-in enforcement toggle is wired. This is limited to the explicitly enabled development configuration, not a managed OIDC production bypass.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R48",
@@ -1686,11 +2070,11 @@
       "title": "Runtime readiness sanitizer misses common secret keys",
       "reported_severity": "low",
       "observed_revision": "eedd03ff800514e3acc626057041e3a6c6f0e580",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Current word-boundary credential filter retains common compound secret keys. A bounded synthetic normalization probe confirmed unsafe-key retention; no real credentials were used.",
-      "evidence_level": "synthetic-probe-and-source-inspection",
+      "assessment": "Bounded plain passive metadata rejects compound credential keys, paths, raw representations, cycles/accessors/nonJSON/nonfinite and resource excess. Diagnostic/blocker fields are strictly reconstructed; composition unsafe message strings retain generic outward redaction. Other family, parent and controlled qualifications remain separate.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F59"
       ],
@@ -1703,10 +2087,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-passive-readiness-diagnostics",
-        "summary": "Bounded plain passive metadata rejects compound credential keys, paths, raw representations, cycles/accessors/nonJSON/nonfinite and resource excess. Diagnostic/blocker fields are strictly reconstructed; composition unsafe message strings retain generic outward redaction. Other family, parent and controlled qualifications remain separate."
-      }
+        "summary": "Bounded plain passive metadata rejects compound credential keys, paths, raw representations, cycles/accessors/nonJSON/nonfinite and resource excess. Diagnostic/blocker fields are strictly reconstructed; composition unsafe message strings retain generic outward redaction. Other family, parent and controlled qualifications remain separate.",
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "security-passive-readiness-diagnostics",
+            "completed_at": "2026-10-21T08:12:38Z",
+            "receipt_digest": "04858191f75888d684bf21563733089719c879a9ed0cfefa0a83deea17c8cb47",
+            "review_digest": "c28289bb0754cb223951496dfac3feebf2aaa86e5baecfdbb02fb632e8e2f51f",
+            "source_digest": "08ed7fe632892cf2c4b7a4fa4684b1888c20a8a6b202ce8cd3fbb90e448a28f3",
+            "criteria": [
+              "bounded-safe-metadata",
+              "safe-diagnostic-records",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Current word-boundary credential filter retains common compound secret keys. A bounded synthetic normalization probe confirmed unsafe-key retention; no real credentials were used.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "synthetic-probe-and-source-inspection"
     },
     {
       "id": "R49",
@@ -1716,11 +2119,11 @@
       "title": "Diagnostic sanitizer no longer redacts file paths",
       "reported_severity": "low",
       "observed_revision": "26a8e9177a4b4cf75f2f14f4e0a320d40e1c8aaa",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Composition diagnostic filtering omits filesystem syntax. A bounded synthetic probe confirmed a path-shaped diagnostic message is retained.",
-      "evidence_level": "synthetic-probe-and-source-inspection",
+      "assessment": "Bounded plain passive metadata rejects compound credential keys, paths, raw representations, cycles/accessors/nonJSON/nonfinite and resource excess. Diagnostic/blocker fields are strictly reconstructed; composition unsafe message strings retain generic outward redaction. Other family, parent and controlled qualifications remain separate.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F60"
       ],
@@ -1733,10 +2136,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-passive-readiness-diagnostics",
-        "summary": "Bounded plain passive metadata rejects compound credential keys, paths, raw representations, cycles/accessors/nonJSON/nonfinite and resource excess. Diagnostic/blocker fields are strictly reconstructed; composition unsafe message strings retain generic outward redaction. Other family, parent and controlled qualifications remain separate."
-      }
+        "summary": "Bounded plain passive metadata rejects compound credential keys, paths, raw representations, cycles/accessors/nonJSON/nonfinite and resource excess. Diagnostic/blocker fields are strictly reconstructed; composition unsafe message strings retain generic outward redaction. Other family, parent and controlled qualifications remain separate.",
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "security-passive-readiness-diagnostics",
+            "completed_at": "2026-10-21T08:12:38Z",
+            "receipt_digest": "04858191f75888d684bf21563733089719c879a9ed0cfefa0a83deea17c8cb47",
+            "review_digest": "c28289bb0754cb223951496dfac3feebf2aaa86e5baecfdbb02fb632e8e2f51f",
+            "source_digest": "08ed7fe632892cf2c4b7a4fa4684b1888c20a8a6b202ce8cd3fbb90e448a28f3",
+            "criteria": [
+              "bounded-safe-metadata",
+              "safe-diagnostic-records",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Composition diagnostic filtering omits filesystem syntax. A bounded synthetic probe confirmed a path-shaped diagnostic message is retained.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "synthetic-probe-and-source-inspection"
     },
     {
       "id": "R50",
@@ -1746,11 +2168,11 @@
       "title": "Manifest fingerprints omit unsafe fields before hashing",
       "reported_severity": "low",
       "observed_revision": "90c5a7d4825663a37ab7574e2f3092ce04bb77b4",
-      "disposition": "validated",
+      "disposition": "partial",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Manifest/entry fingerprints still hash a sanitized projection. A bounded synthetic probe confirmed different rejected-class metadata can yield the same fingerprint; hashing is not a substitute for complete input validation.",
-      "evidence_level": "synthetic-probe-and-source-inspection",
+      "assessment": "Complete bounded passive semantics are validated before semantic-v2 and canonical package hashing. The shared imported-package inspector now verifies every mandatory entry claim and any supplied checksum without rewriting claims; legacy, malformed, mismatched and deep inputs deny statically. Admission re-inspects genuine verified quarantine bytes before trust or writes even with a stale eligible summary. Completed utility and consumer Works preserve the starter, package digest/evidence exclusions, Foundation identities and real lifecycle. Broader nonsemantic resource/schema hardening, installed legacy activation/migration, stronger trust/provenance, native persistence and current parent qualification remain separate; no scanner closure is claimed.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F61"
       ],
@@ -1763,10 +2185,66 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-qualified-native-and-legacy-consumer-qualification-pending",
-        "work_id": "security-r50-versioned-semantic-fingerprint",
-        "summary": "Complete bounded descriptor-safe passive capture and existing manifest/entry validation precede domain-separated semantic-v2 hashing. Valid authorship/explanatory distinctions survive; unsafe/active/malformed inputs deny with static errors. Legacy verification requires explicit revalidation; immutable Foundation records, byte digests, trust and approvals are not rewritten. This pure semantic utility is not installer admission or native/parent-roadmap qualification. Separate-invocation review closed reproduced malformed-tag canonical-collision and incomplete encoded-byte-accounting findings after durable red/green tests; current registered focused gates passed before this separately scoped integration work. No scanner or parent roadmap closure is claimed."
-      }
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
+        "work_id": "security-r50-package-semantic-admission",
+        "summary": "Complete bounded passive semantics are validated before semantic-v2 and canonical package hashing. The shared imported-package inspector now verifies every mandatory entry claim and any supplied checksum without rewriting claims; legacy, malformed, mismatched and deep inputs deny statically. Admission re-inspects genuine verified quarantine bytes before trust or writes even with a stale eligible summary. Completed utility and consumer Works preserve the starter, package digest/evidence exclusions, Foundation identities and real lifecycle. Broader nonsemantic resource/schema hardening, installed legacy activation/migration, stronger trust/provenance, native persistence and current parent qualification remain separate; no scanner closure is claimed.",
+        "historical_status": "implemented-local-qualified-native-and-legacy-consumer-qualification-pending",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r50-versioned-semantic-fingerprint",
+            "completed_at": "2026-10-21T17:42:56Z",
+            "receipt_digest": "fb8c11a13ded5fa5785a611946fac9bb4a3a4a9022fb8993eaa4fa10a704912e",
+            "review_digest": "37146dcc4d7c0f5015c337d0c47d301e1277815d8813c1b6a3c3d5abd7a97cd4",
+            "source_digest": "3f3f6f97547c9e4f82230e79f764af451e5ddc2c8b9f1db2baece300864248b9",
+            "criteria": [
+              "complete-versioned-semantic-input",
+              "supported-pack-compatibility",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          },
+          {
+            "work_id": "security-r50-package-semantic-admission",
+            "completed_at": "2026-10-22T08:27:08Z",
+            "receipt_digest": "52e6bfc0320a10e241dc6df39acc4cf0a21347ff18936c567044ab38fb2ce802",
+            "review_digest": "2b336c8d761f743768a3c0529d07ce406f11f68d2e1653f61c063a3ef31777cf",
+            "source_digest": "eae947997761a3baeb121099a6f65e26e5a8760a010310d62ca96a0bccb8a09f",
+            "criteria": [
+              "bounded-semantic-claims-enforced",
+              "package-lifecycle-compatible",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ],
+        "historical_component_work": {
+          "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
+          "work_id": "security-r50-versioned-semantic-fingerprint",
+          "summary": "Complete bounded descriptor-safe passive capture and existing manifest/entry validation precede domain-separated semantic-v2 hashing. Valid authorship/explanatory distinctions survive; unsafe/active/malformed inputs deny with static errors. Legacy verification requires explicit revalidation; immutable Foundation records, byte digests, trust and approvals are not rewritten. This pure semantic utility is not installer admission or native/parent-roadmap qualification. Separate-invocation review closed reproduced malformed-tag canonical-collision and incomplete encoded-byte-accounting findings after durable red/green tests; current registered focused gates passed before this separately scoped integration work. No scanner or parent roadmap closure is claimed.",
+          "historical_status": "implemented-local-qualified-native-and-legacy-consumer-qualification-pending",
+          "qualified_component_support": [
+            {
+              "work_id": "security-r50-versioned-semantic-fingerprint",
+              "completed_at": "2026-10-21T17:42:56Z",
+              "receipt_digest": "fb8c11a13ded5fa5785a611946fac9bb4a3a4a9022fb8993eaa4fa10a704912e",
+              "review_digest": "37146dcc4d7c0f5015c337d0c47d301e1277815d8813c1b6a3c3d5abd7a97cd4",
+              "source_digest": "3f3f6f97547c9e4f82230e79f764af451e5ddc2c8b9f1db2baece300864248b9",
+              "criteria": [
+                "complete-versioned-semantic-input",
+                "supported-pack-compatibility",
+                "security-impact-reviewed"
+              ],
+              "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+            }
+          ]
+        },
+        "related_work_ids": [
+          "security-r50-versioned-semantic-fingerprint"
+        ]
+      },
+      "planning_assessment": "Manifest/entry fingerprints still hash a sanitized projection. A bounded synthetic probe confirmed different rejected-class metadata can yield the same fingerprint; hashing is not a substitute for complete input validation.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "synthetic-probe-and-source-inspection"
     },
     {
       "id": "R51",
@@ -1776,11 +2254,11 @@
       "title": "Context-aware pack validation misses secret-like text",
       "reported_severity": "low",
       "observed_revision": "add76ceeb99c732c14e0911675b389042a696693",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Explanatory manifest fields skip the general forbidden-text check and credential syntax detection is narrower. Tighten actual protected-content detection while preserving legitimate safety documentation; mere security vocabulary must not become a universal rejection rule.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Actual private-key and established credential-prefix representations in values and property names reject in explanatory purpose/description/limitations at validation, parse and serialization boundaries with non-disclosing errors and safe parent paths. Legitimate non-goals remain accepted. No legacy fingerprint rewrite or full arbitrary-sensitive-prose claim; parent qualification remains pending.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F62"
       ],
@@ -1793,10 +2271,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r51-explanatory-credential-denial",
-        "summary": "Actual private-key and established credential-prefix representations in values and property names reject in explanatory purpose/description/limitations at validation, parse and serialization boundaries with non-disclosing errors and safe parent paths. Legitimate non-goals remain accepted. No legacy fingerprint rewrite or full arbitrary-sensitive-prose claim; parent qualification remains pending."
-      }
+        "summary": "Actual private-key and established credential-prefix representations in values and property names reject in explanatory purpose/description/limitations at validation, parse and serialization boundaries with non-disclosing errors and safe parent paths. Legitimate non-goals remain accepted. No legacy fingerprint rewrite or full arbitrary-sensitive-prose claim; parent qualification remains pending.",
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r51-explanatory-credential-denial",
+            "completed_at": "2026-10-21T08:18:20Z",
+            "receipt_digest": "da08e4fdeff1597b3268762d68c6ce958ff0cc6b8011d61f0041d5b6bbd2f090",
+            "review_digest": "bcd80af522cef01f28c75e40c8f5b72e544e35a498ad56e1d1a5aace9b57bf5e",
+            "source_digest": "1ea289ec3b78c04afa85b5035504c537e1d49ba77ce2d860307b1218e00c9d1a",
+            "criteria": [
+              "explanatory-credential-denial",
+              "safe-prose-compatible",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Explanatory manifest fields skip the general forbidden-text check and credential syntax detection is narrower. Tighten actual protected-content detection while preserving legitimate safety documentation; mere security vocabulary must not become a universal rejection rule.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R52",
@@ -1806,11 +2303,11 @@
       "title": "Execution run normalizer allows unsafe diagnostics",
       "reported_severity": "low",
       "observed_revision": "1aa7ab48867796b625454085687cebfa333cab2d",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Execution-run diagnostic strings are still only trimmed. A bounded synthetic probe confirmed path-shaped messages survive normalization; typed diagnostics require explicit safe-field reconstruction.",
-      "evidence_level": "synthetic-probe-and-source-inspection",
+      "assessment": "Explicit descriptor-safe bounded schemas replace coercion, raw nested spreading and unchecked provenance. Strict diagnostics, finite progress/attempts, actual flags and canonical timestamps; declared lifecycle references retained. Malformed stored records deny without rewrite. No new execution authority; native/runtime and parent qualification remain pending.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F57"
       ],
@@ -1823,10 +2320,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r52-r53-passive-execution-records",
-        "summary": "Explicit descriptor-safe bounded schemas replace coercion, raw nested spreading and unchecked provenance. Strict diagnostics, finite progress/attempts, actual flags and canonical timestamps; declared lifecycle references retained. Malformed stored records deny without rewrite. No new execution authority; native/runtime and parent qualification remain pending."
-      }
+        "summary": "Explicit descriptor-safe bounded schemas replace coercion, raw nested spreading and unchecked provenance. Strict diagnostics, finite progress/attempts, actual flags and canonical timestamps; declared lifecycle references retained. Malformed stored records deny without rewrite. No new execution authority; native/runtime and parent qualification remain pending.",
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r52-r53-passive-execution-records",
+            "completed_at": "2026-10-21T08:49:06Z",
+            "receipt_digest": "7ba9ef6e60ddb42a4056166b7563b70829d928e319f26ff87216126da027494e",
+            "review_digest": "845c81710b307ce7c1ea1e9dea39fc10dae646de5bb84ec4aaa5a2b7d3492246",
+            "source_digest": "3ca855cb5c6a5667ca54069b79105995eb77638eb529310ca0119c7e76794c6e",
+            "criteria": [
+              "strict-passive-plan-records",
+              "strict-passive-run-records",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Execution-run diagnostic strings are still only trimmed. A bounded synthetic probe confirmed path-shaped messages survive normalization; typed diagnostics require explicit safe-field reconstruction.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "synthetic-probe-and-source-inspection"
     },
     {
       "id": "R53",
@@ -1836,11 +2352,11 @@
       "title": "Execution plan normalization preserves unsafe extra fields",
       "reported_severity": "low",
       "observed_revision": "b3fc3560817cb65915ada437dc2d1201615c43f4",
-      "disposition": "partial",
+      "disposition": "mitigated-reverify",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Top-level plan keys are now allowlisted, but nested diagnostic/step normalizers still spread input objects. A bounded synthetic probe confirmed extra nested fields are retained.",
-      "evidence_level": "synthetic-probe-and-source-inspection",
+      "assessment": "Explicit descriptor-safe bounded schemas replace coercion, raw nested spreading and unchecked provenance. Strict diagnostics, finite progress/attempts, actual flags and canonical timestamps; declared lifecycle references retained. Malformed stored records deny without rewrite. No new execution authority; native/runtime and parent qualification remain pending.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F58"
       ],
@@ -1853,10 +2369,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r52-r53-passive-execution-records",
-        "summary": "Explicit descriptor-safe bounded schemas replace coercion, raw nested spreading and unchecked provenance. Strict diagnostics, finite progress/attempts, actual flags and canonical timestamps; declared lifecycle references retained. Malformed stored records deny without rewrite. No new execution authority; native/runtime and parent qualification remain pending."
-      }
+        "summary": "Explicit descriptor-safe bounded schemas replace coercion, raw nested spreading and unchecked provenance. Strict diagnostics, finite progress/attempts, actual flags and canonical timestamps; declared lifecycle references retained. Malformed stored records deny without rewrite. No new execution authority; native/runtime and parent qualification remain pending.",
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r52-r53-passive-execution-records",
+            "completed_at": "2026-10-21T08:49:06Z",
+            "receipt_digest": "7ba9ef6e60ddb42a4056166b7563b70829d928e319f26ff87216126da027494e",
+            "review_digest": "845c81710b307ce7c1ea1e9dea39fc10dae646de5bb84ec4aaa5a2b7d3492246",
+            "source_digest": "3ca855cb5c6a5667ca54069b79105995eb77638eb529310ca0119c7e76794c6e",
+            "criteria": [
+              "strict-passive-plan-records",
+              "strict-passive-run-records",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Top-level plan keys are now allowlisted, but nested diagnostic/step normalizers still spread input objects. A bounded synthetic probe confirmed extra nested fields are retained.",
+      "planning_disposition": "partial",
+      "planning_evidence_level": "synthetic-probe-and-source-inspection"
     },
     {
       "id": "R54",
@@ -1866,11 +2401,11 @@
       "title": "Roadmap writer follows predictable temp symlinks",
       "reported_severity": "low",
       "observed_revision": "750cc3a241adf2326fcc3e87ccf3e75873ce4aca",
-      "disposition": "validated",
+      "disposition": "partial",
       "priority": "P1",
       "owner": "development-and-tooling-security",
-      "assessment": "Roadmap atomic writes still open a predictable temporary pathname through write_text before replace. Publication locking does not prevent an attacker-controlled filesystem entry from being followed.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "The portable roadmap writer now uses exclusive unpredictable temporary creation, fsync, atomic replacement and owned cleanup. Completed workflow/tooling component checks cover precreated predictable-entry denial and failure preservation. Native parent-directory identity, reparse/ACL substitution and race/crash qualification remain pending; cooperative publication checks do not supply these guarantees.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [
         "F56"
       ],
@@ -1883,13 +2418,46 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "roadmap-implementation-qualification-boundary",
         "summary": "Portable writer uses exclusive unpredictable temporary creation, fsync, atomic replacement and owned cleanup. Native parent/reparse/ACL race qualification remains pending.",
         "related_work_ids": [
           "security-local-tooling-evidence-reconciliation"
+        ],
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "roadmap-implementation-qualification-boundary",
+            "completed_at": "2026-10-21T07:18:11Z",
+            "receipt_digest": "5646378fc8a5d7c0b8eb27a4ba14ec967a694a210de945cc3d1c73cc9c11fc49",
+            "review_digest": "3ec5acdea0b9a372d1d9e5d2e9a634c8f7e1948b3b288722e723ca94a09999d8",
+            "source_digest": "9f411e5bac14ec7f16033899187dc4e5f27909e1a1b19f545f917bc744363ad8",
+            "criteria": [
+              "implementation-boundary-admission",
+              "controlled-closure-preserved",
+              "exclusive-roadmap-publication",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          },
+          {
+            "work_id": "security-local-tooling-evidence-reconciliation",
+            "completed_at": "2026-10-21T18:09:07Z",
+            "receipt_digest": "a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40",
+            "review_digest": "8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098",
+            "source_digest": "81dd9d5518ee1ae0bb9135a5f2ef6c04fbdfc17ec2bd5a69d8486222ece0b0d4",
+            "criteria": [
+              "available-tooling-checks-executed",
+              "qualified-dispositions-traceable",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
         ]
-      }
+      },
+      "planning_assessment": "Roadmap atomic writes still open a predictable temporary pathname through write_text before replace. Publication locking does not prevent an attacker-controlled filesystem entry from being followed.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R55",
@@ -1980,22 +2548,41 @@
       "disposition": "security-adjacent",
       "priority": "P2",
       "owner": "runtime-execution-integrity",
-      "assessment": "Python start guards only an existing child handle while preparation is awaited; no shared start promise is visible. Concurrent-start failure belongs in runtime admission and recovery qualification.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Python supervisor now shares startFlight across preparation and uses lifecycle generations to prevent stopped/stale startup continuations from spawning or reviving a worker. Existing deterministic start/shutdown regressions are local support. Actual descendant process ownership, native races and physical healthy-retry qualification remain pending.",
+      "evidence_level": "current-source-inspection-local-support-technical-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
           "path": "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
-          "sha256": "1a95a229e95c77a8c76705e6d1a9ffef930f554db76b7180dadd5412fdf49a34",
+          "sha256": "8ee7790ad723dccffe2e7e30764cf17c1296e2d1bc7324f38c8d56d47d0e6b39",
           "line": 1
         },
         {
-          "path": "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
-          "sha256": "1a95a229e95c77a8c76705e6d1a9ffef930f554db76b7180dadd5412fdf49a34",
+          "path": "modules/adapters/runtime/python/tests/runtime-start-shutdown-races.unit.test.ts",
+          "sha256": "d4d184979947a2ca557ec07d8ca166138393d15da6a6536f0e255f55baf511c1",
           "line": 1
         }
       ],
-      "closure": "not-claimed"
+      "closure": "not-claimed",
+      "assessment_history": [
+        {
+          "assessment": "Python start guards only an existing child handle while preparation is awaited; no shared start promise is visible. Concurrent-start failure belongs in runtime admission and recovery qualification.",
+          "evidence_level": "source-inspection-not-requalified",
+          "evidence": [
+            {
+              "path": "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
+              "sha256": "1a95a229e95c77a8c76705e6d1a9ffef930f554db76b7180dadd5412fdf49a34",
+              "line": 1
+            },
+            {
+              "path": "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
+              "sha256": "1a95a229e95c77a8c76705e6d1a9ffef930f554db76b7180dadd5412fdf49a34",
+              "line": 1
+            }
+          ],
+          "reason": "Superseded by source reinspection during explicit roadmap consolidation; previous evidence and no-closure state retained."
+        }
+      ]
     },
     {
       "id": "R58",
@@ -2086,18 +2673,18 @@
       "disposition": "security-adjacent",
       "priority": "P2",
       "owner": "runtime-execution-integrity",
-      "assessment": "ComfyUI asynchronous spawn error marks unhealthy but does not clear the retained process handle there. Retry/recovery must prove process state and avoid permanently wedged or orphaned capacity.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "An asynchronous spawn error deliberately retains the uncertain owned handle; confirmed exit/close clears it, and generation/identity fences prevent stale events from poisoning replacements. Local owned-process tests cover these cases. Retaining an unconfirmed process is a safety control, not proof of a stale-handle bug. Actual launcher/descendant/native recovery and physical runtimes remain pending.",
+      "evidence_level": "current-source-inspection-local-support-technical-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
           "path": "modules/adapters/runtime/comfyui/createComfyUiRuntimeSupervisor.ts",
-          "sha256": "4b55ca0350d8d5385d330ed7048f4869f9ddf9f21853c8c5ef7784af200aa77c",
+          "sha256": "23482f563eb95740c850f02590944741411aca331519eba24020134fc44a3ebd",
           "line": 1
         },
         {
-          "path": "modules/adapters/runtime/comfyui/createComfyUiRuntimeSupervisor.ts",
-          "sha256": "4b55ca0350d8d5385d330ed7048f4869f9ddf9f21853c8c5ef7784af200aa77c",
+          "path": "modules/adapters/runtime/python/tests/runtime-start-shutdown-races.unit.test.ts",
+          "sha256": "d4d184979947a2ca557ec07d8ca166138393d15da6a6536f0e255f55baf511c1",
           "line": 1
         }
       ],
@@ -2106,7 +2693,26 @@
         "status": "implemented-local-evidence-in-linked-work",
         "work_id": "security-r60-confirmed-worker-termination",
         "summary": "Both owned-child stops require terminal proof with bounded waits; timeout/error/kill failure retains ownership. Startup and health/capability continuations are identity/generation fenced, spawn-error close permits retry and stale errors cannot poison replacement. Externally attached Python stop remains unconfirmed; idle attachment may require external coordination. Direct-child fake-process evidence does not qualify descendant/launcher trees or physical runtimes. Parent roadmap remains blocked."
-      }
+      },
+      "assessment_history": [
+        {
+          "assessment": "ComfyUI asynchronous spawn error marks unhealthy but does not clear the retained process handle there. Retry/recovery must prove process state and avoid permanently wedged or orphaned capacity.",
+          "evidence_level": "source-inspection-not-requalified",
+          "evidence": [
+            {
+              "path": "modules/adapters/runtime/comfyui/createComfyUiRuntimeSupervisor.ts",
+              "sha256": "4b55ca0350d8d5385d330ed7048f4869f9ddf9f21853c8c5ef7784af200aa77c",
+              "line": 1
+            },
+            {
+              "path": "modules/adapters/runtime/comfyui/createComfyUiRuntimeSupervisor.ts",
+              "sha256": "4b55ca0350d8d5385d330ed7048f4869f9ddf9f21853c8c5ef7784af200aa77c",
+              "line": 1
+            }
+          ],
+          "reason": "Superseded by source reinspection during explicit roadmap consolidation; previous evidence and no-closure state retained."
+        }
+      ]
     },
     {
       "id": "R61",
@@ -2314,8 +2920,8 @@
       "disposition": "mitigated-reverify",
       "priority": "P1",
       "owner": "file-and-workspace-authority",
-      "assessment": "Authentication rejects anonymous, unauthenticated and malformed verifier results before success audit or protected identity use; valid authenticated contexts remain supported. Current local qualification is tracked separately; no new token issuer or deployment trust is selected.",
-      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "assessment": "Authentication rejects anonymous, unauthenticated and malformed verifier results before success audit or protected identity use; valid authenticated contexts remain supported. Current local qualification is tracked separately; no new token issuer or deployment trust is selected. The seven-criterion authority Work completed independent local qualification at its recorded snapshot; it is no longer merely planned. Current whole-candidate and the named native/environment boundaries remain unqualified.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -2328,10 +2934,31 @@
       "planning_assessment": "The authentication service accepts the verifier context without checking authenticated and records success. An in-memory synthetic verifier returning anonymous was accepted with authRequired true. Built-in verifiers may throw today; the service invariant is still fail-open for a contract-valid result.",
       "planning_disposition": "validated",
       "implementation": {
-        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "qualification_work_id": "security-existing-authority-controls-qualification",
-        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure."
-      }
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
+        "historical_status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualified_component_support": [
+          {
+            "work_id": "security-existing-authority-controls-qualification",
+            "completed_at": "2026-10-21T10:35:50Z",
+            "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+            "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+            "source_digest": "0628938511edf536dc024eb92d7b75d9c544da2ac63ffec1440ed0bb24293e48",
+            "criteria": [
+              "local-model-effects-held",
+              "local-dataset-source-isolation",
+              "local-write-owned-download-completion",
+              "local-authentication-result-invariant",
+              "local-workspace-revision-integrity",
+              "local-library-create-conflicts",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned"
     },
     {
       "id": "R67",
@@ -2380,11 +3007,11 @@
       "title": "Readiness validation drops blocking conditions",
       "reported_severity": "informational",
       "observed_revision": "2c7c8338cf6fed90a80ffe36180a6f9585fc5597",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P1",
       "owner": "canonical-safe-records",
-      "assessment": "Readiness validation starts with fresh empty blockers and diagnostics rather than preserving caller-validated composition blockers. A ready status can erase an existing blocking condition; actual execution reachability needs host-level proof.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Fresh scoped plan identity/status/version and blockers survive provider validation. Missing composition authority or substituted binding identity fails before save. Derived availability failures recompute without duplicate blockers; invalid/unselected candidates cannot be promoted. Plan version changes require explicit refresh. No execution/route authority or parent-roadmap qualification is granted.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -2395,10 +3022,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r68-readiness-preconditions",
-        "summary": "Fresh scoped plan identity/status/version and blockers survive provider validation. Missing composition authority or substituted binding identity fails before save. Derived availability failures recompute without duplicate blockers; invalid/unselected candidates cannot be promoted. Plan version changes require explicit refresh. No execution/route authority or parent-roadmap qualification is granted."
-      }
+        "summary": "Fresh scoped plan identity/status/version and blockers survive provider validation. Missing composition authority or substituted binding identity fails before save. Derived availability failures recompute without duplicate blockers; invalid/unselected candidates cannot be promoted. Plan version changes require explicit refresh. No execution/route authority or parent-roadmap qualification is granted.",
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r68-readiness-preconditions",
+            "completed_at": "2026-10-21T07:03:26Z",
+            "receipt_digest": "22581ed062f0c16ce8f863e0fb3c4a94b444fccd5fac8408ed5e9a0df6a8a7e5",
+            "review_digest": "b6e22918783301e88c6fb1ba2f2bc1158e7c7013e43a0a0ac8fd93952f038d21",
+            "source_digest": "83c2817f7fd9cc1c760f8d8a3301ceba11559d08c26821ee505a2cf595a14868",
+            "criteria": [
+              "authoritative-preconditions-preserved",
+              "readiness-recovery-and-bounds",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Readiness validation starts with fresh empty blockers and diagnostics rather than preserving caller-validated composition blockers. A ready status can erase an existing blocking condition; actual execution reachability needs host-level proof.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R69",
@@ -2603,11 +3249,11 @@
       "title": "Projection store no longer rejects unsafe metadata",
       "reported_severity": "informational",
       "observed_revision": "75662547a2bd6f0e98bc03dc87f169ddc3a7cbea",
-      "disposition": "validated",
+      "disposition": "mitigated-reverify",
       "priority": "P2",
       "owner": "canonical-safe-records",
-      "assessment": "Projection persistence safety still checks only JSON.stringify availability. Unsanitized record/provenance/reference fields can bypass a safe projection; recursive schema validation is required before storage and reads.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Complete explicit bounded schemas validate projection/snapshot records, typed references, provenance, graph scalars and safe metadata. Fixed collections validate before returns, writes and mutation callbacks; malformed stored bytes preserved. No route/runtime authority granted; controlled qualification pending.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -2618,10 +3264,29 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-evidence-in-linked-work",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "work_id": "security-r74-strict-projection-records",
-        "summary": "Complete explicit bounded schemas validate projection/snapshot records, typed references, provenance, graph scalars and safe metadata. Fixed collections validate before returns, writes and mutation callbacks; malformed stored bytes preserved. No route/runtime authority granted; controlled qualification pending."
-      }
+        "summary": "Complete explicit bounded schemas validate projection/snapshot records, typed references, provenance, graph scalars and safe metadata. Fixed collections validate before returns, writes and mutation callbacks; malformed stored bytes preserved. No route/runtime authority granted; controlled qualification pending.",
+        "historical_status": "implemented-local-evidence-in-linked-work",
+        "qualified_component_support": [
+          {
+            "work_id": "security-r74-strict-projection-records",
+            "completed_at": "2026-10-21T09:02:09Z",
+            "receipt_digest": "7d8d7305f4e001c28a34197624f336ae8aa5938e301072ca47037e208209f026",
+            "review_digest": "157c045c28688da393563a750031b8549728c50302ba95175999658b9d23843f",
+            "source_digest": "76ae8645e5d6e59093fa936d23e88c90f7c749a6f32a07600da232255a18b79e",
+            "criteria": [
+              "strict-passive-projection-records",
+              "validated-projection-persistence",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_assessment": "Projection persistence safety still checks only JSON.stringify availability. Unsanitized record/provenance/reference fields can bypass a safe projection; recursive schema validation is required before storage and reads.",
+      "planning_disposition": "validated",
+      "planning_evidence_level": "source-inspection-not-requalified"
     },
     {
       "id": "R75",
@@ -2712,8 +3377,8 @@
       "disposition": "mitigated-reverify",
       "priority": "P1",
       "owner": "file-and-workspace-authority",
-      "assessment": "Atomic revision replacement includes workspace, asset and revision identity, preserving matching IDs belonging to other workspaces. Current local concurrency/partition qualification is tracked separately; no external database or new tenancy topology is qualified.",
-      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "assessment": "Atomic revision replacement includes workspace, asset and revision identity, preserving matching IDs belonging to other workspaces. Current local concurrency/partition qualification is tracked separately; no external database or new tenancy topology is qualified. The seven-criterion authority Work completed independent local qualification at its recorded snapshot; it is no longer merely planned. Current whole-candidate and the named native/environment boundaries remain unqualified.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -2726,10 +3391,31 @@
       "planning_assessment": "Revision replacement still keys only by authoredAssetId and revisionId, while reads key by workspace too. Same-identity writes can remove another workspace record; classify by integrity impact rather than CSV informational label.",
       "planning_disposition": "validated",
       "implementation": {
-        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "qualification_work_id": "security-existing-authority-controls-qualification",
-        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure."
-      }
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
+        "historical_status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualified_component_support": [
+          {
+            "work_id": "security-existing-authority-controls-qualification",
+            "completed_at": "2026-10-21T10:35:50Z",
+            "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+            "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+            "source_digest": "0628938511edf536dc024eb92d7b75d9c544da2ac63ffec1440ed0bb24293e48",
+            "criteria": [
+              "local-model-effects-held",
+              "local-dataset-source-isolation",
+              "local-write-owned-download-completion",
+              "local-authentication-result-invariant",
+              "local-workspace-revision-integrity",
+              "local-library-create-conflicts",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned"
     },
     {
       "id": "R78",
@@ -2781,8 +3467,8 @@
       "disposition": "mitigated-reverify",
       "priority": "P1",
       "owner": "file-and-workspace-authority",
-      "assessment": "Atomic library creation rejects target and duplicate promoted-source collisions and preserves existing records under concurrent promotion; supported first creation and intentional reuse remain available. This does not resolve the separate personal-library owner-scoping decision.",
-      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "assessment": "Atomic library creation rejects target and duplicate promoted-source collisions and preserves existing records under concurrent promotion; supported first creation and intentional reuse remain available. This does not resolve the separate personal-library owner-scoping decision. The seven-criterion authority Work completed independent local qualification at its recorded snapshot; it is no longer merely planned. Current whole-candidate and the named native/environment boundaries remain unqualified.",
+      "evidence_level": "historical-completed-scoped-work-current-parent-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
@@ -2795,10 +3481,31 @@
       "planning_assessment": "Promotion checks source identity but not collision of requested target identity before upsert. A conflicting library id/version can replace an existing record; require atomic create/conflict semantics and authoritative ownership.",
       "planning_disposition": "validated",
       "implementation": {
-        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "status": "component-qualified-at-recorded-snapshot-parent-qualification-pending",
         "qualification_work_id": "security-existing-authority-controls-qualification",
-        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure."
-      }
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
+        "historical_status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualified_component_support": [
+          {
+            "work_id": "security-existing-authority-controls-qualification",
+            "completed_at": "2026-10-21T10:35:50Z",
+            "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+            "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+            "source_digest": "0628938511edf536dc024eb92d7b75d9c544da2ac63ffec1440ed0bb24293e48",
+            "criteria": [
+              "local-model-effects-held",
+              "local-dataset-source-isolation",
+              "local-write-owned-download-completion",
+              "local-authentication-result-invariant",
+              "local-workspace-revision-integrity",
+              "local-library-create-conflicts",
+              "security-impact-reviewed"
+            ],
+            "scope_limit": "Historical completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+          }
+        ]
+      },
+      "planning_evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned"
     },
     {
       "id": "R80",
@@ -2850,18 +3557,23 @@
       "disposition": "security-adjacent",
       "priority": "P2",
       "owner": "runtime-execution-integrity",
-      "assessment": "Feature disposal queries still omit workspace although the router requires workspace for listTasks. Preserve active task identity and no-orphan lifecycle without making broad renderer-visible task lists.",
-      "evidence_level": "source-inspection-not-requalified",
+      "assessment": "Dataset/image controllers are retained under host feature policies, and the old unscoped listTasks disposal query is absent from both feature composers. Local controller/in-flight/finalization and serialized cleanup controls are support. Current integrated/native no-orphan lifecycle and authoritative cleanup qualification remain pending; do not restore broad public task listing.",
+      "evidence_level": "current-source-inspection-local-support-technical-qualification-pending",
       "legacy_findings": [],
       "evidence": [
         {
+          "path": "modules/hosts/desktop/composition/composeDesktopHost.ts",
+          "sha256": "e93aa36e47899ff201d8cfabaa0474f0b4ddce7a28b772aa12eb6d52e33ffe54",
+          "line": 1
+        },
+        {
           "path": "modules/hosts/desktop/composition/composeDesktopDatasetPreparationFeature.ts",
-          "sha256": "41907302be487d107278f874710c7a1d4d43a118c6e94ad1e56f0b1c0b8a12cb",
+          "sha256": "578aadf8a488174b7206f4e6969a3fd8e03f10ecf5767ca89466acb5b10d8800",
           "line": 1
         },
         {
           "path": "modules/hosts/desktop/composition/composeDesktopImageGenerationFeature.ts",
-          "sha256": "5a520afa7f81fd0c2349eb0615ab5b1c89ffe0b4be858d071baee61102ffa56e",
+          "sha256": "a4366fda803baf1f6c98d932e9d47358edfba4e964d0b18fafb3c638137be70c",
           "line": 1
         }
       ],
@@ -2870,7 +3582,26 @@
         "status": "implemented-local-evidence-in-linked-work",
         "work_id": "security-r81-retained-task-controllers",
         "summary": "Task controllers retain private review, in-flight and finalization state under existing retained policy. Generic cleanup does not use unscoped public task listing; remaining disposable owner replacement is serialized and guard/cleanup failure retains the owner. Parent/native qualification remains pending."
-      }
+      },
+      "assessment_history": [
+        {
+          "assessment": "Feature disposal queries still omit workspace although the router requires workspace for listTasks. Preserve active task identity and no-orphan lifecycle without making broad renderer-visible task lists.",
+          "evidence_level": "source-inspection-not-requalified",
+          "evidence": [
+            {
+              "path": "modules/hosts/desktop/composition/composeDesktopDatasetPreparationFeature.ts",
+              "sha256": "41907302be487d107278f874710c7a1d4d43a118c6e94ad1e56f0b1c0b8a12cb",
+              "line": 1
+            },
+            {
+              "path": "modules/hosts/desktop/composition/composeDesktopImageGenerationFeature.ts",
+              "sha256": "5a520afa7f81fd0c2349eb0615ab5b1c89ffe0b4be858d071baee61102ffa56e",
+              "line": 1
+            }
+          ],
+          "reason": "Superseded by source reinspection during explicit roadmap consolidation; previous evidence and no-closure state retained."
+        }
+      ]
     },
     {
       "id": "R82",

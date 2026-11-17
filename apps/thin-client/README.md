@@ -4,6 +4,25 @@
 
 `apps/thin-client` is the server-backed thin-client host UI surface.
 
+The Systems page uses the existing saved connection to observe committed updates
+when its managed server provides saved-state streaming. Scoped replay recovers
+after a disconnect. Updates refresh saved system lists and preserve the user's
+current view and draft save base. If another client archives an open system,
+the Composer keeps that view open and disables saving and building. Updates
+pause while the tab is hidden, and delayed replies from a previous connection
+cannot change the saved view.
+
+When the server enables browser takeover, the shared confirmation dialog
+lets you accept or decline a request. Revoke returns the tab to your control
+without waiting for the server. The tab can neither keep nor reuse its
+document proof after a page exit, workspace change or sign-in change.
+While an accepted takeover is active, browser navigation, workspace switching
+and conflicting Systems controls are unavailable. Revoke restores them locally.
+On hosts with presentation enabled, an accepted chat session can show saved
+system, component, validation, run or artifact information in the shared
+resource panel. The tab keeps the user's route and draft. Local revoke hides
+the panel and stops further delivery or context publication from that session.
+
 Current scope:
 
 - minimal React bootstrap (`src/main.tsx`, `src/App.tsx`)
@@ -267,3 +286,19 @@ policy; it does not provide hostile-browser credential protection.
 Use the six-file `security-status-ui` contributor profile for local feature
 regressions. The tests use synthetic storage and responses. Actual TLS, server
 identity, managed authorization and final host qualification remain separate.
+
+## Review automation plans
+
+For a managed host that enables plan review, open **Settings** and select
+**Review plan requests**. Choose a request for the current workspace. The
+dialog shows the requesting client, each proposed change and the expiry
+time. You can approve all changes or approve them one at a time. You can
+also deny, cancel, or withdraw a request. Use Escape to close the dialog.
+Your decisions apply to the request and saved revisions shown in the
+dialog.
+
+Select **Open plan approval chat** in Settings to review the same requests
+as a conversation. Use the controls to send a decision. The app displays
+your choice and whether it recorded the decision. A decision made here
+also applies in the popup. Refresh the request if another view has already
+changed it.

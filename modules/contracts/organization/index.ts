@@ -1,4 +1,5 @@
 export * from "./organization-id";
+export { isOrganizationId } from "./organization-id";
 export * from "./organization-role";
 export * from "./organization-record";
 export * from "./organization-membership";

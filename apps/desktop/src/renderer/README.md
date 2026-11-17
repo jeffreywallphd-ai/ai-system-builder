@@ -35,6 +35,12 @@ explicit Reload action. Exceptions, paths and provider data are not displayed.
 Reload uses the same document URL. There is no automatic reload loop. Preload,
 context isolation, Node integration and trusted IPC rules are unchanged.
 
+The main process checks required Python software before registering application
+IPC or opening persistence. On failure it opens this document without the
+application preload. A closed failure category selects fixed recovery text;
+the controller keeps the root inert and skips the React entry. Follow the
+setup guidance and reopen the app to repeat the host check.
+
 Focused controller and native-event tests are in
 `tests/app-lazy-pages.ui.test.tsx` and
 `../../tests/forge-packaging-boundaries.unit.test.ts`. Run the fixed

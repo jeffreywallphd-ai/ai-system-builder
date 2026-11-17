@@ -83,6 +83,17 @@ The resolver returns exactly one permitted release or a safe diagnostic. It neve
 
 ## Package lifecycle
 
+The shared desktop/server inspector captures and validates a complete bounded
+semantic manifest before canonical package hashing. It verifies every entry's
+semantic-v2 fingerprint and any supplied manifest checksum without rewriting
+claims. A valid body with stale/legacy claims can remain quarantined but is
+ineligible. Malformed/deep semantic input has a static rejection with no body.
+Admission re-reads verified immutable bytes and repeats this inspection before
+trust evaluation or writes; a retained eligible summary cannot bypass it.
+Package digest evidence exclusions, independent capability/signature/SBOM/
+provenance checks and the zero-definition starter remain unchanged. Existing
+installed records and legacy activation/migration need separate qualification.
+
 ```txt
 source received
   -> quarantine
@@ -224,6 +235,16 @@ that invocation alone. Ordinary publish APIs retain direct reads; later bootstra
 calls revalidate releases, backing resources and bindings. Successful and failed
 flights are released only after settlement, with no persistent trust/readiness cache.
 Partial immutable publication is preserved for healthy idempotent retry.
+
+Studio and layered-customization definition publication commits the exact current
+review, absent definition and private commit receipt atomically through
+`AssetDefinitionPublicationPort`. Both hosts retain their existing definition and
+organization partitions. Review artifact verification happens before the
+transaction; current record, source snapshot and base/revocation facts are checked
+inside it. Identical existing definitions are not adopted by another draft. A
+published retry verifies its exact private receipt and existing content without
+recreating deleted effects. See the approval-bound publication section in
+`asset-authoring-and-execution-security.md` for qualification limits.
 
 ## Package interface sessions and retry
 

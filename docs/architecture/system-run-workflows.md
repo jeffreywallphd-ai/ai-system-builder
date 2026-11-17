@@ -37,6 +37,51 @@ identity. Approved releases use release ID plus release digest. Reviewed
 execution plans use plan ID plus exact revision. A source that changes between
 steps is stale and cannot be invoked.
 
+The Headless metadata use case projects exact source and snapshot identities
+from existing list and prepare use cases. It returns recognized profile names,
+availability, blocker codes and bounded nonsensitive field descriptions. It
+does not use the invocation port, relay runtime output or grant permission to
+run the actions it describes. The host must supply the current scoped reader.
+The paired desktop connector supplies its registered identity and checks
+workspace, asset and runtime read permission. Its read-only task tool checks
+the saved conversation session, turn and run belong to the same workspace,
+plan and turn. It returns their identity and status without loading a worker.
+
+The desktop connector sends an approved turn through the same conversation
+use case as the desktop workflow. An explicit conversation registration and
+current workspace permissions are required. A repeat with the same key can
+read an existing handle. Only the dispatch policy can reserve a new key.
+The app can return a saved turn and run handle before generation finishes.
+The host tracks at most two delegated turns and one turn per session.
+A lost reply or transport disconnect cannot authorize another turn.
+
+Desktop Settings shows up to ten recent chat tasks for the selected workspace.
+The application marks delegated conversation runs when saving them. The local
+reader checks the saved run, turn and session match before returning their
+identifiers and run status. A trusted desktop frame and current workspace read
+policy are required. A visible Settings panel reads saved status once per
+second after the previous read settles. Hidden panels pause. Workspace changes
+retire old responses, and manual refresh uses the same single-read guard.
+The passive read uses current organization policy without per-poll audit writes.
+Pairing and action authorization keep their existing audit behavior. The list
+can only observe saved records. Older runs lack the provenance marker.
+
+The existing conversation use case supports an internal optional delegated
+fence. It checks the exact saved approval and plan revision before allocating
+a turn. The owning SQLite transaction rechecks the saved session and approval.
+It saves the operation reservation, message, turn and initial run records
+together. A stale or closed session receives none of these writes. An optional
+internal callback can read the committed turn and run IDs before dispatch.
+The trusted policy rechecks the exact target after protected context preparation
+and after model resolution. After async validity checks, a read-only comparison
+of the saved session and approval in one transaction fences adapter submission.
+On desktop that transaction also reads current workspace and membership
+authority and the exact active plan revision. The comparison commit sets the
+order for later stored changes. The adapter checks the live grant separately
+before handing off to the runtime. Neither this check nor a socket close
+cancels a task the runtime has accepted. Ordinary callers retain the
+existing approval checks.
+
 ## Contract primitives
 
 The shared contract permits a finite set of inputs: text, multiline text,
@@ -130,3 +175,9 @@ read-action invocation, input denial, explicit confirmation, sensitive-value
 masking, all bounded result primitives, object-URL cleanup, host client failure
 mapping, and lazy host-page mounting. Desktop preload and both host composition
 roots are covered by their boundary checks.
+Headless preparation may expose the saved IDs of eligible conversation
+sessions for the same reviewed plan and workflow snapshot. The connector
+includes this metadata only with current conversation consent and when the
+existing session read model permits a new message. Preparation does not
+start a worker, load a model or create approval. Execution must independently
+verify the exact session, plan and approval.

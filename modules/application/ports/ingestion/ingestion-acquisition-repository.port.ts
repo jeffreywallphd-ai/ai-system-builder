@@ -7,7 +7,14 @@ import type {
   IngestionTaskFileId,
   IngestionTaskRecord,
 } from "../../../contracts/ingestion";
+import type { ArtifactStorageBinding } from "../../../contracts/storage";
 import type { WorkspaceId } from "../../../contracts/workspace";
+import type { ArtifactCatalogRecord } from "../artifact-catalog";
+
+export interface VerifiedIngestionProviderArtifact {
+  readonly catalog: ArtifactCatalogRecord & { readonly workspaceId: WorkspaceId };
+  readonly binding: ArtifactStorageBinding & { readonly workspaceId: WorkspaceId };
+}
 
 export interface IngestionAcquisitionRepositoryPort {
   createTask(task: IngestionTaskRecord): Promise<IngestionTaskRecord>;
@@ -27,6 +34,13 @@ export interface IngestionAcquisitionRepositoryPort {
     task: IngestionTaskRecord,
     expectedRevision: number,
     snapshot: IngestionSourceSnapshot,
+  ): Promise<{ readonly task: IngestionTaskRecord; readonly snapshot: IngestionSourceSnapshot }>;
+  /** Commit the selected repository backing, catalog, lineage and task through the same storage owner. */
+  saveTaskWithProviderArtifact?(
+    task: IngestionTaskRecord,
+    expectedRevision: number,
+    snapshot: IngestionSourceSnapshot,
+    artifact: VerifiedIngestionProviderArtifact,
   ): Promise<{ readonly task: IngestionTaskRecord; readonly snapshot: IngestionSourceSnapshot }>;
   createSourceSnapshot(snapshot: IngestionSourceSnapshot): Promise<IngestionSourceSnapshot>;
   readSourceSnapshot(workspaceId: WorkspaceId, snapshotId: IngestionSourceSnapshotId): Promise<IngestionSourceSnapshot | undefined>;

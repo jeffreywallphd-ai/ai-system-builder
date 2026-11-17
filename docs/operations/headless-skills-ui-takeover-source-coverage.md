@@ -1,12 +1,83 @@
 # Headless Skills and UI Takeover Source Coverage
 
-- Status: roadmap approved; implementation is on hold; technical checks are planned, not run
+- Status: implementation in progress. See the roadmap and review site for qualification status.
 - Roadmap: [Headless Skills and Revocable UI Takeover](../headless-skills-ui-takeover-implementation-roadmap.md)
-- Complete executable owners and host scope: [coverage JSON](headless-skills-ui-takeover-source-coverage.json)
+- Executable test paths, case names and host scope: [coverage JSON](headless-skills-ui-takeover-source-coverage.json)
 
-The user selected desktop first, then server/browser support. The user approved this roadmap and explicitly deferred its implementation. It summarizes the supplied design without publishing the private source document. Every invariant and acceptance scenario has an owning criterion. Server/browser parity repeats the applicable checks against the same server authority; it does not synchronize desktop and server data.
+The approved order is desktop, then server and browser. This crosswalk summarizes
+the supplied design without publishing the private source document. Every
+invariant and acceptance scenario has an owning criterion. Server/browser
+parity repeats the applicable checks against the same server authority; it
+does not synchronize desktop and server data.
 
-The earlier discovery limit to ignored planning files describes the preparation period before publication was handed off. That period has ended. Future implementation must reconcile current source and preserve unrelated changes, roadmap history and actual qualification. Implementation remains on hold until a separate explicit user request; roadmap approval is now recorded.
+The JSON record links all 18 invariants and 41 acceptance scenarios to current
+test files and named cases or fixture stages. Each link names its environment.
+The original test-owner wording remains in the record for history. The live
+Windows, Chrome and two-server results apply to their reviewed runs. The shared
+tests exercise races by controlling reply order and time. Their results apply
+to those controlled conditions. Where a scenario still needs evidence from a
+real host, the JSON record describes the missing test.
+
+The packaged Windows run `2026-11-13t20-36-57-540z-e399ba3f` passed on the
+authoring checkpoint in commit `a1894a3a1`. A separate MCP client paired,
+created and renamed a saved system, and saw an ordinary desktop save in the
+same feed. The test dropped the committed create reply, then retried with the
+same key and found one saved system. Restart preserved the original receipt.
+A later competing edit reached a clean Canvas, while a dirty Canvas kept its
+local values and original revision and refused to overwrite the newer save.
+
+On Windows x64 with 20 logical processors, 16 GiB RAM, Node 24.22.1 and
+Electron 42.11.18, the one-system fixture delivered 100 of 100 sequential
+edits. Timing began before dispatch: p50 was 841 ms, p95 was 858 ms, and
+the maximum was 865 ms. Reconnect and replay took 677 ms. The fixture used
+one outstanding mutation at a time and did not measure resource peaks or
+queue saturation. The earlier failed timing attempt remains in local history.
+This is scoped desktop authoring evidence. It does not qualify approved
+conversation execution, window takeover, or the managed server and browser.
+
+The managed Chrome and PostgreSQL run in commit `e1e8d8f60` showed a
+competing save in the Canvas, preserved an unsaved field, and reported
+the conflict in Notifications when the user tried to save. The newer
+saved revision stayed intact. This journey checked the dirty value.
+Undo and out-of-order refetch have their own focused tests.
+
+The run in commit `d1e928a22` dropped the reply to one committed create
+before the MCP client could receive it. Chrome showed the saved system.
+The test closed that client. An already connected client with the same
+registered identity repeated the same request key and received the original
+result. The scoped journal held one change for that request. The server
+restart and same-source host checks remain separate.
+
+A separate Chrome journey observed managed authorization before revoke.
+The user switched workspaces before the save committed. PostgreSQL then
+recorded one revision in the original workspace. Returning to that
+workspace showed the saved field and left the takeover panel closed.
+
+Another managed Chrome test held an older real list reply, rendered a
+newer saved name, and let the app read the old reply. The Manage table
+kept the newer name. Shared tests exercise dirty drafts and retired
+saved-state connections separately.
+
+The local managed host suspended the synthetic account while Chrome
+showed an active takeover. The browser returned control to the user,
+and the account could no longer read, write, or replay saved results.
+Restoring membership kept the earlier save and left the old lease
+closed. The test did not check signing in again after access returned.
+
+The real managed takeover popup sent one stale save. Chrome kept the
+unsaved value and sent no grant or readiness request. Manual controls
+returned when the request ended. The newer saved revision stayed intact.
+
+A separate managed browser test held an authorized response while the
+user revoked control. Chrome later read the complete response body and
+sent zero context publications. The pending read and a new read both
+returned no context. This run did not measure the timeout.
+
+The [matched Windows and Chrome report](headless-matched-host-qualification.json)
+records four packaged Windows tests and three separate Chrome runs on
+the same source. It includes sample counts, timing, queue and save
+outcomes. The report retains earlier failed fixture attempts and
+lists the checks outside the matched run.
 
 ## Architectural invariants
 

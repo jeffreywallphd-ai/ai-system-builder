@@ -23,6 +23,15 @@ must still verify their prerequisites and own the runtime process and files.
 
 `composeDesktopHost` wires desktop-host lifecycle dependencies while keeping Electron IPC transport thin.
 
+The main process can obtain an internal headless read handler after IPC
+registration, when the host has an authoritative local identity. It uses the
+same saved-system readers as IPC and refuses stale, unauthorized and closed
+requests. The optional connector does not start at launch. An owned desktop
+window must explicitly confirm starting it for an approved workspace or
+approved existing clients. The main process presents the code in a native
+dialog. The connector stops admission and drains its work before persistence
+closes. Pairing, status, and reads do not start a model runtime.
+
 Current composition includes:
 
 - artifact-object storage via filesystem adapter,

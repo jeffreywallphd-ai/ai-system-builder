@@ -1,6 +1,6 @@
 {
   "schema_version": "security-local-controls-qualification-v1",
-  "scope": "available-local-increment3-and4-controls",
+  "scope": "available-local-increments2-through4-controls",
   "qualification_work_id": "security-local-tooling-evidence-reconciliation",
   "authority_ref": "approved-security-roadmap-and-adr0043-available-local-work",
   "limitation": "This inventory links actual bounded work; its text is not a pass or a replacement for current executed receipts and separate review. Original findings, failed evidence and scanner closure notclaimed are preserved. Parent increment order and native/environment blockers remain.",
@@ -38,11 +38,13 @@
         "R50"
       ],
       "work_ids": [
-        "security-r50-versioned-semantic-fingerprint"
+        "security-r50-versioned-semantic-fingerprint",
+        "security-r50-package-semantic-admission"
       ],
-      "local_scope": "Complete passive validated semantic-v2 hashes, exact full encoded bounds, malformed list denial, explicit legacy revalidation and immutable Foundation compatibility.",
+      "local_scope": "Complete passive validated semantic-v2 hashes, exact full encoded bounds, malformed list denial, explicit legacy revalidation and immutable Foundation compatibility. Shared imported-package claim enforcement before hashing, actual admission reinspection before trust/writes, malformed/deep/stale-summary denial and supported lifecycle are separately component-qualified.",
       "pending": [
-        "Admission/trust/legacy consumer migration",
+        "Existing installed-record and legacy activation/migration policy",
+        "Broader nonsemantic container resource/schema and trust/provenance hardening",
         "Parent native/runtime qualification"
       ]
     },
@@ -97,6 +99,21 @@
       "local_scope": "Positional repository paths, normalized option-prefix/absolute/drive/type denial, fixed Node/Prettier option terminators; optional missing formatter denies normally without fetching.",
       "pending": [
         "Parent roadmap closure and any applicable controlled environment qualification"
+      ]
+    },
+    {
+      "finding_ids": [
+        "R32",
+        "R33"
+      ],
+      "work_ids": [
+        "security-r32-r33-current-local-qualification"
+      ],
+      "local_scope": "Explicit update permission before repair effects, no forceRepair upgrade, unmanaged-origin adoption denial, exact status/target/root/source and ENOENT-only absence; actual current inert regressions and original-supplier dependency gate passed.",
+      "pending": [
+        "Immutable source/current-tree/marker authenticity and native race qualification",
+        "Initial-install trust and physical runtime effects",
+        "Parent qualification; original R32/R33 Work history remains incomplete"
       ]
     }
   ],

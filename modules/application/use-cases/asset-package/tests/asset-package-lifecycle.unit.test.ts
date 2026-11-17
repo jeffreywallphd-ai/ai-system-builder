@@ -1,4 +1,4 @@
-// Synthetic package lifecycle callers explicitly admit their finite test workspace.
+// These lifecycle fixtures explicitly admit their synthetic workspaces; real policy denials have separate composed coverage.
 const workspaceAccess = { async authorize() {} };
 import { createHash } from "node:crypto";
 
@@ -12,7 +12,7 @@ import { createStructuredAssetPackageRepository } from "../../../../adapters/per
 import { createAssetImplementationArtifactAdapter } from "../../../../adapters/storage/asset-implementation";
 import { createAisbPackageInspector } from "../../../../adapters/package/aisb";
 import { createAssetPackageTrustVerifier } from "../../../../adapters/package/trust";
-import { createPackageFixture } from "../../../../testing/fixtures/asset-package-fixture";
+import { createPackageFixture, encodePackage } from "../../../../testing/fixtures/asset-package-fixture";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import type { AssetDefinitionRepositoryPort } from "../../../ports/asset";
 import {
@@ -25,6 +25,60 @@ import {
 import { ResolveAssetImplementationUseCase } from "../../asset-implementation";
 
 describe("asset package lifecycle", () => {
+  it("reinspects genuine quarantine bytes before trust or writes despite a stale eligible summary", async () => {
+    for (const claim of [`fnv1a:${"0".repeat(8)}`, `sha256:semantic-v2:${"0".repeat(64)}`]) {
+      const workspaceId = createWorkspaceId("workspace-a");
+      const documents = createInMemoryStructuredDocumentStore();
+      const packages = createStructuredAssetPackageRepository(documents);
+      const implementations = createStructuredAssetImplementationRepository(documents);
+      const backingResources = createStructuredAssetImplementationBackingResourceRepository(documents);
+      const artifacts = createAssetImplementationArtifactAdapter(memoryStorage());
+      const definitions = memoryDefinitions();
+      const inspector = createAisbPackageInspector();
+      const fixture = await createPackageFixture(inspector);
+      const semantic = fixture.container.manifest.semanticManifest;
+      const bytes = encodePackage({ ...fixture.container, manifest: { ...fixture.container.manifest, semanticManifest: {
+        ...semantic, assets: semantic.assets.map((entry) => ({ ...entry, fingerprint: claim })),
+      } } });
+      const now = () => "2026-07-17T12:00:00.000Z";
+      const inspect = new InspectAssetPackageUseCase({ workspaceAccess, inspector, repository: packages, artifacts, nextInspectionId: () => "historical-inspection", now });
+      const inspected = await inspect.execute({ workspaceId, bytes, actorId: "user-a" });
+      if (!inspected.ok) throw new Error("Safe identity-invalid fixture must remain quarantinable.");
+      expect(inspected.value.eligibleForAdmission).toBe(false);
+      const retained = await packages.readInspection(workspaceId, inspected.value.inspectionId);
+      if (!retained) throw new Error("Missing fixture inspection.");
+      // Model an older policy summary; immutable bytes/descriptors stay genuine.
+      const historicalId = "prior-policy-inspection";
+      await packages.saveInspection({ ...retained, inspectionId: historicalId,
+        summary: { ...retained.summary, inspectionId: historicalId, eligibleForAdmission: true, issues: [] } });
+      let trustCalls = 0;
+      let writes = 0;
+      const trust = createAssetPackageTrustVerifier();
+      const admit = new AdmitAssetPackageUseCase({ workspaceAccess,
+        inspector,
+        packages: { ...packages, async savePackage(value) { writes++; return packages.savePackage(value); } },
+        artifacts: { ...artifacts, async putImmutable(value) { writes++; return artifacts.putImmutable(value); } },
+        trust: { async verify(value) { trustCalls++; return trust.verify(value); } },
+        definitions: { ...definitions, async saveDefinition(value) { writes++; return definitions.saveDefinition(value); } },
+        implementations: { ...implementations,
+          async saveRelease(value) { writes++; return implementations.saveRelease(value); },
+          async createBinding(value) { writes++; return implementations.createBinding(value); },
+        },
+        backingResources: { ...backingResources, async save(value) { writes++; return backingResources.save(value); } },
+        now,
+      });
+      const result = await admit.execute({ workspaceId, inspectionId: historicalId,
+        packageDigest: inspected.value.packageDigest, approvalScope: "workspace", approvedCapabilities: [], actorId: "user-a" });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe("package-admission-blocked");
+      expect(trustCalls).toBe(0);
+      expect(writes).toBe(0);
+      expect((await packages.listPackages(workspaceId)).length).toBe(0);
+      expect((await implementations.listReleases(workspaceId)).length).toBe(0);
+      expect((await backingResources.list(workspaceId)).length).toBe(0);
+    }
+  });
+
   it("quarantines, explicitly admits, installs, activates, disables, and rolls back without overwrite", async () => {
     const documents = createInMemoryStructuredDocumentStore();
     const packages = createStructuredAssetPackageRepository(documents);

@@ -9,6 +9,7 @@ import {
   createAssetPackManifestFingerprint,
   verifyAssetPackManifestFingerprint,
   verifyAssetPackEntryFingerprint,
+  assessAssetPackSemanticIdentityForImport,
 } from "../asset-pack-fingerprint.service";
 import { captureAssetPackFingerprintInput } from "../asset-pack-fingerprint-input";
 import { SYSTEM_FOUNDATION_PACK_MANIFEST, SYSTEM_FOUNDATION_PACK_V2_MANIFEST, SYSTEM_FOUNDATION_PACK_V3_MANIFEST } from "../system-packs";
@@ -46,6 +47,56 @@ function withFirstDefinition(
 }
 
 describe("asset pack manifest fingerprints", () => {
+  it("assesses imported identities on a detached validated copy without changing claims", () => {
+    const manifest = createImportedPackManifestFixture();
+    const before = JSON.stringify(manifest);
+    const assessed = assessAssetPackSemanticIdentityForImport(manifest);
+    assert.equal(assessed.status, "valid");
+    if (assessed.status !== "valid") return;
+    assert.equal(assessed.manifestChecksum, "verified");
+    assert.equal(assessed.manifestFingerprint, manifest.checksum);
+    assert.notEqual(assessed.manifest, manifest);
+    assert.notEqual(assessed.manifest.assets[0]!.definition, manifest.assets[0]!.definition);
+    assert.equal(JSON.stringify(assessed.manifest), before);
+    assert.equal(JSON.stringify(manifest), before);
+    const { checksum: _checksum, ...withoutChecksum } = manifest;
+    const absent = assessAssetPackSemanticIdentityForImport(withoutChecksum);
+    assert.equal(absent.status, "valid");
+    if (absent.status === "valid") assert.equal(absent.manifestChecksum, "absent");
+  });
+
+  it("requires each entry claim and verifies every supplied optional checksum", () => {
+    const manifest = createImportedPackManifestFixture();
+    const entry = manifest.assets[0]!;
+    for (const claim of [undefined, null, "", " ", 0, `fnv1a:${"0".repeat(8)}`, `sha256:${"0".repeat(64)}`, `sha256:semantic-v3:${"0".repeat(64)}`, `sha256:semantic-v2:${"0".repeat(64)}`]) {
+      const changed = { ...manifest, assets: [{ ...entry, fingerprint: claim }] };
+      assert.notEqual(assessAssetPackSemanticIdentityForImport(changed).status, "valid");
+      if (claim !== undefined) assert.notEqual(assessAssetPackSemanticIdentityForImport({ ...manifest, checksum: claim }).status, "valid");
+    }
+    const legacy = assessAssetPackSemanticIdentityForImport({ ...manifest, assets: [{ ...entry, fingerprint: `fnv1a:${"0".repeat(8)}` }] });
+    assert.equal(legacy.status, "identity-invalid");
+    if (legacy.status === "identity-invalid") assert.deepEqual(legacy.issue, { field: "entry-fingerprint", reason: "legacy-revalidation-required", entryIndex: 0 });
+    const stale = assessAssetPackSemanticIdentityForImport({ ...manifest, displayName: "Changed safe manifest" });
+    assert.equal(stale.status, "identity-invalid");
+    if (stale.status === "identity-invalid") assert.deepEqual(stale.issue, { field: "manifest-checksum", reason: "mismatch" });
+  });
+
+  it("bounds and validates complete input before classifying even legacy claims", () => {
+    const manifest = createImportedPackManifestFixture();
+    let evaluations = 0;
+    const accessor = { ...manifest };
+    Object.defineProperty(accessor, "extra", { enumerable: true, get() { evaluations++; return "rejected"; } });
+    const proxy = new Proxy(manifest, { get() { evaluations++; throw new Error("must not run"); } });
+    let nested: unknown = { note: "deep" };
+    for (let index = 0; index < 40; index++) nested = { nested };
+    const cycle: any = { ...manifest }; cycle.metadata = cycle;
+    for (const input of [null, [], {}, { ...manifest, assets: null }, accessor, proxy, cycle,
+      { ...manifest, checksum: `fnv1a:${"0".repeat(8)}`, metadata: nested }]) {
+      assert.deepEqual(assessAssetPackSemanticIdentityForImport(input), { status: "invalid", issue: { field: "manifest", reason: "invalid" } });
+    }
+    assert.equal(evaluations, 0);
+  });
+
   it("rejects malformed set-like lists before semantic normalization", () => {
     const manifest = firstEntryManifest();
     const entry = manifest.assets[0]!;

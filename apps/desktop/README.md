@@ -4,8 +4,10 @@
 
 ## Toolchain
 
-- Host runtime: exact original-supplier Electron 42.11.3 (Node 24), including
-  the GHSA-fw47-9c62-h3vw permission-origin fix
+- Host runtime: exact original-supplier Electron 42.11.18 (Node 24), including
+  the reviewed permission-origin and frame-geometry security fixes. See
+  `docs/security/electron-42-patch-qualification.json` for actual qualification
+  and the supplier's end-of-support limitation.
 - Build/dev system: Electron Forge (exact Vite plugin), per ADR-0044
 - Entry point orchestration: `apps/desktop/src/main` + `modules/hosts/desktop`
 
@@ -18,6 +20,16 @@ From the repository root:
 - `npm run make`
 - `npm run test:visual-composer -- --project packaged-desktop` after packaging,
   to run the isolated real preload/IPC System Composer workflow on Windows
+
+Run `npm run dev:desktop` from the checkout with Node 24 and npm available.
+The command verifies the locked npm dependencies and the approved Electron
+binary, installs missing components, and checks Python and its worker packages
+before starting Forge. It reuses a verified installation. If setup needs to
+install worker packages, it uses a virtual environment under the checkout.
+Windows x64 can provision a pinned portable Python when no supported
+interpreter is available. On other platforms, install Python 3.10–3.14 with
+`venv` and `pip` before launch. An explicit `PYTHON_RUNTIME_COMMAND` must point
+to a usable interpreter. See the [setup guide](../../dev-tools/scripts/bootstrap/README.md).
 
 Forge emits `.vite/build/main.cjs`, independent `main_window_preload.cjs` and
 `system_runtime_preload.cjs`, and separate relative-asset renderer directories.
@@ -50,6 +62,11 @@ honors an explicit `PYTHON_RUNTIME_WORKER_DIR` override, and otherwise uses the
 repository path during development. The resource includes the reviewed worker
 source and requirements file; dependency setup still probes exact versions and
 fails startup on an unexpected or mismatched dependency state.
+Packaged Desktop checks its installed runtime before opening the app shell. If
+Python or worker packages are missing, use a compatible Python environment and
+install the requirements from the packaged `resources/worker` directory before
+closing and reopening the app. From that directory, run
+`python -m pip install -r requirements.txt` using the interpreter Desktop will use.
 The packaged resource also includes `requirements-context.txt`. Normal managed
 Python setup installs and re-verifies the exact LanceDB dependency. Explicit RAG
 create/inspect/query starts repeat the idempotent check so a missing install is
@@ -182,6 +199,11 @@ Renderer constraints for this slice:
 - no styling expansion beyond the existing minimal renderer structure
 
 ## Renderer Shell And Workspace UI
+
+Choose **File > Turn Off Window Takeover for This Session** to end automation
+control in every desktop window. The desktop refuses new window-control
+requests until the app restarts. Authorized editing and chat tasks can continue.
+On the next launch, each window still asks for consent before accepting control.
 
 - Shared mini dashboards replace decorative page-header artwork. Home shows the
   larger workspace summary for published systems, active datasets, trained models,

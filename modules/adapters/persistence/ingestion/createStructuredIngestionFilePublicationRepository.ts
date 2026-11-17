@@ -1,4 +1,4 @@
-import type { IngestionFilePublicationRepositoryPort } from "../../../application/ports/ingestion";
+import type { IngestionFilePublication, IngestionFilePublicationRepositoryPort } from "../../../application/ports/ingestion";
 import { assertPublicationTask, normalizeIngestionFilePublication, publicationUnavailable } from "../../../application/shared/ingestion-file-publication";
 import { normalizeIngestionTaskRecord, type IngestionTaskRecord } from "../../../contracts/ingestion";
 import { cloneStructuredJson, StructuredDocumentConflictError, type StructuredDocumentStore } from "../shared";
@@ -30,29 +30,37 @@ export function createStructuredIngestionFilePublicationRepository(documents: St
       });
     },
     async savePublication(input, expectedRevision) {
-      const next = normalizeIngestionFilePublication(input);
-      if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1 || next.revision !== expectedRevision + 1 || next.state === "committed"
-        || next.organizationId !== documents.organizationId) publicationUnavailable();
-      const key = `${next.workspaceId}/${next.taskId}/${next.fileId}`;
-      return documents.runInTransaction(async transaction => {
-        const current = await transaction.readDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, key);
-        if (!current || current.revision !== expectedRevision) throw new StructuredDocumentConflictError(INGESTION_FILE_PUBLICATION_NAMESPACE, key, expectedRevision);
-        const before = normalizeIngestionFilePublication(current.value);
-        const { state: _beforeState, revision: _beforeRevision, digest: _beforeDigest, ...beforeIdentity } = before;
-        const { state: _nextState, revision: _nextRevision, digest: _nextDigest, ...nextIdentity } = next;
-        if (before.revision !== expectedRevision || JSON.stringify(beforeIdentity) !== JSON.stringify(nextIdentity) || (before.digest && before.digest !== next.digest)) publicationUnavailable();
-        const storedTask = await transaction.readDocument<IngestionTaskRecord>(INGESTION_TASK_NAMESPACE, `${next.workspaceId}/${next.taskId}`);
-        if (!storedTask) publicationUnavailable();
-        const task = normalizeIngestionTaskRecord(storedTask.value);
-        if (task.revision !== storedTask.revision) publicationUnavailable();
-        assertPublicationTask(next, task);
-        // Acknowledging an already returned byte write retains evidence even if
-        // cancellation won; it never permits the next origin transition.
-        if (next.state !== "bytes-acknowledged" && task.status !== "finalizing") publicationUnavailable();
-        if (task.files.find(file => file.fileId === next.fileId)!.status === "finalized") publicationUnavailable();
-        await transaction.writeDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, key, next, { expectedRevision });
-        return cloneStructuredJson(next);
-      });
+      return documents.runInTransaction(transaction => savePublicationInOwnedTransaction(transaction, input, expectedRevision));
     },
   };
+}
+
+/** The transaction owner can fence a new issue against another durable state change. */
+export async function savePublicationInOwnedTransaction(
+  transaction: StructuredDocumentStore, input: IngestionFilePublication, expectedRevision: number,
+): Promise<IngestionFilePublication> {
+  const next = normalizeIngestionFilePublication(input);
+  if (transaction.runInOwnedTransaction || !Number.isSafeInteger(expectedRevision) || expectedRevision < 1 ||
+    next.revision !== expectedRevision + 1 || next.state === "committed" || next.organizationId !== transaction.organizationId)
+    publicationUnavailable();
+  const key = `${next.workspaceId}/${next.taskId}/${next.fileId}`;
+  const current = await transaction.readDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, key);
+  if (!current || current.revision !== expectedRevision)
+    throw new StructuredDocumentConflictError(INGESTION_FILE_PUBLICATION_NAMESPACE, key, expectedRevision);
+  const before = normalizeIngestionFilePublication(current.value);
+  const { state: _beforeState, revision: _beforeRevision, digest: _beforeDigest, ...beforeIdentity } = before;
+  const { state: _nextState, revision: _nextRevision, digest: _nextDigest, ...nextIdentity } = next;
+  if (before.revision !== expectedRevision || JSON.stringify(beforeIdentity) !== JSON.stringify(nextIdentity) ||
+    (before.digest && before.digest !== next.digest)) publicationUnavailable();
+  const storedTask = await transaction.readDocument<IngestionTaskRecord>(INGESTION_TASK_NAMESPACE, `${next.workspaceId}/${next.taskId}`);
+  if (!storedTask) publicationUnavailable();
+  const task = normalizeIngestionTaskRecord(storedTask.value);
+  if (task.revision !== storedTask.revision) publicationUnavailable();
+  assertPublicationTask(next, task);
+  // Acknowledging an already returned byte write retains evidence even if
+  // cancellation won; it never permits the next origin transition.
+  if (next.state !== "bytes-acknowledged" && task.status !== "finalizing") publicationUnavailable();
+  if (task.files.find(file => file.fileId === next.fileId)!.status === "finalized") publicationUnavailable();
+  await transaction.writeDocument(INGESTION_FILE_PUBLICATION_NAMESPACE, key, next, { expectedRevision });
+  return cloneStructuredJson(next);
 }

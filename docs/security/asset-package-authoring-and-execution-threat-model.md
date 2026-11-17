@@ -3,7 +3,7 @@
 - Status: current
 - Scope: executable asset packages, Asset Studio, coding models, system builds, previews, capability brokerage, and system-release execution
 - Related: ADR-0015, ADR-0029, ADR-0030 through ADR-0035
-- Verification: automated negative tests plus Increment 11 manual security review
+- Verification: automated negative tests plus independent AI-agent controlled security review; human acceptance is offline and grants no technical pass
 
 ## Assets to protect
 
@@ -15,6 +15,24 @@
 - availability of desktop, server, builders, runners, and storage.
 
 ## Trust boundaries
+
+Package, Studio and authoring desktop IPC now deny missing, untrusted or throwing
+sender policy before request metadata, payload access or lazy feature resolution.
+The host supplies its existing live owned-window main-frame predicate. Fixed
+request/response mappings preserve sanitized transport failures without echoing
+untrusted correlation fields. Focused tests include every registered channel,
+subframes, foreign/destroyed windows, unreadable payloads and real host wiring.
+This is a sender-boundary component only: persisted workspace authorization,
+approval/publication races and native isolation need their own qualification.
+
+Studio, package and derived application boundaries now require the existing
+persisted workspace/organization access port in both hosts. Every read/mutation
+uses its fixed asset read/write scope before protected effects. Automated denial
+coverage checks all27 owning application entries, absent policy and deferred
+readiness; actual desktop/server registration fixtures exercise persisted active,
+missing and archived workspaces, positive draft/list flows and membership
+suspension. This resource component does not qualify the separate stale publication
+race, authored-source isolation, native effects or complete production profile.
 
 Untrusted inputs cross boundaries at package receipt, archive parsing, manifest normalization, dependency resolution, source editing, coding-model context/output, build execution, preview rendering, capability messages, data/model calls, release activation, and cross-workspace/organization reads.
 
@@ -111,6 +129,18 @@ Static errors expose no rejected values. Immutable shipped identities and packag
 byte digests are unchanged. Legacy hash verification requires explicit revalidation
 and cannot rewrite trust, approval or bindings. This pure utility does not qualify
 installer trust shortcuts, native file effects, or actual release authorization.
+
+The shared imported-package inspector now consumes a detached bounded validated
+semantic copy before recursive canonical hashing. Required entry claims and any
+present optional checksum must verify; missing, legacy, unknown or mismatched
+claims cannot admit content. Safe identity-invalid bodies may be quarantined
+without rewriting claims. Malformed semantic bodies are rejected statically.
+Admission re-inspects genuine verified quarantine bytes before trust or writes,
+including when an old summary claims eligibility. Malformed declaration rows and
+unexpected recursive serialization errors return static ineligible results.
+Exception containment is not qualification of all nonsemantic allocation/work
+bounds. Native effects, installed legacy migration/activation and stronger
+provenance/signer policy remain separate obligations.
 
 Actual credential checks apply to property names as well as string values.
 Credential-bearing names are denied before descent/copy and never become public
@@ -253,6 +283,64 @@ uses supervisor ownership rather than network failures; late replies and old
 generations cannot resurrect accepted unfinished tasks. Retained failures and
 actual host regression evidence remain distinct from inference qualification.
 
+## Reviewed definition publication delta
+
+Protected assets are the current user-reviewed source/definition, immutable base,
+workspace ownership and publication visibility. A stale editor, competing draft,
+changed/revoked base, failed final record write or lost acknowledgement must not
+expose stale content or claim a foreign definition. Both hosts use the typed atomic
+publisher after their existing sender/resource controls. The adapter independently
+verifies reviewed bytes and binds current record/review/snapshot/base facts, absent
+definition and a private owner-bound commit receipt in one structured transaction.
+No callback performs external effects. Existing identities deny publication;
+rollback is atomic and recovery only reads an exact existing commit. Missing
+receipts or deleted/foreign effects remain denied. No source is executed.
+
+Focused memory and Node SQLite tests cover concurrent
+update/abandon/re-review, identical identity competition, intermediate-write
+rollback, lost acknowledgement, missing/foreign receipts and definitions, forged
+review bodies, snapshot loss, owner drift, caller mutation during verification
+and changed/revoked base. Original-command retries reconcile without rewriting
+publication actor/time; all other stale revisions deny. Actual Electron runtime
+qualification remains pending. Legacy record
+APIs, native filesystem publication, live PostgreSQL, complete Assets controlled
+security/UI and parent roadmap qualification remain outside this component.
+
+Legacy resource-authority correction: a trusted desktop sender previously could
+create a legacy draft for a nonexistent workspace and read/update it after real
+membership suspension. Seven mutation entries now require current workspace write
+authority before protected effects; eight public reads use a workspace read facade
+without mutation or unscoped by-ID access. Both hosts bind existing persisted
+workspace and organization policy. Actual host tests cover missing, archived and
+foreign workspaces, membership suspension and valid create/read/update. Missing or
+throwing policy denies without private exception detail; source and sender controls
+remain intact. This is not a server middleware bypass claim and does not qualify
+legacy multi-record publication races, native storage or complete parent security.
+
+## Published Studio workspace visibility delta
+
+Protected assets are unpublished drafts, foreign workspace/organization records
+and exact immutable published versions. The previous workspace facade admitted
+legacy authoring/reuse but omitted Studio publication lineage. A global catalog
+row or a metadata claim must not repair that omission by granting authority.
+The existing private Studio and derived repositories normalize persisted
+published workflow records and return exact references for the requested
+workspace. Both hosts inherit these two readers from their shared registry
+composition using the same organization partition as the workflow records;
+platform definitions remain separate. Admission requires a matching published
+catalog version. Missing composition grants no new visibility; malformed,
+unavailable or oversized configured ownership data denies with a static error.
+
+The per-request source count is two and each returned reference array is capped
+at 25,000; no cross-request authority cache or metadata-derived fallback is
+introduced. Existing repositories still materialize their private collection
+before projecting references, so this count limit is not a storage I/O quota or
+an indexed-query performance claim. Tests cover recomposition, identical workspace
+IDs in different organization partitions, a foreign workspace, unpublished
+drafts with published global metadata, wrong versions/kinds and reader failure.
+Browsing still executes no authored source or runtime work. These local controls
+do not complete the separately pending legacy review, managed-host, accessibility
+or overall roadmap qualification.
 
 ## Studio interface ownership and failure recovery
 
@@ -397,17 +485,6 @@ This local proof does not qualify real Electron events, resource authorization,
 publication transactions, persistence, native or parent roadmap outcomes. Repair
 forward; rollback must retain sender admission rather than restore open handlers.
 
-Legacy resource-authority correction: a trusted desktop sender previously could
-create a legacy draft for a nonexistent workspace and read/update it after real
-membership suspension. Seven mutation entries now require current workspace write
-authority before protected effects; eight public reads use a workspace read facade
-without mutation or unscoped by-ID access. Both hosts bind existing persisted
-workspace and organization policy. Actual host tests cover missing, archived and
-foreign workspaces, membership suspension and valid create/read/update. Missing or
-throwing policy denies without private exception detail; source and sender controls
-remain intact. This is not a server middleware bypass claim and does not qualify
-legacy multi-record publication races, native storage or complete parent security.
-
 Legacy read denial settles inside each registered handler. Three IPC list reads
 previously rejected their promises after access denial; they now return fixed
 unavailable envelopes with the original trusted request context. Four detail
@@ -421,54 +498,6 @@ Package authority/capture correction: current persisted workspace and organizati
 Studio resource admission denies missing, unavailable or revoked workspace authority before repository, artifact, model, clock or identifier effects. Desktop also admits before lazy feature loading, followed by application reauthorization. Owned request data prevents caller mutation during awaits. Focused local tests cover denial, nested input changes and finite host compositions; physical-host durability, arbitrary JSON preallocation and atomic definition publication remain separate concerns.
 
 Derived workflow/catalog admission and owned requests prevent changed workspace, exact base/release, semantic/source, revision, actor or query fields from changing a request during awaits. The desktop resolver checks current workspace capability before lazy loading and receives a closed registered operation, not a caller-selected capability. Sender denial precedes capture and resolution. Focused fixtures retain unavailable loader failures and not-found record results without private error disclosure. Atomic publication, broad metadata allocation and physical host/native qualification remain separate.
-
-## Reviewed definition publication delta
-
-Protected assets are the current user-reviewed source/definition, immutable base,
-workspace ownership and publication visibility. A stale editor, competing draft,
-changed/revoked base, failed final record write or lost acknowledgement must not
-expose stale content or claim a foreign definition. Both hosts use the typed atomic
-publisher after their existing sender/resource controls. The adapter independently
-verifies reviewed bytes and binds current record/review/snapshot/base facts, absent
-definition and a private owner-bound commit receipt in one structured transaction.
-No callback performs external effects. Existing identities deny publication;
-rollback is atomic and recovery only reads an exact existing commit. Missing
-receipts or deleted/foreign effects remain denied. No source is executed.
-
-Focused memory and Node SQLite tests cover concurrent
-update/abandon/re-review, identical identity competition, intermediate-write
-rollback, lost acknowledgement, missing/foreign receipts and definitions, forged
-review bodies, snapshot loss, owner drift, caller mutation during verification
-and changed/revoked base. Original-command retries reconcile without rewriting
-publication actor/time; all other stale revisions deny. Actual Electron runtime
-qualification remains pending. Legacy record
-APIs, native filesystem publication, live PostgreSQL, complete Assets controlled
-security/UI and parent roadmap qualification remain outside this component.
-
-## Published Studio workspace visibility delta
-
-Protected assets are unpublished drafts, foreign workspace/organization records
-and exact immutable published versions. The previous workspace facade admitted
-legacy authoring/reuse but omitted Studio publication lineage. A global catalog
-row or a metadata claim must not repair that omission by granting authority.
-The existing private Studio and derived repositories normalize persisted
-published workflow records and return exact references for the requested
-workspace. Both hosts inherit these two readers from their shared registry
-composition using the same organization partition as the workflow records;
-platform definitions remain separate. Admission requires a matching published
-catalog version. Missing composition grants no new visibility; malformed,
-unavailable or oversized configured ownership data denies with a static error.
-
-The per-request source count is two and each returned reference array is capped
-at 25,000; no cross-request authority cache or metadata-derived fallback is
-introduced. Existing repositories still materialize their private collection
-before projecting references, so this count limit is not a storage I/O quota or
-an indexed-query performance claim. Tests cover recomposition, identical workspace
-IDs in different organization partitions, a foreign workspace, unpublished
-drafts with published global metadata, wrong versions/kinds and reader failure.
-Browsing still executes no authored source or runtime work. These local controls
-do not complete the separately pending legacy review, managed-host, accessibility
-or overall roadmap qualification.
 
 
 ## Repeatable Assets UI test definitions

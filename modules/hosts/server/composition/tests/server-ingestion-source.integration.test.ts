@@ -58,6 +58,10 @@ test("composed server local ingestion publishes one scoped primary source and de
   const now = "2026-10-24T12:00:00.000Z";
   let contextAvailable = true;
   let providerCalls = 0;
+  let syntheticProviderEnabled = false;
+  const providerRepository = "example/synthetic";
+  const providerRevision = "a".repeat(40);
+  let metadataReads = 0;
   const unexpectedProvider = async () => { providerCalls++; throw new Error("Unexpected synthetic provider request"); };
   const organizationContextProvider = { getCurrentOrganizationContext() {
     if (!contextAvailable) throw new Error("Synthetic organization context unavailable");
@@ -72,8 +76,18 @@ test("composed server local ingestion publishes one scoped primary source and de
     artifactRepo: {
       providerCredentialRootDirectory: path.join(fixture, "credentials"),
       huggingFaceTokenConfigFilePath: path.join(fixture, "no-legacy-token.json"),
-      huggingFaceFetchImplementation: unexpectedProvider,
-      huggingFaceHubClient: {fileExists: unexpectedProvider, uploadFile: unexpectedProvider, downloadFile: unexpectedProvider},
+      huggingFaceFetchImplementation: async (url) => {
+        if (!syntheticProviderEnabled || url !== `https://huggingface.co/api/datasets/${providerRepository}/revision/${providerRevision}?expand=sha&expand=cardData`) {
+          return unexpectedProvider();
+        }
+        metadataReads++;
+        return new globalThis.Response(JSON.stringify({ id: providerRepository, sha: providerRevision,
+          cardData: { license: "cc-by-nd-4.0" } }), { headers: { "content-type": "application/json" } });
+      },
+      huggingFaceHubClient: {
+        fileExists: async () => syntheticProviderEnabled ? true : unexpectedProvider(),
+        uploadFile: unexpectedProvider, downloadFile: unexpectedProvider,
+      },
     },
     logSink() {}, now: () => now,
   });
@@ -143,6 +157,28 @@ test("composed server local ingestion publishes one scoped primary source and de
     assert.equal((await repository.listTasks(workspaceId)).length, 1);
     assert.equal(providerCalls, 0);
     assert.doesNotMatch(JSON.stringify(finalized.payload), /server-owned-source|[A-Z]:\\/);
+
+    contextAvailable = true;
+    syntheticProviderEnabled = true;
+    const provider = await invoke({ action: "create-hugging-face", files: [
+      { repository: providerRepository, revision: providerRevision, path: "data/train.parquet" },
+      { repository: providerRepository, revision: providerRevision, path: "data/test.parquet" },
+    ] });
+    assert.ok(provider.payload.ok && provider.payload.value.kind === "task");
+    const providerRun = { action: "run-hugging-face" as const, taskId: provider.payload.value.task.taskId };
+    assert.equal((await invoke(providerRun, otherWorkspaceId)).payload.ok, false);
+    assert.equal(metadataReads, 0);
+    const collected = await invoke(providerRun);
+    assert.ok(collected.payload.ok && collected.payload.value.kind === "task");
+    assert.equal(collected.payload.value.task.status, "succeeded");
+    for (const file of collected.payload.value.task.files) {
+      const origin = await repository.readSourceSnapshot(workspaceId, file.output!.sourceSnapshotId as never);
+      assert.equal(origin?.providerRevision, providerRevision);
+      assert.deepEqual(origin?.providerLicenseIds, ["cc-by-nd-4.0"]);
+    }
+    assert.deepEqual((await invoke(providerRun)).payload, collected.payload);
+    assert.equal(metadataReads, 1);
+    assert.equal(providerCalls, 0);
   } finally {
     contextAvailable = true;
     // Retain fixtures if shutdown fails; never remove live host state.

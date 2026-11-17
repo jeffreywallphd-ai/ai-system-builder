@@ -102,6 +102,70 @@ Design-time statuses are `draft`, `in-composition`, `blocked`, `ready-for-valida
 
 ## Ownership and dependency boundaries
 
+[Headless authoring](../adr/ADR-0047-headless-system-builder-delegation.md)
+uses the same application authority, validation and immutable saved revisions
+as UI authoring. The host authenticates a registered client and checks its
+current workspace access. Saved data notifications must neither steer UI
+navigation nor change a human draft's save base. The initial versioned read
+contract exposes no new product entry point.
+
+The semantic batch request describes exact add, configure, connect, move and
+remove operations against an existing saved revision. The application must
+resolve the exact definitions and enforce its current graph and workspace
+policy before preview or commit. A preview keeps saved state unchanged and
+identifies removed instances and bindings. Apply recomputes the digest,
+checks both saved revision identifiers, and requires a valid result from the
+same graph validator as the editor. If an old reference needs an implicit
+repair, the user can first save it in Composer; a headless batch cannot add
+that change without preview. This internal application path does not enable
+external writes until durable receipt and change delivery are available.
+
+The management contract names the exact installed template when creating a
+system. Rename and clone include the saved record and composition revision
+that the client read. All three requests require an idempotency key and explicit
+workspace. When the host composes the internal authoring service, template
+creation, rename, clone and apply use the existing System Builder use cases.
+Rename preserves the existing description when the client omits it. All
+delegated edits resolve exact definitions through the workspace asset facade.
+Validation stages a single write before the owned transaction. That transaction
+rechecks the saved target and the current host grant, then commits the saved
+change, retry receipt and change notification together. A changed host
+incarnation does not change the saved retry identity. No connector tools
+are granted by the internal service alone.
+
+The committed change reader captures its cursor before reading the saved
+snapshot. A change made during that read can appear again on replay. The
+consumer compares record revisions before applying it. The host binds each
+cursor to its incarnation, organization, workspace, reader and sequence.
+An invalid or expired cursor requires an authorized resync.
+
+The desktop's shared System Builder repository appends committed changes in
+the same transaction as the saved record. Delegated writes use that same
+writer and add their retry receipt to the transaction. A change to a legacy
+record without a current composition revision carries a null revision ID.
+A revision stored without becoming current does not notify readers. The
+journal contains only saved system and revision metadata. Managed server
+wiring remains pending.
+
+Composer saves and upgrade previews use the record revision and exact
+composition revision captured when the draft was opened or saved. A newer list
+response does not advance that base. The Canvas keeps dirty content and undo
+state when a newer revision arrives or the saved system leaves the list.
+Discard loads the current listed revision if it changed. A stale write still
+fails through the application and keeps the user's edits.
+
+A clean Composer can install a newer exact saved revision while keeping the
+active route, tab and compatible asset selection. It leaves the current graph
+usable until the reply arrives. Workspace, target, latest record and request
+generation must still match. Editing, undoing into a dirty draft, saving and
+switching workspaces fence outstanding passive replies.
+
+Desktop chat control requests use the shared modal dialog. A pending or
+dirty-draft request leaves the Canvas and its layout in place. The user can
+revoke from the fixed shell controls or from an open dialog.
+File > New Window opens a second desktop window. A control request and its
+revoke apply to the selected window only.
+
 - System Builder records are workspace-owned and require explicit workspace identity at every future contract, client, transport, use-case, repository, and persistence seam.
 - Asset Kernel definitions, instances, bindings, compositions, and references remain canonical component vocabulary.
 - Asset composition planning remains the non-executing compatibility/planning input. A system record may reference a plan but must not mutate the plan or effective asset projections implicitly.
@@ -586,3 +650,16 @@ must not be treated as deployed or running. See
 ## Manage request ownership and recovery
 
 The Manage view starts a fresh UI session when its workspace or client changes. Late replies cannot populate a former list/dialog, publish a notification or invoke a former active-systems callback. Initial reads and paging recover from transport rejections. Paging and requested preview results belong to the accepting query sequence. Accepted mutations remain owner-scoped across search/filter changes; a view refresh is not mutation cancellation. Synchronous operation tokens precede awaits and only their owner releases busy state. Notifications distinguish failed requests and saved results; raw thrown transport details are not displayed. These UI controls supplement existing exact revision and server/workspace authority. Local rendered fixtures do not qualify physical app/runtime/native or final combined behavior. Owners retire during layout cleanup at commit, before passive effects. An abandoned replacement render does not change the committed session. Confirmation changes are synchronously refused while an action owns them.
+The desktop takeover shell keeps authorization and local presentation state
+separate. Before accepting with a dirty Composer, the user chooses whether to
+save the existing draft. A denied, invalid or conflicting save returns manual
+control and keeps the draft available. The shell and active modal both offer
+immediate revoke while activation is pending or active. Revoke closes the
+window's local gate before IPC. The Composer stays mounted across Systems tabs
+so the handoff sees any pending draft. During attachment, modal body controls are
+inert and keyboard users can still revoke or close the dialog.
+The paired client can request a saved system, component, validation summary,
+artifact, or run. The window shows the authorized resource in a dedicated
+view while the current draft remains in place. Command delivery and saved
+business results have separate receipts. Native end-to-end qualification is
+tracked in the Headless roadmap.

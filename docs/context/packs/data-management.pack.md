@@ -33,14 +33,13 @@
   accepts user-bounded explicit pages or one sitemap, and has no recursive crawl or permissive robots override.
   Compensate only known new capture keys. Both hosts delete each catalog entry after its byte cleanup succeeds.
   Byte denial preserves metadata. Old snapshots, unknown data and native/uncertain recovery stay separate.
-- The shared Hugging Face selector browses a bounded namespace and bounded
-  importable file list through host clients, lets users check exact files, and
-  passes only adapter-returned immutable revisions to the governed task. Do not
-  reintroduce free-form provider paths or mutable revision entry in the primary
-  workflow. Provider users and organizations are source coordinates, never
-  application organization scope; the host must add authoritative organization
-  and principal context and reject missing or conflicting context before task
-  creation.
+- The shared Hugging Face selector browses bounded datasets and files and filters
+  provider-declared licenses. All data retains non-open and unknown declarations.
+  Pass only checked files at adapter-returned revisions to the governed task.
+  Keep free-form provider paths and mutable revision entry outside the primary
+  workflow. A provider namespace identifies a source. The host supplies the
+  authorized application organization and principal, and rejects missing or
+  conflicting context before task creation.
 - Staging recovers omitted byte-descriptor names and media types from the
   workspace-authorized catalog; it never guesses JSON. Provider registration
   persists task workspace on catalog and imported-source records. Parquet
@@ -52,7 +51,7 @@
   needed for private or gated datasets. Keep the token out of task commands,
   errors, logs, and roadmap evidence. The guided workflow is the sole mounted
   ingestion path; do not restore the retired Other import tools beside it.
-- Saved host state reports progress. Task/source and changed-refresh/snapshot pairs commit atomically.
+- Saved host state reports progress. Verified provider catalog and backing records commit with the task and source snapshot. Task/source and changed-refresh/snapshot pairs commit atomically.
   A website file conflict leaves the task unchanged. Keep bytes after an uncertain save; clean up only after confirmed cancellation without a snapshot. Local-file recovery keeps uncertain effects without adoption or cleanup.
 - The baseline worker emits aggregate plus physical train, validation, and test
   outputs. Fixed-seed results are deterministic; source groups and exact
@@ -192,7 +191,7 @@
 - Fresh uploads bind verified local storage; staging requires exact workspace/key metadata and a primary origin. Resumable files use pre-reservation checksum checks, exclusive writing CAS, durable bytes and one acknowledged origin-issued CAS before conditional metadata and atomic task/snapshot/receipt commit. Recovery verifies existing exact origin without recreating missing/deleted records. Unknown effects stay retained; completed retry is read-only. Native/crash/parent qualification stays separate; see canonical architecture/threat model and artifact-store README.
 - `context-management` for RAG databases, context packs, and browser handoffs.
 - `persistence-storage` for object/repository storage or source isolation.
-- `runtime` or `runtime-task-registry` for worker execution/lifecycle. ADR-0046 requires authorized copied PDFs, a separate SHA256 port in both hosts, explicit language/structure-aware settings and a host-only `staged-pdf-ocr-v1` map; caller maps deny. Protocol support is not reader readiness. Windows protocol support does not probe the reader; shared off-by-default PDF controls require an explicit installed language. The controlled OCR app procedure uses the actual packaged worker with synthetic generation; full host delivery remains pending.
+- `runtime` or `runtime-task-registry` for worker execution/lifecycle; ADR-0045 and `docs/operations/optional-low-memory-inference.md` govern explicit memory profiles, current exact capability gating, ownership and qualification. ADR-0046 requires authorized copied PDFs, a separate SHA256 port in both hosts, explicit language/structure-aware settings and a host-only `staged-pdf-ocr-v1` map; caller maps deny. Protocol support is not reader readiness. Windows protocol support does not probe the reader; shared off-by-default PDF controls require an explicit installed language. The controlled OCR app procedure uses the actual packaged worker with synthetic generation; full host delivery remains pending.
 - `desktop-implementation` for renderer and thin-client experience.
 - `server-host` for Express/API composition.
 - `security` when authority, untrusted parsing, provider access, diagnostics, or publication changes.

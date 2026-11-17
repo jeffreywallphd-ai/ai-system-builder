@@ -16,6 +16,7 @@ import type {
 } from "../../routes/thinClientPages";
 import appLogoSrc from "../../../../../modules/ui/shared/assets/branding/logo.svg";
 import { WorkspaceSwitcher } from "../../features/workspace";
+import { useWindowTakeover } from "../../../../../modules/ui/shared/takeover/WindowTakeoverContext";
 
 export interface AppShellProps {
   activePage?: ThinClientPageKey;
@@ -30,6 +31,11 @@ export function AppShell({
   pages,
   children,
 }: AppShellProps) {
+  const { controller, presentationAttached } = useWindowTakeover();
+  const navigate = (page: ThinClientPageKey) => {
+    const status = controller?.getSnapshot().status;
+    if (status !== "active" && status !== "activating") onNavigate(page);
+  };
   const { menuRef, expanded: isMenuExpanded } = useNavigationMenu();
   const { isSidebarCollapsed, toggleSidebar } = useSidebarCollapseState();
   const { isNavigationGroupExpanded, toggleNavigationGroup } =
@@ -67,7 +73,8 @@ export function AppShell({
       className="ui-shell__sidebar-item"
       type="button"
       aria-current={activePage === page.key ? "page" : undefined}
-      onClick={() => onNavigate(page.key)}
+      onClick={() => navigate(page.key)}
+      disabled={presentationAttached}
       title={isSidebarCollapsed ? page.label : undefined}
     >
       <ApplicationIcon name={thinClientPageIcon(page.key)} />
@@ -89,7 +96,8 @@ export function AppShell({
                 className="ui-shell__logo-button"
                 aria-label="Go to Home"
                 title="Home"
-                onClick={() => onNavigate("home")}
+                onClick={() => navigate("home")}
+                disabled={presentationAttached}
               >
                 <span className="ui-shell__logo-frame">
                   <img
@@ -103,7 +111,7 @@ export function AppShell({
               <h1 className="ui-shell__title">AI System Builder</h1>
             </div>
           </div>
-          <div className="ui-shell__header-center">
+          <div className="ui-shell__header-center" inert={presentationAttached || undefined}>
             <WorkspaceSwitcher variant="header" />
           </div>
           <div className="ui-shell__header-actions">
@@ -127,6 +135,7 @@ export function AppShell({
                       className="ui-shell__menu-item"
                       type="button"
                       role="menuitem"
+                      disabled={presentationAttached}
                       tabIndex={-1}
                       aria-current={
                         activePage === page.key ? "page" : undefined
@@ -135,7 +144,7 @@ export function AppShell({
                         event.currentTarget
                           .closest("details")
                           ?.removeAttribute("open");
-                        onNavigate(page.key);
+                        navigate(page.key);
                       }}
                     >
                       {page.label}
@@ -151,7 +160,8 @@ export function AppShell({
               aria-current={activePage === "settings" ? "page" : undefined}
               aria-label="Settings"
               title="Settings"
-              onClick={() => onNavigate("settings")}
+              onClick={() => navigate("settings")}
+              disabled={presentationAttached}
             >
               <ApplicationIcon name="settings" />
               <span className="ui-visually-hidden">Settings</span>

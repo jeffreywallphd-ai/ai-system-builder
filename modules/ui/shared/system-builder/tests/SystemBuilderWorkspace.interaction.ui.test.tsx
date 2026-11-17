@@ -27,6 +27,9 @@ import { SystemFormJourney } from "../SystemFormPreview";
 import { SystemManagementWorkspace } from "../SystemManagementWorkspace";
 import { SystemPublishedFormDialog } from "../SystemPublishedFormDialog";
 import type { SystemPublishedFormClient } from "../SystemPublishedFormClient";
+import { readUiControlAttempt, type UiControlRequestView } from "../../../../contracts/headless";
+import { WindowTakeoverControls, WindowTakeoverProvider, useWindowTakeover } from "../../takeover/WindowTakeoverControls";
+import { createWindowTakeoverController, type DraftHandoff } from "../../takeover/windowTakeoverController";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -330,7 +333,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
       instances: fixture.slice(0, 3), placements: initial.placements!.slice(0, 2),
     };
     let latest = initial;
-    const saveRevision = vi.fn(async (input: Parameters<SystemBuilderClient["saveRevision"]>[0]) => {
+    const saveRevision = vi.fn<SystemBuilderClient["saveRevision"]>(async (input) => {
       latest = { ...initial, revisionNumber: 2, composition: input.composition, instances: input.instances,
         placements: input.placements, bindings: input.bindings };
       return { ok: true as const, value: latest };
@@ -348,7 +351,32 @@ describe("SystemBuilderWorkspace UI preview", () => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
-    const mount = () => root!.render(<SystemBuilderWorkspace workspaceId="workspace-a" client={client} initialSystemId={String(record.systemId)} />);
+    const id = (i: number) => `e38b2781-e605-4de3-83e1-${String(i).padStart(12, "0")}`;
+    const target = readUiControlAttempt({ hostIncarnationId: id(1), windowId: id(2), uiIncarnationId: id(3),
+      workspaceId: "workspace-a", requestId: id(4), attemptId: id(5) })!;
+    const request: UiControlRequestView = { target, agentSessionId: id(6), taskId: id(7), status: "pending", expiresAt: 5000 };
+    const heldAccept = vi.fn(() => new Promise<undefined>(() => {}));
+    let readDraft: (() => DraftHandoff) | undefined;
+    const controller = createWindowTakeoverController({
+      now: () => 0,
+      readDraft: () => readDraft?.() ?? { status: "busy" },
+      port: { accept: heldAccept, ready: vi.fn(async () => undefined), revoke: vi.fn(async () => true) },
+    });
+    const control = { controller, registerDraft(read: () => DraftHandoff) {
+      readDraft = read;
+      return () => { if (readDraft === read) readDraft = undefined; };
+    } };
+    function FixtureComposer() {
+      const { presentationAttached } = useWindowTakeover();
+      return <SystemBuilderWorkspace workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} takeoverReadOnly={presentationAttached} />;
+    }
+    const mount = () => root!.render(
+      <WindowTakeoverProvider control={control}>
+        <WindowTakeoverControls />
+        <FixtureComposer />
+      </WindowTakeoverProvider>,
+    );
     await act(async () => mount());
     const find = <T extends HTMLElement>(label: string, selector: string) => {
       const group = [...container!.querySelectorAll("label")].find((element) =>
@@ -486,7 +514,46 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(document.activeElement).toBe(button(removalDialog(), "Cancel"));
     await act(async () => button(removalDialog(), "Cancel").click());
     expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    let loseSave!: (result: Awaited<ReturnType<SystemBuilderClient["saveRevision"]>>) => void;
+    saveRevision.mockImplementationOnce(() => new Promise(resolve => { loseSave = resolve; }));
+    await act(async () => controller.update(request));
+    const clickConsent = (name: string) => act(async () =>
+      button(document.querySelector(".ui-window-takeover-consent-overlay [role='dialog']")!, name).click());
+    await clickConsent("Accept automation takeover");
+    expect(saveRevision).not.toHaveBeenCalled();
     await removeField("Fast path");
+    await clickConsent("Save changes and accept takeover");
+    expect(controller.getSnapshot().status).toBe("activating");
+    expect(removalDialog().querySelector(".ui-modal-body")?.hasAttribute("inert")).toBe(true);
+    expect(button(container!, "Discard changes").disabled).toBe(true);
+    await act(async () => button(removalDialog(), "Remove field").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    await act(async () => loseSave(systemBuilderFailure("system-builder.stale-record-revision", "This system changed.")));
+    expect(controller.getSnapshot().status).toBe("manual");
+    expect(heldAccept).not.toHaveBeenCalled();
+    expect(saveRevision).toHaveBeenCalledWith(expect.objectContaining({ expectedRecordRevision: record.revision }));
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    expect(button(container!, "Discard changes").disabled).toBe(false);
+    saveRevision.mockClear();
+    saveRevision.mockImplementationOnce(async input => {
+      latest = { ...initial, revisionId: normalizeSystemBuilderRevisionId("portal.r2"), revisionNumber: 2,
+        composition: input.composition, instances: input.instances, bindings: input.bindings, placements: input.placements,
+        validationIssues: [{ severity: "error", category: "composition", message: "Fixture diagnostic" }] };
+      return systemBuilderSuccess(latest);
+    });
+    await act(async () => controller.update({ ...request, target: { ...target, requestId: id(9), attemptId: id(10) } }));
+    await clickConsent("Accept automation takeover");
+    await clickConsent("Save changes and accept takeover");
+    expect(controller.getSnapshot().status).toBe("manual");
+    expect(heldAccept).not.toHaveBeenCalled();
+    expect(container!.textContent).toContain("Fixture diagnostic");
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    await click("Discard changes");
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    expect(saveRevision).toHaveBeenCalledTimes(1);
+    saveRevision.mockClear();
+    if (!removalDialog()) await removeField("Fast path");
     await act(async () => button(removalDialog(), "Remove field").click());
     expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).toBeNull();
     expect(document.activeElement).toBe(tab("First step"));
@@ -2207,8 +2274,19 @@ describe("SystemBuilderWorkspace UI preview", () => {
         ]).get(String(input.definitionRef.id))!,
       }),
     );
+    let listRecord: SystemBuilderRecord | undefined = record;
+    const outstandingReads = new Map<string, (value: { ok: true; value: SystemBuilderRevision }) => void>();
+    let deferNewer = false;
+    const readRevision = vi.fn(async ({ revisionId }: Parameters<SystemBuilderClient["readRevision"]>[0]) => deferNewer && revisionId
+      ? new Promise<{ ok: true; value: SystemBuilderRevision }>((resolve) => { outstandingReads.set(revisionId, resolve); })
+      : ({
+      ok: true as const,
+      value: revisionId === "system-revision-3" ? { ...revision, revisionNumber: 3, revisionId: normalizeSystemBuilderRevisionId("system-revision-3") } : revision,
+    }));
     const client = {
       ...clientFor(record, revision),
+      list: async () => ({ ok: true as const, value: listRecord ? [listRecord] : [] }),
+      readRevision,
       saveRevision,
       listComposerAssets,
       readComposerAsset,
@@ -2378,6 +2456,156 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(
       JSON.stringify(saveRevision.mock.calls[0]?.[0].instances),
     ).not.toMatch(/sampleUserMessage|sampleAssistantMessage|previewValue/);
+
+    listRecord = { ...record, revision: 3, currentRevisionId: normalizeSystemBuilderRevisionId("system-revision-3") };
+    await act(async () => {
+      await button(container!, "Properties").click();
+      await button(container!, "Layers").click();
+    });
+    const latestShell = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'))
+      .find((entry) => entry.textContent?.includes("Standard shell"));
+    expect(latestShell).toBeDefined();
+    await act(async () => latestShell!.click());
+    await act(async () => button(container!, "Properties").click());
+    const nextTitle = await vi.waitFor(() => {
+      const input = container!.querySelector<HTMLInputElement>("#title");
+      expect(input).not.toBeNull();
+      return input!;
+    });
+    await act(async () => setInputValue(nextTitle, "Keep my local title"));
+    saveRevision.mockImplementationOnce(async () => ({
+      ok: false, error: { code: "system-builder.stale-record-revision", message: "This system changed. Reopen it before saving." },
+    }) as never);
+    await act(async () => {
+      root!.render(<SystemBuilderWorkspace workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} activeSystemsRevision={1} />);
+    });
+    await vi.waitFor(() => expect(container!.textContent).toContain("A newer saved version exists."));
+    await act(async () => button(container!, "Save and validate revision").click());
+    await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(2));
+    expect(saveRevision.mock.calls[1]?.[0].expectedRecordRevision).toBe(2);
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Keep my local title");
+    // Undo reaches the saved checkpoint. The already-observed external change
+    // can then replace the clean graph and its obsolete redo history.
+    await act(async () => button(container!, "Undo").click());
+    await vi.waitFor(() => expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Portal"));
+    await act(async () => setInputValue(container.querySelector<HTMLInputElement>("#title")!, "Local edits to discard"));
+    await act(async () => button(container!, "Discard changes").click());
+    await vi.waitFor(() => expect(readRevision).toHaveBeenLastCalledWith({
+      workspaceId: "workspace-a", systemId: String(record.systemId), revisionId: "system-revision-3",
+    }));
+
+    await act(async () => button(container!, "Layers").click());
+    const refreshedShell = [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]')]
+      .find((item) => item.textContent?.includes("Standard shell"));
+    expect(refreshedShell).toBeDefined();
+    await act(async () => refreshedShell!.click());
+    await act(async () => button(container!, "Properties").click());
+    const finalTitle = await vi.waitFor(() => {
+      const field = container!.querySelector<HTMLInputElement>("#title");
+      expect(field).not.toBeNull();
+      return field!;
+    });
+    await act(async () => setInputValue(finalTitle, "Keep after archive"));
+    listRecord = undefined;
+    await act(async () => {
+      root!.render(<SystemBuilderWorkspace workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} activeSystemsRevision={2} />);
+    });
+    await vi.waitFor(() => expect(container!.textContent).toContain("This saved system is no longer in the list."));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Keep after archive");
+    await act(async () => button(container!, "Discard changes").click());
+    expect(container.querySelector(".system-composer__workspace")).toBeNull();
+
+    // Reopen the base, then hold two different clean refreshes and return them
+    // out of order. Neither refresh may change the selected asset or focus.
+    listRecord = record;
+    const open = (activeSystemsRevision: number, managedSavedRefresh?: { isCurrent: () => boolean }) => act(async () => {
+      root!.render(<SystemBuilderWorkspace key="new-composer" workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} activeSystemsRevision={activeSystemsRevision}
+        managedSavedRefresh={managedSavedRefresh} />);
+    });
+    await open(3);
+    await vi.waitFor(() => expect(container!.querySelector(".system-composer__workspace")).not.toBeNull());
+    await act(async () => button(container!, "Layers").click());
+    const selectedShell = [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]')]
+      .find((item) => item.textContent?.includes("Standard shell"));
+    expect(selectedShell).toBeDefined();
+    await act(async () => selectedShell!.click());
+    await act(async () => button(container!, "Properties").click());
+    const focusedTitle = await vi.waitFor(() => {
+      const field = container!.querySelector<HTMLInputElement>("#title");
+      expect(field).not.toBeNull();
+      return field!;
+    });
+    focusedTitle.focus();
+    deferNewer = true;
+    const changed = (number: number, title: string): SystemBuilderRevision => ({
+      ...revision, revisionNumber: number, revisionId: normalizeSystemBuilderRevisionId(`system-revision-${number}`),
+      instances: revision.instances.map((item) => item.instanceId === shellInstance.instanceId
+        ? { ...item, selectedConfiguration: { ...item.selectedConfiguration, title } } : item),
+    });
+    const third = changed(3, "Older saved title");
+    const fourth = changed(4, "Newer saved title");
+    listRecord = { ...record, revision: 3, currentRevisionId: third.revisionId };
+    await open(4);
+    await vi.waitFor(() => expect(outstandingReads.has(third.revisionId)).toBe(true));
+    listRecord = { ...record, revision: 4, currentRevisionId: fourth.revisionId };
+    await open(5);
+    await vi.waitFor(() => expect(outstandingReads.has(fourth.revisionId)).toBe(true));
+    await act(async () => outstandingReads.get(fourth.revisionId)!({ ok: true, value: fourth }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Newer saved title");
+    expect(document.activeElement).toBe(focusedTitle);
+    await act(async () => outstandingReads.get(third.revisionId)!({ ok: true, value: third }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Newer saved title");
+
+    const fifth = changed(5, "External title");
+    listRecord = { ...record, revision: 5, currentRevisionId: fifth.revisionId };
+    await open(6);
+    await vi.waitFor(() => expect(outstandingReads.has(fifth.revisionId)).toBe(true));
+    await act(async () => setInputValue(focusedTitle, "Unsaved while waiting"));
+    await act(async () => outstandingReads.get(fifth.revisionId)!({ ok: true, value: fifth }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Unsaved while waiting");
+    expect(container.textContent).toContain("A newer saved version exists.");
+    outstandingReads.delete(fifth.revisionId);
+    await act(async () => button(container!, "Undo").click());
+    await vi.waitFor(() => expect(outstandingReads.has(fifth.revisionId)).toBe(true));
+    await act(async () => outstandingReads.get(fifth.revisionId)!({ ok: true, value: fifth }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("External title");
+
+    let connected = true;
+    const sixth = changed(6, "Retired connection title");
+    listRecord = { ...record, revision: 6, currentRevisionId: sixth.revisionId };
+    await open(6, { isCurrent: () => connected });
+    await vi.waitFor(() => expect(outstandingReads.has(sixth.revisionId)).toBe(true));
+    connected = false;
+    await act(async () => outstandingReads.get(sixth.revisionId)!({ ok: true, value: sixth }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("External title");
+
+    let finishList!: (value: Awaited<ReturnType<SystemBuilderClient["list"]>>) => void;
+    const heldList = new Promise<Awaited<ReturnType<SystemBuilderClient["list"]>>>((resolve) => { finishList = resolve; });
+    let started = false;
+    const originalList = client.list;
+    client.list = () => { started = true; return heldList; };
+    let visible = true;
+    try {
+      await open(6, { isCurrent: () => visible });
+      await vi.waitFor(() => expect(started).toBe(true));
+      visible = false;
+      await act(async () => finishList({ ok: true, value: [] }));
+      expect(container!.textContent).not.toContain("The open view is still here.");
+    } finally { client.list = originalList; }
+
+    const view = container.querySelector(".system-composer__workspace");
+    const focusedField = container.querySelector<HTMLInputElement>("#title")!;
+    focusedField.focus();
+    listRecord = undefined;
+    await open(6, { isCurrent: () => true });
+    await vi.waitFor(() => expect(container!.textContent).toContain("The open view is still here."));
+    expect(container.querySelector(".system-composer__workspace")).toBe(view);
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("External title");
+    expect(document.activeElement).toBe(focusedField);
+    expect(button(container, "Edit system").disabled).toBe(true);
   });
 });
 

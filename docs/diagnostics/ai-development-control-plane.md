@@ -8,6 +8,15 @@ Source/qualification mismatches produce a description-update diagnostic and an
 agent action, never a human blocker or a raw technical fallback. Keep original
 definitions, results, scope, human approval controls and historical evidence.
 
+When the primary file reaches its support-description limit, add new support
+copy to `docs/operations/roadmap-user-support-descriptions.json`. Use
+`roadmap-user-support-descriptions-v1` as the schema version and a `support`
+list with the same source hashes and wording rules. Each file can hold up to
+1 MiB and 1,000 support descriptions. Keep each source hash and kind unique
+across the files. A duplicate in the companion keeps the primary entry and
+raises a description diagnostic. The review response still has a separate
+2 MiB limit. Verify the protected user projection before publication.
+
 For user-directed superseded-proposal cleanup, retain exact history, map every
 former criterion to its real successor, freeze old execution with the existing
 blocker event and use only the registered bounded retirement manifest. Do not
@@ -132,6 +141,147 @@ The plan shows changed paths, per-path coverage, selected/deferred checks and
 digests. Every acceptance criterion references registered check IDs. The current
 catalog includes documentation, agent-support, control-plane, roadmap,
 architecture, source-owned focused tests, dependency security and evaluation.
+The managed saved-state index migration selects the exact PostgreSQL migration
+parity tests. Run the isolated live PostgreSQL checks for index behavior,
+workspace isolation and the active summary cap.
+The managed saved-state replay check runs the exact API, passive audit,
+repository, and PostgreSQL tests for the scoped snapshot and replay routes.
+
+For the controlled two-worker replay check, set `MANAGED_REFERENCE_DATABASE`
+to the reference for the existing isolated, pinned PostgreSQL fixture. Run
+`node --import tsx dev-tools/scripts/qualification/visual-composer/managed-headless-delivery.ts`
+from the repository. It opens two temporary loopback HTTPS servers, saves
+synthetic systems, interrupts an owned subscriber process and verifies replay
+and resync. Its report contains bounded timings and outcomes. Stop the
+disposable database with the same fixture operator after the check. Built
+browser presentation and production ingress are separate qualifications.
+
+The managed agent qualification uses the same disposable PostgreSQL
+reference. Run
+`node --import tsx dev-tools/scripts/qualification/visual-composer/managed-headless-agent.ts`
+with the existing `MANAGED_REFERENCE_DATABASE` fixture input. It drives the
+official stdio client through verified HTTPS and signed synthetic OIDC
+credentials. It verifies distinct browser and agent credentials, then
+creates, reads and retries the same saved system. The browser's authorized
+feed observes one committed change. The test keeps result facts without
+storing the request payload or credentials.
+
+The managed browser consent qualification uses the built thin client, local
+Chrome, an official stdio client and the fixture's HTTPS, OIDC and PostgreSQL
+server. Run `npm run build:thin-client` and use the existing isolated
+PostgreSQL fixture. Set its `MANAGED_REFERENCE_DATABASE` reference before
+running
+`node --import tsx dev-tools/scripts/qualification/visual-composer/managed-headless-browser-consent.ts`.
+Retire the database with the same fixture operator. The default journey records
+bounded observations for request, dialog, consent, revoke and reload. Set
+`MANAGED_HEADLESS_PRESENTATION_TEST=1` to run the extended journey and save its
+separate report. That journey checks saved work appears through the real browser,
+presented metadata is acknowledged exactly once, context and renewal use the
+active lease, and revoke preserves subsequent authoring. Full timing, dirty-draft,
+background and cross-host qualification have separate evidence requirements.
+Add `MANAGED_HEADLESS_BROWSER_MEASURE=1` to collect 100 samples with the
+test document visible in headless Chrome. Saved-state timing starts before
+the MCP request to give an upper bound on time after commit. The report
+also records the separate MCP-reply-to-visible interval. The test respects
+the existing revoke retention window and applies targets to unrounded timings.
+Collect timing in a separate fixture invocation so other journeys do not
+share the tab's retained revoke records. Use the separate behavior tests
+for hidden tabs and live queue depth. Local timing does not cover a
+production network.
+
+Set `MANAGED_HEADLESS_BROWSER_ISOLATION=1` with the extended journey to test
+two real tabs without Playwright's background-throttling overrides. The test
+holds one presentation reply on the exact originating tab. It checks the queue
+limit, retry and conflict behavior, revoke, and saved state after the tab is
+visible again. When the late reply arrives, the current focus and route must
+stay in place and no presentation may appear. This reference fixture uses
+synthetic records. Production network latency has a separate qualification.
+
+Set `MANAGED_HEADLESS_BROWSER_RECONNECT=1` with the extended journey to
+interrupt the live saved-state stream in the test browser. The test makes
+one saved change before allowing replay. It verifies the same cursor on
+replay, the latest revision in the Manage table, and a new stream that
+uses the newer cursor. Both the visible result and the reopened stream
+must arrive within five seconds of the interruption.
+
+Set `MANAGED_HEADLESS_BROWSER_DRAFT=1` with the extended journey to check how
+Chrome handles a saved change while a user edits a system. The test uses the
+Canvas and Notification Center. It checks that the user keeps their draft,
+receives a conflict on save, and cannot overwrite the newer saved version.
+It also tries saving from the takeover request. A stale draft must return
+control to the user, preserve the unsaved value, and send no grant or
+readiness request.
+
+Set `MANAGED_HEADLESS_BROWSER_LOST_REPLY=1` with the extended journey to
+drop one committed tool reply before the test client receives it. Chrome
+must show the saved system. A retry with the original key must return that
+same system, and the authorized change feed must contain one new event.
+
+Set `MANAGED_HEADLESS_BROWSER_IN_FLIGHT_EDIT=1` with the extended journey to
+exercise a save already in progress. The fixture uses the test server's
+authorization audit to confirm admission. Chrome then revokes control and
+changes workspaces before the authorized change feed shows a new commit.
+The original workspace must receive one saved revision and the other
+workspace must stay separate. Returning to the original workspace must
+show the saved field without bringing back the takeover panel.
+
+Set `MANAGED_HEADLESS_BROWSER_REVERSE_REFETCH=1` with the extended journey to
+test delayed saved-system refresh. Chrome holds one real response while a
+second edit reaches PostgreSQL and appears in the Manage table. The test
+then releases and reads the older response. The table must keep the newer
+value, and the takeover panel must stay closed.
+
+Set `MANAGED_HEADLESS_BROWSER_MEMBERSHIP_LOSS=1` with the extended journey to
+test membership changes. The disposable PostgreSQL fixture suspends only its
+synthetic account after Chrome accepts takeover and displays a saved system.
+The browser must release takeover. The saved-state feed, the old request
+result, and a new write must become unavailable. After the fixture restores
+the account, the original save must remain and the old lease must stay ended.
+
+Set `MANAGED_HEADLESS_BROWSER_HELD_CONTEXT=1` with the extended journey to
+hold an authorized context challenge from the local server. Chrome revokes
+takeover before reading the reply. The fixture checks that Chrome reads the
+released reply without sending context and that the old lease stays ended.
+
+Set `MANAGED_HEADLESS_BROWSER_LEASE_RACES=1` with the extended journey to
+hold a real readiness reply through Revoke and a fresh acceptance. The
+browser still has to return fresh context for the new lease after it reads
+the old reply. The same option hides a Chrome
+tab and measures the timer slowdown. It drops only the test tab's
+retirement messages. The server must end the exact old lease within its
+existing deadline, and Chrome must use a fresh registration when visible.
+
+Run `MANAGED_HEADLESS_BROWSER_ROLLBACK=1` as a separate Chrome presentation
+case. The disposable server restarts at the same TLS origin with its
+managed headless routes disabled. Check that Chrome returns to manual
+control, its other editor keeps an unsaved field, and the ordinary secured
+API and saved system remain available. Check that the audit keeps its
+original records. Restore the options in this fixture only to verify the
+saved receipt and confirm that the old lease stays ended.
+
+Run `MANAGED_HEADLESS_BROWSER_INDEPENDENT_WINDOWS=1` as a focused Chrome
+presentation case. Two separate Chrome processes accept takeover on the same
+test server. Verify both leases before Revoke. The first must end at the host
+before its watchdog deadline while the second continues to show saved work.
+A separate save must commit once even when the
+retired window denies its presentation. The same request key returns the same
+saved result.
+
+The packaged Desktop test measures warm presentation and revoke, including
+when an ordinary dialog is open or a page is loading. The native hide test
+restores the browser's timer policy in the owned test window, measures the
+timer slowdown, and checks that the old lease is retired. After shutdown,
+the test matches each of 32 admitted command IDs and sequences to its
+expected SQLite audit events. The report contains only counts and timings.
+
+It leaves broader source changes and aggregate completion tests to their own
+gates. The PostgreSQL integration tests need an isolated database URL to run.
+The related managed saved-state browser check runs the exact observer and model
+client regression tests. The companion `managed-saved-state-browser-ui`
+check holds list and revision reads and tests open Composer retention when
+another client archives a system. The scope covers the Systems page refresh connection,
+duplicate events, disconnect recovery and retired views. Unrelated thin-client
+changes still need their own checks.
 Unknown impact needs a bounded catalog rule and regression test; do not replace
 it with arbitrary shell text or an early aggregate run.
 The `thin-image-form-ui` and `desktop-image-form-ui` checks each run the exact
@@ -404,6 +554,9 @@ review round. New verification cannot erase an open finding. Completed work
 requires a successor task for corrections.
 
 ## Checkpoint reviewed work
+
+Local controller publication retries the same atomic replacement briefly after
+a Windows sharing error. Persistent denial still requires normal recovery.
 
 Use the roadmap skill's scoped commit procedure for coherent completed, tested
 and reviewed chunks. A separately reviewed local component can checkpoint while

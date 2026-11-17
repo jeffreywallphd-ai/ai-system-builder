@@ -46,11 +46,57 @@ vi.mock("../features/workspace", () => ({
 import { AppShell } from "../components/layout/AppShell";
 import { thinClientPageDefinitions } from "../routes/thinClientPages";
 import { NotificationProvider } from "../../../../modules/ui/shared/notifications";
+import { WindowTakeoverProvider } from "../../../../modules/ui/shared/takeover/WindowTakeoverContext";
+import { createWindowTakeoverController } from "../../../../modules/ui/shared/takeover/windowTakeoverController";
+import { readUiControlLeaseTarget } from "../../../../modules/contracts/headless";
 
 (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?:boolean}).IS_REACT_ACT_ENVIRONMENT=true;
 const mounted: {root:Root;host:HTMLDivElement}[]=[];
 afterEach(()=>{for(const {root,host} of mounted.splice(0)){act(()=>root.unmount());host.remove();}vi.restoreAllMocks();});
 const key=(element:HTMLElement,value:string)=>act(()=>{element.dispatchEvent(new KeyboardEvent("keydown",{key:value,bubbles:true,cancelable:true}));});
+
+it("enables browser navigation again before the exact revoke request returns", async () => {
+  const id = (n:number) => `00000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
+  const lease = readUiControlLeaseTarget({hostIncarnationId:id(1), windowId:id(2), uiIncarnationId:id(3),
+    workspaceId:"workspace.fixture", requestId:id(4), attemptId:id(5), leaseId:id(6), generation:1})!;
+  const {leaseId: _leaseId, generation: _generation, ...attempt} = lease;
+  const held = Promise.withResolvers<boolean>();
+  const revoke = vi.fn(() => held.promise);
+  const controller = createWindowTakeoverController({now:() => performance.now(), readDraft:() => ({status:"clean"}),
+    port:{accept:async () => ({target:lease, remainingMs:10_000}),
+      ready:async () => ({target:lease, remainingMs:10_000}), revoke}});
+  const onNavigate = vi.fn();
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  mounted.push({root,host});
+  try {
+    await act(async () => {root.render(<NotificationProvider><WindowTakeoverProvider
+      control={{controller, registerDraft:() => () => {}}}>
+      <AppShell activePage="systems" pages={thinClientPageDefinitions} onNavigate={onNavigate}>Content</AppShell>
+    </WindowTakeoverProvider></NotificationProvider>);});
+    const settings = host.querySelector<HTMLButtonElement>('.ui-shell__settings-button')!;
+    expect(settings.disabled).toBe(false);
+    await act(async () => {
+      controller.update({target:attempt,status:"pending",agentSessionId:id(7),taskId:id(8),expiresAt:50_000});
+      controller.accept();
+    });
+    expect(settings.disabled).toBe(true);
+    expect(host.querySelector(".ui-shell__header-center")?.hasAttribute("inert")).toBe(true);
+    act(() => {settings.click();});
+    expect(onNavigate).not.toHaveBeenCalled();
+    act(() => controller.revoke());
+    expect(revoke).toHaveBeenCalledWith(lease);
+    expect(settings.disabled).toBe(false);
+    expect(host.querySelector(".ui-shell__header-center")?.hasAttribute("inert")).toBe(false);
+    act(() => {settings.click();});
+    expect(onNavigate).toHaveBeenCalledWith("settings");
+  } finally {
+    held.resolve(true);
+    act(() => controller.close());
+  }
+});
+
 function mountedMenu() {
   const onNavigate=vi.fn();
   const host=document.createElement("div");document.body.append(host);const root=createRoot(host);mounted.push({root,host});

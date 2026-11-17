@@ -233,11 +233,13 @@ export const createConversationWorkflowHandler = (
               sessionId:
                 identifier(session, "conversationSessionId", "id") ??
                 "unknown-session",
-              status: stringValue(session.status) ?? "unknown",
+              status: stringValue(session.sessionStatus) ?? stringValue(session.status) ?? "unknown",
               approval:
                 stringValue(session.approvalStatus) ??
                 stringValue(session.executionApprovalStatus) ??
                 "not-approved",
+              // Internal readiness marker. It is not a visible table column.
+              maySubmitMessage: asRecord(session.actions).maySubmitMessage === true,
             },
           })),
           emptyMessage: "No test conversations have been started.",

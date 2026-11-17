@@ -44,6 +44,7 @@ export function createPythonConversationalTextGenerationInvocationAdapter(
     async invokeConversationTurn(
       request,
     ): Promise<ConversationTurnInvocationOutcome> {
+      const { dispatchFence } = request;
       if (
         request.runtime.runtimeId !== "python-sidecar" ||
         request.runtime.capabilityKind !== "text-generation"
@@ -71,6 +72,8 @@ export function createPythonConversationalTextGenerationInvocationAdapter(
           resolution.record,
         );
         if (!runtimeModel) return { status: "blocked" };
+        if (dispatchFence && (!await dispatchFence.check() || !dispatchFence.isCurrent()))
+          return { status: "blocked" };
         await runtimePort.startTask({
           requestId,
           taskType: "conversation-text-generation",

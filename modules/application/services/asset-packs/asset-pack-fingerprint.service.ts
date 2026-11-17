@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type { AssetPackAssetEntry, AssetPackManifest } from "../../../contracts/asset";
+import type { AssetPackAssetEntry, AssetPackManifest, AssetValidationIssue } from "../../../contracts/asset";
 import { captureAssetPackFingerprintInput } from "./asset-pack-fingerprint-input";
 import { validateAssetPackAssetEntry, validateAssetPackManifest } from "./asset-pack-validation.service";
 
@@ -13,25 +13,77 @@ export type AssetPackFingerprintVerification =
   | { readonly status: "legacy-revalidation-required" }
   | { readonly status: "invalid" | "mismatch" };
 
+export interface AssetPackSemanticIdentityIssue {
+  readonly field: "manifest" | "entry-fingerprint" | "manifest-checksum";
+  readonly reason: "invalid" | "mismatch" | "legacy-revalidation-required";
+  readonly entryIndex?: number;
+}
+
+type AssessedManifest = {
+  readonly manifest: AssetPackManifest;
+  readonly manifestFingerprint: string;
+  readonly validationIssues: readonly AssetValidationIssue[];
+};
+
+export type AssetPackSemanticImportAssessment =
+  | { readonly status: "invalid"; readonly issue: AssetPackSemanticIdentityIssue }
+  | (AssessedManifest & { readonly status: "identity-invalid"; readonly issue: AssetPackSemanticIdentityIssue })
+  | (AssessedManifest & { readonly status: "valid"; readonly manifestChecksum: "absent" | "verified" });
+
+/** Import admission only: never rewrites claims or inherits approval/trust. */
+export function assessAssetPackSemanticIdentityForImport(input: unknown): AssetPackSemanticImportAssessment {
+  try {
+    // Complete capture/validation precedes even legacy-claim classification.
+    const { manifest, validationIssues } = captureManifest(input);
+    const manifestFingerprint = fingerprintManifest(manifest);
+    const assessed = { manifest, manifestFingerprint, validationIssues };
+    for (const [entryIndex, entry] of manifest.assets.entries()) {
+      const result = verify(entry.fingerprint, () => hash("entry", semanticEntry(entry)));
+      if (result.status !== "verified") {
+        return { ...assessed, status: "identity-invalid", issue: { field: "entry-fingerprint", reason: result.status, entryIndex } };
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(manifest, "checksum")) {
+      const result = verify(manifest.checksum, () => manifestFingerprint);
+      if (result.status !== "verified") {
+        return { ...assessed, status: "identity-invalid", issue: { field: "manifest-checksum", reason: result.status } };
+      }
+      return { ...assessed, status: "valid", manifestChecksum: "verified" };
+    }
+    return { ...assessed, status: "valid", manifestChecksum: "absent" };
+  } catch {
+    return { status: "invalid", issue: { field: "manifest", reason: "invalid" } };
+  }
+}
+
 /** Semantic identity only. Never grants trust, import approval or package-byte integrity. */
 export function createAssetPackManifestFingerprint(manifest: AssetPackManifest): string {
   try {
-    const captured = captureAssetPackFingerprintInput(manifest) as unknown as AssetPackManifest;
-    optionalList(captured.tags, true);
-    optionalList(captured.categories, true);
-    optionalList(captured.dependencies);
-    optionalList(captured.overrideRules);
-    if (validateAssetPackManifest(captured).status === "invalid") throw new Error(INVALID);
-    const { checksum: _checksum, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = captured;
-    return hash("manifest", {
-      ...rest,
-      assets: captured.assets.map(semanticEntry).sort(compare),
-      overrideRules: [...(captured.overrideRules ?? [])].sort(compare),
-      dependencies: [...(captured.dependencies ?? [])].sort(compare),
-      tags: [...(captured.tags ?? [])].sort(),
-      categories: [...(captured.categories ?? [])].sort(),
-    });
+    return fingerprintManifest(captureManifest(manifest).manifest);
   } catch { throw new Error(INVALID); }
+}
+
+function captureManifest(input: unknown) {
+  const manifest = captureAssetPackFingerprintInput(input) as unknown as AssetPackManifest;
+  optionalList(manifest.tags, true);
+  optionalList(manifest.categories, true);
+  optionalList(manifest.dependencies);
+  optionalList(manifest.overrideRules);
+  const validation = validateAssetPackManifest(manifest);
+  if (validation.status === "invalid") throw new Error(INVALID);
+  return { manifest, validationIssues: validation.issues };
+}
+
+function fingerprintManifest(manifest: AssetPackManifest): string {
+  const { checksum: _checksum, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = manifest;
+  return hash("manifest", {
+    ...rest,
+    assets: manifest.assets.map(semanticEntry).sort(compare),
+    overrideRules: [...(manifest.overrideRules ?? [])].sort(compare),
+    dependencies: [...(manifest.dependencies ?? [])].sort(compare),
+    tags: [...(manifest.tags ?? [])].sort(),
+    categories: [...(manifest.categories ?? [])].sort(),
+  });
 }
 
 export function createAssetPackEntryFingerprint(entry: AssetPackAssetEntry | Omit<AssetPackAssetEntry, "fingerprint">): string {

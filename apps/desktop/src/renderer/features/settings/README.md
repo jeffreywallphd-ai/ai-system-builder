@@ -28,6 +28,12 @@ fixed messages. Unknown exception text, credentials and native paths must not
 enter notifications or status text. Loading and saving retain their status
 announcements. Folder and model-default responses also retire with their view.
 
+In **Local chat clients**, **Recent chat tasks** shows saved status for up to ten
+turns started by a paired client in the selected workspace. The list refreshes
+while Settings is visible. You can also select **Refresh tasks**. Changing
+workspaces clears the old list. The panel shows the run ID and status without
+opening a conversation or moving focus.
+
 The fixed `settings-ui` contributor profile runs the panel, page, view-ownership
 and API tests with synthetic values. It starts no app or model and uses no real
 credential store or provider. Actual packaged restart and final cross-roadmap
@@ -43,6 +49,9 @@ this Desktop feature. See the shared field README and thin-client Settings READM
 for their separate boundaries.
 
 Python Runtime offers **Copy diagnostics** for its cached, normalized startup report.
+If the failed startup identifies an unsupported Python version, the panel shows
+how to install a supported interpreter, update a custom command if needed, and retry
+after reopening Desktop.
 Copy performs no status/control call, interpreter probe, setup, installation or
 provider request. It exports only closed startup/version/stage facts, excluding
 legacy logs, model inventory, paths and credentials. Fixed notification outcomes

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useWindowTakeover, WindowTakeoverControls } from "../../../../../../modules/ui/shared/takeover/WindowTakeoverControls";
 
 import {
   ApplicationIcon,
@@ -22,6 +23,7 @@ export interface AppShellProps {
   onNavigate: (nextPage: DesktopPageKey) => void;
   pages: readonly DesktopPageDefinition[];
   children: ReactNode;
+  takeoverWorkspaceLabel?: string;
 }
 
 export function AppShell({
@@ -29,7 +31,15 @@ export function AppShell({
   onNavigate,
   pages,
   children,
+  takeoverWorkspaceLabel,
 }: AppShellProps) {
+  const { controller, state } = useWindowTakeover();
+  const navigationDisabled = state.status === "active" || state.status === "activating";
+  const navigate = (page: DesktopPageKey) => {
+    const state = controller?.getSnapshot();
+    if (state?.status === "active" || state?.status === "activating") return;
+    onNavigate(page);
+  };
   const { menuRef, expanded: isMenuExpanded } = useNavigationMenu();
   const { isSidebarCollapsed, toggleSidebar } = useSidebarCollapseState();
   const { isNavigationGroupExpanded, toggleNavigationGroup } =
@@ -64,8 +74,9 @@ export function AppShell({
       key={page.key}
       className="ui-shell__sidebar-item"
       type="button"
+      disabled={navigationDisabled}
       aria-current={activePage === page.key ? "page" : undefined}
-      onClick={() => onNavigate(page.key)}
+      onClick={() => navigate(page.key)}
       title={isSidebarCollapsed ? page.label : undefined}
     >
       <ApplicationIcon name={desktopPageIcon(page.key)} />
@@ -84,10 +95,11 @@ export function AppShell({
             <div className="ui-shell__brand">
               <button
                 type="button"
+                disabled={navigationDisabled}
                 className="ui-shell__logo-button"
                 aria-label="Go to Home"
                 title="Home"
-                onClick={() => onNavigate("home")}
+                onClick={() => navigate("home")}
               >
                 <span className="ui-shell__logo-frame">
                   <img
@@ -101,7 +113,7 @@ export function AppShell({
               <h1 className="ui-shell__title">AI System Builder</h1>
             </div>
           </div>
-          <div className="ui-shell__header-center">
+          <div className="ui-shell__header-center" inert={navigationDisabled || undefined}>
             <WorkspaceSwitcher variant="header" />
           </div>
           <div className="ui-shell__header-actions">
@@ -125,6 +137,7 @@ export function AppShell({
                       className="ui-shell__menu-item"
                       type="button"
                       role="menuitem"
+                      disabled={navigationDisabled}
                       tabIndex={-1}
                       aria-current={
                         activePage === page.key ? "page" : undefined
@@ -133,7 +146,7 @@ export function AppShell({
                         event.currentTarget
                           .closest("details")
                           ?.removeAttribute("open");
-                        onNavigate(page.key);
+                        navigate(page.key);
                       }}
                     >
                       {page.label}
@@ -146,10 +159,11 @@ export function AppShell({
             <button
               className="ui-shell__settings-button"
               type="button"
+              disabled={navigationDisabled}
               aria-current={activePage === "settings" ? "page" : undefined}
               aria-label="Settings"
               title="Settings"
-              onClick={() => onNavigate("settings")}
+              onClick={() => navigate("settings")}
             >
               <ApplicationIcon name="settings" />
               <span className="ui-visually-hidden">Settings</span>
@@ -157,6 +171,7 @@ export function AppShell({
           </div>
         </div>
       </header>
+      <WindowTakeoverControls workspaceLabel={takeoverWorkspaceLabel} />
       <div className="ui-shell__body">
         <aside className="ui-shell__sidebar">
           <nav className="ui-shell__sidebar-nav" aria-label="Application areas">

@@ -6,7 +6,7 @@ import {
 } from "../../../../../../../modules/ui/shared";
 import type { DesktopArtifactBrowserClient } from "../../artifact-browser/api/desktopArtifactBrowserClient";
 import { useArtifactBrowserClient } from "../../artifact-browser/hooks/useArtifactBrowserClient";
-import { createDesktopIngestionTaskClient } from "../api/desktopIngestionTaskClient";
+import { createDesktopHeadlessFilePreparationClient, createDesktopIngestionTaskClient } from "../api/desktopIngestionTaskClient";
 
 export interface ArtifactIngestionFeatureProps {
   ingestionClient?: DesktopArtifactBrowserClient;
@@ -24,6 +24,7 @@ export function ArtifactIngestionFeature({
     [],
   );
   const sourceBrowserClient = useArtifactBrowserClient(ingestionClient);
+  const headlessFileClient = useMemo(createDesktopHeadlessFilePreparationClient, []);
 
   return (
     <section className="ui-panel ui-panel--elevated ui-panel--sectioned">
@@ -36,6 +37,7 @@ export function ArtifactIngestionFeature({
         <GuidedIngestionTaskPanel
           client={ingestionTaskClient}
           sourceBrowserClient={sourceBrowserClient}
+          headlessFileClient={headlessFileClient}
           workspaceId={workspaceId}
           onComplete={onUploadComplete}
         />

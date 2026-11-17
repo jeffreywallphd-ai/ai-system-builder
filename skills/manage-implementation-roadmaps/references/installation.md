@@ -89,6 +89,7 @@ no human action or unclassified legacy record prevents execution. Open agent wor
 permits checks but still prevents completion. Pending criteria prevent final closure.
 Keep exclusive unpredictable temporary publication and failure-cleanup tests;
 portable installation does not attest OS-native ACL/reparse race qualification.
+Include the bounded Windows replacement retry test in portable engine validation.
 Preserve canonical completion regression tests: final approval keeps `completed`,
 while its separate fact makes records immutable and removes the temporary report.
 The user-authorized legacy normalization event must retain exact prior history,

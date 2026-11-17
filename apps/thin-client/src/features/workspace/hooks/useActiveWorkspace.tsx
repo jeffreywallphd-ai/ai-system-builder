@@ -13,6 +13,7 @@ import {
   type ActiveWorkspaceSelection,
   type WorkspaceRecord,
 } from "../../../../../../modules/contracts/workspace";
+import {isOrganizationId, type OrganizationId} from "../../../../../../modules/contracts/organization";
 import { parseApiEnvelope } from "../../../security/apiErrorEnvelope";
 import { secureFetch } from "../../../security/secureFetch";
 
@@ -20,6 +21,7 @@ export type WorkspaceUiStatus = "active" | "archived" | "deleting";
 
 export interface WorkspaceUiRecord {
   readonly id: string;
+  readonly organizationId?: OrganizationId;
   readonly displayName: string;
   readonly status: WorkspaceUiStatus;
   readonly includeSystemFoundationAssets?: boolean;
@@ -234,6 +236,7 @@ export function useActiveWorkspace(): ActiveWorkspaceContextValue {
 export function mapWorkspaceRecord(record: WorkspaceRecord): WorkspaceUiRecord {
   return {
     id: record.workspaceId,
+    ...(isOrganizationId(record.organizationId) ? {organizationId: record.organizationId} : {}),
     displayName: record.displayName,
     status: record.status,
     includeSystemFoundationAssets:

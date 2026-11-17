@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createWorkspaceId } from '../../../../contracts/workspace';
+import { createOrganizationId } from '../../../../contracts/organization';
 import { normalizeConversationMessageId, normalizeConversationSessionId, normalizeConversationTurnId } from '../../../../contracts/conversations';
 import { createLocalConversationRepositoryAdapters } from '../index';
 

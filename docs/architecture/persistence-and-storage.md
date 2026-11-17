@@ -21,7 +21,12 @@ derived transaction stores are valid only in their owning async context and expi
 on exit; nested work uses that same supplied store. Root reentry from the callback
 denies explicitly. Transaction callbacks must not perform I/O through captured root
 repositories. PostgreSQL retains its separate-client Serializable transaction and
-bounded retry policy; live managed qualification remains separate.
+bounded retry policy. Its owned transactions keep platform policy reads and
+organization document operations on a single client and require a synchronous
+admission check before commit. Scoped operations pair each organization binding
+with its query. Transaction views expire when the callback ends. A missing
+commit acknowledgment or unconfirmed rollback retires that checked-out client.
+Live managed qualification remains separate.
 If SQLite rollback cannot be confirmed, all wrappers and queued operations on
 that connection deny further access. The original callback error is preserved;
 no automatic reset can admit work into the unfinished transaction.
@@ -98,6 +103,11 @@ server owns connection lifecycle, health, and adapter selection; credentials and
 connection material enter only through secret/environment configuration at the
 composition boundary. Application/domain modules must not receive connection
 strings, pools, transactions, SQL, or driver errors.
+
+The managed System Builder snapshot selects only saved identifiers, revision,
+status and workspace from a single organization/workspace key range. Schema v3
+indexes active records in that range. The SQL returns at most 129 rows so the
+application can identify a result over its 128-system cap before projection.
 
 Backup method, recovery objective, replication, failover, tenant layout, and
 retention vary by managed environment and require explicit operational decisions.

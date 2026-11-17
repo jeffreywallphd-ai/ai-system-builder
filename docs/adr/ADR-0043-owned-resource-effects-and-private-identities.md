@@ -86,8 +86,16 @@ isolation, malformed records, resource exhaustion and public non-disclosure at
 the layers that own each boundary. Migration and rollback retain stronger denials.
 
 Native filesystem/process evidence, named reference environments, installed-model
-hardware/quality measurements, private-provider/scale trials and representative
-participant/manual assistive-technology checks remain pending until actually run.
-Implemented local controls do not satisfy these checks. The original-supplier
-dependency gate remains failed while affected packages remain. Neither roadmap
-is complete and completion-conditioned main promotion remains pending.
+hardware/quality measurements and private-provider/scale qualification require
+actual reports for their declared technical profiles. Local component tests do
+not supply those results. User-directed participant/manual acceptance is handled
+offline and is not an agent roadmap closure gate; automated UI, keyboard and
+accessibility qualification remains required by the technical roadmaps.
+
+The original-supplier and zero-advisory policy is unchanged. Read actual executed
+dependency receipts for the recorded candidate rather than treating a historical
+failed audit as permanent: the completed runtime repair successor and
+tooling reconciliation retain their scoped evidence and all earlier failures.
+Roadmap completion and main promotion follow current governed JSON state, exact
+candidate-bound checks and independent review. Component completion never
+silently supplies native, model, parent or scanner closure.

@@ -29,7 +29,7 @@ const planId = typed(normalizeExecutionPlanId);
 const runtimeId = typed(normalizeExecutionRuntimeReferenceId);
 const provenance = record<ExecutionRunProvenanceEntry>({
   kind: passiveEnum(['execution-run-created','execution-run-approval-requested','execution-run-approved',
-    'execution-run-approval-invalidated','execution-run-start-requested','execution-run-attempt-created',
+    'execution-run-approval-invalidated','execution-run-start-requested','execution-run-delegated-conversation','execution-run-attempt-created',
     'execution-run-progress-recorded','execution-run-result-recorded','execution-run-succeeded',
     'execution-run-failed','execution-run-cancellation-requested','execution-run-cancelled',
     'execution-run-retry-requested','execution-run-marked-stale','execution-run-archived']),

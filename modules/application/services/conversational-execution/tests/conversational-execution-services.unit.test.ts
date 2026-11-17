@@ -456,6 +456,22 @@ test("orchestrator invokes exactly once in sequence with protected source contex
   });
 });
 
+test("the delegated turn fence withholds the prepared context when approval changes before dispatch", async () => {
+  const harness = createHarness();
+  let current = true;
+  const result = await harness.orchestrator.invoke({
+    ...validInput,
+    async beforeInvoke() {
+      assert.deepEqual(harness.calls, ["approval", "adapter", "guard", "context"]);
+      queueMicrotask(() => { current = false; });
+      return true;
+    },
+    isInvocationCurrent: () => current,
+  });
+  assert.deepEqual(result, { status: "approval-invalidated" });
+  assert.equal(harness.getInvocationRequest(), undefined);
+});
+
 test("orchestrator maps safe invocation outcomes without raw provider details", async () => {
   for (const outcome of [
     { status: "cancelled" },

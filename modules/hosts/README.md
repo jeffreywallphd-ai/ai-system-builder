@@ -7,6 +7,13 @@ Missing, malformed or failed worker observations stay unknown. Installed capacit
 guides an initial recommendation; live worker admission, readiness and offload
 ownership remain separate mandatory checks.
 
+Desktop and server bind Studio, packages and derived customizations to the existing
+workspace asset guard and their organization operation authorizer. Application
+entries require an exact persisted active workspace before source/artifact or
+lifecycle effects. Derived readiness also follows authorization. The server's
+request-scoped organization store remains mandatory; no local or legacy fallback
+is introduced when authority is absent.
+
 
 The shared workspace-summary composition uses repository-owned scalar/identity
 projections with explicit workspace and group authority. Both hosts bind it to
@@ -40,12 +47,18 @@ detail method as the scoped registry. Opening the host does not initialize that
 feature. An admitted batch forwards its original workspace/options once; reader
 failure propagates without replaying one full collection read per component.
 
+Both hosts compose the same typed atomic Studio/customization publisher. Desktop
+keeps definitions in the captured organization partition; server retains its
+existing platform definition partition and request-owned workflow records. The
+server transaction spans those existing partitions on one structured store. The
+placement is fixed by composition, never a request field. Workspace authorization
+and desktop sender admission remain separate required controls.
+
 Legacy authoring IPC and API now receive the authorized workspace read facade,
 while all seven mutation use cases receive the same persisted-workspace policy.
 Desktop rechecks current membership even after sender admission; server resource
 checks supplement its existing organization middleware. Raw internal repository
 references remain internal and confer no public legacy read bypass.
-
 
 Read-policy and repository failures settle as fixed unavailable API/IPC responses.
 Missing required fields retain validation failures. Focused tests cover every
@@ -57,12 +70,5 @@ Package composition passes the existing persisted workspace/current membership p
 Desktop Studio requests capture their contract values and check persisted workspace access before deferred feature construction. Shared Studio composition supplies the same policy to application use cases, which recheck access after readiness. Finite composition fixtures do not qualify physical app startup, process restart or durable storage.
 
 Desktop derived-customization IPC validates and captures the request before awaiting its deferred service getter. The getter receives only the registered operation key and normalized captured workspace; it maps fixed read/write scope and admits before feature construction. Missing or rejected feature loaders retain fixed unavailable envelopes. Application and catalog admission repeat after readiness. Finite handler fixtures do not qualify physical app startup or durable restart.
-
-Both hosts compose the same typed atomic Studio/customization publisher. Desktop
-keeps definitions in the captured organization partition; server retains its
-existing platform definition partition and request-owned workflow records. The
-server transaction spans those existing partitions on one structured store. The
-placement is fixed by composition, never a request field. Workspace authorization
-and desktop sender admission remain separate required controls.
 
 Shared Asset Library composition also supplies the two existing private Studio and derived published-reference readers from the workflow organization store. They add exact published definition visibility only; they create no implementation release, backing row, activation or execution authority.

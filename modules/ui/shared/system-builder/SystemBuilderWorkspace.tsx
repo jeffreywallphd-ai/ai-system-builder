@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useWindowTakeover } from "../takeover/WindowTakeoverControls";
+import type { DraftHandoff } from "../takeover/windowTakeoverController";
 import {
   normalizeAssetId,
   MAX_ASSET_PLACEMENTS_PER_COMPOSITION,
@@ -181,17 +183,28 @@ export interface SystemBuilderClient {
   ): Promise<SystemBuilderResult<SystemBuilderRevision>>;
 }
 
+/** Scope witness for a passive refresh and any subsequent saved-revision read. */
+export interface SavedSystemsRefresh {
+  readonly isCurrent: () => boolean;
+}
+
 export function SystemBuilderWorkspace({
   workspaceId,
   client,
   initialSystemId,
   activeSystemsRevision = 0,
+  managedSavedRefresh,
+  captureSavedRead,
   onBuildAndTest,
+  takeoverReadOnly = false,
 }: {
   readonly workspaceId: string;
   readonly client: SystemBuilderClient;
   readonly initialSystemId?: string;
   readonly activeSystemsRevision?: number;
+  readonly managedSavedRefresh?: SavedSystemsRefresh;
+  readonly captureSavedRead?: () => SavedSystemsRefresh;
+  readonly takeoverReadOnly?: boolean;
   readonly onBuildAndTest?: (input: {
     readonly system: SystemBuilderRecord;
     readonly revision: SystemBuilderRevision;
@@ -264,6 +277,12 @@ export function SystemBuilderWorkspace({
   const [historyError, setHistoryError] = useState<string>();
   const [loadAttempt, setLoadAttempt] = useState(0);
   const savedDraft = useRef<SystemComposerDraft | undefined>(undefined);
+  const draftBase = useRef<{
+    scope: object;
+    systemId: string;
+    recordRevision: number;
+    revisionId: SystemBuilderRevision["revisionId"];
+  } | undefined>(undefined);
   const appliedInitialSystem = useRef<string | undefined>(undefined);
   const scope = useMemo(() => ({ client, workspaceId }), [client, workspaceId]);
   const [formTarget, setFormTarget] = useState<{ scope: typeof scope; systemId: string; formId: string }>();
@@ -277,6 +296,10 @@ export function SystemBuilderWorkspace({
   const operation = useRef<object | undefined>(undefined);
   const [definitionReader] = useState(createSystemComposerDefinitionReader);
   const [dirty, setDirty] = useState(false);
+  const { controller, registerDraft } = useWindowTakeover();
+  const currentDraftHandoff = useRef<() => DraftHandoff>(() => ({ status: "busy" }));
+  const handoffSave = useRef<(() => Promise<boolean>) | undefined>(undefined);
+  const handoffSavedBase = useRef<typeof draftBase.current>(undefined);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const contextualNotice = Boolean(
@@ -286,9 +309,31 @@ export function SystemBuilderWorkspace({
   const [foundationUpgradeOpen, setFoundationUpgradeOpen] = useState(false);
   const [foundationUpgradePreview, setFoundationUpgradePreview] =
     useState<SystemBuilderFoundationUpgradePreview>();
-  const selectedSystem = systems.find(
+  const currentListRecord = systems.find(
     (system) => String(system.systemId) === selectedSystemId,
   );
+  const [detachedSystem, setDetachedSystem] = useState<SystemBuilderRecord>();
+  const [managedUnavailableId, setManagedUnavailableId] = useState<string>();
+  const unavailable = Boolean(selectedSystemId && selectedSystemId === managedUnavailableId && !currentListRecord);
+  const selectedSystem = currentListRecord ?? ((dirty || unavailable) && detachedSystem && detachedSystem.systemId === selectedSystemId &&
+    detachedSystem.targetWorkspaceId === workspaceId ? detachedSystem : undefined);
+  const savedElsewhere = Boolean(dirty && selectedSystemId && draftBase.current?.systemId === selectedSystemId &&
+    draftBase.current.scope === scope && (!currentListRecord ||
+      currentListRecord.revision !== draftBase.current.recordRevision));
+  const liveDraft = useRef<string | undefined>(undefined);
+  liveDraft.current = dirty ? selectedSystemId : undefined;
+  const openSavedSystem = useRef<string | undefined>(undefined);
+  openSavedSystem.current = revision?.systemId === selectedSystemId ? selectedSystemId : undefined;
+  const lastListRequest = useRef<{ scope: typeof scope; localRevision: number }>(undefined);
+  const acceptedListRead = useRef<SavedSystemsRefresh>(undefined);
+  const passiveInstallGeneration = useRef(0);
+  const deferPassiveUntilListChange = useRef<SystemBuilderRecord | undefined>(undefined);
+  const passiveLoadBlocked = useRef(false);
+  passiveLoadBlocked.current = dirty || busy || revisionLoading || foundationUpgradeOpen;
+  const selectedEditorState = useRef({ selectedInstanceId, formTarget });
+  selectedEditorState.current = { selectedInstanceId, formTarget };
+  const liveList = useRef(systems);
+  liveList.current = systems;
   const existingSystemIsLoaded = Boolean(
     selectedSystem && revision && String(revision.systemId) === selectedSystemId && String(revision.targetWorkspaceId) === workspaceId && existingSystemId === selectedSystemId,
   );
@@ -411,6 +456,10 @@ export function SystemBuilderWorkspace({
     operation.current = undefined;
     appliedInitialSystem.current = undefined;
     savedDraft.current = undefined;
+    draftBase.current = undefined;
+    setDetachedSystem(undefined);
+    setManagedUnavailableId(undefined);
+    acceptedListRead.current = undefined;
     setBusy(false);
     setRevisionError(undefined);
     setHistoryError(undefined);
@@ -455,11 +504,18 @@ export function SystemBuilderWorkspace({
 
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => client.list({ workspaceId, includeArchived: false }))
+    const previous = lastListRequest.current;
+    const passive = previous?.scope === scope && previous.localRevision === activeSystemsRevision
+      ? managedSavedRefresh : undefined;
+    lastListRequest.current = { scope, localRevision: activeSystemsRevision };
+    const connection = captureSavedRead?.();
+    const authorized = () => (!passive || passive.isCurrent()) && (!connection || connection.isCurrent());
+    const isCurrentList = () => active && currentScope.current === scope && authorized();
+    void Promise.resolve().then(() => isCurrentList() ? client.list({ workspaceId, includeArchived: false }) : undefined)
       .then((systemResult) => {
-        if (!active) return;
+        if (!isCurrentList() || !systemResult) return;
         if (!systemResult.ok) {
-          setError(systemResult.error.message);
+          if (!passive) setError(systemResult.error.message);
           return;
         }
         const activeSystems = systemResult.value.filter(
@@ -468,18 +524,32 @@ export function SystemBuilderWorkspace({
         const activeSystemIds = new Set(
           activeSystems.map((item) => String(item.systemId)),
         );
-        setSystems(activeSystems);
+        acceptedListRead.current = { isCurrent: authorized };
+        const openSystem = passive ? openSavedSystem.current : undefined;
+        setSystems((priorSystems) => {
+          if (!authorized()) return priorSystems;
+          const sameWorkspace = new Map(priorSystems
+            .filter((record) => record.targetWorkspaceId === workspaceId)
+            .map((record) => [record.systemId, record]));
+          return activeSystems.map((record) => {
+            const existing = sameWorkspace.get(record.systemId);
+            return existing && existing.revision > record.revision ? existing : record;
+          });
+        });
+        setManagedUnavailableId((prior) => authorized()
+          ? openSystem && !activeSystemIds.has(openSystem) ? openSystem : undefined : prior);
+        const keepSelection = liveDraft.current ?? openSystem;
         setExistingSystemId((current) =>
-          current && !activeSystemIds.has(current) ? "" : current,
+          authorized() && current && !activeSystemIds.has(current) && current !== keepSelection ? "" : current,
         );
         setSelectedSystemId((current) =>
-          current && !activeSystemIds.has(current) ? undefined : current,
+          authorized() && current && !activeSystemIds.has(current) && current !== keepSelection ? undefined : current,
         );
-      }).catch(() => { if (active) setError("Systems are unavailable. Retry opening the workspace."); });
+      }).catch(() => { if (isCurrentList() && !passive) setError("Systems are unavailable. Retry opening the workspace."); });
     return () => {
       active = false;
     };
-  }, [activeSystemsRevision, client, workspaceId]);
+  }, [activeSystemsRevision, captureSavedRead, client, managedSavedRefresh, scope, workspaceId]);
 
   const draftDefinitionKey = useMemo(() => [...new Set(instances.map(instance => `${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`))].sort().join("|"), [instances]);
   useEffect(() => {
@@ -521,6 +591,7 @@ export function SystemBuilderWorkspace({
 
   useEffect(() => {
     if (!selectedSystemId) {
+      draftBase.current = undefined;
       setRevisionLoading(false);
       setRevision(undefined);
       setInstances([]);
@@ -533,9 +604,15 @@ export function SystemBuilderWorkspace({
       setFoundationUpgradePreview(undefined);
       return;
     }
+    const loadedFrom = liveList.current.find((record) => record.systemId === selectedSystemId);
+    if (!loadedFrom || (loadedFrom.targetWorkspaceId && loadedFrom.targetWorkspaceId !== workspaceId)) return;
     let active = true;
+    const connection = captureSavedRead?.();
+    const ownsLoad = () => active && currentScope.current === scope && currentSystem.current === selectedSystemId;
+    const isCurrentLoad = () => ownsLoad() && (!connection || connection.isCurrent());
     setRevisionLoading(true);
     setRevision(undefined);
+    draftBase.current = undefined;
     setInstances([]);
     setBindings([]);
     setPlacements([]);
@@ -544,11 +621,14 @@ export function SystemBuilderWorkspace({
     setRevisionError(undefined);
     setHistoryError(undefined);
     const acceptRevision = (value: SystemBuilderRevision) => {
-      if (String(value.systemId) !== selectedSystemId || String(value.targetWorkspaceId) !== workspaceId) {
+      if (String(value.systemId) !== selectedSystemId || String(value.targetWorkspaceId) !== workspaceId ||
+          (loadedFrom.currentRevisionId && value.revisionId !== loadedFrom.currentRevisionId)) {
         setRevisionError("The loaded revision does not belong to this system. Retry loading it.");
         return;
       }
       setRevision(value);
+      draftBase.current = { scope, systemId: selectedSystemId, recordRevision: loadedFrom.revision, revisionId: value.revisionId };
+      setDetachedSystem(loadedFrom);
       const checkpoint = installSavedDraft(value);
       setSelectedLayoutDefinitionId(value.structure?.layoutPresetRef ? String(value.structure.layoutPresetRef.id) : undefined);
       setUndoDrafts([]);
@@ -564,25 +644,73 @@ export function SystemBuilderWorkspace({
       setDirty(false);
     };
     // Optional history never gates the usable current Canvas.
-    void Promise.resolve().then(() => client.readRevision({ workspaceId, systemId: selectedSystemId }))
+    void Promise.resolve().then(() => client.readRevision({ workspaceId, systemId: selectedSystemId,
+      ...(loadedFrom.currentRevisionId ? { revisionId: loadedFrom.currentRevisionId } : {}),
+    }))
       .then(result => {
-        if (!active) return;
+        if (!isCurrentLoad()) return;
         if (result.ok) acceptRevision(result.value);
         else setRevisionError("Unable to load this system revision. Retry loading it.");
-      }).catch(() => { if (active) setRevisionError("Unable to load this system revision. Retry loading it."); })
-      .finally(() => { if (active) setRevisionLoading(false); });
+      }).catch(() => { if (isCurrentLoad()) setRevisionError("Unable to load this system revision. Retry loading it."); })
+      .finally(() => { if (ownsLoad()) setRevisionLoading(false); });
     void Promise.resolve().then(() => client.listRevisions({ workspaceId, systemId: selectedSystemId }))
       .then(result => {
-        if (!active) return;
+        if (!isCurrentLoad()) return;
         if (result.ok) setRevisions(current => {
           const owned = result.value.filter(item => String(item.systemId) === selectedSystemId && String(item.targetWorkspaceId) === workspaceId);
           const byId = new Map([...owned, ...current].map(item => [String(item.revisionId), item]));
           return [...byId.values()].sort((a, b) => b.revisionNumber - a.revisionNumber);
         });
         else setHistoryError("Revision history is unavailable. Your current Canvas is ready.");
-      }).catch(() => { if (active) setHistoryError("Revision history is unavailable. Your current Canvas is ready."); });
+      }).catch(() => { if (isCurrentLoad()) setHistoryError("Revision history is unavailable. Your current Canvas is ready."); });
     return () => { active = false; };
-  }, [client, selectedSystemId, workspaceId, loadAttempt]);
+  }, [captureSavedRead, client, selectedSystemId, workspaceId, loadAttempt]);
+
+  useEffect(() => {
+    const base = draftBase.current;
+    const saved = currentListRecord;
+    if (deferPassiveUntilListChange.current === saved && saved) return;
+    if (passiveLoadBlocked.current || !base || !saved || !selectedSystemId ||
+        base.scope !== scope || base.systemId !== selectedSystemId ||
+        saved.targetWorkspaceId !== workspaceId || saved.status === "archived" ||
+        saved.revision <= base.recordRevision || !saved.currentRevisionId) return;
+    const expectedRevisionId = saved.currentRevisionId;
+    const listRead = acceptedListRead.current;
+    const connection = captureSavedRead?.();
+    const generation = ++passiveInstallGeneration.current;
+    const isCurrent = () => passiveInstallGeneration.current === generation &&
+      currentScope.current === scope && currentSystem.current === selectedSystemId &&
+      (!listRead || listRead.isCurrent()) && (!connection || connection.isCurrent()) &&
+      !passiveLoadBlocked.current && !operation.current && draftBase.current === base &&
+      liveList.current.some((record) => record.targetWorkspaceId === workspaceId &&
+        record.systemId === selectedSystemId && record.revision === saved.revision &&
+        record.currentRevisionId === expectedRevisionId && record.status !== "archived");
+    // This path never changes the route, the visible tab or the editor focus.
+    // It leaves the old saved graph usable until an exact newer reply arrives.
+    void Promise.resolve().then(() => isCurrent()
+      ? client.readRevision({ workspaceId, systemId: selectedSystemId, revisionId: expectedRevisionId })
+      : undefined
+    ).then((result) => {
+      if (!isCurrent() || !result?.ok) return;
+      const value = result.value;
+      if (value.systemId !== selectedSystemId || value.targetWorkspaceId !== workspaceId ||
+          value.revisionId !== expectedRevisionId || value.revisionNumber < (revision?.revisionNumber ?? 0)) return;
+      const { selectedInstanceId: selection, formTarget: form } = selectedEditorState.current;
+      draftBase.current = { scope, systemId: selectedSystemId, recordRevision: saved.revision, revisionId: value.revisionId };
+      if (base.revisionId === value.revisionId) return; // A rename need not replace the graph.
+      setRevision(value);
+      setDetachedSystem(saved);
+      installSavedDraft(value);
+      setUndoDrafts([]);
+      setRedoDrafts([]);
+      setRevisions((current) => [value, ...current.filter((item) => item.revisionId !== value.revisionId)]);
+      setSelectedLayoutDefinitionId(value.structure?.layoutPresetRef ? String(value.structure.layoutPresetRef.id) : undefined);
+      if (selection && !value.instances.some((instance) => instance.instanceId === selection)) setSelectedInstanceId(undefined);
+      if (form?.scope === scope && form.systemId === selectedSystemId &&
+          !value.instances.some((instance) => instance.instanceId === form.formId)) setFormTarget(undefined);
+    }).catch(() => { /* A passive read failure leaves the current saved graph usable. */ });
+    return () => { if (passiveInstallGeneration.current === generation) passiveInstallGeneration.current++; };
+  }, [captureSavedRead, client, scope, workspaceId, selectedSystemId, currentListRecord, revision, dirty, busy, revisionLoading, foundationUpgradeOpen]);
 
   useEffect(() => {
     if (
@@ -760,9 +888,17 @@ export function SystemBuilderWorkspace({
     });
   }
 
-  function installSavedDraft(value: SystemBuilderRevision) {
-    const checkpoint = createSystemComposerDraftHistory({ instances: value.instances, bindings: value.bindings, placements: value.placements ?? [], structure: value.structure }).present;
+  function rememberSavedDraft(value: SystemBuilderRevision) {
+    const checkpoint = createSystemComposerDraftHistory({
+      instances: value.instances, bindings: value.bindings,
+      placements: value.placements ?? [], structure: value.structure,
+    }).present;
     savedDraft.current = checkpoint;
+    return checkpoint;
+  }
+
+  function installSavedDraft(value: SystemBuilderRevision) {
+    const checkpoint = rememberSavedDraft(value);
     setInstances(checkpoint.instances);
     setBindings(checkpoint.bindings);
     setPlacements(checkpoint.placements);
@@ -770,8 +906,27 @@ export function SystemBuilderWorkspace({
     return checkpoint;
   }
 
-  async function transact(action: (isCurrent: () => boolean) => Promise<void>) {
+  function captureDraftBase() {
+    const base = draftBase.current;
+    return base && base.scope === scope && base.systemId === selectedSystemId &&
+      base.revisionId === revision?.revisionId ? base : undefined;
+  }
+
+  function recordSavedBase(value: SystemBuilderRevision, previous: NonNullable<typeof draftBase.current>) {
+    draftBase.current = { ...previous, recordRevision: previous.recordRevision + 1, revisionId: value.revisionId };
+    setDetachedSystem((record) => record?.systemId === previous.systemId ? {
+      ...record, revision: previous.recordRevision + 1, currentRevisionId: value.revisionId, composition: value.composition,
+    } : record);
+  }
+
+  function userOwnsDraft() {
+    const controlState = controller?.getSnapshot().status;
+    return controlState !== "activating" && controlState !== "active";
+  }
+
+  async function transact(action: (isCurrent: () => boolean) => Promise<void>, explicitHandoffSave = false) {
     if (operation.current) return;
+    if (!userOwnsDraft() && (!explicitHandoffSave || controller?.getSnapshot().status !== "activating")) return;
     const token = {};
     const targetSystem = selectedSystemId;
     operation.current = token;
@@ -793,12 +948,14 @@ export function SystemBuilderWorkspace({
   }
 
   function editExistingSystem() {
-    if (!existingSystemId || operation.current) return;
+    if (!existingSystemId || (unavailable && existingSystemId === selectedSystemId) || operation.current || !userOwnsDraft()) return;
     if (dirty && existingSystemId !== selectedSystemId) {
       setError("Save or discard unsaved changes before switching systems.");
       return;
     }
     setError(undefined);
+    if (!dirty && existingSystemId === selectedSystemId &&
+        currentListRecord?.revision !== draftBase.current?.recordRevision) setLoadAttempt((value) => value + 1);
     setSelectedSystemId(existingSystemId);
     requestComposerCatalog();
   }
@@ -931,13 +1088,17 @@ export function SystemBuilderWorkspace({
     );
     setUndoDrafts(history.past);
     setRedoDrafts(history.future);
-    setDirty(!areSystemComposerDraftsEqual(history.present, savedDraft.current));
+    const changed = !areSystemComposerDraftsEqual(history.present, savedDraft.current);
+    // Fence any in-flight result before React renders the next draft state.
+    passiveInstallGeneration.current++;
+    passiveLoadBlocked.current = true;
+    setDirty(changed);
     setError(undefined);
     setNotice(undefined);
   }
 
   function commitDraft(next: SystemComposerDraft) {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     applyDraftHistory(
       commitSystemComposerDraft(
         { past: undoDrafts, present: draft, future: redoDrafts },
@@ -947,7 +1108,7 @@ export function SystemBuilderWorkspace({
   }
 
   function undoDraft() {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     applyDraftHistory(
       undoSystemComposerDraft({
         past: undoDrafts,
@@ -958,7 +1119,7 @@ export function SystemBuilderWorkspace({
   }
 
   function redoDraft() {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     applyDraftHistory(
       redoSystemComposerDraft({
         past: undoDrafts,
@@ -1004,13 +1165,14 @@ export function SystemBuilderWorkspace({
   }
 
   function editForm(instanceId: string) {
-    if (!selectedSystemId || !revision || String(revision.systemId) !== selectedSystemId ||
+    if (!userOwnsDraft() || !selectedSystemId || !revision || String(revision.systemId) !== selectedSystemId ||
         String(revision.targetWorkspaceId) !== workspaceId || busy || !editableFormIds.has(instanceId)) return;
     setSelectedInstanceId(instanceId);
     setFormTarget({ scope, systemId: selectedSystemId, formId: instanceId });
   }
 
   function backToCanvas() {
+    if (!userOwnsDraft()) return;
     if (activeForm) {
       const instanceId = String(activeForm.form.instanceId);
       setRestoreFormFocus(instanceId);
@@ -1219,7 +1381,7 @@ export function SystemBuilderWorkspace({
   }
 
   function removeAsset(instanceId: string) {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     const parentId = placements.find(
       (placement) => String(placement.childInstanceRef.id) === instanceId,
     )?.parentInstanceRef.id;
@@ -1237,7 +1399,7 @@ export function SystemBuilderWorkspace({
   }
 
   function removeFormElement(instanceId: string): boolean {
-    if (!activeForm || operation.current) return false;
+    if (!activeForm || operation.current || !userOwnsDraft()) return false;
     const role = formDraftMembership(instanceId);
     if (!role || (role === "step" && activeForm.steps[0]?.instanceId === instanceId)) return false;
     const result = removeSystemComposerSubtree(draft, instanceId, protectedInstanceIds);
@@ -1267,6 +1429,7 @@ export function SystemBuilderWorkspace({
   }
 
   function placeAsset(instanceId: string, target: SystemComposerTargetSlot) {
+    if (operation.current || !userOwnsDraft()) return;
     const hasPlacement = draft.placements.some(
       (placement) => String(placement.childInstanceRef.id) === instanceId,
     );
@@ -1289,7 +1452,7 @@ export function SystemBuilderWorkspace({
     setSelectedInstanceId(instanceId);
   }
   function discardDraft() {
-    if (operation.current) return;
+    if (operation.current || !userOwnsDraft()) return;
     if (!revision) return;
     const checkpoint = savedDraft.current;
     if (!checkpoint) return;
@@ -1309,6 +1472,14 @@ export function SystemBuilderWorkspace({
     );
     setDirty(false);
     setError(undefined);
+    if (!currentListRecord) {
+      setSelectedSystemId(undefined);
+      setExistingSystemId("");
+    } else if (currentListRecord.revision !== draftBase.current?.recordRevision) {
+      passiveInstallGeneration.current++;
+      deferPassiveUntilListChange.current = currentListRecord;
+      setLoadAttempt((value) => value + 1);
+    }
     setNotice("Unsaved changes discarded.");
   }
 
@@ -1382,6 +1553,7 @@ export function SystemBuilderWorkspace({
   }
 
   async function selectLayout(layout: SystemBuilderComposerAsset, restoreFocus = false) {
+    if (unavailable) return;
     if (!selectedSystem || !revision) {
       setSelectedLayoutDefinitionId(layout.definitionId);
       return;
@@ -1392,6 +1564,8 @@ export function SystemBuilderWorkspace({
       );
       return;
     }
+    const base = captureDraftBase();
+    if (!base) return;
     if (
       structure &&
       String(structure.layoutPresetRef?.id) === layout.definitionId &&
@@ -1412,7 +1586,7 @@ export function SystemBuilderWorkspace({
       const result = await client.previewLayoutChange({
         workspaceId,
         systemId: String(selectedSystem.systemId),
-        expectedRecordRevision: selectedSystem.revision,
+        expectedRecordRevision: base.recordRevision,
         targetLayoutPresetRef: layout.definitionRef,
         composition: revision.composition,
         instances,
@@ -1431,9 +1605,12 @@ export function SystemBuilderWorkspace({
     });
   }
 
-  async function save() {
-    if (!revision || !selectedSystem) return;
-    return transact(async (isCurrent) => {
+  async function save(requireValid = false): Promise<boolean> {
+    if (!revision || !selectedSystem || unavailable) return false;
+    const base = captureDraftBase();
+    if (!base || operation.current) return false;
+    let saved = false;
+    await transact(async (isCurrent) => {
       setError(undefined);
       setNotice(undefined);
       const saveCatalog: SystemBuilderComposerAsset[] = [
@@ -1508,7 +1685,7 @@ export function SystemBuilderWorkspace({
       const result = await client.saveRevision({
         workspaceId,
         systemId: String(selectedSystem.systemId),
-        expectedRecordRevision: selectedSystem.revision,
+        expectedRecordRevision: base.recordRevision,
         composition,
         instances: saveInstances,
         bindings,
@@ -1521,21 +1698,31 @@ export function SystemBuilderWorkspace({
         return;
       }
       if (result.ok) {
+        recordSavedBase(result.value, base);
         setRevision(result.value);
-        installSavedDraft(result.value);
-        setUndoDrafts([]);
-        setRedoDrafts([]);
-        setRevisions((current) => [result.value, ...current]);
-        setDirty(false);
         const invalid = result.value.validationIssues.filter(
           (issue) => issue.severity === "error",
         ).length;
+        if (!requireValid || invalid === 0) {
+          installSavedDraft(result.value);
+          setUndoDrafts([]);
+          setRedoDrafts([]);
+          setDirty(false);
+        } else {
+          // Ordinary saves can commit with blocking diagnostics. Keep the
+          // editable draft and its history, but align Discard with that commit.
+          rememberSavedDraft(result.value);
+          setDirty(true);
+        }
+        setRevisions((current) => [result.value, ...current]);
+        saved = !requireValid || invalid === 0;
+        if (requireValid && saved) handoffSavedBase.current = draftBase.current;
         setSystems((current) =>
           current.map((item) =>
-            String(item.systemId) === selectedSystemId
+            String(item.systemId) === selectedSystemId && item.revision <= base.recordRevision
               ? {
                 ...item,
-                revision: item.revision + 1,
+                revision: base.recordRevision + 1,
                 currentRevisionId: result.value.revisionId,
                 composition,
                 status: invalid
@@ -1553,18 +1740,38 @@ export function SystemBuilderWorkspace({
             : "Revision saved and validated.",
         );
       } else setError(result.error.message);
-    });
+    }, requireValid);
+    return saved;
   }
 
+  useLayoutEffect(() => {
+    currentDraftHandoff.current = () => {
+      if (handoffSave.current || operation.current || revisionLoading) return { status: "busy" };
+      const state = controller?.getSnapshot().status;
+      if (state !== "activating") handoffSavedBase.current = undefined;
+      if (handoffSavedBase.current && handoffSavedBase.current === draftBase.current) return { status: "clean" };
+      if (!dirty) return { status: "clean" };
+      return { status: "dirty", async save() {
+        const pending = async () => save(true);
+        handoffSave.current = pending;
+        try { return await pending(); }
+        finally { if (handoffSave.current === pending) handoffSave.current = undefined; }
+      } };
+    };
+  });
+  useLayoutEffect(() => registerDraft?.(() => currentDraftHandoff.current()), [registerDraft]);
+
   async function previewFoundationUpgrade() {
-    if (!revision || !selectedSystem || dirty) return;
+    if (!revision || !selectedSystem || dirty || unavailable) return;
+    const base = captureDraftBase();
+    if (!base) return;
     return transact(async (isCurrent) => {
       setError(undefined);
       setNotice(undefined);
       const result = await client.previewFoundationUpgrade({
         workspaceId,
         systemId: String(selectedSystem.systemId),
-        expectedRecordRevision: selectedSystem.revision,
+        expectedRecordRevision: base.recordRevision,
       });
       if (!isCurrent()) return;
       if (result.ok) {
@@ -1580,17 +1787,20 @@ export function SystemBuilderWorkspace({
     if (
       !revision ||
       !selectedSystem ||
+      unavailable ||
       !foundationUpgradePreview?.eligible ||
       dirty
     ) {
       return;
     }
+    const base = captureDraftBase();
+    if (!base) return;
     return transact(async (isCurrent) => {
       setError(undefined);
       const result = await client.upgradeFoundation({
         workspaceId,
         systemId: String(selectedSystem.systemId),
-        expectedRecordRevision: selectedSystem.revision,
+        expectedRecordRevision: base.recordRevision,
         sourceRevisionId: foundationUpgradePreview.sourceRevisionId,
       });
       if (!isCurrent()) return;
@@ -1599,6 +1809,7 @@ export function SystemBuilderWorkspace({
         return;
       }
       if (result.ok) {
+        recordSavedBase(result.value, base);
         setRevision(result.value);
         installSavedDraft(result.value);
         setSelectedLayoutDefinitionId(
@@ -1615,10 +1826,10 @@ export function SystemBuilderWorkspace({
         setDirty(false);
         setSystems((current) =>
           current.map((item) =>
-            String(item.systemId) === selectedSystemId
+            String(item.systemId) === selectedSystemId && item.revision <= base.recordRevision
               ? {
                 ...item,
-                revision: item.revision + 1,
+                revision: base.recordRevision + 1,
                 currentRevisionId: result.value.revisionId,
                 composition: result.value.composition,
                 status: "validated",
@@ -1665,12 +1876,17 @@ export function SystemBuilderWorkspace({
         <div className="ui-panel__section-body ui-stack ui-stack--md">
           <TransientNotificationPublisher message={error} title="System Composer needs attention" tone="error" source="System Composer" workspaceId={workspaceId} />
           {contextualNotice ? <p className="ui-status" role="status">{notice}</p> : null}
+          {savedElsewhere ? <p className="ui-status" role="status">{currentListRecord
+            ? "A newer saved version exists. Your unsaved changes are still here."
+            : "This saved system is no longer in the list. Your unsaved changes are still here."}</p> : null}
+          {unavailable && !dirty ? <p className="ui-status" role="status">This saved system is no longer in the list. The open view is still here.</p> : null}
           <TransientNotificationPublisher message={!contextualNotice ? notice : undefined} title="System Composer updated" tone="success" source="System Composer" workspaceId={workspaceId} />
           <p id="system-builder-entry-instructions" className="ui-text-muted">
             Choose an option below to interact with the System Composer.
           </p>
           <div
             className="system-builder__entry-options"
+            inert={takeoverReadOnly || undefined}
             role="group"
             aria-label="Composer entry options"
             aria-describedby="system-builder-entry-instructions"
@@ -1688,6 +1904,7 @@ export function SystemBuilderWorkspace({
                     }}
                   >
                     <option value="">Choose a system</option>
+                    {unavailable && selectedSystem ? <option value={selectedSystemId} disabled>{selectedSystem.name} (unavailable)</option> : null}
                     {systems.map((system) => (
                       <option
                         key={String(system.systemId)}
@@ -1701,7 +1918,7 @@ export function SystemBuilderWorkspace({
                 <button
                   type="button"
                   onClick={editExistingSystem}
-                  disabled={!existingSystemId || revisionLoading}
+                  disabled={!existingSystemId || revisionLoading || (unavailable && existingSystemId === selectedSystemId)}
                 >
                   {revisionLoading && existingSystemId === selectedSystemId ? (
                     <LoadingSpinner label="Loading system into Composer" />
@@ -1817,7 +2034,8 @@ export function SystemBuilderWorkspace({
                 <button
                   type="button"
                   className="ui-button ui-button--outline"
-                  onClick={() => void previewFoundationUpgrade()}
+                  onClick={() => { if (!unavailable) void previewFoundationUpgrade(); }}
+                  aria-disabled={unavailable || undefined}
                   disabled={busy || dirty}
                   aria-haspopup="dialog"
                 >
@@ -1828,8 +2046,8 @@ export function SystemBuilderWorkspace({
               <button
                 type="button"
                 className="ui-button ui-button--outline"
-                onClick={() => setPreviewOpen(true)}
-                disabled={busy || !componentsReady || instances.length === 0}
+                  onClick={() => { if (userOwnsDraft()) setPreviewOpen(true); }}
+                  disabled={takeoverReadOnly || busy || !componentsReady || instances.length === 0}
                 aria-haspopup="dialog"
               >
                 <ApplicationIcon name="play" />
@@ -1840,9 +2058,10 @@ export function SystemBuilderWorkspace({
                   type="button"
                   className="ui-button ui-button--outline"
                   onClick={() =>
-                    revision &&
+                    !unavailable && revision &&
                     onBuildAndTest({ system: selectedSystem, revision })
                   }
+                  aria-disabled={unavailable || undefined}
                   disabled={busy || dirty}
                 >
                   <ApplicationIcon name="systems" />
@@ -1875,6 +2094,7 @@ export function SystemBuilderWorkspace({
                 aria-label="Composer mode"
                 aria-orientation="horizontal"
                 onKeyDown={(event) => {
+                  if (!userOwnsDraft()) return;
                   const tab = event.target;
                   if (!(tab instanceof HTMLButtonElement) || tab.parentElement !== event.currentTarget) return;
                   const mode = event.key === "Home" ? "design" : event.key === "End" ? "connections"
@@ -1896,8 +2116,9 @@ export function SystemBuilderWorkspace({
                     aria-selected={composerMode === mode}
                     aria-controls={composerModeId + "-" + mode + "-panel"}
                     tabIndex={composerMode === mode ? 0 : -1}
+                    disabled={takeoverReadOnly}
                     className="system-composer__flat-control"
-                    onClick={() => setComposerMode(mode)}
+                    onClick={() => { if (userOwnsDraft()) setComposerMode(mode); }}
                   >
                     {mode === "design" ? "Design" : "Connections"}
                   </button>
@@ -1916,7 +2137,7 @@ export function SystemBuilderWorkspace({
                 aria-labelledby={!activeForm ? composerModeId + "-" + composerMode + "-tab" : undefined}
                 tabIndex={!activeForm ? 0 : undefined}
               >
-              <fieldset ref={editorRegion} disabled={busy || !componentsReady} aria-busy={!componentsReady && !catalogError} aria-label="System draft editor" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+              <fieldset ref={editorRegion} disabled={takeoverReadOnly || busy || !componentsReady} aria-busy={!componentsReady && !catalogError} aria-label="System draft editor" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
                 {composerMode === "design" ? (
                   <SystemComposerStructureEditor
                     browseScopeKey={workspaceId}
@@ -1978,11 +2199,11 @@ export function SystemBuilderWorkspace({
                     catalogError={catalogError}
                     canUndo={undoDrafts.length > 0}
                     canRedo={redoDrafts.length > 0}
-                    onSelect={setSelectedInstanceId}
+                    onSelect={(id) => { if (userOwnsDraft()) setSelectedInstanceId(id); }}
                     onSelectLayout={(layout) => void selectLayout(layout, true)}
                     loadLayouts={loadLayoutsOnDemand}
                     loadCompatibleAssets={loadCompatibleAssetsOnDemand}
-                    onSidebarTabChange={setActiveSidebarTab}
+                    onSidebarTabChange={(id) => { if (userOwnsDraft()) setActiveSidebarTab(id); }}
                     onAdd={addAsset}
                     onPlace={placeAsset}
                     onRemove={removeAsset}
@@ -2074,7 +2295,7 @@ export function SystemBuilderWorkspace({
                       type="button"
                       className="ui-button ui-button--outline"
                       onClick={discardDraft}
-                      disabled={busy}
+                      disabled={takeoverReadOnly || busy}
                     >
                       Discard changes
                     </button>
@@ -2082,8 +2303,9 @@ export function SystemBuilderWorkspace({
                   <button
                     type="button"
                     onClick={() => void save()}
+                  aria-disabled={unavailable || undefined}
                     disabled={
-                      busy ||
+                      takeoverReadOnly || busy ||
                       (!dirty &&
                         selectedSystem.status !== "blocked" &&
                         !canRepairConversationInteraction) ||

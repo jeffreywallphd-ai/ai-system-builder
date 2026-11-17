@@ -70,6 +70,7 @@ import { LinkUserLibraryAssetToWorkspaceUseCase } from "../../../application/use
 import type { LoggingPort } from "../../../application/ports/logging";
 import type { SystemRuntimeDatabaseLifecyclePort } from "../../../application/ports/system-deployment";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
+import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import {
   AuthorizeApplicationSettingMutationService,
   AuthorizeProviderRepositoryCreationService,
@@ -79,7 +80,8 @@ import {
 import { createDefaultDatasetQualityPolicyProvider } from "../../../application/services/dataset-preparation";
 import { DatasetVersionFinalizationService } from "../../../application/services/dataset-version";
 import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
-import { createStructuredIngestionAcquisitionRepository, createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
+import { createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
+import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
 import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
 import {
@@ -183,7 +185,7 @@ import {
   deleteContainedFile,
   writeContainedFile,
 } from "../../../adapters/filesystem-security";
-import type { ProviderCredentialStatus } from "../../../contracts/security";
+import type { ProviderCredentialStatus, SecurityScope } from "../../../contracts/security";
 import { composeServerProviderCredentials } from "./composeServerProviderCredentials";
 import { createRuntimePreparedModelCheckpointResolver } from "../../shared/createRuntimePreparedModelCheckpointResolver";
 import {
@@ -248,6 +250,15 @@ import { composeAssetPackageLifecycle } from "../../shared/composition/composeAs
 import { composeAssetStudioWorkflow } from "../../shared/composition/composeAssetStudioWorkflow";
 import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
+import { composeManagedSavedState } from "./composeManagedSavedState";
+import { composeManagedAgentReads } from "./composeManagedAgentReads";
+import { composeManagedBrowserConsent } from "./composeManagedBrowserConsent";
+import { composeManagedBrowserPresentationResources } from "./composeManagedBrowserPresentationResources";
+import { composeManagedHeadlessAuthoring } from "./composeManagedHeadlessAuthoring";
+import { composeManagedHeadlessPlanReview } from "./composeManagedHeadlessPlanReview";
+import { composeManagedHeadlessPlanApprovals } from "./composeManagedHeadlessPlanApprovals";
+import type { HeadlessHostIncarnationId } from "../../../contracts/headless";
+import type { TenantPlacementConfig } from "../../../contracts/config";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
 import { composeSystemData, createManagedSystemDataPrincipal } from "../../shared/composition/composeSystemData";
 import { composePublishedSystemForms } from "../../shared/composition/composePublishedSystemForms";
@@ -374,6 +385,12 @@ export interface ComposeServerHostOptions {
   };
   organizationContextProvider?: OrganizationRequestContextProviderPort;
   organizationAuthorizer?: Pick<AuthorizeOperationService, "execute">;
+  managedSavedState?: {
+    readonly listActiveSystems: Parameters<typeof composeManagedSavedState>[0]["listActiveSystems"];
+    readonly authorize: Pick<AuthorizeOperationService, "execute">;
+  };
+  managedHeadlessAgent?: { readonly placement: TenantPlacementConfig; readonly browserObservationAuthorizer?: AuthorizeOperationService;
+    readonly planReviewClientId?: string };
   env?: NodeJS.ProcessEnv;
   logging?: ComposeServerHostLoggingOptions;
   logSink?: StructuredLogSink;
@@ -635,6 +652,14 @@ export interface ServerHostComposition {
   clearHuggingFaceToken: () => Promise<ProviderCredentialStatus>;
   registerApi: (options: RegisterServerApiOptions) => void;
   waitForAssetFoundation: () => Promise<void>;
+  getManagedSavedState: () => ReturnType<typeof composeManagedSavedState> | undefined;
+  getManagedBrowserConsent: () => (ReturnType<typeof composeManagedBrowserConsent> & {readonly hostIncarnationId: HeadlessHostIncarnationId}) | undefined;
+  getManagedHeadlessAgent: () => {
+    readonly hostIncarnationId: HeadlessHostIncarnationId;
+    readonly read: ReturnType<typeof composeManagedAgentReads>;
+    readonly author: ReturnType<typeof composeManagedHeadlessAuthoring>["execute"];
+    readonly planReview?: ReturnType<typeof composeManagedHeadlessPlanReview>;
+  } | undefined;
   closeRuntimeDatabases: () => Promise<void>;
   shutdownBackgroundTasks: () => Promise<void>;
   getInternalAssetRegistry: () => InternalAssetRegistryComposition | undefined;
@@ -734,6 +759,10 @@ export function composeServerHost(
 
   let internalAssetRegistry: InternalAssetRegistryComposition | undefined;
   let assetFoundationReady: Promise<void> = Promise.resolve();
+  let managedSavedState: ReturnType<typeof composeManagedSavedState> | undefined;
+  let managedBrowserConsent: ReturnType<ServerHostComposition["getManagedBrowserConsent"]>;
+  let managedHeadlessAgent: ReturnType<ServerHostComposition["getManagedHeadlessAgent"]>;
+  const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
   let systemRuntimeDatabases = options.runtimeDatabases;
 
   let shutdownBackgroundTasks: (() => Promise<void>) | undefined;
@@ -756,16 +785,25 @@ export function composeServerHost(
     waitForAssetFoundation() {
       return assetFoundationReady;
     },
+    getManagedSavedState: () => managedSavedState,
+    getManagedBrowserConsent: () => managedBrowserConsent,
+    getManagedHeadlessAgent: () => managedHeadlessAgent,
     async closeRuntimeDatabases() {
+      managedBrowserConsent?.close();
       await shutdownBackgroundTasks?.();
       await systemRuntimeDatabases?.closeAll();
     },
-    async shutdownBackgroundTasks() { await shutdownBackgroundTasks?.(); },
+    async shutdownBackgroundTasks() { managedBrowserConsent?.close(); await shutdownBackgroundTasks?.(); },
     registerApi(registerOptions) {
       const env = options.env ?? process.env;
       const organizationDocuments =
         options.persistence?.organizationDocuments ??
         options.persistence?.documents;
+      const managed = options.managedSavedState;
+      const contexts = options.organizationContextProvider;
+      const managedDocuments = managed && contexts && options.persistence?.organizationDocuments &&
+        options.persistence.documents.runInOwnedTransaction && options.persistence.documents.organizationId === undefined
+        ? options.persistence.documents : undefined;
       const defaultRuntimeRootDirectory = joinHostPath(
         dirname(registerOptions.storageRootDirectory),
         "server-runtime",
@@ -1098,6 +1136,7 @@ export function composeServerHost(
         });
       const registerArtifactFromRepo = new RegisterArtifactFromRepoUseCase({
         artifactRepoStorage,
+        readDatasetRevisionLicense: huggingFaceArtifactRepoStorage.readDatasetRevisionLicense,
         artifactBindingStorage: artifactBindings,
         artifactCatalogAppend: artifactCatalog,
         logging: loggingPort,
@@ -1106,9 +1145,7 @@ export function composeServerHost(
       });
       const ingestionTasks = organizationDocuments && options.organizationContextProvider
         ? (() => {
-            const repository = createStructuredIngestionAcquisitionRepository(
-              organizationDocuments,
-            );
+            const repository = composeIngestionAcquisitionRepository(registerOptions.storageRootDirectory, organizationDocuments);
             const checkpoints = createFilesystemIngestionCheckpointStorage({
               rootDirectory: registerOptions.storageRootDirectory,
               organizationContextProvider: options.organizationContextProvider,
@@ -1636,8 +1673,69 @@ export function composeServerHost(
             modelRegistry,
             generateSystemId: () => `system.${randomUUID()}`,
             now: options.now,
+            journalChanges: managedDocuments !== undefined,
           })
         : undefined;
+      if (managed && managedDocuments && systemBuilder && contexts) {
+        managedSavedState = composeManagedSavedState({ documents: managedDocuments, listActiveSystems: managed.listActiveSystems, hostIncarnationId,
+          workspaces: workspaceFoundation.workspaceRepositories.workspaceRepository, contexts,
+          authorization: new AuthorizeWorkspaceOperationService({ organizationContext: contexts, authorizer: managed.authorize }) });
+      }
+      if (options.managedHeadlessAgent && managedDocuments && systemBuilder && contexts && workspaceAuthorization) {
+        const workspaces = workspaceFoundation.workspaceRepositories.workspaceRepository;
+        const scoped = {hostIncarnationId, workspaces, contexts, authorization: workspaceAuthorization};
+        const authoring = composeManagedHeadlessAuthoring({...scoped, platform: managedDocuments,
+          rootDirectory: registerOptions.storageRootDirectory, placement: options.managedHeadlessAgent.placement, systems: systemBuilder});
+        const localFileSave = options.managedHeadlessAgent.browserObservationAuthorizer &&
+          "finalizeApprovedLocalFile" in ingestionTasks && typeof ingestionTasks.finalizeApprovedLocalFile === "function"
+          ? ingestionTasks.finalizeApprovedLocalFile.bind(ingestionTasks) : undefined;
+        managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
+          read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases}),
+          ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: composeManagedHeadlessPlanReview({
+            ...scoped, platform: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
+            placement: options.managedHeadlessAgent.placement, systems: systemBuilder,
+            enableFilePreview: Boolean(ingestionTasks && options.managedHeadlessAgent.browserObservationAuthorizer),
+            finalizeApprovedLocalFile: localFileSave,
+          }) } : {}),
+        };
+        if (options.managedHeadlessAgent.browserObservationAuthorizer) {
+          const observation = new AuthorizeWorkspaceOperationService({organizationContext: contexts,
+            authorizer: options.managedHeadlessAgent.browserObservationAuthorizer});
+          const readScopes = ["workspace:read", "asset:read"] as const;
+          const authorize = (policy: WorkspaceOperationAuthorizationPort, requiredScopes: readonly SecurityScope[] = readScopes): Parameters<typeof composeManagedBrowserConsent>[0]["authorize"] => async (principal, workspaceId) => {
+            const current = () => {
+              const active = contexts.getCurrentOrganizationContext();
+              return active?.organizationId === principal.organizationId && active.principalId === principal.principalId;
+            };
+            if (!current()) return false;
+            const workspace = await workspaces.readWorkspace(workspaceId);
+            if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== principal.organizationId || workspace.status !== "active") return false;
+            await policy.authorizeWorkspaceOperation({workspace, operation: "headless.window.observe", requiredScopes});
+            return current();
+          };
+          const runs = createLocalExecutionRunRepositoryAdapters({rootDir:registerOptions.storageRootDirectory,
+            now:options.now, documents:organizationDocuments});
+          const presentation = composeManagedBrowserPresentationResources({systems:systemBuilder.repository,
+            artifacts:artifactCatalog, runs:runs.executionRunRepository});
+          const planReviewClientId = options.managedHeadlessAgent.planReviewClientId;
+          const planApprovals = planReviewClientId ? composeManagedHeadlessPlanApprovals({hostIncarnationId,
+            planClientId:planReviewClientId, platform:managedDocuments, rootDirectory:registerOptions.storageRootDirectory,
+            contexts, placement:options.managedHeadlessAgent.placement, localIngestion: ingestionTasks,
+            allowLocalFileSave: Boolean(localFileSave && managedDocuments.publishWithStableReads)}) : undefined;
+          const browserConsent = composeManagedBrowserConsent({hostIncarnationId, planApprovals,
+            authorize: authorize(workspaceAuthorization),
+            authorizeObservation: authorize(observation),
+            async resolvePresentation(principal, workspaceId, intent, {passive}) {
+              const scopes = intent.action === "show-run" ? [...readScopes, "runtime:read"] as const :
+                intent.action === "show-artifact" ? [...readScopes, "artifact:read"] as const : readScopes;
+              const mayRead = authorize(passive ? observation : workspaceAuthorization, scopes);
+              if (!await mayRead(principal, workspaceId)) return;
+              const value = await presentation(workspaceId, intent);
+              if (value && await mayRead(principal, workspaceId)) return value;
+            }});
+          managedBrowserConsent = { ...browserConsent, hostIncarnationId };
+        }
+      }
       const systemBuildArtifacts = createSystemBuildArtifactAdapter(storage);
       const systemDeploymentProfile = resolveServerSystemDeploymentProfile(env);
       const systemBuild =

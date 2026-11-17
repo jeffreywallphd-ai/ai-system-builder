@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import {
   SystemBuilderWorkspace,
   SystemManagementWorkspace,
+  type SavedSystemsRefresh,
   SystemBuildTestModal,
   SystemPublishWorkspace,
 } from "../../../../modules/ui/shared/system-builder";
@@ -16,6 +17,9 @@ import { createThinClientSystemBuildClient } from "../features/system-builder/ap
 import { createThinClientSystemPublishedLifecycleClient } from "../features/system-builder/api/thinClientSystemPublishedLifecycleClient";
 import { createThinClientSystemPublishedFormClient } from "../features/system-builder/api/thinClientSystemPublishedFormClient";
 import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
+import { observeManagedSavedSystems } from "../features/system-builder/api/observeManagedSavedSystems";
+import { pairedDeviceTokenStore } from "../security/pairedDeviceTokenStore";
+import { useWindowTakeover } from "../../../../modules/ui/shared/takeover/WindowTakeoverContext";
 export interface SystemBuilderPageProps {
   readonly workspaceId: string;
   readonly workspaceName: string;
@@ -32,8 +36,22 @@ export function SystemBuilderPage({
   );
   const publishedFormsClient = useMemo(createThinClientSystemPublishedFormClient, []);
   const [activeTabId, setActiveTabId] = useState("compose");
+  const { controller, presentationAttached } = useWindowTakeover();
+  const userOwnsView = () => {
+    const status = controller?.getSnapshot().status;
+    return status !== "active" && status !== "activating";
+  };
   const [composeSystemId, setComposeSystemId] = useState<string>();
   const [activeSystemsRevision, setActiveSystemsRevision] = useState(0);
+  const [managedSavedRefresh, setManagedSavedRefresh] = useState<SavedSystemsRefresh>();
+  const observeSavedState = activeTabId !== "publish";
+  useLayoutEffect(() => {
+    if (!observeSavedState) return;
+    return observeManagedSavedSystems({
+      workspaceId, visibility: document,
+      changed: (isCurrent) => setManagedSavedRefresh({ isCurrent }),
+    });
+  }, [workspaceId, observeSavedState]);
   const [buildTarget, setBuildTarget] = useState<{
     readonly system: SystemBuilderRecord;
     readonly revision: SystemBuilderRevision;
@@ -50,7 +68,7 @@ export function SystemBuilderPage({
       />
       <TabbedPanel
         activeTabId={activeTabId}
-        onTabChange={setActiveTabId}
+        onTabChange={(id) => { if (userOwnsView()) setActiveTabId(id); }}
         defaultTabId="compose"
         tabListAriaLabel="System Builder sections"
         tabs={[
@@ -58,10 +76,15 @@ export function SystemBuilderPage({
             id: "manage",
             label: "Manage",
             content: (
+              <fieldset disabled={presentationAttached} style={{minWidth:0,border:0,padding:0,margin:0}}>
               <SystemManagementWorkspace
                 workspaceId={workspaceId}
                 client={client}
+                activeSystemsRevision={activeSystemsRevision}
+                managedSavedRefresh={managedSavedRefresh}
+                captureSavedRead={pairedDeviceTokenStore.captureToken}
                 onOpenInCompose={(systemId) => {
+                  if (!userOwnsView()) return;
                   setComposeSystemId(systemId);
                   setActiveTabId("compose");
                 }}
@@ -69,6 +92,7 @@ export function SystemBuilderPage({
                   setActiveSystemsRevision((current) => current + 1)
                 }
               />
+              </fieldset>
             ),
           },
           {
@@ -81,7 +105,10 @@ export function SystemBuilderPage({
                 client={client}
                 initialSystemId={composeSystemId}
                 activeSystemsRevision={activeSystemsRevision}
-                onBuildAndTest={setBuildTarget}
+                managedSavedRefresh={managedSavedRefresh}
+                captureSavedRead={pairedDeviceTokenStore.captureToken}
+                onBuildAndTest={(target) => { if (userOwnsView()) setBuildTarget(target); }}
+                takeoverReadOnly={presentationAttached}
               />
             ),
           },
@@ -89,12 +116,14 @@ export function SystemBuilderPage({
             id: "publish",
             label: "Publish",
             content: (
+              <fieldset disabled={presentationAttached} style={{minWidth:0,border:0,padding:0,margin:0}}>
               <SystemPublishWorkspace
                 workspaceId={workspaceId}
                 buildClient={buildClient}
                 lifecycleClient={lifecycleClient}
                 publishedFormsClient={publishedFormsClient}
               />
+              </fieldset>
             ),
           },
         ]}

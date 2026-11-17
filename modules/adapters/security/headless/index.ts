@@ -1,0 +1,1 @@
+export { createDesktopHeadlessClientAuthority } from "./createDesktopHeadlessClientAuthority";

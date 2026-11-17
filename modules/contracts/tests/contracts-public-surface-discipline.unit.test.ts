@@ -13,6 +13,7 @@ const CONTRACT_FAMILIES = [
   "dataset",
   "effectiveAssetProjections",
   "executionPlans",
+  "headless",
   "host",
   "artifactUpload",
   "ingestion",

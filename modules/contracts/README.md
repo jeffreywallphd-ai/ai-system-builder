@@ -12,6 +12,12 @@ Current contract families include:
 - `artifact-browser` read-side operation and read-model contracts
 - `runtime`, `persistence`, `storage`, and `ingestion`
 - `system-builder` for workspace-owned composed-system design records that specialize Asset Kernel compositions
+- `headless` for versioned, finite read requests and bounded read projections
+  from an existing host. Request validation does not grant access or
+  advertise a supported capability. Desktop pairing IPC is separate and never
+  returns the one-time code through its status or action results.
+  The internal semantic batch contract binds edits to the exact workspace,
+  system, saved record revision and composition revision.
 - `asset-authoring` for safe authored records plus exact-base layered
   customizations, typed semantic sections, bounded source overlays, review
   evidence, distinct publication lineage, and shared operation identities used
@@ -38,6 +44,8 @@ Current contract families include:
 
 - Import contracts from family barrels (`modules/contracts/<family>`), not deep
   internal files.
+- Give values consumed by native ESM explicit named exports at the family barrel
+  when the source TypeScript loader exposes that family through CommonJS.
 - The root contracts entry (`modules/contracts`) exposes family namespaces only
   so boundaries stay explicit instead of flattened.
 
