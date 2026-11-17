@@ -4,16 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SettingsPage } from "../../../pages/SettingsPage";
 import type { DesktopApplicationSettingsClient } from "../api/desktopApplicationSettingsClient";
+import type { ApplicationSettingDefinition, ApplicationSettingValue } from "../../../../../../../modules/contracts/settings";
 
-const definitions = [
+const definitions: ApplicationSettingDefinition[] = [
   { key: "huggingface.token", category: "huggingface", label: "HF token", valueKind: "secret", sensitive: true },
   { key: "huggingface.defaultNamespace", category: "huggingface", label: "Namespace", valueKind: "string" },
   { key: "models.default", category: "models", label: "Global model", valueKind: "object" },
   { key: "runtime.python.defaultDevice", category: "runtime", label: "Device", valueKind: "select", options: [{ value: "auto" }, { value: "cpu" }] },
   { key: "features.datasetPreparation.qaGeneration.default", category: "datasetPreparation", label: "DP QA default", valueKind: "object" },
-] as const;
+];
 
-const values = [
+const values: ApplicationSettingValue[] = [
   { key: "huggingface.token", configured: true, masked: true, maskedValue: "********" },
   { key: "huggingface.defaultNamespace", configured: true, value: "openai" },
   { key: "models.default", configured: true, value: { provider: "transformers", modelId: "google/flan-t5-base", inferenceMode: "text2text" } },
@@ -23,12 +24,12 @@ const values = [
 
 let container: HTMLDivElement | undefined;
 let root: Root | undefined;
-let listDefinitions: ReturnType<typeof vi.fn>;
-let readSettings: ReturnType<typeof vi.fn>;
-let updateSetting: ReturnType<typeof vi.fn>;
-let clearSetting: ReturnType<typeof vi.fn>;
-let resolveModelDefault: ReturnType<typeof vi.fn>;
-let selectFolder: ReturnType<typeof vi.fn>;
+let listDefinitions: ReturnType<typeof vi.fn<DesktopApplicationSettingsClient["listDefinitions"]>>;
+let readSettings: ReturnType<typeof vi.fn<DesktopApplicationSettingsClient["readSettings"]>>;
+let updateSetting: ReturnType<typeof vi.fn<DesktopApplicationSettingsClient["updateSetting"]>>;
+let clearSetting: ReturnType<typeof vi.fn<DesktopApplicationSettingsClient["clearSetting"]>>;
+let resolveModelDefault: ReturnType<typeof vi.fn<DesktopApplicationSettingsClient["resolveModelDefault"]>>;
+let selectFolder: ReturnType<typeof vi.fn<DesktopApplicationSettingsClient["selectFolder"]>>;
 
 vi.mock("../api/desktopApplicationSettingsClient", () => ({
   createDesktopApplicationSettingsClient: () => mockClient,
@@ -44,12 +45,12 @@ const mockClient: DesktopApplicationSettingsClient = {
 };
 
 beforeEach(() => {
-  listDefinitions = vi.fn().mockResolvedValue({ definitions });
-  readSettings = vi.fn().mockResolvedValue({ values });
-  updateSetting = vi.fn().mockResolvedValue({ value: { key: "x", configured: true } });
-  clearSetting = vi.fn().mockResolvedValue({ value: { key: "x", configured: false } });
-  resolveModelDefault = vi.fn().mockResolvedValue({ resolved: { provider: "transformers", modelId: "google/flan-t5-base", inferenceMode: "text2text", source: "global" } });
-  selectFolder = vi.fn().mockResolvedValue({ canceled: true });
+  listDefinitions = vi.fn<DesktopApplicationSettingsClient["listDefinitions"]>().mockResolvedValue({ definitions });
+  readSettings = vi.fn<DesktopApplicationSettingsClient["readSettings"]>().mockResolvedValue({ values });
+  updateSetting = vi.fn<DesktopApplicationSettingsClient["updateSetting"]>().mockResolvedValue({ value: { key: "x", configured: true } });
+  clearSetting = vi.fn<DesktopApplicationSettingsClient["clearSetting"]>().mockResolvedValue({ value: { key: "x", configured: false } });
+  resolveModelDefault = vi.fn<DesktopApplicationSettingsClient["resolveModelDefault"]>().mockResolvedValue({ resolved: { provider: "transformers", modelId: "google/flan-t5-base", inferenceMode: "text2text", source: "global" } });
+  selectFolder = vi.fn<DesktopApplicationSettingsClient["selectFolder"]>().mockResolvedValue({ canceled: true });
 });
 
 afterEach(async () => {

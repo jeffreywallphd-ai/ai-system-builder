@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { useWindowTakeover, WindowTakeoverControls } from "../../../../../../modules/ui/shared/takeover/WindowTakeoverControls";
 
 import {
   ApplicationIcon,
@@ -7,6 +8,7 @@ import {
   SidebarNavigationGroup,
   type ApplicationIconName,
   useNavigationGroupCollapseState,
+  useNavigationMenu,
   useSidebarCollapseState,
 } from "../../../../../../modules/ui/shared";
 import type {
@@ -14,13 +16,6 @@ import type {
   DesktopPageKey,
 } from "../../routes/desktopPages";
 import appLogoSrc from "../../../../../../modules/ui/shared/assets/branding/logo.svg";
-import dataOrbitSrc from "../../../../../../modules/ui/shared/assets/illustrations/data-orbit.svg";
-import systemsOrbitSrc from "../../../../../../modules/ui/shared/assets/illustrations/systems-orbit.png";
-import assetsOrbitSrc from "../../../../../../modules/ui/shared/assets/illustrations/assets-orbit.png";
-import libraryOrbitSrc from "../../../../../../modules/ui/shared/assets/illustrations/library-orbit.png";
-import modelsOrbitSrc from "../../../../../../modules/ui/shared/assets/illustrations/models-orbit.png";
-import imageGenerationOrbitSrc from "../../../../../../modules/ui/shared/assets/illustrations/image-generation-orbit.png";
-import settingsOrbitSrc from "../../../../../../modules/ui/shared/assets/illustrations/settings-orbit.png";
 import { WorkspaceSwitcher } from "../../features/workspace";
 
 export interface AppShellProps {
@@ -28,6 +23,7 @@ export interface AppShellProps {
   onNavigate: (nextPage: DesktopPageKey) => void;
   pages: readonly DesktopPageDefinition[];
   children: ReactNode;
+  takeoverWorkspaceLabel?: string;
 }
 
 export function AppShell({
@@ -35,8 +31,16 @@ export function AppShell({
   onNavigate,
   pages,
   children,
+  takeoverWorkspaceLabel,
 }: AppShellProps) {
-  const menuRef = useRef<HTMLDetailsElement | null>(null);
+  const { controller, state } = useWindowTakeover();
+  const navigationDisabled = state.status === "active" || state.status === "activating";
+  const navigate = (page: DesktopPageKey) => {
+    const state = controller?.getSnapshot();
+    if (state?.status === "active" || state?.status === "activating") return;
+    onNavigate(page);
+  };
+  const { menuRef, expanded: isMenuExpanded } = useNavigationMenu();
   const { isSidebarCollapsed, toggleSidebar } = useSidebarCollapseState();
   const { isNavigationGroupExpanded, toggleNavigationGroup } =
     useNavigationGroupCollapseState();
@@ -58,7 +62,7 @@ export function AppShell({
     {
       id: "manage",
       label: "Manage",
-      keys: ["artifacts", "assets", "user-library"],
+      keys: ["artifacts", "context", "assets"],
     },
   ];
 
@@ -70,8 +74,9 @@ export function AppShell({
       key={page.key}
       className="ui-shell__sidebar-item"
       type="button"
+      disabled={navigationDisabled}
       aria-current={activePage === page.key ? "page" : undefined}
-      onClick={() => onNavigate(page.key)}
+      onClick={() => navigate(page.key)}
       title={isSidebarCollapsed ? page.label : undefined}
     >
       <ApplicationIcon name={desktopPageIcon(page.key)} />
@@ -79,33 +84,6 @@ export function AppShell({
     </button>
   );
 
-  useEffect(() => {
-    const closeMenuOnOutsideClick = (event: MouseEvent | TouchEvent) => {
-      const menu = menuRef.current;
-      const target = event.target;
-
-      if (
-        !menu?.open ||
-        !target ||
-        !(target as Node).nodeType ||
-        menu.contains(target as Node)
-      ) {
-        return;
-      }
-
-      menu.open = false;
-    };
-
-    document.addEventListener("mousedown", closeMenuOnOutsideClick);
-    document.addEventListener("touchstart", closeMenuOnOutsideClick);
-
-    return () => {
-      document.removeEventListener("mousedown", closeMenuOnOutsideClick);
-      document.removeEventListener("touchstart", closeMenuOnOutsideClick);
-    };
-  }, []);
-
-  const pageArtwork = resolveDesktopPageArtwork(activePage);
 
   return (
     <main
@@ -117,10 +95,11 @@ export function AppShell({
             <div className="ui-shell__brand">
               <button
                 type="button"
+                disabled={navigationDisabled}
                 className="ui-shell__logo-button"
                 aria-label="Go to Home"
                 title="Home"
-                onClick={() => onNavigate("home")}
+                onClick={() => navigate("home")}
               >
                 <span className="ui-shell__logo-frame">
                   <img
@@ -134,7 +113,7 @@ export function AppShell({
               <h1 className="ui-shell__title">AI System Builder</h1>
             </div>
           </div>
-          <div className="ui-shell__header-center">
+          <div className="ui-shell__header-center" inert={navigationDisabled || undefined}>
             <WorkspaceSwitcher variant="header" />
           </div>
           <div className="ui-shell__header-actions">
@@ -142,19 +121,24 @@ export function AppShell({
               <details ref={menuRef} className="ui-shell__menu">
                 <summary
                   className="ui-shell__menu-trigger"
+                  aria-haspopup="menu"
+                  aria-expanded={isMenuExpanded}
+                  tabIndex={0}
                   aria-label="Open navigation menu"
                   title="Menu"
                 >
                   <ApplicationIcon name="menu" />
                   <span className="ui-visually-hidden">Menu</span>
                 </summary>
-                <div className="ui-shell__menu-panel" role="menu">
+                <div className="ui-shell__menu-panel" role="menu" aria-label="Application navigation">
                   {navigationPages.map((page) => (
                     <button
                       key={page.key}
                       className="ui-shell__menu-item"
                       type="button"
                       role="menuitem"
+                      disabled={navigationDisabled}
+                      tabIndex={-1}
                       aria-current={
                         activePage === page.key ? "page" : undefined
                       }
@@ -162,7 +146,7 @@ export function AppShell({
                         event.currentTarget
                           .closest("details")
                           ?.removeAttribute("open");
-                        onNavigate(page.key);
+                        navigate(page.key);
                       }}
                     >
                       {page.label}
@@ -175,10 +159,11 @@ export function AppShell({
             <button
               className="ui-shell__settings-button"
               type="button"
+              disabled={navigationDisabled}
               aria-current={activePage === "settings" ? "page" : undefined}
               aria-label="Settings"
               title="Settings"
-              onClick={() => onNavigate("settings")}
+              onClick={() => navigate("settings")}
             >
               <ApplicationIcon name="settings" />
               <span className="ui-visually-hidden">Settings</span>
@@ -186,6 +171,7 @@ export function AppShell({
           </div>
         </div>
       </header>
+      <WindowTakeoverControls workspaceLabel={takeoverWorkspaceLabel} />
       <div className="ui-shell__body">
         <aside className="ui-shell__sidebar">
           <nav className="ui-shell__sidebar-nav" aria-label="Application areas">
@@ -235,55 +221,11 @@ export function AppShell({
         </aside>
         <div className="ui-shell__main">
           <NotificationViewport />
-          {pageArtwork ? (
-            <div
-              className={`ui-shell__page-art ui-shell__page-art--${pageArtwork.tone}`}
-              aria-hidden="true"
-            >
-              <img src={pageArtwork.src} alt="" />
-            </div>
-          ) : null}
-          <div
-            className={`ui-shell__content${pageArtwork ? " ui-shell__content--with-art" : ""}`}
-          >
-            {children}
-          </div>
+          <div className="ui-shell__content">{children}</div>
         </div>
       </div>
     </main>
   );
-}
-
-function resolveDesktopPageArtwork(activePage?: DesktopPageKey) {
-  if (!activePage || activePage === "home") {
-    return undefined;
-  }
-
-  if (activePage === "artifacts") {
-    return { src: dataOrbitSrc, tone: "data" } as const;
-  }
-
-  if (activePage === "systems") {
-    return { src: systemsOrbitSrc, tone: "systems" } as const;
-  }
-
-  if (activePage === "assets") {
-    return { src: assetsOrbitSrc, tone: "assets" } as const;
-  }
-
-  if (activePage === "user-library") {
-    return { src: libraryOrbitSrc, tone: "user-library" } as const;
-  }
-
-  if (activePage === "models") {
-    return { src: modelsOrbitSrc, tone: "models" } as const;
-  }
-
-  if (activePage === "image-generation") {
-    return { src: imageGenerationOrbitSrc, tone: "image-generation" } as const;
-  }
-
-  return { src: settingsOrbitSrc, tone: "settings" } as const;
 }
 
 function desktopPageIcon(page: DesktopPageKey): ApplicationIconName {
@@ -294,10 +236,10 @@ function desktopPageIcon(page: DesktopPageKey): ApplicationIconName {
       return "systems";
     case "artifacts":
       return "artifacts";
+    case "context":
+      return "context";
     case "assets":
       return "assets";
-    case "user-library":
-      return "library";
     case "models":
       return "models";
     case "image-generation":

@@ -151,7 +151,7 @@ describe("asset library shared detail panels", () => {
       />,
     );
 
-    expect(markup).toContain("Validation details are loaded only when requested.");
+    expect(markup).toContain("Check validation when needed.");
     expect(markup).not.toContain("Valid With Warnings");
     expect(markup).not.toContain("Issues</dt><dd>0</dd>");
   });

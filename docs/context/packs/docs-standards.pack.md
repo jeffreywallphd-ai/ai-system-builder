@@ -21,6 +21,26 @@
 
 ## Core Guidance
 
+- User-owned offline human acceptance uses the roadmap skill's explicit handoff;
+  close only solely human-blocked legacy increments and preserve technical qualification.
+  Started governed roadmaps use `acceptance-scope-revised`, which never closes or
+  supplies a pass; independently review scope and obtain fresh candidate evidence.
+
+- Functionality controlled qualification uses the versioned operations crosswalk
+  and read-only source-bound assessor. Preserve owner history and pending external
+  environments; an automated assessment never grants approval or release status.
+
+- Explicit technical policy amendments use the roadmap skill's separate
+  `technical-acceptance-revised` event, never human-only scope transfer. Preserve
+  criterion identity/qualification, archive original policy/approval, independently
+  review actual authority and obtain fresh checks; no technical pass is inferred.
+
+- Route contributor workflow requests through `AGENTS.md` and
+  `docs/diagnostics/ai-development-control-plane.md`. Start or reuse its review
+  server and share the verified URL; site data comes from versioned JSON.
+- Keep the existing roadmap authority, explicit legacy evidence, bounded helper
+  execution and current source-bound receipts and separate-invocation review.
+
 - Canonical documentation roles are distinct: ADRs (decisions), architecture docs (system boundaries), standards docs (working rules), context docs (task-oriented summaries).
 - If code changes affect documented behavior or boundaries, update canonical docs in the same work item.
 - Prompts/AI context are accelerators, not substitutes for canonical documentation.

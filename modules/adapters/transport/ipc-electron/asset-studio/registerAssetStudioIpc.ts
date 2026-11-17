@@ -15,18 +15,21 @@ import type {
   TransitionAssetStudioAssetDraftCommand,
   UpdateAssetStudioAssetDraftCommand,
 } from "../../../../contracts/asset-studio";
-import type { IpcMainHandlePort } from "../ipcMainHandlePort";
+import type { IpcMainHandlePort, IpcSenderTrustPolicy } from "../ipcMainHandlePort";
+import { guardedIpcMainHandlePort } from "../guardedIpcMainHandlePort";
 
 export interface RegisterAssetStudioIpcDependencies extends Omit<
   RegisterAssetStudioApiRoutesDependencies,
   "app"
 > {
   ipcMain: IpcMainHandlePort;
+  readonly senderTrust: IpcSenderTrustPolicy;
 }
 
 export function registerAssetStudioIpc(
-  d: RegisterAssetStudioIpcDependencies,
+  dependencies: RegisterAssetStudioIpcDependencies,
 ): void {
+  const d = { ...dependencies, ipcMain: guardedIpcMainHandlePort(dependencies.ipcMain, dependencies.senderTrust, Object.values(DESKTOP_ASSET_STUDIO_CHANNELS)) };
   handle(d, "start", async (payload) =>
     d.start.execute({
       ...payload,

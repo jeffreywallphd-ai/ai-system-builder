@@ -10,6 +10,23 @@ security with transaction-local tenant binding, optimistic revisions, Serializab
 retry, transactionally consistent portable export, sanitized health/readiness data, and graceful drain behind existing
 application ports.
 
+An owned transaction pins authorization reads and writes to one Serializable
+client through a synchronous check immediately before commit. It orders each
+organization binding with its query and fences old transaction views at exit or
+retry. A missing commit acknowledgment or unconfirmed rollback discards the
+client. Headless authoring can reconcile an uncertain reply with the same
+operation identity and key.
+
+PostgreSQL can also hold the exact permission and approval rows used to send
+an already committed plan result. The publication transaction uses point reads
+with shared row locks, refuses a conflicting row immediately, and never repeats
+the send. The publication view cannot write or list records.
+
+Schema version 3 adds a partial index over active System Builder records by
+organization and workspace key range. The managed snapshot query projects only
+saved identifiers, revision and status, returning at most 129 summaries. The
+extra row identifies an over-limit snapshot without loading remaining records.
+
 The pool installs an idle-client error listener so an EventEmitter `error` does
 not become an unhandled process failure. Only a counter and timestamp enter
 health; raw driver error content remains private.

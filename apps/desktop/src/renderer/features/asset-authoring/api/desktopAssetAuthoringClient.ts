@@ -31,7 +31,12 @@ type EnvelopeFailure = {
 type Envelope<T> = EnvelopeSuccess<T> | EnvelopeFailure;
 
 type Api = {
-  listAuthoredAssets?: (i: { workspaceId: string }) => Promise<unknown>;
+  listAuthoredAssets?: (i: {
+    workspaceId: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }) => Promise<unknown>;
   listAssetDrafts?: (i: { targetWorkspaceId: string }) => Promise<unknown>;
   createAssetDraft?: (i: {
     targetWorkspaceId: string;
@@ -46,7 +51,12 @@ type Api = {
     targetWorkspaceId: string;
     draftId: string;
   }) => Promise<unknown>;
-  listAssetOverrides?: (i: { targetWorkspaceId: string }) => Promise<unknown>;
+  listAssetOverrides?: (i: {
+    targetWorkspaceId: string;
+    status?: string;
+    limit?: number;
+    cursor?: string;
+  }) => Promise<unknown>;
   disableAssetOverride?: (i: {
     targetWorkspaceId: string;
     overrideId: string;
@@ -84,6 +94,8 @@ type Api = {
     workspaceId: string;
     status?: string;
     text?: string;
+    limit?: number;
+    cursor?: string;
   }) => Promise<unknown>;
   readAssetDerivedCustomization?: (i: {
     workspaceId: string;
@@ -177,14 +189,33 @@ export function createDesktopAssetAuthoringClient() {
   return {
     async listAuthoredAssets(
       workspaceId: string,
-    ): Promise<Result<{ items: readonly AuthoredAssetRecord[] }>> {
+      options: {
+        status?: string;
+        limit?: number;
+        cursor?: string;
+      } = {},
+    ): Promise<
+      Result<{
+        items: readonly AuthoredAssetRecord[];
+        nextCursor?: string;
+      }>
+    > {
       if (typeof api.listAuthoredAssets !== "function")
         return fail("Custom assets are not available yet.", "unavailable");
-      const r = parseEnvelope<{ assets: readonly AuthoredAssetRecord[] }>(
-        await api.listAuthoredAssets({ workspaceId }),
+      const r = parseEnvelope<{
+        assets: readonly AuthoredAssetRecord[];
+        nextCursor?: string;
+      }>(
+        await api.listAuthoredAssets({ workspaceId, ...options }),
       );
       if (r.ok === true)
-        return { ok: true, value: { items: r.value.assets ?? [] } };
+        return {
+          ok: true,
+          value: {
+            items: r.value.assets ?? [],
+            nextCursor: r.value.nextCursor,
+          },
+        };
       return fail(r.error.message, r.error.code);
     },
     async listDrafts(
@@ -253,17 +284,39 @@ export function createDesktopAssetAuthoringClient() {
     },
     async listOverrides(
       workspaceId: string,
-    ): Promise<Result<{ items: readonly AssetOverrideRecord[] }>> {
+      options: {
+        status?: string;
+        limit?: number;
+        cursor?: string;
+      } = {},
+    ): Promise<
+      Result<{
+        items: readonly AssetOverrideRecord[];
+        nextCursor?: string;
+      }>
+    > {
       if (typeof api.listAssetOverrides !== "function")
         return fail(
           "Workspace customizations are not available yet.",
           "unavailable",
         );
-      const r = parseEnvelope<{ overrides: readonly AssetOverrideRecord[] }>(
-        await api.listAssetOverrides({ targetWorkspaceId: workspaceId }),
+      const r = parseEnvelope<{
+        overrides: readonly AssetOverrideRecord[];
+        nextCursor?: string;
+      }>(
+        await api.listAssetOverrides({
+          targetWorkspaceId: workspaceId,
+          ...options,
+        }),
       );
       if (r.ok === true)
-        return { ok: true, value: { items: r.value.overrides ?? [] } };
+        return {
+          ok: true,
+          value: {
+            items: r.value.overrides ?? [],
+            nextCursor: r.value.nextCursor,
+          },
+        };
       return fail(r.error.message, r.error.code);
     },
     async disableOverride(
@@ -350,6 +403,8 @@ export function createDesktopAssetAuthoringClient() {
       workspaceId: string;
       status?: string;
       text?: string;
+      limit?: number;
+      cursor?: string;
     }): Promise<
       Result<{
         items: readonly AssetDerivedCustomizationDraftRecord[];

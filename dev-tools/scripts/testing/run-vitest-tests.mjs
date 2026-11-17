@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import {
-  mkdirSync,
   readFileSync,
   readdirSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -17,6 +14,7 @@ import {
   parseTestSuiteArgument,
   shouldIncludeTestFileForSuite,
 } from "./non-browser-test-runner-core.mjs";
+import { prepareVitestReport, runExactVitest } from "./vitest-exact-runner.mjs";
 
 const runnerDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(runnerDirectory, "../../..");
@@ -36,11 +34,6 @@ const reportRelativePath =
   suite === "all"
     ? "artifacts/test-reports/vitest-test-report.json"
     : `artifacts/test-reports/vitest-${suite}-test-report.json`;
-const reportPath = path.resolve(repositoryRoot, reportRelativePath);
-const vitestCli = path.resolve(
-  repositoryRoot,
-  "node_modules/vitest/vitest.mjs",
-);
 const discoveredFiles = [];
 
 const toPosixPath = (value) => value.split(path.sep).join("/");
@@ -79,27 +72,21 @@ for (const discoveryRoot of discoveryRoots) {
 }
 
 discoveredFiles.sort((left, right) => left.localeCompare(right));
+const reportPath = prepareVitestReport(repositoryRoot, reportRelativePath);
 if (discoveredFiles.length === 0) {
+  const delegated = suite === "ai";
+  const report = {
+    suite, success: delegated, discoveredFiles: [],
+    selection: { status: delegated ? "empty-delegated" : "empty", expectedFiles: 0, collectedFiles: 0 },
+    numTotalTestSuites: 0, numPassedTestSuites: 0, numFailedTestSuites: 0,
+    numTotalTests: 0, numPassedTests: 0, numFailedTests: 0,
+    testResults: [], slowestFiles: [], slowestTests: [],
+  };
+  writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, { encoding: "utf8", flag: "wx", mode: 0o600 });
   if (suite !== "ai") {
     console.error(`No Vitest-owned ${suite} test files were discovered.`);
     process.exitCode = 1;
   } else {
-    const report = {
-      suite,
-      success: true,
-      discoveredFiles: [],
-      numTotalTestSuites: 0,
-      numPassedTestSuites: 0,
-      numFailedTestSuites: 0,
-      numTotalTests: 0,
-      numPassedTests: 0,
-      numFailedTests: 0,
-      testResults: [],
-      slowestFiles: [],
-      slowestTests: [],
-    };
-    mkdirSync(path.dirname(reportPath), { recursive: true });
-    writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
     console.log(
       "No explicitly marked Vitest AI tests were discovered; continuing with the controlled Python AI tests.",
     );
@@ -107,34 +94,19 @@ if (discoveredFiles.length === 0) {
     process.exitCode = 0;
   }
 } else {
-  mkdirSync(path.dirname(reportPath), { recursive: true });
-  rmSync(reportPath, { force: true });
-
-  const result = spawnSync(
-    process.execPath,
-    [
-      vitestCli,
-      "run",
-      ...discoveredFiles,
-      "--environment=jsdom",
-      "--reporter=json",
-      `--outputFile=${reportRelativePath}`,
-    ],
-    {
-      cwd: repositoryRoot,
-      encoding: "utf8",
-      env: { ...process.env, FORCE_COLOR: "0" },
-      stdio: "inherit",
-    },
-  );
-
-  if (result.error) {
+  let result = { exitCode: 1 };
+  try {
+    result = await runExactVitest({ root: repositoryRoot, files: discoveredFiles, reportRelativePath });
+  } catch (error) {
     console.error(
-      `Vitest ${suite} suite could not start: ${result.error.message}`,
+      `Vitest ${suite} execution did not qualify: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 
   try {
+    if (!result.selection || result.selection.status === "unavailable") {
+      throw new Error("No current validated Vitest report is available.");
+    }
     const report = JSON.parse(readFileSync(reportPath, "utf8"));
     const slowestFiles = report.testResults
       .map((testResult) => ({
@@ -155,6 +127,8 @@ if (discoveredFiles.length === 0) {
       .slice(0, 10);
 
     report.suite = suite;
+    report.selection = result.selection ?? { status: "unavailable" };
+    report.success = report.success === true && result.exitCode === 0;
     report.discoveredFiles = discoveredFiles;
     report.slowestFiles = slowestFiles;
     report.slowestTests = slowestTests;
@@ -170,10 +144,11 @@ if (discoveredFiles.length === 0) {
     }
     console.log(`Timing report: ${reportRelativePath}`);
   } catch (error) {
+    result.exitCode = 1;
     console.error(
       `Vitest ${suite} report could not be summarized: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 
-  process.exitCode = result.status === 0 ? 0 : 1;
+  process.exitCode = result.exitCode;
 }

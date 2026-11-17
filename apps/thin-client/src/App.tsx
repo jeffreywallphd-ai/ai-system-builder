@@ -1,5 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ModelDownloadNotificationBridge, NotificationProvider, useNotificationCenter } from "../../../modules/ui/shared";
+import {
+  ContextTaskNotificationBridge,
+  ModelDownloadNotificationBridge,
+  NotificationProvider,
+  useNotificationCenter,
+} from "../../../modules/ui/shared";
+import { WindowTakeoverControls, WindowTakeoverProvider } from "../../../modules/ui/shared/takeover/WindowTakeoverControls";
+import { PresentedWindowResource } from "../../../modules/ui/shared/takeover/PresentedWindowResource";
 
 import { AppShell } from "./components/layout/AppShell";
 import { AssetLibraryPage } from "./pages/AssetLibraryPage";
@@ -7,11 +14,17 @@ import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { HomePage } from "./pages/HomePage";
 import { ImageGenerationPage } from "./pages/ImageGenerationPage";
 import { ModelsPage } from "./pages/ModelsPage";
-import { UserLibraryPage } from "./pages/UserLibraryPage";
-import { ActiveWorkspaceProvider, WorkspaceGate, WorkspaceRequiredSurface, useActiveWorkspace, type WorkspaceUiRecord } from "./features/workspace";
+import {
+  ActiveWorkspaceProvider,
+  WorkspaceGate,
+  WorkspaceRequiredSurface,
+  useActiveWorkspace,
+  type WorkspaceUiRecord,
+} from "./features/workspace";
 import { SecurityPage } from "./pages/SecurityPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SystemBuilderPage } from "./pages/SystemBuilderPage";
+import { ContextPage } from "./pages/ContextPage";
 import {
   resolveThinClientPage,
   thinClientPageDefinitions,
@@ -20,15 +33,39 @@ import {
 } from "./routes/thinClientPages";
 import { resolveThinClientWorkspaceRouteBoundary } from "./routes/workspaceRouteBoundary";
 import { createApiModelManagementClient } from "./features/model-management/api/apiModelManagementClient";
+import { createContextManagementPageClient } from "./features/context-management/api/contextManagementPageClient";
+import { useManagedBrowserTakeover } from "./features/workspace/hooks/useManagedBrowserTakeover";
 
-type ThinClientWorkspacePageKey = Extract<ThinClientPageKey, "systems" | "artifacts" | "assets" | "user-library" | "models" | "image-generation">;
+type ThinClientWorkspacePageKey = Extract<
+  ThinClientPageKey,
+  "systems" | "artifacts" | "context" | "assets" | "models" | "image-generation"
+>;
 const modelDownloadNotificationClient = createApiModelManagementClient();
 const thinClientDownloadNotificationBridgeClient = {
+  completeModelDownload: modelDownloadNotificationClient.completeModelDownload!,
   listModelDownloads: modelDownloadNotificationClient.listModelDownloads!,
 };
+const thinClientContextNotificationClient = createContextManagementPageClient();
 
 function navigateToPage(page: ThinClientPageKey): void {
-  const path = page === "systems" ? "/systems" : page === "artifacts" ? "/artifacts" : page === "assets" ? "/assets" : page === "user-library" ? "/user-library" : page === "image-generation" ? "/image-generation" : page === "models" ? "/models" : page === "security" ? "/security" : page === "settings" ? "/settings" : "/";
+  const path =
+    page === "systems"
+      ? "/systems"
+      : page === "artifacts"
+        ? "/artifacts"
+        : page === "context"
+          ? "/context"
+          : page === "assets"
+            ? "/assets"
+            : page === "image-generation"
+              ? "/image-generation"
+              : page === "models"
+                ? "/models"
+                : page === "security"
+                  ? "/security"
+                  : page === "settings"
+                    ? "/settings"
+                    : "/";
   window.history.pushState({}, "", path);
 }
 
@@ -43,28 +80,82 @@ export function App() {
 }
 
 function WorkspaceAwareThinClientApp() {
-  const [activePage, setActivePage] = useState<ThinClientPageKey>(resolveThinClientPage(window.location.pathname));
+  const [activePage, setActivePage] = useState<ThinClientPageKey>(
+    resolveThinClientPage(window.location.pathname),
+  );
   const workspace = useActiveWorkspace();
   const notifications = useNotificationCenter();
   const setNotificationWorkspace = notifications.setActiveWorkspaceId;
+  const [contextLaunchArtifactId, setContextLaunchArtifactId] =
+    useState<string>();
+  const [artifactDetailIntent, setArtifactDetailIntent] = useState<string>();
+  const notificationWorkspaceId =
+    workspace.status === "ready" ? workspace.activeWorkspace?.id : undefined;
+  const takeover = useManagedBrowserTakeover(notificationWorkspaceId, workspace.activeWorkspace?.organizationId, activePage === "systems");
   useEffect(() => {
-    setNotificationWorkspace(workspace.activeWorkspaceId);
-  }, [setNotificationWorkspace, workspace.activeWorkspaceId]);
-  const activePageDefinition = thinClientPageDefinitions.find((page) => page.key === activePage);
+    setNotificationWorkspace(notificationWorkspaceId);
+    setContextLaunchArtifactId(undefined);
+    setArtifactDetailIntent(undefined);
+  }, [notificationWorkspaceId, setNotificationWorkspace]);
+  const activePageDefinition = thinClientPageDefinitions.find(
+    (page) => page.key === activePage,
+  );
   const routeRequiresWorkspace = thinClientPageRequiresWorkspace(activePage);
-  const routeBoundary = resolveThinClientWorkspaceRouteBoundary(activePage, workspace.status);
+  const routeBoundary = resolveThinClientWorkspaceRouteBoundary(
+    activePage,
+    workspace.status,
+  );
 
   const setRoute = (nextPage: ThinClientPageKey) => {
+    const status = takeover.controller.getSnapshot().status;
+    if (status === "active" || status === "activating") return;
     navigateToPage(nextPage);
     setActivePage(nextPage);
   };
 
-  const renderWorkspacePageContent = (page: ThinClientWorkspacePageKey, activeWorkspace: WorkspaceUiRecord): ReactNode => {
+  const renderWorkspacePageContent = (
+    page: ThinClientWorkspacePageKey,
+    activeWorkspace: WorkspaceUiRecord,
+  ): ReactNode => {
     switch (page) {
       case "systems":
-        return <SystemBuilderPage workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
+        return (
+          <SystemBuilderPage
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+          />
+        );
       case "artifacts":
-        return <ArtifactsPage workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
+        return (
+          <ArtifactsPage
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+            headlessFileClient={takeover.planApprovals?.fileClient}
+            initialSelectedStorageKey={artifactDetailIntent}
+            onInitialSelectionHandled={() => setArtifactDetailIntent(undefined)}
+            onConvertToRag={(artifactId) => {
+              setContextLaunchArtifactId(artifactId);
+              setArtifactDetailIntent(undefined);
+              setRoute("context");
+            }}
+          />
+        );
+      case "context":
+        return (
+          <ContextPage
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+            initialArtifactId={contextLaunchArtifactId}
+            onInitialArtifactHandled={() =>
+              setContextLaunchArtifactId(undefined)
+            }
+            onViewSource={(artifactId) => {
+              setArtifactDetailIntent(artifactId);
+              setContextLaunchArtifactId(undefined);
+              setRoute("artifacts");
+            }}
+          />
+        );
       case "image-generation":
         return (
           <ImageGenerationPage
@@ -75,11 +166,19 @@ function WorkspaceAwareThinClientApp() {
           />
         );
       case "assets":
-        return <AssetLibraryPage workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
-      case "user-library":
-        return <UserLibraryPage workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
+        return (
+          <AssetLibraryPage
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+          />
+        );
       case "models":
-        return <ModelsPage workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
+        return (
+          <ModelsPage
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+          />
+        );
     }
   };
 
@@ -88,7 +187,9 @@ function WorkspaceAwareThinClientApp() {
       case "security":
         return <SecurityPage />;
       case "settings":
-        return <SettingsPage />;
+        return <SettingsPage planApprovals={takeover.planApprovals && workspace.activeWorkspace ? {
+          ...takeover.planApprovals, workspaceName:workspace.activeWorkspace.displayName,
+        } : undefined} />;
       case "home":
         return <HomePage onNavigate={setRoute} />;
       default:
@@ -100,20 +201,41 @@ function WorkspaceAwareThinClientApp() {
     <WorkspaceRequiredSurface />
   ) : routeRequiresWorkspace ? (
     <WorkspaceGate pageLabel={activePageDefinition?.label ?? activePage}>
-      {(activeWorkspace) => renderWorkspacePageContent(activePage as ThinClientWorkspacePageKey, activeWorkspace)}
+      {(activeWorkspace) =>
+        renderWorkspacePageContent(
+          activePage as ThinClientWorkspacePageKey,
+          activeWorkspace,
+        )
+      }
     </WorkspaceGate>
-  ) : renderGlobalPageContent(activePage);
+  ) : (
+    renderGlobalPageContent(activePage)
+  );
 
   return (
     <>
-      <ModelDownloadNotificationBridge client={thinClientDownloadNotificationBridgeClient} workspaceId={workspace.activeWorkspaceId} />
-      <AppShell
-        activePage={routeBoundary.visibleActivePage}
-        pages={thinClientPageDefinitions}
-        onNavigate={setRoute}
-      >
-        {content}
-      </AppShell>
+      <ModelDownloadNotificationBridge
+        client={thinClientDownloadNotificationBridgeClient}
+        workspaceId={notificationWorkspaceId}
+      />
+      <ContextTaskNotificationBridge
+        client={thinClientContextNotificationClient}
+        workspaceId={notificationWorkspaceId}
+      />
+      <WindowTakeoverProvider control={takeover}>
+        <AppShell
+          activePage={routeBoundary.visibleActivePage}
+          pages={thinClientPageDefinitions}
+          onNavigate={setRoute}
+        >
+          {takeover.presented ? (
+            <PresentedWindowResource intent={takeover.presented.intent} detail={takeover.presented.detail}
+              elementRef={takeover.presentedElement} />
+          ) : null}
+          {content}
+          <WindowTakeoverControls workspaceLabel={workspace.activeWorkspace?.displayName} />
+        </AppShell>
+      </WindowTakeoverProvider>
     </>
   );
 }

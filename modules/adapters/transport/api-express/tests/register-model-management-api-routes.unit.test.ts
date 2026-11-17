@@ -77,14 +77,16 @@ describe("registerModelManagementApiRoutes",()=>{
 
   it("registers short model-download lifecycle routes and normalizes workspace task reads", async()=>{
     const handlers=new Map<string,any>(); const app:ModelManagementExpressRoutePort={post:testDouble.fn((p,h)=>handlers.set(p,h))};
-    const tasks={start:testDouble.fn(async(x)=>({activity:{requestId:'download-1',...x,status:'queued'}})),read:testDouble.fn(async(x)=>({activity:{...x,status:'running'}})),list:testDouble.fn(async()=>({activities:[]})),cancel:testDouble.fn(async(x)=>({activity:{...x,status:'cancelled'},cancelled:true}))};
+    const tasks={complete:testDouble.fn(async(x)=>({activity:{...x,status:"succeeded"}})),start:testDouble.fn(async(x)=>({activity:{requestId:'download-1',...x,status:'queued'}})),read:testDouble.fn(async(x)=>({activity:{...x,status:'running'}})),list:testDouble.fn(async()=>({activities:[]})),cancel:testDouble.fn(async(x)=>({activity:{...x,status:'cancelled'},cancelled:true}))};
     registerModelManagementApiRoutes({app,browseModelsUseCase:{execute:testDouble.fn()},getModelDetailsUseCase:{execute:testDouble.fn()},listModelsUseCase:{execute:testDouble.fn()},saveModelReferenceUseCase:{execute:testDouble.fn()},downloadModelUseCase:{execute:testDouble.fn()},modelDownloadTasksUseCase:tasks,updateModelRecordUseCase:{execute:testDouble.fn()},deleteModelRecordUseCase:{execute:testDouble.fn()}});
     expect([...handlers.keys()]).toContain('/api/model/download/start');
     expect([...handlers.keys()]).toContain('/api/model/download/read');
     expect([...handlers.keys()]).toContain('/api/model/download/list');
     expect([...handlers.keys()]).toContain('/api/model/download/cancel');
     await handlers.get('/api/model/download/read')({body:{workspaceId:'workspace-a',requestId:'download-1'},headers:{}},response().res);
-    expect(tasks.read).toHaveBeenCalledWith({workspaceId:'workspace-a',requestId:'download-1'});
+    expect(tasks.read).toHaveBeenCalledWith({workspaceId:'workspace-a',requestId:'download-1'}, {organizationId:undefined,principalId:undefined});
+    await handlers.get('/api/model/download/complete')({body:{workspaceId:'workspace-a',requestId:'download-1',principalId:'forged'},headers:{}},response().res);
+    expect(tasks.complete).toHaveBeenCalledWith({workspaceId:'workspace-a',requestId:'download-1',principalId:'forged'}, {organizationId:undefined,principalId:undefined,modelWriteAuthorized:true});
   });
 
   it("logs browse request lifecycle", async()=>{

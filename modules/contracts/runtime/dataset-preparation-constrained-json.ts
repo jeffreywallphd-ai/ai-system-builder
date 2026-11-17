@@ -40,6 +40,8 @@ export interface DatasetPreparationGenerationCapacitySnapshot {
   capturedAt: string;
   decoderAvailable: boolean;
   schemaSupported: boolean;
+  /** Exact worker feature availability; absence never grants offload support. */
+  offloadAvailable?: boolean;
   logicalProcessorCount?: number;
   totalSystemMemoryBytes?: number;
   availableSystemMemoryBytes?: number;
@@ -67,6 +69,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const boundedPositiveInteger = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? value
+    : undefined;
+
+const boundedAvailableMemory = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0
     ? value
     : undefined;
 
@@ -102,7 +109,7 @@ export function normalizeDatasetPreparationGenerationCapacitySnapshot(
   const totalSystemMemoryBytes = boundedPositiveInteger(
     value.totalSystemMemoryBytes,
   );
-  const availableSystemMemoryBytes = boundedPositiveInteger(
+  const availableSystemMemoryBytes = boundedAvailableMemory(
     value.availableSystemMemoryBytes,
   );
   const totalAcceleratorMemoryBytes = boundedPositiveInteger(
@@ -114,9 +121,12 @@ export function normalizeDatasetPreparationGenerationCapacitySnapshot(
     capturedAt,
     decoderAvailable: value.decoderAvailable,
     schemaSupported: value.schemaSupported,
+    ...(typeof value.offloadAvailable === "boolean"
+      ? { offloadAvailable: value.offloadAvailable }
+      : {}),
     ...(logicalProcessorCount ? { logicalProcessorCount } : {}),
     ...(totalSystemMemoryBytes ? { totalSystemMemoryBytes } : {}),
-    ...(availableSystemMemoryBytes ? { availableSystemMemoryBytes } : {}),
+    ...(availableSystemMemoryBytes !== undefined ? { availableSystemMemoryBytes } : {}),
     ...(totalAcceleratorMemoryBytes ? { totalAcceleratorMemoryBytes } : {}),
   };
 }
@@ -177,7 +187,7 @@ export function resolveDatasetPreparationGenerationModelCapacity(input: {
   const totalSystemMemoryBytes = boundedPositiveInteger(
     input.capacity.totalSystemMemoryBytes,
   );
-  const availableSystemMemoryBytes = boundedPositiveInteger(
+  const availableSystemMemoryBytes = boundedAvailableMemory(
     input.capacity.availableSystemMemoryBytes,
   );
   const totalAcceleratorMemoryBytes = boundedPositiveInteger(

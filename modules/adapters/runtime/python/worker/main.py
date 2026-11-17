@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import importlib
+import importlib.machinery
+import importlib.util
 import sys
 from os import getenv
 from pathlib import Path
+from types import ModuleType
 
 import uvicorn
 
@@ -14,14 +17,46 @@ def _load_app():
 
         return package_app
 
-    # Support direct script execution (`python main.py`) used by the desktop supervisor.
-    # In script mode, ensure repository root is importable so package-relative imports work.
-    repository_root = Path(__file__).resolve().parents[5]
-    root_path = str(repository_root)
-    if root_path not in sys.path:
-        sys.path.insert(0, root_path)
-
-    module = importlib.import_module("modules.adapters.runtime.python.worker.app")
+    # The shipped worker is a flat directory. Bind its relative imports to that
+    # exact directory without searching a checkout or changing sys.path.
+    worker_root = Path(__file__).resolve().parent
+    worker_directory = str(worker_root)
+    package_name = "_ai_system_builder_worker"
+    package = sys.modules.get(package_name)
+    cached = [(name, module) for name, module in list(sys.modules.items())
+              if name == package_name or name.startswith(package_name + ".")]
+    if package is None and cached:
+        raise RuntimeError("Python runtime package directory is unavailable.")
+    for name, module in cached:
+        parts = name.split(".")[1:]
+        if not isinstance(module, ModuleType) or any(not part.isidentifier() for part in parts):
+            raise RuntimeError("Python runtime package directory is unavailable.")
+        expected = worker_root.joinpath(*parts)
+        module_file = getattr(module, "__file__", None)
+        if module_file is not None:
+            if not isinstance(module_file, str):
+                raise RuntimeError("Python runtime package directory is unavailable.")
+            actual = Path(module_file).resolve()
+            if (not actual.is_relative_to(worker_root)
+                    or actual not in {expected.with_suffix(".py"), expected / "__init__.py"}
+                    or not actual.is_file()):
+                raise RuntimeError("Python runtime package directory is unavailable.")
+        module_paths = getattr(module, "__path__", None)
+        if module_paths is not None:
+            if (list(module_paths) != [str(expected)] or not expected.is_dir()
+                    or expected.resolve() != expected):
+                raise RuntimeError("Python runtime package directory is unavailable.")
+        elif module_file is None:
+            raise RuntimeError("Python runtime package directory is unavailable.")
+    if package is not None:
+        if list(getattr(package, "__path__", ())) != [worker_directory]:
+            raise RuntimeError("Python runtime package directory is unavailable.")
+    else:
+        spec = importlib.machinery.ModuleSpec(package_name, loader=None, is_package=True)
+        spec.submodule_search_locations = [worker_directory]
+        package = importlib.util.module_from_spec(spec)
+        sys.modules[package_name] = package
+    module = importlib.import_module(f"{package_name}.app")
     return module.app
 
 

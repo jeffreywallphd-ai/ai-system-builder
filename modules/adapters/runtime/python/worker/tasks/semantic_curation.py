@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from array import array
 from collections import Counter, defaultdict, deque
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 import hashlib
 import math
@@ -61,10 +63,10 @@ def _source_row_index(row: dict[str, object], fallback: int) -> int:
 
 def hashed_token_embedding(text: str) -> tuple[float, ...]:
     vector = [0.0] * _DIMENSIONS
-    tokens = re.findall(r"[\w'-]+", text.casefold(), re.UNICODE)
-    for token in tokens:
+    for match in re.finditer(r"[\w'-]+", text.casefold(), re.UNICODE):
+        token = match.group()
         digest = hashlib.sha256(token.encode("utf-8")).digest()
-        index = int.from_bytes(digest[:2], "big") % _DIMENSIONS
+        index = (digest[0] * 256 + digest[1]) % _DIMENSIONS
         direction = 1.0 if digest[2] & 1 else -1.0
         vector[index] += direction
     magnitude = math.sqrt(sum(value * value for value in vector))
@@ -73,7 +75,7 @@ def hashed_token_embedding(text: str) -> tuple[float, ...]:
     return tuple(value / magnitude for value in vector)
 
 
-def cosine_similarity(left: tuple[float, ...], right: tuple[float, ...]) -> float:
+def cosine_similarity(left: Sequence[float], right: Sequence[float]) -> float:
     return max(-1.0, min(1.0, sum(a * b for a, b in zip(left, right))))
 
 
@@ -109,6 +111,8 @@ def curate_semantic_rows(
     task_type: str,
     task_recipe: dict[str, Any],
     config: AdvancedSemanticCurationConfig,
+    *,
+    check_cancelled: Callable[[], None] | None = None,
 ) -> SemanticCurationResult:
     if not config.enabled:
         return SemanticCurationResult(rows, [], {
@@ -130,7 +134,7 @@ def curate_semantic_rows(
     maximum_comparisons = int(config.maxComparisonsPerRow or 128)
     source_cap = int(config.maxRowsPerSource) if config.maxRowsPerSource is not None else None
     accepted: list[dict[str, object]] = []
-    embeddings: list[tuple[float, ...]] = []
+    embeddings: list[array] = []
     accepted_lineage: list[tuple[str, int]] = []
     quarantine: list[dict[str, object]] = []
     source_counts: Counter[str] = Counter()
@@ -140,6 +144,8 @@ def curate_semantic_rows(
     review_examples: list[dict[str, object]] = []
 
     for fallback_index, row in enumerate(rows):
+        if check_cancelled is not None:
+            check_cancelled()
         source_id = _source_id(row)
         source_index = _source_row_index(row, fallback_index)
         if source_cap is not None and source_counts[source_id] >= source_cap:
@@ -181,7 +187,7 @@ def curate_semantic_rows(
                 })
             continue
         accepted.append(dict(row))
-        embeddings.append(embedding)
+        embeddings.append(array("d", embedding))
         accepted_lineage.append((source_id, source_index))
         source_counts[source_id] += 1
 
@@ -189,12 +195,20 @@ def curate_semantic_rows(
     hard_negative_count = 0
     if embeddings:
         for index, embedding in enumerate(embeddings):
+            if check_cancelled is not None:
+                check_cancelled()
             best_index: int | None = None
             best_similarity = -1.0
-            for candidate_index, candidate in enumerate(embeddings):
-                if index == candidate_index or accepted_lineage[index][0] == accepted_lineage[candidate_index][0]:
+            # Visit at most K indices, including skipped same-source rows.
+            # Searching until K cross-source matches would still scan all N
+            # rows for a single-source dataset. The cyclic window is stable
+            # for the recorded input order; it is not a global nearest search.
+            for offset in range(1, min(len(embeddings), maximum_comparisons + 1)):
+                candidate_index = (index + offset) % len(embeddings)
+                if accepted_lineage[index][0] == accepted_lineage[candidate_index][0]:
                     continue
-                similarity = cosine_similarity(embedding, candidate)
+                compared_pairs += 1
+                similarity = cosine_similarity(embedding, embeddings[candidate_index])
                 if similarity > best_similarity:
                     best_index = candidate_index
                     best_similarity = similarity
@@ -224,6 +238,8 @@ def curate_semantic_rows(
                             "similarity": round(best_similarity, 4),
                         })
 
+    if check_cancelled is not None:
+        check_cancelled()
     balance_field = _balance_field(task_type, task_recipe, config.balanceField)
     distribution = Counter(
         str(row[balance_field])[:128]
@@ -241,7 +257,7 @@ def curate_semantic_rows(
     ) if nearest_similarities else (1.0 if accepted else 0.0)
     report = {
         "embeddingAlgorithm": "hashed-token-v1",
-        "algorithmVersion": "1",
+        "algorithmVersion": "2",
         "similarityThreshold": threshold,
         "comparedPairCount": compared_pairs,
         "duplicateRowCount": duplicate_count,

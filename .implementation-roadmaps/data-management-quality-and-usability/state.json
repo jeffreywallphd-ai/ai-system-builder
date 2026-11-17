@@ -1,5 +1,151 @@
 {
-  "blockers": [],
+  "blockerReclassifications": [
+    {
+      "assignment": {
+        "actionLocation": "Approved private Hugging Face dataset repository and existing secure app credential store",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "Current private publication and ingestion tests pass, with exact-candidate checks and independent review. The supplied credential alone is not a test pass.",
+        "requiredAction": "Use the saved credential through the existing secure path. Create the already authorized private synthetic test repository if absent, then qualify publishing and ingestion. Preserve independent advanced-runtime and scale requirements.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "private-provider-and-advanced-runtime-unavailable",
+      "originalBlocker": {
+        "id": "private-provider-and-advanced-runtime-unavailable",
+        "kind": "credential",
+        "recordedAt": "2026-10-22T16:25:38Z",
+        "requiredAction": "Supply a separately authorized private test repository/credential through the existing secure path for private-provider checks. Continue available synthetic local/model/UI/scale work; this status does not assert all subwork is complete and grants no external publication authority.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "Real private-provider publication/ingestion qualification requires an authorized private test repository and credentials that have not been supplied. This credential dependency is independent of the pending advanced-runtime/model/UI/scale work; no human participants are required."
+      },
+      "originalDigest": "57c3c1a7a604db304e1b17fd557caaba2aefcc26c27ffb3d0f4525cc26ca4e5f",
+      "reason": "The latest user authority confirms saved credentials and exact private repository creation approval. No provider call was made by this reviewer. An actual access error can require a later precise human request; its existence must not be assumed.",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "revisedSummary": "Saved Hugging Face credentials and the exact private test repository are authorized. Real private publishing and ingestion verification remains unfinished; independent advanced-runtime/model/UI/scale requirements remain pending."
+    },
+    {
+      "assignment": {
+        "actionLocation": "Data roadmap advanced preparation and scalable ingestion increments",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "The unchanged advanced-capability acceptance checks have measured evidence and independent review. Any new supplier choice is separately approved before adoption.",
+        "requiredAction": "Complete the available approved data, model, UI and scale work. Prepare bounded OCR provider options before requesting any new supplier decision; do not claim unsupported OCR is delivered.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "advanced-runtime-qualification-unavailable",
+      "originalBlocker": {
+        "id": "advanced-runtime-qualification-unavailable",
+        "kind": "technical",
+        "recordedAt": "2026-10-22T16:25:39Z",
+        "requiredAction": "Use admitted approved installed models and synthetic sources for feasible tests; separately govern and qualify a selected OCR provider before any supported OCR claim. Preserve model/resource/scale/UI failures and do not treat an unavailable OCR readiness state as delivery.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset coverage remain technical gaps. Human participants are not a prerequisite."
+      },
+      "originalDigest": "c08505e81cfa15d800d2b5a9ad83c5cf4e156ceb60e80f30e9550f59f3a45ead",
+      "reason": "Mixed record: available advanced/local/model/scale/UI work is agent-owned. OCR is intentionally unsupported. A concrete new provider/package choice may require user approval, but the agent must first prepare bounded options; no selected supplier or unasked approval is invented.",
+      "recordedAt": "2026-10-23T18:49:25Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "Data increment 3 provider presentation and increment 4 private-source ingestion qualification",
+        "actionOwner": "agent",
+        "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+        "completionCondition": "Remaining private-provider presentation and ingestion requirements have actual current evidence and independent review. Existing successful publication/retry/denial observations remain preserved and do not supply unrun checks.",
+        "requiredAction": "Reuse the reviewed synthetic private-publication and durable-retry evidence. Finish the remaining provider presentation and private-source ingestion checks, with bounded resource/cleanup evidence and exact-target review. Use only the existing secure credential path and approved test repository; do not request the token again or imply new external publication authority.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+      "blockerId": "private-provider-and-advanced-runtime-unavailable",
+      "originalBlocker": {
+        "actionLocation": "Approved private Hugging Face dataset repository and existing secure app credential store",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "Current private publication and ingestion tests pass, with exact-candidate checks and independent review. The supplied credential alone is not a test pass.",
+        "id": "private-provider-and-advanced-runtime-unavailable",
+        "kind": "credential",
+        "recordedAt": "2026-10-22T16:25:38Z",
+        "requiredAction": "Use the saved credential through the existing secure path. Create the already authorized private synthetic test repository if absent, then qualify publishing and ingestion. Preserve independent advanced-runtime and scale requirements.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Coding agent",
+        "status": "open",
+        "summary": "Saved Hugging Face credentials and the exact private test repository are authorized. Real private publishing and ingestion verification remains unfinished; independent advanced-runtime/model/UI/scale requirements remain pending."
+      },
+      "originalDigest": "c77e0a5725aee60b361d21a86ebd2e83ad426a94f89d59eaa0fe80a91917495f",
+      "reason": "Reviewed private-provider observations supersede the old claim that basic publication and saved access are untested. Remaining requirements are unchanged and are not resolved by this status correction.",
+      "recordedAt": "2026-10-26T08:18:53Z",
+      "revisedSummary": "The saved credential and exact private test repository are authorized. Fixed synthetic publication, exact commit downloads, durable idempotent retry and credential/visibility denial checks have passed. Provider presentation and controlled application ingestion/resource/cleanup qualification remain unfinished. No new credential request or repeated publication is implied."
+    },
+    {
+      "assignment": {
+        "actionLocation": "Data increment 5 remaining advanced-preparation qualification",
+        "actionOwner": "agent",
+        "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+        "completionCondition": "The unchanged remaining advanced-capability requirements have measured evidence and independent review. Completed two-host OCR and accepted model-quality checks stay closed.",
+        "requiredAction": "Reuse completed OCR and accepted model-quality evidence. Complete remaining approved semantic, synthetic-generation, automated UI and bounded resource qualification with fresh exact-target checks and independent review. Preserve prior failed attempts and unresolved requirements; do not rerun accepted accuracy checks or reopen completed OCR.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+      "blockerId": "advanced-runtime-qualification-unavailable",
+      "originalBlocker": {
+        "actionLocation": "Data roadmap advanced preparation and scalable ingestion increments",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "The unchanged advanced-capability acceptance checks have measured evidence and independent review. Any new supplier choice is separately approved before adoption.",
+        "id": "advanced-runtime-qualification-unavailable",
+        "kind": "technical",
+        "recordedAt": "2026-10-22T16:25:39Z",
+        "requiredAction": "Complete the available approved data, model, UI and scale work. Prepare bounded OCR provider options before requesting any new supplier decision; do not claim unsupported OCR is delivered.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Coding agent",
+        "status": "open",
+        "summary": "OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset coverage remain technical gaps. Human participants are not a prerequisite."
+      },
+      "originalDigest": "c0cdc5cb8885a281ca42eafc4274530175c7b831a518ef882166ccc161faa4c6",
+      "reason": "The existing pending record predates the approved and qualified Windows OCR adapter. Correct obsolete OCR/provider-selection facts without changing criteria or claiming the broader advanced capability work is done.",
+      "recordedAt": "2026-10-26T08:18:53Z",
+      "revisedSummary": "Controlled two-host Windows OCR is qualified and accepted model-accuracy checks stay closed. Remaining advanced-capability work includes larger-data semantic outcomes, generated-candidate admission and criticism, full-app controls, progress/cancellation/cleanup and resource evidence. These are agent-owned technical checks."
+    }
+  ],
+  "blockers": [
+    {
+      "actionLocation": "Data increment 3 provider presentation and increment 4 private-source ingestion qualification",
+      "actionOwner": "agent",
+      "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+      "completionCondition": "Remaining private-provider presentation and ingestion requirements have actual current evidence and independent review. Existing successful publication/retry/denial observations remain preserved and do not supply unrun checks.",
+      "id": "private-provider-and-advanced-runtime-unavailable",
+      "kind": "credential",
+      "recordedAt": "2026-10-22T16:25:38Z",
+      "requiredAction": "Reuse the reviewed synthetic private-publication and durable-retry evidence. Finish the remaining provider presentation and private-source ingestion checks, with bounded resource/cleanup evidence and exact-target review. Use only the existing secure credential path and approved test repository; do not request the token again or imply new external publication authority.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Coding agent",
+      "status": "open",
+      "summary": "The saved credential and exact private test repository are authorized. Fixed synthetic publication, exact commit downloads, durable idempotent retry and credential/visibility denial checks have passed. Provider presentation and controlled application ingestion/resource/cleanup qualification remain unfinished. No new credential request or repeated publication is implied."
+    },
+    {
+      "actionLocation": "Data increment 5 remaining advanced-preparation qualification",
+      "actionOwner": "agent",
+      "authorityRef": "user-approved-data-work-and-current-review-maintenance",
+      "completionCondition": "The unchanged remaining advanced-capability requirements have measured evidence and independent review. Completed two-host OCR and accepted model-quality checks stay closed.",
+      "id": "advanced-runtime-qualification-unavailable",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T16:25:39Z",
+      "requiredAction": "Reuse completed OCR and accepted model-quality evidence. Complete remaining approved semantic, synthetic-generation, automated UI and bounded resource qualification with fresh exact-target checks and independent review. Preserve prior failed attempts and unresolved requirements; do not rerun accepted accuracy checks or reopen completed OCR.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Coding agent",
+      "status": "open",
+      "summary": "Controlled two-host Windows OCR is qualified and accepted model-accuracy checks stay closed. Remaining advanced-capability work includes larger-data semantic outcomes, generated-candidate admission and criticism, full-app controls, progress/cancellation/cleanup and resource evidence. These are agent-owned technical checks."
+    }
+  ],
   "chunks": [
     {
       "areas": [
@@ -1464,6 +1610,50 @@
       "outcome": "passed",
       "recordedAt": "2026-07-30T14:00:21Z",
       "summary": "The provider selector reuses host-owned credential storage and bounded browse APIs, retains adapter-returned immutable revisions, redacts provider errors, keeps live network boundaries out of deterministic E2E tests, and preserves the existing controlled-environment qualification requirement. Documentation, architecture, agent-support, thin-client build, and desktop package gates passed."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "controlled-advanced-capabilities-are-qualified",
+      "id": "evidence-42",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T14:07:35Z",
+      "summary": "Technical qualification pending: actual OCR/layout, semantic/hard-negative and model/critic quality, representative resource bounds, progress/cancellation/cleanup and automated accessible preset journeys. OCR is truthfully unavailable; private-provider qualification remains separate. No disabled capability is counted as delivered."
+    },
+    {
+      "artifact": "docs/operations/private-provider-qualification.json",
+      "command": "Reviewed bounded private-provider qualification operator and separate read-only rendering probe",
+      "criterionId": "controlled-provider-publication-is-qualified",
+      "id": "evidence-43",
+      "incrementId": "versioned-dataset-lineage-and-publishing",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-23T23:44:39Z",
+      "summary": "Actual authorized private repository creation, one-commit synthetic publication, exact-revision hash-matched downloads, immediate application retry and credential/public-confirmation denials passed with independent review. Website rendering returned 401; meaningful cleanup, failure recovery and durable host/UI qualification remain pending agent work. Credentials and repository authority are already available; no human action is requested."
+    },
+    {
+      "artifact": "docs/operations/private-provider-qualification.json",
+      "command": "Reviewed bounded private-provider qualification operator",
+      "criterionId": "controlled-ingestion-scale-is-qualified",
+      "id": "evidence-44",
+      "incrementId": "governed-scalable-ingestion",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-23T23:44:40Z",
+      "summary": "Actual private provider synthetic publication and immutable retrieval now provide reviewed lower-level support. This did not execute governed acquisition, representative large-file or website ingestion, streaming-memory, resume/refresh/cancel or full cleanup tests. Those unchanged technical requirements remain pending agent work; no credential or human-testing dependency is inferred."
+    },
+    {
+      "artifact": "docs/operations/private-provider-qualification.json",
+      "command": "Reviewed production destination guard and final bounded private synthetic replay",
+      "criterionId": "controlled-provider-publication-is-qualified",
+      "id": "evidence-45",
+      "incrementId": "versioned-dataset-lineage-and-publishing",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-24T00:07:14Z",
+      "summary": "The production publisher now verifies exact destination visibility before and after commit, rejects metadata redirects/wrong targets, and preserves creation authorization and uncertain-effect failure. The red regression was fixed; 53 isolated compatibility tests, registered checks, production typechecks, final actual private replay and separate review passed. Provider rendering, restart retry, cleanup/failure recovery and mounted-host qualification remain pending agent work; no new human action or model accuracy run is required."
     }
   ],
   "feedback": [
@@ -2353,6 +2543,446 @@
       "recordedAt": "2026-07-30T14:14:33Z",
       "sequence": 119,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "4ed88936a0e21eb33ed3b985129da63dfbe035c7001af6f5f3dab8044a82b7c5",
+      "recordedAt": "2026-10-21T17:07:33Z",
+      "sequence": 120,
+      "type": "human-acceptance-transferred"
+    },
+    {
+      "eventFingerprint": "d064866fa5bd10b8210fae836d0c6df38a81b31ec0dee9f2d9c66718f6786d3e",
+      "recordedAt": "2026-10-21T17:07:34Z",
+      "sequence": 121,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "c826ea636ca21fa17bf4f13362926c8677e3e2187a11d06c4a6feb9e08531260",
+      "recordedAt": "2026-10-21T17:07:34Z",
+      "sequence": 122,
+      "type": "human-acceptance-transferred"
+    },
+    {
+      "eventFingerprint": "d064866fa5bd10b8210fae836d0c6df38a81b31ec0dee9f2d9c66718f6786d3e",
+      "recordedAt": "2026-10-21T17:07:34Z",
+      "sequence": 123,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "ae258eebe492dadd09a134e362aa9b1f0b3fcca40cf2055769815e07f1bbc221",
+      "recordedAt": "2026-10-21T17:07:34Z",
+      "sequence": 124,
+      "type": "human-acceptance-transferred"
+    },
+    {
+      "eventFingerprint": "d064866fa5bd10b8210fae836d0c6df38a81b31ec0dee9f2d9c66718f6786d3e",
+      "recordedAt": "2026-10-21T17:07:35Z",
+      "sequence": 125,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "4a5ee37769fad741e4abc7d4a83a19b071cc1efa2c0ffead324136d6237b7b2b",
+      "recordedAt": "2026-10-22T14:04:24Z",
+      "sequence": 126,
+      "type": "legacy-acceptance-scope-revised"
+    },
+    {
+      "eventFingerprint": "e400f7a09ceea2daa563c6102534f827fd44275b8b37931e2b0af0444790d129",
+      "recordedAt": "2026-10-22T14:04:25Z",
+      "sequence": 127,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "d9fc1536b28b0dad0d0ba54fe110dcc2e9702d02230ab54060e2bdb392855da9",
+      "recordedAt": "2026-10-22T14:07:35Z",
+      "sequence": 128,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "43c7a259ec816a3836f9c5c89cd4863b60d4e280398bfde6a4671bf4566a4fa6",
+      "recordedAt": "2026-10-22T16:25:38Z",
+      "sequence": 129,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "6513c7105fec6afcf0701e9ef639ecf7b05010bc446e8aeef4f8217e926989eb",
+      "recordedAt": "2026-10-22T16:25:39Z",
+      "sequence": 130,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "250c4be32457e74a1ca1db17a7723e97cd32e99a83505af7240952d653379dcf",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 131,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "acd9188c155c8f751d0f52f7021cc8addb7a5822d9034d8f7e1c7f8371e41908",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 132,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "75493b47c1ebfcfe7a17b5a06bda0ad39508042a35675d2a10e39ed9e02786e4",
+      "recordedAt": "2026-10-23T23:44:39Z",
+      "sequence": 133,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1d7b256c25a0a7084044c1c00edcd0195eb0cba2eb49efda08d17f2d6a931f8c",
+      "recordedAt": "2026-10-23T23:44:40Z",
+      "sequence": 134,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "74ffb711fdf4171305ecc13070e35dea18f077581c26e9a1c003860077b01052",
+      "recordedAt": "2026-10-24T00:07:14Z",
+      "sequence": 135,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7987993656215fdb7d62baf6815fe0b56b22f0ee7b0343ac03ccd33b2e434777",
+      "recordedAt": "2026-10-26T08:18:53Z",
+      "sequence": 136,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "9a7516ce27a50c0bda4f0690f7cd47b90c9a0db6b3b80dd2e9dc0ddc9ee29303",
+      "recordedAt": "2026-10-26T08:18:53Z",
+      "sequence": 137,
+      "type": "blocker-reclassified"
+    }
+  ],
+  "humanAcceptanceTransfers": [
+    {
+      "authorityRef": "explicit-user-offline-human-acceptance",
+      "criteria": [
+        {
+          "description": "Controlled keyboard, screen-reader, zoom/reflow, and representative non-technical usability review confirms that users can add supported data, understand readiness, create a dataset, and find its result without opening Advanced settings or needing unexplained technical terms.",
+          "id": "guided-usability-is-qualified",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "incrementId": "guided-trustworthy-foundation",
+      "originalPlan": {
+        "assumptions": [
+          "Existing requests with only trainRatio and testRatio remain valid; validationRatio is additive and defaults to zero for stored callers, while the new guided default uses a three-way split.",
+          "The aggregate dataset remains available for backward compatibility, and explicit train/validation/test artifacts are additive results for new training and review flows.",
+          "Parquet support uses the already locked pyarrow training dependency; unsupported legacy DOC, XLS/XLSX, and TSV entries are not offered until a bounded tested reader is deliberately added.",
+          "Hugging Face converted-Parquet browsing may use the provider's immutable converted reference only after localization records the exact returned revision and object metadata; no renderer fetches provider bytes directly.",
+          "Controlled private-provider, representative non-technical, screen-reader, and supported-zoom qualification can remain explicitly pending with automation complete; it will not be inferred from unit tests."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "guided-supported-paths-are-truthful",
+              "warnings-and-results-are-actionable",
+              "security-foundation-closes-known-disclosures"
+            ],
+            "id": "truthful-capabilities-and-source-staging",
+            "outcome": "Every offered local or Hugging Face source is accepted only when its format and task are supported end to end; native structured readers include Parquet; remote-only selections are localized within existing bounds and carry exact repository revision evidence into the preparation request.",
+            "title": "Truthful capabilities and source staging"
+          },
+          {
+            "criteriaIds": [
+              "dataset-splits-are-real-and-leakage-safe",
+              "warnings-and-results-are-actionable",
+              "security-foundation-closes-known-disclosures"
+            ],
+            "id": "deterministic-splits-and-safe-diagnostics",
+            "outcome": "Configured train, validation, and test proportions produce deterministic physical outputs with source/group and exact-duplicate isolation, counts derived from emitted files, backward-compatible aggregate output, and failure diagnostics limited to bounded counts and reason codes.",
+            "title": "Deterministic splits and safe diagnostics"
+          },
+          {
+            "criteriaIds": [
+              "guided-supported-paths-are-truthful",
+              "dataset-splits-are-real-and-leakage-safe",
+              "warnings-and-results-are-actionable",
+              "security-foundation-closes-known-disclosures"
+            ],
+            "id": "role-aware-materialization-and-transport",
+            "outcome": "Application storage and provider publication safely preserve aggregate and split outputs, validate handles and workspace ownership, expose bounded split locations and warnings through desktop and server transports, and clean temporary files on success, failure, or cancellation.",
+            "title": "Role-aware materialization and transport parity"
+          },
+          {
+            "criteriaIds": [
+              "guided-supported-paths-are-truthful",
+              "ordered-steps-default-is-plain-language",
+              "warnings-and-results-are-actionable",
+              "security-foundation-closes-known-disclosures",
+              "guided-usability-is-qualified"
+            ],
+            "id": "ordered-data-management-experience",
+            "outcome": "Desktop and thin client present the same accessible Add data, Check data, Prepare dataset, and Review and create sequence, keep ordinary choices in plain language with recommended defaults, move technical tuning under Advanced settings, and show truthful readiness, warning, split, and result summaries.",
+            "title": "Ordered Data Management experience"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check when context routing or agent guidance changes",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package where practical",
+          "npm test"
+        ],
+        "documentation": [
+          "Canonical Data Management and dataset-preparation architecture",
+          "Data-boundary threat model and security standards delta",
+          "ADR current-implementation notes for staged artifacts, backing identity, runtime tasks, and security",
+          "Dataset preparation, artifact repository/storage, Python runtime, desktop, thin-client, and shared UI READMEs",
+          "Task-relevant context packs and context catalog entries",
+          "Concise temporary implementation report"
+        ],
+        "fingerprint": "67e01b058fc83efca062f2e9ce8b0293ec1e35f064ab0de8742d45a42bd7e16c",
+        "focusedTests": [
+          "Capability registry and application guards for supported format/task/destination combinations, unsupported early denial, workspace isolation, provider revision preservation, remote-only localization, redirect/size/deadline failure, and cleanup",
+          "Python structured/document readers for CSV, JSON, JSONL, Parquet, TXT, Markdown, HTML, PDF, and DOCX plus malformed, deeply nested, oversized, missing dependency, and unsupported DOC/XLS/XLSX/TSV denial cases",
+          "Python deterministic three-way splitting for seeds, ratios, small datasets, source/group isolation, exact duplicate isolation, count invariants, every output format, cancellation, cleanup, and diagnostic non-disclosure",
+          "Application materialization, local storage, Hugging Face publication, output handle validation, partial failure compensation, warnings, role projections, API/IPC/preload/client parity, and local-path/provider-payload non-disclosure",
+          "Shared, desktop, and thin-client UI tests for WorkflowSequence semantics, recommended defaults, Advanced disclosure, readiness blocking, actionable warnings, split/result summaries, keyboard flow, focus, zoom/reflow styles, reduced motion, cancellation, retry, and notification ownership"
+        ],
+        "recordedAt": "2026-07-30T01:06:42Z",
+        "rollback": "Disable the guided renderer and additive split projections while retaining the corrected worker split allocation, capability denials, diagnostic redaction, immutable provider revision evidence, workspace isolation, and secure localization. Keep the aggregate dataset for compatible readers; never restore advertised unsupported formats, fake split counts, raw-content diagnostics, or mutable remote-source substitution.",
+        "steps": [
+          "Add the typed source-to-dataset capability registry, guard task starts against unsupported combinations, align UI filtering with the registry, support bounded Parquet input, and automatically localize remote Hugging Face artifacts through the existing repository boundary while retaining exact revision evidence.",
+          "Add optional validation ratio compatibility, deterministic source/group and exact-duplicate-aware allocation, physical aggregate/train/validation/test outputs, truthful count invariants, bounded warnings, and aggregate-only sanitized diagnostics in the Python worker.",
+          "Materialize, verify, publish, and clean every role-tagged output safely; extend result contracts and API/IPC/preload clients without removing the aggregate dataset; add thin-client dataset-preparation lifecycle routes and clients using the same application authority.",
+          "Build the shared Add data, Check data, Prepare dataset, and Review and create sequence with recommended defaults, readiness and recovery summaries, technical controls under Advanced settings, split and warning results, keyboard semantics, and responsive behavior in both composed Data Management hosts.",
+          "Update canonical architecture, security/data-boundary, ADR/current-implementation, context-pack, contract/runtime/storage/UI README documentation and run Increment 1 completion gates after all focused chunks pass."
+        ],
+        "summary": "Implement Increment 1 as four vertical chunks: establish one truthful capability contract and complete supported local/provider staging; correct split and diagnostic integrity while preserving aggregate-output compatibility; expose all results through application and transport parity; then replace the dense default form with the shared ordered-step experience in desktop and thin-client Data Management before running the increment completion gates once."
+      },
+      "previousApproval": {
+        "approvedAt": "2026-07-30T10:58:25Z",
+        "fingerprint": "9dc97811e7da01bd0002c8c587a03d30be5f9918433e7619b66b92c40a726358",
+        "note": "User explicitly approved the revised roadmap and requested production-ready end-to-end implementation of Increment 6."
+      },
+      "recordedAt": "2026-10-21T17:07:33Z",
+      "status": "offline-user-owned",
+      "summary": "Explicit user direction assigns manual accessibility and representative-user acceptance offline. Remove this human-only criterion from technical closure; preserve original evidence and legacy declarations. No human pass or hardware/resource qualification is asserted."
+    },
+    {
+      "authorityRef": "explicit-user-offline-human-acceptance",
+      "criteria": [
+        {
+          "description": "Controlled accessibility and representative non-technical review confirms that users can identify why data needs attention, make an allowed correction, inspect quarantine, and approve a ready dataset using the ordered workflow and plain-language summaries.",
+          "id": "quality-review-usability-is-qualified",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "incrementId": "quality-curation-and-review",
+      "originalPlan": {
+        "assumptions": [
+          "Existing requests without the additive quality configuration retain Increment 1 behavior; the guided desktop and thin-client defaults opt into authoritative policy resolution and review-required materialization.",
+          "A host-owned baseline policy can be composed without a new external service or dependency; managed organization policy is required when organization context is present, while local desktop uses an explicit local baseline policy.",
+          "Deterministic lexical/token-shingle profiling and bounded SimHash candidate bucketing satisfy this increment's non-semantic fuzzy duplicate scope; embedding-based semantic detection remains Increment 5.",
+          "Quarantine artifacts may retain rejected row content because they are workspace-scoped recovery data, but result/report samples and all diagnostics must redact sensitive values and remain bounded.",
+          "The current task registry may retain unapproved runtime outputs only until approval/stop/cleanup in this increment; durable restart-safe immutable dataset version state belongs to Increment 3.",
+          "Automated policy checks provide decision support and admission controls, not legal, consent, copyright, safety, or regulatory conclusions.",
+          "Controlled screen-reader, zoom/reflow, reduced-motion, and representative non-technical review may remain explicitly pending with all local automation complete."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "profiles-and-mappings-are-actionable",
+              "quality-and-leakage-gates-protect-datasets",
+              "security-curation-policy-is-enforced"
+            ],
+            "id": "quality-contracts-and-policy-resolution",
+            "outcome": "One typed contract describes requested and effective quality controls, profiles, mappings, reason codes, reports, quarantine, review states, and approval fingerprints, while host-composed policy resolution clamps permitted user choices and fails closed for missing managed policy.",
+            "title": "Quality contracts and authoritative policy resolution"
+          },
+          {
+            "criteriaIds": [
+              "profiles-and-mappings-are-actionable",
+              "curation-is-measured-and-reversible",
+              "quality-and-leakage-gates-protect-datasets",
+              "security-curation-policy-is-enforced"
+            ],
+            "id": "bounded-curation-and-quarantine",
+            "outcome": "The worker profiles task mappings and distributions, applies deterministic exact/fuzzy duplicate and governance gates, emits count- and lineage-complete metrics, and moves rejected rows to a contained quarantine artifact while reports and diagnostics remain sanitized.",
+            "title": "Bounded profiling, curation, and quarantine"
+          },
+          {
+            "criteriaIds": [
+              "curation-is-measured-and-reversible",
+              "quality-and-leakage-gates-protect-datasets",
+              "review-step-supports-informed-approval",
+              "security-curation-policy-is-enforced"
+            ],
+            "id": "approval-gated-materialization-and-transport",
+            "outcome": "Review results expose sanitized evidence while final dataset outputs remain unmaterialized; scope- and fingerprint-bound approval atomically advances the existing task result through application storage/provider ports, with API/IPC/client parity and deterministic cleanup on every terminal path.",
+            "title": "Approval-gated materialization and transport parity"
+          },
+          {
+            "criteriaIds": [
+              "profiles-and-mappings-are-actionable",
+              "review-step-supports-informed-approval",
+              "security-curation-policy-is-enforced",
+              "quality-review-usability-is-qualified"
+            ],
+            "id": "plain-language-quality-review",
+            "outcome": "Desktop and thin client turn Check data and Review into understandable Ready, Needs attention, or Blocked decisions with bounded redacted examples, quarantine reasons, permitted settings, explicit approve/stop actions, and technical evidence hidden under Advanced details.",
+            "title": "Plain-language quality review experience"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check when context routing changes",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package where practical",
+          "npm test"
+        ],
+        "documentation": [
+          "Data Management architecture and threat model",
+          "Staged artifact, backing identity, and security ADR current-state notes",
+          "Runtime contract/worker, application use-case, storage/provider, API/IPC, server/desktop/thin-client READMEs",
+          "Data Management and adjacent context packs",
+          "Concise temporary implementation report"
+        ],
+        "fingerprint": "a2ca4b4bfd6a28bab074c322be5ca48dd2cf8d353fe9dd17cfcd67f036f81745",
+        "focusedTests": [
+          "Contract and policy-provider tests for defaults, permitted overrides, mandatory gates, organization/workspace context, missing-policy denial, stable policy/report fingerprints, malformed values, and backward compatibility",
+          "Python profile tests for schema, nulls, types, language confidence, field/task mappings, source/class distributions, bounded sanitized samples, malformed/deep/oversized rows, and deterministic reports",
+          "Python curation tests for exact and bucketed fuzzy duplicates, boilerplate and low-quality rules, PII/secret redaction, unsafe markers, benchmark/source/language/license/consent policies, post-generation admission, quarantine lineage, before/after counts, cancellation bounds, and no silent row loss",
+          "Application/storage/provider tests for report/quarantine materialization, final-output withholding, scope and fingerprint approval, stale/replayed approval denial, partial failure cleanup, wrong-workspace/organization denial, contained handles, and non-disclosure",
+          "API, IPC, preload, desktop/thin clients, and UI tests for review-required status, approve/stop parity, plain summaries, bounded examples, correction actions, Advanced details, keyboard/reflow/reduced-motion behavior, and notification ownership"
+        ],
+        "recordedAt": "2026-07-30T02:11:41Z",
+        "rollback": "Disable guided quality review and approval-gated output visibility while retaining Increment 1 capability, split, scope, and diagnostic controls. Preserve immutable raw artifacts and any already-created quarantine/report artifacts, clean retained unapproved runtime outputs, and never make policy-blocked rows eligible through fallback or restore raw-content diagnostics.",
+        "steps": [
+          "Add typed quality policy, requested overrides, effective policy, field profile, task mapping, reason code, sanitized sample, quality report, quarantine, review state, and approval contracts; resolve guided requests against a host-owned workspace/organization policy before runtime work.",
+          "Instrument structured mapping and generated rows, compute bounded schema/completeness/distribution/language/source/task profiles, apply deterministic exact and bounded fuzzy deduplication plus mandatory schema, sensitive-content, source, language, benchmark, license/consent, and quality gates, and emit a sanitized report and contained quarantine output with complete count/lineage invariants.",
+          "Persist only report/quarantine evidence at review time, retain final runtime outputs behind the application boundary, require an exact review fingerprint and task scope for approval, add approve/stop lifecycle parity to API and desktop IPC, and clean retained outputs on rejection, cancellation, stale approval, failure, or completion.",
+          "Extend Check data and Review and create in desktop and thin client with Ready, Needs attention, and Blocked summaries, recommended policy presets, bounded redacted examples, quarantine counts/reasons, permitted corrections, explicit approval/stop, and technical evidence under Advanced details.",
+          "Update canonical architecture, threat model, ADR current-state notes, Data Management/runtime/storage/API/IPC/UI READMEs and context pack, then run documentation, architecture, agent-support, server, thin-client, desktop package, and full repository gates once."
+        ],
+        "summary": "Implement Increment 2 as four vertical chunks: define policy-resolved quality/profile contracts; add deterministic bounded profiling, curation, and quarantine in the worker; withhold final materialization behind scope- and fingerprint-bound approval across desktop/server transports; then expose plain-language Check data and Review decisions in both guided hosts before running increment-wide gates once."
+      },
+      "previousApproval": {
+        "approvedAt": "2026-10-21T17:07:34Z",
+        "fingerprint": "0908d6382f9da7964caafb2abb8712b561e615d3199af7c50a9c324f65bd9be0",
+        "note": "User explicitly directed removal of solely blocking human acceptance tasks and closure of technically implemented increments, with human acceptance handled offline. Approve only this archived human-acceptance scope transfer; retain every technical criterion and legacy evidence limitations."
+      },
+      "recordedAt": "2026-10-21T17:07:34Z",
+      "status": "offline-user-owned",
+      "summary": "Explicit user direction assigns manual accessibility and representative-user acceptance offline. Remove this human-only criterion from technical closure; preserve original evidence and legacy declarations. No human pass or hardware/resource qualification is asserted."
+    },
+    {
+      "authorityRef": "explicit-user-offline-human-acceptance",
+      "criteria": [
+        {
+          "description": "Representative non-technical users can distinguish combining existing datasets from creating a dataset from source material, understand when no preparation copy is needed, select each supported task, understand what is checked, choose from only meaningful methods, and identify unavailable capabilities without opening irrelevant settings or needing unexplained technical terminology; keyboard, screen-reader, zoom, and reduced-motion behavior also pass.",
+          "id": "exact-task-usability-is-qualified",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "originalPlan": {
+        "assumptions": [
+          "A structured source represents an existing example dataset; one selected structured source uses validate-and-split, while multiple compatible structured sources use combine-validate-and-split.",
+          "Document inputs are source material for supported text tasks; direct image inputs are source material for supported image tasks, while structured image manifests are existing datasets.",
+          "Mixed structured and source-material selections are ambiguous and fail with a corrective action in this increment rather than silently merging unlike roles.",
+          "Topic-aware division is the default only when its declared local capability is ready; otherwise the best ready compatible method is selected.",
+          "A ready dataset is not presented as a Step 3 style. Validation, curation, splitting, and immutable version materialization remain explicit derived work rather than an unexplained near-copy.",
+          "Pixel-level image inspection, OCR, automatic box generation, and automatic mask generation remain outside the approved capability boundary."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "input-intent-precedes-preparation",
+              "adaptive-settings-are-compatible",
+              "runtime-rejects-contradictory-recipes",
+              "security-adaptive-data-boundaries-reviewed"
+            ],
+            "id": "adaptive-contract-and-migration",
+            "outcome": "One portable contract classifies ready datasets, dataset combinations, source material, and ambiguous mixtures; returns only meaningful methods and compatible controls; creates a normalized execution plan; and migrates known legacy presets without retaining inactive fields.",
+            "title": "Adaptive intent and method contract"
+          },
+          {
+            "criteriaIds": [
+              "input-intent-precedes-preparation",
+              "exact-task-checks-are-honest",
+              "task-quality-rules-protect-examples",
+              "runtime-rejects-contradictory-recipes",
+              "security-adaptive-data-boundaries-reviewed"
+            ],
+            "id": "runtime-task-quality-boundary",
+            "outcome": "Application and worker boundaries validate actual staged source kinds against the plan, require only method-active recipe sections, reject contradictory recipes and malformed task rows, preserve exact source association, and report inspection limits without exposing protected data.",
+            "title": "Runtime and task-quality boundary"
+          },
+          {
+            "criteriaIds": [
+              "input-intent-precedes-preparation",
+              "exact-task-checks-are-honest",
+              "adaptive-settings-are-compatible",
+              "exact-task-usability-is-qualified"
+            ],
+            "id": "adaptive-ordered-workflows",
+            "outcome": "Both supported clients explain inferred input intent, skip a preparation-style choice for a single ready dataset, preselect combination for multiple datasets, show zero to three task/source methods, default to topic-aware preparation when ready, and expose only compatible Advanced settings with accessible state transitions.",
+            "title": "Adaptive ordered desktop and thin-client workflows"
+          },
+          {
+            "criteriaIds": [
+              "input-intent-precedes-preparation",
+              "exact-task-checks-are-honest",
+              "adaptive-settings-are-compatible",
+              "task-quality-rules-protect-examples",
+              "runtime-rejects-contradictory-recipes",
+              "security-adaptive-data-boundaries-reviewed",
+              "exact-task-usability-is-qualified"
+            ],
+            "id": "documentation-and-qualification",
+            "outcome": "Canonical guidance and tests describe the adaptive behavior, explicit visual-inspection limits, migration and rollback; all focused checks and applicable repository completion gates are recorded, with controlled usability evidence left pending only when it cannot be performed locally.",
+            "title": "Documentation, security evidence, and qualification"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package",
+          "npm test",
+          "git diff --check"
+        ],
+        "documentation": [
+          "docs/architecture/data-management.md",
+          "docs/security/data-management-threat-model.md",
+          "docs/context/packs/data-management.pack.md",
+          "modules/contracts/runtime/README.md",
+          "modules/adapters/runtime/python/worker/README.md",
+          "modules/ui/shared/data-management/README.md"
+        ],
+        "fingerprint": "a69f1be99bc1543d71c80bcd2177134009c40edeecb111a60e45a5ebb6b7f2b5",
+        "focusedTests": [
+          "Runtime contract tests covering every task, source-kind combination, input intent, method count/default, active control set, unavailable state, and legacy normalization denial.",
+          "Application use-case tests for staged-source plan mismatch, inactive-field rejection, no-op intent explanation, multiple-dataset combination, missing capability, malformed request, and sanitized failure.",
+          "Managed Python worker tests for fixed, semantic, and structure-aware compatibility; inactive field denial; task schemas and relationships; labels; bounded boxes and masks; forged lineage; unsupported visual inspection; resource bounds; and diagnostic non-disclosure.",
+          "Desktop request-builder, state migration, and component tests plus thin-client interaction tests for exact-task selection, inferred intent, variable method counts, semantic default, adaptive Advanced settings, switching, and accessibility semantics."
+        ],
+        "recordedAt": "2026-07-30T11:02:46Z",
+        "rollback": "Remove the adaptive plan and clients together, preserve approved dataset versions and source artifacts, accept only losslessly normalizable saved recipes, and disable uncertain methods rather than returning to ignored settings, permissive inference, or weaker validation.",
+        "steps": [
+          "Add shared input-intent, task/source method, active-control, readiness, and legacy-normalization contracts with a focused compatibility matrix.",
+          "Validate the adaptive plan against staged sources in the application use case and managed worker; add bounded task-specific row, relationship, label, box, mask, lineage, and diagnostic denial checks.",
+          "Drive desktop and thin-client Step 2, Step 3, request serialization, Advanced settings, saved setup restoration, and unavailable states from the same adaptive authority.",
+          "Update canonical architecture, threat model, runtime/UI READMEs, and context guidance; run all focused checks, then the completion gates once."
+        ],
+        "summary": "Implement Increment 6 as four coherent chunks: a contract-owned adaptive intent/method plan with legacy normalization; fail-closed application and worker validation with task-specific quality checks; desktop and thin-client adaptive workflows driven by the shared plan; and documentation plus completion qualification. New requests omit inactive controls, while known legacy presets migrate deterministically and unsupported combinations stop with a corrective action."
+      },
+      "previousApproval": {
+        "approvedAt": "2026-10-21T17:07:34Z",
+        "fingerprint": "57b98a01d09a78c2a906b8b137715ca0ccd92c38a8bbb64e49cc01109992fc73",
+        "note": "User explicitly directed removal of solely blocking human acceptance tasks and closure of technically implemented increments, with human acceptance handled offline. Approve only this archived human-acceptance scope transfer; retain every technical criterion and legacy evidence limitations."
+      },
+      "recordedAt": "2026-10-21T17:07:34Z",
+      "status": "offline-user-owned",
+      "summary": "Explicit user direction assigns manual accessibility and representative-user acceptance offline. Remove this human-only criterion from technical closure; preserve original evidence and legacy declarations. No human pass or hardware/resource qualification is asserted."
     }
   ],
   "increments": [
@@ -2382,11 +3012,6 @@
           "description": "Upload, network, provider, storage, runtime, workspace, organization, and diagnostic boundaries remain fail closed and bounded; focused negative tests prove source content, prompts, model output, credentials, provider payloads, local paths, raw logs, and cross-workspace records cannot enter public diagnostics or the wrong workspace.",
           "id": "security-foundation-closes-known-disclosures",
           "qualification": "local"
-        },
-        {
-          "description": "Controlled keyboard, screen-reader, zoom/reflow, and representative non-technical usability review confirms that users can add supported data, understand readiness, create a dataset, and find its result without opening Advanced settings or needing unexplained technical terms.",
-          "id": "guided-usability-is-qualified",
-          "qualification": "controlled-environment"
         }
       ],
       "allowPendingQualification": true,
@@ -2397,7 +3022,7 @@
         "role-aware-materialization-and-transport",
         "ordered-data-management-experience"
       ],
-      "completionSummary": "Increment 1 delivers a truthful, bounded, workspace- and organization-scoped source-to-dataset path with deterministic physical splits, safe diagnostics, authenticated desktop/server lifecycle parity, the shared ordered desktop/thin-client experience, aligned canonical guidance, and passing repository completion gates. Controlled representative human usability qualification remains explicitly pending.",
+      "completionSummary": "Increment 1 delivers a truthful, bounded, workspace- and organization-scoped source-to-dataset path with deterministic physical splits, safe diagnostics, authenticated desktop/server lifecycle parity, the shared ordered desktop/thin-client experience, aligned canonical guidance, and passing repository completion gates. Controlled representative human usability qualification remains explicitly pending. Human acceptance transferred offline by explicit user direction; no human test pass asserted.",
       "deliverables": [
         "Shared source-to-dataset capability registry and compatibility guards used by contracts, application behavior, runtime adapters, and UI selectors",
         "Real deterministic train/validation/test materialization with exact-duplicate and group/source isolation checks",
@@ -2420,9 +3045,7 @@
       "id": "guided-trustworthy-foundation",
       "number": 1,
       "objective": "Deliver one truthful end-to-end path from supported local or Hugging Face source data to a correctly split training dataset, presented through the established ordered-steps UX with plain-language defaults and safe diagnostics.",
-      "pendingCriteria": [
-        "guided-usability-is-qualified"
-      ],
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "Existing requests with only trainRatio and testRatio remain valid; validationRatio is additive and defaults to zero for stored callers, while the new guided default uses a three-way split.",
@@ -2569,7 +3192,7 @@
       ],
       "rollback": "Disable the new guided entry point and additive capability projections while retaining the corrected split implementation, diagnostic redaction, workspace isolation, secure-egress, and immutable-revision controls. Keep prior supported operations available only through the same truthful capability checks; never restore aggregate fake splits, raw-content logging, mutable-source substitution, or a UI path known to fail late.",
       "startedAt": "2026-07-30T01:03:15Z",
-      "status": "implemented-pending-qualification",
+      "status": "completed",
       "title": "Guided and trustworthy Data Management foundation",
       "verification": [
         "Run focused capability-registry, contract-guard, application-use-case, and transport-client tests while implementing each supported path.",
@@ -2628,11 +3251,6 @@
           "description": "Curation policies derive from authoritative configuration, remain workspace and organization scoped, apply before publication, bound preview and report content, and fail closed on missing policy or classifier failure; denial and non-disclosure tests cover PII, secrets, protected content, guessed identifiers, and cross-workspace access.",
           "id": "security-curation-policy-is-enforced",
           "qualification": "local"
-        },
-        {
-          "description": "Controlled accessibility and representative non-technical review confirms that users can identify why data needs attention, make an allowed correction, inspect quarantine, and approve a ready dataset using the ordered workflow and plain-language summaries.",
-          "id": "quality-review-usability-is-qualified",
-          "qualification": "controlled-environment"
         }
       ],
       "allowPendingQualification": true,
@@ -2643,7 +3261,7 @@
         "approval-gated-materialization-and-transport",
         "plain-language-quality-review"
       ],
-      "completionSummary": "Implemented policy-resolved profiling and curation, reversible quarantine, approval-gated materialization, authenticated API and IPC parity, and plain-language desktop and thin-client review. All local criteria and repository gates pass; controlled representative-human accessibility and non-technical usability qualification remains explicitly pending.",
+      "completionSummary": "Implemented policy-resolved profiling and curation, reversible quarantine, approval-gated materialization, authenticated API and IPC parity, and plain-language desktop and thin-client review. All local criteria and repository gates pass; controlled representative-human accessibility and non-technical usability qualification remains explicitly pending. Human acceptance transferred offline by explicit user direction; no human test pass asserted.",
       "deliverables": [
         "Typed profiling, schema, mapping, quality-policy, quarantine, and quality-report contracts",
         "Streaming profile and curation stages with bounded samples, reason codes, metrics, cancellation, and deterministic configuration",
@@ -2667,9 +3285,7 @@
       "id": "quality-curation-and-review",
       "number": 2,
       "objective": "Turn the Check data and Review steps into a measurable curation workflow that profiles data, quarantines problems, applies configurable quality and governance policies, and lets users approve a dataset using understandable evidence.",
-      "pendingCriteria": [
-        "quality-review-usability-is-qualified"
-      ],
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "Existing requests without the additive quality configuration retain Increment 1 behavior; the guided desktop and thin-client defaults opt into authoritative policy resolution and review-required materialization.",
@@ -2810,7 +3426,7 @@
       ],
       "rollback": "Stop producing or consuming curated versions and return the guided workflow to the trustworthy readiness and split behavior from Increment 1. Preserve immutable raw inputs and quarantine records for recovery, retain mandatory redaction and workspace controls, and never make policy-blocked rows eligible merely because an optional classifier or UI is rolled back.",
       "startedAt": "2026-07-30T02:09:39Z",
-      "status": "implemented-pending-qualification",
+      "status": "completed",
       "title": "Data quality, curation, and human review",
       "verification": [
         "Run focused schema, mapping, statistics, quality-stage, quarantine, policy, reason-code, and deterministic-report tests with synthetic bounded fixtures.",
@@ -3321,7 +3937,7 @@
           "qualification": "local"
         },
         {
-          "description": "Controlled representative hardware and accessibility qualification proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset usability with synthetic data.",
+          "description": "Agent-executable qualification on controlled representative hardware and automated accessibility/UI tests proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset workflows with synthetic data, including keyboard/focus, accessibility-tree semantics, zoom/reflow, reduced-motion and responsive behavior.",
           "id": "controlled-advanced-capabilities-are-qualified",
           "qualification": "controlled-environment"
         }
@@ -3547,11 +4163,6 @@
           "description": "Synthetic denial tests prove malformed annotations, forged source associations, unsafe metadata, incompatible dataset combinations, unavailable visual or semantic inspection, oversized work, and contradictory recipes cannot bypass review, silently duplicate or reinterpret data, or expose source content, prompts, model output, identifiers, local paths, or raw errors through diagnostics or notifications.",
           "id": "security-adaptive-data-boundaries-reviewed",
           "qualification": "local"
-        },
-        {
-          "description": "Representative non-technical users can distinguish combining existing datasets from creating a dataset from source material, understand when no preparation copy is needed, select each supported task, understand what is checked, choose from only meaningful methods, and identify unavailable capabilities without opening irrelevant settings or needing unexplained technical terminology; keyboard, screen-reader, zoom, and reduced-motion behavior also pass.",
-          "id": "exact-task-usability-is-qualified",
-          "qualification": "controlled-environment"
         }
       ],
       "allowPendingQualification": true,
@@ -3562,7 +4173,7 @@
         "adaptive-ordered-workflows",
         "documentation-and-qualification"
       ],
-      "completionSummary": "Exact-task adaptive dataset preparation is implemented end to end across contracts, application and worker validation, desktop and thin-client workflows, notification-backed long-running model downloads, documentation, security controls, and production gates. Local evidence passed; only the explicitly external usability and assistive-technology qualification remains pending.",
+      "completionSummary": "Exact-task adaptive dataset preparation is implemented end to end across contracts, application and worker validation, desktop and thin-client workflows, notification-backed long-running model downloads, documentation, security controls, and production gates. Local evidence passed; only the explicitly external usability and assistive-technology qualification remains pending. Human acceptance transferred offline by explicit user direction; no human test pass asserted.",
       "deliverables": [
         "Input-intent, exact-task preparation, and quality capability contracts",
         "Task-specific bounded validators and review evidence",
@@ -3587,9 +4198,7 @@
       "id": "exact-task-adaptive-quality-and-preparation",
       "number": 6,
       "objective": "Make the ordered Data Management workflow truthful and simple for every supported training task by establishing input intent before preparation, then adapting checks, source transformations, example creation, Advanced settings, runtime validation, and review evidence to the exact task, source kind, and selected method.",
-      "pendingCriteria": [
-        "exact-task-usability-is-qualified"
-      ],
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "A structured source represents an existing example dataset; one selected structured source uses validate-and-split, while multiple compatible structured sources use combine-validate-and-split.",
@@ -3740,7 +4349,7 @@
       ],
       "rollback": "Remove the additive intent and adaptive capability mapping plus task-specific validators together, migrate saved recipes back only when lossless, preserve unchanged source datasets and approved immutable versions, and disable methods whose compatibility cannot be proven rather than restoring misleading choices, ignored settings, or unnecessary content copies.",
       "startedAt": "2026-07-30T11:00:28Z",
-      "status": "implemented-pending-qualification",
+      "status": "completed",
       "title": "Exact-task adaptive quality and preparation",
       "verification": [
         "Run focused contract and compatibility-matrix tests for a single ready dataset, multiple compatible datasets, source material, ambiguous or mixed inputs, every supported task, every available method count, and every Advanced-setting visibility or denial path.",
@@ -3779,6 +4388,111 @@
       ]
     }
   ],
+  "legacyAcceptanceScopeRevisions": [
+    {
+      "authorityRef": "user-agent-only-acceptance-and-current-scope-20261022",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "originalPlan": {
+        "assumptions": [
+          "The existing managed Python worker remains the only runtime topology and all advanced processing stays local.",
+          "No new package is needed: deterministic local algorithms cover structure and semantic evidence, while OCR remains explicitly unavailable until a separately governed provider is qualified.",
+          "Standard remains the default and produces the existing request semantics when advanced configuration is absent.",
+          "Controlled representative-hardware, screen-reader, reduced-motion, and non-technical usability evidence may remain pending under the increment's approved qualification allowance."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "advanced-content-processing-preserves-structure-and-lineage",
+              "security-model-assisted-boundaries-reviewed"
+            ],
+            "id": "advanced-capability-contracts-and-structured-processing",
+            "outcome": "Opt-in token, sentence, section, table, semantic, and layout-aware processing records bounded source-span lineage and extraction quality, while unavailable OCR reports an explicit disabled readiness state without fabricated text.",
+            "title": "Capability contracts and structure-aware processing"
+          },
+          {
+            "criteriaIds": [
+              "semantic-curation-improves-measured-quality",
+              "security-model-assisted-boundaries-reviewed"
+            ],
+            "id": "semantic-curation-and-mixing",
+            "outcome": "Deterministic recorded embeddings, thresholds, source caps, balancing, coverage, and hard-negative recommendations improve synthetic reference data without cross-split leakage.",
+            "title": "Semantic curation and mixing"
+          },
+          {
+            "criteriaIds": [
+              "synthetic-examples-are-validated-before-admission",
+              "security-model-assisted-boundaries-reviewed"
+            ],
+            "id": "verified-synthetic-generation-and-review",
+            "outcome": "Bounded multi-candidate generation records citations and sends schema, grounding, critic, duplicate, safety, or diversity failures to the existing quarantine and human-review boundary before splitting.",
+            "title": "Verified synthetic generation and review"
+          },
+          {
+            "criteriaIds": [
+              "advanced-options-do-not-complicate-the-default-path",
+              "security-model-assisted-boundaries-reviewed",
+              "controlled-advanced-capabilities-are-qualified"
+            ],
+            "id": "plain-language-advanced-presets",
+            "outcome": "Desktop and thin-client users retain the concise Standard path and can opt into Better document understanding or Generate examples with readiness, effort, review, cancel, retry, and advanced details kept clear.",
+            "title": "Plain-language advanced presets"
+          }
+        ],
+        "completionTests": [
+          "Run the focused complete preparation worker and UI suites after all chunks are implemented.",
+          "Run npm run security:dependencies only if dependency manifests, lockfiles, or runtime dependency inputs change.",
+          "Run npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run build:server, npm run build:thin-client, npm run package, and npm test once for final increment qualification.",
+          "Validate the roadmap state and record controlled hardware/accessibility qualification as pending unless representative evidence is available."
+        ],
+        "documentation": [
+          "Runtime worker and dataset-preparation READMEs",
+          "Data management architecture and context pack",
+          "Data management threat model and persistence/operations guidance",
+          "Approved roadmap and concise generated implementation report"
+        ],
+        "fingerprint": "f0a04606361d1135ba508a22668f868912b8fb9fd16024d76675399362d15ff8",
+        "focusedTests": [
+          "Worker contract and structure tests for every enabled strategy, exact bounded span or region lineage, quality metrics, unsupported OCR, malformed files, and resource ceilings.",
+          "Worker semantic tests for deterministic hashed embeddings, near duplicates, coverage, balancing, source caps, hard-negative recommendations, and group-safe split leakage prevention.",
+          "Worker generation tests for multiple candidates, strict task schemas, grounding, citations, independent critic decisions, duplication, diversity, quarantine, review-required denial, cancellation-safe progress, and sanitized diagnostics.",
+          "Desktop and thin-client request/UI tests for all three presets, Standard backward compatibility, readiness and effort copy, Advanced settings disclosure, disabled controls during progress, cancel/retry, keyboard semantics, and no obsolete page-level notifications."
+        ],
+        "recordedAt": "2026-07-30T05:41:17Z",
+        "rollback": "Disable or remove the additive advanced profiles and presets while retaining the unchanged Standard request shape, baseline bounded parser, quality policy, deterministic group-safe splits, review flow, and immutable advanced-derived lineage. Never reuse an unverified generated row or silently substitute an unavailable capability.",
+        "steps": [
+          "Define portable advanced-profile, capability-readiness, lineage, and aggregate-evidence contracts, then add bounded structure-aware processing in the managed worker.",
+          "Add deterministic semantic duplicate, coverage, balancing, source-cap, and hard-negative evidence before split creation.",
+          "Add bounded multi-candidate generation with source citations and independent deterministic admission checks that route rejected candidates to quarantine.",
+          "Expose Standard, Better document understanding, and Generate examples in both ordered workflows, document the behavior and security boundary, then run completion qualification once."
+        ],
+        "summary": "Deliver advanced dataset preparation as four additive, reviewable chunks inside the existing worker and ordered workflows, preserving Standard defaults and failing closed whenever an opted-in capability cannot prove readiness or candidate quality."
+      },
+      "previousApproval": {
+        "approvedAt": "2026-10-21T17:07:35Z",
+        "fingerprint": "2b272ad7f7d97dfe591a2e365120f129627742e221bd618be873727eb648ef0d",
+        "note": "User explicitly directed removal of solely blocking human acceptance tasks and closure of technically implemented increments, with human acceptance handled offline. Approve only this archived human-acceptance scope transfer; retain every technical criterion and legacy evidence limitations."
+      },
+      "recordedAt": "2026-10-22T14:04:24Z",
+      "removedCriteria": [],
+      "replacedCriteria": [
+        {
+          "humanScope": "Participant/non-technical usability studies and observed human screen-reader/manual acceptance are handled offline. This transfers no automated accessibility/UI, actual OCR/layout, hardware/model/resource/quality/security qualification or product human approval/curation controls.",
+          "original": {
+            "description": "Controlled representative hardware and accessibility qualification proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset usability with synthetic data.",
+            "id": "controlled-advanced-capabilities-are-qualified",
+            "qualification": "controlled-environment"
+          },
+          "revised": {
+            "description": "Agent-executable qualification on controlled representative hardware and automated accessibility/UI tests proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset workflows with synthetic data, including keyboard/focus, accessibility-tree semantics, zoom/reflow, reduced-motion and responsive behavior.",
+            "id": "controlled-advanced-capabilities-are-qualified",
+            "qualification": "controlled-environment"
+          }
+        }
+      ],
+      "status": "offline-user-owned",
+      "summary": "User-directed offline human acceptance; preserve every technical requirement and all prior evidence. No test pass or closure is asserted."
+    }
+  ],
   "name": "Data Management Quality and Usability",
   "objective": "Deliver a secure, reliable, plain-language Data Management workflow that turns uploaded, web, and repository-backed sources into validated, versioned training datasets without requiring users to understand technical pipeline details.",
   "paths": {
@@ -3788,12 +4502,12 @@
   },
   "resumeAudits": [],
   "roadmapApproval": {
-    "approvedAt": "2026-07-30T10:58:25Z",
-    "fingerprint": "9dc97811e7da01bd0002c8c587a03d30be5f9918433e7619b66b92c40a726358",
-    "note": "User explicitly approved the revised roadmap and requested production-ready end-to-end implementation of Increment 6."
+    "approvedAt": "2026-10-22T14:04:25Z",
+    "fingerprint": "6a7bfa92ed38f7ab73554aeba8eb38750d73ec455ec14332648a020cfbb88854",
+    "note": "The user explicitly directed AI-executable roadmap acceptance, offline human testing and removal of obsolete scope. This reapproval covers only the independently reviewed human wording amendment; technical qualification and product approval controls are unchanged."
   },
   "schemaVersion": 1,
   "slug": "data-management-quality-and-usability",
   "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-07-30T14:14:33Z"
+  "updatedAt": "2026-10-26T08:18:53Z"
 }

@@ -115,6 +115,8 @@ export function createComfyUiHttpClient(options: CreateComfyUiHttpClientOptions)
       if (!promptId.trim() || promptId.length > 256) {
         throw new Error("ComfyUI cancellation requires a valid prompt identifier.");
       }
+      const before = await this.getQueue();
+      const wasPending = before.queue_pending.some((entry) => Array.isArray(entry) && entry[1] === promptId);
       const response = await boundedFetch("/queue", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -125,7 +127,11 @@ export function createComfyUiHttpClient(options: CreateComfyUiHttpClientOptions)
           `ComfyUI request failed for /queue with status ${response.status}.`,
         );
       }
-      return { cancelled: true };
+      // /queue acknowledges deletion requests even when a prompt is running.
+      // Confirm removal of a previously queued item; never interrupt other work.
+      const [after, history] = await Promise.all([this.getQueue(), this.getHistory()]);
+      const stillPresent = [...after.queue_pending, ...after.queue_running].some((entry) => Array.isArray(entry) && entry[1] === promptId);
+      return { cancelled: wasPending && !stillPresent && !history[promptId] };
     },
 
     async unloadModels() {

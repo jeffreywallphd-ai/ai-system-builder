@@ -1,0 +1,394 @@
+{
+ "schema_version": "historical-ui-census-sources-v1",
+ "scope": "historical-only-not-current-coverage-or-execution",
+ "roadmap_id": "comprehensive-ui-automation",
+ "prior_commit": "79379e6d8618548c03c8eb45bf816c1be9c87080",
+ "prior_census_path": "docs/operations/comprehensive-ui-automation-current-census.json",
+ "prior_census_sha256": "d1ead677b9153a144990d977a57e48d375923846be1d5d1adc3073f090759a58",
+ "prior_pointer": {
+  "source": "docs/operations/comprehensive-ui-automation-current-census.json",
+  "command": "node dev-tools/helpers/ui_coverage_census.mjs",
+  "work_id": "current-ui-coverage-census",
+  "status": "technical-check-pending",
+  "scope": "Settings, model-reference and local artifact journeys are committed and reviewed. Two provider-import journeys and one Desktop private-publication journey still need construction. Link all new source during the final coverage review. Source analysis runs no app tests and grants no host or parent pass.",
+  "pending_agent_work": [
+   "The two Settings public-value host journeys and focused checks are already complete. Add their source links during the final coverage review. Actual app execution remains pending.",
+   "The two Settings token/model-default host journeys and focused checks are already complete. Add their source links during the final coverage review. Actual app execution remains pending. User credentials are never copied.",
+   "Add a functional host journey that imports a small sample from an authorized provider source and verifies the saved file. Existing file import and focused transport checks do not supply this host journey.",
+   "Local artifact lifecycle and Thin publication-permission journeys are committed and focused-tested. Final source links and actual app runs remain pending. Add the Desktop private-publication journey. Remote deletion is not authorized.",
+   "The two model search and Save reference host journeys and focused checks are already complete. Add their source links during the final coverage review. Actual app execution remains pending. No weights or accuracy tests were run."
+  ],
+  "full_testing_status": "deferred-by-user",
+  "original_assessment": {
+   "source": "docs/operations/comprehensive-ui-automation-current-census.json",
+   "command": "node dev-tools/helpers/ui_coverage_census.mjs",
+   "work_id": "current-ui-coverage-census",
+   "status": "definition-map-validation-pending-review",
+   "scope": "Current source assertions and inventories are references only. Existing scenario fields preserve earlier implementation evidence. No test execution or parent pass follows from this map.",
+   "pending_agent_work": [
+    "Add focused thin-client Settings mutation/recovery tests.",
+    "Review missing family-specific host definitions and conditional test modifiers before the final matrix."
+   ],
+   "full_testing_status": "deferred-by-user"
+  },
+  "source_support_work_ids": [
+   "thin-settings-recovery-and-shared-fields",
+   "launcher-aware-owned-process-observation",
+   "image-host-ui-journey-definitions-checked",
+   "settings-functional-host-journey-definitions-checked",
+   "model-reference-functional-host-definitions",
+   "local-artifact-functional-host-definitions"
+  ],
+  "reconciliation_basis": "The independent full-family audit is preserved. Settings, model-reference and local artifact construction is reviewed and committed; provider import, Desktop private publication and final source linking remain pending. Original scenarios, behaviors and execution fields are unchanged."
+ },
+ "reason": "These rows have no behavior, host declaration/list or capability-inventory reference. Preserve their exact prior facts here; original requirements, linked assertions and execution history stay unchanged.",
+ "sources": [
+  {
+   "row": {
+    "path": "apps/desktop/src/renderer/features/models/hooks/useModelTrainingFeature.ts",
+    "facts": {
+     "sha256": "e9e93b8ee0bab53095d0f643f4cc208366ab62c5360e6a09d9fcd799ea0c7de7",
+     "bytes": 28744,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "isTerminalTrainingStatus",
+       "line": 33
+      },
+      {
+       "name": "toTrainingMessage",
+       "line": 37
+      },
+      {
+       "name": "resolveHuggingFaceRepositoryInput",
+       "line": 58
+      },
+      {
+       "name": "isVisionTrainingTask",
+       "line": 71
+      },
+      {
+       "name": "isTrainingDatasetArtifact",
+       "line": 77
+      },
+      {
+       "name": "hasLocalModelFiles",
+       "line": 94
+      },
+      {
+       "name": "isLocalTextTrainingBaseModel",
+       "line": 100
+      },
+      {
+       "name": "isDatasetPreparationGenerationModel",
+       "line": 112
+      },
+      {
+       "name": "selectDefaultTrainingBaseModel",
+       "line": 119
+      },
+      {
+       "name": "resolveTrainingDatasetFormat",
+       "line": 143
+      },
+      {
+       "name": "useModelTrainingFeature",
+       "line": 163
+      }
+     ],
+     "assertionCount": 0,
+     "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+     "assertionExamples": [],
+     "modifiers": []
+    },
+    "committed_sha256": "e9e93b8ee0bab53095d0f643f4cc208366ab62c5360e6a09d9fcd799ea0c7de7"
+   },
+   "prior_row_sha256": "771e11e1ab43fc4123b1b3990bca6df363df8abfcab4e42daf02213a25ba3b8f",
+   "reason": "No behavior, host or inventory reference in the prior complete map."
+  },
+  {
+   "row": {
+    "path": "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs",
+    "facts": {
+     "sha256": "8a4028dd851cf57a4831bd8b493b291d7c8c68943142dd102233fc9fb06f791a",
+     "bytes": 753,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [],
+     "assertionCount": 0,
+     "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+     "assertionExamples": [],
+     "modifiers": []
+    },
+    "committed_sha256": "8a4028dd851cf57a4831bd8b493b291d7c8c68943142dd102233fc9fb06f791a"
+   },
+   "prior_row_sha256": "6c893d91774c97d9b997951d89b55e997370a67ad326ce55ddab372b602c4236",
+   "reason": "No behavior, host or inventory reference in the prior complete map."
+  },
+  {
+   "row": {
+    "path": "dev-tools/scripts/testing/run-model-training-e2e.mjs",
+    "facts": {
+     "sha256": "eefa6e038fab8913a80bc2edf9e0f4e91c43552d1cc47306dfb8942ed16c87d3",
+     "bytes": 843,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [],
+     "assertionCount": 0,
+     "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+     "assertionExamples": [],
+     "modifiers": []
+    },
+    "committed_sha256": "eefa6e038fab8913a80bc2edf9e0f4e91c43552d1cc47306dfb8942ed16c87d3"
+   },
+   "prior_row_sha256": "6d9f79b02c6d9d7baeaac80b07bba9f9e400bd8291a10c32d4b76d9206fd8a42",
+   "reason": "No behavior, host or inventory reference in the prior complete map."
+  },
+  {
+   "row": {
+    "path": "modules/hosts/shared/shutdownOwnedTasks.ts",
+    "facts": {
+     "sha256": "6c342cc205a12dbf21eb35bf1bd3e3e92bff67772bf04b877e2f57a31521483f",
+     "bytes": 1080,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "shutdownOwnedTasks",
+       "line": 4
+      }
+     ],
+     "assertionCount": 0,
+     "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+     "assertionExamples": [],
+     "modifiers": []
+    },
+    "committed_sha256": "6c342cc205a12dbf21eb35bf1bd3e3e92bff67772bf04b877e2f57a31521483f"
+   },
+   "prior_row_sha256": "46fa66638583eb4fcd3659723e6da6a7884f1c0f25e1e7d4c5d4d62dcd8f911f",
+   "reason": "No behavior, host or inventory reference in the prior complete map."
+  },
+  {
+   "row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts",
+    "facts": {
+     "sha256": "0935280e22c8feffae1356913b3f56fc28b629565a568e25ca9e57b070cc794e",
+     "bytes": 14492,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "deny",
+       "line": 26
+      },
+      {
+       "name": "field",
+       "line": 27
+      },
+      {
+       "name": "array",
+       "line": 33
+      },
+      {
+       "name": "id",
+       "line": 45
+      },
+      {
+       "name": "hash",
+       "line": 49
+      },
+      {
+       "name": "reviewRepositoryId",
+       "line": 53
+      },
+      {
+       "name": "allowReviewSiteRequest",
+       "line": 59
+      },
+      {
+       "name": "parseReviewSiteJson",
+       "line": 67
+      },
+      {
+       "name": "verifyReviewSiteStatus",
+       "line": 73
+      },
+      {
+       "name": "captureReviewProjection",
+       "line": 92
+      },
+      {
+       "name": "reviewRouteMaximum",
+       "line": 157
+      },
+      {
+       "name": "assertReviewRequirementText",
+       "line": 161
+      },
+      {
+       "name": "captureReviewSiteReply",
+       "line": 169
+      },
+      {
+       "name": "reviewBrowserPhases",
+       "line": 185
+      },
+      {
+       "name": "reviewBrowserReport",
+       "line": 188
+      }
+     ],
+     "assertionCount": 0,
+     "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+     "assertionExamples": [],
+     "modifiers": []
+    },
+    "committed_sha256": "0935280e22c8feffae1356913b3f56fc28b629565a568e25ca9e57b070cc794e"
+   },
+   "prior_row_sha256": "0dcb9f1483d5824e1b2cfb83e29416287d35098aa7bf1d18c487085c572d8659",
+   "reason": "No behavior, host or inventory reference in the prior complete map."
+  },
+  {
+   "row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/website-acquisition-oracles.ts",
+    "facts": {
+     "sha256": "b951e3fce1fc701a0f8061ac21825b8776857a6fdd8c6a190fac63fa037facf1",
+     "bytes": 5131,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "denseStrings",
+       "line": 13
+      },
+      {
+       "name": "readWebsiteHostFixture",
+       "line": 27
+      },
+      {
+       "name": "websiteWorkspace",
+       "line": 51
+      },
+      {
+       "name": "websiteArtifactPair",
+       "line": 55
+      },
+      {
+       "name": "websiteHostReport",
+       "line": 75
+      }
+     ],
+     "assertionCount": 0,
+     "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+     "assertionExamples": [],
+     "modifiers": []
+    },
+    "committed_sha256": "b951e3fce1fc701a0f8061ac21825b8776857a6fdd8c6a190fac63fa037facf1"
+   },
+   "prior_row_sha256": "83e5bb03d69fdc4af5166ee03c481fa799d7685da88bf8db91f82432628f42ad",
+   "reason": "No behavior, host or inventory reference in the prior complete map."
+  },
+  {
+   "row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts",
+    "facts": {
+     "sha256": "1acc0d15367949924070176042b4a513f9aac3b341e2c585c5d02a5d8291478d",
+     "bytes": 5064,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "denseStrings",
+       "line": 16
+      },
+      {
+       "name": "trainingPublicId",
+       "line": 28
+      },
+      {
+       "name": "trainingWorkspaceId",
+       "line": 32
+      },
+      {
+       "name": "trainingDatasetIds",
+       "line": 36
+      },
+      {
+       "name": "captureTrainingHostFixture",
+       "line": 52
+      },
+      {
+       "name": "trainingHostReport",
+       "line": 70
+      }
+     ],
+     "assertionCount": 0,
+     "assertionDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+     "assertionExamples": [],
+     "modifiers": []
+    },
+    "committed_sha256": "1acc0d15367949924070176042b4a513f9aac3b341e2c585c5d02a5d8291478d"
+   },
+   "prior_row_sha256": "f070c34b1e662b67117f5b2ebd8982923e002ba3ea9de6327ea54eed51d189fc",
+   "reason": "No behavior, host or inventory reference in the prior complete map."
+  },
+  {
+   "row": {
+    "path": "dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs",
+    "facts": {
+     "sha256": "3913793d46cda0faea8360fb02076209c0cac9cb401a3344b300ad34642d8fa2",
+     "bytes": 5187,
+     "cases": [
+      {
+       "name": "missing declared inputs return a pending profile before package or app startup",
+       "line": 6
+      },
+      {
+       "name": "fixed Desktop training reuses the host plan and preserves ordinary server and browser launch",
+       "line": 25
+      },
+      {
+       "name": "a literal training slot gets distinct private cache and temporary roots without touching files",
+       "line": 41
+      },
+      {
+       "name": "caller paths and other model families cannot become a launch selector",
+       "line": 49
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [],
+     "assertionCount": 27,
+     "assertionDigest": "5fb119d8f5f3f0990f9cf126ee126a2b29fdc8fa4ef0ce33db9a267b65728ff5",
+     "assertionExamples": [
+      {
+       "line": 12,
+       "kind": "assert",
+       "sha256": "292c35737cb11427709fdb38e9ac698123a754f51f637d4f84237f5d289702a6"
+      },
+      {
+       "line": 13,
+       "kind": "assert",
+       "sha256": "88530838ef3a3647fffe6785010dfa1c8a74a6c09ae93f49f4ff30ebab5c9b5d"
+      },
+      {
+       "line": 28,
+       "kind": "assert",
+       "sha256": "46d486f7b863dfdfdd6aabf2d33df4c93805684627a6067260012917fc3f6da4"
+      },
+      {
+       "line": 28,
+       "kind": "assert",
+       "sha256": "92670e525069e577c78a01da7e4608568697553cf2569a4a6acc47325f8a18d2"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "3913793d46cda0faea8360fb02076209c0cac9cb401a3344b300ad34642d8fa2"
+   },
+   "prior_row_sha256": "0217dbfba8914cc193190ae43c6d16abc0d776d5b38e96e774aa8c6d81604736",
+   "reason": "No behavior, host or inventory reference in the prior complete map."
+  }
+ ]
+}

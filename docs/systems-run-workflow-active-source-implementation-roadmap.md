@@ -2,8 +2,8 @@
 
 # Systems Run Workflow Active Source Eligibility Implementation Roadmap
 
-- Status: `roadmap-drafting`
-- Updated: `2026-07-29T04:05:14Z`
+- Status: `blocked`
+- Updated: `2026-10-22T14:04:25Z`
 
 ## Objective
 

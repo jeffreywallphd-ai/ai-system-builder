@@ -1,0 +1,1794 @@
+"""Model-free Core/ABI fault tests. All native and directory facts are synthetic."""
+import ctypes as C
+import copy
+import gc
+import pickle
+from pathlib import Path
+import struct
+from types import MethodType, SimpleNamespace
+from threading import Thread
+import unittest
+import weakref
+from unittest.mock import Mock, patch
+
+from modules.adapters.runtime.python.worker.tasks import windows_offload_core as c
+
+
+class SyntheticApi:
+    """Finite fresh-domain simulation; no Windows, directory or model effects."""
+    def __init__(self, owner):
+        self.owner, self.steps, self.nodes = owner, [], {}
+        self.fail = self.changed = None
+        self.broken = False
+        self.acl = struct.pack('<BBHHH', 2, 0, 28, 1, 0) + struct.pack('<BBHI', 0, 0, 20, 0x1701ff) + c._WORLD
+
+    def step(self, name):
+        self.steps.append(name)
+        if self.fail == name:
+            raise RuntimeError('synthetic native failure')
+
+    def node(self, directory, parent=None, name=None, size=0):
+        handle = c._Handle()
+        handle.slot.value = 10 + len(self.owner._handles)
+        self.owner._handles.append(handle)
+        self.nodes[handle] = {'identity': b'volume00' + handle.value.to_bytes(16, 'little'), 'directory': directory,
+                              'parent': parent, 'name': name, 'size': size, 'allocated': size, 'permissions': (self.acl, c._PRIVATE_CONTROL)}
+        return handle
+
+    def prepare(self, path):
+        self.step('prepare')
+        root = self.node(True)
+        return ((root, self.identity(root)),)
+
+    def identity(self, handle):
+        self.step('identity')
+        return self.nodes[handle]['identity']
+
+    def kind(self, handle, directory):
+        self.step('kind')
+        c._require(self.nodes[handle]['directory'] is directory)
+
+    def create_directory(self, parent, name):
+        self.step('create-' + (name if name == '.aisb-offload-v1' else 'leaf'))
+        c._require(not any(n['parent'] is parent and n['name'] == name for n in self.nodes.values()))
+        handle = self.node(True, parent, name)
+        return handle, self.identity(handle), self.acl
+
+    def permissions(self, handle):
+        self.step('permissions')
+        return self.nodes[handle]['permissions']
+
+    def protect(self, handle, original):
+        self.step('protect')
+        c._require(self.permissions(handle) == original and original[1] == c._PRIVATE_CONTROL)
+        result = c._acl(original[0], deny=True), original[1]
+        self.nodes[handle]['permissions'] = result
+        return result
+
+    def assert_protected(self, handle, expected):
+        # Deliberate synthetic enforcement only; never Native proof.
+        self.step('assert-protected')
+        c._require(self.permissions(handle) == expected)
+
+    def entries(self, handle):
+        self.step('entries')
+        rows = [(n['name'], n['identity'][8:], n['size'], n['allocated'], n['directory'])
+                for n in self.nodes.values() if n['parent'] is handle and not n.get('deleted')]
+        return tuple(rows)
+
+    def open_index(self, handle):
+        self.step('open-index')
+        return next(h for h, n in self.nodes.items() if n['parent'] is handle and n['name'] == 'index.json')
+
+    def file_facts(self, handle):
+        self.step('file-facts')
+        n = self.nodes[handle]
+        c._require(not n['directory'] and not n.get('named_stream'))
+        return n['identity'], n['size'], n['allocated']
+
+    def guard(self, handle):
+        self.step('guard')
+        value = {'handle': handle, 'retired': False}
+        self.owner._guards.append(value)
+        return value
+
+    def check_guard(self, guard):
+        self.step('check-guard')
+        c._require(not guard['retired'] and not self.broken)
+
+    def retire_guard(self, guard):
+        self.step('retire-guard')
+        c._require(not guard['retired'])
+        guard['retired'] = True
+
+    def delete(self, handle):
+        self.step('delete')
+        c._require(not self.entries(handle) if self.nodes[handle]['directory'] else True)
+        c._require(not self.nodes[handle].get('deleted'))
+        self.nodes[handle]['deleted'] = True
+
+    def close(self, handle):
+        self.step('close')
+        c._require(not handle.closed)
+        handle.closed = True
+
+
+class SyntheticExecution(c._NativeExecutionPort):
+    """Finite in-memory test callbacks only; no actual Windows DLL is loaded."""
+    def __init__(self): self.core, self.mode, self.late = None, None, None
+    def assert_bound(self, core):
+        c._require(core is self.core and core._factory is SyntheticApi)
+    def execute(self, core, operation):
+        self.assert_bound(core)
+        if self.mode == 'skip': return None
+        if self.mode == 'early':
+            self.late = operation
+            return None
+        result = operation()
+        if self.mode == 'double':
+            try: operation()
+            except c.OffloadAdmissionError: pass
+        return result
+
+
+def raw_api_core():
+    execution = SyntheticExecution()
+    core = c.WindowsOffloadCore(Path.cwd(), _api_factory=SyntheticApi, _execution=execution)
+    execution.core = core
+    api = object.__new__(c._WindowsApi); api.owner = core; core._api = api
+    return core, api
+
+
+def fresh_core():
+    execution = SyntheticExecution()
+    value = c.WindowsOffloadCore(Path.cwd() / 'synthetic-fresh-domain', _api_factory=SyntheticApi, _execution=execution)
+    execution.core = value
+    value.prepare_fresh_binding()
+    return value
+
+
+class SyntheticAnchorReceiver(c._JournalAnchorReceiver):
+    """Fake independent duplicate; never a native journal or release proof."""
+    def __init__(self, fail=None):
+        self.fail, self.calls, self.anchor = fail, 0, None
+
+    def _accept_core_anchor(self, binding, handle, identity):
+        binding.assert_borrow_callback(self)
+        self.calls += 1
+        self.borrowed = handle
+        self.anchor = SimpleNamespace(identity=identity, closed=False)
+        if self.fail == 'interrupt': raise KeyboardInterrupt()
+        if self.fail == 'reentry':
+            try: binding.borrow_anchor(self)
+            except c.OffloadAdmissionError: pass
+        return True if self.fail == 'bool' else None
+
+
+def read_binding_core():
+    """Real Core/base-close ledger; only the native replies are synthetic."""
+    def prepare(api, path):
+        api.step('prepare')
+        return tuple((handle, api.identity(handle)) for handle in
+                     (api.node(True), api.node(True), api.node(True)))
+    with patch.object(SyntheticApi, 'prepare', prepare):
+        core = fresh_core()
+    api, events = core._api, []
+    identity = api.identity
+    def observe(handle):
+        events.append(('identity', handle.slot.value))
+        return identity(handle)
+    def close(number):
+        events.append(('close', number))
+        return 1
+    api.identity = observe
+    api.k = SimpleNamespace(CloseHandle=close)
+    api.call = MethodType(c._WindowsApi.call, api)
+    api.close = MethodType(c._WindowsApi.close, api)
+    return core, events
+
+
+class NativeOutcomeContract:
+    """Shared black-box failure journeys for the two concrete call consumers."""
+    def outcome(self, owner):
+        return getattr(owner, '_' + type(owner).__name__ + '__native_outcome')
+
+    def test_unregistered_outcome_denies_before_target(self):
+        owner, _ = self.outcome_case(); native = Mock(return_value=1)
+        record = c._NativeCallOutcome(owner, None, native, (), lambda _: True, ())
+        with self.assertRaises(c.OffloadAdmissionError): record.invoke()
+        native.assert_not_called()
+
+    def test_preinvoke_observer_drift_denies_before_target(self):
+        invoke = c._NativeCallOutcome.invoke
+        for alias in ('_pending', '_dispatch', '_api', 'api_owner'):
+            with self.subTest(alias=alias):
+                owner, api = self.outcome_case(); native = Mock(return_value=1)
+                def drift(record):
+                    if alias == 'api_owner': api.owner = object()
+                    else: setattr(owner, alias, SimpleNamespace(owner=owner))
+                    return invoke(record)
+                with patch.object(c._NativeCallOutcome, 'invoke', drift):
+                    with self.assertRaises(c.OffloadAdmissionError): owner._run(lambda: api.call(native))
+                native.assert_not_called()
+
+    def test_foreign_thread_denies_before_target_invocation(self):
+        owner, api = self.outcome_case(); native = Mock(return_value=1)
+        invoke = c._NativeCallOutcome.invoke
+        def wrong_thread(record):
+            errors = []
+            def attempt():
+                try: invoke(record)
+                except BaseException as error: errors.append(error)
+            thread = Thread(target=attempt)
+            thread.start(); thread.join(timeout=2)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(len(errors), 1)
+            raise errors[0]
+        with patch.object(c._NativeCallOutcome, 'invoke', wrong_thread):
+            with self.assertRaises(c.OffloadAdmissionError): owner._run(lambda: api.call(native))
+        native.assert_not_called()
+        record = self.outcome(owner)
+        self.assertTrue(record.failed); self.assertFalse(record.value_known)
+
+    def test_missing_error_reader_denies_before_target(self):
+        owner, api = self.outcome_case()
+        native = Mock(return_value=1)
+        with patch.object(C, 'get_last_error', None, create=True):
+            with self.assertRaises(c.OffloadAdmissionError):
+                owner._run(lambda: api.call(native))
+        native.assert_not_called()
+
+    def test_error_reader_failure_keeps_actual_return_and_never_retries(self):
+        for interruption in (RuntimeError('synthetic reader failure'), KeyboardInterrupt()):
+            with self.subTest(kind=type(interruption).__name__):
+                owner, api = self.outcome_case()
+                value = object(); native = Mock(return_value=value); validator = Mock(return_value=True)
+                reader = Mock(side_effect=interruption)
+                with patch.object(C, 'get_last_error', reader, create=True):
+                    with self.assertRaises(BaseException):
+                        owner._run(lambda: api.call(native, valid=validator))
+                record = self.outcome(owner)
+                self.assertTrue(record.value_known and record.failed)
+                self.assertIs(record.value, value)
+                self.assertFalse(record.error_returned or record.error_known or record.acknowledged)
+                reader.assert_called_once_with(); native.assert_called_once_with(); validator.assert_not_called()
+                owner._pending = None; owner._uncertain = False; owner._busy = False
+                with self.assertRaises(c.OffloadAdmissionError):
+                    owner._run(lambda: api.call(native))
+                native.assert_called_once_with()
+                self.assertIs(self.outcome(owner), record)
+
+    def test_malformed_error_is_retained_without_coercion(self):
+        class Opaque:
+            def __repr__(self): raise AssertionError('No formatting')
+            def __int__(self): raise AssertionError('No coercion')
+        for error in (None, True, -1, 0x100000000, Opaque()):
+            with self.subTest(kind=type(error).__name__):
+                owner, api = self.outcome_case(); value = object(); validator = Mock(return_value=True)
+                with patch.object(C, 'get_last_error', return_value=error, create=True):
+                    with self.assertRaises(c.OffloadAdmissionError):
+                        owner._run(lambda: api.call(lambda: value, valid=validator))
+                record = self.outcome(owner)
+                self.assertIs(record.error, error); self.assertIs(record.value, value)
+                self.assertTrue(record.value_known and record.error_returned and record.failed)
+                self.assertFalse(record.error_known or record.acknowledged); validator.assert_not_called()
+
+    def test_callable_interruption_never_invents_a_return_or_reads_error(self):
+        for error in (RuntimeError('synthetic call failure'), KeyboardInterrupt()):
+            with self.subTest(kind=type(error).__name__):
+                owner, api = self.outcome_case(); native = Mock(side_effect=error); reader = Mock(return_value=0)
+                with patch.object(C, 'get_last_error', reader, create=True):
+                    with self.assertRaises(BaseException): owner._run(lambda: api.call(native))
+                record = self.outcome(owner)
+                self.assertTrue(record.failed)
+                self.assertFalse(record.value_known or record.error_returned or record.acknowledged)
+                native.assert_called_once_with(); reader.assert_not_called()
+
+    def test_actual_none_return_is_distinct_from_unknown_return(self):
+        owner, api = self.outcome_case()
+        self.assertIsNone(owner._run(lambda: api.call(lambda: None, valid=lambda value: value is None)))
+        record = self.outcome(owner)
+        self.assertIsNone(record.value)
+        self.assertTrue(record.value_known and record.acknowledged)
+        self.assertFalse(record.failed)
+
+    def test_original_reader_is_captured_before_callable_rebinds_it(self):
+        owner, api = self.outcome_case(); original = Mock(return_value=19); replacement = Mock(return_value=20)
+        def native():
+            C.get_last_error = replacement
+            return 1
+        with patch.object(C, 'get_last_error', original, create=True):
+            self.assertEqual(owner._run(lambda: api.call(native)), 1)
+        self.assertEqual(self.outcome(owner).error, 19)
+        original.assert_called_once_with(); replacement.assert_not_called()
+
+    def test_observer_drift_keeps_original_return_before_validation(self):
+        for alias in ('_pending', '_dispatch', '_api', 'finished', 'thread'):
+            with self.subTest(alias=alias):
+                owner, api = self.outcome_case(); result = object(); validator = Mock(return_value=True)
+                def native():
+                    if alias == '_api': owner._api = SimpleNamespace(owner=owner)
+                    elif alias == 'finished': owner._dispatch.finished = True
+                    elif alias == 'thread': owner._dispatch.thread = -1
+                    else: setattr(owner, alias, object())
+                    return result
+                with self.assertRaises(c.OffloadAdmissionError):
+                    owner._run(lambda: api.call(native, valid=validator))
+                record = self.outcome(owner)
+                self.assertIs(record.value, result); self.assertTrue(record.value_known and record.failed)
+                self.assertFalse(record.acknowledged); validator.assert_not_called()
+
+    def test_swallowed_reentry_cannot_replace_original_even_with_pending_reset(self):
+        owner, api = self.outcome_case(); nested = Mock(return_value=1); value = object()
+        def native():
+            original_pending = owner._pending
+            owner._pending = None
+            try: api.call(nested)
+            except c.OffloadAdmissionError: pass
+            owner._pending = original_pending; owner._uncertain = False
+            return value
+        with self.assertRaises(c.OffloadAdmissionError):
+            owner._run(lambda: api.call(native, valid=lambda _: True))
+        record = self.outcome(owner)
+        self.assertIs(record.function, native); self.assertIs(record.value, value)
+        self.assertTrue(record.value_known and record.failed); self.assertFalse(record.acknowledged)
+        nested.assert_not_called()
+
+    def test_failure_bookkeeping_raises_after_private_return_is_pinned(self):
+        owner, api = self.outcome_case(); value = object()
+        method = 'retain_failure' if type(owner) is c.WindowsOffloadCore else '_fail'
+        with patch.object(owner, method, side_effect=RuntimeError('synthetic observer failure')):
+            with self.assertRaises(RuntimeError):
+                owner._run(lambda: api.call(lambda: value, valid=lambda _: False))
+        record = self.outcome(owner)
+        self.assertIs(record.value, value); self.assertTrue(record.value_known and record.failed)
+
+    def test_later_operation_failure_keeps_truthful_successful_call_facts(self):
+        owner, api = self.outcome_case()
+        def operation():
+            self.assertEqual(api.call(lambda: 1), 1)
+            raise RuntimeError('synthetic operation failure after call ACK')
+        with self.assertRaises(c.OffloadAdmissionError): owner._run(operation)
+        record = self.outcome(owner)
+        self.assertTrue(record.value_known and record.acknowledged and record.failed)
+        self.assertEqual(record.value, 1)
+
+    def test_producer_failure_after_callback_ack_retains_the_last_call(self):
+        owner, api = self.outcome_case()
+        core = owner if type(owner) is c.WindowsOffloadCore else owner._core
+        def execute(_core, operation):
+            operation()
+            raise RuntimeError('synthetic producer failure after callback')
+        with patch.object(core._execution, 'execute', side_effect=execute):
+            with self.assertRaises(c.OffloadAdmissionError): owner._run(lambda: api.call(lambda: 1))
+        record = self.outcome(owner)
+        self.assertEqual(record.value, 1)
+        self.assertTrue(record.value_known and record.acknowledged and record.failed)
+
+    def test_error_reader_reentry_cannot_acknowledge_the_outer_call(self):
+        owner, api = self.outcome_case(); nested = Mock(return_value=1); validator = Mock(return_value=True)
+        def reader():
+            try: api.call(nested)
+            except c.OffloadAdmissionError: pass
+            owner._uncertain = False
+            return 37
+        with patch.object(C, 'get_last_error', reader, create=True):
+            with self.assertRaises(c.OffloadAdmissionError):
+                owner._run(lambda: api.call(lambda: 1, valid=validator))
+        record = self.outcome(owner)
+        self.assertTrue(record.value_known and record.error_known and record.failed)
+        self.assertEqual(record.error, 37); self.assertFalse(record.acknowledged)
+        nested.assert_not_called(); validator.assert_not_called()
+
+    def test_repeated_acknowledged_calls_keep_one_passive_record(self):
+        owner, api = self.outcome_case(); previous = []
+        for _ in range(100):
+            self.assertEqual(owner._run(lambda: api.call(lambda: 1)), 1)
+            previous.append(weakref.ref(self.outcome(owner)))
+        gc.collect()
+        self.assertTrue(all(ref() is None for ref in previous[:-1]))
+        self.assertIs(previous[-1](), self.outcome(owner))
+        self.assertTrue(self.outcome(owner).acknowledged)
+
+    def test_copy_and_serialization_cannot_supply_original_record(self):
+        owner, api = self.outcome_case(); owner._run(lambda: api.call(lambda: 1))
+        record = self.outcome(owner)
+        self.assertEqual(repr(record), '<native-call-outcome>')
+        for operation in (copy.copy, copy.deepcopy, pickle.dumps):
+            with self.assertRaises(TypeError): operation(record)
+        duplicate = copy.copy(owner)
+        method = 'retain_failure' if type(owner) is c.WindowsOffloadCore else '_fail'
+        with self.assertRaises(c.OffloadAdmissionError): getattr(duplicate, method)()
+        self.assertFalse(record.failed or owner._uncertain)
+
+
+class CoreTests(NativeOutcomeContract, unittest.TestCase):
+    def outcome_case(self):
+        return raw_api_core()
+
+    def setUp(self):
+        self.enterContext(patch.object(C, 'get_last_error', return_value=0, create=True))
+        # Synthetic test process only; restore the previous table on exit.
+        self.scope = patch.dict(c._CUSTODY, {}, clear=True)
+        self.scope.start()
+        self.addCleanup(self.scope.stop)
+        self.read_scope = patch.dict(c._READ_RETIREMENTS, {}, clear=True)
+        self.read_scope.start()
+        self.addCleanup(self.read_scope.stop)
+
+    def test_unused_read_binding_closes_only_original_handles_after_all_identities(self):
+        core, events = read_binding_core()
+        handles = tuple(core._handles)
+        numbers = [h.value for h in handles]
+        self.assertIsNone(core._retire_unused_read_binding())
+        self.assertEqual(events[:len(handles)], [('identity', n) for n in numbers])
+        self.assertEqual([n for op, n in events if op == 'close'], numbers[::-1])
+        closed = set()
+        for operation, number in events:
+            if operation == 'identity': self.assertNotIn(number, closed)
+            else:
+                self.assertNotIn(number, closed)
+                closed.add(number)
+        self.assertTrue(all(h.close_started is True and h.closed is True for h in handles))
+        self.assertTrue(core._retired)
+        self.assertEqual(core._retirement_kind, 'read-binding')
+        self.assertNotIn(id(core), c._CUSTODY)
+        self.assertNotIn(id(core), c._READ_RETIREMENTS)
+        self.assertLessEqual(set(core._api.steps), {'prepare', 'identity'})
+        before = list(events)
+        with self.assertRaises(c.OffloadAdmissionError): core.assert_bound()
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual(events, before)
+
+    def test_unused_retirement_never_supplies_a_borrowed_staging_witness(self):
+        core, events = read_binding_core()
+        binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver()
+        core._retire_unused_read_binding()
+        before = list(events)
+        custody = dict(c._CUSTODY)
+        with self.assertRaises(c.OffloadAdmissionError): binding.retired_witness(receiver, core)
+        with self.assertRaises(c.OffloadAdmissionError): binding.borrow_anchor(receiver)
+        self.assertEqual(receiver.calls, 0)
+        self.assertEqual(events, before)
+        self.assertEqual(c._CUSTODY, custody)
+        self.assertFalse(core._uncertain)
+
+    def test_staging_witness_requires_the_staging_retirement_kind(self):
+        core = fresh_core(); binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver(); binding.borrow_anchor(receiver)
+        core.create_staging(4096); core.seal_staging(); core.retire_fresh_staging()
+        witness = binding.retired_witness(receiver, core)
+        for kind in ('read-binding', None, False, 0, 'staging-copy'):
+            with self.subTest(kind=kind):
+                core._retirement_kind = kind
+                with self.assertRaises(c.OffloadAdmissionError): binding.retired_witness(receiver, core)
+        core._retirement_kind = 'staging'
+        self.assertIs(binding.retired_witness(receiver, core), witness)
+
+    def test_unused_read_retirement_denies_actual_borrow_without_closing_anchor(self):
+        core, events = read_binding_core(); binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver(); binding.borrow_anchor(receiver)
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertFalse(any(op == 'close' for op, _ in events))
+        self.assertFalse(receiver.anchor.closed)
+        self.assertIs(binding._receiver, receiver)
+        self.assertIs(c._CUSTODY[id(core)], core)
+
+    def test_unused_read_retirement_rejects_nonempty_and_falsy_staging_states(self):
+        states = [('_namespace', ()), ('_stage', False), ('_index', 0),
+                  ('_reservation', 0), ('_reservation', 4096), ('_protected', []),
+                  ('_sealed', {}), ('_guards', [object()]), ('_allocations', [object()]),
+                  ('_pending', False), ('_retirement_kind', 'staging')]
+        for name, value in states:
+            with self.subTest(name=name, value=value):
+                core, events = read_binding_core(); setattr(core, name, value)
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                self.assertFalse(any(op == 'close' for op, _ in events))
+                self.assertTrue(core._uncertain)
+                self.assertIs(c._CUSTODY[id(core)], core)
+
+    def test_unused_read_retirement_rejects_incomplete_duplicate_or_foreign_records(self):
+        def empty(core): core._chain = ()
+        def duplicate(core): core._chain = (core._chain[0],) * len(core._chain)
+        def extra(core): core._handles.append(c._Handle())
+        def swapped(core): core._handles[0], core._handles[1] = core._handles[1], core._handles[0]
+        def generation(core): core._handles[0].slot.value = core._handles[1].slot.value
+        def started(core): core._handles[0].close_started = True
+        def delete_started(core): core._handles[0].delete_started = True
+        def identity_changed(core): core._api.nodes[core._handles[-1]]['identity'] = b'X' * 24
+        for change in (empty, duplicate, extra, swapped, generation, started, delete_started, identity_changed):
+            with self.subTest(change=change.__name__):
+                core, events = read_binding_core(); change(core)
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                self.assertFalse(any(op == 'close' for op, _ in events))
+                self.assertTrue(core._uncertain)
+
+    def test_unused_read_retirement_copies_and_foreign_binding_do_not_poison_owners(self):
+        core, events = read_binding_core(); other, _ = read_binding_core()
+        clone = copy.copy(core)
+        with self.assertRaises(c.OffloadAdmissionError): clone._retire_unused_read_binding()
+        original = core._accounting
+        for binding in (copy.copy(original), other._accounting):
+            core._accounting = binding
+            with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+            self.assertFalse(core._uncertain or other._uncertain)
+        core._accounting = original
+        self.assertFalse(any(op == 'close' for op, _ in events))
+
+    def test_unused_read_retirement_retains_captured_containers_after_callback_swap(self):
+        for field in ('_handles', '_chain', '_api', '_accounting'):
+            with self.subTest(field=field):
+                core, events = read_binding_core(); original_handles = core._handles
+                original_chain = core._chain; api = core._api; identity = api.identity
+                other, _ = read_binding_core()
+                def swap(handle):
+                    value = identity(handle)
+                    replacement = {'_handles': list(original_handles), '_chain': tuple(list(original_chain)),
+                                   '_api': other._api, '_accounting': other._accounting}[field]
+                    setattr(core, field, replacement)
+                    return value
+                api.identity = swap
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                retained = c._READ_RETIREMENTS[id(core)]
+                self.assertIs(retained.handles, original_handles)
+                self.assertIs(retained.chain, original_chain)
+                self.assertIs(retained.api, api)
+                self.assertFalse(any(op == 'close' for op, _ in events))
+                self.assertFalse(other._uncertain)
+
+    def test_unused_read_retirement_reentry_or_borrow_during_identity_cannot_hide_change(self):
+        for attack in ('reentry', 'borrow-state'):
+            with self.subTest(attack=attack):
+                core, events = read_binding_core(); identity = core._api.identity
+                def changed(handle):
+                    result = identity(handle)
+                    if attack == 'reentry':
+                        try: core.assert_bound()
+                        except c.OffloadAdmissionError: pass
+                    else: core._accounting._borrow_started = True
+                    return result
+                core._api.identity = changed
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                self.assertTrue(core._uncertain)
+                self.assertFalse(any(op == 'close' for op, _ in events))
+
+    def test_unused_read_retirement_changed_generation_after_close_is_not_adopted(self):
+        core, events = read_binding_core(); handles = tuple(core._handles)
+        close = core._api.k.CloseHandle
+        def reused(number):
+            result = close(number)
+            handles[1].slot.value = handles[-1].slot.value
+            return result
+        core._api.k.CloseHandle = reused
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual([n for op, n in events if op == 'close'], [handles[-1].slot.value])
+        self.assertIs(c._READ_RETIREMENTS[id(core)].entries[1][1], handles[1])
+        before = list(events)
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual(events, before)
+
+    def test_unused_read_retirement_failed_native_close_at_each_position_never_retries(self):
+        for position in range(3):
+            with self.subTest(position=position):
+                core, events = read_binding_core(); handles = tuple(core._handles)
+                close = core._api.k.CloseHandle; calls = []
+                def fail(number):
+                    calls.append(number); close(number)
+                    return 0 if len(calls) == position + 1 else 1
+                core._api.k.CloseHandle = fail
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                self.assertEqual(len(calls), position + 1)
+                self.assertEqual(sum(h.closed for h in handles), position)
+                self.assertTrue(core._uncertain)
+                self.assertIs(c._CUSTODY[id(core)], core)
+                self.assertIs(c._READ_RETIREMENTS[id(core)].handles, core._handles)
+                before = list(events)
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                self.assertEqual(events, before)
+
+    def test_unused_read_retirement_interruption_before_and_after_native_ack_keeps_slots(self):
+        for after_ack in (False, True):
+            with self.subTest(after_ack=after_ack):
+                core, events = read_binding_core(); handles = tuple(core._handles)
+                if after_ack:
+                    close = core._api.close
+                    def interrupted(handle):
+                        close(handle)
+                        raise KeyboardInterrupt()
+                    core._api.close = interrupted
+                else:
+                    def interrupted(number):
+                        events.append(('close', number))
+                        raise KeyboardInterrupt()
+                    core._api.k.CloseHandle = interrupted
+                with self.assertRaises(KeyboardInterrupt): core._retire_unused_read_binding()
+                self.assertEqual(sum(h.closed for h in handles), int(after_ack))
+                self.assertTrue(handles[-1].close_started)
+                self.assertTrue(core._uncertain)
+                self.assertIs(c._READ_RETIREMENTS[id(core)].handles, core._handles)
+                before = list(events)
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                self.assertEqual(events, before)
+
+    def test_unused_read_retirement_does_not_accept_high_level_fake_close_without_ledger(self):
+        core, events = read_binding_core()
+        core._api.close = MethodType(SyntheticApi.close, core._api)
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertFalse(any(op == 'close' for op, _ in events))
+        self.assertTrue(core._uncertain)
+        self.assertIs(c._CUSTODY[id(core)], core)
+
+    def test_unused_read_retirement_lost_ack_or_duplicate_dispatch_retains_closed_state(self):
+        for mode in ('wrong-result', 'skip', 'double'):
+            with self.subTest(mode=mode):
+                core, events = read_binding_core(); execute = core._execution.execute
+                if mode == 'wrong-result':
+                    def lost(bound, operation):
+                        execute(bound, operation)
+                        return object()
+                    core._execution.execute = lost
+                else: core._execution.mode = mode
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                self.assertTrue(core._uncertain)
+                self.assertIs(c._CUSTODY[id(core)], core)
+                self.assertIn(id(core), c._READ_RETIREMENTS)
+                self.assertEqual(sum(op == 'close' for op, _ in events), 0 if mode == 'skip' else 3)
+
+    def test_unused_read_retirement_registry_removal_interruption_retains_original_snapshot(self):
+        class InterruptedPop(dict):
+            def pop(self, key, *args):
+                super().pop(key, *args)
+                raise KeyboardInterrupt()
+        for registry in ('_CUSTODY', '_READ_RETIREMENTS'):
+            with self.subTest(registry=registry):
+                core, events = read_binding_core()
+                with patch.object(c, registry, InterruptedPop(getattr(c, registry))):
+                    with self.assertRaises(KeyboardInterrupt): core._retire_unused_read_binding()
+                    self.assertTrue(core._retired and core._uncertain)
+                    self.assertEqual(core._retirement_kind, 'read-binding')
+                    self.assertIs(c._CUSTODY[id(core)], core)
+                    self.assertIs(c._READ_RETIREMENTS[id(core)].handles, core._handles)
+                    self.assertEqual(sum(op == 'close' for op, _ in events), 3)
+
+    def test_unused_read_retirement_needs_prepared_api_and_finite_owner_before_callbacks(self):
+        factory = Mock(side_effect=AssertionError('No native factory expected'))
+        unopened = c.WindowsOffloadCore(Path.cwd(), _api_factory=factory)
+        with self.assertRaises(c.OffloadAdmissionError): unopened._retire_unused_read_binding()
+        factory.assert_not_called()
+        self.assertNotIn(id(unopened), c._READ_RETIREMENTS)
+        core, events = read_binding_core(); core._execution = None
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual(events, [])
+        self.assertFalse(any(h.closed for h in core._handles))
+
+    def test_unused_read_retirement_rejects_every_started_or_malformed_borrow_state(self):
+        states = [('_receiver', False), ('_borrow_started', True), ('_borrow_started', 0),
+                  ('_borrowed', True), ('_borrowed', 0), ('_borrowing_thread', 1),
+                  ('_uncertain', True), ('_uncertain', 0)]
+        for name, value in states:
+            with self.subTest(name=name, value=value):
+                core, events = read_binding_core(); setattr(core._accounting, name, value)
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                self.assertFalse(any(op == 'close' for op, _ in events))
+                self.assertFalse(any(h.closed for h in core._handles))
+                self.assertIs(c._CUSTODY[id(core)], core)
+
+    def test_unused_read_retirement_foreign_dispatch_thread_denies_before_identity_or_close(self):
+        core, events = read_binding_core(); responses = []
+        def execute(bound, operation):
+            def run():
+                try: responses.append(('value', operation()))
+                except BaseException as error: responses.append(('error', error))
+            thread = Thread(target=run, daemon=True)
+            thread.start(); thread.join(timeout=2)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(len(responses), 1)
+            if responses[0][0] == 'error': raise responses[0][1]
+            return responses[0][1]
+        core._execution.execute = execute
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual(events, [])
+        self.assertTrue(core._uncertain)
+        self.assertIs(c._READ_RETIREMENTS[id(core)].handles, core._handles)
+
+    def test_unused_read_retirement_post_ack_slot_mutation_stops_further_closes(self):
+        core, events = read_binding_core(); original = tuple(core._handles)
+        close = core._api.close
+        def mutated(handle):
+            close(handle)
+            handle.slot.value = 9999
+        core._api.close = mutated
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual(sum(op == 'close' for op, _ in events), 1)
+        self.assertTrue(core._uncertain and original[-1].closed)
+        snapshot = c._READ_RETIREMENTS[id(core)]
+        self.assertIs(snapshot.entries[-1][1], original[-1])
+        self.assertNotEqual(snapshot.entries[-1][3], original[-1].slot.value)
+
+    def test_retired_read_binding_retries_cannot_overfill_full_owner_table(self):
+        retired = []
+        for _ in range(3):
+            core, events = read_binding_core(); core._retire_unused_read_binding()
+            retired.append((core, events, list(events)))
+        active = [fresh_core() for _ in range(c._MAX_OWNERS)]
+        before = dict(c._CUSTODY)
+        self.assertEqual(len(before), c._MAX_OWNERS)
+        for core, events, original_events in retired:
+            with self.subTest(retired=id(core)):
+                with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+                self.assertEqual(c._CUSTODY, before)
+                self.assertEqual(c._READ_RETIREMENTS, {})
+                self.assertEqual(events, original_events)
+                self.assertTrue(core._retired)
+                self.assertFalse(core._uncertain)
+        self.assertTrue(all(before[id(core)] is core for core in active))
+
+    def test_ordinary_run_rejects_completed_read_binding_without_transient_registration(self):
+        core, events = read_binding_core(); core._retire_unused_read_binding()
+        insertions = []
+        class Observed(dict):
+            def __setitem__(self, key, value):
+                insertions.append(key)
+                return super().__setitem__(key, value)
+        before = list(events)
+        with patch.object(c, '_CUSTODY', Observed(c._CUSTODY)):
+            with self.assertRaises(c.OffloadAdmissionError): core.assert_bound()
+            self.assertEqual(insertions, [])
+            self.assertNotIn(id(core), c._CUSTODY)
+            self.assertEqual(events, before)
+            self.assertFalse(core._uncertain)
+
+    def test_interrupted_retirement_pops_restore_entries_before_shared_lock_release(self):
+        class InterruptedPop(dict):
+            def pop(self, key, *args):
+                super().pop(key, *args)
+                raise KeyboardInterrupt()
+        for registry in ('_CUSTODY', '_READ_RETIREMENTS'):
+            with self.subTest(registry=registry):
+                core, _ = read_binding_core(); observations = []
+                class ObservedLock:
+                    def __init__(self): self.lock = c.RLock()
+                    def __enter__(self): self.lock.acquire(); return self
+                    def __exit__(self, kind, error, traceback):
+                        if kind is KeyboardInterrupt:
+                            observations.append((c._CUSTODY.get(id(core)) is core,
+                                                 id(core) in c._READ_RETIREMENTS))
+                        self.lock.release()
+                        return False
+                with patch.object(c, registry, InterruptedPop(getattr(c, registry))), \
+                     patch.object(c, '_CUSTODY_LOCK', ObservedLock()):
+                    with self.assertRaises(KeyboardInterrupt): core._retire_unused_read_binding()
+                    self.assertEqual(observations, [(True, True)])
+                    self.assertIs(c._CUSTODY[id(core)], core)
+                    self.assertIs(c._READ_RETIREMENTS[id(core)].core, core)
+
+    def test_post_commit_interruption_does_not_resurrect_owner_after_competing_admission(self):
+        core, events = read_binding_core()
+        active = [fresh_core() for _ in range(c._MAX_OWNERS - 1)]
+        admitted = []
+        class AfterCommit:
+            def __init__(self): self.lock, self.fired = c.RLock(), False
+            def __enter__(self): self.lock.acquire(); return self
+            def __exit__(self, kind, error, traceback):
+                self.lock.release()
+                if (kind is None and not self.fired and core._retired
+                        and id(core) not in c._CUSTODY and id(core) not in c._READ_RETIREMENTS):
+                    self.fired = True
+                    # Model the legal competing admission after lock release,
+                    # then a caller interruption before the outer call returns.
+                    admitted.append(fresh_core())
+                    raise KeyboardInterrupt()
+                return False
+        with patch.object(c, '_CUSTODY_LOCK', AfterCommit()):
+            with self.assertRaises(KeyboardInterrupt): core._retire_unused_read_binding()
+        self.assertEqual(len(admitted), 1)
+        self.assertEqual(len(c._CUSTODY), c._MAX_OWNERS)
+        self.assertNotIn(id(core), c._CUSTODY)
+        self.assertNotIn(id(core), c._READ_RETIREMENTS)
+        self.assertTrue(core._retired and not core._uncertain)
+        self.assertTrue(core._read_retirement.released)
+        self.assertEqual(sum(op == 'close' for op, _ in events), 3)
+        self.assertTrue(all(c._CUSTODY[id(owner)] is owner for owner in active + admitted))
+        with self.assertRaises(c.OffloadAdmissionError):
+            core._journal_accounting_binding().retired_witness(SyntheticAnchorReceiver(), core)
+
+    def test_unregistered_read_binding_cannot_mint_custody_admission(self):
+        core, events = read_binding_core(); c._CUSTODY.pop(id(core))
+        before = dict(c._CUSTODY)
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual(c._CUSTODY, before)
+        self.assertEqual(c._READ_RETIREMENTS, {})
+        self.assertEqual(events, [])
+        self.assertFalse(core._retired or core._uncertain)
+
+    def test_pending_read_retirement_blocks_other_operation_before_identity_or_close(self):
+        core, events = read_binding_core(); run = core._run; interrupted = []
+        def interleave(function):
+            if not interrupted:
+                interrupted.append(True)
+                try: run(core._check_bound)
+                except c.OffloadAdmissionError: pass
+            return run(function)
+        core._run = interleave
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual(events, [])
+        self.assertTrue(core._uncertain)
+        self.assertIs(c._CUSTODY[id(core)], core)
+        self.assertIs(core._read_retirement, c._READ_RETIREMENTS[id(core)])
+
+    def test_native_callback_cannot_assign_a_release_commit_before_acknowledged_removals(self):
+        core, events = read_binding_core(); identity = core._api.identity
+        def premature(handle):
+            value = identity(handle)
+            core._read_retirement.released = True
+            return value
+        core._api.identity = premature
+        with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertFalse(core._read_retirement.released)
+        self.assertFalse(any(op == 'close' for op, _ in events))
+        self.assertTrue(core._uncertain)
+        self.assertIs(c._CUSTODY[id(core)], core)
+        self.assertIs(c._READ_RETIREMENTS[id(core)], core._read_retirement)
+
+    def test_constructor_and_unprepared_denial_have_no_native_or_file_effects(self):
+        factory = Mock(side_effect=AssertionError('No native factory expected'))
+        core = c.WindowsOffloadCore(Path.cwd(), _api_factory=factory)
+        factory.assert_not_called()
+        with self.assertRaises(c.OffloadAdmissionError): core.assert_bound()
+        factory.assert_not_called()
+
+    def test_actual_core_preparation_requires_finite_owner_before_dll_or_file_callback(self):
+        core = c.WindowsOffloadCore(Path.cwd())
+        with patch.object(C, 'WinDLL', create=True) as native:
+            with self.assertRaises(c.OffloadAdmissionError): core.prepare_fresh_binding()
+            native.assert_not_called()
+        self.assertIsNone(core._api)
+        with self.assertRaises(TypeError): c._NativeExecutionPort()
+        with self.assertRaises(c.OffloadAdmissionError): c.WindowsOffloadCore(Path.cwd(), _execution={})
+
+    def test_accounting_binding_construction_is_effect_free_and_unprepared_borrow_denies(self):
+        factory = Mock(side_effect=AssertionError('No native factory expected'))
+        core = c.WindowsOffloadCore(Path.cwd(), _api_factory=factory)
+        binding = core._journal_accounting_binding()
+        self.assertIs(binding, core._journal_accounting_binding())
+        receiver = SyntheticAnchorReceiver()
+        with self.assertRaises(c.OffloadAdmissionError): binding.borrow_anchor(receiver)
+        factory.assert_not_called()
+        self.assertEqual(receiver.calls, 0)
+
+    def test_independent_journal_anchor_survives_exact_core_retirement(self):
+        core = fresh_core(); binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver(); handles = list(core._handles)
+        binding.borrow_anchor(receiver)
+        self.assertEqual(core._handles, handles)
+        self.assertEqual(receiver.calls, 1)
+        with self.assertRaises(c.OffloadAdmissionError): binding.assert_borrow_callback(receiver)
+        with self.assertRaises(c.OffloadAdmissionError): binding.retired_witness(receiver, core)
+        core.create_staging(4096); core.seal_staging(); core.retire_fresh_staging()
+        steps = list(core._api.steps)
+        witness = binding.retired_witness(receiver, core)
+        binding.assert_retired_witness(receiver, core, witness)
+        self.assertIs(witness, binding.retired_witness(receiver, core))
+        self.assertEqual(core._api.steps, steps)  # No closed-handle native query.
+        self.assertTrue(receiver.borrowed.closed)
+        self.assertFalse(receiver.anchor.closed)
+        marker = object()
+        self.assertIs(binding.execute(receiver, lambda: marker, retired=True), marker)
+
+    def test_binding_receiver_core_and_witness_copies_do_not_grant_authority(self):
+        core = fresh_core(); binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver(); clone = copy.copy(binding)
+        steps = list(core._api.steps)
+        with self.assertRaises(c.OffloadAdmissionError): clone.borrow_anchor(receiver)
+        self.assertEqual(receiver.calls, 0)
+        self.assertEqual(core._api.steps, steps)
+        self.assertFalse(core._uncertain)
+        binding.borrow_anchor(receiver)
+        for foreign in (SyntheticAnchorReceiver(), copy.copy(receiver)):
+            with self.assertRaises(c.OffloadAdmissionError): binding.assert_consumer(foreign, core)
+        other = fresh_core()
+        self.assertEqual(core._chain[-1][1], other._chain[-1][1])
+        with self.assertRaises(c.OffloadAdmissionError): binding.assert_consumer(receiver, other)
+        core.create_staging(4096); core.seal_staging(); core.retire_fresh_staging()
+        witness = binding.retired_witness(receiver, core)
+        for foreign in (copy.copy(witness), {'retired': True}, True):
+            with self.assertRaises(c.OffloadAdmissionError): binding.assert_retired_witness(receiver, core, foreign)
+
+    def test_unknown_borrow_ack_or_hidden_reentry_retains_receiver_and_prevents_retry(self):
+        for mode in ('bool', 'interrupt', 'reentry'):
+            core = fresh_core(); binding = core._journal_accounting_binding()
+            receiver = SyntheticAnchorReceiver(mode)
+            with self.subTest(mode=mode), self.assertRaises(BaseException): binding.borrow_anchor(receiver)
+            self.assertTrue(core._uncertain and binding._uncertain)
+            self.assertIs(binding._receiver, receiver)
+            self.assertIs(c._CUSTODY[id(core)], core)
+            steps = list(core._api.steps)
+            with self.assertRaises(c.OffloadAdmissionError): binding.borrow_anchor(receiver)
+            self.assertEqual(receiver.calls, 1)
+            self.assertEqual(core._api.steps, steps)
+            self.assertNotIn('delete', steps)
+            self.assertNotIn('close', steps)
+
+    def test_retired_boolean_is_insufficient_after_lost_execution_ack(self):
+        core = fresh_core(); binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver(); binding.borrow_anchor(receiver)
+        core.create_staging(4096); core.seal_staging()
+        original = core._execution.execute
+        def lost_ack(bound, operation):
+            original(bound, operation)
+            return object()
+        core._execution.execute = lost_ack
+        with self.assertRaises(c.OffloadAdmissionError): core.retire_fresh_staging()
+        self.assertTrue(core._retired and all(h.closed for h in core._handles))
+        self.assertTrue(core._uncertain)
+        self.assertIs(c._CUSTODY[id(core)], core)
+        steps = list(core._api.steps)
+        with self.assertRaises(c.OffloadAdmissionError): binding.retired_witness(receiver, core)
+        self.assertEqual(core._api.steps, steps)
+
+    def test_fresh_staging_keeps_the_owner_slot_until_the_execution_reply(self):
+        core = fresh_core()
+        core.create_staging(4096); core.seal_staging()
+        original = core._execution.execute
+        observations = []
+
+        def held_reply(bound, operation):
+            result = original(bound, operation)
+            observations.append(c._CUSTODY.get(id(core)) is core)
+            try:
+                fresh_core()
+            except c.OffloadAdmissionError:
+                observations.append('denied')
+            return result
+
+        core._execution.execute = held_reply
+        with patch.object(c, '_MAX_OWNERS', 1):
+            core.retire_fresh_staging()
+        self.assertEqual(observations, [True, 'denied'])
+        self.assertNotIn(id(core), c._CUSTODY)
+        self.assertFalse(core._uncertain)
+
+    def test_interrupted_staging_slot_removal_restores_custody_before_unlock(self):
+        core = fresh_core()
+        binding = core._journal_accounting_binding()
+        receiver = SyntheticAnchorReceiver()
+        binding.borrow_anchor(receiver)
+        core.create_staging(4096); core.seal_staging()
+        observations = []
+
+        class InterruptedPop(dict):
+            def pop(self, key, *args):
+                super().pop(key, *args)
+                raise KeyboardInterrupt()
+
+        class ObservedLock:
+            def __init__(self): self.lock = c.RLock()
+            def __enter__(self): self.lock.acquire(); return self
+            def __exit__(self, kind, error, traceback):
+                if kind is KeyboardInterrupt:
+                    observations.append(c._CUSTODY.get(id(core)) is core)
+                self.lock.release()
+                return False
+
+        with patch.object(c, '_CUSTODY', InterruptedPop(c._CUSTODY)), \
+             patch.object(c, '_CUSTODY_LOCK', ObservedLock()):
+            with self.assertRaises(KeyboardInterrupt): core.retire_fresh_staging()
+            self.assertEqual(observations, [True])
+            self.assertIs(c._CUSTODY[id(core)], core)
+            self.assertTrue(core._uncertain)
+            with self.assertRaises(c.OffloadAdmissionError): binding.retired_witness(receiver, core)
+
+    def test_stale_call_paused_before_pin_cannot_reinsert_a_retired_core(self):
+        for kind in ('read-binding', 'staging'):
+            with self.subTest(kind=kind):
+                if kind == 'read-binding':
+                    core, _ = read_binding_core()
+                    retire = core._retire_unused_read_binding
+                else:
+                    core = fresh_core()
+                    core.create_staging(4096); core.seal_staging()
+                    retire = core.retire_fresh_staging
+                original = core._retain
+                steps_after_retirement = []
+
+                def interleave():
+                    core._retain = original
+                    retire()
+                    steps_after_retirement[:] = core._api.steps
+                    original()
+
+                core._retain = interleave
+                with self.assertRaises(c.OffloadAdmissionError): core.assert_bound()
+                core.retain_failure()
+                self.assertTrue(core._retired)
+                self.assertFalse(core._uncertain)
+                self.assertNotIn(id(core), c._CUSTODY)
+                self.assertNotIn(id(core), c._READ_RETIREMENTS)
+                self.assertEqual(core._api.steps, steps_after_retirement)
+
+    def test_read_release_rechecks_custody_after_a_prelock_failure(self):
+        core, _ = read_binding_core()
+        observations = []
+
+        class InterleavedLock:
+            def __init__(self): self.lock = c.RLock()
+            def __enter__(self):
+                if core._retirement_kind == 'read-binding' and not observations:
+                    # A competing failure wins the lock before the release acquires it.
+                    observations.append(core._busy)
+                    core.retain_failure()
+                self.lock.acquire()
+                return self
+            def __exit__(self, *_): self.lock.release()
+
+        with patch.object(c, '_CUSTODY_LOCK', InterleavedLock()):
+            with self.assertRaises(c.OffloadAdmissionError): core._retire_unused_read_binding()
+        self.assertEqual(observations, [False])
+        self.assertTrue(core._retired and core._uncertain)
+        self.assertIs(c._CUSTODY[id(core)], core)
+        self.assertIs(c._READ_RETIREMENTS[id(core)], core._read_retirement)
+        self.assertFalse(core._read_retirement.released)
+
+    def test_execution_producer_cannot_skip_return_early_or_hide_double_dispatch(self):
+        for mode in ('skip', 'early', 'double'):
+            execution = SyntheticExecution(); execution.mode = mode
+            core = c.WindowsOffloadCore(Path.cwd(), _api_factory=SyntheticApi, _execution=execution)
+            execution.core = core
+            with self.subTest(mode=mode), self.assertRaises(c.OffloadAdmissionError): core.prepare_fresh_binding()
+            if mode == 'early':
+                with self.assertRaises(c.OffloadAdmissionError): execution.late()
+                self.assertIsNone(core._api)
+            self.assertTrue(core._uncertain)
+            self.assertIs(c._CUSTODY[id(core)], core)
+
+    def test_shallow_copy_or_foreign_api_owner_denies_before_original_callbacks(self):
+        core = fresh_core(); clone = copy.copy(core)
+        steps = list(core._api.steps)
+        for operation in (clone.assert_bound, clone.retain_failure, clone.prepare_fresh_binding):
+            with self.assertRaises(c.OffloadAdmissionError): operation()
+        self.assertEqual(core._api.steps, steps)
+        self.assertFalse(core._uncertain)
+        core._api.owner = clone
+        with self.assertRaises(c.OffloadAdmissionError): core.assert_bound()
+        self.assertEqual(core._api.steps, steps)
+
+    def test_real_core_fresh_create_seal_check_and_retire_with_synthetic_api(self):
+        core = fresh_core()
+        path = core.create_staging(4096)
+        self.assertEqual(path.parent, core.cache_root / '.aisb-offload-v1')
+        core._api.node(False, core._stage[0], 'index.json', 2)
+        core.seal_staging()
+        core.assert_sealed()
+        core.retire_fresh_staging()
+        self.assertTrue(core._retired)
+        self.assertNotIn(id(core), c._CUSTODY)
+        self.assertTrue(all(h.closed for h in core._handles))
+        self.assertLess(core._api.steps.index('retire-guard'), core._api.steps.index('delete'))
+
+    def test_empty_staging_is_supported_without_invented_index(self):
+        core = fresh_core(); core.create_staging(4096); core.seal_staging()
+        self.assertEqual(len(core._guards), 2)
+        core.retire_fresh_staging()
+
+    def test_existing_namespace_is_never_opened_adopted_or_cleaned(self):
+        core = fresh_core()
+        core._api.node(True, core._chain[-1][0], '.aisb-offload-v1')
+        with self.assertRaises(c.OffloadAdmissionError): core.create_staging(4096)
+        self.assertNotIn('delete', core._api.steps)
+        self.assertNotIn('close', core._api.steps)
+        self.assertIs(c._CUSTODY[id(core)], core)
+
+    def test_failed_creation_return_keeps_all_predispatch_native_slots(self):
+        core = fresh_core(); original = core._api.create_directory
+        def create(*args):
+            original(*args)
+            raise KeyboardInterrupt()
+        core._api.create_directory = create
+        with self.assertRaises(KeyboardInterrupt): core.create_staging(4096)
+        self.assertEqual(len(core._handles), 2)
+        self.assertIs(c._CUSTODY[id(core)], core)
+        with self.assertRaises(c.OffloadAdmissionError): core.create_staging(4096)
+        self.assertEqual(core._api.steps.count('create-.aisb-offload-v1'), 1)
+
+    def test_unknown_file_stream_or_allocation_refuses_before_protection(self):
+        for case in ('extra', 'stream', 'size'):
+            with self.subTest(case=case):
+                core = fresh_core(); core.create_staging(2)
+                handle = core._api.node(False, core._stage[0], 'foreign.bin' if case == 'extra' else 'index.json', 2)
+                if case == 'stream': core._api.nodes[handle]['named_stream'] = True
+                with self.assertRaises(c.OffloadAdmissionError): core.seal_staging()
+                self.assertNotIn('protect', core._api.steps)
+                self.assertNotIn('delete', core._api.steps)
+
+    def test_late_guard_break_stops_reuse_and_cleanup_without_retry(self):
+        core = fresh_core(); core.create_staging(4096); core.seal_staging()
+        core._api.broken = True
+        with self.assertRaises(c.OffloadAdmissionError): core.assert_sealed()
+        before = list(core._api.steps)
+        with self.assertRaises(c.OffloadAdmissionError): core.retire_fresh_staging()
+        self.assertEqual(core._api.steps, before)
+        self.assertNotIn('delete', before)
+
+    def test_inherited_or_changed_private_profile_is_not_normalized(self):
+        for control in (4, 0x404, 0x1404, 0x100c):
+            core = fresh_core(); core.create_staging(4096)
+            core._api.nodes[core._stage[0]]['permissions'] = (core._stage[2], control)
+            with self.assertRaises(c.OffloadAdmissionError): core.seal_staging()
+            self.assertNotIn('protect', core._api.steps)
+
+    def test_failure_in_each_stage_preserves_custody_without_cleanup(self):
+        for failure in ('protect', 'guard', 'check-guard', 'retire-guard', 'delete', 'close'):
+            core = fresh_core(); core.create_staging(4096)
+            if failure in ('retire-guard', 'delete', 'close'): core.seal_staging()
+            core._api.fail = failure
+            with self.subTest(failure=failure), self.assertRaises(c.OffloadAdmissionError):
+                core.retire_fresh_staging() if core._sealed is not None else core.seal_staging()
+            self.assertIs(c._CUSTODY[id(core)], core)
+            steps = list(core._api.steps)
+            with self.assertRaises(c.OffloadAdmissionError): core.assert_bound()
+            self.assertEqual(steps, core._api.steps)
+
+    def test_callback_reentry_cannot_hide_terminal_uncertainty(self):
+        core = fresh_core()
+        def identity(_):
+            try: core.assert_bound()
+            except c.OffloadAdmissionError: pass
+            return core._chain[0][1]
+        core._api.identity = identity
+        with self.assertRaises(c.OffloadAdmissionError): core.assert_bound()
+        self.assertTrue(core._uncertain)
+
+    def test_native_close_unknown_or_interruption_is_never_retried(self):
+        for reply in (0, {'closed': True}, KeyboardInterrupt()):
+            core, api = raw_api_core()
+            close = Mock(side_effect=reply if isinstance(reply, BaseException) else None,
+                         return_value=reply if not isinstance(reply, BaseException) else None)
+            api.k = SimpleNamespace(CloseHandle=close)
+            handle = api.handle(); handle.slot.value = 701
+            with self.assertRaises(BaseException): core._run(lambda: api.close(handle))
+            self.assertTrue(handle.close_started)
+            self.assertFalse(handle.closed)
+            with self.assertRaises(c.OffloadAdmissionError): api.close(handle)
+            close.assert_called_once_with(701)
+            self.assertIs(c._CUSTODY[id(core)], core)
+            self.assertIsNotNone(core._pending)
+
+    def test_return_is_retained_when_validation_raises(self):
+        core, api = raw_api_core()
+        result, argument, buffer = object(), object(), object()
+        native = Mock(return_value=result)
+        def reject(value):
+            self.assertIs(value, result)
+            raise RuntimeError('synthetic validator failure')
+        with patch.object(C, 'get_last_error', return_value=122, create=True):
+            with self.assertRaises(c.OffloadAdmissionError):
+                core._run(lambda: api.call(native, argument, valid=reject, keep=(buffer,)))
+        outcome = core._WindowsOffloadCore__native_outcome
+        self.assertIs(outcome.owner, core)
+        self.assertIs(outcome.function, native)
+        self.assertIs(outcome.args[0], argument)
+        self.assertIs(outcome.keep[0], buffer)
+        self.assertIs(outcome.value, result)
+        self.assertTrue(outcome.value_known and outcome.error_known and outcome.failed)
+        self.assertEqual(outcome.error, 122)
+        self.assertFalse(outcome.acknowledged)
+        native.assert_called_once_with(argument)
+
+    def test_confirmed_native_close_is_idempotent_and_keeps_exact_attempt(self):
+        core, api = raw_api_core()
+        api.k = SimpleNamespace(CloseHandle=Mock(return_value=1))
+        handle = api.handle(); handle.slot.value = 702
+        core._run(lambda: api.close(handle)); core._run(lambda: api.close(handle))
+        api.k.CloseHandle.assert_called_once_with(702)
+        self.assertTrue(handle.close_started and handle.closed)
+
+    def test_native_dispatch_requires_canonical_api_and_active_execution_thread(self):
+        core, api = raw_api_core()
+        callback = Mock(return_value=1)
+        with self.assertRaises(c.OffloadAdmissionError): api.call(callback)
+        callback.assert_not_called()
+        duplicate = copy.copy(api)
+        with self.assertRaises(c.OffloadAdmissionError): duplicate.call(callback)
+        callback.assert_not_called()
+
+    def test_pending_native_create_owns_output_slot_before_dispatch_and_denies_reuse(self):
+        core, api = raw_api_core()
+        parent = api.handle(); parent.slot.value = 100
+        def create(slot, *_):
+            self.assertIs(c._CUSTODY[id(core)], core)
+            self.assertEqual(len(core._handles), 2)
+            C.cast(slot, C.POINTER(c._PTR)).contents.value = 703
+            return 259  # Pending, not successful ownership.
+        api.n = SimpleNamespace(NtCreateFile=Mock(side_effect=create))
+        with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.open(parent, 'new', 0x700a1, create=True))
+        self.assertEqual(core._handles[-1].slot.value, 703)
+        self.assertIsNotNone(core._pending)
+        self.assertTrue(core._uncertain)
+
+    def test_raced_successful_break_or_unconfirmed_cancel_never_retires_or_closes(self):
+        for result, status in ((1, 0), (0, 259)):
+            core, api = raw_api_core()
+            handle, event = api.handle(), api.handle(); handle.slot.value, event.slot.value = 710, 711
+            overlapped = c._Overlapped(); overlapped.event = event.value; overlapped.internal = status
+            api.k = SimpleNamespace(CancelIoEx=Mock(return_value=1), WaitForSingleObject=Mock(return_value=0), GetOverlappedResult=Mock(return_value=result), CloseHandle=Mock(return_value=1))
+            guard = {'handle': handle, 'event': event, 'overlapped': overlapped, 'retirement_started': False, 'retired': False}
+            core._guards.append(guard)
+            with patch.object(C, 'get_last_error', return_value=995, create=True), self.assertRaises(c.OffloadAdmissionError):
+                core._run(lambda: api.retire_guard(guard))
+            self.assertFalse(guard['retired'])
+            api.k.CloseHandle.assert_not_called()
+            self.assertTrue(core._uncertain)
+
+    def test_only_confirmed_cancelled_native_status_retires_the_exact_guard(self):
+        core, api = raw_api_core()
+        handle, event = api.handle(), api.handle(); handle.slot.value, event.slot.value = 712, 713
+        overlapped = c._Overlapped(); overlapped.event = event.value; overlapped.internal = 0xc0000120
+        api.k = SimpleNamespace(CancelIoEx=Mock(return_value=1), WaitForSingleObject=Mock(return_value=0), GetOverlappedResult=Mock(return_value=0), CloseHandle=Mock(return_value=1))
+        guard = {'handle': handle, 'event': event, 'overlapped': overlapped, 'retirement_started': False, 'retired': False}
+        core._guards.append(guard)
+        with patch.object(C, 'get_last_error', return_value=995, create=True): core._run(lambda: api.retire_guard(guard))
+        self.assertTrue(guard['retired'] and event.closed)
+        self.assertFalse(handle.closed)
+        api.k.CloseHandle.assert_called_once_with(713)
+        with self.assertRaises(c.OffloadAdmissionError): api.retire_guard(guard)
+        api.k.CancelIoEx.assert_called_once()
+
+    def test_directory_page_requires_bounded_complete_valid_records(self):
+        def page(name='index.json', following=0, attrs=0x80, length=None):
+            text = name.encode('utf-16-le')
+            header = c._DIRECTORY_ROW.pack(following, 0, 0, 0, 0, 0, 2, 2, attrs, len(text) if length is None else length, 0, 0, b'x' * 16)
+            return (header + text).ljust(c._PAGE_BYTES, b'\0')
+        self.assertEqual(c._directory_page(page())[0][0], 'index.json')
+        for raw in (b'', page('../escape'), page(attrs=0x480), page(length=511), page(following=8)):
+            with self.subTest(size=len(raw)), self.assertRaises(c.OffloadAdmissionError): c._directory_page(raw)
+
+
+
+class DirectoryConstructionTests(unittest.TestCase):
+    """Actual create/open methods with explicit typed synthetic native replies."""
+    def setUp(self):
+        self.enterContext(patch.object(C, 'get_last_error', return_value=0, create=True))
+        self.enterContext(patch.dict(c._CUSTODY, {}, clear=True))
+
+    def test_core_keeps_its_existing_two_directory_and_protection_targets(self):
+        core = fresh_core(); core.create_staging(8192); core.seal_staging()
+        self.assertEqual(core._api.steps.count('protect'), 2)
+        self.assertEqual(len(core._protected), 2)
+        created = [v for v in core._api.nodes.values() if v['parent'] is not None]
+        self.assertEqual(len(created), 2)
+        self.assertEqual({v['name'] for v in created}, {'.aisb-offload-v1', core._leaf})
+
+    def kernel(self, *, status=0, information=2, changed_security=False):
+        core, api = raw_api_core()
+        api._construction_origin = api
+        api._construction_generation = api._construction_generation_origin = object()
+        api._directory_creations = []; api._directory_creation_rows = api._directory_creations
+        acl = struct.pack('<BBHHH', 2, 0, 28, 1, 0) + struct.pack('<BBHI', 0, 0, 20, 0x1701ff) + c._WORLD
+        parent = api.handle(); parent.slot.value = 901
+        api._private_acl = Mock(return_value=acl)
+        descriptor = c._Descriptor(); api._descriptor = Mock(return_value=(b'inert', descriptor, None))
+        api.kind = Mock(); api.identity = Mock(side_effect=lambda h: b'ownedvol' + h.value.to_bytes(16, 'little'))
+        api.security = Mock(return_value=(acl, c._PRIVATE_CONTROL, b'x' if changed_security else c._WORLD))
+        def create(output, access, attributes, io, allocation, flags, share, disposition, options, ea, size):
+            self.assertEqual((share, disposition), (0, 2))
+            self.assertIsNotNone(core._pending)
+            self.assertIs(core._pending[3][0], core._handles[-1])
+            self.assertIn(len(api._directory_creations), (1, 2))
+            self.assertFalse(api._directory_creations[-1].completed)
+            output._obj.value = 901 + len(api._directory_creations); io._obj.information = information
+            return status
+        api.n = SimpleNamespace(NtCreateFile=Mock(side_effect=create))
+        return core, api, parent, acl
+
+    def test_only_exclusive_actual_directory_creation_mints_original_receipt(self):
+        core, api, parent, acl = self.kernel()
+        result = core._run(lambda: api.create_directory(parent, 'owned'))
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[1:], (b'ownedvol' + (902).to_bytes(16, 'little'), acl))
+        receipt = api.directory_creation(result[0])
+        self.assertIs(type(receipt), c._DirectoryCreation)
+        self.assertTrue(receipt.completed)
+        self.assertIs(receipt.handle, result[0]); self.assertIs(receipt.parent, parent)
+        self.assertIsNone(c._DirectoryCreation.assert_origin(receipt, api))
+        api._descriptor.assert_called_once_with(acl, principal=c._WORLD)
+
+    def test_pending_open_existing_readback_and_security_failure_leave_only_incomplete_receipt(self):
+        for values in ({'status': 0x103}, {'information': 1}, {'changed_security': True}):
+            with self.subTest(values=values):
+                core, api, parent, acl = self.kernel(**values)
+                with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.create_directory(parent, 'owned'))
+                self.assertTrue(core._uncertain); self.assertEqual(len(api._directory_creations), 1)
+                self.assertFalse(api._directory_creations[0].completed)
+                before = api.n.NtCreateFile.call_count
+                with self.assertRaises(c.OffloadAdmissionError): api.directory_creation(core._handles[-1])
+                self.assertEqual(api.n.NtCreateFile.call_count, before)
+
+    def test_copied_missing_or_closed_construction_cannot_become_parent_authority(self):
+        for mode in ('copy', 'missing', 'closed', 'slot', 'generation', 'foreign-api'):
+            with self.subTest(mode=mode):
+                core, api, parent, acl = self.kernel()
+                value = core._run(lambda: api.create_directory(parent, 'owned'))
+                target = api
+                if mode == 'copy': api._directory_creations[0] = copy.copy(api._directory_creations[0])
+                if mode == 'missing': api._directory_creations.clear()
+                if mode == 'closed': value[0].closed = True
+                if mode == 'slot': value[0].slot = c._PTR(902)
+                if mode == 'generation': api._construction_generation = object()
+                if mode == 'foreign-api': target = copy.copy(api)
+                before = (api.identity.call_count, api.security.call_count)
+                with self.assertRaises(c.OffloadAdmissionError): target.directory_creation(value[0])
+                self.assertEqual((api.identity.call_count, api.security.call_count), before)
+
+    def test_two_directory_receipts_allow_no_third_native_creation(self):
+        core, api, parent, acl = self.kernel()
+        first = core._run(lambda: api.create_directory(parent, 'first'))
+        second = core._run(lambda: api.create_directory(first[0], 'second'))
+        self.assertEqual(len(api._directory_creations), 2)
+        self.assertIs(api.directory_creation(second[0]), api._directory_creations[1])
+        before = api.n.NtCreateFile.call_count
+        with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.create_directory(second[0], 'third'))
+        self.assertEqual(api.n.NtCreateFile.call_count, before)
+
+    def test_construction_primitive_substitutions_refuse_before_callbacks_or_native_queries(self):
+        class Trap:
+            def __getattribute__(self, name): raise AssertionError('No foreign attribute')
+            def __eq__(self, other): raise AssertionError('No foreign equality')
+            def __bool__(self): raise AssertionError('No foreign truth')
+        for field in ('thread', 'generation', 'handles', 'parent', 'parent_slot', 'parent_number',
+                      'name', 'handle', 'slot', 'number', 'original', 'principal', 'identity', 'completed'):
+            with self.subTest(field=field):
+                core, api, parent, acl = self.kernel()
+                result = core._run(lambda: api.create_directory(parent, 'owned'))
+                setattr(api._directory_creations[0], field, Trap())
+                before = (api.identity.call_count, api.security.call_count)
+                with self.assertRaises(c.OffloadAdmissionError): api.directory_creation(result[0])
+                self.assertEqual((api.identity.call_count, api.security.call_count), before)
+
+
+class FixedProtectionTests(unittest.TestCase):
+    """Actual protection/security methods with typed synthetic replies only."""
+    def setUp(self):
+        self.enterContext(patch.object(C, 'get_last_error', return_value=0, create=True))
+        scope = patch.dict(c._CUSTODY, {}, clear=True); scope.start(); self.addCleanup(scope.stop)
+
+    def acl(self):
+        principal = b'\x01\x01\0\0\0\0\0\x05\x15\0\0\0'
+        raw = struct.pack('<BBHHH', 2, 0, 28, 1, 0) + struct.pack('<BBHI', 0, 0, 20, 0x1701ff) + principal
+        return raw, principal
+
+    def protection_kernel(self, *, setter=0, changed_owner=False, changed_identity=False):
+        core, api = raw_api_core()
+        api._protection_origin = api; api._protections = []; api._protection_rows = api._protections
+        handle = api.handle(); handle.slot.value = 900
+        acl, principal = self.acl(); expected = c._acl(acl, deny=True), c._PRIVATE_CONTROL
+        state = {'set': False, 'queries': 0}
+        def security(h):
+            self.assertIs(h, handle); state['queries'] += 1
+            return (*(expected if state['set'] else (acl, c._PRIVATE_CONTROL)),
+                    principal if not state['set'] or not changed_owner else c._WORLD)
+        def change(h, info, descriptor):
+            self.assertEqual((h, info), (900, 4))
+            self.assertIs(c._CUSTODY[id(core)], core)
+            self.assertEqual(len(api._protections), 1)
+            self.assertFalse(api._protections[0].completed)
+            self.assertIs(core._pending[3][-1], api._protections[0])
+            state['set'] = setter == 0
+            return setter
+        api.security = Mock(side_effect=security)
+        api.identity = Mock(side_effect=lambda h: (b'b' if state['set'] and changed_identity else b'a') * 24)
+        descriptor = c._Descriptor(); api._descriptor = Mock(return_value=(b'only-inert-fixture', descriptor, None))
+        api.n = SimpleNamespace(NtSetSecurityObject=Mock(side_effect=change))
+        return core, api, handle, acl, principal, expected, state
+
+    def security_kernel(self, *, bad=None):
+        core, api = raw_api_core(); handle = api.handle(); handle.slot.value = 901
+        acl, principal = self.acl(); buffer = C.create_string_buffer(128); base = C.addressof(buffer)
+        C.memmove(base + 32, principal, len(principal)); C.memmove(base + 64, acl, len(acl))
+        if bad == 'sid': C.memmove(base + 33, b'\xff', 1)
+        if bad == 'acl': C.memmove(base + 66, struct.pack('<H', 65535), 2)
+        def get_info(h, kind, info, owner, group, dacl, sacl, descriptor):
+            self.assertEqual((h, kind, info), (901, 1, 5))
+            self.assertTrue(core._allocations); self.assertIsNotNone(core._pending)
+            owner._obj.value = (base + 127 if bad == 'owner-range' else base + 32)
+            dacl._obj.value = (base + 127 if bad == 'acl-range' else base + 64)
+            descriptor._obj.value = base
+            return 0
+        def control(_descriptor, output, revision):
+            output._obj.value = c._PRIVATE_CONTROL | 0x8000; revision._obj.value = 1
+            return 1
+        def free(_descriptor):
+            self.assertTrue(core._allocations); self.assertEqual(_descriptor.value, base)
+            return 1 if bad == 'free' else None
+        api.a = SimpleNamespace(GetSecurityInfo=Mock(side_effect=get_info),
+            IsValidSecurityDescriptor=Mock(return_value=0 if bad == 'descriptor' else 1),
+            GetSecurityDescriptorLength=Mock(return_value=131073 if bad == 'length' else 128),
+            IsValidAcl=Mock(return_value=1), IsValidSid=Mock(return_value=1),
+            GetSecurityDescriptorControl=Mock(side_effect=control))
+        api.k = SimpleNamespace(LocalFree=Mock(side_effect=free))
+        api._test_only_allocation = buffer  # Fixture memory stays live; not runtime proof.
+        return core, api, handle, acl, principal
+
+    def test_final_acl_denies_mutation_and_security_with_explicit_owner_rights(self):
+        acl, principal = self.acl(); raw = c._acl(acl, deny=True)
+        self.assertEqual(struct.unpack('<BBHHH', raw[:8]), (2, 0, 68, 3, 0))
+        self.assertEqual(struct.unpack_from('<BBHI', raw, 8), (1, 0, 20, 0xd0156))
+        self.assertEqual(raw[16:28], c._WORLD)
+        self.assertEqual(struct.unpack_from('<BBHI', raw, 28), (0, 0, 20, 0x20000))
+        self.assertEqual(raw[36:48], b'\x01\x01\0\0\0\0\0\x03\x04\0\0\0')
+        self.assertEqual(raw[48:], acl[8:]); self.assertEqual(c._private_sid(acl), principal)
+        for invalid in (b'', acl[:-1], raw, acl[:8] + b'\x01' + acl[9:]):
+            with self.subTest(invalid=len(invalid)), self.assertRaises(c.OffloadAdmissionError): c._private_sid(invalid)
+
+    def test_exact_native_protection_is_retained_before_set_and_required_afterward(self):
+        core, api, handle, acl, principal, expected, state = self.protection_kernel()
+        self.assertEqual(core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL))), expected)
+        self.assertEqual(len(api._protections), 1); self.assertTrue(api._protections[0].completed)
+        self.assertEqual(state['queries'], 3)
+        self.assertIsNone(core._run(lambda: api.assert_protected(handle, expected)))
+        calls = api.n.NtSetSecurityObject.call_count
+        with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+        self.assertEqual(api.n.NtSetSecurityObject.call_count, calls)
+
+    def test_failed_set_owner_or_identity_readback_never_supplies_completed_protection(self):
+        for settings in ({'setter': 1}, {'changed_owner': True}, {'changed_identity': True}):
+            with self.subTest(settings=settings):
+                core, api, handle, acl, _, _, _ = self.protection_kernel(**settings)
+                with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+                self.assertTrue(core._uncertain); self.assertIs(c._CUSTODY[id(core)], core)
+                self.assertEqual(len(api._protections), 1); self.assertFalse(api._protections[0].completed)
+                self.assertEqual(api.n.NtSetSecurityObject.call_count, 1)
+
+    def test_copied_proof_or_slot_substitution_cannot_replace_original_generation(self):
+        for mode in ('copy', 'slot', 'api'):
+            with self.subTest(mode=mode):
+                core, api, handle, acl, _, expected, _ = self.protection_kernel()
+                core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+                before = api.security.call_count
+                if mode == 'copy': api._protections[0] = copy.copy(api._protections[0])
+                if mode == 'slot': handle.slot = c._PTR(900)
+                target = copy.copy(api) if mode == 'api' else api
+                with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: target.assert_protected(handle, expected))
+                self.assertEqual(api.security.call_count, before)
+
+    def test_security_query_bounds_outputs_and_releases_only_its_acknowledged_allocation(self):
+        core, api, handle, acl, principal = self.security_kernel()
+        self.assertEqual(core._run(lambda: api.security(handle)), (acl, c._PRIVATE_CONTROL, principal))
+        self.assertEqual(core._allocations, []); api.k.LocalFree.assert_called_once()
+        self.assertIsNone(core._pending)
+
+    def test_unknown_security_outputs_or_failed_free_retain_allocation_and_fail_closed(self):
+        for mode in ('owner-range', 'acl-range', 'sid', 'acl', 'descriptor', 'length', 'free'):
+            with self.subTest(mode=mode):
+                core, api, handle, _, _ = self.security_kernel(bad=mode)
+                with self.assertRaises(c.OffloadAdmissionError): core._run(lambda: api.security(handle))
+                self.assertTrue(core._uncertain); self.assertEqual(len(core._allocations), 1)
+                self.assertEqual(api.k.LocalFree.call_count, 1 if mode == 'free' else 0)
+
+    def test_new_directory_descriptor_retains_exact_explicit_owner_until_create(self):
+        core, api = raw_api_core(); acl, principal = self.acl()
+        api._construction_origin = api
+        api._construction_generation = api._construction_generation_origin = object()
+        api._directory_creations = []; api._directory_creation_rows = api._directory_creations
+        parent = api.handle(); parent.slot.value = 910
+        trace = []
+        def owner(descriptor, sid, defaulted):
+            trace.append('owner')
+            self.assertEqual(C.string_at(sid, len(principal)), principal)
+            self.assertEqual(defaulted, 0)
+            descriptor._obj.owner = C.cast(sid, c._PTR).value
+            self.assertIn(sid, core._pending[3])
+            return 1
+        def create(output, access, attributes, io, allocation, flags, share, disposition, options, ea, size):
+            trace.append('create')
+            self.assertEqual((attributes._obj.root, access, share, disposition), (parent.value, 0x700a1, 0, 2))
+            buffers = core._pending[3][5]; self.assertEqual(len(buffers), 3)
+            self.assertEqual(C.string_at(buffers[1].owner, len(principal)), principal)
+            self.assertIsNotNone(buffers[2])
+            output._obj.value = 911; io._obj.information = 2
+            return 0
+        api.a = SimpleNamespace(IsValidAcl=Mock(return_value=1), InitializeSecurityDescriptor=Mock(return_value=1),
+            SetSecurityDescriptorDacl=Mock(return_value=1), SetSecurityDescriptorControl=Mock(return_value=1),
+            IsValidSid=Mock(return_value=1), SetSecurityDescriptorOwner=Mock(side_effect=owner),
+            IsValidSecurityDescriptor=Mock(return_value=1))
+        api._private_acl = Mock(return_value=acl)
+        api.open = Mock(side_effect=AssertionError('Canonical creation cannot use a substituted open'))
+        api.n = SimpleNamespace(NtCreateFile=Mock(side_effect=create)); api.kind = Mock()
+        api.security = Mock(return_value=(acl, c._PRIVATE_CONTROL, principal)); api.identity = Mock(return_value=b'c' * 24)
+        result = core._run(lambda: api.create_directory(parent, 'fixed'))
+        self.assertEqual(result, (core._handles[-1], b'c' * 24, acl))
+        api.open.assert_not_called(); self.assertTrue(api.directory_creation(result[0]).completed)
+        self.assertEqual(trace, ['owner', 'create'])
+
+
+    def test_foreign_protection_row_cannot_invoke_a_callback_or_admit_an_unsealed_acl(self):
+        core, api, handle, acl, principal, _expected, _state = self.protection_kernel()
+        callback = Mock(return_value=None)
+        forged = SimpleNamespace(assert_origin=callback, handle=handle, completed=True,
+            expected=(acl, c._PRIVATE_CONTROL), principal=principal, identity=b'a' * 24)
+        api._protections.append(forged)
+        with self.assertRaises(c.OffloadAdmissionError):
+            core._run(lambda: api.assert_protected(handle, (acl, c._PRIVATE_CONTROL)))
+        callback.assert_not_called(); api.security.assert_not_called()
+        api.n.NtSetSecurityObject.assert_not_called()
+
+    def test_changed_canonical_protection_fields_deny_before_later_native_observation(self):
+        for mode in ('expected', 'original', 'completed', 'principal'):
+            with self.subTest(mode=mode):
+                core, api, handle, acl, principal, expected, state = self.protection_kernel()
+                core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+                row = api._protections[0]
+                if mode == 'expected':
+                    row.expected = acl, c._PRIVATE_CONTROL; state['set'] = False
+                if mode == 'original': row.original = acl, 0
+                if mode == 'completed': row.completed = 1
+                if mode == 'principal': row.principal = c._WORLD
+                calls = api.security.call_count
+                with self.assertRaises(c.OffloadAdmissionError):
+                    core._run(lambda: api.assert_protected(handle, row.expected))
+                self.assertEqual(api.security.call_count, calls)
+                self.assertEqual(api.n.NtSetSecurityObject.call_count, 1)
+
+
+    def test_replaced_canonical_bound_validator_cannot_admit_a_weakened_acl(self):
+        core, api, handle, acl, _principal, _expected, state = self.protection_kernel()
+        core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+        row = api._protections[0]; callback = Mock(return_value=None)
+        row.assert_origin = callback
+        row.expected = acl, c._PRIVATE_CONTROL
+        state['set'] = False
+        calls = api.security.call_count
+        with self.assertRaises(c.OffloadAdmissionError):
+            core._run(lambda: api.assert_protected(handle, row.expected))
+        callback.assert_not_called(); self.assertEqual(api.security.call_count, calls)
+
+
+    def test_protection_record_field_proxies_deny_before_comparison_or_property_callbacks(self):
+        for mode in ('expected', 'expected-acl', 'expected-control', 'principal', 'identity', 'thread', 'number', 'slot'):
+            with self.subTest(mode=mode):
+                core, api, handle, acl, _principal, expected, state = self.protection_kernel()
+                core._run(lambda: api.protect(handle, (acl, c._PRIVATE_CONTROL)))
+                callback = Mock()
+                class Proxy:
+                    def __eq__(self, other): callback('equal'); return True
+                    @property
+                    def value(self): callback('value'); return 900
+                proxy = Proxy(); row = api._protections[0]; argument = expected
+                if mode == 'expected':
+                    row.expected = proxy; argument = acl, c._PRIVATE_CONTROL; state['set'] = False
+                elif mode == 'expected-acl':
+                    row.expected = proxy, c._PRIVATE_CONTROL; argument = acl, c._PRIVATE_CONTROL; state['set'] = False
+                elif mode == 'expected-control': row.expected = expected[0], proxy
+                elif mode == 'slot': row.slot = handle.slot = proxy
+                else: setattr(row, mode, proxy)
+                queries = api.security.call_count
+                with self.assertRaises(c.OffloadAdmissionError):
+                    core._run(lambda: api.assert_protected(handle, argument))
+                callback.assert_not_called(); self.assertEqual(api.security.call_count, queries)
+
+
+class DefaultConstructionTests(unittest.TestCase):
+    """Actual default constructor, with memory-only DLLs and execution facts."""
+    def setUp(self):
+        scope=patch.dict(c._CUSTODY,{},clear=True);scope.start();self.addCleanup(scope.stop)
+        self.loads=[];self.libraries=[];self.fail_at=None;self.signature_failure=False;self.hook=None
+        case=self
+        class Function:
+            def __init__(self,name):object.__setattr__(self,'name',name)
+            def __setattr__(self,name,value):
+                if case.signature_failure and self.name=='NtCreateFile'and name=='argtypes':
+                    raise OSError('synthetic signature failure')
+                object.__setattr__(self,name,value)
+        class Dll:
+            def __init__(self,name,**kwargs):
+                case.loads.append((name,kwargs))
+                if name==case.fail_at:raise OSError('synthetic library failure')
+                self._name=name;self.functions={};case.libraries.append(self)
+                if case.hook:case.hook(name,self)
+            def __getattr__(self,name):
+                if name not in self.functions:self.functions[name]=Function(name)
+                return self.functions[name]
+        self.dll=Dll
+        loader=patch.object(C,'WinDLL',Dll,create=True);loader.start();self.addCleanup(loader.stop)
+        class Execution(c._NativeExecutionPort):
+            def assert_bound(self,core):c._require(core is self.core)
+            def execute(self,core,operation):self.assert_bound(core);return operation()
+        self.execution_type=Execution
+
+    def core(self,**kwargs):
+        execution=self.execution_type()
+        core=c.WindowsOffloadCore(Path.cwd()/'synthetic-default-native-construction',_execution=execution,**kwargs)
+        execution.core=core
+        return core
+
+    @staticmethod
+    def record(core):return vars(core).get('_WindowsOffloadCore__api_construction')
+
+    def prepare_without_file_io(self,core):
+        handle=c._Handle();handle.slot.value=81
+        with patch.object(c._WindowsApi,'prepare',return_value=((handle,b'v'*24),)), \
+             patch.object(core,'_check_bound',return_value=None):core.prepare_fresh_binding()
+
+    def test_default_second_library_failure_keeps_original_construction(self):
+        self.fail_at='advapi32';core=self.core()
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        record=self.record(core);self.assertIsNotNone(record)
+        self.assertEqual(record.phase,'failed');self.assertIs(record.loader,self.dll)
+        self.assertIs(record.api.owner,core);self.assertIsNone(core._api)
+        self.assertEqual(len(record.libraries),1);self.assertIs(record.libraries[0],self.libraries[0])
+        self.assertIs(c._CUSTODY[id(core)],core);self.assertTrue(core._uncertain)
+        count=len(self.loads)
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        self.assertEqual(len(self.loads),count)
+
+    def test_first_third_and_signature_failures_retain_exact_returned_prefix(self):
+        for failure,signature,expected in(('kernel32',False,0),('ntdll',False,2),(None,True,3)):
+            with self.subTest(failure=failure,signature=signature):
+                self.loads.clear();self.libraries.clear();self.fail_at=failure;self.signature_failure=signature
+                core=self.core()
+                with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+                record=self.record(core);self.assertIsNotNone(record)
+                self.assertEqual(record.phase,'failed');self.assertEqual(len(record.libraries),expected)
+                self.assertTrue(all(a is b for a,b in zip(record.libraries,self.libraries)))
+                self.assertIsNone(core._api);self.assertTrue(core._uncertain)
+
+    def test_default_success_publishes_only_complete_original_api_and_fixed_loads(self):
+        core=self.core();self.prepare_without_file_io(core);record=self.record(core)
+        self.assertIsNotNone(record);self.assertEqual(record.phase,'complete')
+        self.assertIs(core._api,record.api)
+        self.assertTrue(all(a is b for a,b in zip(record.libraries,(core._api.k,core._api.a,core._api.n))))
+        self.assertEqual(self.loads,[(name,{'use_last_error':True})for name in('kernel32','advapi32','ntdll')])
+        count=len(self.loads)
+        with self.assertRaises(c.OffloadAdmissionError):c._WindowsApi.__init__(core._api,core)
+        self.assertEqual(len(self.loads),count)
+
+    def test_default_direct_and_wrapped_raw_constructor_deny_before_any_library(self):
+        core=self.core()
+        with self.assertRaises(c.OffloadAdmissionError):c._WindowsApi(core)
+        self.assertEqual(self.loads,[])
+        wrapped=self.core(_api_factory=lambda owner:c._WindowsApi(owner))
+        with self.assertRaises(c.OffloadAdmissionError):wrapped.prepare_fresh_binding()
+        self.assertEqual(self.loads,[])
+
+    def test_return_is_retained_before_observation_drift_can_fail_admission(self):
+        for alias in('constructing','published','owner','library','factory'):
+            with self.subTest(alias=alias):
+                self.loads.clear();self.libraries.clear();core=self.core()
+                def drift(name,value):
+                    if name!='kernel32':return
+                    api=core._constructing_api
+                    if alias=='constructing':core._constructing_api=object()
+                    elif alias=='published':core._api=SimpleNamespace(owner=core)
+                    elif alias=='owner':api.owner=object()
+                    elif alias=='library':api.k=object()
+                    else:core._factory=lambda owner:SimpleNamespace(owner=owner)
+                self.hook=drift
+                with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+                record=self.record(core);self.assertIsNotNone(record)
+                self.assertEqual(record.phase,'failed');self.assertEqual(len(record.libraries),1)
+                self.assertIs(record.libraries[0],self.libraries[0]);self.assertEqual(len(self.loads),1)
+                self.assertTrue(core._uncertain);self.assertIs(c._CUSTODY[id(core)],core)
+        self.hook=None
+
+    def test_alias_restoration_or_factory_demotion_cannot_retry_failed_constructor(self):
+        self.fail_at='advapi32';core=self.core()
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        record=self.record(core);self.assertIsNotNone(record);count=len(self.loads)
+        core._api=None;core._constructing_api=record.api;core._uncertain=False
+        core._factory=lambda owner:SimpleNamespace(owner=owner)
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        self.assertIs(self.record(core),record);self.assertEqual(len(self.loads),count)
+        self.assertEqual(record.phase,'failed')
+
+    def test_private_record_keeps_library_after_observation_references_are_removed(self):
+        self.fail_at='advapi32';core=self.core()
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        record=self.record(core);self.assertIsNotNone(record)
+        observed=weakref.ref(self.libraries[0]);self.libraries.clear()
+        record.api.k=None;core._constructing_api=None
+        gc.collect();self.assertIs(observed(),record.libraries[0])
+
+    def test_custom_subclass_keeps_its_new_hook_and_original_constructor_behavior(self):
+        roots=[]
+        class Pinned(c._WindowsApi):
+            def __new__(cls,owner):
+                value=object.__new__(cls);roots.append((owner,value));return value
+        core=self.core(_api_factory=Pinned);self.prepare_without_file_io(core)
+        self.assertIsNone(self.record(core));self.assertIs(core._api,roots[0][1])
+        self.assertEqual(self.loads,[(name,{'use_last_error':True})for name in('kernel32','advapi32','ntdll')])
+
+    def test_registered_default_constructor_never_selects_custom_loader_hook(self):
+        core=self.core()
+        with patch.object(c._WindowsApi,'_constructor_library_loader',side_effect=AssertionError('default bypass'))as hook:
+            self.prepare_without_file_io(core)
+        hook.assert_not_called();self.assertEqual(self.record(core).phase,'complete')
+        self.assertEqual(len(self.loads),3)
+
+    def test_custom_loader_hook_is_selected_once_before_owner_assignment(self):
+        selections=[];slots=[];loader=self.dll
+        class Pinned(c._WindowsApi):
+            def _constructor_library_loader(api):
+                selections.append(api);self.assertFalse(hasattr(api,'owner'))
+                def load(slot):
+                    slots.append(slot)
+                    return loader(('kernel32','advapi32','ntdll')[slot],use_last_error=True)
+                return load
+        core=self.core(_api_factory=Pinned);self.prepare_without_file_io(core)
+        self.assertEqual(selections,[core._api]);self.assertEqual(slots,[0,1,2])
+        self.assertIsNone(self.record(core))
+
+    def test_invalid_custom_loader_selection_denies_before_fixed_libraries(self):
+        class Pinned(c._WindowsApi):
+            def _constructor_library_loader(api):return object()
+        core=self.core(_api_factory=Pinned)
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        self.assertEqual(self.loads,[]);self.assertTrue(core._uncertain)
+
+    def test_foreign_thread_reinit_has_no_effect_on_original_constructor(self):
+        core=self.core();results=[]
+        def observe(name,value):
+            if name!='kernel32':return
+            def foreign():
+                try:c._WindowsApi.__init__(core._constructing_api,core)
+                except c.OffloadAdmissionError:results.append('denied')
+            thread=Thread(target=foreign);thread.start();thread.join(2)
+            self.assertFalse(thread.is_alive())
+        self.hook=observe;self.prepare_without_file_io(core)
+        self.assertEqual(results,['denied']);self.assertEqual(len(self.loads),3)
+        self.assertEqual(self.record(core).phase,'complete');self.assertFalse(core._uncertain)
+
+    def test_copied_or_wrong_owner_construction_cannot_redirect_original_record(self):
+        core=self.core();other=self.core();denials=[]
+        def observe(name,value):
+            if name!='kernel32':return
+            api=core._constructing_api;record=self.record(core)
+            clone=object.__new__(c._WindowsApi);clone._default_core_construction=record
+            for operation in(lambda:copy.copy(record),lambda:copy.deepcopy(record),
+                             lambda:c._WindowsApi.__init__(clone,core),
+                             lambda:c._WindowsApi.__init__(api,other)):
+                with self.assertRaises(c.OffloadAdmissionError):operation()
+                denials.append(True)
+        self.hook=observe;self.prepare_without_file_io(core)
+        self.assertEqual(len(denials),4);self.assertEqual(len(self.loads),3)
+        self.assertEqual(self.record(core).phase,'complete');self.assertIsNone(self.record(other))
+
+    def test_loader_rebinding_after_return_retains_original_value_and_stops_next_load(self):
+        core=self.core()
+        def observe(name,value):
+            if name=='kernel32':C.WinDLL=lambda *args,**kwargs:None
+        self.hook=observe
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        record=self.record(core)
+        self.assertEqual(record.phase,'failed');self.assertIs(record.loader,self.dll)
+        self.assertIs(record.libraries[0],self.libraries[0]);self.assertEqual(len(self.loads),1)
+
+    def test_interrupted_library_load_keeps_terminal_custody_without_retry(self):
+        core=self.core()
+        def interrupt(name,value):
+            if name=='advapi32':raise KeyboardInterrupt()
+        self.hook=interrupt
+        with self.assertRaises(KeyboardInterrupt):core.prepare_fresh_binding()
+        record=self.record(core)
+        self.assertEqual(record.phase,'failed');self.assertEqual(len(record.libraries),1)
+        self.assertIs(record.libraries[0],self.libraries[0]);self.assertIsNone(core._api)
+        self.assertIs(c._CUSTODY[id(core)],core);self.assertTrue(core._uncertain)
+        count=len(self.loads)
+        with self.assertRaises(c.OffloadAdmissionError):core.prepare_fresh_binding()
+        self.assertEqual(len(self.loads),count)
+
+    def test_reentrant_library_slot_denies_before_a_second_original_load(self):
+        core=self.core();attempted=[];denied=[]
+        def observe(name,value):
+            if name!='kernel32'or attempted:return
+            attempted.append(True)
+            try:self.record(core).load(0)
+            except c.OffloadAdmissionError:denied.append(True)
+        self.hook=observe
+        try:self.prepare_without_file_io(core)
+        except c.OffloadAdmissionError:pass
+        self.assertEqual(sum(name=='kernel32'for name,_ in self.loads),1)
+        self.assertEqual(denied,[True]);self.assertEqual(self.record(core).phase,'complete')
+        self.assertTrue(all(a is b for a,b in zip(self.record(core).libraries,self.libraries)))
+
+
+if __name__ == '__main__': unittest.main()

@@ -1,0 +1,786 @@
+"""Behavioral qualification; adapted upstream denial/recovery cases use local adapters."""
+from __future__ import annotations
+
+import copy
+import importlib.util
+import json
+import multiprocessing
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from unittest.mock import patch
+
+HELPERS = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(HELPERS))
+from control_plane import catalog
+from control_plane.common import digest, read_json
+from control_plane.contracts import ControlError
+from control_plane.execution import execute
+from control_plane.records import Records
+from control_plane.storage import canonical_bytes, confined_path
+from control_plane.work import Work, validate_spec
+
+
+def race(directory, queue):
+    try:
+        Records(Path(directory)).mutate(lambda s: s["feedback"].update({"test": {}}), expected_revision=0)
+        queue.put("passed")
+    except ControlError:
+        queue.put("refused")
+
+
+class Fixture(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="cp-")
+        self.root = Path(self.temp.name)
+        self.addCleanup(self.temp.cleanup)
+
+    def put(self, name, content):
+        p = self.root / name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(content, encoding="utf-8")
+        return p
+
+    def repository(self, start=True):
+        self.put("AGENTS.md", "Fixture contributor entry\n")
+        self.put("docs/result.md", "initial\n")
+        self.put("dev-tools/scripts/docs/check-doc-drift.mjs", 'import fs from "node:fs"; process.exit(fs.readFileSync("docs/result.md","utf8").startsWith("completed") ? 0 : 1);\n')
+        for args in (["init", "-q"], ["add", "."], ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture"]):
+            r = subprocess.run(["git", *args], cwd=self.root, capture_output=True)
+            self.assertEqual(r.returncode, 0, "Fixture Git preparation failed")
+        self.work = Work(self.root)
+        self.spec = {"schema_version": "development-work-v1", "work_id": "fixture-work", "kind": "lightweight", "title": "Correct a documented outcome", "authority_ref": "fixture-request", "outcome": {"problem": "Documented outcome is incomplete", "success": "Completed result passes its independent check", "quality": "No unrelated change", "internal_rationale": "Contributor fixture"}, "write_scope": ["docs/result.md"], "acceptance": [{"id": "result", "description": "Result is complete", "check_ids": ["documentation"]}]}
+        if start:
+            self.claim = self.work.start(self.spec, "author-run")["claim"]["claim_id"]
+
+    def verify(self, content="completed\n"):
+        self.put("docs/result.md", content)
+        return self.work.verify("fixture-work", "author-run", self.claim)
+
+    def review(self, receipt, **overrides):
+        value = {"schema_version": "technical-review-v1", "work_id": "fixture-work", "invocation_id": "review-run", "assurance": "operator-attested", "disposition": "accepted", "receipt_digest": receipt["receipt_digest"], "findings": [], "closures": [], "reviewed_criteria": ["result"]}
+        value.update(overrides)
+        return self.work.review(value)
+
+
+class StorageTests(Fixture):
+    def test_revision_conflict_and_corruption_fail_closed(self):
+        r = Records(self.root)
+        r.mutate(lambda s: s["feedback"].update({"test": {}}), expected_revision=0)
+        with self.assertRaises(ControlError):
+            r.mutate(lambda s: None, expected_revision=0)
+        value = read_json(r.path)
+        value["revision"] += 1
+        r.path.write_bytes(canonical_bytes(value))
+        with self.assertRaises(ControlError):
+            r.load()
+
+    def test_interrupted_journal_and_state_recover_idempotently(self):
+        for phase in ("journal", "state"):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory(prefix="cp-") as directory:
+                r = Records(Path(directory))
+                with self.assertRaises(OSError):
+                    r.mutate(lambda s: s["feedback"].update({"test": {}}), fault_after=phase)
+                self.assertTrue(r.recover())
+                self.assertFalse(r.recover())
+                self.assertEqual(r.load()["revision"], 1)
+
+    def test_two_processes_cannot_commit_the_same_revision(self):
+        context = multiprocessing.get_context("spawn")
+        queue = context.Queue()
+        workers = [context.Process(target=race, args=(str(self.root), queue)) for _ in range(2)]
+        for p in workers: p.start()
+        for p in workers: p.join(10)
+        self.assertTrue(all(p.exitcode == 0 for p in workers))
+        self.assertEqual(sorted([queue.get(timeout=2), queue.get(timeout=2)]), ["passed", "refused"])
+
+    def test_confined_paths_and_duplicate_json_keys(self):
+        for value in ("../escape", "/outside", "C:/outside"):
+            with self.assertRaises(ControlError): confined_path(self.root, value)
+        p = self.put("duplicate.json", '{"id":1,"id":2}')
+        with self.assertRaises(ControlError): read_json(p)
+
+    def test_no_arbitrary_journal_targets(self):
+        r = Records(self.root)
+        self.put(".local-codex/control-plane/transaction.json", '{"path":"../elsewhere"}')
+        with self.assertRaises(ControlError): r.recover()
+
+    def test_missing_successor_digest_preserves_journal_and_state(self):
+        r = Records(self.root)
+        with self.assertRaises(OSError): r.mutate(lambda s: None, fault_after="journal")
+        j = read_json(r.journal)
+        j["successor"].pop("state_digest")
+        r.journal.write_bytes(canonical_bytes(j))
+        original = r.journal.read_bytes()
+        with self.assertRaises(ControlError): r.recover()
+        self.assertEqual(r.journal.read_bytes(), original)
+        self.assertFalse(r.path.exists())
+
+
+class CatalogTests(Fixture):
+    def test_dataset_browser_profile_keeps_exact_host_coverage_and_unrelated_fallback(self):
+        import run_focused_checks
+        root = HELPERS.parents[1]
+        config = "dev-tools/config/contributor-check-profiles.json"
+        profile = read_json(root / config)["profiles"]["dataset-version-browser"]
+        expected = ['modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts', 'apps/thin-client/src/features/dataset-preparation/tests/api-dataset-preparation-client.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts', 'modules/application/use-cases/dataset-version/tests/publish-dataset-version.use-case.unit.test.ts', 'modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts', 'apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx', 'apps/thin-client/src/features/artifact-browser/tests/use-artifact-browser-feature.unit.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx', 'apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx', 'modules/ui/shared/dataset-version/tests/datasetVersionReplayHandoff.ui.test.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-reuse.ui.test.tsx', 'modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts', 'modules/ui/shared/dataset-version/tests/readDatasetVersionReplaySources.unit.test.ts', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-reuse.ui.test.tsx', 'dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py', 'dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts', 'dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts']
+        expected.extend([
+            "dev-tools/scripts/qualification/tests/manual-context-host-journey.unit.test.ts",
+            "modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
+            "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts",
+            "dev-tools/scripts/qualification/tests/source-context-host-journey.unit.test.ts",
+        ])
+        self.assertEqual(profile["test_paths"], expected)
+        commands = run_focused_checks.profile_commands(root, "dataset-version-browser")
+        self.assertEqual(sorted(p for command in commands for p in command if p in expected), sorted(p for p in expected if not p.endswith(".py")))
+        self.assertEqual(sum(command[0] == "node" for command in commands), len(commands) - 1)
+        self.assertEqual([command[-1] for command in commands if command[0] != "node"], ["test_provided_dataset_qualification_worker.py"])
+        # The desktop client also belongs to the existing portable OCR profile.
+        # Retain that overlapping owner in the fixture rather than suppressing it.
+        self.put(config, json.dumps(read_json(root / config)))
+        exact = ['modules/ui/shared/dataset-version/DatasetVersionPanel.tsx', 'modules/ui/shared/dataset-version/tests/DatasetVersionPanel.interaction.ui.test.tsx', 'apps/desktop/src/renderer/pages/ArtifactsPage.tsx', 'apps/thin-client/src/pages/ArtifactsPage.tsx', 'apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx', 'apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-saved-versions.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/hooks/useDatasetPreparationFeature.ts', 'apps/desktop/src/renderer/features/dataset-preparation/components/DatasetPreparationFeature.tsx', 'apps/thin-client/src/features/dataset-preparation/components/DatasetPreparationFeature.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-sources.ui.test.tsx', 'apps/thin-client/src/features/artifact-browser/api/apiArtifactBrowserClient.ts', 'apps/thin-client/src/features/artifact-browser/tests/api-artifact-browser-client.unit.test.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/datasetVersionReplayFixture.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff.ts', 'modules/ui/shared/dataset-version/tests/datasetVersionReplayHandoff.ui.test.tsx', 'apps/desktop/src/renderer/pages/tests/artifacts-page-reuse.ui.test.tsx', 'modules/ui/shared/dataset-version/datasetVersionReplay.ts', 'modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts', 'modules/ui/shared/dataset-version/readDatasetVersionReplaySources.ts', 'modules/ui/shared/dataset-version/tests/readDatasetVersionReplaySources.unit.test.ts', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-version-replay.ui.test.tsx', 'apps/thin-client/src/pages/tests/artifacts-page-reuse.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/datasetVersionReplayFixture.ts', 'dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification-worker.py', 'dev-tools/scripts/qualification/visual-composer/provided-dataset-host-launch-plan.mjs', 'dev-tools/scripts/qualification/visual-composer/provided-dataset-server-entry.ts', 'dev-tools/scripts/qualification/visual-composer/provided-dataset-server-lifecycle.ts', 'dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md', 'dev-tools/scripts/qualification/visual-composer/e2e/provided-dataset-version-journey.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/thin-client-dataset-versions.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/desktop-task-cleanup.ts', 'dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_provided_dataset_qualification_worker.py', 'dev-tools/scripts/qualification/tests/provided-dataset-server-lifecycle.unit.test.ts', 'dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts']
+        for path in exact:
+            ids = {row["id"] for row in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
+            self.assertIn("dataset-version-browser", ids)
+            if path.startswith(("apps/", "modules/")):
+                self.assertIn("architecture", ids)
+            self.assertNotIn("focused-tests", ids)
+            if path == "apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts":
+                self.assertIn("ocr-provider-contract", ids)
+        extra_sources = [
+            "dev-tools/scripts/qualification/visual-composer/e2e/manual-context-host-journey.ts",
+            "dev-tools/scripts/qualification/visual-composer/daily-context-fixture.json",
+            "dev-tools/scripts/qualification/visual-composer/daily-row-review-fixture.json",
+            "dev-tools/scripts/qualification/visual-composer/e2e/saved-row-review-host-journey.ts",
+            "dev-tools/scripts/qualification/tests/saved-row-review-host-journey.unit.test.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/source-context-host-journey.ts",
+            "dev-tools/scripts/qualification/tests/source-context-host-journey.unit.test.ts",
+        ]
+        for path in extra_sources:
+            ids = {row["id"] for row in catalog.plan(self.root, [path], ["dataset-version-browser", "documentation"], "candidate")["selected"]}
+            self.assertIn("dataset-version-browser", ids)
+            self.assertNotIn("focused-tests", ids)
+        exact.extend(extra_sources)
+        for paths, required, focused in [(exact + [config], ["control-plane"], False),
+                                         (exact, ["focused-tests"], True),
+                                         (exact + ["apps/thin-client/src/other.ts"], ["documentation"], True)]:
+            ids = {row["id"] for row in catalog.plan(self.root, paths, required, "candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids, focused)
+        ids = {row["id"] for row in catalog.plan(self.root, ["modules/ui/shared/other/source.ts"], ["documentation"], "candidate")["selected"]}
+        self.assertIn("focused-tests", ids)
+        self.assertNotIn("dataset-version-browser", ids)
+
+    def test_dataset_replay_profile_is_exact_bounded_and_keeps_unrelated_coverage(self):
+        import run_focused_checks
+        root = HELPERS.parents[1]
+        config = "dev-tools/config/contributor-check-profiles.json"
+        profile = read_json(root / config)["profiles"]["dataset-version-replay"]
+        expected = [
+            "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts",
+            "modules/contracts/dataset/tests/dataset-review-version-display.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-adaptive.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-advanced.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-ocr.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-memory.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-output-shape.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-capabilities.unit.test.ts",
+            "modules/application/use-cases/dataset-version/tests/dataset-version-read.use-cases.unit.test.ts",
+        ]
+        self.assertEqual(profile["test_paths"], expected)
+        commands = run_focused_checks.profile_commands(root, "dataset-version-replay")
+        self.assertEqual([p for command in commands for p in command if p in expected], sorted(expected))
+        self.assertTrue(all(command[:4] == ["node", "--import", "tsx", "--test"] for command in commands))
+        # The Browser profile now includes exact replay source/contract coverage.
+        # Keep both owners available instead of manufacturing a missing profile.
+        self.put(config, json.dumps(read_json(root / config)))
+        exact = ["modules/ui/shared/dataset-version/datasetVersionReplay.ts", expected[0], "modules/ui/shared/dataset-version/index.ts"]
+        for path in exact:
+            selected = catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]
+            ids = {row["id"] for row in selected}
+            owners = {"dataset-version-replay"}
+            if path != "modules/ui/shared/dataset-version/index.ts":
+                owners.add("dataset-version-browser")
+            self.assertEqual(ids.intersection(catalog.QUALIFICATION_PROFILES), owners)
+            self.assertNotIn("focused-tests", ids)
+            self.assertIn("architecture", ids)
+        for paths, required, focused in [(exact + [config], ["control-plane"], False),
+                                          (exact, ["focused-tests"], True),
+                                          (exact + ["modules/unknown/source.ts"], ["documentation"], True)]:
+            ids = {row["id"] for row in catalog.plan(self.root, paths, required, "candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids, focused)
+        for path in ["modules/ui/shared/other/source.ts"]:
+            ids = {row["id"] for row in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+            self.assertNotIn("dataset-version-replay", ids)
+        for path in ["dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_delivery.py"]:
+            ids = {row["id"] for row in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
+            self.assertIn("control-plane", ids)
+        ids = {row["id"] for row in catalog.plan(self.root, ["docs/context/packs/data-management.pack.md"], ["documentation"], "candidate")["selected"]}
+        self.assertTrue({"documentation", "agent-support"}.issubset(ids))
+
+
+    def test_focused_python_checks_never_expand_into_controlled_ai_suite(self):
+        import run_focused_checks
+        files = {"modules/adapters/runtime/python/worker/tests/" + n: "x" for n in ("test_unit.py", "test_constrained_json_outlines_integration.py", "test_context_generation_ai_e2e.py", "test_model_training_task_matrix_e2e.py")}
+        self.put("modules/adapters/runtime/python/worker/tests/test_unit.py", "import unittest\nclass Cases(unittest.TestCase):\n    def test_value(self): pass\n")
+        with patch.object(run_focused_checks, "snapshot", return_value={"files": files}):
+            commands = run_focused_checks.commands(self.root, ["modules/adapters/runtime/python/worker/service.py"])
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0][-1], "test_unit.py")
+
+    def test_aggregate_checks_are_denied_before_overall_phase(self):
+        self.repository(start=False)
+        self.spec["acceptance"][0]["check_ids"] = ["completion-all"]
+        with self.assertRaisesRegex(ControlError, "only after"):
+            self.work.start(self.spec, "author-run")
+
+    def test_focused_test_routing_uses_imports_not_mentions_of_vitest(self):
+        import run_focused_checks
+        node = "dev-tools/scripts/example/runner.test.mjs"
+        vitest = "dev-tools/scripts/example/component.test.mjs"
+        self.put(node, '''import test from "node:test";
+const label = "vitest";
+isVitestOwnedTestSource('import { it } from "vitest";');
+''')
+        self.put(vitest, 'import {\n test\n} from "vitest";')
+        with patch.object(run_focused_checks, "snapshot", return_value={"files": {node: "a", vitest: "b"}}):
+            commands = run_focused_checks.commands(self.root, [node])
+        self.assertIn(node, commands[0])
+        self.assertNotIn(vitest, commands[0])
+        self.assertIn(vitest, commands[1])
+        self.assertNotIn(node, commands[1])
+
+    def test_source_owned_profiles_are_bounded_exact_and_policy_bound(self):
+        import run_focused_checks
+        path = "modules/example/tests/owned.test.mjs"
+        other = "modules/example/tests/unrelated.test.mjs"
+        self.put(path, 'import test from "node:test";')
+        self.put(other, 'import test from "node:test";')
+        config = "dev-tools/config/contributor-check-profiles.json"
+        value = {"schema_version": "contributor-check-profiles-v1", "profiles": {"owned": {"test_paths": [path], "source_paths": [path]}}}
+        self.put(config, json.dumps(value))
+        with patch.object(run_focused_checks, "snapshot", return_value={"files": {path: "a", other: "b"}}):
+            selected = run_focused_checks.profile_commands(self.root, "owned")
+        self.assertIn(path, selected[0])
+        self.assertNotIn(other, selected[0])
+        before = catalog.policy_digest(self.root, catalog.definitions(self.root))
+        self.put(config, json.dumps({**value, "profiles": {"owned": {"test_paths": [other], "source_paths": [other]}}}))
+        self.assertNotEqual(before, catalog.policy_digest(self.root, catalog.definitions(self.root)))
+
+    def test_profiles_reject_unknown_unsafe_missing_non_test_and_controlled_ai_paths(self):
+        import run_focused_checks
+        config = "dev-tools/config/contributor-check-profiles.json"
+        for paths in [[], ["../outside.test.mjs"], ["--test.test.mjs"], ["modules/example/source.ts"],
+                      ["modules/missing.test.ts"], ["modules/runtime/tests/test_context_generation_ai_e2e.py"],
+                      ["modules/example/x.ai.test.ts"], ["modules/example/x.test.ts"] * 101]:
+            self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"owned": {"test_paths": paths, "source_paths": ["modules/example/source.ts"]}}}))
+            with patch.object(run_focused_checks, "snapshot", return_value={"files": {p: "a" for p in paths if p != "modules/missing.test.ts"}}):
+                with self.assertRaises(ControlError):
+                    run_focused_checks.profile_commands(self.root, "owned")
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {}}))
+        with self.assertRaises(ControlError):
+            run_focused_checks.profile_commands(self.root, "unknown")
+
+    def test_profile_substitutes_only_explicitly_covered_focused_impact(self):
+        config = "dev-tools/config/contributor-check-profiles.json"
+        source = "modules/example/source.ts"
+        profile = {"test_paths": ["modules/example/tests/owned.test.mjs"], "source_paths": [source]}
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"security-authority": profile}}))
+        selected = catalog.plan(self.root, [source], ["security-authority"], "candidate")["selected"]
+        self.assertNotIn("focused-tests", [c["id"] for c in selected])
+        selected = catalog.plan(self.root, [source], ["security-authority", "focused-tests"], "candidate")["selected"]
+        self.assertIn("focused-tests", [c["id"] for c in selected])
+        selected = catalog.plan(self.root, [source, "modules/unknown/source.ts"], ["security-authority"], "candidate")["selected"]
+        self.assertIn("focused-tests", [c["id"] for c in selected])
+
+    def test_host_setup_policy_profile_is_exact_and_keeps_unknown_impact(self):
+        import run_focused_checks
+        root=HELPERS.parents[1];config="dev-tools/config/contributor-check-profiles.json"
+        lifecycle="dev-tools/scripts/qualification/tests/visual-composer-host-lifecycle.unit.test.mjs"
+        identity="dev-tools/scripts/qualification/tests/settings-public-identity.unit.test.mjs"
+        routing="dev-tools/helpers/tests/test_control_plane_settings_public_identity_profile.py"
+        listener="dev-tools/scripts/qualification/tests/settings-host-listener.unit.test.mjs"
+        tests=[lifecycle,identity,routing,listener]
+        source="dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs"
+        setup="dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs"
+        profiles=read_json(root/config);profile=profiles["profiles"]["host-setup-policy"]
+        self.assertEqual(profile["test_paths"],tests)
+        self.assertEqual(run_focused_checks.profile_commands(root,"host-setup-policy"),[
+            ["node","--test","--",listener,identity,lifecycle],
+            [sys.executable,"-B","-m","unittest","discover","-s","dev-tools/helpers/tests","-p",Path(routing).name],
+        ])
+        self.put(config,json.dumps(profiles))
+        for path in (source,setup,*tests):
+            ids={row["id"] for row in catalog.plan(self.root,[path],["documentation"],"candidate")["selected"]}
+            self.assertIn("host-setup-policy",ids)
+            self.assertNotIn("native-host-policy",ids)
+            self.assertNotIn("ocr-provider-contract",ids)
+            self.assertNotIn("focused-tests",ids)
+        for paths,required,focused in (([source,config],["host-setup-policy"],False),([source,"modules/unknown/source.ts"],["host-setup-policy"],True),([source],["host-setup-policy","focused-tests"],True)):
+            ids={row["id"] for row in catalog.plan(self.root,paths,required,"candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids,focused)
+        ids={row["id"] for row in catalog.plan(self.root,["dev-tools/scripts/qualification/visual-composer/unknown.mjs"],["documentation"],"candidate")["selected"]}
+        self.assertNotIn("host-setup-policy",ids)
+        self.assertIn("focused-tests",ids)
+
+    def test_native_host_policy_profile_is_exact_and_keeps_unknown_impact(self):
+        import run_focused_checks
+        root=HELPERS.parents[1]
+        config="dev-tools/config/contributor-check-profiles.json"
+        source="dev-tools/helpers/native-qualification/owned_command_job.py"
+        tests="dev-tools/helpers/native-qualification/tests/test_owned_command_job.py"
+        coordinator="dev-tools/helpers/native-qualification/serial_provided_coordinator.py"
+        coordinator_tests="dev-tools/helpers/native-qualification/tests/test_serial_provided_coordinator.py"
+        node_tests="dev-tools/helpers/native-qualification/tests/provided-data-helpers.unit.test.mjs"
+        fixed_helpers=["dev-tools/helpers/native-qualification/provided-data/"+name for name in ("package-tree.mjs","offline-package.mjs","global-setup.mjs","playwright.config.mjs")]
+        readme="dev-tools/helpers/native-qualification/README.md"
+        profiles=read_json(root/config)
+        profile=profiles["profiles"]["native-host-policy"]
+        self.assertEqual(profile["test_paths"],[tests,coordinator_tests,node_tests])
+        commands=run_focused_checks.profile_commands(root,"native-host-policy")
+        self.assertEqual(commands,[["node","--test","--",node_tests]]+[[sys.executable,"-B","-m","unittest","discover","-s",str(Path(test).parent.as_posix()),"-p",Path(test).name] for test in (tests,coordinator_tests)])
+        self.put(config,json.dumps(profiles))
+        for path in (source,tests,coordinator,coordinator_tests,readme):
+            ids={row["id"] for row in catalog.plan(self.root,[path],["documentation"],"candidate")["selected"]}
+            self.assertIn("native-host-policy",ids)
+            self.assertNotIn("ocr-provider-contract",ids)
+            self.assertNotIn("focused-tests",ids)
+        for path in (*fixed_helpers,node_tests):
+            # These additional templates have explicit profile coverage. They do
+            # not broaden automatic routing or suppress unknown/forced impact.
+            ids={row["id"] for row in catalog.plan(self.root,[path,config],["native-host-policy"],"candidate")["selected"]}
+            self.assertIn("native-host-policy",ids)
+            self.assertNotIn("focused-tests",ids)
+            ids={row["id"] for row in catalog.plan(self.root,[path,"modules/unknown/source.ts"],["native-host-policy"],"candidate")["selected"]}
+            self.assertIn("focused-tests",ids)
+        for paths,required,focused in (([source,config],["native-host-policy"],False),([source,"modules/unknown/source.ts"],["native-host-policy"],True),([source],["native-host-policy","focused-tests"],True)):
+            ids={row["id"] for row in catalog.plan(self.root,paths,required,"candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids,focused)
+        ids={row["id"] for row in catalog.plan(self.root,["dev-tools/helpers/native-qualification/unknown.py"],["documentation"],"candidate")["selected"]}
+        self.assertNotIn("native-host-policy",ids)
+        self.assertIn("agent-support",ids)
+
+    def test_all_registered_profiles_require_coverage_and_keep_explicit_focused_gate(self):
+        config = "dev-tools/config/contributor-check-profiles.json"
+        source = "modules/example/source.ts"
+        profile = {"test_paths": ["modules/example/tests/owned.test.mjs"], "source_paths": [source]}
+        for name in catalog.QUALIFICATION_PROFILES:
+            self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {name: profile}}))
+            for paths, required, expected in [([source], [name], False), ([source], [name, "focused-tests"], True), ([source, "modules/unknown/source.ts"], [name], True)]:
+                with self.subTest(name=name, paths=paths, required=required):
+                    planned = catalog.plan(self.root, paths, required, "candidate")
+                    self.assertEqual("focused-tests" in [c["id"] for c in planned["selected"]], expected)
+                    self.assertEqual(next(c for c in planned["selected"] if c["id"] == name)["argv"][-2:], ["--profile", name])
+            self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {name: {**profile, "source_paths": [source] * 201}}}))
+            with self.assertRaises(ControlError):
+                catalog.plan(self.root, [source], [name], "candidate")
+
+    def test_profile_rejects_repository_ai_suite_marker(self):
+        import run_focused_checks
+        path = "modules/example/provider.test.ts"
+        self.put(path, '// @test-suite ai\nimport {test} from "vitest";')
+        self.put("dev-tools/config/contributor-check-profiles.json", json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"owned": {"test_paths": [path], "source_paths": [path]}}}))
+        with patch.object(run_focused_checks, "snapshot", return_value={"files": {path: "a"}}):
+            with self.assertRaises(ControlError):
+                run_focused_checks.profile_commands(self.root, "owned")
+
+    def test_ocr_contract_profile_auto_selects_and_keeps_unknown_impact(self):
+        import run_focused_checks
+        root = HELPERS.parents[1]
+        name = "ocr-provider-contract"
+        profile = read_json(root / "dev-tools/config/contributor-check-profiles.json")["profiles"][name]
+        test_path = "modules/adapters/runtime/python/worker/tests/test_ocr_protocol.py"
+        source = "modules/adapters/runtime/python/worker/ocr/protocol.py"
+        wire_test = "modules/adapters/runtime/python/worker/tests/test_ocr_wire.py"
+        resource_test = "modules/adapters/runtime/python/worker/tests/test_ocr_resource.py"
+        process_test = "modules/adapters/runtime/python/worker/tests/test_ocr_process.py"
+        provider_test = "modules/adapters/runtime/python/worker/tests/test_ocr_provider.py"
+        recognition_test = "modules/adapters/runtime/python/worker/tests/test_ocr_recognition.py"
+        normalization_test = "modules/adapters/runtime/python/worker/tests/test_document_normalization_ocr.py"
+        standard_test = "modules/adapters/runtime/python/worker/tests/test_document_normalization.py"
+        normalization_source = "modules/adapters/runtime/python/worker/tasks/document_normalization.py"
+        build_test = "dev-tools/scripts/native/tests/test_build_windows_ocr.py"
+        hook_test = "dev-tools/scripts/native/tests/windows-ocr-build.unit.test.mjs"
+        build_source = "dev-tools/scripts/native/build_windows_ocr.py"
+        hook_source = "dev-tools/scripts/native/build_windows_ocr.cjs"
+        forge_source = "apps/desktop/forge.config.js"
+        native_test = "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py"
+        document_test = "modules/adapters/runtime/python/worker/tests/qualification_ocr_documents.py"
+        source_test = "modules/adapters/runtime/python/worker/tests/test_ocr_source_snapshot.py"
+        source_native = "modules/adapters/runtime/python/worker/tests/qualification_ocr_source_snapshot.py"
+        source_capture = "modules/adapters/runtime/python/worker/ocr/source_snapshot.py"
+        staging_tests = [
+            "modules/contracts/runtime/tests/dataset-preparation-ocr.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-advanced.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-adaptive.unit.test.ts",
+            "modules/contracts/runtime/tests/dataset-preparation-capabilities.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case-typecheck.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-quality-policy.unit.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-version-finalization.unit.test.ts",
+        ]
+        ocr_contract_source = "modules/contracts/runtime/dataset-preparation-ocr.ts"
+        task_tests = ["modules/adapters/runtime/python/worker/tests/" + name for name in [
+            "test_ocr_task_sources.py", "test_markdown_chunking.py", "test_prepare_training_dataset_ocr.py",
+            "test_worker_app.py", "test_prepare_training_dataset_task.py", "test_advanced_dataset_preparation.py"]]
+        desktop_client_source = "apps/desktop/src/renderer/features/dataset-preparation/api/desktopDatasetPreparationClient.ts"
+        desktop_client_test = "apps/desktop/src/renderer/features/dataset-preparation/tests/desktop-dataset-preparation-client.unit.test.ts"
+        artifact_browser_hook = 'apps/desktop/src/renderer/features/artifact-browser/hooks/useArtifactBrowserFeature.ts'
+        artifact_browser_test = 'apps/desktop/src/renderer/features/artifact-browser/tests/use-artifact-browser-feature-composition.unit.test.tsx'
+        desktop_readme = 'apps/desktop/README.md'
+        ui_tests = ['modules/ui/shared/data-management/tests/DatasetPreparationOcrSettings.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', desktop_client_test, artifact_browser_test, 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-request-builder.unit.test.ts', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-workflow.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-feature.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx', 'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx', 'apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx']
+        ocr_port_source = "modules/application/ports/runtime/dataset-preparation-source-hasher.port.ts"
+        ocr_app_test = "modules/application/use-cases/tests/prepare-training-dataset-ocr-source.integration.test.ts"
+        host_source = "modules/hosts/server/composition/composeServerHost.ts"
+        journey_python = "dev-tools/scripts/qualification/tests/test_ocr_qualification_worker.py"
+        journey_node = ["dev-tools/scripts/qualification/tests/" + name for name in [
+            "ocr-host-launch-plan.unit.test.mjs", "visual-composer-host-lifecycle.unit.test.mjs",
+            "controlled-runtime-preparation.unit.test.mjs"]] + ["modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx"]
+        self.assertEqual(profile["test_paths"], [test_path, wire_test, resource_test, process_test, provider_test, recognition_test, normalization_test, standard_test, source_test, build_test, hook_test, *staging_tests, *task_tests, *ui_tests, journey_python, *journey_node])
+        self.assertIn(native_test, profile["source_paths"])
+        self.assertNotIn(native_test, profile["test_paths"])
+        self.assertIn(document_test, profile["source_paths"])
+        self.assertNotIn(document_test, profile["test_paths"])
+        self.assertIn(source_native, profile["source_paths"])
+        self.assertNotIn(source_native, profile["test_paths"])
+        self.assertIn(source_capture, profile["source_paths"])
+        self.assertIn(source, profile["source_paths"])
+        self.assertIn(desktop_client_source, profile["source_paths"])
+        self.assertIn(desktop_client_test, profile["test_paths"])
+        self.assertIn(artifact_browser_hook, profile["source_paths"])
+        self.assertIn(artifact_browser_test, profile["source_paths"])
+        self.assertIn(artifact_browser_test, profile["test_paths"])
+        self.assertEqual(profile["source_paths"].count(desktop_readme), 1)
+        commands = run_focused_checks.profile_commands(root, name)
+        node_tests = sorted([hook_test, *staging_tests, *journey_node])
+        self.assertEqual(commands, [*[["node", "--import", "tsx", "--test", "--", *node_tests[at:at+12]] for at in range(0, len(node_tests), 12)],
+                                   ["node", "dev-tools/helpers/run_vitest_checks.mjs", "--", *sorted(ui_tests)],
+                                   [sys.executable, "-B", "-m", "unittest", "discover",
+                                    "-s", "dev-tools/scripts/native/tests",
+                                    "-p", "test_build_windows_ocr.py"],
+                                   [sys.executable, "-B", "-m", "unittest", "discover",
+                                    "-s", "dev-tools/scripts/qualification/tests", "-p", "test_ocr_qualification_worker.py"],
+                                   *[[sys.executable, "-B", "-m", "unittest", "discover",
+                                      "-s", "modules/adapters/runtime/python/worker/tests", "-p", name]
+                                     for name in sorted(["test_document_normalization.py", "test_document_normalization_ocr.py",
+                                                  "test_ocr_process.py", "test_ocr_protocol.py", "test_ocr_provider.py",
+                                                  "test_ocr_recognition.py", "test_ocr_resource.py", "test_ocr_source_snapshot.py", "test_ocr_wire.py",
+                                                  *[Path(path).name for path in task_tests]])]])
+        config = "dev-tools/config/contributor-check-profiles.json"
+        # Preserve the Browser profile that also owns the desktop client.
+        self.put(config, json.dumps(read_json(root / config)))
+        for paths, required, expected_ocr, expected_generic in [
+            ([source], ["documentation"], True, False),
+            ([test_path], ["documentation"], True, False),
+            ([wire_test], ["documentation"], True, False),
+            ([resource_test], ["documentation"], True, False),
+            ([process_test], ["documentation"], True, False),
+            ([provider_test], ["documentation"], True, False),
+            ([recognition_test], ["documentation"], True, False),
+            ([normalization_test], ["documentation"], True, False),
+            ([standard_test], ["documentation"], True, False),
+            ([normalization_source], ["documentation"], True, False),
+            ([native_test], ["documentation"], True, False),
+            ([document_test], ["documentation"], True, False),
+            ([source_test], ["documentation"], True, False),
+            ([source_native], ["documentation"], True, False),
+            ([source_capture], ["documentation"], True, False),
+            ([ocr_contract_source], ["documentation"], True, False),
+            ([ocr_port_source], ["documentation"], True, False),
+            ([ocr_app_test], ["documentation"], True, False),
+            (["modules/adapters/runtime/python/worker/ocr/task_sources.py"], ["documentation"], True, False),
+            ([task_tests[0]], ["documentation"], True, False),
+            ([task_tests[2]], ["documentation"], True, False),
+            (['modules/ui/shared/data-management/DatasetPreparationOcrSettings.tsx'], ["documentation"], True, False),
+            (['modules/ui/shared/data-management/tests/DatasetPreparationOcrSettings.ui.test.tsx'], ["documentation"], True, False),
+            (['apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx'], ["documentation"], True, False),
+            (['apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-ocr.ui.test.tsx'], ["documentation"], True, False),
+            ([desktop_client_source], ["documentation"], True, False),
+            ([desktop_client_test], ["documentation"], True, False),
+            ([artifact_browser_hook], ["documentation"], True, False),
+            ([artifact_browser_test], ["documentation"], True, False),
+            ([desktop_readme], ["documentation"], True, False),
+            (["apps/desktop/src/renderer/features/artifact-browser/hooks/unrelatedArtifactBrowserHook.ts"], ["documentation"], False, True),
+            (["apps/desktop/src/renderer/features/artifact-browser/tests/unrelated-composition.unit.test.tsx"], ["documentation"], False, True),
+            ([artifact_browser_hook, "modules/other/source.ts"], ["documentation"], True, True),
+            ([desktop_readme, "apps/desktop/src/renderer/features/artifact-browser/hooks/unrelatedArtifactBrowserHook.ts"], ["documentation"], True, True),
+            (["apps/desktop/src/renderer/features/dataset-preparation/api/unrelatedDesktopClient.ts"], ["documentation"], False, True),
+            (["apps/desktop/src/renderer/features/dataset-preparation/tests/unrelated-client.unit.test.ts"], ["documentation"], False, True),
+            (["dev-tools/scripts/qualification/visual-composer/ocr-qualification-worker.py"], ["documentation"], True, False),
+            (["dev-tools/scripts/qualification/visual-composer/ocr-host-launch-plan.mjs"], ["documentation"], True, False),
+            (["dev-tools/scripts/qualification/visual-composer/e2e/ocr-dataset-journey.ts"], ["documentation"], True, False),
+            # Shared host/barrel paths are covered only when this bounded OCR
+            # profile is selected. They must not auto-own unrelated host work.
+            ([host_source], ["documentation"], False, True),
+            ([ocr_contract_source, host_source], ["documentation"], True, False),
+            ([build_test], ["documentation"], True, False),
+            ([hook_test], ["documentation"], True, False),
+            ([build_source], ["documentation"], True, False),
+            ([hook_source], ["documentation"], True, False),
+            ([forge_source], ["documentation"], True, False),
+            ([source, "modules/other/source.ts"], ["documentation"], True, True),
+            ([source], ["documentation", "focused-tests"], True, True),
+            (["modules/other/source.ts"], ["documentation"], False, True),
+            (["modules/adapters/runtime/python/worker/tasks/other.py"], ["documentation"], False, True),
+        ]:
+            with self.subTest(paths=paths, required=required):
+                selected = catalog.plan(self.root, paths, required, "candidate")["selected"]
+                self.assertEqual(name in [row["id"] for row in selected], expected_ocr)
+                self.assertEqual("focused-tests" in [row["id"] for row in selected], expected_generic)
+                self.assertEqual("dependencies" in [row["id"] for row in selected],
+                                 bool(set(paths) & {build_source, hook_source, forge_source}))
+                if expected_ocr:
+                    self.assertEqual(next(row for row in selected if row["id"] == name)["argv"][-2:], ["--profile", name])
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+            name: {**profile, "source_paths": [test_path]},
+        }}))
+        selected = catalog.plan(self.root, [source], ["documentation"], "candidate")["selected"]
+        self.assertIn("focused-tests", [row["id"] for row in selected])
+
+    def test_host_memory_profile_stays_model_free_and_does_not_hide_other_impact(self):
+        root = HELPERS.parents[1]
+        profiles = read_json(root / "dev-tools/config/contributor-check-profiles.json")["profiles"]
+        profile = profiles["host-memory-fixture"]
+        self.assertEqual(profile["test_paths"], [
+            "dev-tools/scripts/qualification/tests/controlled-dataset-preparation.unit.test.mjs",
+            "dev-tools/scripts/qualification/tests/controlled-conversation-runtime-worker.unit.test.mjs",
+            "modules/ui/shared/data-management/tests/useDatasetPreparationConstrainedJson.ui.test.tsx",
+            "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
+            "apps/thin-client/src/features/dataset-preparation/tests/dataset-preparation-constrained-json.ui.test.tsx",
+            "modules/adapters/runtime/python/tests/pythonRuntimeHttpProtocol.unit.test.ts",
+            "modules/adapters/runtime/python/worker/tests/test_generation_capacity.py",
+            "modules/adapters/runtime/python/worker/tests/test_worker_app.py",
+            "modules/adapters/runtime/python/worker/tests/test_main.py",
+        ])
+        source = "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts"
+        self.assertIn(source, profile["source_paths"])
+        self.put("dev-tools/config/contributor-check-profiles.json", json.dumps({
+            "schema_version": "contributor-check-profiles-v1", "profiles": {"host-memory-fixture": profile},
+        }))
+        for paths, focused in [([source], False), ([source, "modules/other/source.ts"], True)]:
+            planned = catalog.plan(self.root, paths, ["host-memory-fixture"], "candidate")
+            self.assertEqual("focused-tests" in [c["id"] for c in planned["selected"]], focused)
+
+    def test_ingestion_profile_is_explicit_and_keeps_unknown_and_required_coverage(self):
+        import run_focused_checks
+        root = HELPERS.parents[1]
+        profile = read_json(root / "dev-tools/config/contributor-check-profiles.json")["profiles"]["ingestion-publication"]
+        expected = [
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-tasks.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-ingestion-acquisition-repository.unit.test.ts",
+            "modules/adapters/persistence/ingestion/tests/structured-ingestion-file-publication-repository.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/desktop-ingestion-source.integration.test.ts",
+            "modules/hosts/server/composition/tests/server-ingestion-source.integration.test.ts",
+            "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+            "modules/hosts/desktop/composition/tests/composeDesktopIngestionFeature.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
+            "modules/adapters/transport/api-express/tests/register-ingestion-task-api-route.unit.test.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
+            "modules/adapters/storage/ingestion-checkpoint/tests/filesystem-ingestion-checkpoint-storage.integration.test.ts",
+            "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
+            "modules/adapters/transport/api-express/tests/ingestion-task-http-policy.integration.test.ts",
+            "modules/adapters/transport/api-express/tests/task-route-availability-dispositions.unit.test.ts",
+            "apps/server/src/tests/create-server.integration.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/governed-ingestion-streaming.integration.test.ts",
+            "modules/adapters/storage/huggingface/tests/createHuggingFaceArtifactRepoStorageAdapter.unit.test.ts",
+            "modules/adapters/storage/huggingface/tests/datasetParquetBrowseSession.unit.test.ts",
+        ]
+        self.assertEqual(profile["test_paths"], expected)
+        byte_sources = [
+            "modules/adapters/storage/filesystem/artifact-store/createFilesystemIngestionFileByteStorageAdapter.ts",
+            "modules/adapters/storage/filesystem/artifact-store/tests/ingestion-file-byte-storage.integration.test.ts",
+        ]
+        self.assertTrue(all(path in profile["source_paths"] for path in byte_sources))
+        commands = run_focused_checks.profile_commands(root, "ingestion-publication")
+        node_tests = sorted(expected[:-1])
+        expected_commands = [
+            ["node", "--import", "tsx", "--test", "--", *node_tests[:12]],
+            ["node", "--import", "tsx", "--test", "--", *node_tests[12:]],
+            ["node", "dev-tools/helpers/run_vitest_checks.mjs", "--", expected[-1]],
+        ]
+        self.assertEqual(commands, expected_commands)
+        config = "dev-tools/config/contributor-check-profiles.json"
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"ingestion-publication": profile}}))
+        for paths, required, focused in [
+            (profile["source_paths"] + expected, ["ingestion-publication"], False),
+            (byte_sources, ["ingestion-publication"], False),
+            ([expected[0]], ["ingestion-publication", "focused-tests"], True),
+            ([expected[0], "modules/unknown/source.ts"], ["ingestion-publication"], True),
+        ]:
+            with self.subTest(paths=paths, required=required):
+                selected = catalog.plan(self.root, paths, required, "candidate")["selected"]
+                self.assertEqual("focused-tests" in [check["id"] for check in selected], focused)
+                self.assertEqual(next(check for check in selected if check["id"] == "ingestion-publication")["argv"][-2:], ["--profile", "ingestion-publication"])
+
+    def test_review_profile_auto_selects_only_exact_ui_ownership_and_keeps_denials(self):
+        config = "dev-tools/config/contributor-check-profiles.json"
+        dom = "dev-tools/scripts/testing/control-plane-guard.unit.test.mjs"
+        profile = {"test_paths": [dom], "source_paths": [dom, config]}
+        self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"review-site": profile}}))
+        for paths, required, focused in [([dom, config], ["control-plane"], False),
+                                         ([dom, config], ["control-plane", "focused-tests"], True),
+                                         ([dom, "modules/unknown/source.ts"], ["control-plane"], True)]:
+            with self.subTest(paths=paths, required=required):
+                selected = catalog.plan(self.root, paths, required, "candidate")["selected"]
+                ids = {c["id"] for c in selected}
+                self.assertIn("review-site", ids)
+                self.assertEqual("focused-tests" in ids, focused)
+                self.assertEqual(ids.intersection(catalog.QUALIFICATION_PROFILES), {"review-site"})
+        for path in ["dev-tools/scripts/testing/unrelated.test.mjs", "dev-tools/review-site/other.js", "docs/review.md"]:
+            ids = {c["id"] for c in catalog.plan(self.root, [path], ["documentation"], "candidate")["selected"]}
+            self.assertNotIn("review-site", ids)
+        with self.assertRaises(ControlError):
+            catalog.plan(self.root, [dom], ["unregistered-ui-check"], "candidate")
+
+    def test_review_profile_cannot_execute_ai_or_unsafe_test_paths(self):
+        import run_focused_checks
+        config = "dev-tools/config/contributor-check-profiles.json"
+        for path in ["../outside.test.mjs", "dev-tools/review-site/source.js", "modules/model/a.ai.test.ts",
+                     "modules/runtime/tests/test_context_generation_ai_e2e.py"]:
+            self.put(config, json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                "review-site": {"test_paths": [path], "source_paths": ["dev-tools/review-site/app.js"]}}}))
+            with self.subTest(path=path), patch.object(run_focused_checks, "snapshot", return_value={"files": {path: "a"}}):
+                with self.assertRaises(ControlError):
+                    run_focused_checks.profile_commands(self.root, "review-site")
+
+    def test_vitest_adapter_executes_exact_ts_path_without_tsx_sibling(self):
+        self.put("modules/example/owned.test.ts", 'import {test,expect} from "vitest"; test("selected",()=>expect(1).toBe(1));')
+        self.put("modules/example/owned.test.tsx", '// @test-suite ai\nimport {test} from "vitest"; test("excluded",()=>{throw new Error("unselected sibling executed")});')
+        result = subprocess.run(["node", str(HELPERS / "run_vitest_checks.mjs"), "--", "modules/example/owned.test.ts"], cwd=self.root, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("unselected sibling executed", result.stdout + result.stderr)
+
+    def test_disjoint_claims_require_separate_checkouts(self):
+        self.repository()
+        second = copy.deepcopy(self.spec)
+        second["work_id"] = "disjoint"
+        second["write_scope"] = ["docs/other.md"]
+        with self.assertRaisesRegex(ControlError, "active claim"):
+            self.work.start(second, "another-run")
+    def test_mixed_covered_and_uncovered_paths_are_denied(self):
+        with self.assertRaisesRegex(ControlError, "Every changed path"):
+            catalog.plan(self.root, ["docs/a.md", "unknown/new.dat"], ["documentation"], "candidate")
+
+    def test_deletion_and_both_rename_sides_are_classified(self):
+        from control_plane.candidate import changed
+        paths = changed({"docs/old.md": "a"}, {"docs/new.md": "a"})
+        p = catalog.plan(self.root, paths, ["documentation"], "candidate")
+        self.assertEqual(set(p["coverage"]), {"docs/old.md", "docs/new.md"})
+        self.assertEqual(p, catalog.plan(self.root, paths, ["documentation"], "candidate"))
+
+
+class DeliveryTests(Fixture):
+    def test_public_cli_runs_real_check_review_and_completion(self):
+        self.repository(start=False)
+        self.put(".local-codex/work.json", json.dumps(self.spec))
+        def cli(*args):
+            p = subprocess.run([sys.executable, "-B", str(HELPERS / "development_control_plane.py"), "--repo", str(self.root), *args], capture_output=True, text=True, timeout=20)
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+            return json.loads(p.stdout)["data"]
+        claim = cli("start", "--from", ".local-codex/work.json", "--invocation", "author-run")["claim"]["claim_id"]
+        self.put("docs/result.md", "completed through the public CLI\n")
+        receipt = cli("verify", "fixture-work", "--invocation", "author-run", "--claim", claim)
+        request = {"schema_version": "technical-review-v1", "work_id": "fixture-work", "invocation_id": "review-run", "assurance": "operator-attested", "disposition": "accepted", "receipt_digest": receipt["receipt_digest"], "findings": [], "closures": [], "reviewed_criteria": ["result"]}
+        self.put(".local-codex/review.json", json.dumps(request))
+        cli("review", "--from", ".local-codex/review.json")
+        self.assertEqual(cli("complete", "fixture-work", "--invocation", "author-run", "--claim", claim)["status"], "complete")
+
+    def test_actual_execution_review_and_completion(self):
+        self.repository()
+        receipt = self.verify()
+        self.assertEqual(receipt["qualification"], "passed")
+        self.review(receipt)
+        self.assertEqual(self.work.complete("fixture-work", "author-run", self.claim)["status"], "complete")
+        with self.assertRaises(ControlError): self.work.claim("fixture-work", "author-run", self.claim)
+
+    def test_failed_execution_cannot_be_declared_complete(self):
+        self.repository()
+        receipt = self.verify("broken\n")
+        self.assertEqual(receipt["qualification"], "failed")
+        with self.assertRaises(ControlError): self.review(receipt)
+
+    def test_self_review_missing_coverage_and_stale_receipt_denied(self):
+        self.repository()
+        receipt = self.verify()
+        with self.assertRaises(ControlError): self.review(receipt, invocation_id="author-run")
+        with self.assertRaises(ControlError): self.review(receipt, reviewed_criteria=[])
+        self.put("docs/result.md", "completed with a change\n")
+        with self.assertRaises(ControlError): self.review(receipt)
+
+    def test_acceptance_and_scope_are_frozen(self):
+        self.repository()
+        self.verify()
+        self.put("AGENTS.md", "out of scope\n")
+        with self.assertRaises(ControlError): self.work.plan("fixture-work")
+        self.put("AGENTS.md", "Fixture contributor entry\n")
+        self.work.records.mutate(lambda s: s["work_items"]["fixture-work"]["spec"]["acceptance"][0].update(description="weakened"))
+        with self.assertRaises(ControlError): self.work.plan("fixture-work")
+
+    def test_blocking_findings_need_correction_and_explicit_closure(self):
+        self.repository()
+        r = self.verify()
+        finding = {"id": "finding-1", "criterion_id": "result", "description": "Outcome needs a correction", "blocking": True, "kind": "substantive"}
+        self.review(r, disposition="changes-requested", findings=[finding])
+        r2 = self.verify("completed with the correction\n")
+        with self.assertRaises(ControlError): self.review(r2)
+        self.review(r2, closures=[{"finding_id": "finding-1", "receipt_digest": r2["receipt_digest"]}])
+        self.work.complete("fixture-work", "author-run", self.claim)
+
+    def test_live_owner_overlap_expiry_and_recovery_fencing(self):
+        self.repository()
+        second = copy.deepcopy(self.spec); second["work_id"] = "other"
+        with self.assertRaises(ControlError): self.work.start(second, "other-run")
+        with self.assertRaises(ControlError): self.work.claim("fixture-work", "other-run", action="recover")
+        expired = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+        self.work.records.mutate(lambda s: s["work_items"]["fixture-work"]["claim"].update(expires_at=expired))
+        with self.assertRaises(ControlError): self.work.verify("fixture-work", "author-run", self.claim)
+        recovered = self.work.claim("fixture-work", "other-run", action="recover")
+        self.assertNotEqual(recovered["claim"]["claim_id"], self.claim)
+        with self.assertRaises(ControlError): self.work.claim("fixture-work", "author-run", self.claim)
+
+    def test_private_output_is_hashed_not_persisted(self):
+        result = execute(self.root, {"id": "fixture", "argv": [sys.executable, "-c", "print('synthetic-private-payload')"], "timeout": 2})
+        self.assertEqual(result["status"], "passed")
+        self.assertNotIn("synthetic-private-payload", json.dumps(result))
+
+    def test_timeout_and_output_limit_are_nonqualifying(self):
+        result = execute(self.root, {"id": "fixture", "argv": [sys.executable, "-c", "import time; time.sleep(3)"], "timeout": .1})
+        self.assertEqual(result["status"], "timed-out")
+        with patch("control_plane.execution.MAX_OUTPUT", 100):
+            result = execute(self.root, {"id": "fixture", "argv": [sys.executable, "-c", "print('x'*10000)"], "timeout": 2})
+        self.assertEqual(result["status"], "output-limit")
+
+
+    def test_model_task_profile_covers_exact_ui_and_keeps_unknown_impact(self):
+        import run_focused_checks
+        actual_root = HELPERS.parents[1]
+        config = "dev-tools/config/contributor-check-profiles.json"
+        profiles = read_json(actual_root / config)
+        profile = profiles["profiles"]["functionality-tasks"]
+        expected = {
+            "apps/thin-client/src/features/model-management/tests/model-management-feature.unit.test.tsx",
+            "apps/thin-client/src/features/model-management/tests/use-model-management-feature.unit.test.tsx",
+            "apps/thin-client/src/features/model-management/tests/api-model-management-client.unit.test.ts",
+        }
+        self.assertTrue(expected.issubset(profile["test_paths"]))
+        commands = run_focused_checks.profile_commands(actual_root, "functionality-tasks")
+        flattened = {arg for command in commands for arg in command}
+        self.assertTrue(expected.issubset(flattened))
+        self.assertNotIn("apps/thin-client/src/pages/tests/home-page.unit.test.tsx", flattened)
+        self.put(config, json.dumps(profiles))
+        source = "apps/thin-client/src/features/model-management/hooks/useModelManagementFeature.ts"
+        for paths, required, focused in (
+            ([source, config], ["functionality-tasks"], False),
+            ([source, "modules/unknown/source.ts"], ["functionality-tasks"], True),
+            ([source], ["functionality-tasks", "focused-tests"], True),
+        ):
+            ids = {row["id"] for row in catalog.plan(self.root, paths, required, "candidate")["selected"]}
+            self.assertEqual("focused-tests" in ids, focused)
+
+if __name__ == "__main__": unittest.main()

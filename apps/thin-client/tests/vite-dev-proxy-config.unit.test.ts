@@ -66,8 +66,32 @@ describe("thin-client Vite API proxy config", () => {
 
     expect(createThinClientApiProxyConfig(environment)).toMatchObject({
       target: "https://example.test:9443",
-      secure: false,
+      secure: true,
     });
+  });
+
+  it("never disables verification for remote targets that resemble loopback", () => {
+    for (const host of ["localhost.example.test", "127.0.0.1.example.test", "192.0.2.10", "example.test"]) {
+      expect(shouldVerifyThinClientApiProxyTls({ AI_SYSTEM_BUILDER_TLS_CERT_MODE: "auto-local-ca",
+        AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET: `https://${host}` })).toBe(true);
+    }
+    for (const host of ["127.0.0.1", "localhost", "[::1]"]) {
+      expect(shouldVerifyThinClientApiProxyTls({ AI_SYSTEM_BUILDER_TLS_CERT_MODE: "auto-local-ca",
+        AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET: `https://${host}` })).toBe(false);
+    }
+  });
+
+  it("rejects LAN HTTP overrides and malformed or credential-bearing targets without echoing them", () => {
+    for (const target of ["http://127.0.0.1:3010", "http://remote.test", "file:///private", "invalid", "https://user:private@remote.test"]) {
+      let message = "";
+      try {
+        createThinClientApiProxyConfig({ AI_SYSTEM_BUILDER_SECURITY_MODE: "lan-https-token",
+          AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET: target });
+      } catch (error) { message = (error as Error).message; }
+      expect(message.length).toBeGreaterThan(0);
+      expect(message).not.toContain(target);
+      expect(message).not.toContain("private");
+    }
   });
 
   it("does not change API proxy target when only thin-client HTTPS env vars are set", () => {

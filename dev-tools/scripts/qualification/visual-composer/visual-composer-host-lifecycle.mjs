@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { EventEmitter, once } from "node:events";
 import { mkdirSync } from "node:fs";
 import net from "node:net";
@@ -13,11 +13,14 @@ import {
   sanitizeVisualComposerQualificationDiagnostic,
 } from "./visual-composer-qualification-core.mjs";
 
+import { stopVisualComposerOwnedProcess } from "./visual-composer-owned-process.mjs";
+export { DEFAULT_VISUAL_COMPOSER_SHUTDOWN_TIMEOUT_MS, stopVisualComposerOwnedProcess } from "./visual-composer-owned-process.mjs";
+
 export const DEFAULT_VISUAL_COMPOSER_SERVER_PORT = 43_170;
 export const DEFAULT_VISUAL_COMPOSER_THIN_CLIENT_PORT = 43_171;
 export const DEFAULT_VISUAL_COMPOSER_RUNTIME_PORT = 43_172;
+export const DEFAULT_VISUAL_COMPOSER_SERVER_RUNTIME_PORT = 43_173;
 export const DEFAULT_VISUAL_COMPOSER_STARTUP_TIMEOUT_MS = 30_000;
-export const DEFAULT_VISUAL_COMPOSER_SHUTDOWN_TIMEOUT_MS = 5_000;
 export const VISUAL_COMPOSER_PROCESS_LOG_LIMIT = 16_000;
 
 const LOOPBACK_HOST = "127.0.0.1";
@@ -81,7 +84,8 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
     DEFAULT_VISUAL_COMPOSER_RUNTIME_PORT,
     "controlled runtime",
   );
-  if (new Set([serverPort, thinClientPort, runtimePort]).size !== 3) {
+  const serverRuntimePort = normalizePort(options.serverRuntimePort, DEFAULT_VISUAL_COMPOSER_SERVER_RUNTIME_PORT, "controlled server runtime");
+  if (new Set([serverPort, thinClientPort, runtimePort, serverRuntimePort]).size !== 4) {
     throw new Error("Visual composer qualification ports must be different.");
   }
 
@@ -96,6 +100,16 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
     paths,
     serverPort,
   );
+  Object.assign(serverEnvironment, {
+    PYTHON_RUNTIME_BASE_URL: `http://${LOOPBACK_HOST}:${serverRuntimePort}`,
+    PYTHON_RUNTIME_HOST: LOOPBACK_HOST,
+    PYTHON_RUNTIME_PORT: String(serverRuntimePort),
+    PYTHON_RUNTIME_COMMAND: process.execPath,
+    PYTHON_RUNTIME_ARGS: CONTROLLED_CONVERSATION_WORKER_RELATIVE_PATH.replaceAll("\\", "/"),
+    PYTHON_RUNTIME_WORKER_DIR: repoRoot,
+    PYTHON_RUNTIME_STARTUP_TIMEOUT_MS: "15000",
+    HF_HUB_CACHE: path.join(paths.thinRuntimeRoot, "controlled-model-cache"),
+  });
   const thinClientEnvironment = createThinClientEnvironment(
     baseEnvironment,
     serverOrigin,
@@ -117,6 +131,7 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
   const desktopEnvironment = {
     ...baseEnvironment,
     VISUAL_COMPOSER_DESKTOP_DATA_ROOT: paths.desktopDataRoot,
+    HF_HUB_CACHE: path.join(paths.desktopDataRoot, "controlled-model-cache"),
     PYTHON_RUNTIME_BASE_URL: `http://${LOOPBACK_HOST}:${runtimePort}`,
     PYTHON_RUNTIME_HOST: LOOPBACK_HOST,
     PYTHON_RUNTIME_PORT: String(runtimePort),
@@ -312,52 +327,6 @@ export function createBoundedProcessOutput(
   };
 }
 
-export async function stopVisualComposerOwnedProcess(child, options = {}) {
-  if (!child || child.exitCode !== null || child.signalCode !== null) return;
-  const timeoutMs =
-    options.shutdownTimeoutMs ?? DEFAULT_VISUAL_COMPOSER_SHUTDOWN_TIMEOUT_MS;
-  const platform = options.platform ?? process.platform;
-  const waitForExit = waitForChildExit(child);
-
-  if (platform === "win32") {
-    if (Number.isInteger(child.pid) && child.pid > 0) {
-      const terminateTree =
-        options.terminateWindowsTree ?? terminateWindowsTree;
-      terminateTree(child.pid);
-    } else {
-      child.kill("SIGTERM");
-    }
-  } else if (child.pid && options.detached !== false) {
-    try {
-      process.kill(-child.pid, "SIGTERM");
-    } catch {
-      child.kill("SIGTERM");
-    }
-  } else {
-    child.kill("SIGTERM");
-  }
-
-  if (await settleWithin(waitForExit, timeoutMs)) return;
-  if (platform === "win32") {
-    try {
-      child.kill("SIGKILL");
-    } catch {
-      // The owned process may have exited between the timeout and fallback.
-    }
-  } else {
-    try {
-      if (child.pid && options.detached !== false) {
-        process.kill(-child.pid, "SIGKILL");
-      } else {
-        child.kill("SIGKILL");
-      }
-    } catch {
-      child.kill("SIGKILL");
-    }
-  }
-  await settleWithin(waitForExit, Math.min(1_000, timeoutMs));
-}
-
 function createServerEnvironment(baseEnvironment, paths, serverPort) {
   const environment = {
     ...baseEnvironment,
@@ -528,29 +497,8 @@ function hostStartupError(endpoint, diagnostic, options) {
   );
 }
 
-function waitForChildExit(child) {
-  if (child.exitCode !== null || child.signalCode !== null) {
-    return Promise.resolve();
-  }
-  return new Promise((resolveExit) => child.once("exit", resolveExit));
-}
-
-function settleWithin(promise, timeoutMs) {
-  return Promise.race([
-    promise.then(() => true),
-    delay(timeoutMs).then(() => false),
-  ]);
-}
-
 function delay(milliseconds) {
   return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
-}
-
-function terminateWindowsTree(pid) {
-  spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
-    windowsHide: true,
-    stdio: "ignore",
-  });
 }
 
 async function runUntilInterrupted() {

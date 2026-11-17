@@ -1112,6 +1112,46 @@ def _contains_secret(text: str) -> bool:
     return any(pattern.search(text) for pattern in _SECRET_PATTERNS)
 
 
+def resolve_text_language(metadata: dict[str, Any], text: str) -> str:
+    return _resolve_language(metadata, text)
+
+
+def contains_sensitive_personal_data(text: str) -> bool:
+    return _contains_sensitive_personal_data(text)
+
+
+def contains_secret_like_content(text: str) -> bool:
+    return _contains_secret(text)
+
+
+def text_content_fingerprint(text: str) -> str:
+    return _content_fingerprint({"text": text})
+
+
+def text_simhash(text: str) -> int | None:
+    return _simhash(text)
+
+
+def simhash_band_keys(value: int) -> list[tuple[int, int]]:
+    return _simhash_band_keys(value)
+
+
+def has_fuzzy_text_duplicate(
+    value: int,
+    accepted: list[int],
+    buckets: dict[tuple[int, int], list[int]],
+    threshold: float,
+    maximum_candidates: int,
+) -> bool:
+    return _has_fuzzy_duplicate(
+        value,
+        accepted,
+        buckets,
+        threshold,
+        maximum_candidates,
+    )
+
+
 def _is_explicitly_unsafe(
     metadata: dict[str, Any], row: dict[str, object]
 ) -> bool:

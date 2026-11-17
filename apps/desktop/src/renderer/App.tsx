@@ -1,29 +1,56 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
-import { ModelDownloadNotificationBridge, NotificationProvider, useNotificationCenter } from "../../../../modules/ui/shared";
+import { WindowTakeoverProvider } from "../../../../modules/ui/shared/takeover/WindowTakeoverControls";
+import { PresentedWindowResource } from "../../../../modules/ui/shared/takeover/PresentedWindowResource";
+import { useDesktopWindowTakeover } from "./features/workspace/hooks/useActiveWorkspaceTakeover";
+import {
+  ContextTaskNotificationBridge,
+  ModelDownloadNotificationBridge,
+  NotificationProvider,
+  useNotificationCenter,
+} from "../../../../modules/ui/shared";
 
 import { AppShell } from "./components/layout/AppShell";
 import { DesktopPageLoadingFallback } from "./components/layout/DesktopPageLoadingFallback";
 import { useDesktopPage } from "./hooks/useDesktopPage";
-import { ActiveWorkspaceProvider, WorkspaceGate, WorkspaceRequiredSurface, useActiveWorkspace, type WorkspaceUiRecord } from "./features/workspace";
-import { desktopPageDefinitions, desktopPageRequiresWorkspace, type DesktopPageKey } from "./routes/desktopPages";
-import { desktopLazyPages, type DesktopLazyPageDiagnosticContext, type DesktopLazyPageRegistry } from "./routes/lazyDesktopPages";
+import {
+  ActiveWorkspaceProvider,
+  WorkspaceGate,
+  WorkspaceRequiredSurface,
+  useActiveWorkspace,
+  type WorkspaceUiRecord,
+} from "./features/workspace";
+import {
+  desktopPageDefinitions,
+  desktopPageRequiresWorkspace,
+  type DesktopPageKey,
+} from "./routes/desktopPages";
+import {
+  desktopLazyPages,
+  type DesktopLazyPageDiagnosticContext,
+  type DesktopLazyPageRegistry,
+} from "./routes/lazyDesktopPages";
 import { resolveDesktopWorkspaceRouteBoundary } from "./routes/workspaceRouteBoundary";
 import { recordRendererMemorySnapshot } from "./diagnostics/rendererMemoryDiagnostics";
 import { createDesktopModelsClient } from "./features/models/api/desktopModelsClient";
 import { createDesktopDatasetPreparationClient } from "./features/dataset-preparation/api/desktopDatasetPreparationClient";
 import { DatasetPreparationNotificationBridge } from "./features/dataset-preparation/components/DatasetPreparationNotificationBridge";
 import { ModelTrainingNotificationBridge } from "./features/models/components/ModelTrainingNotificationBridge";
+import { createDesktopContextManagementClient } from "./features/context-management/api/desktopContextManagementClient";
 
-type DesktopWorkspacePageKey = Extract<DesktopPageKey, "artifacts" | "assets" | "user-library" | "models" | "image-generation" | "systems">;
+type DesktopWorkspacePageKey = Extract<
+  DesktopPageKey,
+  "artifacts" | "context" | "assets" | "models" | "image-generation" | "systems"
+>;
 const desktopModelDownloadNotificationClient = {
-  listModelDownloads: (input: Parameters<ReturnType<typeof createDesktopModelsClient>["listModelDownloads"]>[0]) =>
-    createDesktopModelsClient().listModelDownloads(input),
+  completeModelDownload: (input: Parameters<ReturnType<typeof createDesktopModelsClient>["completeModelDownload"]>[0]) => createDesktopModelsClient().completeModelDownload(input),
+  listModelDownloads: (
+    input: Parameters<
+      ReturnType<typeof createDesktopModelsClient>["listModelDownloads"]
+    >[0],
+  ) => createDesktopModelsClient().listModelDownloads(input),
 };
 const desktopDatasetPreparationNotificationClient = {
-  readPrepareTrainingDatasetTask: (
-    requestId: string,
-    workspaceId?: string,
-  ) =>
+  readPrepareTrainingDatasetTask: (requestId: string, workspaceId?: string) =>
     createDesktopDatasetPreparationClient().readPrepareTrainingDatasetTask(
       requestId,
       workspaceId,
@@ -33,6 +60,7 @@ const desktopModelTrainingNotificationClient = {
   readModelTrainingStatus: (input: { runId: string; workspaceId: string }) =>
     createDesktopModelsClient().readModelTrainingStatus(input),
 };
+const desktopContextNotificationClient = createDesktopContextManagementClient();
 
 export function App() {
   useEffect(() => {
@@ -55,20 +83,39 @@ export interface WorkspaceAwareDesktopAppProps {
   readonly lazyPages?: DesktopLazyPageRegistry;
 }
 
-export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: WorkspaceAwareDesktopAppProps = {}) {
+export function WorkspaceAwareDesktopApp({
+  lazyPages = desktopLazyPages,
+}: WorkspaceAwareDesktopAppProps = {}) {
   const { activePage, setActivePage } = useDesktopPage();
   const workspace = useActiveWorkspace();
   const notifications = useNotificationCenter();
   const setNotificationWorkspace = notifications.setActiveWorkspaceId;
   const [artifactRefreshToken, setArtifactRefreshToken] = useState(0);
+  const [contextLaunchArtifactId, setContextLaunchArtifactId] =
+    useState<string>();
+  const [artifactDetailIntent, setArtifactDetailIntent] = useState<string>();
+  const notificationWorkspaceId =
+    workspace.status === "ready" ? workspace.activeWorkspace?.id : undefined;
+  const takeover = useDesktopWindowTakeover(notificationWorkspaceId, activePage === "systems");
+  const navigateByUser = (page: DesktopPageKey) => {
+    const status = takeover.controller.getSnapshot().status;
+    if (status !== "active" && status !== "activating") setActivePage(page);
+  };
 
   useEffect(() => {
-    setNotificationWorkspace(workspace.activeWorkspaceId);
-  }, [setNotificationWorkspace, workspace.activeWorkspaceId]);
+    setNotificationWorkspace(notificationWorkspaceId);
+    setContextLaunchArtifactId(undefined);
+    setArtifactDetailIntent(undefined);
+  }, [notificationWorkspaceId, setNotificationWorkspace]);
 
-  const activePageDefinition = desktopPageDefinitions.find((page) => page.key === activePage);
+  const activePageDefinition = desktopPageDefinitions.find(
+    (page) => page.key === activePage,
+  );
   const routeRequiresWorkspace = desktopPageRequiresWorkspace(activePage);
-  const routeBoundary = resolveDesktopWorkspaceRouteBoundary(activePage, workspace.status);
+  const routeBoundary = resolveDesktopWorkspaceRouteBoundary(
+    activePage,
+    workspace.status,
+  );
   const lazyLoadContext: DesktopLazyPageDiagnosticContext = {
     activePage,
     visibleActivePage: routeBoundary.visibleActivePage,
@@ -85,7 +132,10 @@ export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: Works
     />
   );
 
-  const renderWorkspacePageContent = (page: DesktopWorkspacePageKey, activeWorkspace: WorkspaceUiRecord): ReactNode => {
+  const renderWorkspacePageContent = (
+    page: DesktopWorkspacePageKey,
+    activeWorkspace: WorkspaceUiRecord,
+  ): ReactNode => {
     switch (page) {
       case "artifacts": {
         const ArtifactsPage = lazyPages.artifacts;
@@ -95,31 +145,77 @@ export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: Works
             workspaceId={activeWorkspace.id}
             workspaceName={activeWorkspace.displayName}
             refreshToken={artifactRefreshToken}
+            initialSelectedStorageKey={artifactDetailIntent}
+            onInitialSelectionHandled={() => setArtifactDetailIntent(undefined)}
+            onConvertToRag={(artifactId) => {
+              setContextLaunchArtifactId(artifactId);
+              setArtifactDetailIntent(undefined);
+              navigateByUser("context");
+            }}
             onUploaded={() => {
               setArtifactRefreshToken((current) => current + 1);
             }}
           />
         );
       }
+      case "context": {
+        const ContextPage = lazyPages.context;
+        return (
+          <ContextPage
+            __lazyLoadContext={lazyLoadContext}
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+            initialArtifactId={contextLaunchArtifactId}
+            onInitialArtifactHandled={() =>
+              setContextLaunchArtifactId(undefined)
+            }
+            onViewSource={(artifactId) => {
+              setArtifactDetailIntent(artifactId);
+              setContextLaunchArtifactId(undefined);
+              navigateByUser("artifacts");
+            }}
+          />
+        );
+      }
       case "assets": {
         const AssetLibraryPage = lazyPages.assets;
-        return <AssetLibraryPage __lazyLoadContext={lazyLoadContext} workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
-      }
-      case "user-library": {
-        const UserLibraryPage = lazyPages["user-library"];
-        return <UserLibraryPage __lazyLoadContext={lazyLoadContext} workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
+        return (
+          <AssetLibraryPage
+            __lazyLoadContext={lazyLoadContext}
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+          />
+        );
       }
       case "models": {
         const ModelsPage = lazyPages.models;
-        return <ModelsPage __lazyLoadContext={lazyLoadContext} workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
+        return (
+          <ModelsPage
+            __lazyLoadContext={lazyLoadContext}
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+          />
+        );
       }
       case "image-generation": {
         const ImageGenerationPage = lazyPages["image-generation"];
-        return <ImageGenerationPage __lazyLoadContext={lazyLoadContext} workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
+        return (
+          <ImageGenerationPage
+            __lazyLoadContext={lazyLoadContext}
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+          />
+        );
       }
       case "systems": {
         const SystemBuilderPage = lazyPages.systems;
-        return <SystemBuilderPage __lazyLoadContext={lazyLoadContext} workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
+        return (
+          <SystemBuilderPage
+            __lazyLoadContext={lazyLoadContext}
+            workspaceId={activeWorkspace.id}
+            workspaceName={activeWorkspace.displayName}
+          />
+        );
       }
     }
   };
@@ -128,7 +224,12 @@ export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: Works
     switch (page) {
       case "home": {
         const HomePage = lazyPages.home;
-        return <HomePage __lazyLoadContext={lazyLoadContext} onNavigate={setActivePage} />;
+        return (
+          <HomePage
+            __lazyLoadContext={lazyLoadContext}
+            onNavigate={navigateByUser}
+          />
+        );
       }
       case "settings": {
         const SettingsPage = lazyPages.settings;
@@ -155,28 +256,49 @@ export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: Works
     <WorkspaceRequiredSurface />
   ) : routeRequiresWorkspace ? (
     <WorkspaceGate pageLabel={activePageDefinition?.label ?? activePage}>
-      {(activeWorkspace) => renderWorkspacePageContent(activePage as DesktopWorkspacePageKey, activeWorkspace)}
+      {(activeWorkspace) =>
+        renderWorkspacePageContent(
+          activePage as DesktopWorkspacePageKey,
+          activeWorkspace,
+        )
+      }
     </WorkspaceGate>
-  ) : renderGlobalPageContent(activePage);
+  ) : (
+    renderGlobalPageContent(activePage)
+  );
 
   return (
     <>
-      <ModelDownloadNotificationBridge client={desktopModelDownloadNotificationClient} workspaceId={workspace.activeWorkspaceId} />
+      <ModelDownloadNotificationBridge
+        client={desktopModelDownloadNotificationClient}
+        workspaceId={notificationWorkspaceId}
+      />
       <DatasetPreparationNotificationBridge
         client={desktopDatasetPreparationNotificationClient}
-        workspaceId={workspace.activeWorkspaceId}
+        workspaceId={notificationWorkspaceId}
       />
       <ModelTrainingNotificationBridge
         client={desktopModelTrainingNotificationClient}
-        workspaceId={workspace.activeWorkspaceId}
+        workspaceId={notificationWorkspaceId}
       />
-      <AppShell
-        activePage={routeBoundary.visibleActivePage}
-        onNavigate={setActivePage}
-        pages={desktopPageDefinitions}
-      >
-        <Suspense fallback={lazyPageFallback}>{content}</Suspense>
-      </AppShell>
+      <ContextTaskNotificationBridge
+        client={desktopContextNotificationClient}
+        workspaceId={notificationWorkspaceId}
+      />
+      <WindowTakeoverProvider control={takeover}>
+        <AppShell
+          activePage={routeBoundary.visibleActivePage}
+          onNavigate={navigateByUser}
+          pages={desktopPageDefinitions}
+          takeoverWorkspaceLabel={workspace.activeWorkspace?.displayName}
+        >
+          {takeover.presented ? (
+            <PresentedWindowResource intent={takeover.presented.intent} detail={takeover.presented.detail}
+              elementRef={takeover.presentedElement} />
+          ) : null}
+          <Suspense fallback={lazyPageFallback}>{content}</Suspense>
+        </AppShell>
+      </WindowTakeoverProvider>
     </>
   );
 }

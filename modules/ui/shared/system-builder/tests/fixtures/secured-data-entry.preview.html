@@ -26,32 +26,37 @@
                       <fieldset>
                         <legend>Request details</legend>
                         <div data-slot="fields">
-                          <label>
-                            <span>Title *</span>
-                            <input type="text" required />
-                          </label>
-                          <label>
-                            <span>Amount *</span>
-                            <input
-                              type="number"
-                              required
-                              min="0"
-                              max="1000000"
-                            />
-                          </label>
-                          <label>
-                            <span>Status *</span>
-                            <select required>
-                              <option value="" selected>Select</option>
-                              <option value="draft">Draft</option>
-                              <option value="submitted">Submitted</option>
-                              <option value="approved">Approved</option>
-                            </select>
-                          </label>
-                          <label>
-                            <span>Due date *</span>
-                            <input type="date" required />
-                          </label>
+                          <fieldset>
+                            <legend>Request fields</legend>
+                            <div data-slot="fields">
+                              <label>
+                                <span>Title *</span>
+                                <input type="text" required />
+                              </label>
+                              <label>
+                                <span>Amount *</span>
+                                <input
+                                  type="number"
+                                  required
+                                  min="0"
+                                  max="1000000"
+                                />
+                              </label>
+                              <label>
+                                <span>Status *</span>
+                                <select required>
+                                  <option value="" selected>Select</option>
+                                  <option value="draft">Draft</option>
+                                  <option value="submitted">Submitted</option>
+                                  <option value="approved">Approved</option>
+                                </select>
+                              </label>
+                              <label>
+                                <span>Due date *</span>
+                                <input type="date" required />
+                              </label>
+                            </div>
+                          </fieldset>
                         </div>
                       </fieldset>
                       <div data-slot="actions">

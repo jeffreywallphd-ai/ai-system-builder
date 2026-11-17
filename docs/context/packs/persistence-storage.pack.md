@@ -50,10 +50,11 @@
   organization context. Platform/legacy records are a separate partition and
   are never an implicit fallback.
 - Shared model storage is an additional configured model source, not a replacement for workspace model storage.
-- Explicit desktop model deletion removes local files only through a canonical,
-  approved-root adapter. Hugging Face snapshots delete their owning cache
-  repository, standalone checkpoints delete only their recorded file, and
-  root, link, traversal, or outside-root targets fail before registry deletion.
+- Desktop model deletion/reveal remain unavailable until the owning native effect
+  authority is qualified under ADR-0043. Canonical paths, provider cache layout,
+  markers and read-only identity checks alone never grant deletion/reveal rights.
+  Shared/imported caches remain reference-only; unknown content is never adopted
+  or deleted. Preserve actual pending native and provenance qualification.
 
 ## Key Constraints
 
@@ -70,12 +71,24 @@
 - Deployment-target config maps local to SQLite and campus/corporate/cloud to
   PostgreSQL. Desktop composition actively selects the Electron SQLite runtime;
   explicit managed server shapes actively select the PostgreSQL runtime.
-- Both engines provide schema-version-2 migrations, transactions, revisions, health,
+- Both engines provide versioned migrations, transactions, revisions, health,
   and portable exports. SQLite adds online backup/validated restore. Managed
   PostgreSQL backup/restore remains an operator/platform responsibility.
 - Database-backed collection mutations use bounded revision compare-and-swap;
   PostgreSQL transactions use bounded full-callback retries at Serializable
   isolation. Mutation callbacks must remain pure because they may run again.
+  Owned PostgreSQL transactions pin policy reads and scoped writes, close
+  transaction views before the final synchronous check, and retire clients
+  when commit or rollback cannot be confirmed.
+  PostgreSQL schema v3 indexes active System Builder records for an exact
+  bounded managed snapshot. SQLite retains its versioned local schema.
+- In-memory roots and SQLite connections serialize all structured operations
+  across their organization wrappers. Outside reads wait for committed state;
+  unrelated acknowledged writes survive another transaction's failure. Use the
+  supplied transaction store only in its owning async context; expired/foreign
+  stores and captured-root reentry deny. Caller data is copied before waits.
+  An unconfirmed SQLite rollback fences the connection, including queued requests;
+  keep the original callback error and do not reset the fence automatically.
 - JSON compatibility remains only for an unshaped non-production server. Import
   is allowlisted, rollback-preserving, activation-marked, and fail-closed on
   changed source; never add silent fallback, split-write, or implicit re-import.
@@ -164,3 +177,12 @@
 - Add `asset-kernel` for resource-backed Asset Registry or Asset Library work.
 - Add `security` when storage reads/writes expose public diagnostics, credentials, tokens, paths, or provider metadata.
 - Add `desktop-host` or `server-host` only when host-specific root composition, API/IPC wiring, or thin-client behavior changes.
+
+## In-memory transaction guidance
+
+- A root and its organization views share FIFO operation ownership. Use only the
+  supplied active transaction view; nested calls reuse it without a savepoint.
+- Preserve detached caller data and write options before waits, copied read/write
+  results, outer-callback rollback, and expired/foreign/root-reentry denial.
+- See `docs/architecture/persistence-and-storage.md` and ADR-0028 for the owning
+  semantics; do not infer physical database qualification from an in-memory test.

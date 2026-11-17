@@ -11,6 +11,10 @@ import {
   type RegisterDesktopDatasetPreparationIpcDependencies,
 } from "./registerDesktopDatasetPreparationIpc";
 import {
+  registerDesktopContextManagementIpc,
+  type RegisterDesktopContextManagementIpcDependencies,
+} from "./registerDesktopContextManagementIpc";
+import {
   registerDesktopImageGenerationIpc,
   type RegisterDesktopImageGenerationIpcDependencies,
 } from "./registerDesktopImageGenerationIpc";
@@ -104,6 +108,7 @@ export interface RegisterElectronIpcDependencies {
   runtime: RegisterDesktopRuntimeIpcDependencies;
   ingestion: RegisterDesktopIngestionIpcDependencies;
   datasetPreparation: RegisterDesktopDatasetPreparationIpcDependencies;
+  contextManagement?: RegisterDesktopContextManagementIpcDependencies;
   userLibrary?: RegisterUserLibraryIpcDependencies;
   assetAuthoring?: RegisterAssetAuthoringIpcDependencies;
   effectiveAssetProjections?: RegisterEffectiveAssetProjectionIpcDependencies;
@@ -158,6 +163,11 @@ export function registerElectronIpc(
   registerGroup(dependencies.recordMilestone, "dataset-preparation-group", () =>
     registerDesktopDatasetPreparationIpc(dependencies.datasetPreparation),
   );
+  if (dependencies.contextManagement) {
+    registerGroup(dependencies.recordMilestone, "context-management-group", () =>
+      registerDesktopContextManagementIpc(dependencies.contextManagement!),
+    );
+  }
   if (dependencies.userLibrary) {
     registerGroup(dependencies.recordMilestone, "user-library-group", () =>
       registerUserLibraryIpc(dependencies.userLibrary!),
@@ -241,6 +251,7 @@ export type {
   RegisterDesktopArtifactIpcDependencies,
   RegisterDesktopAssetIpcDependencies,
   RegisterDesktopDatasetPreparationIpcDependencies,
+  RegisterDesktopContextManagementIpcDependencies,
   RegisterDesktopImageGenerationIpcDependencies,
   RegisterDesktopIngestionIpcDependencies,
   RegisterDesktopModelIpcDependencies,

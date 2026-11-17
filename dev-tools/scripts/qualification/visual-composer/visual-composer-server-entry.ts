@@ -7,6 +7,8 @@ import {
   type ServerListener,
 } from "../../../../apps/server/src/createServer";
 import { createVisualComposerQualificationRuntimeDatabase } from "./visual-composer-runtime-database";
+import { createControlledRuntimeEnvironmentPreparer } from "./controlled-runtime-preparation.mjs";
+import { createOrganizationId } from "../../../../modules/contracts/organization";
 
 let listener: ServerListener | undefined;
 let closePersistence: (() => Promise<void>) | undefined;
@@ -29,8 +31,17 @@ async function start(): Promise<void> {
   }
   const created = await createServer({
     env: process.env,
-    structuredDocuments: createInMemoryStructuredDocumentStore(),
+    structuredDocuments: ["dataset-profile", "structured-output-controls", "ocr-documents"].includes(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO ?? "")
+      ? createInMemoryStructuredDocumentStore().forOrganization(createOrganizationId("qualification.local"))
+      : createInMemoryStructuredDocumentStore(),
     runtimeDatabases: createVisualComposerQualificationRuntimeDatabase(),
+    // OCR uses real deployed Python. Omit the Node fixture's preparation
+    // override so the production dependency preparer remains authoritative.
+    ...(process.env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO === "ocr-documents" ? {} : {
+      pythonRuntimeEnvironmentPreparer: createControlledRuntimeEnvironmentPreparer({
+        repoRoot: process.cwd(), runRoot: runtimeRoot, environment: process.env,
+      }),
+    }),
   });
   listener = createServerListener(created);
   closePersistence = created.closePersistence;

@@ -1,8 +1,13 @@
 // @ts-expect-error jsdom is a runtime test dependency without local declarations.
 import { JSDOM } from "jsdom";
-import { act, useEffect } from "react";
+import { act, useEffect, useLayoutEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import path from "node:path";
+import ts from "typescript";
 import {
+  after,
   afterEach,
   describe,
   expect,
@@ -10,10 +15,15 @@ import {
   testDouble,
 } from "../../../../testing/node-test";
 
-import type {
-  IngestionTaskRecord,
-  IngestionTaskTransportCommand,
+import {
+  INGESTION_TASK_RECOMMENDED_CHUNK_BYTES,
+  normalizeIngestionTaskTransportCommand,
+  type IngestionTaskRecord,
+  type IngestionTaskTransportCommand,
+  type IngestionTaskTransportValue,
 } from "../../../../contracts/ingestion";
+import type { AppHeadlessLocalFileSelectionValue, DesktopLocalFileSelectionInput } from "../../../../contracts/headless";
+import type { GuidedHeadlessFileClient } from "../GuidedIngestionTaskPanel";
 import { NotificationViewport } from "../../notifications/NotificationCenter";
 import {
   NotificationProvider,
@@ -31,7 +41,12 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>", {
 (globalThis as any).HTMLElement = dom.window.HTMLElement;
 (globalThis as any).HTMLInputElement = dom.window.HTMLInputElement;
 (globalThis as any).HTMLTextAreaElement = dom.window.HTMLTextAreaElement;
-(globalThis as any).navigator = dom.window.navigator;
+const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+Object.defineProperty(globalThis, "navigator", { configurable: true, value: dom.window.navigator });
+after(() => {
+  if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+  else Reflect.deleteProperty(globalThis, "navigator");
+});
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 let scrollTo = testDouble.fn();
 Object.defineProperty(dom.window, "scrollTo", {
@@ -202,7 +217,7 @@ function websiteTask(
   };
 }
 
-function huggingFaceTask(status: "queued" | "succeeded"): IngestionTaskRecord {
+function huggingFaceTask(status: "queued" | "succeeded" | "cancelled"): IngestionTaskRecord {
   const revision = "a".repeat(40);
   return {
     schemaVersion: "1.0",
@@ -217,7 +232,7 @@ function huggingFaceTask(status: "queued" | "succeeded"): IngestionTaskRecord {
         fileName: "train.parquet",
         mediaType: "application/vnd.apache.parquet",
         totalBytes: 0,
-        status: status === "succeeded" ? "finalized" : "pending",
+        status: status === "succeeded" ? "finalized" : status === "cancelled" ? "cancelled" : "pending",
         acceptedBytes: 0,
         nextChunkIndex: 0,
         providerSource: {
@@ -249,11 +264,11 @@ function huggingFaceTask(status: "queued" | "succeeded"): IngestionTaskRecord {
           ? "Provider data is ready."
           : "Ready to import selected files.",
     },
-    revision: status === "succeeded" ? 2 : 1,
+    revision: status === "queued" ? 1 : 2,
     cleanupPending: false,
     createdAt: "2026-07-30T12:00:00.000Z",
     updatedAt: "2026-07-30T12:00:00.000Z",
-    ...(status === "succeeded"
+    ...(status !== "queued"
       ? { completedAt: "2026-07-30T12:00:00.000Z" }
       : {}),
   };
@@ -279,6 +294,725 @@ async function chooseWebsiteAndEnterPage(): Promise<void> {
 }
 
 describe("GuidedIngestionTaskPanel", () => {
+  it("coverage census: preserves all approved scenario families and matches the current literal route declarations", () => {
+    const repository = path.resolve(".");
+    const read = (name: string) => {
+      const file = path.join(repository, name);
+      expect(statSync(file).size <= 256 * 1024).toBe(true);
+      return readFileSync(file, "utf8");
+    };
+    const ledger = JSON.parse(read("docs/operations/comprehensive-ui-automation-coverage.json"));
+    const discovery = JSON.parse(read("docs/operations/comprehensive-ui-automation-discovery.json"));
+    expect(ledger.schema_version).toBe("comprehensive-ui-coverage-v1");
+    expect(ledger.scenarios.map((value: any) => value.id)).toEqual(discovery.scenarioMatrix.map((value: any) => value.id));
+    expect(new Set(ledger.scenarios.map((value: any) => value.id)).size).toBe(39);
+    expect(ledger.full_testing_status).toBe("deferred-by-user");
+    for (const scenario of ledger.scenarios) {
+      const original = discovery.scenarioMatrix.find((value: any) => value.id === scenario.id);
+      expect(scenario.required_behavior).toEqual(original.expectedBehavior);
+      expect(scenario.hosts).toEqual(original.hosts);
+      expect(scenario.actual_host_qualification).toBe("pending");
+      for (const name of scenario.source_refs) {
+        expect((/^(apps|modules|docs|dev-tools)\//.test(name) || name === "AGENTS.md") && !name.includes("..") && !name.includes("\\") && !name.includes(":")).toBe(true);
+        expect(existsSync(path.join(repository, name))).toBe(true);
+      }
+    }
+    for (const [host, file, alias, declaration] of [
+      ["desktopRouteKeys", "apps/desktop/src/renderer/routes/desktopPages.ts", "DesktopPageKey", "desktopPageDefinitions"],
+      ["thinClientRouteKeys", "apps/thin-client/src/routes/thinClientPages.ts", "ThinClientPageKey", "thinClientPageDefinitions"],
+    ]) {
+      const tree = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true), union: string[] = [], registered: string[] = [];
+      const visit = (node: ts.Node) => {
+        if (ts.isTypeAliasDeclaration(node) && node.name.text === alias && ts.isUnionTypeNode(node.type)) {
+          for (const member of node.type.types) {
+            expect(ts.isLiteralTypeNode(member) && ts.isStringLiteral(member.literal)).toBe(true);
+            union.push((member as ts.LiteralTypeNode).literal.getText(tree).slice(1, -1));
+          }
+        }
+        if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === declaration) {
+          expect(Boolean(node.initializer && ts.isArrayLiteralExpression(node.initializer))).toBe(true);
+          for (const item of (node.initializer as ts.ArrayLiteralExpression).elements) {
+            expect(ts.isObjectLiteralExpression(item)).toBe(true);
+            const key = (item as ts.ObjectLiteralExpression).properties.find(value => ts.isPropertyAssignment(value) && value.name.getText(tree) === "key") as ts.PropertyAssignment;
+            expect(Boolean(key && ts.isStringLiteral(key.initializer))).toBe(true);
+            registered.push((key.initializer as ts.StringLiteral).text);
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(tree);
+      expect(union).toEqual(ledger.surface_census[host]);
+      expect(registered.length).toBe(host === "desktopRouteKeys" ? union.length - 1 : union.length);
+      expect(registered.every(key => union.includes(key))).toBe(true);
+      expect(new Set(registered).size).toBe(registered.length);
+    }
+  });
+  function deferredResponse() {
+    let resolve!: (value: IngestionTaskTransportValue) => void;
+    const promise = new Promise<IngestionTaskTransportValue>(done => { resolve = done; });
+    return { promise, resolve };
+  }
+  function button(text: string) {
+    const value = Array.from(container!.querySelectorAll("button")).find(item => item.textContent === text);
+    expect(Boolean(value)).toBe(true);
+    return value!;
+  }
+  async function mountAcquisition(client: { execute: any }, onComplete = () => undefined, workspaceId = "workspace-a",
+    withNotifications = false, headlessFileClient?: GuidedHeadlessFileClient) {
+    if (!root) {
+      container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    }
+    const panel = <GuidedIngestionTaskPanel workspaceId={workspaceId} client={client} onComplete={onComplete}
+      headlessFileClient={headlessFileClient} />;
+    await act(async () => root!.render(withNotifications ? <NotificationProvider><ActiveNotificationWorkspace /><NotificationViewport />{panel}</NotificationProvider> : panel));
+  }
+
+  it("stages one file for the chosen chat client, retries only selection and can cancel the staged file", { timeout: 5_000 }, async () => {
+    const registeredClientId = "34012ffc-feed-411f-b86b-1b80f5d0ba2f";
+    const otherClient = "34012ffc-feed-411f-b86b-1b80f5d0ba30";
+    const selections: DesktopLocalFileSelectionInput[] = [];
+    const commands: IngestionTaskTransportCommand[] = [];
+    const onComplete = testDouble.fn();
+    const cancelResponse = deferredResponse();
+    let markSelectionStarted!: () => void;
+    const selectionStarted = new Promise<void>(resolve => { markSelectionStarted = resolve; });
+    const client = { async execute({ command }: { command: IngestionTaskTransportCommand }) {
+      commands.push(command);
+      if (command.action === "create-files") return { kind: "task", task: task("queued", 0, "pending") };
+      if (command.action === "append-chunk") return { kind: "task", task: task("transferring", 3, "transferring") };
+      if (command.action === "cancel") return cancelResponse.promise;
+      throw new Error("Unexpected ingestion action for a preview.");
+    } };
+    const headlessFileClient: GuidedHeadlessFileClient = {
+      async listClients(workspaceId) {
+        expect(workspaceId).toBe("workspace-a");
+        return [otherClient, registeredClientId];
+      },
+      async select(input) {
+        selections.push(input);
+        if (selections.length === 1) { markSelectionStarted(); return; }
+        const { workspaceId, taskId, fileId, taskRevision } = input;
+        return { workspaceId, taskId, fileId, taskRevision, selectionRevision: 1 };
+      },
+    };
+    await mountAcquisition(client, onComplete, "workspace-a", false, headlessFileClient);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    expect(button("Prepare for chat").disabled).toBe(true);
+    const clientChoice = container!.querySelector("select")!;
+    clientChoice.value = registeredClientId;
+    await act(async () => clientChoice.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Prepare for chat").click(); await selectionStarted; });
+    expect(container!.querySelector('[aria-label="File reference"]')).toBe(null);
+    expect(button("Add data").disabled).toBe(true);
+    await act(async () => button("Try preparing again").click());
+    const reference = { workspaceId: "workspace-a", taskId: "ingestion.test", fileId: "file.test", taskRevision: 2 };
+    expect(selections).toEqual(Array.from({ length: 2 }, () => ({
+      ...reference, registeredClientId, expectedSelectionRevision: 0,
+    })));
+    expect(commands.map(({ action }) => action)).toEqual(["create-files", "append-chunk"]);
+    expect(commands[1]).toMatchObject({ bytes: new TextEncoder().encode("A,B"),
+      sha256: `sha256:${createHash("sha256").update("A,B").digest("hex")}` });
+    expect(container!.querySelector<HTMLTextAreaElement>('[aria-label="File reference"]')!.value)
+      .toBe(JSON.stringify(reference));
+    await act(async () => button("Cancel").click());
+    expect(commands.map(({ action }) => action)).toEqual(["create-files", "append-chunk", "cancel"]);
+    expect(container!.querySelector('[aria-label="File reference"]')).toBe(null);
+    expect(button("Adding data…").disabled).toBe(true);
+    await act(async () => cancelResponse.resolve({ kind: "task", task: task("cancelled", 0, "cancelled") }));
+    expect(button("Add data").disabled).toBe(false);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it("discards the prepared reference if the workspace changes while selection is in flight", { timeout: 5_000 }, async () => {
+    let resolveSelection!: (receipt: AppHeadlessLocalFileSelectionValue) => void;
+    const selection = new Promise<AppHeadlessLocalFileSelectionValue>(resolve => { resolveSelection = resolve; });
+    let markSelectionStarted!: () => void;
+    const selectionStarted = new Promise<void>(resolve => { markSelectionStarted = resolve; });
+    let selected: DesktopLocalFileSelectionInput | undefined;
+    const headlessFileClient: GuidedHeadlessFileClient = {
+      async listClients() { return ["34012ffc-feed-411f-b86b-1b80f5d0ba2f"]; },
+      async select(input) { selected = input; markSelectionStarted(); return selection; },
+    };
+    const uploaded = task("transferring", 3, "transferring");
+    const client = { async execute({ command }: { command: IngestionTaskTransportCommand }) {
+      if (command.action === "create-files") return { kind: "task", task: task("queued", 0, "pending") };
+      if (command.action === "append-chunk") return { kind: "task", task: uploaded };
+      throw new Error("Unexpected ingestion action for a preview.");
+    } };
+    const onComplete = testDouble.fn();
+    await mountAcquisition(client, onComplete, "workspace-a", false, headlessFileClient);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Prepare for chat").click(); await selectionStarted; });
+    expect(selected?.workspaceId).toBe("workspace-a");
+    await mountAcquisition(client, onComplete, "workspace-b", false, headlessFileClient);
+    const { workspaceId, taskId, fileId, taskRevision } = selected!;
+    await act(async () => resolveSelection({ workspaceId, taskId, fileId, taskRevision, selectionRevision: 1 }));
+    expect(container!.querySelector('[aria-label="File reference"]')).toBe(null);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it("keeps an ordinary upload running while the browser's chat connection changes", { timeout: 5_000 }, async () => {
+    const appendResponse = deferredResponse();
+    const appendStarted = Promise.withResolvers<void>();
+    const onComplete = testDouble.fn();
+    const calls: string[] = [];
+    const client = { async execute({ command }: { command: IngestionTaskTransportCommand }) {
+      calls.push(command.action);
+      if (command.action === "create-files") return { kind: "task", task: task("queued", 0, "pending") };
+      if (command.action === "append-chunk") {
+        appendStarted.resolve();
+        return appendResponse.promise;
+      }
+      if (command.action === "finalize-file") return { kind: "task", task: task("succeeded", 3, "finalized") };
+      throw new Error("Unexpected ordinary upload action.");
+    } };
+    const firstClient: GuidedHeadlessFileClient = {
+      async listClients() { return ["34012ffc-feed-411f-b86b-1b80f5d0ba2f"]; },
+      select: testDouble.fn(),
+    };
+    const replacement = { ...firstClient, select: testDouble.fn() };
+    await mountAcquisition(client, onComplete, "workspace-a", false, firstClient);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Add data").click(); await appendStarted.promise; });
+    await mountAcquisition(client, onComplete, "workspace-a", false);
+    expect(button("Adding data…").disabled).toBe(true);
+    await mountAcquisition(client, onComplete, "workspace-a", false, replacement);
+    expect(container!.querySelector('input[type="file"]')).toBe(input);
+    await act(async () => appendResponse.resolve({ kind: "task", task: task("transferring", 3, "transferring") }));
+    expect(calls).toEqual(["create-files", "append-chunk", "finalize-file"]);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(firstClient.select).not.toHaveBeenCalled();
+    expect(replacement.select).not.toHaveBeenCalled();
+  });
+
+  it("hides a retired chat receipt and still allows the staged upload to be canceled", { timeout: 5_000 }, async () => {
+    const pending = Promise.withResolvers<AppHeadlessLocalFileSelectionValue>();
+    const started = Promise.withResolvers<DesktopLocalFileSelectionInput>();
+    const calls: string[] = [];
+    const client = { async execute({ command }: { command: IngestionTaskTransportCommand }) {
+      calls.push(command.action);
+      if (command.action === "create-files") return { kind: "task", task: task("queued", 0, "pending") };
+      if (command.action === "append-chunk") return { kind: "task", task: task("transferring", 3, "transferring") };
+      if (command.action === "cancel") return { kind: "task", task: task("cancelled", 0, "cancelled") };
+      throw new Error("Unexpected staged upload action.");
+    } };
+    const chat: GuidedHeadlessFileClient = {
+      async listClients() { return ["34012ffc-feed-411f-b86b-1b80f5d0ba2f"]; },
+      select: testDouble.fn(async (request: DesktopLocalFileSelectionInput) => { started.resolve(request); return pending.promise; }),
+    };
+    const onComplete = testDouble.fn();
+    await mountAcquisition(client, onComplete, "workspace-a", false, chat);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Prepare for chat").click(); await started.promise; });
+    const { workspaceId, taskId, fileId, taskRevision } = await started.promise;
+    await mountAcquisition(client, onComplete, "workspace-a", false);
+    await mountAcquisition(client, onComplete, "workspace-a", false, chat);
+    await act(async () => pending.resolve({ workspaceId, taskId, fileId, taskRevision, selectionRevision: 1 }));
+    expect(container!.querySelector('[aria-label="File reference"]')).toBe(null);
+    expect(container!.textContent).toContain("The chat connection changed. Cancel this upload");
+    expect(button("Add data").disabled).toBe(true);
+    await act(async () => button("Cancel").click());
+    expect(calls).toEqual(["create-files", "append-chunk", "cancel"]);
+    expect(button("Add data").disabled).toBe(false);
+    expect(chat.select).toHaveBeenCalledTimes(1);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it("replaces a retired selection error with the available cancellation action", { timeout: 5_000 }, async () => {
+    const selectionStarted = Promise.withResolvers<void>();
+    const client = { async execute({ command }: { command: IngestionTaskTransportCommand }) {
+      if (command.action === "create-files") return { kind: "task", task: task("queued", 0, "pending") };
+      if (command.action === "append-chunk") return { kind: "task", task: task("transferring", 3, "transferring") };
+      throw new Error("Unexpected staged upload action.");
+    } };
+    const chat: GuidedHeadlessFileClient = {
+      async listClients() { return ["34012ffc-feed-411f-b86b-1b80f5d0ba2f"]; },
+      async select() { selectionStarted.resolve(); return; },
+    };
+    await mountAcquisition(client, undefined, "workspace-a", false, chat);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Prepare for chat").click(); await selectionStarted.promise; });
+    expect(container!.querySelector('[role="alert"]')!.textContent).toContain("try preparing it again");
+    await mountAcquisition(client, undefined, "workspace-a", false);
+    expect(container!.querySelector('[role="alert"]')).toBe(null);
+    expect(container!.textContent).toContain("The chat connection changed. Cancel this upload");
+    expect(button("Cancel").disabled).toBe(false);
+  });
+
+  it("refreshes paired chat clients on focus after an unavailable status read", async () => {
+    const execute = testDouble.fn();
+    const select = testDouble.fn();
+    let reads = 0;
+    await mountAcquisition({ execute }, undefined, "workspace-a", false, {
+      async listClients() { return ++reads === 1 ? [] : ["34012ffc-feed-411f-b86b-1b80f5d0ba2f"]; },
+      select,
+    });
+    expect(reads).toBe(0);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    expect(reads).toBe(1);
+    expect(container!.querySelector('select[aria-label="Chat client"]')).toBe(null);
+    expect(button("Add data").disabled).toBe(false);
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    expect(reads).toBe(2);
+    expect(button("Prepare for chat").disabled).toBe(false);
+    expect(execute).not.toHaveBeenCalled();
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it("keeps a failed chat transfer out of the ordinary publishing retry", { timeout: 5_000 }, async () => {
+    const queued = task("queued", 0, "pending");
+    const failed = task("failed", 0, "failed");
+    const actions: string[] = [];
+    let markAppendStarted!: () => void;
+    const appendStarted = new Promise<void>(resolve => { markAppendStarted = resolve; });
+    const client = { async execute({ command }: { command: IngestionTaskTransportCommand }) {
+      actions.push(command.action);
+      if (command.action === "create-files") return { kind: "task", task: queued };
+      if (command.action === "append-chunk") {
+        markAppendStarted();
+        return { kind: "task", task: { ...failed, files: [{ ...failed.files[0]!,
+          error: { code: "ingestion.transfer-failed", message: "The temporary transfer failed.", retryable: true },
+        }] } };
+      }
+      throw new Error("The failed chat transfer must never start a publishing retry.");
+    } };
+    const choose = testDouble.fn();
+    await mountAcquisition(client, undefined, "workspace-a", false, {
+      async listClients() { return ["34012ffc-feed-411f-b86b-1b80f5d0ba2f"]; },
+      select: choose,
+    });
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Prepare for chat").click(); await appendStarted; });
+    expect(actions).toEqual(["create-files", "append-chunk"]);
+    expect(choose).not.toHaveBeenCalled();
+    expect(container!.querySelector('[role="alert"]')?.textContent).toContain("The temporary transfer failed.");
+    expect(Array.from(container!.querySelectorAll("button")).some(item => item.textContent === "Try again")).toBe(false);
+    expect(button("Prepare for chat").disabled).toBe(false);
+  });
+
+  for (const [description, size] of [
+    ["the last chunk", 3],
+    ["a chunk with bytes still remaining", INGESTION_TASK_RECOMMENDED_CHUNK_BYTES + 1],
+  ] as const) {
+    it(`stops the file transfer when the host confirms cancellation during ${description}`, { timeout: 5_000 }, async () => {
+      const appended = deferredResponse();
+      let enteredAppend!: () => void;
+      const appendStarted = new Promise<void>(resolve => { enteredAppend = resolve; });
+      const commands: string[] = [];
+      const onComplete = testDouble.fn();
+      const queued = task("queued", 0, "pending");
+      const cancelled = task("cancelled", 0, "cancelled");
+      const client = {
+        execute: async ({ command }: { command: IngestionTaskTransportCommand }): Promise<IngestionTaskTransportValue> => {
+          commands.push(command.action);
+          if (command.action === "create-files") return {
+            kind: "task",
+            task: { ...queued, files: [{ ...queued.files[0]!, totalBytes: size }], progress: { ...queued.progress, totalBytes: size } },
+          };
+          if (command.action === "append-chunk" && commands.length === 2) {
+            enteredAppend();
+            return appended.promise;
+          }
+          throw new Error("The host has already ended the test task.");
+        },
+      };
+      await mountAcquisition(client, onComplete);
+      const file = new File([new Uint8Array(size)], "train.csv", { type: "text/csv" });
+      const slice = testDouble.fn(file.slice.bind(file));
+      Object.defineProperty(file, "slice", { value: slice });
+      const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+      Object.defineProperty(input, "files", { configurable: true, value: [file] });
+      await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+      await act(async () => { button("Add data").click(); await appendStarted; });
+      await act(async () => appended.resolve({
+        kind: "task",
+        task: {
+          ...cancelled, completedAt: cancelled.updatedAt,
+          files: [{ ...cancelled.files[0]!, totalBytes: size }],
+          progress: { ...cancelled.progress, totalBytes: size, message: "The task was cancelled." },
+        },
+      }));
+      expect(commands).toEqual(["create-files", "append-chunk"]);
+      expect(slice).toHaveBeenCalledTimes(1);
+      expect(container!.textContent).toContain("The task was cancelled.");
+      expect(container!.querySelector('[role="alert"]')).toBe(null);
+      expect(input.files?.length).toBe(1);
+      expect(onComplete).not.toHaveBeenCalled();
+    });
+  }
+
+  it("acquisition race: admits only one start before React commits the busy state", async () => {
+    const created = deferredResponse(), commands: string[] = [];
+    const client = { execute: async ({ command }: any) => {
+      commands.push(command.action);
+      return command.action === "create-website" ? created.promise : { kind: "task", task: websiteTask("cancelled") };
+    } };
+    await mountAcquisition(client); await chooseWebsiteAndEnterPage();
+    try {
+      await act(async () => { const add = button("Add data"); add.click(); add.click(); });
+      expect(commands).toEqual(["create-website"]);
+    } finally {
+      await act(async () => created.resolve({ kind: "task", task: websiteTask("cancelled") }));
+    }
+  });
+
+  for (const changed of ["workspace", "client"] as const) {
+    it(`acquisition race: discards delayed creation after ${changed} replacement`, async () => {
+      const created = deferredResponse(), commands: string[] = [], onComplete = testDouble.fn();
+      const client = { execute: async ({ command }: any) => {
+        commands.push(command.action);
+        return command.action === "create-website" ? created.promise : { kind: "task", task: websiteTask("succeeded") };
+      } };
+      await mountAcquisition(client, onComplete); await chooseWebsiteAndEnterPage();
+      await act(async () => button("Add data").click());
+      const replacement = { execute: testDouble.fn() };
+      await mountAcquisition(changed === "client" ? replacement : client, onComplete, changed === "workspace" ? "workspace-b" : "workspace-a");
+      await act(async () => created.resolve({ kind: "task", task: websiteTask("queued") }));
+      expect(commands).toEqual(["create-website"]);
+      expect(onComplete).toHaveBeenCalledTimes(0);
+      expect(replacement.execute).toHaveBeenCalledTimes(0);
+      expect(container!.textContent).toContain("0 files selected");
+      expect(container!.querySelector("textarea")).toBe(null);
+      expect(scrollTo).toHaveBeenCalledTimes(0);
+    });
+  }
+
+  it("acquisition race: retires a removed session before deferred passive cleanup", async () => {
+    const created = deferredResponse(), onComplete = testDouble.fn();
+    const client = { execute: async () => created.promise };
+    let passiveRetired = false, completedBeforePassive = false;
+    function RetirementProbe({ replaced }: { replaced: boolean }) {
+      useEffect(() => () => { passiveRetired = true; }, []);
+      useLayoutEffect(() => {
+        if (!replaced) return;
+        created.resolve({ kind: "task", task: websiteTask("succeeded") });
+        // Force the concurrent scheduler to yield before the deleted tree's
+        // passive cleanup. A real slow layout has the same ordering.
+        const until = performance.now() + 15;
+        while (performance.now() < until) { /* bounded commit delay */ }
+      }, [replaced]);
+      return null;
+    }
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root!.render(<><RetirementProbe key="old" replaced={false} /><GuidedIngestionTaskPanel workspaceId="workspace-a" client={client} onComplete={() => { completedBeforePassive = !passiveRetired; onComplete(); }} /></>));
+    await chooseWebsiteAndEnterPage();
+    await act(async () => button("Add data").click());
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = false;
+    try {
+      root!.render(<RetirementProbe key="new" replaced />);
+      const deadline = performance.now() + 2000;
+      while (!passiveRetired && performance.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    } finally {
+      (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    }
+    expect(completedBeforePassive).toBe(false);
+    expect(onComplete).toHaveBeenCalledTimes(0);
+    expect(passiveRetired).toBe(true);
+  });
+
+  it("acquisition race: rejects a foreign task before progress, notification or completion", async () => {
+    const onComplete = testDouble.fn(), commands: string[] = [];
+    const foreign = { ...websiteTask("succeeded"), workspaceId: "workspace-other", progress: { ...websiteTask("succeeded").progress, message: "synthetic foreign private content" } };
+    const client = { execute: async ({ command }: any) => { commands.push(command.action); return { kind: "task", task: foreign }; } };
+    await mountAcquisition(client, onComplete, "workspace-a", true); await chooseWebsiteAndEnterPage();
+    await act(async () => button("Add data").click());
+    expect(commands).toEqual(["create-website"]);
+    expect(onComplete).toHaveBeenCalledTimes(0);
+    expect(container!.textContent).not.toContain("synthetic foreign private content");
+    expect(container!.querySelector('[role="alert"]')?.textContent).toContain("response");
+  });
+
+  it("acquisition race: stops before append when unmounted during a file slice", async () => {
+    let finishSlice!: (value: ArrayBuffer) => void;
+    const bytes = new Promise<ArrayBuffer>(done => { finishSlice = done; }), commands: string[] = [];
+    const client = { execute: async ({ command }: any) => {
+      commands.push(command.action); return { kind: "task", task: task(command.action === "create-files" ? "queued" : "succeeded", 0, "pending") };
+    } };
+    await mountAcquisition(client);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { configurable: true, value: [{ name: "train.csv", type: "text/csv", size: 3, slice: () => ({ arrayBuffer: () => bytes }) }] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => button("Add data").click());
+    await act(async () => root!.unmount()); root = undefined;
+    await act(async () => { finishSlice(new Uint8Array([1, 2, 3]).buffer); await new Promise(done => setTimeout(done, 10)); });
+    expect(commands).toEqual(["create-files"]);
+  });
+
+  it("acquisition race: failed cancellation keeps admission closed until an explicit status check", async () => {
+    const running = deferredResponse(), commands: string[] = [];
+    const client = { execute: async ({ command }: any) => {
+      commands.push(command.action);
+      if (command.action === "create-website") return { kind: "task", task: websiteTask("queued") };
+      if (command.action === "run-website") return running.promise;
+      if (command.action === "cancel") throw new Error("synthetic cancellation transport failure");
+      return { kind: "task", task: websiteTask("cancelled") };
+    } };
+    await mountAcquisition(client); await chooseWebsiteAndEnterPage();
+    try {
+      await act(async () => button("Add data").click());
+      await act(async () => button("Cancel").click());
+      expect(container!.querySelector<HTMLTextAreaElement>("textarea")!.disabled).toBe(true);
+      await act(async () => button("Check task status").click());
+      expect(commands).toEqual(["create-website", "run-website", "cancel", "read"]);
+      expect(container!.textContent).toContain("cancelled");
+    } finally {
+      await act(async () => running.resolve({ kind: "task", task: websiteTask("cancelled") }));
+    }
+  });
+
+  it("acquisition race: nonterminal cancellation is not accepted as confirmation", async () => {
+    const running = deferredResponse();
+    const client = { execute: async ({ command }: any) => command.action === "run-website" ? running.promise : {
+      kind: "task", task: websiteTask(command.action === "read" ? "cancelled" : "queued"),
+    } };
+    await mountAcquisition(client); await chooseWebsiteAndEnterPage();
+    try {
+      await act(async () => button("Add data").click());
+      await act(async () => button("Cancel").click());
+      expect(container!.querySelector<HTMLTextAreaElement>("textarea")!.disabled).toBe(true);
+      expect(container!.textContent).toContain("Check task status");
+    } finally { await act(async () => running.resolve({ kind: "task", task: websiteTask("cancelled") })); }
+  });
+
+  it("acquisition race: confirmed cancellation cannot be replaced by late older progress", async () => {
+    const running = deferredResponse(), onComplete = testDouble.fn();
+    const client = { execute: async ({ command }: any) => command.action === "run-website" ? running.promise : {
+      kind: "task", task: websiteTask(command.action === "cancel" ? "cancelled" : "queued"),
+    } };
+    await mountAcquisition(client, onComplete); await chooseWebsiteAndEnterPage();
+    await act(async () => button("Add data").click());
+    await act(async () => button("Cancel").click());
+    await act(async () => running.resolve({ kind: "task", task: websiteTask("queued") }));
+    expect(container!.textContent).toContain("cancelled");
+    expect(onComplete).toHaveBeenCalledTimes(0);
+  });
+
+  it("acquisition race: changing the source browser also retires a pending acquisition session", async () => {
+    const created = deferredResponse(), commands: string[] = [];
+    const client = { execute: async ({ command }: any) => {
+      commands.push(command.action); return command.action === "create-website" ? created.promise : { kind: "task", task: websiteTask("succeeded") };
+    } };
+    await mountAcquisition(client); await chooseWebsiteAndEnterPage();
+    await act(async () => button("Add data").click());
+    await act(async () => root!.render(<GuidedIngestionTaskPanel workspaceId="workspace-a" client={client as never} sourceBrowserClient={{}} />));
+    await act(async () => created.resolve({ kind: "task", task: websiteTask("queued") }));
+    expect(commands).toEqual(["create-website"]);
+    expect(container!.textContent).toContain("0 files selected");
+  });
+
+  it("acquisition race: unmount stops polling without pretending the accepted host task was cancelled", async () => {
+    const running = deferredResponse(), commands: string[] = [], onComplete = testDouble.fn();
+    const client = { execute: async ({ command }: any) => {
+      commands.push(command.action); return command.action === "run-website" ? running.promise : { kind: "task", task: websiteTask("queued") };
+    } };
+    await mountAcquisition(client, onComplete); await chooseWebsiteAndEnterPage();
+    await act(async () => button("Add data").click());
+    await act(async () => root!.unmount()); root = undefined;
+    await new Promise(done => setTimeout(done, 550));
+    await act(async () => running.resolve({ kind: "task", task: websiteTask("succeeded") }));
+    expect(commands).toEqual(["create-website", "run-website"]);
+    expect(onComplete).toHaveBeenCalledTimes(0);
+  });
+
+  it("acquisition race: a foreign task identity cannot finish or release the current task", async () => {
+    const commands: IngestionTaskTransportCommand[] = [], onComplete = testDouble.fn();
+    const client = { execute: async ({ command }: any) => {
+      commands.push(command);
+      return { kind: "task", task: command.action === "create-website" ? websiteTask("queued") : command.action === "read" ? websiteTask("cancelled") : { ...websiteTask("succeeded"), taskId: "ingestion.foreign" } };
+    } };
+    await mountAcquisition(client, onComplete); await chooseWebsiteAndEnterPage();
+    await act(async () => button("Add data").click());
+    expect(container!.querySelector<HTMLTextAreaElement>("textarea")!.disabled).toBe(true);
+    expect(onComplete).toHaveBeenCalledTimes(0);
+    await act(async () => button("Check task status").click());
+    expect(commands[2]).toEqual({ action: "read", taskId: "ingestion.website" });
+    expect(container!.querySelector<HTMLTextAreaElement>("textarea")!.disabled).toBe(false);
+  });
+
+  it("acquisition race: an old run cannot reset a newly admitted task after confirmed cancellation", async () => {
+    const first = deferredResponse(), second = deferredResponse(), onComplete = testDouble.fn();
+    let creates = 0;
+    const client = { execute: async ({ command }: any) => {
+      if (command.action === "create-website") return { kind: "task", task: { ...websiteTask("queued"), taskId: ++creates === 1 ? "ingestion.website" : "ingestion.second" } };
+      if (command.action === "run-website") return command.taskId === "ingestion.website" ? first.promise : second.promise;
+      return { kind: "task", task: websiteTask("cancelled") };
+    } };
+    await mountAcquisition(client, onComplete); await chooseWebsiteAndEnterPage();
+    await act(async () => button("Add data").click());
+    await act(async () => button("Cancel").click());
+    await act(async () => button("Add data").click());
+    await act(async () => first.resolve({ kind: "task", task: websiteTask("succeeded") }));
+    expect(container!.querySelector<HTMLTextAreaElement>("textarea")!.disabled).toBe(true);
+    expect(onComplete).toHaveBeenCalledTimes(0);
+    await act(async () => second.resolve({ kind: "task", task: { ...websiteTask("succeeded"), taskId: "ingestion.second" as never } }));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(creates).toBe(2);
+  });
+
+  it("acquisition race: cancellation requested before task creation is sent once identity arrives", async () => {
+    const created = deferredResponse(), commands: string[] = [];
+    const client = { execute: async ({ command }: any) => {
+      commands.push(command.action);
+      return command.action === "create-website" ? created.promise : { kind: "task", task: websiteTask("cancelled") };
+    } };
+    await mountAcquisition(client); await chooseWebsiteAndEnterPage();
+    await act(async () => button("Add data").click());
+    await act(async () => button("Cancel").click());
+    expect(container!.querySelector<HTMLTextAreaElement>("textarea")!.disabled).toBe(true);
+    await act(async () => created.resolve({ kind: "task", task: websiteTask("queued") }));
+    expect(commands).toEqual(["create-website", "cancel"]);
+    expect(container!.textContent).toContain("cancelled");
+  });
+
+  it("acquisition race: duplicate cancel clicks issue one request and failed status checks stay locked", async () => {
+    const running = deferredResponse(), cancelled = deferredResponse(), commands: string[] = [];
+    let reads = 0;
+    const client = { execute: async ({ command }: any) => {
+      commands.push(command.action);
+      if (command.action === "create-website") return { kind: "task", task: websiteTask("queued") };
+      if (command.action === "run-website") return running.promise;
+      if (command.action === "cancel") return cancelled.promise;
+      if (++reads === 1) throw new Error("synthetic status transport failure");
+      return { kind: "task", task: websiteTask("cancelled") };
+    } };
+    await mountAcquisition(client); await chooseWebsiteAndEnterPage();
+    try {
+      await act(async () => button("Add data").click());
+      await act(async () => { const cancel = button("Cancel"); cancel.click(); cancel.click(); });
+      expect(commands.filter(value => value === "cancel").length).toBe(1);
+      await act(async () => cancelled.resolve({ kind: "task", task: websiteTask("transferring") }));
+      await act(async () => button("Check task status").click());
+      expect(container!.querySelector<HTMLTextAreaElement>("textarea")!.disabled).toBe(true);
+      await act(async () => button("Check task status").click());
+      expect(container!.querySelector<HTMLTextAreaElement>("textarea")!.disabled).toBe(false);
+      expect(commands).toEqual(["create-website", "run-website", "cancel", "read", "read"]);
+    } finally { await act(async () => running.resolve({ kind: "task", task: websiteTask("cancelled") })); }
+  });
+
+  it("acquisition race: a retry admits only one resume before the busy render", async () => {
+    const resumed = deferredResponse(), commands: string[] = [], onComplete = testDouble.fn();
+    let runs = 0;
+    const client = { execute: async ({ command }: any) => {
+      commands.push(command.action);
+      if (command.action === "create-website") return { kind: "task", task: websiteTask("queued") };
+      if (command.action === "resume") return resumed.promise;
+      return { kind: "task", task: websiteTask(++runs === 1 ? "failed" : "succeeded") };
+    } };
+    await mountAcquisition(client, onComplete); await chooseWebsiteAndEnterPage();
+    await act(async () => button("Add data").click());
+    try {
+      await act(async () => { const retry = button("Try again"); retry.click(); retry.click(); });
+      expect(commands.filter(value => value === "resume").length).toBe(1);
+    } finally { await act(async () => resumed.resolve({ kind: "task", task: websiteTask("queued") })); }
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("acquisition workflow: transfers two distinct files across chunk boundaries without whole-file reads", async () => {
+    const size = 1024 * 1024 + 17;
+    const content = [new Uint8Array(size).fill(42), new Uint8Array([7, 8, 9])];
+    const names = ["train.csv", "labels.jsonl"], slices: [string, number, number][] = [], commands: string[] = [];
+    const received: Uint8Array[][] = [[], []];
+    const digest = (value: Uint8Array) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
+    let record: IngestionTaskRecord = { ...task("queued", 0, "pending"), files: content.map<IngestionTaskRecord["files"][number]>((value, index) => ({
+      fileId: `file.multi${index}` as never, checkpointId: `checkpoint.multi${index}`, fileName: names[index]!,
+      mediaType: index ? "application/jsonl" : "text/csv", totalBytes: value.length,
+      status: "pending", acceptedBytes: 0, nextChunkIndex: 0,
+    })) };
+    const client = { execute: async ({ command, workspaceId }: any) => {
+      expect(workspaceId).toBe("workspace-a"); commands.push(command.action);
+      if (command.action === "create-files") {
+        expect(command.files.map((value: any) => [value.fileName, value.sizeBytes])).toEqual(names.map((name, index) => [name, content[index].length]));
+      } else {
+        const index = record.files.findIndex(value => value.fileId === command.fileId), previous = record.files[index];
+        expect(index >= 0).toBe(true);
+        if (command.action === "append-chunk") {
+          expect(command.expectedOffset).toBe(previous.acceptedBytes);
+          expect(command.chunkIndex).toBe(received[index].length);
+          expect(command.bytes.byteLength > 0 && command.bytes.byteLength <= 1024 * 1024).toBe(true);
+          expect(command.sha256).toBe(digest(command.bytes));
+          received[index].push(new Uint8Array(command.bytes));
+          record = { ...record, status: "transferring", files: record.files.map((file, at) => at !== index ? file : {
+            ...file, status: "transferring", acceptedBytes: previous.acceptedBytes + command.bytes.length,
+            nextChunkIndex: previous.nextChunkIndex + 1,
+          }) };
+        } else {
+          expect(command.action).toBe("finalize-file");
+          const bytes = Buffer.concat(received[index]);
+          expect(digest(bytes)).toBe(digest(content[index]));
+          expect(previous.acceptedBytes).toBe(content[index].length);
+          record = { ...record, files: record.files.map((file, at) => at !== index ? file : {
+            ...file, status: "finalized", output: { key: `workspaces/workspace-a/${names[index]}`, mediaType: file.mediaType, sizeBytes: bytes.length, digest: digest(bytes) as never },
+          }) };
+          if (record.files.every(file => file.status === "finalized")) record = { ...record, status: "succeeded" };
+        }
+        record = { ...record, revision: record.revision + 1 };
+      }
+      return { kind: "task", task: record };
+    } };
+    const onComplete = testDouble.fn(); await mountAcquisition(client, onComplete);
+    const input = container!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { configurable: true, value: content.map((value, index) => ({
+      name: names[index], size: value.length, type: "", arrayBuffer: () => { throw new Error("Whole-file reads are forbidden."); },
+      slice: (start: number, end: number) => { slices.push([names[index], start, end]); return { arrayBuffer: async () => value.slice(start, end).buffer }; },
+    })) });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    await act(async () => { button("Add data").click(); await new Promise(done => setTimeout(done, 30)); });
+    expect(commands).toEqual(["create-files", "append-chunk", "append-chunk", "finalize-file", "append-chunk", "finalize-file"]);
+    expect(slices).toEqual([[names[0], 0, 1024 * 1024], [names[0], 1024 * 1024, size], [names[1], 0, 3]]);
+    expect(record.files.map(file => file.output?.digest)).toEqual(content.map(digest));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(container!.textContent).toContain("0 files selected");
+  });
+
+  it("offers PDFs and transfers a PDF with missing browser MIME through the bounded file workflow", async () => {
+    const commands: IngestionTaskTransportCommand[] = [];
+    const onComplete = testDouble.fn();
+    const record = (status: IngestionTaskRecord["status"], accepted: number, state: IngestionTaskRecord["files"][number]["status"]) => {
+      const result = task(status, accepted, state);
+      return { ...result, files: result.files.map(file => ({ ...file, fileName: "scan.PDF", mediaType: "application/pdf",
+        ...(file.output ? { output: { ...file.output, key: "workspaces/workspace-a/artifacts/files/scan.pdf", mediaType: "application/pdf" } } : {}),
+      })) };
+    };
+    const execute = testDouble.fn(async ({ command }: { command: IngestionTaskTransportCommand }) => {
+      commands.push(normalizeIngestionTaskTransportCommand(command));
+      return { kind: "task" as const, task: command.action === "create-files" ? record("queued", 0, "pending")
+        : command.action === "append-chunk" ? record("transferring", 3, "transferring") : record("succeeded", 3, "finalized") };
+    });
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root?.render(<GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} onComplete={onComplete} />));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    expect(input.accept.split(",")).toContain(".pdf");
+    expect(input.accept.split(",")).toContain("application/pdf");
+    const file = { name: "scan.PDF", type: "", size: 3,
+      arrayBuffer: () => { throw new Error("Whole-file allocation is not permitted."); },
+      slice: () => ({ arrayBuffer: async () => new Uint8Array([37, 80, 68]).buffer }),
+    } as unknown as File;
+    Object.defineProperty(input, "files", { configurable: true, value: [file] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+    await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(commands[0]).toEqual({ action: "create-files", files: [{ fileName: "scan.PDF", mediaType: "application/pdf", sizeBytes: 3 }] });
+    expect(commands.map(command => command.action)).toEqual(["create-files", "append-chunk", "finalize-file"]);
+    expect(Array.from((commands[1] as { bytes: Uint8Array }).bytes)).toEqual([37, 80, 68]);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the plain-language ordered source workflow with technical limits under Advanced settings", async () => {
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -332,6 +1066,126 @@ describe("GuidedIngestionTaskPanel", () => {
     );
     expect(container.textContent).toContain(
       "You are responsible for following the data use and web scraping policies of the sites you enter above.",
+    );
+  });
+
+  for (const [secondName, secondModified] of [["same.csv", 1000], ["same.csv", 2000], [" same.csv", 1000], ["same.csv ", 1000]] as const) {
+    it(`refuses ambiguous normalized-name and equal-size files before creating a task (${JSON.stringify(secondName)}, modified ${secondModified})`, async () => {
+      const execute = testDouble.fn(async ({ command }: { command: IngestionTaskTransportCommand }) => {
+        normalizeIngestionTaskTransportCommand(command);
+        throw new Error("Unexpected ingestion effect.");
+      });
+      container = document.createElement("div");
+      document.body.appendChild(container);
+      root = createRoot(container);
+      await act(async () => root?.render(
+        <GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} />,
+      ));
+      const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+      Object.defineProperty(input, "files", { configurable: true, value: [
+        new File(["A,B"], "same.csv", { type: "text/csv", lastModified: 1000 }),
+        new File(["C,D"], secondName, { type: "text/csv", lastModified: secondModified }),
+      ] });
+      const normalized = normalizeIngestionTaskTransportCommand({ action: "create-files", files: Array.from(input.files!).map(file => ({ fileName: file.name, mediaType: file.type, sizeBytes: file.size })) });
+      expect(normalized.action === "create-files" && normalized.files.map(file => file.fileName)).toEqual(["same.csv", "same.csv"]);
+      await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+      const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+      await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+      expect(execute).toHaveBeenCalledTimes(0);
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "Two selected files have the same name and size. Rename one file and select the files again.",
+      );
+      expect(container.textContent).toContain("2 files selected");
+      expect(input.files?.length).toBe(2);
+      expect(add.disabled).toBe(false);
+    });
+  }
+
+  for (const selectedNames of [["same.csv", "same.csv"], [" same.csv", "same.csv "]] as const) {
+  it(`keeps normalized equal names with different sizes distinct during transfer (${JSON.stringify(selectedNames)})`, async () => {
+    const onComplete = testDouble.fn();
+    const appended: { fileId: string; bytes: number[] }[] = [];
+    const rows = [3, 4].map((size, index) => ({ ...task("queued", 0, "pending").files[0]!,
+      fileName: "same.csv", fileId: `file.${index}` as never, checkpointId: `checkpoint.${index}`, totalBytes: size,
+    }));
+    const execute = testDouble.fn(async ({ command }: { workspaceId: string; command: IngestionTaskTransportCommand }) => {
+      if (command.action === "append-chunk") {
+        const row = rows.find(file => file.fileId === command.fileId)!;
+        appended.push({ fileId: command.fileId, bytes: Array.from(command.bytes) });
+        row.acceptedBytes = command.bytes.byteLength;
+      }
+      if (command.action === "finalize-file") rows.find(file => file.fileId === command.fileId)!.status = "finalized";
+      const completed = rows.filter(file => file.status === "finalized").length;
+      return { kind: "task" as const, task: { ...task(completed === 2 ? "succeeded" : "transferring", 0, "pending"),
+        files: rows.map(file => ({ ...file })), progress: { acceptedBytes: rows.reduce((n, file) => n + file.acceptedBytes, 0), totalBytes: 7,
+          completedItems: completed, totalItems: 2, percent: completed * 50, message: completed === 2 ? "All files are ready." : "Adding files." },
+      } };
+    });
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root?.render(<GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} onComplete={onComplete} />));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { configurable: true, value: [
+      new File([new Uint8Array([1, 2, 3])], selectedNames[0], { type: "text/csv" }),
+      new File([new Uint8Array([4, 5, 6, 7])], selectedNames[1], { type: "text/csv" }),
+    ] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+    await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(appended).toEqual([{ fileId: "file.0", bytes: [1, 2, 3] }, { fileId: "file.1", bytes: [4, 5, 6, 7] }]);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+  }
+
+  it("refuses a newly ambiguous normalized selection before resuming a failed file task", async () => {
+    const commands: IngestionTaskTransportCommand[] = [];
+    const failedSeed = task("failed", 0, "failed");
+    const failed = { ...failedSeed, files: failedSeed.files.map(file => ({ ...file,
+      error: { code: "temporary-storage-failure", message: "Try again.", retryable: true },
+    })) };
+    const execute = testDouble.fn(async ({ command }: { command: IngestionTaskTransportCommand }) => {
+      commands.push(normalizeIngestionTaskTransportCommand(command));
+      return { kind: "task" as const, task: command.action === "create-files" ? task("queued", 0, "pending") : failed };
+    });
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root?.render(<GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} />));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { configurable: true, value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+    await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(commands.some(command => command.action === "append-chunk")).toBe(true);
+    const beforeRetry = commands.length;
+    Object.defineProperty(input, "files", { configurable: true, value: [
+      new File(["A,B"], "train.csv", { type: "text/csv" }),
+      new File(["C,D"], " train.csv", { type: "text/csv" }),
+    ] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const retry = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Try again")!;
+    expect(Boolean(retry)).toBe(true);
+    await act(async () => { retry.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(commands.length).toBe(beforeRetry);
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      "Two selected files have the same name and size. Rename one file and select the files again.",
+    );
+  });
+
+  it("refuses an ambiguous saved task before transferring any selected bytes", async () => {
+    const commands: IngestionTaskTransportCommand[] = [];
+    const ambiguous = task("queued", 0, "pending");
+    const execute = testDouble.fn(async ({ command }: { command: IngestionTaskTransportCommand }) => {
+      commands.push(command);
+      return { kind: "task" as const, task: { ...ambiguous, files: [ambiguous.files[0]!, { ...ambiguous.files[0]!, fileId: "file.other" as never }] } };
+    });
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => root?.render(<GuidedIngestionTaskPanel workspaceId="workspace-a" client={{ execute }} />));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, "files", { configurable: true, value: [new File(["A,B"], "train.csv", { type: "text/csv" })] });
+    await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
+    const add = Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Add data")!;
+    await act(async () => { add.click(); await new Promise(resolve => window.setTimeout(resolve, 10)); });
+    expect(commands.map(command => command.action)).toEqual(["create-files"]);
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      "This task contains files with the same name and size. Start a new task with renamed files.",
     );
   });
 
@@ -604,9 +1458,15 @@ describe("GuidedIngestionTaskPanel", () => {
     expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 
-  it("browses Hugging Face datasets and imports only checked files at the returned immutable revision", async () => {
+  async function verifyProviderImport(prepareForChat: boolean) {
     const commands: IngestionTaskTransportCommand[] = [];
     const immutableRevision = "a".repeat(40);
+    const registeredClientId = "97441616-22eb-4126-934e-54437dded5bc";
+    const selectLocal = testDouble.fn(async () => undefined);
+    const selectProvider = testDouble.fn(async (input: DesktopLocalFileSelectionInput) => ({
+      workspaceId: input.workspaceId, taskId: input.taskId, fileId: input.fileId,
+      taskRevision: input.taskRevision, selectionRevision: 1,
+    }));
     const browseHuggingFaceNamespaceDatasets = testDouble
       .fn()
       .mockResolvedValue([
@@ -622,6 +1482,12 @@ describe("GuidedIngestionTaskPanel", () => {
           revision: immutableRevision,
           sizeBytes: 12,
         },
+        {
+          repository: "openai/example-data",
+          path: "data/test.parquet",
+          revision: immutableRevision,
+          sizeBytes: 8,
+        },
       ]);
     const execute = testDouble.fn(
       async ({
@@ -634,7 +1500,7 @@ describe("GuidedIngestionTaskPanel", () => {
         return {
           kind: "task" as const,
           task: huggingFaceTask(
-            command.action === "create-hugging-face" ? "queued" : "succeeded",
+            command.action === "create-hugging-face" ? "queued" : command.action === "cancel" ? "cancelled" : "succeeded",
           ),
         };
       },
@@ -647,6 +1513,9 @@ describe("GuidedIngestionTaskPanel", () => {
         <GuidedIngestionTaskPanel
           workspaceId="workspace-a"
           client={{ execute }}
+          headlessFileClient={prepareForChat ? {
+            listClients: async () => [registeredClientId], select: selectLocal, selectProvider,
+          } : undefined}
           sourceBrowserClient={{
             browseHuggingFaceNamespaceDatasets,
             browseHuggingFaceDatasetParquetFiles,
@@ -704,9 +1573,16 @@ describe("GuidedIngestionTaskPanel", () => {
     expect(container.textContent).toContain(
       "The exact version of each selected file is recorded automatically.",
     );
-    const add = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Add data",
-    )!;
+    const button = (label: string) => Array.from(container.querySelectorAll("button"))
+      .find(candidate => candidate.textContent === label);
+    if (prepareForChat) {
+      const otherFile = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
+        .find(input => input.parentElement?.textContent?.includes("data/test.parquet"))!;
+      await act(async () => otherFile.click());
+      expect(button("Prepare for chat")).toBeUndefined();
+      await act(async () => otherFile.click());
+    }
+    const add = button(prepareForChat ? "Prepare for chat" : "Add data")!;
     await act(async () => {
       add.click();
       await new Promise((resolve) => window.setTimeout(resolve, 10));
@@ -729,10 +1605,32 @@ describe("GuidedIngestionTaskPanel", () => {
           },
         ],
       },
-      { action: "run-hugging-face", taskId: "ingestion.hugging-face" },
+      ...(!prepareForChat ? [{ action: "run-hugging-face", taskId: "ingestion.hugging-face" }] : []),
     ]);
-    expect(container.textContent).toContain("0 files selected");
-  });
+    expect(selectLocal).not.toHaveBeenCalled();
+    if (prepareForChat) {
+      const reference = { workspaceId: "workspace-a", taskId: "ingestion.hugging-face",
+        fileId: "file.hugging-face", taskRevision: 1 };
+      expect(selectProvider).toHaveBeenCalledWith({ ...reference, registeredClientId, expectedSelectionRevision: 0 });
+      const field = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="File reference"]');
+      expect(JSON.parse(field?.value ?? "null")).toEqual(reference);
+      expect(container.textContent).toContain("Ready for the selected chat client to preview the repository file.");
+      expect(button("Add data")?.disabled).toBe(true);
+      await act(async () => button("Cancel")?.click());
+      expect(commands[1]).toEqual({ action: "cancel", taskId: "ingestion.hugging-face" });
+      expect(container.querySelector('textarea[aria-label="File reference"]')).toBe(null);
+      expect(button("Add data")?.disabled).toBe(false);
+    } else {
+      expect(selectProvider).not.toHaveBeenCalled();
+      expect(container.textContent).toContain("0 files selected");
+    }
+  }
+
+  it("browses Hugging Face datasets and imports only checked files at the returned immutable revision",
+    () => verifyProviderImport(false));
+
+  it("prepares only one checked repository file for the selected chat client without starting the import",
+    () => verifyProviderImport(true));
 
   it("does not expose provider credentials or local paths when dataset browsing fails", async () => {
     const browseHuggingFaceNamespaceDatasets = testDouble

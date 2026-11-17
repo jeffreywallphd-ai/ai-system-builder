@@ -233,6 +233,77 @@
       "acceptanceSignals": ["Progress remains lifecycle-owned and diagnostics expose no sensitive task payloads."]
     },
     {
+      "id": "context-management-artifact-handoff",
+      "task": "Convert a textual Artifact Browser dataset into a RAG database while preserving valid existing chunk boundaries and source lineage.",
+      "affectedPaths": [
+        "docs/architecture/data-management.md",
+        "docs/architecture/context-management.md",
+        "modules/application/use-cases/context-management/",
+        "modules/adapters/runtime/python/worker/tasks/context_generation.py"
+      ],
+      "expectedPacks": ["context-management", "data-management"],
+      "forbiddenPacks": ["image-generation", "user-library"],
+      "requiredSources": [
+        "docs/adr/ADR-0041-context-management-and-portable-context-artifacts.md",
+        "docs/architecture/context-management.md",
+        "docs/security/context-management-threat-model.md"
+      ],
+      "requiredChecks": [
+        "npm run docs:check",
+        "npm run architecture:check",
+        "npm run agent-support:check",
+        "npm test"
+      ],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": [
+        "The navigation handoff is identifier-only, workspace authorization is repeated, and valid persisted chunk lineage is preserved without rechunking."
+      ]
+    },
+    {
+      "id": "control-plane-work-request",
+      "task": "Use the development control plane for a bounded work request, preserve security evidence, and share the live review site.",
+      "affectedPaths": ["dev-tools/helpers/control_plane/work.py", "dev-tools/review-site/server.py"],
+      "expectedPacks": ["docs-standards", "security"],
+      "forbiddenPacks": ["image-generation", "runtime-installer"],
+      "requiredSources": ["docs/diagnostics/ai-development-control-plane.md", "docs/architecture/ai-development-control-plane.md", "docs/security/ai-development-control-plane-threat-model.md"],
+      "requiredChecks": ["npm run docs:check", "npm run agent-support:check"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The verified loopback review URL is shared, site data is JSON, work is scoped to outcomes, and executed evidence plus real separate-invocation review govern completion."]
+    },
+    {
+      "id": "explicit-technical-roadmap-policy-amendment",
+      "task": "Apply an already explicit user model-quality threshold change to a pending governed roadmap criterion using the development control plane, preserving actual offload security and runtime qualification.",
+      "affectedPaths": ["skills/manage-implementation-roadmaps/scripts/roadmap.py", "docs/diagnostics/ai-development-control-plane.md"],
+      "expectedPacks": ["docs-standards", "security"],
+      "forbiddenPacks": ["runtime-installer", "image-generation"],
+      "requiredSources": ["skills/manage-implementation-roadmaps/SKILL.md", "skills/manage-implementation-roadmaps/references/events.md", "docs/security/ai-development-control-plane-threat-model.md"],
+      "requiredChecks": ["npm run docs:check", "npm run agent-support:check"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Use the replacement-only technical-acceptance-revised event, not a human-only scope handoff. Preserve identity, qualification, historical evidence and real resource/native/runtime obligations, archive the old policy, record actual narrow reapproval and require fresh independent qualification without inventing a pass."]
+    },
+    {
+      "id": "reviewed-roadmap-chunk-checkpoint",
+      "task": "Commit completed and tested roadmap chunks on the authorized branch, preserving security authority and source integrity. One local component has passing focused execution and accepted independent review, an unrelated file is dirty, and its parent hardware qualification is pending.",
+      "affectedPaths": ["skills/manage-implementation-roadmaps/SKILL.md", "docs/diagnostics/implementation-roadmap-skill.md"],
+      "expectedPacks": ["docs-standards", "security"],
+      "forbiddenPacks": ["runtime-installer", "image-generation"],
+      "requiredSources": ["skills/manage-implementation-roadmaps/SKILL.md", "skills/manage-implementation-roadmaps/references/workflow.md", "docs/standards/ai-agent-development-standards.md"],
+      "requiredChecks": ["npm run docs:check", "npm run agent-support:check"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Checkpoint only the reviewed chunk's owned dependency-complete paths or hunks after releasing source claims. Preserve unrelated index/worktree changes, report the actual commit identity and create a fresh baseline for later work. Parent hardware qualification stays pending; no accuracy rerun, parent completion, push, history rewrite or main advancement is inferred."]
+    },
+    {
+      "id": "publish-roadmap-draft-before-approval",
+      "task": "Prepare a complete implementation roadmap for user approval while preserving security authority. The review site currently shows only a discovery shell with zero increments and criteria, while the full unapproved proposal is in ignored preparation files.",
+      "affectedPaths": ["skills/manage-implementation-roadmaps/SKILL.md", "docs/diagnostics/implementation-roadmap-skill.md"],
+      "expectedPacks": ["docs-standards", "security"],
+      "forbiddenPacks": ["runtime-installer", "image-generation"],
+      "requiredSources": ["skills/manage-implementation-roadmaps/SKILL.md", "skills/manage-implementation-roadmaps/references/workflow.md", "docs/diagnostics/ai-development-control-plane.md"],
+      "requiredChecks": ["npm run docs:check", "npm run agent-support:check"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Publish the complete unapproved draft through the governed roadmap event and canonical render, verify its live expected nonzero increment/objective/criterion identities and details, repair missing projection, then share the verified review link before requesting approval. A discovery shell, ignored proposal or live server alone is insufficient; no approval or implementation is inferred."]
+    },
+    {
       "id": "agent-governance-change",
       "task": "Change agent governance and context evaluation rules while keeping documentation and CI aligned.",
       "affectedPaths": ["docs/standards/ai-agent-development-standards.md", "dev-tools/agent-evals/scenarios.json"],

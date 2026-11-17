@@ -14,6 +14,7 @@ import {
 import type { LoggingPort } from "../../../../application/ports/logging";
 import type { StructuredLogEvent } from "../../../../contracts/logging";
 import { TaskType } from "../../../../contracts/runtime";
+import { OwnedTaskReconcilerService } from "../../../../application/services/runtime/owned-task-reconciler.service";
 import type { HuggingFaceFetchImplementation } from "../../../../adapters/storage/huggingface";
 
 import {
@@ -647,6 +648,7 @@ describe("composeDesktopHost", () => {
     const milestones: string[] = [];
 
     const feature = await composeDesktopRuntimeTaskFeature({
+      taskReconciler: new OwnedTaskReconcilerService(),
       pythonRuntimeFoundation: {
         supervisor: { start: testDouble.fn(async () => undefined) },
         runtimePort: {},
@@ -687,6 +689,7 @@ describe("composeDesktopHost", () => {
       supervisorStatus = "ready";
     });
     const feature = await composeDesktopRuntimeTaskFeature({
+      taskReconciler: new OwnedTaskReconcilerService(),
       pythonRuntimeFoundation: {
         supervisor: { start },
         runtimePort: {},
@@ -722,6 +725,7 @@ describe("composeDesktopHost", () => {
       await import("../composeDesktopRuntimeTaskFeature");
     const callOrder: string[] = [];
     const feature = await composeDesktopRuntimeTaskFeature({
+      taskReconciler: new OwnedTaskReconcilerService(),
       pythonRuntimeFoundation: {
         supervisor: {
           start: testDouble.fn(async () => {
@@ -732,9 +736,9 @@ describe("composeDesktopHost", () => {
           callOrder.push("prepare-training");
         }),
         runtimePort: {
-          startTask: testDouble.fn(async (request: { requestId: string }) => {
+          startTask: testDouble.fn(async (request: { requestId: string; taskType: string }) => {
             callOrder.push("dispatch-training");
-            return { requestId: request.requestId, status: "queued" };
+            return { requestId: request.requestId, taskType: request.taskType, accepted: true, status: "queued" };
           }),
         },
       },
@@ -761,6 +765,65 @@ describe("composeDesktopHost", () => {
       "start-runtime",
       "prepare-training",
       "dispatch-training",
+    ]);
+  });
+
+  it("prepares Context dependencies with progress before runtime startup and dispatch", async () => {
+    const { composeDesktopRuntimeTaskFeature } =
+      await import("../composeDesktopRuntimeTaskFeature");
+    const callOrder: string[] = [];
+    const feature = await composeDesktopRuntimeTaskFeature({
+      taskReconciler: new OwnedTaskReconcilerService(),
+      pythonRuntimeFoundation: {
+        supervisor: {
+          start: testDouble.fn(async () => {
+            callOrder.push("start-runtime");
+          }),
+        },
+        prepareContextEnvironment: testDouble.fn(
+          async (
+            onProgress?: (progress: {
+              phase: "installing" | "installed";
+              message: string;
+            }) => void,
+          ) => {
+            callOrder.push("prepare-context");
+            onProgress?.({
+              phase: "installing",
+              message: "Installing the local vector database.",
+            });
+          },
+        ),
+        runtimePort: {
+          startTask: testDouble.fn(async (request: { requestId: string }) => {
+            callOrder.push("dispatch-context");
+            return { requestId: request.requestId, status: "queued" };
+          }),
+        },
+      },
+      imageRuntimeTaskRegistry: {
+        startTask: testDouble.fn(),
+        readTask: testDouble.fn(),
+        cancelTask: testDouble.fn(),
+        listTasks: testDouble.fn(),
+      },
+      runtimeReadiness: {
+        getCapabilityStatus: testDouble.fn(),
+        getReadinessSnapshot: testDouble.fn(),
+      },
+    });
+
+    await feature.runtimeTaskRegistry.startTask({
+      workspaceId: "workspace.test" as never,
+      requestId: "context-setup-1",
+      taskType: TaskType.CONTEXT_GENERATION,
+      payload: { kind: "rag-database" },
+    });
+
+    expect(callOrder).toEqual([
+      "prepare-context",
+      "start-runtime",
+      "dispatch-context",
     ]);
   });
 
@@ -825,7 +888,7 @@ describe("composeDesktopHost", () => {
       "repoBrowser: huggingFaceArtifactRepoStorage",
     );
     expect(pythonSource).toContain("createPythonRuntimeAdapterFoundation");
-    expect(pythonSource).toContain("ensurePythonRuntimeWorkerDependencies");
+    expect(pythonSource).toContain("preparePythonRuntimeEnvironment");
     expect(comfyInstallSource).toContain("createComfyUiRuntimeInstaller");
     expect(comfySource).toContain("createComfyUiRuntimeInstaller");
     expect(comfySource).toContain("detectNvidiaGpu()");

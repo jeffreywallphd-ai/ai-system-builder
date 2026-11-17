@@ -1,8 +1,36 @@
 # Desktop host composition
 
+## Restrict automatic ComfyUI setup
+
+Set `COMFYUI_AUTO_INSTALL=0` in the Desktop host environment before launch to
+disable automatic ComfyUI installation and dependency repair during image runtime
+startup. The host snapshots this value when it composes the feature. An unset
+value or `1` retains the existing automatic setup behavior. Other values stop
+composition with a fixed configuration error.
+
+Before every start with automatic setup disabled, the host reads the installer's
+managed metadata for the exact root, target and official Git source. Missing,
+unconfirmed or mismatched metadata stops startup with a fixed error. The read
+cannot fall back to installation or repair.
+
+This setting does not disable explicit installer operations or Python runtime
+setup. Managed metadata does not prove file integrity or import readiness. This
+setting does not prevent the launched
+runtime's own network activity, or grant model download authority. Test profiles
+must still verify their prerequisites and own the runtime process and files.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 `composeDesktopHost` wires desktop-host lifecycle dependencies while keeping Electron IPC transport thin.
+
+The main process can obtain an internal headless read handler after IPC
+registration, when the host has an authoritative local identity. It uses the
+same saved-system readers as IPC and refuses stale, unauthorized and closed
+requests. The optional connector does not start at launch. An owned desktop
+window must explicitly confirm starting it for an approved workspace or
+approved existing clients. The main process presents the code in a native
+dialog. The connector stops admission and drains its work before persistence
+closes. Pairing, status, and reads do not start a model runtime.
 
 Current composition includes:
 
@@ -43,7 +71,12 @@ The managed ComfyUI workflow prepares selected image artifacts into the runtime 
 
 ## Feature lifecycle disposal policy
 
-Desktop host composition keeps core startup services resident and treats feature disposal as an explicit lifecycle concern of host-owned lazy providers. Local foundations such as artifact storage, model registries, asset definitions, settings, workspace shell, logging, diagnostics, and runtime readiness remain resident or warm after first use. Clearly transient features such as artifact remote/Hugging Face adapters, website ingestion, dataset preparation without active tasks, and image generation without active tasks may be disposed by explicit developer action or scoped idle timeout.
+Desktop host composition keeps core startup services resident and treats feature disposal as an explicit lifecycle concern of host-owned lazy providers. Local foundations such as artifact storage, model registries, asset definitions, settings, workspace shell, logging, diagnostics, and runtime readiness remain resident or warm after first use. Clearly transient features such as artifact remote/Hugging Face adapters, website ingestion, dataset preparation without active tasks, Context Management without active generation/retrieval tasks, and image generation without active tasks may be disposed by explicit developer action or scoped idle timeout.
+
+Context Management is composed lazily over the retained artifact and runtime
+foundations. Its generation, browser, retrieval, deletion, and task-list
+operations share one application facade, and active context tasks block generic
+feature disposal.
 
 Generic disposal must not delete persisted records or files, must not stop Python or ComfyUI, and must not cancel active runtime work. Python process stop, Python model unload, and ComfyUI process/runtime unload remain explicit user/runtime-control paths.
 
@@ -60,3 +93,32 @@ URL to host-owned loopback HTTP, then delegates per-launch bearer generation and
 rotation to the shared Python runtime foundation. Runtime launch credentials are
 child-only state and must not be included in desktop logs, diagnostics, preload,
 IPC, or renderer data.
+
+Image resource views use the private organization/workspace identity port backed by
+structured persistence. Public image/output/artifact/cursor aliases are random and
+persisted; exact source reauthorization is required on every detail read. Reserved
+CAS publication is private until both indexes agree and the source revision commits.
+Unassigned/legacy JSON storage and old source-derived references never trigger a
+compatibility identity fallback. See ADR-0043 and the asset/package threat model.
+
+First-use asset composition still waits for validated Foundation definitions and
+trusted implementations. Bounded bootstrap batching reduces that work; readiness
+never skips integrity checks. Foundation failures retain the generic public
+message with safe internal stage/version/count/code attribution.
+
+Website ingestion receives the same canonical artifact catalog for compensation
+as stream publication. Exact new capture bytes are deleted before their catalog
+entries. Generic storage deletion, workspace authorization and native guards
+retain their existing responsibilities.
+
+The host retains a closed startup report outside the lazy Python foundation promise.
+An uncomposed or rejected foundation remains readable without another composition.
+Only actual start-attempt callbacks and existing preparation observations update
+that report. Selected command/environment stay private; old/coalesced callbacks
+cannot replace a newer attempt. The existing status operation carries the optional
+report separately from legacy logs and model inventory. No persistent sink is added.
+Effective command, arguments, capability list, bound health methods and private
+environments are captured before startup observers. The trusted launch seam writes
+the rotated bearer into its attempt-local child environment; HTTP authentication
+keeps the same private token closure. Attached health failure updates its existing
+attempt without inventing a new launch.

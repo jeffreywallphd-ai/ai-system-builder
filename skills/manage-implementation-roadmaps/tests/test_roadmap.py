@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -17,6 +18,72 @@ if SPEC is None or SPEC.loader is None:
     raise RuntimeError("Unable to load roadmap engine.")
 roadmap = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(roadmap)
+
+
+class RoadmapEvidenceRenderingTest(unittest.TestCase):
+    def test_local_evidence_is_named_without_masking_other_links(self):
+        lines = roadmap.render_sources([
+            {"title": "Report", "url": "artifacts/test-reports/test-suite-report.json", "note": "Failed"},
+            {"title": "Procedure", "url": "docs/operations/qualification.md"},
+            {"title": "External", "url": "https://example.com/artifacts/report.json"},
+            {"title": "Out of scope", "url": "artifacts/../missing.md"},
+        ], "docs/example-roadmap.md")
+        self.assertEqual(lines, [
+            "- Report (`artifacts/test-reports/test-suite-report.json`) - Failed",
+            "- [Procedure](<operations/qualification.md>)",
+            "- [External](<https://example.com/artifacts/report.json>)",
+            "- [Out of scope](<../missing.md>)",
+        ])
+
+
+class PublicationSecurityTest(unittest.TestCase):
+    def test_precreated_predictable_entry_is_never_written_or_removed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "state.json"
+            target.write_text("old", encoding="utf-8")
+            predictable = target.with_name(f".{target.name}.{roadmap.os.getpid()}.tmp")
+            predictable.write_text("unowned", encoding="utf-8")
+            roadmap.atomic_write(target, "new\n")
+            self.assertEqual(target.read_text(), "new\n")
+            self.assertEqual(predictable.read_text(), "unowned")
+            self.assertEqual(set(Path(directory).iterdir()), {target, predictable})
+
+    def test_replace_and_write_failures_preserve_old_target_and_remove_only_owned_temp(self):
+        for operation in ("replace", "fsync"):
+            with self.subTest(operation=operation), tempfile.TemporaryDirectory() as directory:
+                target = Path(directory) / "state.json"
+                target.write_text("old", encoding="utf-8")
+                with mock.patch.object(roadmap.os, operation, side_effect=OSError("injected")):
+                    with self.assertRaises(roadmap.RoadmapError):
+                        roadmap.atomic_write(target, "new")
+                self.assertEqual(target.read_text(), "old")
+                self.assertEqual(list(Path(directory).iterdir()), [target])
+
+    def test_windows_sharing_error_retries_only_the_owned_replace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "state.json"
+            target.write_text("old", encoding="utf-8")
+            replace = roadmap.os.replace
+            attempts = []
+            collision = PermissionError("synthetic Windows sharing conflict")
+            collision.winerror = 5
+
+            def replace_once_locked(source, destination):
+                attempts.append((source, destination))
+                if len(attempts) == 1:
+                    raise collision
+                replace(source, destination)
+
+            with mock.patch.object(roadmap.os, "replace", side_effect=replace_once_locked):
+                roadmap.atomic_write(target, "new")
+            self.assertEqual(attempts, [attempts[0], attempts[0]])
+            self.assertEqual(target.read_text(), "new")
+            with mock.patch.object(roadmap.os, "replace", side_effect=collision) as denied:
+                with self.assertRaises(roadmap.RoadmapError):
+                    roadmap.atomic_write(target, "refused")
+            self.assertEqual(denied.call_count, 4)
+            self.assertEqual(target.read_text(), "new")
+            self.assertEqual(list(Path(directory).iterdir()), [target])
 
 
 def security_impact() -> dict:
@@ -32,6 +99,15 @@ def security_impact() -> dict:
         "controls": [],
         "verification": [],
         "residualRisks": [],
+    }
+
+
+def human_action_fields() -> dict:
+    return {
+        "actionOwner": "human", "responsibleRole": "Repository owner",
+        "actionLocation": "The approved review channel",
+        "completionCondition": "The requested evidence is provided and independently checked.",
+        "authorityRef": "user-human-action-policy",
     }
 
 
@@ -122,6 +198,216 @@ class RoadmapEngineTest(unittest.TestCase):
         self.state = roadmap.apply_event(self.state, event)
         roadmap.validate_state_shape(self.repo, self.state)
 
+    def asset_assessment_fixture(self):
+        target = increment_definition(roadmap.ASSET_SCOPE_TARGET, 1)
+        target["acceptanceCriteria"].append({"id": "security-review", "description": "Prior controlled review.",
+                                             "qualification": "controlled-environment"})
+        self.define_and_approve([target])
+        self.state["slug"] = roadmap.FORM_ROADMAP
+        increment = self.state["increments"][0]
+        plan = implementation_plan(1)
+        plan["chunks"][0]["criteriaIds"].append("security-review")
+        increment.update(status="implemented-pending-qualification", completedChunks=["chunk-1"],
+                         pendingCriteria=["security-review"], plan={**plan, "fingerprint": roadmap.fingerprint(plan)})
+        self.state["evidence"].append({"incrementId": increment["id"], "criterionId": "security-review",
+                                       "outcome": "pending", "kind": "manual"})
+        self.state["blockers"].extend([{"id": roadmap.ASSET_SCOPE_ISSUE, "status": "open"},
+                                       {"id": "other-pending", "status": "open", "actionOwner": "agent",
+                                        "authorityRef": "synthetic-authority", "responsibleRole": "Agent",
+                                        "requiredAction": "Run test.", "actionLocation": "Fixture",
+                                        "completionCondition": "See report."}])
+        baseline = self.state["roadmapApproval"]["fingerprint"]
+        pins = {"originalCriterion": increment["acceptanceCriteria"][-1], "originalPlan": increment["plan"],
+                "previousApproval": self.state["roadmapApproval"], "originalIssue": self.state["blockers"][0],
+                "originalEvidence": self.state["evidence"][-1]}
+        patch = mock.patch.multiple(roadmap, ASSET_SCOPE_BASELINE=baseline,
+                                    ASSET_SCOPE_PINS={key: roadmap.fingerprint(value) for key, value in pins.items()})
+        event = {"type": "asset-legacy-assessment-excluded", "authorityRef": roadmap.ASSET_SCOPE_AUTHORITY,
+                 "approvedFingerprint": baseline}
+        return event, patch
+
+    def test_asset_exclusion_is_not_a_pass_and_requires_fresh_independent_review(self):
+        event, patch = self.asset_assessment_fixture()
+        original = copy.deepcopy(self.state)
+        proof = {"type": "asset-security-review-recorded", "workId": "fixture-work",
+                 "receiptDigest": "a" * 64, "reviewDigest": "b" * 64, "summary": "Independent technical review."}
+        with patch:
+            self.apply(event)
+            self.assertEqual(self.state["evidence"], original["evidence"])
+            self.assertEqual(roadmap.unresolved_work(self.state), [original["blockers"][1]])
+            self.assertEqual(self.state["increments"][0]["pendingCriteria"], ["security-review"])
+            self.assertFalse(roadmap.approval_is_current(self.state))
+            self.assertIn("was not performed", roadmap.render_roadmap(self.state))
+            with self.assertRaisesRegex(roadmap.RoadmapError, "current approval"):
+                self.apply(proof)
+            self.apply({"type": "roadmap-approved", "note": "Renew approval for the revised scope."})
+            with self.assertRaisesRegex(roadmap.RoadmapError, "executed independent review"):
+                self.apply({"type": "evidence-recorded", "incrementId": roadmap.ASSET_SCOPE_TARGET,
+                            "criterionId": "security-review", "kind": "review", "outcome": "passed",
+                            "summary": "An unverified declaration.", "artifact": "docs/tmp/review.json"})
+            with self.assertRaisesRegex(roadmap.RoadmapError, "control-plane adapter"):
+                roadmap.require_asset_security_review(self.repo, self.state, proof)
+            with self.assertRaisesRegex(roadmap.RoadmapError, "exact receipt and review digests"):
+                self.apply({**proof, "reviewDigest": "bad"})
+            self.apply(proof)
+            self.assertEqual(self.state["increments"][0]["status"], "implemented-pending-qualification")
+            missing = copy.deepcopy(self.state)
+            del missing["assetRevisedSecurityProofs"]
+            with self.assertRaisesRegex(roadmap.RoadmapError, "requires its executed proof"):
+                roadmap.validate_state_shape(self.repo, missing)
+            self.apply({"type": "evidence-recorded", "incrementId": roadmap.ASSET_SCOPE_TARGET,
+                        "criterionId": "security-review", "kind": "test", "outcome": "failed",
+                        "summary": "A later change failed the security check."})
+            with self.assertRaisesRegex(roadmap.RoadmapError, "already recorded"):
+                self.apply(proof)
+            self.apply({**proof, "receiptDigest": "c" * 64, "reviewDigest": "d" * 64})
+            self.assertEqual(len(self.state["assetRevisedSecurityProofs"]), 2)
+            roadmap.validate_state_shape(self.repo, self.state)
+            with self.assertRaises(roadmap.RoadmapError):
+                self.apply(event)
+            changed = copy.deepcopy(self.state)
+            changed["evidence"].pop(0)
+            with self.assertRaisesRegex(roadmap.RoadmapError, "preserve the original history"):
+                roadmap.validate_state_shape(self.repo, changed)
+
+    def test_asset_exclusion_refuses_other_roadmaps_failed_evidence_and_unfinished_chunks(self):
+        event, patch = self.asset_assessment_fixture()
+        original = self.state
+        with patch:
+            for field, value in [("slug", "security-findings-refresh"), ("evidencePolicy", "control-plane-v1")]:
+                with self.assertRaises(roadmap.RoadmapError):
+                    roadmap.apply_event({**original, field: value}, event)
+            changed = copy.deepcopy(original)
+            changed["evidence"][-1]["outcome"] = "failed"
+            with self.assertRaisesRegex(roadmap.RoadmapError, "exact pending assessment"):
+                roadmap.apply_event(changed, event)
+            changed = copy.deepcopy(original)
+            changed["increments"][0]["completedChunks"].clear()
+            with self.assertRaisesRegex(roadmap.RoadmapError, "completed implementation"):
+                roadmap.apply_event(changed, event)
+
+    def test_asset_review_binding_checks_lineage_and_separate_invocation(self):
+        event, patch = self.asset_assessment_fixture()
+        with patch:
+            self.apply(event)
+            self.apply({"type": "roadmap-approved", "note": "Renew approval for the revised scope."})
+        source = "f" * 64
+        receipt_digest = "a" * 64
+        review = {"work_id": "asset-test", "receipt_digest": receipt_digest, "source_digest": source,
+                  "disposition": "accepted", "reviewed_criteria": ["security-review"], "invocation_id": "other"}
+        review["review_digest"] = roadmap.fingerprint(review)
+        proof = {"workId": "asset-test", "receiptDigest": receipt_digest, "reviewDigest": review["review_digest"]}
+        receipt = {"work_id": "asset-test", "source_digest": source, "receipt_digest": receipt_digest,
+                   "recorded_at": self.state["roadmapApproval"]["approvedAt"],
+                   "attempts": [{"check_id": key} for key in roadmap.ASSET_SECURITY_CHECKS]}
+        candidate = {"status": "complete", "contributors": ["author"],
+                     "completion": {"receipt_digest": receipt_digest, "source_digest": source,
+                                    "review_digest": review["review_digest"]},
+                     "spec": {"kind": "lightweight", "work_id": "asset-test", "authority_ref":
+                              "asset-scope-qualification-" + roadmap.roadmap_fingerprint(self.state),
+                              "acceptance": [{"id": "security-review", "description": roadmap.ASSET_SCOPE_DESCRIPTION}]}}
+        matches = lambda c, r, v: roadmap.asset_review_matches(self.state, proof, c, r, v, roadmap.fingerprint)
+        self.assertTrue(matches(candidate, receipt, review))
+        self.assertFalse(matches({**candidate, "contributors": ["other"]}, receipt, review))
+        self.assertFalse(matches({**candidate, "spec": {**candidate["spec"], "authority_ref": "other"}}, receipt, review))
+        self.assertFalse(matches(candidate, {**receipt, "receipt_digest": "b" * 64}, review))
+        self.assertFalse(matches(candidate, {**receipt, "attempts": receipt["attempts"][:1]}, review))
+        self.assertFalse(matches(candidate, receipt, {**review, "reviewed_criteria": ["unrelated"]}))
+        self.assertFalse(matches(candidate, receipt, {**review, "recorded_at": "changed-after-review"}))
+
+    def contextual_form_fixture(self):
+        increment = increment_definition(roadmap.FORM_INCREMENT, 1)
+        increment["acceptanceCriteria"] = [
+            {"id": key, "description": f"Superseded {key}.", "qualification": "local"}
+            for key in roadmap.FORM_CRITERIA
+        ] + increment["acceptanceCriteria"]
+        increment["deliverables"] = ["Old entry", "Old page mapping", "Retained runtime"]
+        increment["excluded"] = ["External delivery", "Imports", "Old Canvas boundary"]
+        self.define_and_approve([increment])
+        self.state["slug"] = roadmap.FORM_ROADMAP
+        plan = implementation_plan(1)
+        plan["chunks"][0]["criteriaIds"] = [c["id"] for c in increment["acceptanceCriteria"]]
+        plan["chunks"].append({"id": "another-chunk", "title": "Author", "outcome": "Old entry",
+                               "criteriaIds": list(roadmap.FORM_CRITERIA)})
+        plan["focusedTests"].append("Check the original editor switch.")
+        self.state["increments"][0].update(status="verifying", completedChunks=["chunk-1", "another-chunk"],
+                                            plan={**plan, "fingerprint": roadmap.fingerprint(plan)})
+        self.state["currentIncrementId"] = roadmap.FORM_INCREMENT
+        self.state["status"] = "executing"
+        self.state["feedback"].append({"id": roadmap.FORM_SCOPE_AUTHORITY, "targetIncrementId": roadmap.FORM_INCREMENT,
+                                      "category": "clarification", "disposition": "accepted"})
+        for key in roadmap.FORM_CRITERIA:
+            for outcome in ("passed", "failed"):
+                self.state["evidence"].append({"incrementId": roadmap.FORM_INCREMENT, "criterionId": key,
+                                               "kind": "review", "outcome": outcome})
+        self.state["blockers"].append({"id": "separate-check", "status": "open"})
+        active = self.state["increments"][0]
+        baseline = self.state["roadmapApproval"]["fingerprint"]
+        pins = mock.patch.multiple(
+            roadmap, FORM_BASELINE=baseline, FORM_PLAN_BASELINE=roadmap.fingerprint(active["plan"]),
+            FORM_APPROVAL_BASELINE=roadmap.fingerprint(self.state["roadmapApproval"]),
+            FORM_DEFINITION_BASELINE=roadmap.fingerprint({key: active[key] for key in roadmap.FORM_DEFINITION_FIELDS}),
+        )
+        event = {"type": "contextual-form-scope-aligned", "approvedFingerprint": baseline,
+                 "authorityRef": roadmap.FORM_SCOPE_AUTHORITY}
+        return event, pins
+
+    def test_contextual_form_alignment_archives_scope_and_keeps_evidence_and_gates(self):
+        event, pins = self.contextual_form_fixture()
+        original = copy.deepcopy(self.state)
+        with pins:
+            self.apply(event)
+            active = self.state["increments"][0]
+            old = original["increments"][0]
+            archive = self.state["contextualFormScopeAlignment"]
+            self.assertEqual(archive["originalDefinition"], {key: old[key] for key in roadmap.FORM_DEFINITION_FIELDS})
+            self.assertEqual(archive["originalPlan"], old["plan"])
+            self.assertEqual(archive["previousApproval"], original["roadmapApproval"])
+            self.assertEqual(active["acceptanceCriteria"][2:], old["acceptanceCriteria"][2:])
+            self.assertEqual(active["completedChunks"], old["completedChunks"])
+            for key in ("evidence", "chunks", "blockers", "feedback", "currentIncrementId"):
+                self.assertEqual(self.state[key], original[key])
+            for key, description in roadmap.FORM_CRITERIA.items():
+                self.assertEqual(roadmap.latest_criterion_evidence(self.state, roadmap.FORM_INCREMENT, key)["outcome"], "failed")
+                self.assertIn({"id": key, "description": description, "qualification": "local"}, active["acceptanceCriteria"])
+            self.assertFalse(roadmap.approval_is_current(self.state))
+            self.apply({"type": "roadmap-approved", "note": "Record the already accepted contextual scope."})
+            with self.assertRaisesRegex(roadmap.RoadmapError, "pending technical work"):
+                self.apply({"type": "increment-completed", "summary": "Keep the open qualification."})
+            with self.assertRaises(roadmap.RoadmapError):
+                self.apply(event)
+            archive = self.state["contextualFormScopeAlignment"]
+            archive["previousApproval"]["note"] = "Altered historical approval note"
+            with self.assertRaisesRegex(roadmap.RoadmapError, "exact legacy approval"):
+                roadmap.validate_state_shape(self.repo, self.state)
+            archive["previousApproval"] = original["roadmapApproval"]
+            active = self.state["increments"][0]
+            active["acceptanceCriteria"][-1]["description"] = "Changed the security requirement"
+            with self.assertRaisesRegex(roadmap.RoadmapError, "match the exact archived"):
+                roadmap.validate_state_shape(self.repo, self.state)
+
+    def test_contextual_form_alignment_denies_stale_wrong_or_unfinished_input(self):
+        event, pins = self.contextual_form_fixture()
+        states = [copy.deepcopy(self.state) for _ in range(9)]
+        states[0]["slug"] = "another-roadmap"
+        states[1]["evidencePolicy"] = "control-plane-v1"
+        states[2]["currentIncrementId"] = None
+        states[3]["feedback"].clear()
+        states[4]["evidence"].pop()
+        states[5]["increments"][0]["completedChunks"].pop()
+        states[6]["increments"][0]["plan"]["steps"][0] = "A different plan"
+        states[7]["contextualFormScopeAlignment"] = None
+        states[8]["roadmapApproval"]["note"] = "Altered approved note"
+        cases = [(state, event) for state in states]
+        for override in ({"approvedFingerprint": "stale"}, {"authorityRef": "foreign"}, {"description": "A different replacement"}):
+            cases.append((self.state, {**event, **override}))
+        with pins:
+            for index, (state, request) in enumerate(cases):
+                before = copy.deepcopy(state)
+                with self.subTest(index=index), self.assertRaises(roadmap.RoadmapError):
+                    roadmap.apply_event(state, request)
+                self.assertEqual(state, before)
+
     def define_and_approve(self, increments: list[dict]) -> None:
         self.apply(
             {
@@ -199,6 +485,367 @@ class RoadmapEngineTest(unittest.TestCase):
             }
         )
 
+    def pending_human_acceptance(self):
+        self.define_and_approve([increment_definition("increment-1", 1, qualification="controlled-environment", allow_pending=True)])
+        self.execute_increment(1, "pending")
+        return {"type": "human-acceptance-transferred", "incrementId": "increment-1", "criterionIds": ["criterion-1"],
+                "approvedFingerprint": roadmap.roadmap_fingerprint(self.state), "authorityRef": "explicit-user-offline-acceptance",
+                "onlyHumanAcceptance": True, "summary": "User owns manual acceptance offline; technical evidence remains declarative."}
+
+    def test_human_acceptance_handoff_archives_without_fabricating_passes(self):
+        event = self.pending_human_acceptance()
+        before = copy.deepcopy(self.state)
+        self.apply(event)
+        self.assertEqual(self.state["increments"][0]["status"], "completed")
+        self.assertEqual(self.state["increments"][0]["pendingCriteria"], [])
+        self.assertEqual(self.state["evidence"], before["evidence"])
+        self.assertEqual(self.state["chunks"], before["chunks"])
+        self.assertEqual(self.state["increments"][0]["plan"], before["increments"][0]["plan"])
+        transfer = self.state["humanAcceptanceTransfers"][0]
+        self.assertEqual(transfer["criteria"], before["increments"][0]["acceptanceCriteria"][:1])
+        self.assertEqual(transfer["originalPlan"], before["increments"][0]["plan"])
+        self.assertEqual(transfer["previousApproval"], before["roadmapApproval"])
+        self.assertEqual(transfer["status"], "offline-user-owned")
+        self.assertFalse(roadmap.approval_is_current(self.state))
+        self.assertIn("no test pass asserted", roadmap.render_roadmap(self.state))
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "roadmap-completed", "summary": "No stale approval allowed"})
+        self.apply({"type": "roadmap-approved", "note": "User explicitly directed this narrow human acceptance scope transfer."})
+        self.assertEqual(self.state["status"], "roadmap-ready-to-close")
+        self.assertNotEqual(self.state["roadmapApproval"]["fingerprint"], before["roadmapApproval"]["fingerprint"])
+
+    def test_human_acceptance_handoff_cannot_bypass_governed_completion_policy(self):
+        event = self.pending_human_acceptance()
+        self.state["evidencePolicy"] = "control-plane-v1"
+        self.state["completionSuite"] = "standardande2e"
+        self.state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        event["approvedFingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        before = copy.deepcopy(self.state)
+        with self.assertRaisesRegex(roadmap.RoadmapError, "governed"):
+            self.apply(event)
+        self.assertEqual(self.state, before)
+
+    def test_human_acceptance_handoff_denies_unsafe_or_nonsole_blockers(self):
+        event = self.pending_human_acceptance()
+        original = copy.deepcopy(self.state)
+        cases = []
+        for patch in [{"approvedFingerprint": "stale"}, {"onlyHumanAcceptance": False}, {"criterionIds": ["unknown"]},
+                      {"criterionIds": ["criterion-1", "criterion-1"]}, {"authorityRef": ""}]:
+            cases.append((copy.deepcopy(original), {**event, **patch}))
+        for status in ["implementing", "pending", "completed"]:
+            state = copy.deepcopy(original); state["increments"][0]["status"] = status; cases.append((state, event))
+        for outcome in ["failed", "passed", "missing"]:
+            state = copy.deepcopy(original)
+            if outcome == "missing": state["evidence"] = state["evidence"][1:]
+            else: state["evidence"][0]["outcome"] = outcome
+            cases.append((state, event))
+        state = copy.deepcopy(original); state["increments"][0]["completedChunks"] = []; cases.append((state, event))
+        state = copy.deepcopy(original); state["blockers"] = [{"status": "open"}]; cases.append((state, event))
+        state = copy.deepcopy(original); state["evidence"][-1]["outcome"] = "failed"; cases.append((state, event))
+        state = copy.deepcopy(original); state["increments"][0]["acceptanceCriteria"][0]["qualification"] = "local"
+        state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+        cases.append((state, {**event, "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        state = copy.deepcopy(original)
+        state["increments"][0]["acceptanceCriteria"][1]["qualification"] = "controlled-environment"
+        state["evidence"][-1]["outcome"] = "pending"
+        state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+        cases.append((state, {**event, "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        cases.append((state, {**event, "criterionIds": ["security-impact-reviewed"], "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        state = copy.deepcopy(state)
+        state["evidence"][0]["outcome"] = "passed"
+        # Isolate the security guard: every other criterion already passes.
+        cases.append((state, {**event, "criterionIds": ["security-impact-reviewed"], "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        for state, request in cases:
+            with self.subTest(request=request, status=state["increments"][0]["status"]):
+                frozen = copy.deepcopy(state)
+                with self.assertRaises(roadmap.RoadmapError): roadmap.apply_event(state, request)
+                self.assertEqual(state, frozen)
+
+    def governed_human_scope(self):
+        self.pending_human_acceptance()
+        self.state.update(evidencePolicy="control-plane-v1", completionSuite="standardande2e")
+        increment = self.state["increments"][0]
+        increment["acceptanceCriteria"].append({"id": "mixed-check", "description": "Reference performance and manual screen reader", "qualification": "controlled-environment"})
+        increment["pendingCriteria"].append("mixed-check")
+        self.state["evidence"].append({**self.state["evidence"][0], "id": "evidence-3", "criterionId": "mixed-check"})
+        increment["plan"]["chunks"][0]["criteriaIds"].append("mixed-check")
+        self.state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        return {"type": "acceptance-scope-revised", "incrementId": "increment-1",
+                "approvedFingerprint": roadmap.roadmap_fingerprint(self.state), "authorityRef": "explicit-user-agent-only",
+                "onlyHumanScope": True, "summary": "Human acceptance is user-owned offline; retain technical checks.",
+                "removeCriterionIds": ["criterion-1"], "replaceCriteria": [{"criterion": {"id": "mixed-check", "description": "Reference performance and automated keyboard/accessibility", "qualification": "controlled-environment"}, "humanScope": "Manual screen-reader acceptance"}]}
+
+    def test_governed_human_scope_preserves_technical_evidence_and_never_closes(self):
+        event = self.governed_human_scope()
+        self.state["blockers"] = [{"id": "technical-environment", "status": "open"}]
+        before = copy.deepcopy(self.state)
+        self.apply(event)
+        increment = self.state["increments"][0]
+        self.assertEqual(increment["status"], before["increments"][0]["status"])
+        self.assertEqual(increment["pendingCriteria"], ["mixed-check"])
+        for key in ["chunks", "evidence", "blockers", "currentIncrementId", "completionSuite", "evidencePolicy"]:
+            self.assertEqual(self.state[key], before[key])
+        self.assertEqual(increment["plan"], before["increments"][0]["plan"])
+        self.assertEqual(self.state["history"][:-1], before["history"])
+        revision = self.state["acceptanceScopeRevisions"][0]
+        self.assertEqual(revision["removedCriteria"], before["increments"][0]["acceptanceCriteria"][:1])
+        self.assertEqual(revision["replacedCriteria"][0]["original"], before["increments"][0]["acceptanceCriteria"][-1])
+        self.assertEqual(revision["previousApproval"], before["roadmapApproval"])
+        self.assertFalse(roadmap.approval_is_current(self.state))
+        self.assertIn("no test pass asserted", roadmap.render_roadmap(self.state))
+        self.apply({"type": "roadmap-approved", "note": "User explicitly approved the narrow agent-only scope."})
+        self.assertNotEqual(self.state["roadmapApproval"]["fingerprint"], before["roadmapApproval"]["fingerprint"])
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "roadmap-completed", "summary": "Pending technical checks cannot close"})
+
+    def test_governed_human_scope_denies_unsafe_changes_without_mutation(self):
+        event = self.governed_human_scope()
+        original = copy.deepcopy(self.state)
+        cases = []
+        for patch in [{"approvedFingerprint": "stale"}, {"onlyHumanScope": False}, {"removeCriterionIds": ["unknown"]},
+                      {"removeCriterionIds": ["criterion-1", "criterion-1"]}, {"authorityRef": ""},
+                      {"removeCriterionIds": [], "replaceCriteria": []}, {"removeCriterionIds": ["mixed-check"]},
+                      {"completionSuite": "all"}]:
+            cases.append((copy.deepcopy(original), {**event, **patch}))
+        for policy in [None, "unknown"]:
+            state = copy.deepcopy(original); state["evidencePolicy"] = policy; cases.append((state, event))
+        for status in ["pending", "implementing", "completed"]:
+            state = copy.deepcopy(original); state["increments"][0]["status"] = status; cases.append((state, event))
+        for outcome in ["passed", "failed", "missing"]:
+            state = copy.deepcopy(original)
+            if outcome == "missing": state["evidence"] = state["evidence"][1:]
+            else: state["evidence"][0]["outcome"] = outcome
+            cases.append((state, event))
+        state = copy.deepcopy(original); state["increments"][0]["completedChunks"] = []; cases.append((state, event))
+        for replacement in [{"id": "new-id"}, {"qualification": "local"}, {"description": "Reference performance and manual screen reader"}]:
+            request = copy.deepcopy(event); request["replaceCriteria"][0]["criterion"].update(replacement); cases.append((original, request))
+        state = copy.deepcopy(original)
+        state["increments"][0]["acceptanceCriteria"][0]["qualification"] = "local"
+        state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+        cases.append((state, {**event, "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        state = copy.deepcopy(original)
+        state["increments"][0]["acceptanceCriteria"][1]["qualification"] = "controlled-environment"
+        state["evidence"][1]["outcome"] = "pending"
+        state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+        cases.append((state, {**event, "removeCriterionIds": ["security-impact-reviewed"], "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        for state, request in cases:
+            with self.subTest(request=request):
+                frozen = copy.deepcopy(state)
+                with self.assertRaises(roadmap.RoadmapError): roadmap.apply_event(state, request)
+                self.assertEqual(state, frozen)
+
+    def test_governed_scope_archive_rejects_malformed_or_active_retired_requirements(self):
+        event = self.governed_human_scope()
+        self.apply(event)
+        original = copy.deepcopy(self.state)
+        patches = [lambda r: r.update(status="passed"), lambda r: r.update(authorityRef=""),
+                   lambda r: r.update(removedCriteria=[{"id": "mixed-check", "description": "Active", "qualification": "controlled-environment"}]),
+                   lambda r: r["replacedCriteria"][0]["revised"].update(id="different"),
+                   lambda r: r["replacedCriteria"][0]["revised"].update(qualification="local"),
+                   lambda r: r.update(replacedCriteria=[None]),
+                   lambda r: r.update(removedCriteria=[], replacedCriteria=[])]
+        for patch in patches:
+            state = copy.deepcopy(original)
+            patch(state["acceptanceScopeRevisions"][0])
+            with self.assertRaises(roadmap.RoadmapError): roadmap.validate_state_shape(self.repo, state)
+
+    def test_explicit_legacy_mixed_scope_archives_humans_without_technical_closure(self):
+        event = self.governed_human_scope()
+        self.state.pop("evidencePolicy")
+        self.state.pop("completionSuite")
+        self.state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        event.update(type="legacy-acceptance-scope-revised", approvedFingerprint=roadmap.roadmap_fingerprint(self.state))
+        before = copy.deepcopy(self.state)
+        self.apply(event)
+        self.assertEqual(self.state["legacyAcceptanceScopeRevisions"][0]["originalPlan"], before["increments"][0]["plan"])
+        self.assertNotIn("acceptanceScopeRevisions", self.state)
+        self.assertNotIn("evidencePolicy", self.state)
+        self.assertIsNone(self.state["roadmapApproval"])
+        for key in ["evidence", "chunks", "blockers", "currentIncrementId"]:
+            self.assertEqual(self.state[key], before[key])
+        self.assertEqual(self.state["increments"][0]["status"], before["increments"][0]["status"])
+        self.assertEqual(self.state["increments"][0]["pendingCriteria"], ["mixed-check"])
+        roadmap.validate_state_shape(self.repo, self.state)
+        self.assertIn("No test pass is asserted", roadmap.render_roadmap(self.state))
+        self.apply({"type": "roadmap-approved", "note": "User explicitly requested this exact offline scope."})
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "roadmap-completed", "summary": "Technical qualification is still pending"})
+        state = copy.deepcopy(self.state)
+        state["evidencePolicy"] = "control-plane-v1"
+        with self.assertRaises(roadmap.RoadmapError): roadmap.validate_state_shape(self.repo, state)
+
+    def test_legacy_scope_cannot_bypass_governed_event_or_technical_pending_guards(self):
+        event = self.governed_human_scope()
+        request = {**event, "type": "legacy-acceptance-scope-revised"}
+        original = copy.deepcopy(self.state)
+        with self.assertRaises(roadmap.RoadmapError): self.apply(request)
+        self.assertEqual(self.state, original)
+        for mode in ["failed", "missing", "security", "incomplete", "stale"]:
+            state = copy.deepcopy(original)
+            state.pop("evidencePolicy")
+            if mode == "failed": state["evidence"][0]["outcome"] = "failed"
+            if mode == "missing": state["evidence"] = state["evidence"][1:]
+            if mode == "security": request = {**request, "removeCriterionIds": ["security-impact-reviewed"]}
+            else: request = {**event, "type": "legacy-acceptance-scope-revised"}
+            if mode == "incomplete": state["increments"][0]["completedChunks"] = []
+            state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+            request["approvedFingerprint"] = "stale" if mode == "stale" else roadmap.roadmap_fingerprint(state)
+            frozen = copy.deepcopy(state)
+            with self.subTest(mode=mode), self.assertRaises(roadmap.RoadmapError): roadmap.apply_event(state, request)
+            self.assertEqual(state, frozen)
+
+    def technical_policy_revision(self):
+        self.pending_human_acceptance()
+        self.state.update(evidencePolicy="control-plane-v1", completionSuite="all")
+        self.state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        return {
+            "type": "technical-acceptance-revised", "incrementId": "increment-1",
+            "approvedFingerprint": roadmap.roadmap_fingerprint(self.state),
+            "authorityRef": "explicit-user-model-quality-policy", "policyRef": "model-quality-contract",
+            "policyDigest": "a" * 64,
+            "criterion": {"id": "criterion-1", "qualification": "controlled-environment",
+                          "description": "Use the approved completed-output quality policy; actual optional resource and cleanup evidence is still required."},
+            "supersededRequirements": ["Earlier numeric output-quality threshold"],
+            "retainedRequirements": ["Actual optional execution, resource bounds, native authority and confirmed cleanup"],
+            "summary": "Apply explicit user technical policy without inventing a measurement or passing optional execution.",
+        }
+
+    def test_technical_policy_revision_archives_exact_scope_and_never_qualifies(self):
+        event = self.technical_policy_revision()
+        self.state["blockers"] = [{"id": "native-proof", "status": "open"}]
+        self.state["currentIncrementId"] = "increment-1"
+        self.state["increments"][0]["status"] = "blocked"
+        self.state["status"] = "blocked"
+        before = copy.deepcopy(self.state)
+        self.apply(event)
+        revision = self.state["technicalAcceptanceRevisions"][0]
+        self.assertEqual(revision["originalCriterion"], before["increments"][0]["acceptanceCriteria"][0])
+        self.assertEqual(revision["revisedCriterion"], event["criterion"])
+        self.assertEqual(revision["originalPlan"], before["increments"][0]["plan"])
+        self.assertEqual(revision["previousApproval"], before["roadmapApproval"])
+        for key in ["evidence", "chunks", "blockers", "currentIncrementId", "completionSuite", "evidencePolicy", "completion", "finalApproval"]:
+            self.assertEqual(self.state[key], before[key])
+        self.assertEqual(self.state["history"][:-1], before["history"])
+        for key in ["plan", "completedChunks", "pendingCriteria", "status"]:
+            self.assertEqual(self.state["increments"][0][key], before["increments"][0][key])
+        self.assertFalse(roadmap.approval_is_current(self.state))
+        self.assertNotEqual(roadmap.roadmap_fingerprint(self.state), before["roadmapApproval"]["fingerprint"])
+        self.assertIn("no test pass or completion is asserted", roadmap.render_roadmap(self.state))
+        self.assertIn(before["increments"][0]["acceptanceCriteria"][0]["description"], roadmap.render_roadmap(self.state))
+        self.assertNotIn("offline-user-owned", json.dumps(revision))
+        self.apply({"type": "roadmap-approved", "note": "User already explicitly authorized this exact narrow policy."})
+        self.assertTrue(roadmap.approval_is_current(self.state))
+        self.assertEqual(self.state["status"], "blocked")
+        self.assertEqual(self.state["increments"][0]["status"], "blocked")
+        self.assertEqual(self.state["blockers"], before["blockers"])
+        self.assertFalse(roadmap.implementation_ready_for_overall(self.state))
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "roadmap-completed", "summary": "Policy is not qualification"})
+
+    def test_technical_policy_revision_denies_unsafe_requests_without_mutation(self):
+        event = self.technical_policy_revision()
+        original = copy.deepcopy(self.state)
+        cases = []
+        for patch in [{"approvedFingerprint": "stale"}, {"authorityRef": ""}, {"policyRef": "../policy.json"},
+                      {"policyDigest": "bad"}, {"policyDigest": 1}, {"retainedRequirements": []},
+                      {"supersededRequirements": []}, {"removeCriterionIds": ["criterion-1"]},
+                      {"onlyHumanScope": True}, {"completionSuite": "standardande2e"},
+                      {"retainedRequirements": ["x"] * 21}]:
+            cases.append((copy.deepcopy(original), {**event, **patch}))
+        for patch in [{"id": "unknown"}, {"qualification": "local"},
+                      {"description": original["increments"][0]["acceptanceCriteria"][0]["description"]}]:
+            cases.append((copy.deepcopy(original), {**event, "criterion": {**event["criterion"], **patch}}))
+        for policy in [None, "unknown"]:
+            state = copy.deepcopy(original)
+            state["evidencePolicy"] = policy
+            state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+            cases.append((state, {**event, "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        for status in ["pending", "implementing", "completed"]:
+            state = copy.deepcopy(original)
+            state["increments"][0]["status"] = status
+            cases.append((state, event))
+        for outcome in ["passed", "failed", "missing"]:
+            state = copy.deepcopy(original)
+            if outcome == "missing":
+                state["evidence"] = state["evidence"][1:]
+            else:
+                state["evidence"][0]["outcome"] = outcome
+            cases.append((state, event))
+        for chunks in [[], ["chunk-1", "chunk-1"]]:
+            state = copy.deepcopy(original)
+            state["increments"][0]["completedChunks"] = chunks
+            cases.append((state, event))
+        state = copy.deepcopy(original)
+        state["increments"][0]["plan"]["chunks"] *= 2
+        state["increments"][0]["completedChunks"] *= 2
+        cases.append((state, event))
+        state = copy.deepcopy(original)
+        state["increments"][0]["acceptanceCriteria"][1]["qualification"] = "controlled-environment"
+        state["evidence"][1]["outcome"] = "pending"
+        state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+        cases.append((state, {**event, "approvedFingerprint": roadmap.roadmap_fingerprint(state),
+                              "criterion": {**event["criterion"], "id": "security-impact-reviewed"}}))
+        for state, request in cases:
+            frozen = copy.deepcopy(state)
+            with self.subTest(request=request), self.assertRaises(roadmap.RoadmapError):
+                roadmap.apply_event(state, request)
+            self.assertEqual(state, frozen)
+
+    def test_technical_policy_archive_rejects_malformed_or_reclassified_records(self):
+        event = self.technical_policy_revision()
+        self.apply(event)
+        original = copy.deepcopy(self.state)
+        patches = [lambda r: r.update(status="passed"), lambda r: r.update(status="offline-user-owned"),
+                   lambda r: r.update(policyDigest="bad"), lambda r: r.update(authorityRef=""),
+                   lambda r: r.update(retainedRequirements=[]), lambda r: r.update(originalPlan=None),
+                   lambda r: r.update(previousApproval=None), lambda r: r.update(unknown=True),
+                   lambda r: r["revisedCriterion"].update(id="other"),
+                   lambda r: r["revisedCriterion"].update(qualification="local"),
+                   lambda r: r["originalCriterion"].update(qualification="local")]
+        for patch in patches:
+            state = copy.deepcopy(original)
+            patch(state["technicalAcceptanceRevisions"][0])
+            with self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, state)
+        state = copy.deepcopy(original)
+        state.pop("evidencePolicy")
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.validate_state_shape(self.repo, state)
+        state = copy.deepcopy(original)
+        state["increments"][0]["acceptanceCriteria"][0]["id"] = "foreign"
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.validate_state_shape(self.repo, state)
+
+    def test_technical_policy_revision_cannot_reuse_prior_approval_or_close_pending_target(self):
+        event = self.technical_policy_revision()
+        self.apply(event)
+        revised = copy.deepcopy(self.state)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply(event)
+        self.assertEqual(self.state, revised)
+        self.apply({"type": "roadmap-approved", "note": "User approved exact policy; actual checks still pending."})
+        self.assertIsNotNone(roadmap.pending_qualification_context(self.state, "increment-1"))
+        with self.assertRaisesRegex(roadmap.RoadmapError, "Every target criterion"):
+            self.apply({"type": "increment-qualified", "incrementId": "increment-1", "workId": "old-target",
+                        "receiptDigest": "0" * 64, "reviewDigest": "0" * 64, "summary": "No invented pass"})
+
+    def test_pending_target_qualification_refuses_legacy_and_unperformed_checks(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1, qualification="controlled-environment", allow_pending=True)])
+        self.execute_increment(1, "pending")
+        event = {"type": "increment-qualified", "incrementId": "increment-1", "workId": "target-proof",
+                 "receiptDigest": "0" * 64, "reviewDigest": "0" * 64, "summary": "No unperformed check may pass"}
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply(event)
+        self.state["evidencePolicy"] = "control-plane-v1"
+        self.state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        self.assertIsNotNone(roadmap.pending_qualification_context(self.state, "increment-1"))
+        with self.assertRaisesRegex(roadmap.RoadmapError, "Every target criterion"):
+            self.apply(event)
+        increment = self.state["increments"][0]
+        increment["plan"]["chunks"] *= 2
+        increment["completedChunks"] *= 2
+        self.assertIsNone(roadmap.pending_qualification_context(self.state, "increment-1"))
+
     def test_two_increment_happy_path_renders_durable_artifacts(self) -> None:
         self.define_and_approve(
             [
@@ -246,6 +893,320 @@ class RoadmapEngineTest(unittest.TestCase):
             self.apply(
                 {"type": "increment-started", "incrementId": "increment-2"}
             )
+
+    def legacy_pending_work(self, *, active=False):
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        if active:
+            self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.state["blockers"].append({
+            "id": "native-proof", "kind": "technical", "status": "open",
+            "summary": "Native protection and its technical checks are unfinished.",
+            "requiredAction": "Implement and verify the approved protection.",
+            "recordedAt": "2026-10-20T00:00:00Z", "resolvedAt": None, "resolution": None,
+        })
+        self.state["status"] = "blocked"
+        if active:
+            self.state["increments"][0]["status"] = "blocked"
+
+    def reclassification(self, owner="agent", identifier="native-proof"):
+        blocker = next(b for b in self.state["blockers"] if b["id"] == identifier)
+        return {
+            "type": "blocker-reclassified", "blockerId": identifier,
+            "expectedBlockerDigest": roadmap.fingerprint(blocker),
+            **human_action_fields(), "actionOwner": owner,
+            "responsibleRole": "Coding agent" if owner == "agent" else "Repository owner",
+            "requiredAction": "Implement the approved protection and run its checks.",
+            "actionLocation": "The owning implementation increment",
+            "completionCondition": "Current technical checks and independent review confirm the protection.",
+            "reason": "The user reserves Blocked for an explicit human action; technical work is unfinished.",
+        }
+
+    def test_reclassification_archives_exact_record_and_preserves_scope(self):
+        self.legacy_pending_work()
+        before = copy.deepcopy(self.state)
+        event = self.reclassification()
+        self.apply(event)
+        current = self.state["blockers"][0]
+        self.assertEqual(current["status"], "open")
+        self.assertIsNone(current["resolution"])
+        self.assertIsNone(current["resolvedAt"])
+        self.assertEqual(self.state["blockerReclassifications"][0]["originalBlocker"], before["blockers"][0])
+        self.assertEqual(self.state["history"][:-1], before["history"])
+        for key in ["increments", "chunks", "evidence", "roadmapApproval", "decisions", "feedback"]:
+            self.assertEqual(self.state[key], before[key])
+        self.assertEqual(roadmap.roadmap_fingerprint(self.state), roadmap.roadmap_fingerprint(before))
+        self.assertEqual(self.state["status"], "ready")
+        self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state["status"], "executing")
+        self.assertEqual(self.state["blockers"][0]["status"], "open")
+        self.assertIn("No user action is needed", roadmap.next_checkpoint(self.state))
+        for rendered in [roadmap.render_roadmap(self.state), roadmap.render_report(self.state)]:
+            self.assertIn("## Pending work", rendered)
+            self.assertNotIn("## Human action needed", rendered)
+            self.assertNotIn("## Open blockers", rendered)
+
+    def test_reclassification_denies_missing_stale_and_unsafe_fields_atomically(self):
+        self.legacy_pending_work()
+        event = self.reclassification(); before = copy.deepcopy(self.state)
+        cases = [{**event, key: value} for key, value in [
+            ("expectedBlockerDigest", "0" * 64), ("actionOwner", "automatic"),
+            ("actionOwner", []), ("actionOwner", {}), ("summary", ""),
+            ("responsibleRole", "x" * 2001),
+            ("responsibleRole", ""), ("actionLocation", ""), ("completionCondition", ""),
+            ("requiredAction", ""), ("authorityRef", ""), ("reason", ""),
+            ("status", "resolved"), ("evidence", []), ("blockerId", "missing"),
+        ]]
+        cases += [{k: v for k, v in event.items() if k != key} for key in event if key != "type"]
+        for invalid in cases:
+            with self.subTest(event=invalid), self.assertRaises(roadmap.RoadmapError):
+                roadmap.apply_event(self.state, invalid)
+            self.assertEqual(self.state, before)
+        self.apply(event)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply(self.reclassification())
+
+    def test_new_blocker_requires_explicit_human_action(self):
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        event = {"type": "blocker-recorded", "id": "review-needed", "kind": "dependency",
+                 "summary": "A permitted independent review is needed.", "requiredAction": "Arrange that review.",
+                 **human_action_fields()}
+        before = copy.deepcopy(self.state)
+        for invalid in [{**event, "actionOwner": "agent"}] + [
+                {k: v for k, v in event.items() if k != key} for key in human_action_fields()]:
+            with self.subTest(event=invalid), self.assertRaises(roadmap.RoadmapError):
+                self.apply(invalid)
+            self.assertEqual(self.state, before)
+        self.apply(event)
+        self.assertTrue(roadmap.execution_blocked(self.state))
+        self.assertIn("## Human action needed", roadmap.render_report(self.state))
+        self.assertIn("Repository owner", roadmap.render_report(self.state))
+
+    def test_mixed_responsibility_and_reapproval_preserve_human_execution_guard(self):
+        self.legacy_pending_work(active=True)
+        self.apply(self.reclassification())
+        self.assertEqual(self.state["status"], "executing")
+        self.apply({"type": "blocker-recorded", "id": "review-needed", "kind": "dependency",
+                    "summary": "A separate permitted review is needed.", "requiredAction": "Arrange the review.",
+                    **human_action_fields()})
+        self.apply({"type": "roadmap-approved", "note": "The existing scope remains approved."})
+        self.assertEqual(self.state["status"], "blocked")
+        self.apply({"type": "resumed", "blockerId": "review-needed", "resolution": "The review was actually received.",
+                    "reconciliation": "Review evidence is separate; unfinished agent work remains open."})
+        self.assertEqual(self.state["status"], "executing")
+        self.assertEqual(self.state["blockers"][0]["status"], "open")
+        self.assertEqual(self.state["increments"][0]["status"], "researching")
+
+    def test_agent_work_permits_checks_but_refuses_completion_despite_passed_evidence(self):
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        self.execute_increment(1)
+        self.state["blockers"] = [{"id": "native-proof", "kind": "technical", "status": "open"}]
+        self.apply(self.reclassification())
+        self.assertEqual(self.state["status"], "implementation-complete-qualification-pending")
+        self.assertTrue(roadmap.implementation_ready_for_overall(self.state))
+        for event in [{"type": "roadmap-completed", "summary": "Not yet"},
+                      {"type": "increment-qualified", "incrementId": "increment-1"}]:
+            before = copy.deepcopy(self.state)
+            with self.subTest(event=event), self.assertRaisesRegex(roadmap.RoadmapError, "pending technical"):
+                self.apply(event)
+            self.assertEqual(self.state, before)
+        self.state["currentIncrementId"] = "increment-1"
+        self.state["increments"][0]["status"] = "verifying"
+        self.state["status"] = "executing"
+        with self.assertRaisesRegex(roadmap.RoadmapError, "pending technical"):
+            self.apply({"type": "increment-completed", "summary": "Not yet"})
+        self.apply({"type": "resumed", "blockerId": "native-proof", "resolution": "The technical work is actually verified.",
+                    "reconciliation": "Current proof was reviewed separately, without changing criterion evidence."})
+        self.apply({"type": "increment-completed", "summary": "All actual work is complete."})
+        self.apply({"type": "roadmap-completed", "summary": "All actual requirements are complete."})
+        self.assertEqual(self.state["status"], "completed")
+
+    def test_reclassification_chain_and_archive_tamper_fail_closed(self):
+        self.legacy_pending_work()
+        self.apply(self.reclassification())
+        self.apply(self.reclassification("human"))
+        self.assertEqual(self.state["status"], "blocked")
+        self.assertEqual(len(self.state["blockerReclassifications"]), 2)
+        good = copy.deepcopy(self.state)
+        for key, value in [("originalDigest", "0" * 64), ("authorityRef", "other"), ("reason", "")]:
+            bad = copy.deepcopy(good); bad["blockerReclassifications"][0][key] = value
+            with self.subTest(key=key), self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, bad)
+        bad = copy.deepcopy(good); bad["blockers"][0]["actionOwner"] = "agent"
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.validate_state_shape(self.repo, bad)
+        bad = copy.deepcopy(good); bad["blockerReclassifications"][1]["originalBlocker"]["summary"] = "tampered"
+        bad["blockerReclassifications"][1]["originalDigest"] = roadmap.fingerprint(bad["blockerReclassifications"][1]["originalBlocker"])
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.validate_state_shape(self.repo, bad)
+
+    def test_legacy_evidence_cannot_promote_unfinished_agent_work(self):
+        self.define_and_approve([increment_definition("increment-1", 1, qualification="controlled-environment", allow_pending=True)])
+        self.execute_increment(1, "pending")
+        self.state["blockers"] = [{"id": "native-proof", "kind": "technical", "status": "open"}]
+        event = {**self.reclassification(), "summary": "The sign-in is already saved; the agent must run the checks."}
+        self.apply(event)
+        self.assertEqual(self.state["blockers"][0]["summary"], event["summary"])
+        self.assertNotIn("summary", self.state["blockerReclassifications"][0]["originalBlocker"])
+        self.assertEqual(self.state["blockerReclassifications"][0]["revisedSummary"], event["summary"])
+        self.apply({"type": "evidence-recorded", "incrementId": "increment-1", "criterionId": "criterion-1",
+                    "kind": "test", "outcome": "passed", "summary": "The criterion check passed; other work is unfinished."})
+        self.assertEqual(self.state["increments"][0]["status"], "implemented-pending-qualification")
+        self.assertEqual(self.state["blockers"][0]["status"], "open")
+        self.assertEqual(self.state["increments"][0]["pendingCriteria"], [])
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "roadmap-completed", "summary": "Unfinished work cannot close."})
+
+    def test_reclassification_retains_stale_approval_and_rejects_resolved_record(self):
+        self.legacy_pending_work(active=True)
+        self.apply({"type": "feedback-recorded", "id": "new-decision", "summary": "A changed scope needs real approval.",
+                    "category": "decision", "impact": "high-level", "targetIncrementId": "increment-1",
+                    "disposition": "needs-decision", "nextAction": "Obtain approval for the changed scope."})
+        self.apply(self.reclassification())
+        self.assertEqual(self.state["status"], "approval-required")
+        self.assertIsNone(self.state["roadmapApproval"])
+        self.assertEqual(self.state["increments"][0]["status"], "paused-for-approval")
+        self.apply({"type": "resumed", "blockerId": "native-proof", "resolution": "Actual proof was received.",
+                    "reconciliation": "The separate scope approval remains missing."})
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply(self.reclassification())
+
+    def test_blocked_feedback_requires_actual_recorded_human_action(self):
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        event = {"type": "feedback-recorded", "id": "wait", "summary": "A required action is outstanding.",
+                 "category": "verification", "impact": "within-increment", "targetIncrementId": "increment-1",
+                 "disposition": "blocked", "nextAction": "Complete the requested action."}
+        before = copy.deepcopy(self.state)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply(event)
+        self.assertEqual(self.state, before)
+        self.apply({"type": "blocker-recorded", "id": "review", "kind": "dependency",
+                    "summary": "An independent review is needed.", "requiredAction": "Arrange the permitted review.",
+                    **human_action_fields()})
+        self.apply(event)
+        self.assertEqual(self.state["status"], "blocked")
+
+    def test_portable_human_action_guidance_is_kept_together(self):
+        base = MODULE_PATH.parents[1]
+        for relative in ["SKILL.md", "references/events.md", "references/workflow.md", "references/installation.md"]:
+            text = (base / relative).read_text(encoding="utf-8")
+            with self.subTest(relative=relative):
+                self.assertIn("blocker-reclassified", text)
+                self.assertIn("ASD-STE100", text)
+                self.assertIn("technical accordion", text)
+
+    def test_legacy_unclassified_does_not_infer_human_or_agent_from_kind(self):
+        self.legacy_pending_work()
+        roadmap.validate_state_shape(self.repo, self.state)
+        self.assertTrue(roadmap.execution_blocked(self.state))
+        self.assertIn("## Legacy classification pending", roadmap.render_report(self.state))
+        self.assertNotIn("## Human action needed", roadmap.render_report(self.state))
+        self.assertNotIn("## Pending work", roadmap.render_report(self.state))
+        before = copy.deepcopy(self.state)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state, before)
+
+    def test_new_increment_refuses_unresolved_blockers_atomically(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        approved = copy.deepcopy(self.state)
+        kinds = ["environment", "dependency", "decision", "credential", "production-authority", "technical"]
+        for kind, status in [(kind, "open") for kind in kinds] + [("technical", "pending"), ("technical", None)]:
+            with self.subTest(kind=kind, status=status):
+                self.state = copy.deepcopy(approved)
+                self.apply({
+                    "type": "blocker-recorded", **human_action_fields(), "id": "actual-obstacle", "kind": kind,
+                    "summary": "A required technical prerequisite is unavailable.",
+                    "requiredAction": "Resolve and reconcile the actual prerequisite before starting.",
+                })
+                # Only an explicitly resolved record can grant start admission.
+                self.state["blockers"][0]["status"] = status
+                before = copy.deepcopy(self.state)
+                roadmap.write_project_files(self.repo, self.state)
+                paths = [self.repo / path for path in self.state["paths"].values()]
+                original_files = {path: path.read_bytes() for path in paths}
+                event_file = self.repo / "start-event.json"
+                event_file.write_text(json.dumps({"type": "increment-started", "incrementId": "increment-1"}), encoding="utf-8")
+                with self.assertRaisesRegex(roadmap.RoadmapError, "blocker"):
+                    roadmap.command_apply(argparse.Namespace(repo=str(self.repo), state=self.state["paths"]["state"], event_file=str(event_file), dry_run=False))
+                self.assertEqual(self.state, before)
+                self.assertEqual({path: path.read_bytes() for path in paths}, original_files)
+                self.assertEqual(self.state["roadmapApproval"], approved["roadmapApproval"])
+                self.assertIsNone(self.state["currentIncrementId"])
+
+    def test_resolving_only_some_blockers_keeps_new_increment_denied(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        for identifier in ["first-obstacle", "second-obstacle"]:
+            self.apply({"type": "blocker-recorded", **human_action_fields(), "id": identifier, "kind": "technical", "summary": "A required prerequisite is unavailable.", "requiredAction": "Resolve the actual prerequisite."})
+        self.apply({"type": "resumed", "blockerId": "first-obstacle", "resolution": "The first prerequisite is available.", "reconciliation": "Verified only the first prerequisite; the other remains unavailable."})
+        before = copy.deepcopy(self.state)
+        with self.assertRaisesRegex(roadmap.RoadmapError, "blocker"):
+            self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state, before)
+
+    def test_resolved_blocker_allows_start_and_preserves_approval(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        approval = copy.deepcopy(self.state["roadmapApproval"])
+        self.apply({"type": "blocker-recorded", **human_action_fields(), "id": "runtime-prerequisite", "kind": "environment", "summary": "The required runtime is unavailable.", "requiredAction": "Verify runtime availability."})
+        self.apply({"type": "resumed", "blockerId": "runtime-prerequisite", "resolution": "The required runtime is available.", "reconciliation": "Verified the prerequisite before continuing."})
+        self.assertEqual(self.state["status"], "ready")
+        self.assertTrue(roadmap.approval_is_current(self.state))
+        self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state["status"], "executing")
+        self.assertEqual(self.state["currentIncrementId"], "increment-1")
+        self.assertEqual(self.state["roadmapApproval"], approval)
+        self.assertEqual(self.state["blockers"][0]["status"], "resolved")
+
+    def test_resolved_blocker_does_not_allow_incomplete_dependencies(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1), increment_definition("increment-2", 2, depends_on=["increment-1"])])
+        # A legacy non-active blocked prefix is still an incomplete dependency.
+        self.state["increments"][0]["status"] = "blocked"
+        self.apply({"type": "blocker-recorded", **human_action_fields(), "id": "environment", "kind": "environment", "summary": "A host prerequisite is unavailable.", "requiredAction": "Verify host availability."})
+        self.apply({"type": "resumed", "blockerId": "environment", "resolution": "The host is available.", "reconciliation": "The host recovered; the earlier increment remains incomplete."})
+        before = copy.deepcopy(self.state)
+        with self.assertRaisesRegex(roadmap.RoadmapError, "dependencies are incomplete"):
+            self.apply({"type": "increment-started", "incrementId": "increment-2"})
+        self.assertEqual(self.state, before)
+
+    def test_resumed_derives_inactive_status_without_qualifying_work(self) -> None:
+        initial = copy.deepcopy(self.state)
+        for outcome, future_pending, expected in [
+            ("passed", False, "roadmap-ready-to-close"),
+            ("pending", False, "implementation-complete-qualification-pending"),
+            ("pending", True, "ready"),
+        ]:
+            with self.subTest(outcome=outcome, future_pending=future_pending):
+                self.state = copy.deepcopy(initial)
+                increments = [increment_definition("increment-1", 1, qualification="controlled-environment", allow_pending=True)]
+                if future_pending:
+                    increments.append(increment_definition("increment-2", 2, depends_on=["increment-1"]))
+                self.define_and_approve(increments)
+                self.execute_increment(1, outcome)
+                preserved = copy.deepcopy({key: self.state[key] for key in ["increments", "evidence", "chunks", "roadmapApproval"]})
+                self.apply({"type": "blocker-recorded", **human_action_fields(), "id": "host", "kind": "environment", "summary": "A host prerequisite is unavailable.", "requiredAction": "Verify host recovery."})
+                self.apply({"type": "resumed", "blockerId": "host", "resolution": "Host prerequisite recovered.", "reconciliation": "Recovery changes no implementation or qualification facts."})
+                self.assertEqual(self.state["status"], expected)
+                self.assertEqual({key: self.state[key] for key in preserved}, preserved)
+                self.assertIsNone(self.state["currentIncrementId"])
+
+    def test_resumed_preserves_active_stage_and_stale_approval_precedence(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        approved = copy.deepcopy(self.state)
+        for stage in ["researching", "planning", "implementing", "verifying", "stale-approval"]:
+            with self.subTest(stage=stage):
+                self.state = copy.deepcopy(approved)
+                self.apply({"type": "increment-started", "incrementId": "increment-1"})
+                if stage != "researching":
+                    self.apply({"type": "increment-research-recorded", "summary": "Research complete.", "sources": [{"title": "Current source"}], "risks": ["Preserve actual progress."]})
+                if stage in ["implementing", "verifying"]:
+                    self.apply({"type": "increment-plan-recorded", "plan": implementation_plan(1)})
+                if stage == "verifying":
+                    self.apply({"type": "chunk-recorded", "chunkId": "chunk-1", "summary": "Implemented outcome.", "areas": ["Scoped area"], "tests": ["Focused check passed."], "documentation": ["Guidance updated."], "feedbackAddressed": []})
+                if stage == "stale-approval":
+                    self.apply({"type": "feedback-recorded", "id": "new-choice", "summary": "User requests a changed high-level choice.", "category": "decision", "impact": "high-level", "targetIncrementId": "increment-1", "disposition": "needs-decision", "nextAction": "Obtain actual approval."})
+                self.apply({"type": "blocker-recorded", **human_action_fields(), "id": "host", "kind": "environment", "summary": "A required host is unavailable.", "requiredAction": "Verify recovery."})
+                self.apply({"type": "resumed", "blockerId": "host", "resolution": "Host recovered.", "reconciliation": "Resume only the prior progress; no qualification change."})
+                self.assertEqual(self.state["status"], "approval-required" if stage == "stale-approval" else "executing")
+                self.assertEqual(self.state["increments"][0]["status"], "paused-for-approval" if stage == "stale-approval" else stage)
 
     def test_revision_preserves_completed_work_and_replaces_pending_suffix(self) -> None:
         self.define_and_approve(
@@ -474,6 +1435,67 @@ class RoadmapEngineTest(unittest.TestCase):
                 source,
                 r"(?i)(?:protected\s+prompts?|private\s+payloads?|sensitive\s+payloads?)",
             )
+
+    def test_reviewed_chunk_checkpoint_guidance_preserves_authority_and_pending_scope(self) -> None:
+        skill_root = MODULE_PATH.parent.parent
+        repository_root = skill_root.parents[1]
+        workflow = (skill_root / "references" / "workflow.md").read_text(encoding="utf-8")
+        installation = (skill_root / "references" / "installation.md").read_text(encoding="utf-8")
+        standard = (repository_root / "docs/standards/ai-agent-development-standards.md").read_text(encoding="utf-8")
+        for text in [workflow, installation, standard]:
+            # Keep the portable safety/authority contract, not just a section title.
+            self.assertRegex(text, r"(?i)pending parent")
+            self.assertRegex(text, r"(?i)unrelated.*(?:index|staged)")
+            self.assertRegex(text, r"(?i)release[^.]+(?:source\s+claim|claim)")
+            self.assertRegex(text, r"(?i)fresh (?:source )?baseline")
+            for authority in [r"push", r"history rewrite", r"main\s+advancement"]:
+                self.assertRegex(text, rf"(?i){authority}")
+        self.assertIn("parent work need not be complete", workflow)
+        self.assertIn("status alone proves neither", workflow)
+        self.assertIn("does not execute Git", workflow)
+        for relative in ["AGENTS.md", "docs/README.md", "docs/context/prompt-routing.md",
+                         "docs/diagnostics/implementation-roadmap-skill.md"]:
+            self.assertIn("checkpoint", (repository_root / relative).read_text(encoding="utf-8"))
+        scenarios = json.loads((repository_root / "dev-tools/agent-evals/scenarios.json").read_text(encoding="utf-8"))
+        scenario = next(row for row in scenarios["scenarios"] if row["id"] == "reviewed-roadmap-chunk-checkpoint")
+        self.assertEqual(scenario["decisionExpectation"], "proceed")
+        self.assertIn("skills/manage-implementation-roadmaps/references/workflow.md", scenario["requiredSources"])
+        self.assertIn("pending", scenario["task"])
+        self.assertIn("unrelated", scenario["task"])
+
+    def test_complete_draft_renders_before_approval_without_execution_authority(self) -> None:
+        self.apply({"type": "discovery-recorded", "summary": "The complete proposal is ready to publish.",
+                    "sources": [], "constraints": [], "securityImpact": security_impact(), "decisionRequired": False})
+        self.apply({"type": "roadmap-defined", "increments": [increment_definition("increment-1", 1),
+                    increment_definition("increment-2", 2, depends_on=["increment-1"])]})
+        self.assertEqual(self.state["status"], "roadmap-review")
+        self.assertIsNone(self.state["roadmapApproval"])
+        self.assertEqual(len(self.state["increments"]), 2)
+        self.assertTrue(all(i["objective"] and len(i["acceptanceCriteria"]) == 2 for i in self.state["increments"]))
+        roadmap.write_project_files(self.repo, self.state)
+        rendered = (self.repo / self.state["paths"]["roadmap"]).read_text(encoding="utf-8")
+        for identifier in ("criterion-1", "criterion-2", "security-impact-reviewed"):
+            self.assertIn(identifier, rendered)
+        before = copy.deepcopy(self.state)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state, before)
+        self.assertEqual(self.state["chunks"], [])
+        self.assertEqual(self.state["evidence"], [])
+
+    def test_completed_chunk_does_not_complete_pending_technical_parent(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1,
+                                                     qualification="controlled-environment", allow_pending=True)])
+        self.execute_increment(1, "pending")
+        increment = self.state["increments"][0]
+        self.assertEqual(increment["completedChunks"], ["chunk-1"])
+        self.assertEqual(increment["status"], "implemented-pending-qualification")
+        evidence = roadmap.latest_criterion_evidence(self.state, "increment-1", "criterion-1")
+        self.assertEqual(evidence["outcome"], "pending")
+        before = copy.deepcopy(self.state)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "roadmap-completed", "summary": "A checkpoint cannot qualify hardware."})
+        self.assertEqual(self.state, before)
 
     def test_plan_separates_focused_and_increment_completion_tests(self) -> None:
         self.define_and_approve([increment_definition("increment-1", 1)])
@@ -938,7 +1960,9 @@ class RoadmapEngineTest(unittest.TestCase):
         )
         roadmap.write_project_files(self.repo, self.state)
 
-        self.assertEqual(self.state["status"], "final-approved")
+        self.assertEqual(self.state["status"], "completed")
+        self.assertTrue(self.state["finalApproval"])
+        self.assertIn("Final approval recorded", roadmap.next_checkpoint(self.state))
         self.assertFalse(report_path.exists())
         self.assertTrue(roadmap_path.exists())
         roadmap.ensure_documents_match(self.repo, self.state)
@@ -956,6 +1980,89 @@ class RoadmapEngineTest(unittest.TestCase):
                 }
             )
 
+    def finally_approved_fixture(self) -> dict:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        self.execute_increment(1)
+        self.apply({"type": "roadmap-completed", "summary": "Actual completed fixture."})
+        self.apply({"type": "final-approval-recorded", "note": "Explicit final approval."})
+        return copy.deepcopy(self.state)
+
+    def test_legacy_completion_normalization_preserves_all_terminal_facts(self):
+        legacy = self.finally_approved_fixture()
+        legacy["status"] = "final-approved"
+        roadmap.validate_state_shape(self.repo, legacy)
+        updated = roadmap.apply_event(legacy, {"type": "completion-status-normalized",
+            "authorityRef": "user-single-completion-status", "summary": "Normalize only current completion status."})
+        roadmap.validate_state_shape(self.repo, updated)
+        self.assertEqual(updated["status"], "completed")
+        self.assertEqual(updated["history"][:-1], legacy["history"])
+        self.assertEqual(updated["history"][-1]["type"], "completion-status-normalized")
+        self.assertEqual(roadmap.roadmap_fingerprint(updated), roadmap.roadmap_fingerprint(legacy))
+        for key in legacy.keys() - {"status", "updatedAt", "history"}:
+            self.assertEqual(updated[key], legacy[key], key)
+        self.assertIn("Final approval recorded", roadmap.next_checkpoint(updated))
+        self.assertIn("Final approval recorded", roadmap.next_checkpoint(legacy))
+        for event in [{"type": "completion-status-normalized", "authorityRef": "again", "summary": "Again"},
+                      {"type": "final-approval-recorded", "note": "Again"},
+                      {"type": "report-relocated", "reportPath": "docs/tmp/other.md", "reason": "Again"}]:
+            with self.subTest(event=event), self.assertRaisesRegex(roadmap.RoadmapError, "immutable"):
+                roadmap.apply_event(updated, event)
+
+    def test_normalization_refuses_incomplete_unapproved_malformed_and_override_inputs(self):
+        legacy = self.finally_approved_fixture()
+        legacy["status"] = "final-approved"
+        event = {"type": "completion-status-normalized", "authorityRef": "user-normalization", "summary": "Normalize"}
+        cases = []
+        for patch in [{"completion": None}, {"completion": {}}, {"completion": {"summary": "Done"}},
+                      {"completion": {"summary": 7, "completedAt": "old"}}, {"finalApproval": None},
+                      {"completion": {"summary": "Done", "completedAt": "not-a-date"}},
+                      {"completion": {"summary": "Done", "completedAt": "2026-10-22T01:00:00"}},
+                      {"finalApproval": {}}, {"finalApproval": {"note": "", "approvedAt": "old"}},
+                      {"finalApproval": {"note": "Approved", "approvedAt": "not-a-date"}},
+                      {"currentIncrementId": "increment-1"}, {"increments": []},
+                      {"blockers": [{"status": "open"}]}, {"status": "completed"}]:
+            cases.append({**copy.deepcopy(legacy), **patch})
+        incomplete = copy.deepcopy(legacy); incomplete["increments"][0]["status"] = "implemented-pending-qualification"; cases.append(incomplete)
+        for state in cases:
+            original = copy.deepcopy(state)
+            with self.subTest(state=state.get("status")), self.assertRaises(roadmap.RoadmapError):
+                roadmap.apply_event(state, event)
+            self.assertEqual(state, original)
+        for malformed in [{"type": event["type"], "summary": "No authority"}, {**event, "status": "completed"}, {**event, "finalApproval": {}}]:
+            with self.subTest(event=malformed), self.assertRaises(roadmap.RoadmapError):
+                roadmap.apply_event(legacy, malformed)
+
+    def test_final_approval_validation_requires_real_completed_facts_in_both_statuses(self):
+        approved = self.finally_approved_fixture()
+        for status in ["completed", "final-approved"]:
+            valid = {**copy.deepcopy(approved), "status": status}
+            roadmap.validate_state_shape(self.repo, valid)
+            for patch in [{"completion": None}, {"completion": {}}, {"currentIncrementId": "increment-1"}, {"status": "executing"}]:
+                with self.subTest(status=status, patch=patch), self.assertRaises(roadmap.RoadmapError):
+                    roadmap.validate_state_shape(self.repo, {**copy.deepcopy(valid), **patch})
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.validate_state_shape(self.repo, {**approved, "status": "final-approved", "finalApproval": None})
+
+    def test_cli_normalization_serializes_and_never_recreates_final_report(self):
+        legacy = self.finally_approved_fixture(); legacy["status"] = "final-approved"
+        roadmap.write_project_files(self.repo, legacy)
+        event = self.repo / "normalize.json"
+        event.write_text(json.dumps({"type": "completion-status-normalized", "authorityRef": "user-normalization", "summary": "One completion status"}), encoding="utf-8")
+        args = argparse.Namespace(repo=str(self.repo), state=legacy["paths"]["state"], event_file=str(event), dry_run=True)
+        self.assertEqual(roadmap.command_apply(args)["status"], "completed")
+        self.assertEqual(json.loads((self.repo / args.state).read_text())["status"], "final-approved")
+        args.dry_run = False
+        result = roadmap.command_apply(args)
+        self.assertEqual(result["status"], "completed")
+        self.assertFalse(result["reportAvailable"])
+        saved = json.loads((self.repo / args.state).read_text())
+        self.assertEqual(saved["history"][:-1], legacy["history"])
+        roadmap.command_render(argparse.Namespace(repo=str(self.repo), state=args.state, dry_run=False))
+        roadmap.ensure_documents_match(self.repo, saved)
+        self.assertFalse((self.repo / legacy["paths"]["report"]).exists())
+        with self.assertRaisesRegex(roadmap.RoadmapError, "immutable"):
+            roadmap.command_apply(args)
+
     def test_state_is_written_before_generated_documents(self) -> None:
         writes: list[Path] = []
         original_atomic_write = roadmap.atomic_write
@@ -969,6 +2076,37 @@ class RoadmapEngineTest(unittest.TestCase):
             self.repo / self.state["paths"]["state"],
         )
         self.assertEqual(len(writes), 3)
+
+    def test_interrupted_cli_publication_recovers_without_lost_event(self) -> None:
+        roadmap.write_project_files(self.repo, self.state)
+        event = self.repo / "event.json"
+        event.write_text(json.dumps({"type": "discovery-recorded", "summary": "Publication recovery fixture", "sources": [], "constraints": [], "securityImpact": security_impact(), "decisionRequired": False}))
+        args = argparse.Namespace(repo=str(self.repo), state=self.state["paths"]["state"], event_file=str(event), dry_run=False)
+        original = roadmap.atomic_write
+        def interrupted(path, content):
+            if path == self.repo / self.state["paths"]["roadmap"]:
+                raise OSError("injected projection failure")
+            original(path, content)
+        try:
+            roadmap.atomic_write = interrupted
+            with self.assertRaises(OSError):
+                roadmap.command_apply(args)
+        finally:
+            roadmap.atomic_write = original
+        roadmap.command_render(args)
+        _, recovered = roadmap.load_state(self.repo, args.state)
+        self.assertEqual(recovered["discovery"]["summary"], "Publication recovery fixture")
+        roadmap.ensure_documents_match(self.repo, recovered)
+        self.assertEqual(len(recovered["history"]), 1)
+
+    def test_new_repository_policy_cannot_close_with_declarations_alone(self) -> None:
+        helper = self.repo / "dev-tools/helpers/development_control_plane.py"
+        helper.parent.mkdir(parents=True)
+        helper.write_text("# fixture marker\n")
+        new = roadmap.initial_state(self.repo, {"name": "Governed", "slug": "governed", "objective": "Qualified completion"})
+        self.assertEqual(new["evidencePolicy"], "control-plane-v1")
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.require_control_completion(self.repo, new)
 
     def test_empty_and_completed_roadmaps_reject_completion_events(self) -> None:
         with self.assertRaisesRegex(roadmap.RoadmapError, "at least one increment"):

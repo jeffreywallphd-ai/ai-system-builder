@@ -3,6 +3,14 @@ import { describe, expect, it } from "../../../../testing/node-test";
 import { mapImageGenerationRequestToComfyUiPrompt } from "../comfyUiImageGenerationWorkflowMapper";
 
 describe("comfyUiImageGenerationWorkflowMapper", () => {
+  it('rejects excessive requests and selected host defaults without flooring invalid batches',()=>{
+    for(const [field,values] of [['width',[63,4097,512.5,NaN,Infinity]],['height',[63,4097]],['steps',[0,201,1.5]],['numImages',[0,9,1.5]]] as const)
+      for(const value of values)expect(()=>mapImageGenerationRequestToComfyUiPrompt({prompt:'Valid',[field]:value},{defaultCheckpoint:'model'})).toThrow();
+    for(const defaults of [{defaultWidth:4097},{defaultHeight:Infinity},{defaultSteps:201},{defaultSampler:{}},{defaultScheduler:[]}])
+      expect(()=>mapImageGenerationRequestToComfyUiPrompt({prompt:'Valid'},{defaultCheckpoint:'model',...defaults} as any)).toThrow();
+    const output=mapImageGenerationRequestToComfyUiPrompt({prompt:'Valid',width:64,height:64,steps:1,numImages:1},{defaultCheckpoint:'model',defaultWidth:4097,defaultHeight:Infinity,defaultSteps:201});
+    expect(output.prompt['4'].inputs.batch_size).toBe(1);expect(output.prompt['4'].inputs.width).toBe(64);
+  });
   it("maps prompt/negative prompt", () => {
     const payload = mapImageGenerationRequestToComfyUiPrompt({ prompt: "sunset", negativePrompt: "blurry" }, { defaultCheckpoint: "sdxl.safetensors" });
     expect(payload.prompt["2"].inputs.text).toBe("sunset");

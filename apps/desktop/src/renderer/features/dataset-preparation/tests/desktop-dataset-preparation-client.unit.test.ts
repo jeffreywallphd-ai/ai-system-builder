@@ -1,8 +1,157 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createDesktopDatasetPreparationClient } from "../api/desktopDatasetPreparationClient";
+import { createFilesystemArtifactBrowserReadAdapter } from "../../../../../../../modules/adapters/storage/filesystem/artifact-store/createFilesystemArtifactBrowserReadAdapter";
+import { BrowseArtifactsUseCase } from "../../../../../../../modules/application/use-cases/browse-artifacts.use-case";
+import { ReadArtifactDetailUseCase } from "../../../../../../../modules/application/use-cases/read-artifact-detail.use-case";
+
+// Dataset-only fixtures deny unrelated provider operations. These methods keep
+// the existing required preload shape without a credential or network path.
+function deniedProviderBridge() {
+  const unavailable = async () => ({ ok: false, error: { code: "unavailable", message: "Provider operations are outside this Dataset client fixture." } });
+  return { getHuggingFaceTokenStatus: unavailable, setHuggingFaceToken: unavailable,
+    clearHuggingFaceToken: unavailable, browseHuggingFaceNamespaceDatasets: unavailable,
+    browseHuggingFaceDatasetParquetFiles: unavailable };
+}
 
 describe("desktop dataset preparation client", () => {
+  const makeReplayClient = (readArtifactDetail = vi.fn(async () => ({ ok: true, value: { artifact: { locator: { storageKey: "uploads/source.csv" }, originalName: "source.csv", mediaType: "text/csv" } } }))) => {
+    const host = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    host.window ??= {} as Window & typeof globalThis;
+    host.window.desktopApi = { readArtifactDetail } as never;
+    return { client: createDesktopDatasetPreparationClient(), readArtifactDetail };
+  };
+  const reference = { artifactId: "uploads/source.csv", storageKey: "uploads/source.csv" };
+  it("resolves exact key-derived source identity with explicit workspace and fixed sequential reads", async () => {
+    let active = 0, peak = 0;
+    const read = vi.fn(async (locator: { storageKey: string }) => {
+      peak = Math.max(peak, ++active); await Promise.resolve(); --active;
+      return { ok: true, value: { artifact: { locator, originalName: "source.csv", mediaType: "text/csv" } } };
+    });
+    const { client } = makeReplayClient(read as never);
+    const refs = Array.from({ length: 100 }, (_, i) => ({ artifactId: `uploads/source-${i}.csv`, storageKey: `uploads/source-${i}.csv` }));
+    const rows = await client.readReplaySourceArtifacts!("workspace-a", refs, () => true);
+    expect(rows).toHaveLength(100); expect(peak).toBe(1);
+    expect(rows[99].artifactId).toBe(refs[99].storageKey);
+    expect(read.mock.calls.every((call: any) => call[1].workspaceId === "workspace-a")).toBe(true);
+  });
+  it.each([[], Array(101).fill(reference), [reference, reference], [{ ...reference, artifactId: "legacy-id" }], [{ ...reference, storageKey: "../source.csv" }]])("rejects invalid reference set before any metadata read", async refs => {
+    const { client, readArtifactDetail } = makeReplayClient();
+    await expect(client.readReplaySourceArtifacts!("workspace-a", refs, () => true)).rejects.toThrow("Saved source files could not be confirmed in this workspace.");
+    expect(readArtifactDetail).not.toHaveBeenCalled();
+  });
+  it.each([undefined, { ok: false, error: { message: "private source detail" } }, { ok: true, value: {} }, { ok: true, value: { artifact: { locator: { storageKey: "other/source.csv" } } } }, { ok: true, value: { artifact: { locator: { storageKey: reference.storageKey }, mediaType: {} } } }])("rejects missing, denied, changed-key or malformed replies with fixed safe copy", async response => {
+    const { client } = makeReplayClient(vi.fn(async () => response) as never);
+    await expect(client.readReplaySourceArtifacts!("workspace-a", [reference], () => true)).rejects.toThrow("Saved source files could not be confirmed in this workspace.");
+  });
+  it("captures reference scalars and stops after a stale reply without reading another key", async () => {
+    let resolve!: (value: any) => void, current = true;
+    const read = vi.fn(() => new Promise<any>(yes => { resolve = yes; }));
+    const { client } = makeReplayClient(read as never);
+    const refs = [{ ...reference }, { artifactId: "uploads/next.csv", storageKey: "uploads/next.csv" }];
+    const pending = client.readReplaySourceArtifacts!("workspace-a", refs, () => current);
+    refs[1].artifactId = refs[1].storageKey = "uploads/mutated.csv";
+    current = false; resolve({ ok: true, value: { artifact: { locator: { storageKey: reference.storageKey } } } });
+    await expect(pending).rejects.toThrow("Saved source files could not be confirmed in this workspace.");
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+  it("uses captured keys after caller mutation while the first lookup is pending", async () => {
+    let resolve!: (value: any) => void;
+    const read = vi.fn().mockImplementationOnce(() => new Promise<any>(yes => { resolve = yes; })).mockImplementation(async (locator: any) => ({ ok: true, value: { artifact: { locator } } }));
+    const { client } = makeReplayClient(read as never);
+    const refs = [{ ...reference }, { artifactId: "uploads/next.csv", storageKey: "uploads/next.csv" }];
+    const pending = client.readReplaySourceArtifacts!("workspace-a", refs, () => true);
+    refs[1].artifactId = refs[1].storageKey = "uploads/mutated.csv";
+    resolve({ ok: true, value: { artifact: { locator: { storageKey: reference.storageKey } } } });
+    expect((await pending)[1].artifactId).toBe("uploads/next.csv"); expect(read.mock.calls[1][0]).toEqual({ storageKey: "uploads/next.csv" });
+  });
+  it("bounds the whole metadata batch to15 seconds without claiming IPC cancellation", async () => {
+    vi.useFakeTimers();
+    try {
+      let resolve!: (value: any) => void;
+      const read = vi.fn(() => new Promise<any>(yes => { resolve = yes; })); const { client } = makeReplayClient(read as never);
+      const pending = client.readReplaySourceArtifacts!("workspace-a", [reference, { artifactId: "uploads/next.csv", storageKey: "uploads/next.csv" }], () => true);
+      const denied = expect(pending).rejects.toThrow("Saved source files could not be confirmed in this workspace.");
+      await vi.advanceTimersByTimeAsync(15_001); await denied; expect(read).toHaveBeenCalledTimes(1);
+      resolve({ ok: true, value: { artifact: { locator: { storageKey: reference.storageKey } } } }); await Promise.resolve();
+      expect(read).toHaveBeenCalledTimes(1);
+    } finally { vi.useRealTimers(); }
+  });
+  it("uses the real capped adapter/use cases and exact-key client to resolve a source older than the first250", async () => {
+    const records = Array.from({ length: 251 }, (_, index) => ({ storageKey: `uploads/source-${index}.csv`, artifactFamily: "tabular", mediaType: "text/csv", originalName: `source-${index}.csv`, createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, index)).toISOString(), sourceKind: "upload" }));
+    const reads: string[] = [];
+    const catalog = {
+      browseArtifactCatalogRecords: async (_request: any, context: any) => ({ ok: true, value: { records: context.workspaceId === "workspace-a" ? records : [] } }),
+      readArtifactCatalogRecord: async (request: any, context: any) => {
+        reads.push(context.workspaceId); const record = context.workspaceId === "workspace-a" ? records.find(row => row.storageKey === request.storageKey) : undefined;
+        return record ? { ok: true, value: { record } } : { ok: false, error: { code: "not-found", message: "Synthetic missing source" } };
+      },
+    };
+    const adapter = createFilesystemArtifactBrowserReadAdapter({ rootDirectory: ".", artifactCatalogRead: catalog, artifactCatalogAppend: {} } as never);
+    const workspaceRepository = { readWorkspace: async (id: string) => ({ id, status: "active" }) };
+    const authority = vi.fn(async (request: any) => { if (request.workspace.id !== "workspace-a") throw new Error("Denied fixture workspace"); });
+    const deps = { artifactBrowserMetadataRead: adapter, workspaceRepository, workspaceAuthorization: { authorizeWorkspaceOperation: authority } } as never;
+    const browse = new BrowseArtifactsUseCase(deps), detail = new ReadArtifactDetailUseCase(deps);
+    const readArtifactDetail = vi.fn((locator: any, context: any) => detail.execute({ locator }, context));
+    const { client } = makeReplayClient(readArtifactDetail as never);
+    (window.desktopApi as any).browseArtifacts = (input: any) => browse.execute({}, { workspaceId: input.workspaceId });
+    const page = await client.browseSourceArtifacts("workspace-a");
+    expect(page).toHaveLength(250); expect(page.some(row => row.storageKey === records[0].storageKey)).toBe(false);
+    const refs = [{ artifactId: records[0].storageKey, storageKey: records[0].storageKey }];
+    expect(await client.readReplaySourceArtifacts!("workspace-a", refs, () => true)).toEqual([{ artifactId: records[0].storageKey, storageKey: records[0].storageKey, label: records[0].originalName, mediaType: "text/csv" }]);
+    expect(reads).toEqual(["workspace-a"]);
+    expect(authority.mock.calls.some(([request]) => request.operation === "artifact.detail.read" && request.requiredScopes.includes("artifact:read"))).toBe(true);
+    await expect(client.readReplaySourceArtifacts!("workspace-b", refs, () => true)).rejects.toThrow("Saved source files could not be confirmed in this workspace.");
+    expect(reads).toEqual(["workspace-a"]);
+  });
+  it("rejects malformed source-list envelopes and preserves a genuinely empty result", async () => {
+    const host = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    host.window ??= {} as Window & typeof globalThis;
+    const browseArtifacts = vi.fn();
+    host.window.desktopApi = { browseArtifacts } as never;
+    const client = createDesktopDatasetPreparationClient();
+    for (const value of [undefined, null, {}, { items: null }, { items: "invalid" }]) {
+      browseArtifacts.mockResolvedValueOnce({ ok: true, value });
+      await expect(client.browseSourceArtifacts("workspace-a")).rejects.toThrow("Source file list is incomplete.");
+    }
+    browseArtifacts.mockResolvedValueOnce({ ok: true, value: { items: [] } });
+    expect(await client.browseSourceArtifacts("workspace-a")).toEqual([]);
+  });
+  it("rejects malformed version lists instead of reporting a successful empty history", async () => {
+    const host = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    host.window ??= {} as Window & typeof globalThis;
+    const listDatasetVersions = vi.fn();
+    host.window.desktopApi = { listDatasetVersions } as never;
+    const client = createDesktopDatasetPreparationClient();
+    for (const value of [undefined, {}, { versions: null }, { versions: "invalid" }]) {
+      listDatasetVersions.mockResolvedValueOnce({ ok: true, value });
+      await expect(client.listVersions!("workspace-a")).rejects.toThrow("Dataset version history is incomplete.");
+    }
+    listDatasetVersions.mockResolvedValueOnce({ ok: true, value: { versions: [] } });
+    expect(await client.listVersions!("workspace-a")).toEqual([]);
+  });
+  it("preserves cancellation truth and rejects substituted or inconsistent replies", async () => {
+    const host = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    host.window ??= {} as Window & typeof globalThis;
+    const cancelPrepareTrainingDatasetTask = vi.fn();
+    host.window.desktopApi = { cancelPrepareTrainingDatasetTask } as never;
+    const client = createDesktopDatasetPreparationClient();
+    for (const value of [
+      { requestId: "task", cancelled: false, status: "running" },
+      { requestId: "task", cancelled: false, status: "unknown" },
+      { requestId: "task", cancelled: true, status: "cancelled" },
+    ]) {
+      cancelPrepareTrainingDatasetTask.mockResolvedValueOnce({ ok: true, value });
+      expect(await client.cancelPrepareTrainingDatasetTask("task", "workspace-a")).toEqual({ ok: true, value });
+    }
+    for (const value of [undefined, {}, { requestId: "other", cancelled: true, status: "cancelled" },
+      { requestId: "task", cancelled: true, status: "running" }, { requestId: "task", cancelled: false, status: "cancelled" }]) {
+      cancelPrepareTrainingDatasetTask.mockResolvedValueOnce({ ok: true, value });
+      expect(await client.cancelPrepareTrainingDatasetTask("task", "workspace-a")).toMatchObject({ ok: false });
+    }
+    expect(cancelPrepareTrainingDatasetTask).toHaveBeenCalledWith({ requestId: "task", workspaceId: "workspace-a" });
+  });
+
   it("maps success response from preload bridge", async () => {
     const hostWindow = globalThis as typeof globalThis & {
       window?: Window & typeof globalThis;
@@ -73,6 +222,7 @@ describe("desktop dataset preparation client", () => {
     });
 
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({
@@ -154,6 +304,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -204,6 +355,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -264,6 +416,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({
@@ -300,6 +453,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({
@@ -333,6 +487,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -443,6 +598,7 @@ describe("desktop dataset preparation client", () => {
         },
       });
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -577,6 +733,7 @@ describe("desktop dataset preparation client", () => {
     };
     hostWindow.window ??= {} as Window & typeof globalThis;
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -619,6 +776,74 @@ describe("desktop dataset preparation client", () => {
     expect(JSON.stringify(result)).not.toContain("secret");
   });
 
+  it.each([
+    [
+      "ocr_unavailable",
+      "ocr_unavailable",
+      "Text recognition is unavailable. Choose an installed Windows recognition language, or turn off scanned-PDF recognition.",
+      "normalization",
+    ],
+    [
+      "ocr_input_invalid",
+      "ocr_input_invalid",
+      "The scanned PDF or its settings could not be verified. Select the source again and check the recognition language.",
+      "normalization",
+    ],
+    [
+      "ocr_unknown",
+      "ocr_unknown",
+      "Dataset preparation could not finish. Review the selected files and settings, then retry.",
+      "normalization",
+    ],
+    [
+      "ocr_unavailable/private",
+      "task_failed",
+      "Dataset preparation could not finish. Review the selected files and settings, then retry.",
+      "normalization",
+    ],
+    [
+      "ocr_unavailable",
+      "ocr_unavailable",
+      "Text recognition is unavailable. Choose an installed Windows recognition language, or turn off scanned-PDF recognition.",
+      "private-stage",
+    ],
+  ])("safely projects OCR task failure case %# (%s)", async (inputCode, code, message, stage) => {
+    const hostWindow = globalThis as typeof globalThis & {
+      window?: Window & typeof globalThis;
+    };
+    hostWindow.window ??= {} as Window & typeof globalThis;
+    const previous = hostWindow.window.desktopApi;
+    try {
+      hostWindow.window.desktopApi = {
+        ...previous,
+        readPrepareTrainingDatasetTask: async () => ({
+          ok: true,
+          value: {
+            status: "failed",
+            error: {
+              code: inputCode,
+              stage,
+              message: "C:\\private\\source.pdf token=secret prompt=private-content",
+              details: { path: "private-content", diagnosticClass: "SupplierPrivateError" },
+            },
+          },
+        }),
+      } as never;
+      const result = await createDesktopDatasetPreparationClient().readPrepareTrainingDatasetTask("ocr-task");
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code,
+          message,
+          ...(stage === "normalization" ? { details: { stage, reasonCode: code } } : {}),
+        },
+      });
+      expect(JSON.stringify(result)).not.toMatch(/private|secret|SupplierPrivateError/);
+    } finally {
+      hostWindow.window.desktopApi = previous;
+    }
+  });
+
   it("maps workspace-bound dataset review bridge responses", async () => {
     const hostWindow = globalThis as typeof globalThis & {
       window?: Window & typeof globalThis;
@@ -658,6 +883,7 @@ describe("desktop dataset preparation client", () => {
       },
     }));
     hostWindow.window.desktopApi = {
+      ...deniedProviderBridge(),
       uploadArtifact: async () => ({ ok: false }),
       getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
@@ -712,4 +938,23 @@ describe("desktop dataset preparation client", () => {
       }),
     );
   });
+  it("formats only validated memory facts from task errors", async () => {
+    const hostWindow = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    hostWindow.window ??= {} as Window & typeof globalThis;
+    const previous = hostWindow.window.desktopApi;
+    try {
+      hostWindow.window.desktopApi = { ...previous, readPrepareTrainingDatasetTask: async () => ({ ok: true, value: { status: "failed", error: {
+        code: "generation_insufficient_resources", stage: "generation", message: "private-fixture",
+        memoryShortfall: { resource: "ram", requiredBytes: 3758096384, availableBytes: 3503902720, allowedOverflowBytes: 0, path: "private-fixture" },
+      } } }) } as any;
+      const result = await createDesktopDatasetPreparationClient().readPrepareTrainingDatasetTask("memory-task");
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).toContain("Free at least 243 MiB of RAM");
+      expect(JSON.stringify(result)).not.toContain("private-fixture");
+      expect(result).toMatchObject({ ok: false, error: { details: { memoryShortfall: {
+        resource: "ram", requiredBytes: 3758096384, availableBytes: 3503902720, allowedOverflowBytes: 0,
+      } } } });
+    } finally { hostWindow.window.desktopApi = previous; }
+  });
+
 });

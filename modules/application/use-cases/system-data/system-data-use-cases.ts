@@ -1,4 +1,5 @@
 import type {
+  PersistedSystemDataRecord,
   SystemDataReleaseDefinitionPort,
   SystemDataRepositoryPort,
   SystemDataResolvedDefinition,
@@ -85,6 +86,54 @@ export class ReleaseBoundSystemDataUseCases {
     }
   }
 
+  /** Uses the existing record/audit transaction. Only the form host calls this path. */
+  public async createFormRecordOnce(command: {
+    readonly workspaceId: CreateSystemDataRecordCommand["workspaceId"];
+    readonly releaseId: CreateSystemDataRecordCommand["releaseId"];
+    readonly entityType: string;
+    readonly formId: string;
+    readonly actorId: string;
+    readonly recordId: string;
+    readonly values: SystemDataValues;
+    readonly reauthorize: () => Promise<SystemDataPrincipal | undefined>;
+  }): Promise<"completed" | "already-recorded" | "pending" | "denied" | "invalid"> {
+    if (!/^form-[a-f0-9]{64}$/.test(command.recordId) || safeActor(command.actorId) !== command.actorId) return "invalid";
+    const admission = async () => {
+      const definition = await this.dependencies.definitions.resolve(command.workspaceId, command.releaseId, command.entityType, { formInstanceId: command.formId });
+      const principal = await command.reauthorize();
+      return definition && principal?.actorId === command.actorId && authorized(principal, definition, "create")
+        ? { definition, principal } : undefined;
+    };
+    const admitted = await admission();
+    if (!admitted) return "denied";
+    const validation = validateValues(admitted.definition.descriptor.fields, command.values);
+    if (!validation.ok) return "invalid";
+    const timestamp = this.now();
+    const record: PersistedSystemDataRecord = { recordId: command.recordId, targetWorkspaceId: command.workspaceId,
+      releaseId: command.releaseId, entityType: command.entityType, revision: 1, values: validation.value,
+      creationSource: "published-form-v1",
+      createdAt: timestamp, createdBy: command.actorId, updatedAt: timestamp, updatedBy: command.actorId };
+    const auditContext = { ...command, principal: admitted.principal };
+    const audit = { ...this.auditEntry(auditContext, "create", "allowed", command.recordId, Object.keys(record.values), timestamp),
+      auditId: `audit.${command.recordId}` };
+    try {
+      await this.dependencies.repository.createRecordWithAudit(record, audit);
+      return "completed";
+    } catch {
+      // Recovery proves the same transactional effect. It never repeats a different action.
+      if (!await admission()) return "denied";
+      try {
+        const stored = await this.dependencies.repository.readRecord(command.workspaceId, command.releaseId, command.entityType, command.recordId);
+        if (stored?.creationSource === "published-form-v1" && stored.createdBy === command.actorId && stored.recordId === command.recordId &&
+            stored.targetWorkspaceId === command.workspaceId && stored.releaseId === command.releaseId &&
+            stored.entityType === command.entityType) return "already-recorded";
+      } catch {
+        // The caller gets a stable receipt and can retry with the same submission ID.
+      }
+      return "pending";
+    }
+  }
+
   public async read(query: ReadSystemDataRecordQuery): Promise<SystemDataResult<SystemDataRecord>> {
     const definition = await this.definition(query);
     if (!definition) return unavailable();
@@ -117,7 +166,7 @@ export class ReleaseBoundSystemDataUseCases {
       return validation;
     }
     const timestamp = this.now();
-    const updated: SystemDataRecord = {
+    const updated: PersistedSystemDataRecord = {
       ...current,
       revision: current.revision + 1,
       values: validation.value,
@@ -267,7 +316,8 @@ function validIsoDate(value: string): boolean {
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }
 
-function maskRecord(record: SystemDataRecord, definition: SystemDataResolvedDefinition, principal: SystemDataPrincipal): SystemDataRecord {
+function maskRecord({ creationSource: _creationSource, ...record }: PersistedSystemDataRecord,
+  definition: SystemDataResolvedDefinition, principal: SystemDataPrincipal): SystemDataRecord {
   if (principal.roles.some((role) => definition.unmaskRoles.includes(role))) return record;
   const protectedFields = new Set(definition.descriptor.fields.filter((field) => field.protected).map((field) => field.name));
   return { ...record, values: Object.fromEntries(Object.entries(record.values).filter(([key]) => !protectedFields.has(key))) };

@@ -1,8 +1,12 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import {
+  SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS,
+  SYSTEM_FOUNDATION_LAYOUT_PRESETS,
+} from "../../../../application/services/asset-packs/system-packs";
 import type {
   AssetInstance,
   AssetPlacement,
@@ -17,6 +21,11 @@ import {
   SystemComposerStructureEditor,
   SystemLayoutGallery,
 } from "../SystemComposerStructureEditor";
+import {
+  deriveProtectedSystemInstanceIds,
+  removeSystemComposerSubtree,
+  type SystemComposerDraft,
+} from "../systemComposerDraft";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -120,12 +129,20 @@ describe("SystemComposerStructureEditor interactions", () => {
     );
     expect(treeItems).toHaveLength(3);
     expect(treeItems[1]?.getAttribute("aria-selected")).toBe("true");
+    expect(document.getElementById(treeItems[0]!.getAttribute("aria-labelledby")!)?.textContent).toBe("System root");
+    expect(document.getElementById(treeItems[0]!.getAttribute("aria-labelledby")!)?.textContent).not.toContain("Application shell");
+    for (const item of treeItems.filter(item => item.getAttribute("aria-expanded") === "true")) {
+      const ownedGroup = document.getElementById(item.getAttribute("aria-owns")!);
+      expect(ownedGroup?.getAttribute("role")).toBe("group");
+      expect(ownedGroup?.querySelector('[role="treeitem"]')).not.toBeNull();
+    }
     expect(container!.textContent).toContain("System root");
     expect(container!.textContent).toContain("Application shell");
 
     await fire(treeItems[1]!, "keydown", { key: "ArrowUp" });
     expect(onSelect).toHaveBeenCalledWith("instance.root");
     await fire(treeItems[0]!, "keydown", { key: "ArrowLeft" });
+    expect(treeItems[0]?.hasAttribute("aria-owns")).toBe(false);
     expect(
       container!.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'),
     ).toHaveLength(1);
@@ -133,6 +150,28 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(
       container!.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'),
     ).toHaveLength(3);
+    const toggle = container!.querySelector<HTMLButtonElement>(".system-composer__tree-toggle")!;
+    expect(toggle.getAttribute("aria-hidden")).toBe("true");
+    await click(toggle);
+    expect(document.activeElement).toBe(treeItems[0]);
+    expect(onSelect).toHaveBeenLastCalledWith("instance.root");
+    await fire(treeItems[0]!, "keydown", { key: "ArrowRight" });
+
+    const layersTab = container!.querySelector<HTMLButtonElement>("#system-composer-sidebar-tab-layers")!;
+    const propertiesTab = container!.querySelector<HTMLButtonElement>("#system-composer-sidebar-tab-properties")!;
+    const stylingTab = container!.querySelector<HTMLButtonElement>("#system-composer-sidebar-tab-styling")!;
+    layersTab.focus();
+    await fire(layersTab, "keydown", { key: "ArrowRight" });
+    expect(document.activeElement).toBe(propertiesTab);
+    expect(propertiesTab.getAttribute("aria-selected")).toBe("true");
+    await fire(propertiesTab, "keydown", { key: "ArrowRight" });
+    expect(document.activeElement).toBe(stylingTab);
+    await fire(stylingTab, "keydown", { key: "End" });
+    expect(document.activeElement).toBe(layersTab);
+    await fire(layersTab, "keydown", { key: "Home" });
+    expect(document.activeElement).toBe(propertiesTab);
+    await fire(propertiesTab, "keydown", { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(layersTab);
 
     expect(
       Array.from(
@@ -281,7 +320,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(button("Undo").disabled).toBe(true);
     await click(button("Redo"));
     expect(onRedo).toHaveBeenCalledTimes(1);
-    expect(button("Remove selected subtree").disabled).toBe(true);
+    expect(button("Remove asset").disabled).toBe(true);
     expect(onRemove).not.toHaveBeenCalled();
   });
 
@@ -498,47 +537,57 @@ describe("SystemComposerStructureEditor interactions", () => {
 
   it("offers predefined layouts as a native single-choice gallery", async () => {
     const onSelect = vi.fn();
-    const standard = applicationLayout(
-      "builtin.layout.application.standard",
-      ["top-bar", "content"],
-      [["top-bar"], ["content"]],
-      "single",
-    );
-    const sidebar = applicationLayout(
-      "builtin.layout.application.navigation",
-      ["top-bar", "start-sidebar", "content"],
-      [
-        ["top-bar", "top-bar"],
-        ["start-sidebar", "content"],
-      ],
-      "start-content",
-    );
-
-    render(
-      <SystemLayoutGallery
-        layouts={[standard, sidebar]}
-        selectedDefinitionId={standard.definitionId}
+    const presets = SYSTEM_FOUNDATION_LAYOUT_PRESETS.filter((preset) => preset.kind === "application-shell");
+    const layouts = presets.map((preset) => ({
+      ...applicationLayout(preset.presetId, preset.sourceOrder, preset.responsive.regular.areas, preset.responsive.regular.columnPattern),
+      displayName: preset.displayName,
+      slots: preset.slots,
+    }));
+    function LayoutFixture({ disabled = false }: { disabled?: boolean }) {
+      const [selected, setSelected] = useState(layouts[0]!.definitionId);
+      return <SystemLayoutGallery
+        layouts={layouts}
+        selectedDefinitionId={selected}
+        disabled={disabled}
+        mode="change"
         compact
-        onSelect={onSelect}
-      />,
-    );
+        hideLegend
+        onSelect={(layout) => { onSelect(layout); setSelected(layout.definitionId); }}
+      />;
+    }
+    render(<LayoutFixture />);
 
     const choices = Array.from(
       container!.querySelectorAll<HTMLInputElement>(
         'input[name="system-layout"]',
       ),
     );
-    expect(choices).toHaveLength(2);
+    expect(choices.map((choice) => choice.value)).toEqual(SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS);
+    expect(container!.querySelector("fieldset > legend")?.textContent).toBe("Layout");
     expect(choices[0]?.checked).toBe(true);
-    expect(
-      container!.querySelector<HTMLElement>(
-        '[data-layout-area="start-sidebar"]',
-      )?.style.gridArea,
-    ).toBe("start-sidebar");
-    await act(async () => {
-      choices[1]?.click();
-    });
-    expect(onSelect).toHaveBeenCalledWith(sidebar);
+
+    for (const [index, choice] of choices.entries()) {
+      const layout = layouts[index]!;
+      expect(choice.type).toBe("radio");
+      const label = choice.labels?.[0];
+      expect(label?.querySelector("strong")?.textContent).toBe(layout.displayName);
+      expect(label?.querySelector("[aria-hidden=true]")).toBe(choice.nextElementSibling);
+      const regions = Array.from(label?.querySelectorAll<HTMLElement>("[data-layout-area]") ?? []);
+      expect(regions.map((region) => region.style.gridArea)).toEqual(presets[index]!.sourceOrder);
+      choice.focus();
+      expect(document.activeElement).toBe(choice);
+      if (index > 0) {
+        await click(choice);
+        expect(onSelect).toHaveBeenLastCalledWith(layout);
+      }
+      expect(choices.filter((item) => item.checked)).toEqual([choice]);
+    }
+
+    await act(async () => root!.render(<LayoutFixture disabled />));
+    expect(choices.every((choice) => choice.matches(":disabled"))).toBe(true);
+    await click(choices[0]!);
+    expect(onSelect).toHaveBeenCalledTimes(layouts.length - 1);
+    expect(choices.at(-1)?.checked).toBe(true);
   });
 
   it("loads layouts on demand and adds compatible elements through a container-scoped modal", async () => {
@@ -559,10 +608,10 @@ describe("SystemComposerStructureEditor interactions", () => {
     const onAdd = vi.fn();
     const onPlace = vi.fn();
     const onTargetSlotChange = vi.fn();
-    const loadLayouts = vi.fn().mockResolvedValue({
-      ok: true,
-      value: { items: [shell] },
-    });
+    const pendingLayouts = Promise.withResolvers<{ ok: true; value: { items: typeof shell[] } }>();
+    const loadLayouts = vi.fn()
+      .mockRejectedValueOnce(new Error("Synthetic transport failure"))
+      .mockReturnValue(pendingLayouts.promise);
     const loadCompatibleAssets = vi.fn().mockResolvedValue({
       ok: true,
       value: { items: [card, formInput] },
@@ -608,18 +657,28 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(loadLayouts).not.toHaveBeenCalled();
     await click(ariaButton("Show layouts"));
     await flushAsync();
-    expect(loadLayouts).toHaveBeenCalledTimes(1);
+    expect(container!.textContent).toContain("Unable to load predefined layouts. Reopen Layouts to retry.");
+    await click(ariaButton("Hide layouts"));
+    await click(ariaButton("Show layouts"));
+    await click(ariaButton("Hide layouts"));
+    await click(ariaButton("Show layouts"));
+    expect(loadLayouts).toHaveBeenCalledTimes(2);
+    pendingLayouts.resolve({ ok: true, value: { items: [shell] } });
+    await flushAsync();
+    expect(loadLayouts).toHaveBeenCalledTimes(2);
     expect(
       container!.querySelectorAll<HTMLInputElement>(
         'input[name="system-layout"]',
       ),
     ).toHaveLength(1);
 
-    const addElement = ariaButton("Add an element inside Application shell");
+    const addElement = ariaButton("Add element to content in Application shell");
+    expect(addElement.closest("[data-slot-id]")?.getAttribute("data-slot-id")).toBe("content");
+    expect(container!.querySelector(".system-composer__canvas-node-heading .system-composer__add-element")).toBeNull();
     await click(addElement);
     await flushAsync();
     expect(loadCompatibleAssets).toHaveBeenCalledWith(
-      { parentInstanceId: "instance.shell", slotId: "top-bar" },
+      { parentInstanceId: "instance.shell", slotId: "content" },
       { limit: 48 },
     );
     const modal = document.querySelector<HTMLElement>('[role="dialog"]');
@@ -643,18 +702,19 @@ describe("SystemComposerStructureEditor interactions", () => {
     const destination = Array.from(
       modal!.querySelectorAll<HTMLSelectElement>("select"),
     ).find((candidate) => candidate !== typeFilter)!;
+    expect(destination.value).toBe("content");
     await act(async () => {
-      destination.value = "content";
+      destination.value = "top-bar";
       destination.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await flushAsync();
     expect(loadCompatibleAssets).toHaveBeenLastCalledWith(
-      { parentInstanceId: "instance.shell", slotId: "content" },
+      { parentInstanceId: "instance.shell", slotId: "top-bar" },
       { limit: 48 },
     );
     expect(onTargetSlotChange).toHaveBeenLastCalledWith({
       parentInstanceId: "instance.shell",
-      slotId: "content",
+      slotId: "top-bar",
     });
     const newCard = Array.from(
       modal!.querySelectorAll<HTMLButtonElement>(
@@ -667,7 +727,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     await click(newCard!);
     expect(onAdd).toHaveBeenCalledWith(card, {
       parentInstanceId: "instance.shell",
-      slotId: "content",
+      slotId: "top-bar",
     });
     expect(document.querySelector('[role="dialog"]')).toBeNull();
 
@@ -684,10 +744,188 @@ describe("SystemComposerStructureEditor interactions", () => {
     await click(existingCard!);
     expect(onPlace).toHaveBeenCalledWith("instance.card", {
       parentInstanceId: "instance.shell",
-      slotId: "top-bar",
+      slotId: "content",
     });
+    addElement.focus();
+    await click(addElement);
+    const reopened = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    await fire(reopened, "keydown", { key: "Escape" });
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(addElement);
     expect(container!.querySelector('[aria-label^="Drag "]')).toBeNull();
   });
+});
+
+it("opens a collapsed region for insertion and focuses the new element when the region fills", async () => {
+  const containerAsset = composerAsset("builtin.container.root", ["states"]);
+  const system = {
+    ...containerAsset,
+    slots: containerAsset.slots.map((slot) => ({
+      ...slot,
+      cardinality: { minItems: 0, maxItems: 1 },
+    })),
+  };
+  const card = composerAsset("builtin.container.card", []);
+  const parent = instance("root", system.definitionId, "Root");
+  const child = instance("child", card.definitionId, "New card");
+  const onAdd = vi.fn();
+
+  function Editor() {
+    const [filled, setFilled] = useState(false);
+    return (
+      <SystemComposerStructureEditor
+        draft={{
+          instances: filled ? [parent, child] : [parent],
+          placements: filled ? [placement("root", "states", "child")] : [],
+          bindings: [],
+        }}
+        rootInstanceRefs={[{ kind: "asset-instance", id: parent.instanceId }]}
+        catalog={[system, card]}
+        compatibleAssets={[card]}
+        selectedInstanceId={filled ? "child" : "root"}
+        protectedInstanceIds={new Set()}
+        canUndo={false}
+        canRedo={false}
+        onSelect={vi.fn()}
+        onAdd={(asset, target) => {
+          onAdd(asset, target);
+          setFilled(true);
+        }}
+        onPlace={vi.fn()}
+        onRemove={vi.fn()}
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+      />
+    );
+  }
+
+  render(<Editor />);
+  const addElement = ariaButton("Add element to states in Root");
+  const region = addElement.closest("section")!;
+  expect(region.dataset.collapsed).toBe("true");
+  addElement.focus();
+  await click(addElement);
+  expect(region.dataset.collapsed).toBe("false");
+
+  const choice = document.querySelector<HTMLButtonElement>(
+    '[role="dialog"] .system-composer__asset-picker-card',
+  )!;
+  await click(choice);
+  expect(onAdd).toHaveBeenCalledWith(card, { parentInstanceId: "root", slotId: "states" });
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(addElement.disabled).toBe(true);
+  expect(document.activeElement).toBe(
+    region.querySelector('[data-instance-id="child"] .system-composer__canvas-node-select'),
+  );
+});
+
+it("removes an old placeholder and confirms all nested assets before removing a container", async () => {
+  function foundationAsset(id: string, slots: readonly string[]) {
+    const asset = composerAsset(id, slots);
+    return { ...asset, version: "3.0.0", definitionRef: { ...asset.definitionRef, version: "3.0.0" } };
+  }
+  const page = foundationAsset("builtin.layout.page.single", ["content"]);
+  const pageDefinition = {
+    ...page,
+    slots: page.slots.map((slot) => ({ ...slot, cardinality: { minItems: 1, maxItems: 8 } })),
+  };
+  const placeholder = foundationAsset("builtin.state.empty-state", []);
+  const card = foundationAsset("builtin.ui.card", ["content"]);
+  const roots = [{ kind: "asset-instance" as const, id: normalizeAssetId("page") }];
+  const catalog = [pageDefinition, placeholder, card];
+  const initial: SystemComposerDraft = {
+    instances: [
+      { ...instance("page", page.definitionId, "Main page"), definitionRef: page.definitionRef },
+      { ...instance("empty", placeholder.definitionId, "Empty content"), definitionRef: placeholder.definitionRef },
+      { ...instance("card", card.definitionId, "Details card"), definitionRef: card.definitionRef },
+      { ...instance("child", card.definitionId, "Child card"), definitionRef: card.definitionRef },
+    ],
+    placements: [
+      placement("page", "content", "empty"),
+      { ...placement("page", "content", "card"), order: 1 },
+      placement("card", "content", "child"),
+    ],
+    bindings: [],
+    structure: { schemaVersion: "system-builder-structure.v1", profile: "interactive" },
+  };
+  function Editor() {
+    const [draft, setDraft] = useState(initial);
+    const [selected, setSelected] = useState("page");
+    const protectedIds = deriveProtectedSystemInstanceIds(draft, roots, catalog);
+    return (
+      <SystemComposerStructureEditor draft={draft} rootInstanceRefs={roots} catalog={catalog}
+        selectedInstanceId={selected} protectedInstanceIds={protectedIds}
+        canUndo={false} canRedo={false} onSelect={setSelected} onAdd={vi.fn()} onPlace={vi.fn()}
+        onRemove={(id) => {
+          const result = removeSystemComposerSubtree(draft, id, protectedIds);
+          if (result.ok) {
+            setDraft(result.value);
+            setSelected("page");
+          }
+        }}
+        onUndo={vi.fn()} onRedo={vi.fn()} />
+    );
+  }
+
+  render(<Editor />);
+  const node = (id: string) => container!.querySelector(`[data-instance-id="${id}"]`);
+  const select = (id: string) => node(id)!.querySelector<HTMLButtonElement>(".system-composer__canvas-node-select")!;
+  const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]')!;
+  const dialogButton = (name: string) => Array.from(dialog().querySelectorAll("button"))
+    .find((candidate) => candidate.textContent?.trim() === name)!;
+  expect(node("page")!.querySelector('button[aria-label="Remove Main page"]')).toBeNull();
+
+  await click(select("empty"));
+  await click(ariaButton("Remove Empty content"));
+  expect(dialog().textContent).toContain("Empty content");
+  expect(dialog().textContent).not.toContain("All child assets");
+  expect(node("empty")).not.toBeNull();
+  await click(dialogButton("Remove asset"));
+  expect(node("empty")).toBeNull();
+  expect(document.activeElement).toBe(select("page"));
+
+  await click(select("card"));
+  const removeCard = ariaButton("Remove Details card");
+  removeCard.focus();
+  await click(removeCard);
+  expect(dialog().textContent).toContain("All child assets will also be removed");
+  expect(dialog().textContent).toContain("1 total");
+  expect(document.activeElement).toBe(dialogButton("Cancel"));
+  await click(dialogButton("Cancel"));
+  expect(node("card")).not.toBeNull();
+  expect(node("child")).not.toBeNull();
+  expect(document.activeElement).toBe(removeCard);
+  await click(removeCard);
+  await click(dialogButton("Remove asset"));
+  expect(node("card")).toBeNull();
+  expect(node("child")).toBeNull();
+  expect(node("page")).not.toBeNull();
+});
+
+it("ignores a late Load more response after the destination changes", async () => {
+  const system = composerAsset("builtin.container.root", ["one", "two"]);
+  const first = composerAsset("builtin.container.first", []);
+  const stale = composerAsset("builtin.container.stale", []);
+  let resolveMore: (value: any) => void = () => {};
+  const loader = vi.fn((target, query) => query.cursor
+    ? new Promise(resolve => { resolveMore = resolve; })
+    : Promise.resolve({ok: true, value: {items: target.slotId === "one" ? [first] : [], ...(target.slotId === "one" ? {nextCursor: "page.two"} : {})}}));
+  render(<SystemComposerStructureEditor draft={{instances: [instance("root", system.definitionId, "Root")], placements: [], bindings: []}}
+    rootInstanceRefs={[{kind: "asset-instance", id: normalizeAssetId("root")}]} catalog={[system, first, stale]} selectedInstanceId="root"
+    protectedInstanceIds={new Set()} canUndo={false} canRedo={false} onSelect={vi.fn()} onAdd={vi.fn()} onPlace={vi.fn()}
+    onRemove={vi.fn()} onUndo={vi.fn()} onRedo={vi.fn()} loadCompatibleAssets={loader as any} />);
+  await click(ariaButton("Add element to one in Root")); await flushAsync();
+  const more = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(button => button.textContent?.trim() === "Load more")!;
+  await click(more);
+  const modal = document.querySelector<HTMLElement>('[role="dialog"]')!;
+  const filter = modal.querySelector('[aria-label="Filter elements by type"]');
+  const destination = Array.from(modal.querySelectorAll<HTMLSelectElement>("select")).find(select => select !== filter)!;
+  await act(async () => { destination.value = "two"; destination.dispatchEvent(new Event("change", {bubbles: true})); });
+  await flushAsync();
+  await act(async () => { resolveMore({ok: true, value: {items: [stale], nextCursor: "page.three"}}); });
+  await flushAsync();
+  expect(modal.textContent).not.toContain(stale.definitionId);
+  expect(Array.from(modal.querySelectorAll("button")).some(button => button.textContent?.trim() === "Load more")).toBe(false);
 });
 
 function render(element: React.ReactNode): void {

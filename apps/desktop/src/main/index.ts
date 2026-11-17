@@ -1,8 +1,14 @@
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, MenuItem, shell } from "electron";
 
-import { composeDesktopHost } from "../../../../modules/hosts/desktop";
+import {
+  checkDesktopPythonRuntimeInstallation,
+  composeDesktopHost,
+  resolveDesktopPythonRuntimeLaunch,
+} from "../../../../modules/hosts/desktop";
+import type { DesktopStartupFailure } from "../startupFailure";
 import { recordDesktopMemorySnapshot } from "../../../../modules/hosts/desktop/diagnostics";
 import {
   resolveLocalSqliteDatabasePolicy,
@@ -14,6 +20,12 @@ import {
   readLocalIdentityProfile,
 } from "../../../../modules/adapters/security/local-identity";
 import { isTrustedIpcSender } from "./trustedIpcSender";
+import { DESKTOP_UI_CONTROL_RETIRED_EVENT } from "../../../../modules/contracts/headless";
+import { captureDesktopHeadlessPairingWindow, registerDesktopHeadlessPairingIpc } from "./desktopHeadlessPairingIpc";
+import { registerDesktopHeadlessPlanApprovalIpc } from "./desktopHeadlessPlanApprovalIpc";
+import { registerDesktopHeadlessLocalFileSelectionIpc } from "./desktopHeadlessLocalFileSelectionIpc";
+import { registerDesktopUiControlIpc } from "./desktopUiControlIpc";
+import { installDesktopMainWindowMenu } from "./desktopMainWindowMenu";
 import { createRevealModelPath } from "./revealModelPath";
 import {
   createSystemRuntimeWindowManager,
@@ -28,8 +40,13 @@ recordDesktopMemorySnapshot({
 });
 
 const openWindows = new Set<BrowserWindow>();
+let retireUiControlWindow: ((window: BrowserWindow) => void) | undefined;
 
 async function createMainWindow(): Promise<void> {
+  return createDesktopWindow();
+}
+
+async function createDesktopWindow(startupFailure?: DesktopStartupFailure): Promise<void> {
   recordDesktopMemorySnapshot({
     milestone: "desktop.window.create.before",
     component: "desktop-main",
@@ -39,8 +56,9 @@ async function createMainWindow(): Promise<void> {
     width: 1200,
     height: 800,
     show: false,
+    backgroundColor: "#06101e",
     webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      ...(startupFailure ? {} : { preload: path.join(__dirname, "main_window_preload.cjs") }),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -50,19 +68,102 @@ async function createMainWindow(): Promise<void> {
     milestone: "desktop.window.constructed",
     component: "desktop-main",
   });
-
   openWindows.add(mainWindow);
-
   mainWindow.on("closed", () => {
+    retireUiControlWindow?.(mainWindow);
     openWindows.delete(mainWindow);
   });
+  mainWindow.webContents.on("did-start-navigation", (event) => {
+    if (event.isMainFrame && !event.isSameDocument) retireUiControlWindow?.(mainWindow);
+  });
+  mainWindow.webContents.on("render-process-gone", () => retireUiControlWindow?.(mainWindow));
+  // Native visibility can change while renderer events or timers are delayed.
+  mainWindow.on("hide", () => retireUiControlWindow?.(mainWindow));
+  mainWindow.on("minimize", () => retireUiControlWindow?.(mainWindow));
 
-  mainWindow.maximize();
+  let hasBeenShown = false;
+  let visibleCueAttempt = 0;
+  let visibleCueFailed = false;
+  function notifyVisibleDocument() {
+    if (visibleCueFailed || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return;
+    const attempt = ++visibleCueAttempt;
+    // A fixed, one-way presentation cue. No data, Node API, IPC capability or
+    // caller-controlled script crosses into the renderer. The attribute replays
+    // a cue received before its tiny controller; the event covers later arrival.
+    void Promise.resolve().then(() => {
+      if (mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return;
+      return mainWindow.webContents.executeJavaScript(
+        'document.documentElement.dataset.desktopWindowShown = "true"; document.dispatchEvent(new Event("desktop-window-shown"));',
+      );
+    }).catch(() => {
+      // Superseded, closing or navigating documents have a later load cue. A
+      // live current document must not keep its ready shell inert indefinitely.
+      if (visibleCueFailed || attempt !== visibleCueAttempt || mainWindow.isDestroyed() ||
+          mainWindow.webContents.isDestroyed() || mainWindow.webContents.isLoadingMainFrame()) return;
+      visibleCueFailed = true;
+      dialog.showErrorBox(
+        "AI System Builder could not open",
+        "The desktop loading screen could not finish. Close the app and start it again.",
+      );
+      if (!mainWindow.isDestroyed()) mainWindow.destroy();
+    });
+  }
+  mainWindow.on("show", () => { hasBeenShown = true; notifyVisibleDocument(); });
+  mainWindow.webContents.on("did-finish-load", () => {
+    // Reload creates a new document without a new native show event. Replay even
+    // while minimized; the controller counts only later visible paint/time.
+    if (hasBeenShown) notifyVisibleDocument();
+  });
+
   recordDesktopMemorySnapshot({
     milestone: "desktop.window.load.before",
     component: "desktop-main",
   });
-  await mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  const outcome = await new Promise<"ready" | "closed" | "failed">((resolve) => {
+    let settled = false;
+    let loaded = false;
+    let painted = false;
+    const finish = (value: "ready" | "closed" | "failed") => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      mainWindow.removeListener("ready-to-show", onPaint);
+      mainWindow.removeListener("closed", onClosed);
+      mainWindow.webContents.removeListener("preload-error", onFailure);
+      mainWindow.webContents.removeListener("render-process-gone", onFailure);
+      resolve(value);
+    };
+    const check = () => { if (loaded && painted) finish("ready"); };
+    const onPaint = () => { painted = true; check(); };
+    const onClosed = () => finish("closed");
+    const onFailure = () => finish("failed");
+    // This bounds a hidden, unpainted native window only. It does not change
+    // any app, model or runtime execution budget, nor mark slow React failed.
+    const deadline = setTimeout(onFailure, 60_000);
+    mainWindow.once("ready-to-show", onPaint);
+    mainWindow.once("closed", onClosed);
+    mainWindow.webContents.once("preload-error", onFailure);
+    mainWindow.webContents.once("render-process-gone", onFailure);
+    // Attach success/failure handlers immediately, including synchronous throws.
+    void Promise.resolve().then(() => {
+      const entry = MAIN_WINDOW_VITE_DEV_SERVER_URL ??
+        pathToFileURL(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)).href;
+      if (!startupFailure) return mainWindow.loadURL(entry);
+      const loadingPage = new URL(entry);
+      loadingPage.searchParams.set("required-python", startupFailure);
+      return mainWindow.loadURL(loadingPage.href);
+    }).then(() => { loaded = true; check(); }, onFailure);
+  });
+  if (outcome !== "ready" || mainWindow.isDestroyed()) {
+    if (outcome === "failed") dialog.showErrorBox(
+      "AI System Builder could not open",
+      "The desktop loading screen could not open. Close the app and start it again.",
+    );
+    // Keep the hidden window alive while the fixed dialog is shown. Destroying
+    // the last window first can trigger app quit before the message is visible.
+    if (!mainWindow.isDestroyed()) mainWindow.destroy();
+    return;
+  }
   recordDesktopMemorySnapshot({
     milestone: "desktop.window.load.after",
     component: "desktop-main",
@@ -71,6 +172,9 @@ async function createMainWindow(): Promise<void> {
     milestone: "desktop.window.show.before",
     component: "desktop-main",
   });
+  // Electron maximize also reveals hidden windows. Both calls belong AFTER the
+  // successful document-load + first-paint gate, never at construction time.
+  mainWindow.maximize();
   mainWindow.show();
   recordDesktopMemorySnapshot({
     milestone: "desktop.window.show.after",
@@ -88,6 +192,14 @@ app.whenReady().then(async () => {
     milestone: "desktop.app.whenReady.ready",
     component: "desktop-main",
   });
+
+  const pythonRuntimeLaunch = resolveDesktopPythonRuntimeLaunch();
+  const pythonInstallation = checkDesktopPythonRuntimeInstallation(pythonRuntimeLaunch);
+  if (pythonInstallation !== "ready") {
+    if (process.platform === "darwin") app.once("window-all-closed", () => app.quit());
+    await createDesktopWindow(pythonInstallation);
+    return;
+  }
 
   const desktopDataRootDirectory = app.getPath("userData");
   const storageRootDirectory = path.join(desktopDataRootDirectory, "artifacts");
@@ -154,6 +266,7 @@ app.whenReady().then(async () => {
     component: "desktop-main",
   });
   const desktopHost = composeDesktopHost({
+    pythonRuntimeLaunch,
     localIdentity: localIdentityProfile,
     persistence: { documents: sqliteDatabase.documents, organizationDocuments },
     runtimeDataRootDirectory: desktopDataRootDirectory,
@@ -187,8 +300,9 @@ app.whenReady().then(async () => {
   });
 
   const systemRuntimeWindows = createSystemRuntimeWindowManager({
-    entryUrl: SYSTEM_RUNTIME_WEBPACK_ENTRY,
-    preloadPath: SYSTEM_RUNTIME_PRELOAD_WEBPACK_ENTRY,
+    entryUrl: SYSTEM_RUNTIME_VITE_DEV_SERVER_URL ??
+      pathToFileURL(path.join(__dirname, `../renderer/${SYSTEM_RUNTIME_VITE_NAME}/index.html`)).href,
+    preloadPath: path.join(__dirname, "system_runtime_preload.cjs"),
     developmentMode: !app.isPackaged,
     createWindow: (windowOptions) =>
       new BrowserWindow(windowOptions) as unknown as RuntimeBrowserWindowLike,
@@ -212,6 +326,101 @@ app.whenReady().then(async () => {
     systemRuntimeWindows,
     revealModelPath: createRevealModelPath(shell),
   });
+  retireUiControlWindow = registerDesktopUiControlIpc({
+    ipcMain, getOwner: desktopHost.getUiControlOwner,
+    notifyRetirement(window, frame, target) {
+      for (const current of openWindows) {
+        if (current !== window || current.isDestroyed() || current.webContents.isDestroyed() ||
+            current.webContents.isLoadingMainFrame() || current.webContents.mainFrame !== frame) continue;
+        try { current.webContents.mainFrame.send(DESKTOP_UI_CONTROL_RETIRED_EVENT, target); }
+        catch { /* An already closed frame cannot consume the signal. */ }
+        break;
+      }
+    },
+    resolve(event) {
+      for (const window of openWindows) {
+        const isUsable = () => openWindows.has(window) && !window.isDestroyed() && window.isVisible() &&
+          !window.isMinimized() && isTrustedIpcSender(event, [window]) && !window.webContents.isLoadingMainFrame();
+        if (!isUsable()) continue;
+        const frame = window.webContents.mainFrame;
+        return {
+          window, frame,
+          isCurrent: () => isUsable() && window.webContents.mainFrame === frame,
+        };
+      }
+    },
+  }).retire;
+  const resolveInteractiveHeadlessWindow = (event: unknown) => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (!window) return;
+    const isUsable = () => BrowserWindow.getFocusedWindow() === window && openWindows.has(window) &&
+      !window.isDestroyed() && window.isVisible() && !window.isMinimized() &&
+      isTrustedIpcSender(event, [window]) && !window.webContents.isLoadingMainFrame();
+    if (!isUsable()) return;
+    const frame = window.webContents.mainFrame;
+    return { key: frame, isUsable: () => isUsable() && window.webContents.mainFrame === frame };
+  };
+  registerDesktopHeadlessPlanApprovalIpc({
+    ipcMain,
+    getApprovals: desktopHost.getHeadlessPlanApprovals,
+    resolveWindow: resolveInteractiveHeadlessWindow,
+  });
+  registerDesktopHeadlessLocalFileSelectionIpc({
+    ipcMain,
+    getSelection: desktopHost.getHeadlessLocalFileSelection,
+    resolveWindow: resolveInteractiveHeadlessWindow,
+  });
+  registerDesktopHeadlessPairingIpc({
+    ipcMain,
+    getConnection: desktopHost.getHeadlessConnection,
+    resolveWindow: (event) => captureDesktopHeadlessPairingWindow(event, {
+      getFocusedWindow: () => BrowserWindow.getFocusedWindow(),
+      ownsAndTrusts: (window, caller) => openWindows.has(window) && isTrustedIpcSender(caller, [window]),
+      dialogs: (window) => ({
+        async confirm(workspaceLabel, access = "read") {
+          const canEdit = access === "author";
+          const canConverse = access === "conversation";
+          const canPresent = access === "presentation";
+          const canPropose = access === "plan-review";
+          const { response } = await dialog.showMessageBox(window, {
+            type: "question",
+            title: "Pair a chat client",
+            message: canPresent ? "Allow this chat client to ask for control of a window?"
+              : canConverse ? "Allow a local chat client to read saved systems and run approved conversations?"
+              : canPropose ? "Allow a local chat client to send plans for review?"
+                : canEdit ? "Allow a local chat client to edit saved systems?" : "Allow a local chat client to read saved systems?",
+            detail: `Workspace: ${workspaceLabel}\n${canEdit
+              ? "The new client can create, rename, copy and edit saved systems in this workspace."
+              : canConverse ? "The client can read saved systems in this workspace. It can also send messages to conversation sessions already approved for this workspace. It cannot approve a session or edit saved systems."
+                : canPresent ? "The client can read saved systems and ask to show saved resources in one window. You must accept each request in that window."
+                : canPropose ? "The client can read saved systems and ask you to approve proposed changes. You decide which changes the app may make."
+                  : "The new client can read saved systems in this workspace."} The local connector also lets previously paired clients reconnect with their existing access. This does not give the client control of this window.`,
+            buttons: ["Cancel", "Create pairing code"], defaultId: 0, cancelId: 0, noLink: true,
+          });
+          return response === 1;
+        },
+        async confirmStart() {
+          const { response } = await dialog.showMessageBox(window, {
+            type: "question",
+            title: "Turn on the local connector",
+            message: "Allow your paired local chat clients to reconnect?",
+            detail: "Each client keeps the access you approved for its workspace.",
+            buttons: ["Cancel", "Turn on"], defaultId: 0, cancelId: 0, noLink: true,
+          });
+          return response === 1;
+        },
+        async showCode(endpoint, fingerprint, code) {
+          await dialog.showMessageBox(window, {
+            type: "info",
+            title: "One-time pairing code",
+            message: "Use this code in your trusted local chat client.",
+            detail: `Local address: ${endpoint}\nCertificate fingerprint: ${fingerprint}\nCode: ${code}\nThis code expires in two minutes. Do not share it with another person.`,
+            buttons: ["Done"], defaultId: 0, cancelId: 0, noLink: true,
+          });
+        },
+      }),
+    }),
+  });
   recordDesktopMemorySnapshot({
     milestone: "desktop.ipc.register.after",
     component: "desktop-main",
@@ -219,8 +428,26 @@ app.whenReady().then(async () => {
 
   await createMainWindow();
 
+  let shutdownStarted = false;
+  let shutdownComplete = false;
+  const menu = Menu.getApplicationMenu();
+  const ownsWindow = (source: Electron.BaseWindow | undefined) => [...openWindows].some(
+    window => window === source && !window.isDestroyed(),
+  );
+  if (installDesktopMainWindowMenu(menu, (options) => new MenuItem(options),
+    source => !shutdownStarted && openWindows.size < 2 && ownsWindow(source),
+    () => { void createMainWindow().catch(() => dialog.showErrorBox(
+      "AI System Builder could not open", "The new window could not open. Try again from the File menu.",
+    )); }, desktopHost.getUiControlOwner() ? {
+      mayStop: source => !shutdownStarted && source === BrowserWindow.getFocusedWindow() && ownsWindow(source),
+      stop() {
+        for (const window of openWindows) retireUiControlWindow?.(window);
+        desktopHost.disableWindowTakeover();
+      },
+    } : undefined)) Menu.setApplicationMenu(menu);
+
   app.on("activate", async () => {
-    if (openWindows.size === 0) {
+    if (!shutdownStarted && openWindows.size === 0) {
       recordDesktopMemorySnapshot({
         milestone: "desktop.activate.window-create.before",
         component: "desktop-main",
@@ -233,8 +460,6 @@ app.whenReady().then(async () => {
     }
   });
 
-  let shutdownStarted = false;
-  let shutdownComplete = false;
   app.on("before-quit", (event) => {
     recordDesktopMemorySnapshot({
       milestone: "desktop.before-quit",
@@ -246,13 +471,17 @@ app.whenReady().then(async () => {
     shutdownStarted = true;
     void shutdownDesktopRuntimeResources({
       closeRuntimeWindows: () => systemRuntimeWindows.closeAll(),
+      shutdownBackgroundTasks: () => desktopHost.shutdownBackgroundTasks(),
       stopPythonRuntime: () => desktopHost.stopPythonRuntime(),
       closeRuntimeDatabases: () =>
         desktopHost.systemRuntimeDatabases?.closeAll() ?? Promise.resolve(),
       closePlatformDatabase: () => sqliteDatabase.close(),
-    }).finally(() => {
+    }).then(() => {
       shutdownComplete = true;
       app.quit();
+    }).catch(() => {
+      shutdownStarted = false;
+      console.warn("Background shutdown remains pending; closing can be retried.");
     });
   });
 });

@@ -12,6 +12,7 @@ import {
 
 import { ArtifactsPage } from "../pages/ArtifactsPage";
 import { AssetLibraryPage } from "../pages/AssetLibraryPage";
+import { ContextPage } from "../pages/ContextPage";
 import { ImageGenerationPage } from "../pages/ImageGenerationPage";
 import { ModelsPage } from "../pages/ModelsPage";
 import { SettingsPage } from "../pages/SettingsPage";
@@ -120,32 +121,31 @@ function createDesktopApiMock(): DesktopApiMock {
       .mockResolvedValue(envelope({ values: [] })),
     updateApplicationSetting: vi.fn().mockResolvedValue(envelope({})),
     clearApplicationSetting: vi.fn().mockResolvedValue(envelope({})),
-    readPythonRuntimeStatus: vi
+    executeContextManagement: vi
       .fn()
-      .mockResolvedValue(
-        envelope({
-          supervisorStatus: "stopped",
-          runtimeStatus: "stopped",
-          healthy: false,
-          capabilities: [],
-          activeTaskCount: 0,
-          loadedModels: [],
-          logs: [],
-        }),
-      ),
-    controlPythonRuntime: vi
-      .fn()
-      .mockResolvedValue(
-        envelope({
-          supervisorStatus: "stopped",
-          runtimeStatus: "stopped",
-          healthy: false,
-          capabilities: [],
-          activeTaskCount: 0,
-          loadedModels: [],
-          logs: [],
-        }),
-      ),
+      .mockResolvedValue(envelope({ action: "browser-list", items: [] })),
+    readPythonRuntimeStatus: vi.fn().mockResolvedValue(
+      envelope({
+        supervisorStatus: "stopped",
+        runtimeStatus: "stopped",
+        healthy: false,
+        capabilities: [],
+        activeTaskCount: 0,
+        loadedModels: [],
+        logs: [],
+      }),
+    ),
+    controlPythonRuntime: vi.fn().mockResolvedValue(
+      envelope({
+        supervisorStatus: "stopped",
+        runtimeStatus: "stopped",
+        healthy: false,
+        capabilities: [],
+        activeTaskCount: 0,
+        loadedModels: [],
+        logs: [],
+      }),
+    ),
     startImageGeneration: vi
       .fn()
       .mockResolvedValue(envelope({ requestId: "img1" })),
@@ -168,54 +168,58 @@ function createDesktopApiMock(): DesktopApiMock {
       .mockResolvedValue(
         envelope({ targetId: "comfyui", status: "installed" }),
       ),
-    readFeatureLifecycleState: vi
-      .fn()
-      .mockResolvedValue(
-        envelope({
-          entries: [
-            {
-              featureKey: "artifact-remote",
-              policy: "disposable",
-              loaded: false,
-              idle: false,
-              idleTimeoutScheduled: false,
-            },
-          ],
-        }),
-      ),
+    readFeatureLifecycleState: vi.fn().mockResolvedValue(
+      envelope({
+        entries: [
+          {
+            featureKey: "artifact-remote",
+            policy: "disposable",
+            loaded: false,
+            idle: false,
+            idleTimeoutScheduled: false,
+          },
+        ],
+      }),
+    ),
     disposeIdleFeatures: vi.fn().mockResolvedValue(envelope({ results: [] })),
-    listSystemRunWorkflowProfiles: vi
-      .fn()
-      .mockResolvedValue(envelope([])),
-    listSystemPublicationWorkspace: vi.fn().mockResolvedValue(envelope({
-      systems: [{
-        systemId: "system-1",
-        name: "Published assistant",
-        builds: [{
-          buildId: "build-1",
-          systemRevisionId: "revision-1",
-          versionNumber: 1,
-          status: "succeeded",
-          publicationStatus: "published",
-          statusMessage: "Published",
-          releaseId: "release-1",
-          createdAt: "2026-07-29T00:00:00.000Z",
-          publishedAt: "2026-07-29T00:01:00.000Z",
-          outputCount: 1,
-          evidenceCount: 1,
-          diagnosticCount: 0,
-        }],
-      }],
-    })),
-    readPublishedSystemLifecycle: vi.fn().mockResolvedValue(envelope({
-      schemaVersion: "1.0",
-      releaseId: "release-1",
-      state: "not-installed",
-      revision: "lifecycle-1",
-      eligibleActions: ["install"],
-      health: "unknown",
-      diagnostics: [],
-    })),
+    listSystemRunWorkflowProfiles: vi.fn().mockResolvedValue(envelope([])),
+    listSystemPublicationWorkspace: vi.fn().mockResolvedValue(
+      envelope({
+        systems: [
+          {
+            systemId: "system-1",
+            name: "Published assistant",
+            builds: [
+              {
+                buildId: "build-1",
+                systemRevisionId: "revision-1",
+                versionNumber: 1,
+                status: "succeeded",
+                publicationStatus: "published",
+                statusMessage: "Published",
+                releaseId: "release-1",
+                createdAt: "2026-07-29T00:00:00.000Z",
+                publishedAt: "2026-07-29T00:01:00.000Z",
+                outputCount: 1,
+                evidenceCount: 1,
+                diagnosticCount: 0,
+              },
+            ],
+          },
+        ],
+      }),
+    ),
+    readPublishedSystemLifecycle: vi.fn().mockResolvedValue(
+      envelope({
+        schemaVersion: "1.0",
+        releaseId: "release-1",
+        state: "not-installed",
+        revision: "lifecycle-1",
+        eligibleActions: ["install"],
+        health: "unknown",
+        diagnostics: [],
+      }),
+    ),
     invokePublishedSystemLifecycle: vi.fn(),
   };
 }
@@ -276,6 +280,39 @@ describe("desktop page section loading", () => {
     expect(api.readPythonRuntimeStatus).not.toHaveBeenCalled();
   });
 
+  it("shows the shared Python runtime monitor throughout Context", async () => {
+    const { container: c, api } = await mount(
+      <ContextPage workspaceId="w1" workspaceName="Workspace" />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(c.textContent).toContain("RAG Databases");
+    expect(c.textContent).toContain("Python Runtime");
+    expect(api.readPythonRuntimeStatus).toHaveBeenCalledTimes(1);
+
+    const contextPacksTab = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent === "Context Packs",
+    );
+    await act(async () => {
+      contextPacksTab?.click();
+      await Promise.resolve();
+    });
+    expect(c.textContent).toContain("Python Runtime");
+
+    const restartButton = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent === "Restart",
+    );
+    await act(async () => {
+      restartButton?.click();
+      await Promise.resolve();
+    });
+    expect(api.controlPythonRuntime).toHaveBeenCalledWith({
+      action: "restart",
+    });
+  });
+
   it("renders Artifacts shell and upload form without remote artifact operations or selected detail reads", async () => {
     const { container: c, api } = await mount(
       <ArtifactsPage
@@ -295,20 +332,18 @@ describe("desktop page section loading", () => {
 
   it("loads artifact detail only after the browser section selects an artifact", async () => {
     const api = createDesktopApiMock();
-    api.browseArtifacts = vi
-      .fn()
-      .mockResolvedValue(
-        envelope({
-          items: [
-            {
-              storageKey: "uploads/a.txt",
-              originalName: "a.txt",
-              artifactFamily: "document",
-              mediaType: "text/plain",
-            },
-          ],
-        }),
-      );
+    api.browseArtifacts = vi.fn().mockResolvedValue(
+      envelope({
+        items: [
+          {
+            storageKey: "uploads/a.txt",
+            originalName: "a.txt",
+            artifactFamily: "document",
+            mediaType: "text/plain",
+          },
+        ],
+      }),
+    );
     const { container: c } = await mount(
       <ArtifactsPage
         workspaceId="w1"
@@ -523,6 +558,7 @@ describe("page section loading policy classification", () => {
       "image-generation:generate",
       "image-generation:preview/finalization",
       "image-generation:install/repair",
+      "context:Python runtime monitor",
       "settings:token/basic settings",
       "settings:model defaults",
       "settings:runtime settings",
@@ -543,5 +579,10 @@ describe("page section loading policy classification", () => {
       "refresh",
     ]);
     expect(policy.get("image-generation:generate")).toBe("user-action");
+    expect(policy.get("context:Python runtime monitor")).toEqual([
+      "initial",
+      "refresh",
+      "user-action",
+    ]);
   });
 });

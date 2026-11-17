@@ -2,6 +2,20 @@
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+The shared `useDatasetPreparationConstrainedJson` hook records the first fresh,
+ready recommendation for a model/device/task/workspace selection. Later free-RAM
+polls do not change that initial checkbox choice. Explicit true or false always
+wins. Changing the selection starts a new recommendation; unavailable startup
+facts do not freeze a false default before the decoder becomes ready.
+
+Readiness and the intended mode are separate. A selected checked mode stays
+checked when readiness disappears, and each host refuses submission before
+dispatch. The user can explicitly uncheck it when the shape remains valid.
+Invalid shapes still disable the control and refuse generation. A stable
+recommendation never replaces the live memory guard, worker capability check or
+schema validation. No model accuracy or offload capability follows from these
+renderer tests.
+
 `GuidedIngestionTaskPanel` presents the shared three-step Add data workflow for
 desktop and thin client: choose Files, Website pages, or Hugging Face dataset;
 select the bounded source; then add it. Safe limits are automatic and technical
@@ -13,7 +27,12 @@ selected file names before import. Hugging Face Step 2 includes
 a token-only settings card backed by the same persisted Hugging Face setting
 used elsewhere; public datasets do not require a token, while private or gated
 datasets may. Selection asks for a user or organization, lists bounded
-datasets, and then lists importable files with checkboxes. The provider browser
+datasets, and then lists importable files with checkboxes. Dataset rows show
+the provider's declared license. All data includes non-open and unknown
+licenses. Choose Open Creative Commons or Other open licenses to narrow the list.
+Changing filters clears the previous selection. Run
+`python dev-tools/helpers/run_focused_checks.py --profile headless-data-license-discovery`
+to check the provider adapter, host transports, and shared picker. The provider browser
 returns the immutable revision for every file; the guided task imports only
 checked files and records those exact revisions without asking users to type
 repository paths or commit identifiers. Desktop and thin client mount only this
@@ -139,3 +158,191 @@ shape. Desktop startup prefers an installed decoder-compatible Python version
 when no operator command is configured. Desktop and thin client keep the
 control disabled when capability is unavailable, so a saved or stale checked
 preference cannot send a known-unsupported constrained request.
+
+## Memory admission notifications
+
+Dataset Preparation memory-admission failures use the workspace notification
+center in desktop and thin client, without a duplicate inline memory error.
+Desktop preflight denial publishes before dispatch; post-start desktop failures
+remain in the existing background task activity. Thin-client observed task
+failures publish to notification history. Contextual form validation and other
+security/readiness blockers keep their existing presentation and enforcement.
+
+The worker projects only the known memory-failure code and a bounded numeric
+shortfall: resource kind (RAM, VRAM or combined), required bytes, currently
+available bytes and explicitly permitted overflow. API/IPC and UI normalize
+these facts again. Guidance rounds the remaining shortfall upward to MiB after
+subtracting already permitted overflow. It describes a point-in-time observation,
+not a guarantee that a later retry will fit. Unknown or malformed measurements
+use safe smaller-model/retry guidance without inventing an amount. No exception
+text, model/source details, filesystem paths, prompts or raw logs enter the new
+public field. Existing guards, limits, admission, cleanup and offload opt-in
+controls remain unchanged; notifications never authorize a denied model load.
+
+## Distinct selected files
+
+Use the existing command normalizer before matching files. It trims names. Check
+duplicate normalized name/size pairs before creating or resuming a file task,
+and use the same pairs to select the original bytes. Leading/trailing spaces
+cannot distinguish two otherwise identical pairs. Reject ambiguous saved task
+entries before byte transfer. A unique normalized name still supports transfer.
+
+File transfer and resume bind each task entry to a selected file name and size.
+Two distinct files can have both values in common, even with different dates.
+Reject that ambiguous selection before creating a task. Keep the selection and
+ask the user to rename one file and select again. Equal names with different
+sizes remain supported. Selection rows have independent keys even for identical
+metadata. Existing chunk limits, task ownership, checksum and publication guards
+remain authoritative. Real host journeys exercise multi-file import and source
+discovery; observing bounded file slices does not establish process RSS.
+
+## Scanned PDFs
+
+Desktop and thin client use `DatasetPreparationOcrSettings` for the same optional
+scanned-PDF choice. It starts off and requires only PDFs, Document-structure
+sections and an exact installed Windows language tag. No language is preselected.
+The task checks the installed reader and language. This control performs no
+supplier probe, installation or download. Each PDF is limited to 16 MiB by the
+existing authoritative host/native checks.
+
+Keep a checked choice visible when sources become incompatible, allowing it to be
+turned off; refuse submission until corrected. Explicit method or goal changes
+clear the opt-in. Lock the fieldset while a task runs, including requested but
+unconfirmed cancellation. Desktop named settings preserve a valid explicit choice;
+older records start off and malformed flags cannot activate recognition. Browser
+page loads start off. Public requests contain no host source maps or staging data.
+
+`DatasetPreparationTextReadingChecks` shows completed document/page/line counts
+and the language, without raw provider/version values. Explain that the
+text-character percentage checks replacement and control characters; it is not
+an OCR accuracy score. Form tests use synthetic clients and do not qualify the
+complete installed host, packaged product or generation-model accuracy.
+
+Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
+into smaller source files before using recognition. A version replay must retain
+the exact structure-aware/layout/Markdown settings and a compatible training goal;
+an explicit saved plan cannot bypass those checks.
+
+## Scanned-PDF source selection
+
+The Add data file chooser includes PDF sources alongside the existing structured
+formats. If the browser supplies no MIME type, a PDF extension supplies the
+existing `application/pdf` metadata. This does not authorize a source or validate
+its contents; the existing task, upload policy, source digest and actual reader
+checks remain authoritative. PDF bytes use the same bounded slice, checksum,
+workspace and acknowledged-finalization path. A regression covers a PDF with no
+browser MIME without whole-file allocation. The controlled OCR journeys also
+check the chooser before importing a real synthetic scanned PDF.
+
+Preparation method captions and the recognition-language caption have stable,
+short accessible names. Associate changing instructions as descriptions rather
+than including them in the control name. Use component-generated IDs so multiple
+forms do not share label or help targets. Real OCR journeys use the exact captions.
+
+Desktop and Thin Artifact Browser now offer Use this setup again for an exact saved
+version. The page owns one request; Preparation waits for its current source
+list and applies only complete validated settings. Success is announced from
+the surviving page after the resulting form commit. Input, navigation, workspace
+changes, source failure or replacement requests retire older delivery. The action
+never runs preparation or publishes a dataset. Thin checks the complete actual
+command before changing any fields. A setting outside its smaller form's support
+denies the whole restore, preserving the current form instead of approximating it.
+
+Saved-source matching uses `projectDatasetVersionReplaySources` from the shared
+dataset-version module. Keep all observed matching rows, including conflicting
+or incompatible duplicates. A partial browse page cannot prove completeness.
+Both apps capture saved meaning before I/O, then resolve at most 100 exact source
+keys through the existing workspace-authorized metadata read, sequentially within
+a 15-second caller deadline. Derive source identity from each exact returned key;
+do not invent an ID for a missing legacy source. Reject observed conflicts, run
+the complete replay/request roundtrip, and only then merge validated options with
+the form. The async consumer acknowledges the resulting current form commit.
+The ordinary 250 browse and 256 matching-row bounds remain unchanged. This grants
+no byte integrity, transport cancellation, provider, scale-runtime or parent pass.
+`readDatasetVersionReplaySources` supplies the shared bounded metadata lookup;
+each host supplies its existing workspace-authorized detail operation. Retain all
+observed rows before capability filtering, so incompatible duplicates cannot be hidden.
+
+## Acquisition session ownership
+
+Add data keeps one synchronous start or retry owner before React renders the busy
+state. Changing workspace or either client replaces the form session. Late task
+responses cannot change the new form, publish notifications, call completion or
+send another chunk or poll. Leaving a page does not claim that the host task has
+been cancelled; accepted work remains host-owned and observable.
+
+Cancel remains pending until a matching terminal task response confirms its
+outcome. A failed request or a still-running response keeps new starts disabled
+and offers **Check task status**. A cancel requested during creation waits for the
+task identity before sending the request. Duplicate cancel/status requests are
+refused. A later old run response cannot replace a confirmed terminal outcome.
+Matching workspace/task identities are checked before progress or notifications.
+File transfer still slices at the existing 1 MiB bound and uses authoritative
+chunk offsets, digests and finalization; whole-file reads are unnecessary.
+If the current host response confirms that a file task has ended, the form stops
+reading file slices and sending transfer or finalization requests. The host
+still owns checkpoint cleanup.
+
+The focused interaction tests drive this real shared renderer with bounded client
+and file fixtures. They cover both host consumers' shared behavior, not actual
+packaged-app, browser transport, provider or native qualification. The comprehensive
+UI coverage ledger is `docs/operations/comprehensive-ui-automation-coverage.json`.
+
+Session retirement runs in the layout cleanup of the committed tree, before
+passive effects. This closes the commit-to-passive interval for late completion
+and notification effects without changing accepted host task ownership.
+
+## Provider browse and selection intent
+
+Hugging Face namespace and file browsing share one synchronous request owner.
+Repeated clicks before the busy render issue one browse; retired sessions do not
+apply late replies. Changing the namespace clears its datasets and files. Changing
+the dataset selection clears loaded files and their selection. A new file browse
+also invalidates old selection before awaiting the provider. Add data refuses a
+stale provider selection synchronously, including before the next render.
+
+Current provider ingestion verifies and registers exact imported-source references.
+It preserves provider, repository, path and immutable revision in scoped bindings
+and source snapshots; it does not download provider bytes. A retry skips completed
+files and retries only unfinished items. Localization remains a separate existing
+application action. UI selection never grants provider or workspace authority.
+After a provider import finishes, Add Data shows the reported license for each
+saved file. The task and source snapshot retain the same exact-revision codes.
+Add Data shows an unknown license if the provider supplied no usable declaration.
+
+Composed desktop and browser scenarios use actual clients, preload/registered IPC
+or owned local HTTP, application browse/registration/task code, new JSON catalog
+and binding files, and an in-memory task repository. Provider metadata/existence,
+sender/access and unavailable credential operations are finite offline fixtures.
+No real credential, provider network/publication/download, Parquet-byte parsing,
+physical host, database restart, native recovery or model qualification follows.
+
+## Dataset configuration variation coverage
+
+The focused Dataset UI matrix mounts both current app components and checks all
+65 registry-supported training-goal/source-format pairs in each. It also checks
+merging, all eight method choices across their applicable workflows, task fields,
+incompatible source refusal, corrected split settings and omission of inactive
+model or division settings. Open the actual panels before using their controls.
+Desktop exposes Parquet, JSONL, JSON and CSV; the browser currently exposes
+Parquet and JSONL. Changing the browser training goal intentionally clears source
+selection and requires a new selection. Do not invent missing host controls.
+
+These are configuration checks with finite metadata/settings/inventory/client
+fixtures. A fixed refusal captures the command without accepting a task. They do
+not decode input, generate or save data, run model accuracy or OCR, use provider
+credentials, or qualify installed apps, native ownership or final combined tests.
+See `dev-tools/scripts/qualification/tests/dataset-capability-variants.ui.test.tsx`
+and the comprehensive UI coverage ledger. Existing accepted model accuracy remains
+with its owning roadmap and must not be rerun for these interface checks.
+
+### Composed preparation approval checks
+
+The Dataset qualification file mounts both existing preparation forms and uses
+actual clients, registered IPC or local HTTP, application review/materialization,
+SQLite version documents and filesystem bytes. The finite fixture supplies CSV
+classification input and declared worker JSONL outputs. It does not execute a
+worker, model, OCR engine or provider. Tests inspect ready and set-aside rows,
+explicit Save/Discard, exact saved split bytes and version digests/lineage.
+Same-process database reopen is not an installed-host restart. Row editing,
+successor versions, compare, reproduction and publication remain separate.

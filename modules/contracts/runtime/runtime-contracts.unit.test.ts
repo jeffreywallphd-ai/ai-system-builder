@@ -961,6 +961,8 @@ describe("runtime task registry contracts", () => {
     expect(taskTypes).toEqual([
       "dataset-preparation",
       "dataset-review",
+      "context-generation",
+      "context-retrieval",
       "model-download",
       "model-training",
       "model-validation",

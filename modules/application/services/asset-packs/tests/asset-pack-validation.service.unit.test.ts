@@ -301,3 +301,31 @@ function definitionRef(id: string): AssetReference {
 function messages(result: { readonly issues: readonly { readonly message: string }[] }): string {
   return result.issues.map((issue) => issue.message).join("\n");
 }
+
+
+it("rejects actual credential representations in explanatory purpose, descriptions and limitations without echo", () => {
+ const credentials=[...['hf_','ghp_','github_pat_','sk_','sk-'].map(prefix=>prefix+'syntheticvalue'.repeat(3)), '-----BEGIN PRIVATE KEY-----', '-----BEGIN RSA PRIVATE KEY-----', '-----BEGIN ENCRYPTED PRIVATE KEY-----'];
+ for(const credential of credentials) {
+  for(const field of ['purpose','description','limitations']) {
+   const base=validDefinition();
+   const definition={...base,...(field==='description'?{description:credential}:{}),aiContext:{...base.aiContext,...(field==='purpose'?{purpose:credential}:{}),...(field==='limitations'?{limitations:[{limitationId:'fixture.limitation',summary:credential}]}:{})}};
+   const result=validateAssetPackManifest(createSystemFoundationPackManifest([validEntry({definition})]));
+   assert.equal(result.status,'invalid');
+   assert.equal(JSON.stringify(result.issues).includes(credential),false);
+  }
+ }
+});
+
+
+it("rejects credential-bearing property names without copying names into issue paths",()=>{
+ for(const credential of ['hf_'+ 'syntheticvalue'.repeat(3),'-----BEGIN PRIVATE KEY-----']) {
+  for(const location of ['limitation','metadata']) {
+   const base=validDefinition();
+   const definition={...base,aiContext:{...base.aiContext,limitations:[{limitationId:'fixture.limitation',summary:'Safe',...(location==='limitation'?{[credential]:{token:'synthetic'}}:{})}]}};
+   const entry=validEntry({definition,...(location==='metadata'?{metadata:{nested:{[credential]:{token:'synthetic'}}}}:{})});
+   const result=validateAssetPackManifest(createSystemFoundationPackManifest([entry]));
+   assert.equal(result.status,'invalid');
+   assert.equal(JSON.stringify(result.issues).includes(credential),false);
+  }
+ }
+});

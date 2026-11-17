@@ -7,6 +7,9 @@ import { createLocalWorkspaceRepository, createLocalWorkspaceSelectionRepository
 import type { AssetResourceBackedViewProvider } from "../../../application/ports/asset";
 import { composeLocalAssetKernel, type LocalAssetKernelComposition } from "./composeLocalAssetKernel";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
+import {createLocalAuthoredAssetRepositoryAdapter,createLocalAssetRevisionRepositoryAdapter,createLocalAssetDraftRepositoryAdapter,createLocalAssetOverrideRepositoryAdapter} from "../../../adapters/persistence/asset-authoring";
+import { createStructuredAssetStudioAssetDraftRepository } from "../../../adapters/persistence/asset-studio/createStructuredAssetStudioAssetDraftRepository";
+import { createStructuredAssetDerivedCustomizationRepository } from "../../../adapters/persistence/asset-authoring/createStructuredAssetDerivedCustomizationRepository";
 
 export interface ComposeInternalAssetRegistryOptions {
   readonly rootDirectory: string;
@@ -70,6 +73,14 @@ export function composeInternalAssetRegistry(options: ComposeInternalAssetRegist
     assetRegistryRead: readFacade,
     listWorkspaceSystemPackActivations,
     workspaceRepository,
+    authoredAssetRepository:createLocalAuthoredAssetRepositoryAdapter({rootDir:options.rootDirectory,documents:options.documents}),
+    assetRevisionRepository:createLocalAssetRevisionRepositoryAdapter({rootDir:options.rootDirectory,documents:options.documents}),
+    assetDraftRepository:createLocalAssetDraftRepositoryAdapter({rootDir:options.rootDirectory,documents:options.documents}),
+    assetOverrideRepository:createLocalAssetOverrideRepositoryAdapter({rootDir:options.rootDirectory,documents:options.documents}),
+    workspacePublishedAssetSources: options.documents ? [
+      createStructuredAssetStudioAssetDraftRepository(options.documents),
+      createStructuredAssetDerivedCustomizationRepository(options.documents),
+    ] : [],
   });
 
   return {

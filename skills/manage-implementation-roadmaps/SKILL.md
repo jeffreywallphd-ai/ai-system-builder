@@ -11,6 +11,109 @@ resume faithfully without committing verbose progress reports.
 
 ## Start
 
+When the target repository provides the development control plane linked from
+`AGENTS.md`, read that guide, start or safely reuse its JSON-backed review site,
+and provide the verified link on workflow work requests. Keep this skill's
+planning authority; the repository helper owns bounded execution and review.
+New governed roadmaps require current receipts and a separate-invocation review
+covering each increment criterion. Historical state remains explicitly
+declarative; never manufacture qualifying evidence or a second reviewer identity.
+For this adapter, initialize AI-related roadmaps with `completionSuite: all`
+(otherwise `standardande2e`). After all implementation chunks are recorded, use the guide's `overall` work
+binding for current aggregate qualification. The final increment may be verifying
+while all predecessors are implemented. Pending controlled qualification never
+becomes a pass and still prevents final roadmap closure.
+
+Approved work that has not started is pending (`ready`), and active work is in
+progress (`executing`). Use `blocked` only when a human must take a specific action.
+Name the responsible role, action, location and proof that the action is done.
+Missing coding, an unrun technical check or a future user start order is agent work,
+not a human blocker. New `blocker-recorded` events require human action details.
+Use `blocker-reclassified` to assign saved unresolved work to `agent` or `human`.
+It archives the exact earlier record and authority/reason; agent work stays open.
+Unclassified legacy records retain their execution guard until explicitly reviewed.
+Agent work permits approved execution and checks, but unresolved technical work
+still prevents increment, target and final completion. Use `resumed` only when the
+recorded action or technical work is actually done, not to change a status label.
+Approval, ordered increments, dependencies and every technical criterion remain.
+
+Write user descriptions with ASD-STE100 principles: short sentences, familiar
+words, one clear action and an explicit actor. State what the user must do, where
+to do it and how completion is checked. For agent work say "No action needed" and
+use "In progress" or "Technical check pending". Do not ask for saved credentials
+or repeat authority already granted. Keep technical facts and history internally.
+Bind separate user descriptions to the current source; do not replace technical
+requirements or expose a technical accordion in the user view. Do not claim full
+ASD-STE100 conformance from these writing principles alone.
+
+For this repository, maintain `docs/operations/roadmap-user-descriptions.json`
+with current criterion/qualification and heading hashes. Review the complete
+meaning of every bullet, action and scope limit separately from syntax/hash checks.
+Include current and inspectable merged history. A display rewrite never removes
+an obligation or supplies a test pass. Do not publish a technical fallback when
+plain copy is stale; the agent must update it. Keep the technical CLI available
+for implementation and preserve exact qualification outcomes and support limits.
+
+Use the fixed `contextual-form-scope-aligned` event only for the accepted Asset
+Experience Form clarification. Preserve the original definition, plan and evidence.
+See `references/events.md` for admission and fresh verification.
+
+For the expressly authorized Asset Experience exclusion, use only the exact
+`asset-legacy-assessment-excluded` event in `references/events.md`. Keep the
+unperformed assessment in the Security roadmap and preserve original evidence.
+Reapprove the exact revised Asset scope and obtain a fresh, separate technical
+review of the retained checks. This event does not qualify the release profile
+and is not a general way to remove technical acceptance.
+
+For an explicitly authorized change to a pending technical acceptance policy,
+use `technical-acceptance-revised` as documented in `references/events.md`.
+This governed replacement-only event preserves criterion identity/qualification,
+archives the prior definition/plan/approval and invalidates old approval/bindings.
+It cannot remove criteria, amend security criteria, qualify a measurement or clear
+a blocker. Independently review the exact superseded/retained requirements and
+policy digest. Record the actual narrowly authorized reapproval; an earlier explicit
+user instruction may supply that authority without another question. Obtain fresh
+current checks/review for technical closure. Human-only scope events cannot revise
+model accuracy or other technical policy. Keep real resource/native/runtime gaps.
+
+When the human explicitly takes human acceptance testing offline, use
+`human-acceptance-transferred` as documented in `references/events.md`. Close only
+legacy implemented increments whose sole remaining criteria are human acceptance.
+This metadata handoff refuses receipt-governed roadmaps; those retain their
+candidate-bound completion policy and require separately qualified scope changes.
+Archive the original criteria and approval, preserve evidence and chunk history,
+and record the human's narrow scope approval through `roadmap-approved` afterward.
+Offline acceptance is user-owned, never a passing test. Mixed performance,
+hardware, provider, runtime and security checks remain technical qualification.
+Review the classification independently; the event's human-only attestation is
+operator supplied and cannot infer the meaning of arbitrary criterion prose.
+
+For technical roadmaps, define agent-executable acceptance, including automated UI
+tests where relevant; human studies/manual acceptance belong offline. For a started
+receipt-governed roadmap, use `acceptance-scope-revised` to remove purely human
+criteria or revise mixed descriptions under their existing IDs/qualification.
+Archive originals and explicitly supersede human portions of historical plans;
+retain automated accessibility, zero-data-loss/authority invariants and all
+performance, model, hardware, native and security checks. This event never closes
+an increment, changes evidence or qualifies a test. Independently review the exact
+classification, record actual narrow user reapproval, then obtain fresh current
+receipts/review for technical closure. Unavailable technical checks stay pending.
+For legacy mixed criteria, use the separate `legacy-acceptance-scope-revised`
+event with the same current-approval, complete-chunk and pending-controlled guards.
+It archives to `legacyAcceptanceScopeRevisions`, retains the legacy evidence
+policy and every technical status/evidence/blocker, invalidates approval, and
+never closes an increment. Do not use the human-only closure event for mixed
+criteria. Product human review/approval controls are separate from human acceptance
+testing and must remain intact.
+Governed evidence declarations never auto-complete an implemented-pending
+increment, even when an overall review exists. After actual technical checks pass,
+record the exact evidence/reports, create fresh work bound to that pending target
+with every criterion, verify and independently review it, then use
+`increment-qualified` with its exact work/receipt/review references. This path
+requires all implementation complete and preserves any other active increment.
+Evidence, report or plan changes invalidate qualification work. Do not fabricate
+an active implementation or bypass target review with overall evidence.
+
 1. Read the repository agent instructions, root README, documentation entry point,
    current worktree status, affected code, nearest README files, tests, architecture
    decisions, change-impact guidance, and
@@ -66,8 +169,20 @@ approval from a request to draft or inspect a roadmap.
    concise `not-security-relevant` review. Keep closely coupled work as chunks
    inside one cohesive vertical slice.
    The state engine rejects new or revised increments that omit this criterion.
-7. Present the complete roadmap and stop for explicit user approval. Record
-   `roadmap-approved` only after that approval.
+7. Publish the complete unapproved draft through `roadmap-defined` or the
+   applicable `roadmap-revised` event, then render and validate its canonical
+   roadmap/state. In repositories with the control-plane adapter, start or reuse
+   the review site and verify its live JSON projection matches the draft: the
+   expected nonzero increments, objectives, dependencies, work packages,
+   deliverables, criterion IDs/counts/descriptions/qualification, verification,
+   rollback and exclusions must be reviewable. A discovery-only 0/0 shell or an
+   ignored-only proposal is not a published draft. Repair missing, stale or
+   incomplete projection before asking. Implementation chunk plans follow
+   approval and increment research; they are not required to publish a draft.
+8. Share the verified review-site link and canonical full-roadmap reference before
+   requesting roadmap approval. Keep the draft unapproved; publication is neither
+   approval nor implementation authority. Record `roadmap-approved` only after
+   the user actually approves that published proposal.
 
 Do not start implementation while an option or roadmap approval is missing or stale.
 
@@ -147,6 +262,10 @@ is genuinely unavailable, or the user explicitly requests an increment checkpoin
 Continuous execution never infers initial implementation approval and never broadens
 the approved scope or authority. The explicit final overall approval remains
 required after `roadmap-completed`.
+A technical gap alone remains pending, not Blocked. Continue feasible approved
+work. If a human decision is actually needed, first prepare the concrete choice
+and record its role, action, location and completion condition. Do not invent a
+credential request, privilege requirement or test pass to change a status.
 
 For every approved increment, repeat this loop:
 
@@ -184,6 +303,11 @@ For every approved increment, repeat this loop:
    remains in JSON state and the roadmap. Provide the user a clickable report link
    after a user-visible slice or natural checkpoint, not after every file change or
    minor internal chunk.
+   Commit a coherent completed, tested and independently reviewed chunk before
+   continuing to the next chunk, following the owned-change checkpoint procedure
+   in `references/workflow.md`. Pending parent work, increment or roadmap
+   qualification does not defer a safe local commit; a chunk checkpoint does not
+   qualify its parent. Do not wait for whole-roadmap completion.
 8. Attach evidence to every acceptance criterion, including the security impact
    criterion. A `not-security-relevant` criterion uses review evidence with its
    concrete rationale; a `security-relevant` criterion cites implemented controls,
@@ -202,7 +326,10 @@ For every approved increment, repeat this loop:
 - Invalidate approval and stop when feedback changes a high-level decision or scope.
 - Re-run the security impact screen for feedback that changes scope, data flow,
   authority, side effects, dependencies, rollback, or an implementation boundary.
-- Record blockers with the action required to clear them.
+- Record human blockers with a responsible role, action, location and completion
+  condition. Keep unfinished agent implementation and checks pending.
+- Reclassify old mixed records explicitly; preserve their original text and reason.
+  Never mark unfinished technical work resolved to change a status label.
 - On resume, inspect worktree and artifact drift, resolve the blocker, document the
   reconciliation, re-run affected checks, and continue from the last proven state.
 - After every user approval response, perform the plan-continuity reconciliation
@@ -248,7 +375,11 @@ Before claiming completion:
    explicit final approval of the completed overall work.
 5. Only after the user gives that final approval, record
    `final-approval-recorded`. The engine removes only the generated temporary
-   report and retains the roadmap and canonical JSON state.
+   report and retains the roadmap and canonical JSON state. Status stays
+   `completed`; `finalApproval` separately records final approval and makes the
+   record immutable. For user-authorized legacy `final-approved` conversion,
+   use `completion-status-normalized` as documented in the event reference;
+   never rewrite history or treat normalization as new qualification.
 6. Provide permanent roadmap/state references and report commands run, failures,
    evidence that remains external, and work not done.
 

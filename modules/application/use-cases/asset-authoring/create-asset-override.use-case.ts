@@ -1,3 +1,5 @@
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import { normalizeAssetOverrideId, normalizeAssetOverrideRecord, normalizeCreateAssetOverrideCommand, type AssetAuthoringFailure, type CreateAssetOverrideCommand, type CreateAssetOverrideResult } from "../../../contracts/asset-authoring";
 import type { AssetCustomizationTargetReaderPort, AssetOverrideRepositoryPort } from "../../ports/asset-authoring";
 import { detectExpectedBaseRevisionConflict } from "./asset-authoring-conflict.service";
@@ -14,10 +16,12 @@ const provenanceFor = (sourceKind: CreateAssetOverrideCommand["target"]["sourceK
   if (sourceKind === "system-owned-asset") return createSystemDerivedOverrideProvenance(workspaceId, operationAt, sourceWorkspaceId);
   return createEditedAuthoredAssetProvenance(workspaceId, operationAt);
 };
-export interface CreateAssetOverrideUseCaseDependencies { assetOverrideRepository: AssetOverrideRepositoryPort; targetReader: AssetCustomizationTargetReaderPort; now?: () => string; generateAssetOverrideId: () => string; }
+export interface CreateAssetOverrideUseCaseDependencies { workspaceAccess: WorkspaceAssetAccessPort; assetOverrideRepository: AssetOverrideRepositoryPort; targetReader: AssetCustomizationTargetReaderPort; now?: () => string; generateAssetOverrideId: () => string; }
 export class CreateAssetOverrideUseCase { constructor(private readonly d: CreateAssetOverrideUseCaseDependencies) {}
   async execute(command: CreateAssetOverrideCommand): Promise<CreateAssetOverrideResult> {
     let c; try { c = normalizeCreateAssetOverrideCommand(command); } catch { return fail("validation", "Create asset override command is invalid."); }
+try {await requireWorkspaceAssetAccess(this.d.workspaceAccess, c.targetWorkspaceId, "asset-authoring.create-asset-override", "asset:write");} catch {return fail("unavailable", "Workspace asset operation is not authorized.");}
+
     if (c.targetWorkspaceId !== c.target.targetWorkspaceId) return fail("validation", "Target workspace id must match command workspace id.");
     if (c.target.sourceKind === "customized-asset") return fail("unsupported", "Customized-asset target chaining is deferred.");
     let found; try { found = await this.d.targetReader.readCustomizationTargetByReference(c.targetWorkspaceId, c.target.effectiveAssetReference); } catch { return fail("unavailable", "Customization target reader is unavailable."); }

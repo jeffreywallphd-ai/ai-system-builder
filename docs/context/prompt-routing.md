@@ -4,6 +4,16 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 
 ## Baseline
 
+- Contributor workflow work requests start at `AGENTS.md` and
+  `docs/diagnostics/ai-development-control-plane.md`. Start or reuse its
+  JSON-backed review server and share the verified link. Use `docs-standards`
+  for workflow changes, plus `security` for execution or evidence boundaries.
+  For final aggregate admission, use the roadmap skill's implementation-boundary
+  rule: all chunks implemented, current approval and no blockers. Pending external
+  evidence never permits final closure.
+  Pending implemented targets use `increment-qualified` after actual checks and
+  fresh exact-target review; preserve other active work and overall authority.
+
 - Always include `docs/context/packs/index.pack.md`.
 - Read `docs/README.md` before assembling task context.
 - Use `docs/context/pack-catalog.json` for machine-readable task/path signals and applicable checks.
@@ -28,6 +38,7 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 | execution plans, dry-run/preflight, planned steps/inputs/outputs, safety gates                                             | `docs/context/packs/execution-plan-preparation.pack.md`                                                              |
 | conversational runnable systems, sessions, turns, runs, text-generation adapters                                           | `docs/context/packs/controlled-conversational-system-execution.pack.md`                                              |
 | ingestion, staged sources, dataset preparation, split integrity, curation, versioning, or dataset publication             | `docs/context/packs/data-management.pack.md`                                                                         |
+| context browser, RAG database generation, chunk extraction, context packs, topics, summaries, or manual context           | `docs/context/packs/context-management.pack.md`                                                                      |
 | runtime adapters, runtime contracts, runtime execution flow                                                                | `docs/context/packs/runtime.pack.md`                                                                                 |
 | runtime task registry lifecycle, progress, cancellation, retention                                                         | `docs/context/packs/runtime-task-registry.pack.md`                                                                   |
 | runtime installers, auto-install, install state, ComfyUI/Git installs                                                      | `docs/context/packs/runtime-installer.pack.md`                                                                       |
@@ -61,6 +72,10 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 - Data Management: `index` + `data-management`; add only the one owning
   storage, runtime, UI, server, or security pack proven relevant to the current
   boundary.
+- Context Management: `index` + `context-management`; add
+  `data-management` for Artifact Browser handoffs and shared extraction, then
+  only the one owning storage, runtime, UI, server, or security pack proven
+  relevant to the current boundary.
 - Security: `index` + `security` + the one public host/client/feature boundary being changed.
 - Implicit security boundary: when an otherwise ordinary feature changes authority, isolation, public payloads, untrusted input, storage, runtime/provider I/O, diagnostics, dependencies, migration, or rollback, route it as `index` + `security` + the owning boundary pack even if the request never says “security.”
 - Desktop renderer styling: `index` + `desktop-styling` + `desktop-implementation`.
@@ -86,6 +101,42 @@ Before architecture-sensitive implementation, consult `docs/adr/decision-readine
 
 ## Implementation Roadmap Routing
 
+Requests for roadmap approval must first publish the complete unapproved draft
+through the roadmap skill and verify its live review-site increments, objectives
+and acceptance details. A discovery-only 0/0 shell is insufficient; share the
+verified link before asking. Publication never supplies approval.
+
+Approved not-started work is Pending (`ready`); active work is In progress
+(`executing`). Reserve Blocked for a concrete action that a person must take. Agent-owned implementation and automated checks are pending work. User-ordered future work
+stays queued in its plan, without inventing a blocker or automatic cross-roadmap
+gate. For actual blockers, use the skill's `resumed` reconciliation before a new
+increment; current approval, ordering and dependencies remain mandatory.
+
+Requests to commit completed and tested roadmap chunks also use the roadmap
+skill. Its scoped checkpoint procedure preserves unrelated changes and pending
+parent qualification; a checkpoint grants no publication or main advancement.
+For Windows publication errors, use the roadmap skill's state recovery procedure.
+
+Use `completed` as the single current roadmap completion status. Final approval
+is the separate immutable `finalApproval` fact. For explicit legacy status
+conversion, route to the skill's `completion-status-normalized` event; retain
+history, approvals, evidence and creation dates without inventing qualification.
+
+When the user assigns human acceptance offline, route to the skill's explicit
+handoff event; retain technical checks and archived history without invented passes.
+Mixed legacy criteria use `legacy-acceptance-scope-revised`; keep technical
+identity, pending evidence and completion status unchanged. Product approval
+controls remain requirements, not acceptance testing to remove.
+For agent-only acceptance on started governed roadmaps, use the skill's
+`acceptance-scope-revised` event, independent classification review and fresh
+candidate qualification. Retain automated UI and actual technical/native checks.
+For explicit numeric or other technical policy amendments, use the separate
+`technical-acceptance-revised` event. Preserve the controlled criterion identity,
+archive original policy/plan/approval and independently verify actual user authority
+and policy digest. It supplies no pass, removes no criterion/security control and
+retains genuine resource/runtime/native qualification. Existing explicit narrow
+authority can supply reapproval without another question; fresh checks/review remain.
+
 Requests to prepare, implement, continue, resume, or review an implementation
 roadmap route to `skills/manage-implementation-roadmaps/SKILL.md`. Drafting or
 review alone does not authorize code changes. Once implementation is explicitly
@@ -94,7 +145,27 @@ by default; do not insert routine per-increment approval pauses. Stop only when 
 skill's scope, authority, security, blocker, controlled-environment, or final
 approval gates apply.
 
+Requests to plan a system from a written description, inspect or edit saved
+systems, check a conversation task, send an approved turn, or show a saved
+resource in a consented app window through MCP route to
+`skills/control-ai-system-builder/SKILL.md`. Repository development and roadmap
+implementation continue to use the contributor workflow.
+
+For the accepted Asset Experience contextual Form clarification, use the roadmap
+skill's fixed alignment event. Preserve prior evidence and obtain fresh focused
+verification for the two revised local criteria.
+
 ## Stop Condition
 
 - If required canonical guidance is missing, unclear, or conflicting, update or request clarification for the canonical docs rather than inventing policy silently.
 - If the security impact cannot be dispositioned, or a material identity, tenancy, secret, sandbox, public exposure, encryption, retention, audit, or residual-risk choice is unresolved, stop at the decision gate rather than assuming a permissive policy.
+
+For unclear review-site instructions, use the existing source-bound presentation
+JSON. State the responsible role, exact action, action location and completion
+proof. Show plain user wording on the review site and retain technical definitions
+internally. Reclassification is not a test pass, scope removal or new authority.
+
+The browser description adapter reads `docs/operations/roadmap-user-descriptions.json`.
+Review semantic completeness before binding current source/qualification hashes.
+Retain the technical CLI and canonical JSON for agent work; stale copy means an
+agent must update the description. Display formatting cannot change qualification.

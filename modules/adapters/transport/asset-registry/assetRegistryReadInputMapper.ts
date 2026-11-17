@@ -217,7 +217,7 @@ export function toAssetRegistryDefinitionReference(
   input: Pick<AssetRegistryDefinitionReadInput, "definitionId" | "version">,
 ): AssetReference {
   return {
-    kind: "asset-definition",
+    kind: input.version ? "asset-definition-version" : "asset-definition",
     id: normalizeAssetId(input.definitionId),
     ...(input.version ? { version: normalizeAssetVersion(input.version) } : {}),
   };
@@ -360,6 +360,6 @@ function assertPublicLimit(value: number): number {
 
 function parseCursor(value: unknown, shape: AssetRegistryReadInputShape): string {
   const cursor = requiredString(value, "cursor", shape);
-  if (cursor.length > 512 || /[\\/\x00-\x1f\x7f]/.test(cursor)) throw new Error("invalid cursor");
+  if (cursor.length > 8192 || /[\\/\x00-\x1f\x7f]/.test(cursor)) throw new Error("invalid cursor");
   return cursor;
 }

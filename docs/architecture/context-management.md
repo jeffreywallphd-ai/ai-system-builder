@@ -1,0 +1,397 @@
+# Context Management
+
+- Status: current
+- Related decisions:
+  `docs/adr/ADR-0008-ingestion-and-staged-artifact-semantic-model.md`,
+  `docs/adr/ADR-0009-artifact-identity-and-backing-domain-model.md`,
+  `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md`,
+  `docs/adr/ADR-0040-immutable-dataset-versions-lineage-and-publication.md`,
+  `docs/adr/ADR-0041-context-management-and-portable-context-artifacts.md`
+- Related areas: `docs/architecture/data-management.md`,
+  `docs/architecture/runtime-model.md`,
+  `docs/architecture/persistence-and-storage.md`
+- Verification: `docs/architecture/architecture-verification.md`
+
+## Purpose
+
+Context Management turns explicitly selected workspace artifacts and bounded
+manual entries into portable context artifacts. It does not introduce a second
+upload, acquisition, or dataset system. Data Management remains the authority
+for acquiring source artifacts and creating reviewed datasets; Context
+Management consumes those artifact identities and preserves their provenance.
+
+The user experience has three peer surfaces:
+
+1. **RAG databases** selects source data, inspects or extracts chunks, configures
+   a local embedding model, generates a review, and asks the user to save or
+   discard. Its compact source picker follows Data Management conventions with
+   readable names, file-type badges, and All, Uploaded, and Generated filters.
+2. **Context packs** first chooses manual entry or source materials. Manual
+   entry validates and preserves the entered Markdown. Source mode performs
+   semantic chunking, topic grouping, Standard or Strict cleaning, then either
+   preserves each group with **No Summarization** or generates summaries with
+   an explicitly selected local model. Both modes use the same formatted review
+   and explicit save/discard lifecycle.
+3. **Context Browser** shows saved RAG databases and context packs in the same
+   card vocabulary as Artifact Browser. **View Details** opens a bounded modal
+   for metadata, preview, source navigation, RAG testing, rebuild, and deletion.
+
+## Shared capability and Data Management linkage
+
+`modules/contracts/context-management/context-source-capabilities.ts` consumes
+the Dataset Preparation source capability authority. Context accepts textual
+CSV, JSON, JSON Lines, Parquet, TXT, Markdown, HTML, PDF, and DOCX artifacts and
+rejects image-only and unsupported formats before runtime work.
+
+Artifact Browser details for compatible textual data can expose **Convert to
+RAG database**. The handoff contains only the authoritative workspace id,
+artifact id, and target tab. The Context page resolves the current
+workspace-scoped artifact again; a renderer-provided path, media type, byte
+payload, or readiness claim is never authoritative.
+
+“Already chunked” means the selected structured artifact contains persisted
+`chunkIndex` and `sourceLineage` evidence for every usable row. Context
+generation reuses each row as a chunk and preserves the selected artifact
+digest, row index, text field, original chunk index, normalized span, page, and
+region where present. A merely structured dataset is not called already
+chunked. When that evidence is absent, the normal extraction settings apply.
+
+RAG extraction reuses
+`modules/adapters/runtime/python/worker/tasks/markdown_chunking.py`, the neutral
+chunker used by Dataset Preparation. The user can choose fixed-length,
+topic-aware, or document-structure sections. Fixed-length uses character size
+and overlap. Topic-aware uses semantic sentence boundaries with a bounded token
+ceiling and sensitivity. Document-structure uses normalized headings,
+paragraphs, tables, pages, and layout regions where the source parser provides
+them, with a section fallback for structured rows. These controls apply only
+to unchunked sources; verified persisted chunks are reused without alteration.
+
+## End-to-end flow
+
+    Context ordered workflow or identifier-only Data Management handoff
+      -> authenticated workspace host boundary
+      -> ContextGenerationUseCase
+      -> workspace artifact binding, catalog, and object-storage reads
+      -> private bounded staging with exact source SHA-256
+      -> RuntimeTaskRegistryPort (context-generation)
+      -> managed Python worker (generate-context-artifact)
+      -> bounded source inspection, preview, manifest, and private output
+      -> explicit Save or Discard
+      -> record-last object, catalog, and binding persistence
+      -> Context Browser or Artifact Browser detail selection
+
+Application code owns authorization, staging, task ownership, output
+containment, review state, save/discard, catalog visibility, and compensation.
+The Python worker owns document/structured extraction, chunking, embedding,
+topic/summary generation, and physical artifact creation. Renderers own only
+ordered interaction state and bounded display. The shared desktop/thin-client
+Context Studio uses the standard tab-panel inset and four-step workflow
+components. Workspace changes clear source filters and selections, manual text,
+task review state, browser selection, and query results. Only an opaque task id
+may be retained for review recovery. The shell-level notification bridge
+publishes authoritative bounded task progress while the tabs are open or
+closed. Save, discard, and delete publish terminal outcomes; validation,
+blocking diagnostics, loading, empty results, and routine reads remain inline.
+
+LanceDB is supplied by the host-owned managed Python dependency boundary.
+Normal runtime setup installs the exact reviewed package by default. Before an
+explicit RAG generation, saved-artifact inspection, or query, desktop and server
+repeat one asynchronous idempotent probe/install/re-probe. Concurrent requests
+share one in-flight ensure. If installation is required, the same workspace task
+activity reports a fixed **Installing the local vector database** message,
+completion, or a sanitized retryable failure before normal Context progress
+continues. Context list, passive detail metadata, readiness, capability, task
+status, and notification polling never install or repair dependencies.
+
+Saved artifacts are accessed through `ContextBrowserUseCases`. List is derived
+only from the authorized workspace artifact catalog and the two context media
+types. Detail re-retrieves exact bounded bytes, verifies the catalog digest,
+and asks the managed runtime to parse the LanceDB package or context-pack ZIP
+into a safe bounded projection. Rebuild reconstructs a generation command only when every source
+remains available and no manual text would be lost. Delete delegates to the
+registered-artifact deletion lifecycle.
+
+RAG test queries use the embedding model recorded in the verified manifest,
+rank vectors inside the managed runtime, and return only bounded excerpts,
+scores, and exact citations. Stored vectors and arbitrary LanceDB columns never
+cross the runtime boundary.
+
+Desktop and server hosts compose the same application facade. Electron exposes
+one sender-trusted, independently validated command channel through preload.
+The server exposes authenticated read and write routes with `artifact:read`
+and `artifact:write` policy scopes. Both transports inject authoritative actor
+context and preserve opaque cross-workspace not-found behavior.
+
+The desktop Context page renders the shared sanitized Python runtime monitor
+beneath RAG Databases, Context Packs, and Context Browser. It loads bounded
+runtime status and activity with the page and keeps start, stop, restart,
+refresh, and clear as explicit user actions. Source-inspection projections
+always include `textFields`; document sources use an empty array so the typed
+runtime boundary does not reject an otherwise valid inspection result.
+
+## Materialized artifacts
+
+### RAG LanceDB package
+
+The RAG media type is
+`application/vnd.ai-system-builder.rag-database+lancedb+zip`. One saved artifact
+contains `manifest.json` and a `database/` subtree with exactly one `chunks`
+table. Its non-null schema is `id`, `ordinal`, `text`, `citation_json`, and a
+fixed-size float32 `vector`; the manifest records the exact vector dimension,
+embedding model, sources, counts, and digests. The package is a portable blob,
+not a registered directory or a global database singleton. Workspace and
+artifact identity therefore isolate each database while the shared managed
+Python worker may open many packages independently without a process per
+database.
+
+Generation writes into private staging and packages only regular contained
+files. Inspection and queries verify the catalog digest, ZIP layout, duplicate
+entries, link/file type, compressed and expanded bounds, manifest, table name,
+exact Arrow schema, row count, unique ids and ordinals, finite vector values and
+dimensions, citation digests, and source lineage before using the database.
+Materialization uses a private temporary directory and never `extractall`.
+Table validation scans at most 256 rows per Arrow batch, checking every vector
+natively for nulls, dimensions and finite values before retaining validated
+metadata. It never materializes the full vector table as Python floats.
+Cancellation is checked between batches and metadata rows; the reader closes
+on success, denial or cancellation. Query ranking remains exact with the vector
+index bypassed. No cross-request package, vector or embedding cache is added.
+Embedding vectors are not returned in previews, task metadata, catalog records,
+or diagnostics. Generation uses a selected local Transformers model with
+`local_files_only=true`; it never downloads a model as a side effect.
+
+### Markdown context pack
+
+The context-pack media type is
+`application/vnd.ai-system-builder.markdown-context-pack+zip`. Every bounded
+ZIP contains `manifest.json` and `README.md`. A manual pack adds one exact
+`context.md`; a source-derived pack adds `topics.md` and `sources.md`.
+Static archive member names prevent path traversal. Each source-derived topic
+and source chunk has a citation back to the selected artifact.
+
+No Summarization preserves each cleaned semantic group without shortening it.
+Model-assisted generation requires an explicitly selected installed local
+model, a maximum line count, and strict JSON output. Source text is delimited
+as untrusted data, embedded instructions have no authority, and every returned
+citation must match a supplied chunk id. Manual and generated Markdown is
+validated before review and archive creation. Review renders a safe React
+projection; raw HTML from Markdown is never executed.
+
+## Review and persistence lifecycle
+
+Runtime success is `review-required`, not saved. The host revalidates output
+handle containment, regular-file status, byte count, media type, manifest,
+source evidence, preview bounds, and SHA-256 before exposing review evidence.
+Only bounded preview text and citations cross into UI state.
+
+Save re-reads and re-hashes the same staged output. Object bytes are written
+first, then a workspace catalog record is appended, then the primary local
+binding is created. Catalog or binding failure compensates previous writes.
+Discard removes the private runtime directory without cataloging anything.
+Cancellation is cooperative and checks between chunks; terminal paths release
+the power-suspension blocker and private staging.
+
+## Bounds
+
+- At most 32 selected artifacts and 32 manual entries.
+- At most 64 MiB per retrieved artifact and 1 GiB aggregate selected bytes.
+- At most 200,000 characters per manual entry and 1,000,000 aggregate. The
+  manual authoring surface reports lines because that is the meaningful editing
+  measure; the character ceilings remain defense-in-depth byte-growth bounds.
+- At most 100,000 chunks; chunk size is 64 to 32,000 characters and overlap is
+  smaller than the chunk and at most 8,000 characters. Adaptive chunking uses
+  32 to 4,096 tokens per chunk and topic sensitivity from 0 to 1.
+- At most 32 discovered topic groups. No Summarization groups are at most
+  12,000 characters; local-model output is at most 64,000 characters and the
+  requested 1 to 1,000 lines. Review remains at most 100 items and 8,000
+  aggregate preview characters.
+- Model prompts and outputs are separately bounded; every source and saved
+  context artifact is at most 64 MiB, matching verified object retrieval.
+- A RAG package contains at most 4,096 database files, no entry larger than
+  128 MiB, and no more than 256 MiB of expanded bytes. Only `manifest.json` and
+  regular files beneath `database/` are accepted.
+
+## Failure and recovery
+
+Generation may select CPU, CUDA or automatic embedding placement; omission keeps
+CPU behavior. Retrieval uses its own optional `embeddingDevice` request hint.
+Device is never persisted in a portable manifest, so saved packages and source
+rebuilds remain placement independent. Automatic selection prefers available
+CUDA; explicit CUDA fails when unavailable and never falls back on failure.
+The local runtime moves weights and every token tensor to the same selected
+device, preserves float32 pooling/normalization/dimensions, and releases owned
+GPU tensors/cache after success or failure. UI preferences reset with workspace
+changes. The model, sources and dimensions still come from verified authority.
+
+Missing workspace, authorization, source, capability, digest, model,
+dependency, citation, output containment, or storage evidence fails closed.
+Public errors do not contain source text, manual content, prompts, model output,
+embeddings, credentials, or local paths. Private staged directories are removed
+after terminal failure, cancellation, save, or discard. A failed save remains
+reviewable after compensation so the user can retry.
+
+> AI documentation reminder: when behavior in this area changes, update the
+> related ADRs, threat model, context pack, runtime docs, and host/UI READMEs in
+> the same change.
+
+## Renderer session and action ownership
+
+Context Studio replaces its form session when the workspace or typed client
+changes. Layout cleanup retires the old session during commit. Its client checks
+that session before dispatch and after each asynchronous reply, before another
+command, task-storage write or notification can occur. The shell notification
+bridge has a separate committed workspace/client fence and remains independent
+of the page. Leaving the page does not cancel or remove accepted host work.
+
+Generation, inspection, review, query, rebuild and delete use synchronous action
+ownership before the busy render. An accepted generation stays owned through
+review or unconfirmed cancellation. Matching terminal status permits a later
+preparation. Save/discard require their matching terminal result; Save also
+requires the returned artifact before claiming success. Closing a detail view
+retires its local read/query presentation. A newer detail or browser-list request
+cannot be overwritten by an older reply.
+
+Source inspection, saved detail, retrieval and generation status replies must
+match the requested action and source, artifact or task identity. This renderer
+fence supplements existing host authorization; it grants no backend authority.
+Transport exceptions use fixed user messages. Only local fixed Markdown
+validation diagnostics and renderer-owned diagnostics retain detailed copy.
+Focused UI fixtures exercise these behaviors and existing RAG/pack round trips.
+Actual host, model, native and final combined qualification remain separate.
+
+Each accepted generation has a local observation epoch. Later cancellation or
+poll replies cannot replace a confirmed terminal or ready-for-review state. A
+fresh explicit acceptance resets presentation for the next generation without
+reviving the old observation. This is renderer ownership, not runtime authority.
+
+Delete confirmation binds the selected artifact ID and verified storage key.
+Only an acknowledgement of that exact key can clear the confirmation, refresh
+the list or report deletion. A different key leaves the selected view intact.
+
+### Manual package byte identity during inspection
+
+A saved manual pack must contain exactly one manual manifest entry and no source
+artifacts, as required by manual generation. The runtime compares SHA-256 of the
+exact bounded `context.md` member bytes with that entry before accepting UTF-8
+and Markdown. It does not normalize line endings or text before the comparison.
+The existing catalog digest protects the outer package; the member check protects
+its internal content/lineage consistency. It does not authenticate an author.
+Legacy/source-derived package handling, RAG validation and review/save controls
+remain unchanged. Focused byte fixtures do not qualify either mounted host.
+
+## Current-owner save failure and retry
+
+Context save checks that its generated catalog identity is unused before writing.
+Only an exact acknowledged object write becomes a compensation target. The local
+object adapter can append catalog metadata during storage; Context therefore
+removes that target's catalog entry on a later save failure even when its own
+explicit catalog update failed. It removes the known bytes after catalog cleanup.
+A refused write or an unconfirmed returned key never becomes a deletion target.
+
+A temporary catalog/object cleanup outage retains the current request's exact key
+and private reviewed output. Serialized Save, Discard and Cancel finish that
+cleanup before another object write or terminal release. This is cooperative
+current-owner recovery in the live application, not an atomic metadata
+transaction, crash journal, native file-identity proof or adoption of old state.
+The existing process-restart/native qualification remains separate.
+
+The focused Context test composes the actual shared UI, desktop preload/IPC or
+browser HTTP client, artifact/Context host helpers, application facade, runtime
+adapter, JSON catalog/bindings and filesystem bytes. Manual review/save/discard,
+source-derived no-summary lineage, exact-byte reopen/deletion, duplicate save,
+wrong-workspace recovery and safe persistence correction have exact assertions.
+Finite worker output and inspection fixtures exercise the application boundary;
+they do not qualify the production archive parser, Python/model/OCR, provider
+access, physical app windows, SQLite/process restart, native shutdown or final
+combined testing. No accepted model accuracy is rerun.
+
+Save error copy is owned by the application. Unknown filesystem/port exceptions
+use a fixed generic message; refused port results use fixed step messages.
+Private staged paths and port error text/details never become Save transport
+failures. Both registered HTTP and IPC envelopes are checked directly, including
+an actual missing staged file. Failed-save cleanup checks reopen the exact old
+object key to prove absence, and the positive case verifies the exact durable
+primary binding, not only catalog counts or a successful response.
+
+## Preparation start and staging diagnostics
+
+The application owns public failure copy for generation-start exceptions and
+source-staging exceptions/refused binding or byte reads. Preserve the refused
+contract code while replacing its message with fixed corrective text. Unknown
+exceptions use a fixed step fallback. Raw adapter/runtime text and details do
+not cross these error branches into registered HTTP or IPC envelopes.
+
+Composed both-client tests capture the actual envelopes, preserve manual input
+or exact source bytes, refuse generation when staging fails and permit correction
+and retry. The finite registry refuses before worker acceptance; this correction
+does not change or qualify existing worker ownership, cancellation, native cleanup,
+process restart, terminal-runtime diagnostics or final combined testing.
+
+### Joined retrieval and rebuild regression
+
+An accepted Rebuild closes the old Context detail dialog before showing the
+preparation/review workflow. A refused rebuild leaves the detail available for
+correction and retry. The source and original saved artifact remain unchanged;
+the rebuilt candidate still requires explicit review and save.
+
+The renderer admits query results only for the selected artifact, within the
+requested/canonical result and excerpt limits, with finite valid scores and
+citations validated by the existing contract helper. Invalid replies get fixed
+public copy before result rendering. Starting a new query clears the old answer
+so a failed or refused reply cannot appear to answer the new request. These
+checks support display safety; application/transport authorization remains the
+authority and no UI value grants access or a device fallback.
+
+Eighteen additional two-host composed tests check RAG review/save/query/rebuild,
+source-pack rebuild/restoration, exact source/chunk/citation/device context,
+reopened catalog/bindings/bytes and preserved originals. Explicit CUDA refusal
+requires an explicit corrected retry. Runtime output, malformed acknowledgement,
+archive inspection, embedding/query, access and in-process invocation are finite
+fixtures. Real UI/clients/transports/application/staging/files are composed; the
+fixture is not an actual LanceDB/model/physical-host or final roadmap pass.
+Whole-app source-pack/RAG helper wiring remains separate implementation work.
+
+### Fixed source Context processor regression
+
+The private provided-data qualification worker admits one versioned synthetic
+Markdown source and its declared source-pack/RAG settings. The existing production
+processors generate, inspect and query the actual package. A finite deterministic
+embedding callback replaces model execution; real LanceDB storage and query
+remain in use. This callback is test support, not a new production provider.
+The source digest, bounded package manifest and actual returned citations remain
+checked. Actual app restart and real model/index qualification are separate.
+
+Generated source packs now frame each topic summary with an invisible versioned
+Markdown marker and its exact character count. This preserves the cleaned group
+verbatim, including nested headings, citation-like lines and fenced examples.
+The bounded reader uses that count to find the real citation footer. Existing
+unambiguous legacy topics and manual packs retain their existing reader paths.
+Malformed frames, oversized summaries and unsupported versions fail closed;
+archive, topic, summary, line and citation limits remain unchanged.
+
+### Source Context app-journey wiring
+
+Both existing app restart cases now reuse one fixed-source Context helper. Data
+details passes only the selected storage identifier into RAG preparation. Public
+read results provide byte/digest/manifest/source/citation evidence; all creation,
+review/save, query, source navigation, rebuild, discard and deletion actions use
+existing visible controls. Immutable original records are re-read after every
+successor. The original workspace is restored for existing dataset/manual cases.
+A source review identified that fresh-session source-pack rebuild may not restore
+the preparation mode. That separate product regression/fix remains agent work,
+not a human blocker or a qualification pass. Actual app execution is deferred.
+
+### Fresh-session saved-pack review
+
+The earlier source-review finding is repaired at the shared renderer boundary.
+An accepted, still-owned source-pack Rebuild restores its manifest input mode
+before showing preparation/review. Missing legacy mode means source materials,
+matching the application command. A refused rebuild keeps detail open and does
+not select a mode or publish an artifact. Saved manual packs remain ineligible
+for automatic rebuild because their content must be entered again. Explicit
+review and save create a separate successor; original records and bytes remain.
+Workspace/client/unmount tests preserve the existing scoped-client isolation;
+explicit action-token checks also guard acknowledgement and error updates.
+Fresh renderer tests use actual registered Desktop IPC/preload or owned HTTP,
+application and filesystem catalog/bindings, with finite worker/archive fixtures.
+They do not qualify actual app restart, models, native cleanup or parent closure.

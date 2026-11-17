@@ -1,0 +1,133 @@
+{
+  "schema_version": "security-authority-local-feature-evidence-v1",
+  "increment_id": "file-and-workspace-authority",
+  "tested_source": {
+    "head": "99f43a06d6d9f7181f9d10f62fe6162030d74f45",
+    "source_digest": "cfaa92f8c16e337360fbdfee7f3856866ca582c0940c7cfdc019709ec692b07f"
+  },
+  "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test --test-concurrency=1 --test-reporter=tap",
+  "tests_passed": 81,
+  "suites": [
+    {
+      "name": "authentication",
+      "criterion_id": "authentication-result-invariant",
+      "qualification": "local-pass-candidate",
+      "exit_code": 0,
+      "paths": [
+        "modules/application/services/security/tests/transport-authentication-invariant.unit.test.ts"
+      ],
+      "counts": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "transcript_sha256": "54a2c8017408df9104421fdce9c4aed3d107d567f79b3cd0baea685bcd1acf21",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": [
+        "Denies malformed, anonymous or unauthenticated verifier results before a successful audit.",
+        "Preserves the authenticated identity and keeps the token out of the audit."
+      ]
+    },
+    {
+      "name": "dataset-source",
+      "criterion_id": "dataset-source-isolation",
+      "qualification": "local-component-support",
+      "exit_code": 0,
+      "paths": [
+        "modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts",
+        "modules/adapters/transport/api-express/dataset-preparation/tests/register-dataset-preparation-api-routes.unit.test.ts",
+        "modules/adapters/storage/filesystem/artifact-catalog/tests/local-artifact-storage-binding.adapter.unit.test.ts"
+      ],
+      "counts": {
+        "tests": 35,
+        "pass": 35,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "transcript_sha256": "1a8520d4b4ee6d6acd7dfc02710f635ee6b806357094e6e6831f52269cd78dd7",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": [
+        "Denies missing or conflicting source bindings before reading storage, calling a provider or starting a worker.",
+        "Stages a valid source and localizes equal source IDs in two workspaces to different filesystem objects.",
+        "The API forwards the authenticated organization and denies unauthenticated starts. A full cross-organization source read with the same IDs was not exercised."
+      ]
+    },
+    {
+      "name": "scoped-state",
+      "criterion_id": "scoped-state-integrity",
+      "qualification": "local-pass-candidate",
+      "exit_code": 0,
+      "paths": [
+        "modules/adapters/persistence/asset-authoring/tests/local-asset-authoring-repositories.unit.test.ts",
+        "modules/adapters/persistence/user-library/tests/local-user-library-repository-adapters.unit.test.ts",
+        "modules/application/use-cases/user-library/tests/promote-workspace-asset-to-user-library.use-case.unit.test.ts"
+      ],
+      "counts": {
+        "tests": 18,
+        "pass": 18,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "transcript_sha256": "a87b93c47828fdb61da9e2feebad0085efe90763e5cf284fea75fdbcd356dc9a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": [
+        "Identical asset and revision IDs retain both workspace records.",
+        "Concurrent colliding library writes from different adapter instances preserve the existing record and return a safe conflict."
+      ]
+    },
+    {
+      "name": "download-completion-local",
+      "criterion_id": "write-owned-model-completion",
+      "qualification": "local-component-support",
+      "exit_code": 0,
+      "paths": [
+        "modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts",
+        "modules/adapters/transport/api-express/tests/register-model-management-api-routes.unit.test.ts"
+      ],
+      "counts": {
+        "tests": 26,
+        "pass": 26,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "transcript_sha256": "b2b9aa174964bb221ebd2f7c1097afd1b24146fa110ea10c151c220a94b6e94d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": [
+        "Read and list operations do not write to the registry.",
+        "Explicit write authorization and exact task ownership are checked before registration. In-process retries register once.",
+        "Restart recovery and durable registration replay were not exercised."
+      ]
+    }
+  ],
+  "legacy_history": {
+    "pre_handoff_commit": "9141f7f50dd2c593088ddb3e375800543ceb5432",
+    "frozen_state_digest": "c74c24552248e7763036058d519939c7b627aa01dde8764aad9f84f7f4b57d65",
+    "legacy_completed_increments": 4,
+    "unresolved_criterion_owner_mappings": 10,
+    "original_chunks_preserved": 12,
+    "original_evidence_preserved": 15,
+    "legacy_final_approval": null,
+    "approved_successor": "security-findings-refresh",
+    "outcome": "passed"
+  },
+  "cleanup": {
+    "removed_owned_test_files": true,
+    "test_transcripts_preserved": true
+  },
+  "limits": [
+    "The native file delete and reveal paths and the full increment security review remain open.",
+    "The tests used synthetic data and made no private provider requests or changes to user files.",
+    "The storage tests covered persistence invariants only. They did not reopen the separate legacy Assets authorization review."
+  ],
+  "parent_increment_pass": false
+}

@@ -1,8 +1,10 @@
 import type { ServerListener } from "./createServer";
 import { createServer, createServerListener } from "./createServer";
+import { shutdownServerResources } from "./shutdownServerResources";
 
 let activeListener: ServerListener | undefined;
 let closeActivePersistence: (() => Promise<void>) | undefined;
+let shutdownActiveTasks: (() => Promise<void>) | undefined;
 let restartQueue = Promise.resolve();
 let shutdownQueue: Promise<void> | undefined;
 
@@ -15,6 +17,7 @@ async function startServer(): Promise<void> {
   const listener = createServerListener(createdServer);
   activeListener = listener;
   closeActivePersistence = createdServer.closePersistence;
+  shutdownActiveTasks = createdServer.shutdownBackgroundTasks;
 
   listener.listen(createdServer.config.port, () => {
     void createdServer.loggingPort.log({
@@ -48,23 +51,9 @@ async function startServer(): Promise<void> {
 async function closeActiveListener(): Promise<void> {
   const listener = activeListener;
   activeListener = undefined;
-  if (!listener) {
-    await closeActivePersistence?.();
-    closeActivePersistence = undefined;
-    return;
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    listener.close((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
-  });
-  await closeActivePersistence?.();
+  await shutdownServerResources({ listener, shutdownBackgroundTasks: shutdownActiveTasks, closePersistence: closeActivePersistence });
   closeActivePersistence = undefined;
+  shutdownActiveTasks = undefined;
 }
 
 async function restartServer(): Promise<void> {
@@ -73,8 +62,10 @@ async function restartServer(): Promise<void> {
 }
 
 function beginShutdown(): void {
-  shutdownQueue ??= closeActiveListener().then(() => undefined);
-  void shutdownQueue;
+  shutdownQueue ??= closeActiveListener().catch(() => {
+    shutdownQueue = undefined;
+    console.warn("Server shutdown remains pending; owned resources are retained.");
+  });
 }
 
 process.once("SIGINT", beginShutdown);

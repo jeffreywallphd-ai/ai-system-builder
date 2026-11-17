@@ -1,3 +1,6 @@
+import { capturePackageInspection } from "../../services/asset-package/capture-package-commands";
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import type { AssetImplementationArtifactPort } from "../../ports/asset-implementation";
 import type {
   AssetPackageInspectorPort,
@@ -15,6 +18,7 @@ import { packageFailure, packageSuccess } from "./asset-package-result";
 export class InspectAssetPackageUseCase {
   public constructor(
     private readonly dependencies: {
+      readonly workspaceAccess: WorkspaceAssetAccessPort;
       readonly inspector: AssetPackageInspectorPort;
       readonly repository: AssetPackageRepositoryPort;
       readonly artifacts: AssetImplementationArtifactPort;
@@ -24,6 +28,10 @@ export class InspectAssetPackageUseCase {
   ) {}
 
   public async execute(command: InspectAssetPackageCommand): Promise<AssetPackageResult<AssetPackageInspectionSummary>> {
+    try { command = capturePackageInspection(command); }
+    catch { return packageFailure("package-inspection-rejected", "Package could not be safely quarantined."); }
+    try { await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-package.inspect", "asset:write"); }
+    catch { return packageFailure("package-workspace-forbidden", "Workspace asset access is unavailable or forbidden."); }
     const inspectionId = this.dependencies.nextInspectionId();
     const inspectedAt = this.dependencies.now();
     const inspected = await this.dependencies.inspector.inspect({

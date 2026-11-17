@@ -1,0 +1,1100 @@
+{
+  "schema_version": "comprehensive-ui-thin-operational-current-evidence-v1",
+  "increment_id": "operational-ui-and-coverage-qualification",
+  "criterion_id": "operational-and-task-ui",
+  "case": "thin client preserves Security refresh recovery and shell controls",
+  "tested_source": {
+    "head": "58daf32ebf473fef658e360cc2063e9ca2fad51d",
+    "source_digest": "2658163949778bc6b2cd0fc74ede45034d4758109f48bead758f8658962a40e8",
+    "app_source": "source.a7fd49d337c062647396ae061a517c85a6f5b5d7db0453ffc70e94524ec9e361"
+  },
+  "attempts": [
+    {
+      "run_id": "operational-thin-cb39438cc0864a1a9d4e2d0e5a3a79fb",
+      "status": "failed",
+      "exit_code": 1,
+      "manifest_sha256": "2898ad176d6392310a88b37306c4e4f9b10aa3ec9cb57fcbf3b3c284a26d4701",
+      "case_report_sha256": "b3caec89aa053cff37121e07593fba0b855c9e45f13f4f3fb62a152eb96f81ff",
+      "teardown_sha256": "234ec165c1d55039150bda9b38007535b18685b0e64b20b36a60dbb4c881fa02",
+      "outcome_sha256": "1e1fa73c0550bbdc555c53817fa7b284db3fd10efeae32a79fe86b1f14cf0329",
+      "setup": null,
+      "operational_phases": null,
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false
+    },
+    {
+      "run_id": "operational-thin-ecf551070240445f8df6006f3ee6a278",
+      "status": "failed",
+      "exit_code": 1,
+      "manifest_sha256": "dedbf964fd7526848a80da861e1ebad926b1703d99cc92402addda90a1632ea5",
+      "case_report_sha256": "55011accbaedef34e9fa4d1dde8dc9d2b9d20b7651bcb714a0bb6e85f412a352",
+      "teardown_sha256": "d7a5f6ead16a5f9f2d79e34f5ef50bec14d8b41ca8b1b6f0f1c885ce4b1d13db",
+      "outcome_sha256": "74a07055207b84ac0eaf1c935a995a44d6cbc71cefcf06a1843f53954272e515",
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 0,
+        "forwardFailures": 0,
+        "navigationStatus": null,
+        "nextStage": "browser-launch",
+        "browserLaunched": false,
+        "browserClosed": true,
+        "proxyClosed": true
+      },
+      "operational_phases": null,
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false
+    },
+    {
+      "run_id": "operational-thin-791f8197b91445388fc660d456bfb47f",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "550e9437caf955eba69e28ddf86c98ee0266696c",
+        "source_digest": "4cee63828c3f845d49ad9b907379e5f0bb84d676f2472ef318e99c6f2cfe85b6",
+        "app_source": "source.a4dcda87c78bd4629057a53e4888325cf944aebf6a36d56dbb13117bb8bb40f4"
+      },
+      "manifest_sha256": "8a73bab29b85bcc3476acc07f9e6302b62e5c166059103579da19f0102922a5b",
+      "case_report_sha256": "41c4b20f8f7044594799b8b469c2d8d0025bc5a77118e5877ece295501780ea4",
+      "teardown_sha256": "941b020dc952215c536b60c2b8371ff38d4dbb56dfb92c86d2a1ab352d388158",
+      "execution_sha256": "97b83f82ffa5a7730a521f35e5241a956331ef6db0092b898cdc7724f8f0447a",
+      "setup": null,
+      "operational_phases": null,
+      "selected_cases": 0,
+      "case_events": 0,
+      "framework_errors": 1,
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "browser_case_dispatch": "Not reached: current framework load failed before test selection/body dispatch. The conservative original fence and spent attempt stay intact.",
+      "diagnosed_failure": "The basename test selector also discovered an archived test copy in a deeper folder. That copy could not resolve its relative import. This preparation defect did not exercise the application.",
+      "source_only_reproduction": {
+        "mode": "list-only-no-global-setup-or-test-run",
+        "archived_case_load_error_reproduced": true,
+        "app_or_browser_effects": false
+      },
+      "limits": [
+        "No claim that the two November6 failures had the same cause.",
+        "No browser, operational feature, native, physical-model or parent qualification was supplied by this failed attempt.",
+        "No raw actual-app output, credential contents or provider payloads were read, retained or hashed."
+      ]
+    },
+    {
+      "run_id": "operational-thin-84a7372265424fbfad655c41226b3eb3",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "550e9437caf955eba69e28ddf86c98ee0266696c",
+        "source_digest": "936f523a0ad1ff48f51a856d93d27939a41b99a7f63225305fa95fed13f1be2d",
+        "app_source": "source.a4dcda87c78bd4629057a53e4888325cf944aebf6a36d56dbb13117bb8bb40f4"
+      },
+      "manifest_sha256": "f410ce98053685f8d1f13c186e711794d6f82dd164dfb460aab04a521bf6aa7b",
+      "case_report_sha256": "c1d81ab6296924abc2205117526ef65b420494fe6eb114c02d85174cb514cb32",
+      "teardown_sha256": "13c85be5edd31260c93c45ea1da84334dd8b68f43ed6313e2f213d0ca445242d",
+      "execution_sha256": "3684d9af8a195355b3514fbb7ddeef0a01cc0a455105a4a5defc32d484cb75e4",
+      "independent_failure_review_sha256": "a3fe3fbec5a2f1aa0b65937c43567aa2ebb45df0b3545d319ff0cdfbc23c9453",
+      "safe_accessibility_report_sha256": "9c8d22c6e36ae43a5a1875a23a104b732a01f4eeb9c90c764f5c66ba75717bb7",
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 5028,
+      "setup": {
+        "blockedRequests": 2,
+        "forwardedRequests": 566,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [],
+        "nextPhase": "navigation-menu-opened"
+      },
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "accessibility_observation": {
+        "surface": "navigation-menu",
+        "status": "failed",
+        "failure_stage": "control-access-320",
+        "wide": {
+          "width": 1440,
+          "controls": 29,
+          "inaccessible": 0,
+          "audit_violations": 0,
+          "audit_incomplete": 0,
+          "contrast_positive_nodes": 59
+        },
+        "narrow": {
+          "width": 320,
+          "controls": 25,
+          "inaccessible": 8,
+          "audit_executed": false
+        },
+        "reduced_motion_checked_at": [
+          1440,
+          320
+        ],
+        "forced_colors_executed": false
+      },
+      "limits": [
+        "Eight narrow controls were outside the viewport; exact control geometry and causal CSS relationship have not yet been proven.",
+        "Two request denials remain a separate unclassified failure; no origin/scheme exception is authorized.",
+        "A failed declared accessibility attachment set the reporter flag; no raw private artifact was retained.",
+        "Ordinary fixture retirement supplies no physical native/offload/process-tree or parent qualification."
+      ]
+    },
+    {
+      "run_id": "operational-thin-8a2e49fbec1a47889638dd8b8ee54e5a",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "550e9437caf955eba69e28ddf86c98ee0266696c",
+        "source_digest": "175c7feb137a98183daaacbd71b64e1fc45a97f2181386328af4223ae754cf53",
+        "app_source": "source.6d4f1e9b396527e8d2e3d8270667fe3e3481cd72a8daace710ea843a2da3be71"
+      },
+      "manifest_sha256": "d91777d8e540987226c3514017b8301d4e96d669f372623e2ddfdd3b97843a3d",
+      "case_report_sha256": "5c8beaca1395b691bd8eed64a1aa4541ffc6ba86cf7735a7089a8f1856e5bfa7",
+      "teardown_sha256": "9e5d178c32458d8b18b2d8c052563f7aa30765e18f2ce0036532dc5e94b5ef6a",
+      "execution_sha256": "a0a3ea5f818be67e5ebf6ef6a45baf469ff67a7c29ebb8a5ed541f770f42ca8e",
+      "independent_local_outcome_review_sha256": "ee001d5d8e86c58d39f048b5ab57568de9a3e1d43bc40ed0c1901b6760ae18a8",
+      "safe_accessibility_report_sha256": "37105b427b39c9217b4d5b9130dcb6e5e53d9b841cb245c9e33e9348b8b3a4b9",
+      "request_diagnostics_sha256": "8aa34582bef238318e16bdc39bbc520cd9e82e5da0c15d91ab8ad887607adc7b",
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 3506,
+      "setup": {
+        "blockedRequests": 2,
+        "forwardedRequests": 566,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [],
+        "nextPhase": "navigation-menu-opened"
+      },
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "local_layout_observed_passed": true,
+      "accessibility_observation": {
+        "surface": "navigation-menu",
+        "status": "failed",
+        "failure_stage": "audit-320",
+        "wide": {
+          "width": 1440,
+          "controls": 29,
+          "inaccessible": 0,
+          "audit_violations": 0,
+          "audit_incomplete": 0,
+          "contrast_positive_nodes": 59
+        },
+        "narrow": {
+          "width": 320,
+          "controls": 25,
+          "inaccessible": 0,
+          "audit_violations": 0,
+          "unresolved_contrast_nodes": 6,
+          "contrast_positive_nodes": 43
+        },
+        "forced_colors_executed": false
+      },
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 2,
+        "endpoint_or_cause_identified": false
+      },
+      "limits": [
+        "The compact layout correction is directly observed; the overall operational test still failed.",
+        "Six unresolved contrast nodes remain in the open-menu workspace/Home/glossary regions. Their cause is not yet qualified and unresolved checks are not passes.",
+        "Only the current two denied requests are classified as WebSockets. Earlier request denials retain their original unclassified scope. No endpoint or development-client cause is asserted.",
+        "No native/offload/process-tree/physical-model or parent qualification is supplied."
+      ]
+    },
+    {
+      "run_id": "operational-thin-952e4e8417574df68f6bb3aacafad2d5",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "a35834b49a9e056d49973a1377b10f819fbaa8b9",
+        "source_digest": "83f7a76805a4b1930ca54043f9713b2a78fa842fe48079a12e19f4b513dd63b2",
+        "app_source": "source.40547c57154d3a16751c259b8285ffa5c32a5f6ca9091213c335f7712aa1541b"
+      },
+      "manifest_sha256": "3bfa63ab7b3fecf0f780db8e4d1af42c83aba54bf3a45e5a5ffb7b7b5ccb8880",
+      "case_report_sha256": "50e4fe1a95355fae0d854c68883dedd39067aa42eba3e67428fc04d0ba7dc440",
+      "teardown_sha256": "c4abb2a03356891eec99e739384710faefcf61f04ab7572a22598087906fa32e",
+      "execution_sha256": "e7f3779d7a933679ce9a8314b382ac583f6cda2ebd790dfb30b20e63483372d8",
+      "compiled_binding_execution_sha256": "f03e6ae27690ced90a0c691dddba09e63861056759c9d3d225b702a755ea264b",
+      "independent_local_outcome_review_sha256": "bd76bd7be344fef1e75bafcf7bf29cbb60737eb0b4497febbfb12dd1552317db",
+      "safe_accessibility_report_sha256": {
+        "navigation-menu": "1f7f59718c9da2a822c1a99074b42a602d7fb6dfc2efae8792e4258830bd8770",
+        "settings": "f1fd8e51582b91dfdb712a08e7187529768eb5d0be2204d8558f2e6f43c82db9",
+        "security": "c16a9e0c62acc69bbbd19b0a710718126f940a9815e86a1e2c75efe42d66c35e"
+      },
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 5267,
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 27,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [
+          "navigation-menu-opened",
+          "navigation-menu-navigated",
+          "navigation-menu-focus-returned",
+          "sidebar-collapsed",
+          "sidebar-restored",
+          "settings-opened"
+        ],
+        "nextPhase": "security-known"
+      },
+      "passed_accessibility_surfaces": [
+        "navigation-menu",
+        "settings"
+      ],
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "compiled_ui_binding_satisfied": true,
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 0,
+        "prior_development_websocket_provenance_proved": false
+      },
+      "security_observation": {
+        "status": "failed",
+        "failure_stage": "audit-1440",
+        "controls": 20,
+        "inaccessible": 0,
+        "positive_contrast_nodes": 30,
+        "violations": 0,
+        "unresolved_contrast_nodes": 4,
+        "resolved_retries": 0,
+        "fixed_reason": "elmPartiallyObscured",
+        "fixed_region": "shellContent",
+        "narrow_or_forced_colors_executed": false,
+        "precise_layout_cause_proved": false
+      },
+      "limits": [
+        "Six of17ordered phases completed; Security and all later phases remain pending.",
+        "Navigation includes the complete closed document and expanded opener plus panel in normal and forced-colors media; both pass. Settings also passes both widths and media. These are local actual observations, not parent/current aggregate qualification.",
+        "Current production-preview request denial counts are zero and the compiled7-file set matches before/after ordinary retirement. Earlier two Vite-shaped denied WebSockets remain historical; provenance is not inferred from shape.",
+        "No native zoom, protected-file ownership, offload, model, managed/restricted review or whole-system qualification is supplied."
+      ]
+    },
+    {
+      "run_id": "operational-thin-fb9aa257544a4e94b0ae5a18c1efb67f",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "7ca6a0167677efd43ebd2595ac1d63e93609576d",
+        "source_digest": "845f80bf57e6d76a2e9c918454f5b664e7912d5e0ba0ec90c1093f43b3618939",
+        "app_source": "source.5c236d2b36d53c84eeeaf36cfb8541d918f0e59b7eca73faff452324294206a6"
+      },
+      "manifest_sha256": "890198750ac8a07335a56a9188bc39544538e8fee4550f44a2f59217a973c72c",
+      "case_report_sha256": "632a7dadf38f156dc91f677294d9aac201ae4ba17915fe1e1d68845be16fa88b",
+      "teardown_sha256": "9f8d43d8acf2098ae408abc2ed815ad0db40224de3bee865313b5e801957044e",
+      "execution_sha256": "7fa8bb91a4f805c2acfcfc895cbcce6a7b4089afe70abb0afd87fb76e63f6724",
+      "compiled_binding_execution_sha256": "0b29ceec2de4be97106e25d0a1e0c5c147a5c68ed9a105fb07598653d5f4979d",
+      "independent_local_outcome_review_sha256": "1b9c5dd3b9b95370a0a2d174bd956a6d6e1c64812c3163d08348072f42049037",
+      "safe_accessibility_report_sha256": {
+        "navigation-menu": "98f6b5750da2936c548771ef04b9b8f4fe6c467db80d7a91ef86889bf94ae050",
+        "settings": "0a2c3d3d7022ada2076e5542725a77f058598a2a63517d18c9f65b54d60e7881",
+        "security": "e10bd181d1d7534511bea6f795075421f90f0170e723476a0f1150842d5f725c",
+        "notifications": "8dbacad4a49880ad5857acd3c5b04d6784f259d856a76e4fb3cfbf677e45e580"
+      },
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 6641,
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 29,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [
+          "navigation-menu-opened",
+          "navigation-menu-navigated",
+          "navigation-menu-focus-returned",
+          "sidebar-collapsed",
+          "sidebar-restored",
+          "settings-opened",
+          "security-known",
+          "security-fault-visible",
+          "security-fault-safe",
+          "security-retry-known",
+          "security-controls-restricted"
+        ],
+        "nextPhase": "notifications-empty"
+      },
+      "passed_accessibility_surfaces": [
+        "navigation-menu",
+        "settings",
+        "security"
+      ],
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "compiled_ui_binding_satisfied": true,
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 0
+      },
+      "security_observation": {
+        "status": "passed-local-observation",
+        "workflow_phases_passed": [
+          "security-known",
+          "security-fault-visible",
+          "security-fault-safe",
+          "security-retry-known",
+          "security-controls-restricted"
+        ],
+        "widths": [
+          1440,
+          320
+        ],
+        "positive_contrast_nodes": [
+          34,
+          21
+        ],
+        "forced_colors_positive_contrast_nodes": [
+          34,
+          21
+        ],
+        "violations": 0,
+        "unresolved_nodes": 0
+      },
+      "notifications_observation": {
+        "status": "failed",
+        "failure_stage": "audit-1440",
+        "unresolved_rule": "aria-valid-attr-value",
+        "unresolved_nodes": 1,
+        "positive_contrast_nodes": 37,
+        "violations": 0,
+        "narrow_or_forced_colors_executed": false,
+        "precise_element_or_cause_proved": false
+      },
+      "limits": [
+        "The first11of17ordered steps completed. All five Security workflow steps and its normal/forced-colors audits pass at both widths; the entire operational case remains failed.",
+        "Notifications retains one unresolved ARIA check. The exact element and cause need evidence; no attribute removal or audit waiver follows.",
+        "Current request denials are zero; original process/browser/proxy retirement and the complete7file compiled binding pass. No retry or further effect is granted by this record.",
+        "No native400, other-host, offload, model, restricted security review, parent or deferred full-system qualification follows."
+      ]
+    },
+    {
+      "run_id": "operational-thin-898a27c9bf204e6b98a37dbbc0fb0445",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "6c785c91f117d816829a899428433e162accfde2",
+        "source_digest": "32e0ffef5dcdfeeb5d0580ff561ef7b9a12a5757bac397e9acb1f64943a73727",
+        "app_source": "source.5931a06a8d6f40ce62b4d281fde8667ddb4434e71e00f2cc76a920dfbae79df4"
+      },
+      "manifest_sha256": "c1071a7ee7425b1853228ba01e98f9bcfdd4be3b2ca749129183b22a40fbd45f",
+      "case_report_sha256": "72c854cf54227aad79a60245e5093520ae453037c1bd673508ed3694f58187f6",
+      "teardown_sha256": "4d59511aecacae2629618dde492662da861f991dc5f7913d0c756450ef574b08",
+      "execution_sha256": "6dcc84c1e032f2e3b40b4f858d570a9a21419831aaae31dfb20e9d0cd32e0d93",
+      "compiled_binding_execution_sha256": "4f03176116b7d2d69fa81fe93f9a6b728038ef5ce19e1d152bcab507b6d65692",
+      "independent_local_outcome_review_sha256": "0c2c3302cbda35269c8be0205184c8e6e94ec91fb192686c91356c490048a11f",
+      "safe_accessibility_report_sha256": {
+        "navigation-menu": "587cea56f89bfee53894a74314fa100e6769156664442ddc76d03a4184f65863",
+        "settings": "3431e52750f7cffde145036d426d8b6f8c8eba0a21da3c90c253e46879e9a762",
+        "security": "db996af79c4597e5e109409ea57a13eddbfa7c3bd47e217f3c809922d2f07ecf",
+        "notifications": "97134dc9ba9fa381a8ccce27e2ec854d6bd575a6316df9fa981d6ebfcce259dd",
+        "models-discovery": "a56a11694974d32c1c6706390eb63d54a74982c808edc1693d3b85aeeaabf81a",
+        "models-inventory": "52bee4562e80725b897edf722a02a4f29b4fa6a0a2937cc6c63063efa3a2290e"
+      },
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 14142,
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 43,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [
+          "navigation-menu-opened",
+          "navigation-menu-navigated",
+          "navigation-menu-focus-returned",
+          "sidebar-collapsed",
+          "sidebar-restored",
+          "settings-opened",
+          "security-known",
+          "security-fault-visible",
+          "security-fault-safe",
+          "security-retry-known",
+          "security-controls-restricted",
+          "notifications-empty",
+          "notifications-focus-returned",
+          "models-discovery-opened",
+          "models-inventory-opened"
+        ],
+        "nextPhase": "image-configuration-opened"
+      },
+      "passed_accessibility_surfaces": [
+        "navigation-menu",
+        "settings",
+        "security",
+        "notifications",
+        "models-discovery",
+        "models-inventory"
+      ],
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "compiled_ui_binding_satisfied": true,
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 0
+      },
+      "notifications_observation": {
+        "status": "passed-local-observation",
+        "closed_document_widths": [
+          1440,
+          320
+        ],
+        "closed_document_positive_contrast_nodes": [
+          34,
+          21
+        ],
+        "forced_colors_closed_document_positive_contrast_nodes": [
+          34,
+          21
+        ],
+        "popup_positive_contrast_nodes": [
+          3,
+          1
+        ],
+        "forced_colors_popup_positive_contrast_nodes": [
+          3,
+          1
+        ],
+        "exact_positive_reference_proofs": 4,
+        "preserved_raw_engine_review_rule": "aria-valid-attr-value",
+        "preserved_raw_engine_review_nodes_per_popup": 1,
+        "specific_engine_check": "controlsWithinPopup",
+        "generic_raw_audit_status": "failed",
+        "additional_fixed_reference_qualification": "passed",
+        "product_aria_unchanged": true
+      },
+      "limits": [
+        "Fifteen of17ordered steps and six normal/forced-colors accessibility surfaces passed. The entire operational case remains failed at Image Generation configuration before its audit. The precise failing action/cause has not been proved.",
+        "Notification popup reference is automatically verified on the live source-owned bell and dialog. Each raw official ARIA review remains failed beside its separate positive reference proof; generic rules and product ARIA are unchanged.",
+        "Original browser/proxy/app retirement, source stability, complete7file compiled binding and zero foreign/redirect/WebSocket denials pass. No retry or additional effect is granted.",
+        "No native400, other-host, offload, model, restricted security review, parent or deferred full-system qualification follows."
+      ]
+    },
+    {
+      "run_id": "operational-thin-c5b5b9ac2a85475cb06a4b19c9c07842",
+      "status": "failed",
+      "exit_code": 1,
+      "tested_source": {
+        "head": "e08dc32439b7cc7fb4d82f50f20d3c060c7a4dc4",
+        "source_digest": "ce617c0c043d3eabd028539bd3f5a605d40b7bd63d4977366f258aa7056beb48",
+        "app_source": "source.5053ac2f626ca468f6e783d09c86bd09635331880e565c48ed98ee9493ae154e"
+      },
+      "manifest_sha256": "32541e4e339b5d79507f3510e22ad73543ec7ddefc204c808fd4b62382856e37",
+      "case_report_sha256": "999893f85a23023aff42185c44df51f26e30e60e59395cff137b5582dca1f69a",
+      "teardown_sha256": "8ea7251c56bdc22ff4e231acefccc639ce1295da2863978d30038c9fbb9f37ee",
+      "execution_sha256": "7a862c7d10a25cdc3ff9a52d61465faf3dde60fe565b19ccdb542a2a399f4332",
+      "compiled_binding_execution_sha256": "9eb91cd3f3bf39f4be28d04ae713caf9b6d24cc8f605c99c593ae18befc72ca8",
+      "independent_local_outcome_review_sha256": "246e567d7429d0501d596f6e2e713c1e12440616a36287c76019f486d6a9823c",
+      "safe_accessibility_report_sha256": {
+        "navigation-menu": "8186e41d2e5d46f780c6f4dcca4b917f60b319b243bd571b18c10b8aced56677",
+        "settings": "a05783212a738f362a58f64cd58d74cd5164dc0a36970fe7c8956b736aee6239",
+        "security": "5bf07d58fd1a37a6f366dd787f27e497e8442a0acfb50c3f2d5f143ee3f5d894",
+        "notifications": "2f6dec8dff9302688ea415bbaaae2c5797f96fd45b96eac90888da0184203478",
+        "models-discovery": "39bb4417b028f3a64ac06ff7758ada1e1ebbe6e10a3b6c686476c6caf825350d",
+        "models-inventory": "ae19a37972d7a03a4eb92d2a744abbf465423d443d9c48e640a5080e424ace24",
+        "image-configuration": "2502be206ac7c61a16aa952dcc246f7750d4d4da9f606e7c2edd67450bfb7ea3"
+      },
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 5366,
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 38,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": "operational-journey",
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": "feature-assertion"
+      },
+      "operational_phases": {
+        "status": "failed",
+        "phases": [
+          "navigation-menu-opened",
+          "navigation-menu-navigated",
+          "navigation-menu-focus-returned",
+          "sidebar-collapsed",
+          "sidebar-restored",
+          "settings-opened",
+          "security-known",
+          "security-fault-visible",
+          "security-fault-safe",
+          "security-retry-known",
+          "security-controls-restricted",
+          "notifications-empty",
+          "notifications-focus-returned",
+          "models-discovery-opened",
+          "models-inventory-opened"
+        ],
+        "nextPhase": "image-configuration-opened"
+      },
+      "passed_accessibility_surfaces": [
+        "navigation-menu",
+        "settings",
+        "security",
+        "notifications",
+        "models-discovery",
+        "models-inventory"
+      ],
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": false,
+      "compiled_ui_binding_satisfied": true,
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 0
+      },
+      "image_configuration_observation": {
+        "prompt_edit_and_value_assertion_completed": true,
+        "proof": "The unchanged original case writes the Image audit only after its Prompt edit and value assertion both succeed.",
+        "audit_status": "failed",
+        "failure_stage": "audit-1440",
+        "violation_rule": "color-contrast",
+        "violating_nodes": 1,
+        "positive_contrast_nodes": 98,
+        "unresolved_nodes": 0,
+        "exact_contrast_element_or_cause_proved": false,
+        "narrow_or_forced_colors_executed": false,
+        "failed_audit_attachment_retained": true
+      },
+      "limits": [
+        "The live Prompt edit and value assertion pass. The original case then fails one wide Image contrast rule; the whole17step journey remains failed.",
+        "All six earlier surfaces pass both widths and normal/forced-colors. Four Notifications reference proofs pass with raw engine review preserved.",
+        "Original browser/proxy/app retirement, source stability, complete compiled binding and strict network behavior pass. No retry or further effect is granted.",
+        "No native400, other-host, offload, model, restricted review, parent or deferred full-system qualification follows."
+      ]
+    },
+    {
+      "run_id": "operational-thin-0521f0199c794dd6b51c5c9071f087a9",
+      "status": "passed",
+      "exit_code": 0,
+      "tested_source": {
+        "head": "a93eeb306ad7352b273b4b4d83d8e176da7746ff",
+        "source_digest": "a6bc0b5a3684ad01039152e04277d56472115de819ee61447c6eb672f027a04f",
+        "app_source": "source.9ecf69a2c53472e326366d00108159edf8722ba184461a223764a2ad05b77ccf"
+      },
+      "manifest_sha256": "0d79ba78ca8c5776dfe6f2da91c5dde28a2464d9ad2678e9adb302a531ce3525",
+      "case_report_sha256": "efa08fe0d7add78c981481a24d8cc4b5c9b496a73f5aa00d2caeb52a1f183d33",
+      "teardown_sha256": "b8a1cb9bea3163f35cb15b45d5554c8ad0a044ffd8133c1ed9e9c3fce069ccc7",
+      "execution_sha256": "cc03ffb226601dfd57281cac3a6bc5f86ad2e8ddf1d8c35e236dbfa8116da59a",
+      "compiled_binding_execution_sha256": "da55c2bbfa20c91ebb0d1b28a6f9a2fe293b7ce6770a791aff6f3c39de0935a4",
+      "independent_local_outcome_review_sha256": "5e94411a3476522f2206a943d5d7eb8fb8afb2a430460f15123e0310e21bc9b0",
+      "safe_accessibility_report_sha256": {
+        "navigation-menu": "78e2afa813d026acc578113fc8890acce79ffbbbe1f10d04c929103401ad1e23",
+        "settings": "c23ffc1233041b0ac78a7a52fc17ff5b902c77a2ad906795ee543efce47477b5",
+        "security": "949ddf9cf21b2dde98e5ad00922ac1c53746a8cf9e38d4e5c22416c869a5afd4",
+        "notifications": "f2c5a451b57d65b297a3aaea58997665005e0a28354878cc684a68ea71c49bbb",
+        "models-discovery": "2ec1613a27674fea14f31082c50cc2b4dca03bed5028e87a1c2676b9dc219e67",
+        "models-inventory": "b6778b66461ca68d6f9ecaa33bbad654405b1a54c9df08e75d743e3b9783d8b5",
+        "image-configuration": "62b5f5138096095cec901068dd7a201a2a418c9b8ece8f590aa07348b13a14d0"
+      },
+      "selected_cases": 1,
+      "case_events": 1,
+      "framework_errors": 0,
+      "retries": 0,
+      "case_duration_ms": 7510,
+      "setup": {
+        "blockedRequests": 0,
+        "forwardedRequests": 40,
+        "forwardFailures": 0,
+        "navigationStatus": 200,
+        "nextStage": null,
+        "browserLaunched": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "errorCategory": null
+      },
+      "operational_phases": {
+        "status": "passed",
+        "phases": [
+          "navigation-menu-opened",
+          "navigation-menu-navigated",
+          "navigation-menu-focus-returned",
+          "sidebar-collapsed",
+          "sidebar-restored",
+          "settings-opened",
+          "security-known",
+          "security-fault-visible",
+          "security-fault-safe",
+          "security-retry-known",
+          "security-controls-restricted",
+          "notifications-empty",
+          "notifications-focus-returned",
+          "models-discovery-opened",
+          "models-inventory-opened",
+          "image-configuration-opened",
+          "home-returned"
+        ],
+        "nextPhase": null
+      },
+      "passed_accessibility_surfaces": [
+        "navigation-menu",
+        "settings",
+        "security",
+        "notifications",
+        "models-discovery",
+        "models-inventory",
+        "image-configuration"
+      ],
+      "own_test_server_background_and_persistence_closed": true,
+      "own_thin_client_and_server_processes_closed": true,
+      "generated_test_credential_removed_metadata_only": true,
+      "ordinary_browser_and_proxy_closed": true,
+      "raw_artifacts_retained": 0,
+      "verified_feature_pass": true,
+      "compiled_ui_binding_satisfied": true,
+      "request_denial_kinds": {
+        "foreign_http": 0,
+        "redirects": 0,
+        "websockets": 0
+      },
+      "image_configuration_observation": {
+        "prompt_edit_and_value_assertion_completed": true,
+        "audit_status": "passed",
+        "normal_widths": [
+          1440,
+          320
+        ],
+        "forced_colors_widths": [
+          1440,
+          320
+        ],
+        "normal_positive_contrast_nodes": [
+          99,
+          84
+        ],
+        "normal_violation_nodes": 0,
+        "normal_unresolved_nodes": 0
+      },
+      "limits": [
+        "One unchanged local Thin client feature test with synthetic data. All 17 steps and seven reported accessibility surfaces passed.",
+        "The prior failures and separate diagnostic remain in the record.",
+        "This test gives no Desktop, native, model, provider, full system or parent qualification."
+      ]
+    }
+  ],
+  "limits": [
+    "One isolated Chrome case with synthetic credentials. No real providers, actual model loads, or Electron.",
+    "The first attempt stopped before the operational steps reported evidence. It supplies no feature pass.",
+    "The retry stopped while launching Chrome, before app navigation. This identifies a test setup failure; the app workflow remains unobserved.",
+    "Desktop, native zoom, managed environment and full-suite checks remain separate."
+  ],
+  "parent_criterion_pass": false,
+  "current_follow_up": {
+    "owner": "Agent",
+    "status": "pending",
+    "action": "Continue the remaining Desktop, host and coverage checks. No user action is needed for this work.",
+    "completed_preparation": "The Thin client test now passes all 17 steps. Image Generation passes the accessibility checks at both widths in normal and forced colors.",
+    "first_failures_preserved": true,
+    "parent_pass": false
+  },
+  "browser_launch_diagnosis": {
+    "schema_version": "fresh-browser-launch-diagnosis-summary-v1",
+    "source_digest": "4cee63828c3f845d49ad9b907379e5f0bb84d676f2472ef318e99c6f2cfe85b6",
+    "cases": [
+      {
+        "id": "old-length-isolated-os",
+        "stage": null,
+        "error": null,
+        "browserLaunched": true,
+        "contentVerified": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "deniedExternalRequests": 10,
+        "durationMs": 724,
+        "profileCharacters": 91,
+        "parentTempCharacters": 121,
+        "browserTempCharacters": 121
+      },
+      {
+        "id": "short-isolated-os",
+        "stage": null,
+        "error": null,
+        "browserLaunched": true,
+        "contentVerified": true,
+        "browserClosed": true,
+        "launchRejectionClosureUnconfirmed": false,
+        "proxyClosed": true,
+        "deniedExternalRequests": 9,
+        "durationMs": 657,
+        "profileCharacters": 91,
+        "parentTempCharacters": 85,
+        "browserTempCharacters": 85
+      }
+    ],
+    "ordinary_profiles_cleaned": true,
+    "original_failure_cause_established": false,
+    "app_or_native_or_parent_qualification": false
+  },
+  "local_layout_observation": {
+    "source_digest": "175c7feb137a98183daaacbd71b64e1fc45a97f2181386328af4223ae754cf53",
+    "implementation": "Align the compact dropdown to the full header action area instead of the first small trigger.",
+    "fixture_scope": "Six actual shared styles on inert source-owned header markup; this is not the actual app.",
+    "fixture_viewport_widths": [
+      320,
+      672,
+      1024,
+      1440
+    ],
+    "fixture_sidebar_states": [
+      "expanded",
+      "collapsed"
+    ],
+    "fixture_observations_per_source": 8,
+    "before_320": {
+      "panel_left": -32,
+      "panel_right": 208,
+      "inaccessible_menu_controls": 8
+    },
+    "after_320": {
+      "panel_left": 68,
+      "panel_right": 308,
+      "inaccessible_menu_controls": 0
+    },
+    "fixture_request_observations": {
+      "blocked_context_requests_before": 0,
+      "blocked_context_requests_after": 0,
+      "denied_proxy_requests_before": 10,
+      "denied_proxy_requests_after": 10,
+      "successful_external_dispatch_claimed": false
+    },
+    "actual_app_320": {
+      "controls": 25,
+      "inaccessible_before": 8,
+      "inaccessible_after": 0
+    },
+    "independent_local_observation_review_sha256": "ee001d5d8e86c58d39f048b5ab57568de9a3e1d43bc40ed0c1901b6760ae18a8",
+    "overall_operational_feature_pass": false,
+    "parent_qualification_granted": false
+  },
+  "focused_diagnostics": [
+    {
+      "kind": "navigation-menu-state-diagnostic",
+      "run_id": "operational-thin-d47200129e0c43cfa3968f74c070e2a1",
+      "tested_source": {
+        "head": "a35834b49a9e056d49973a1377b10f819fbaa8b9",
+        "source_digest": "0b3d5502b0a755c4dc1c37d1d91ae03627e5fd0e5905497ae4fff098a5a3ef71",
+        "app_source": "source.6d4f1e9b396527e8d2e3d8270667fe3e3481cd72a8daace710ea843a2da3be71"
+      },
+      "audit_state_report_sha256": "d6e4baba9365050c0955afb81670159d062b35a103e61bd2ee6a19c129817f67",
+      "websocket_shape_report_sha256": "07deab881d06d5cd9ab60a1f928017995246524c63c3453883c5c080cfc244f2",
+      "execution_sha256": "a420c39257c7118d7b535bcf04652e263906ddccc6f992a0d0dd3aa5499e94a8",
+      "independent_outcome_review_sha256": "7c0ca270779dbe3c51ce3756ae4cb145dcae5dbe36d0fee209ae2e82cc9dff8e",
+      "observations": [
+        {
+          "media": "normal",
+          "menu_state": "closed-before",
+          "status": "passed",
+          "positive_contrast_nodes": 41,
+          "violations": 0,
+          "unresolved_contrast_nodes": 0,
+          "resolved_retries": 0
+        },
+        {
+          "media": "normal",
+          "menu_state": "open",
+          "status": "failed",
+          "positive_contrast_nodes": 43,
+          "violations": 0,
+          "unresolved_contrast_nodes": 6,
+          "resolved_retries": 0
+        },
+        {
+          "media": "normal",
+          "menu_state": "closed-after",
+          "status": "passed",
+          "positive_contrast_nodes": 41,
+          "violations": 0,
+          "unresolved_contrast_nodes": 0,
+          "resolved_retries": 0
+        },
+        {
+          "media": "forced-colors",
+          "menu_state": "closed-before",
+          "status": "passed",
+          "positive_contrast_nodes": 41,
+          "violations": 0,
+          "unresolved_contrast_nodes": 0,
+          "resolved_retries": 0
+        },
+        {
+          "media": "forced-colors",
+          "menu_state": "open",
+          "status": "failed",
+          "positive_contrast_nodes": 43,
+          "violations": 0,
+          "unresolved_contrast_nodes": 6,
+          "resolved_retries": 0
+        },
+        {
+          "media": "forced-colors",
+          "menu_state": "closed-after",
+          "status": "passed",
+          "positive_contrast_nodes": 41,
+          "violations": 0,
+          "unresolved_contrast_nodes": 0,
+          "resolved_retries": 0
+        }
+      ],
+      "request_counts": {
+        "denied_websockets": 2,
+        "fixed_loopback_root_token_key_shape": 2,
+        "other_websocket_shapes": 0,
+        "foreign_http": 0,
+        "redirects": 0,
+        "client_provenance_proved": false
+      },
+      "ordinary_fixture_retirement_confirmed": true,
+      "generated_identity_absence_metadata_only": true,
+      "raw_artifacts_retained": 0,
+      "whole_operational_journey_executed": false,
+      "whole_operational_feature_pass": false,
+      "parent_qualification_granted": false,
+      "interpretation": "The full page has positive contrast in both closed states; only an open covering menu yields unresolved background checks. These diagnostic observations do not pass the menu or waive any unresolved check. New source tests require both the complete closed-page audit and a separate fixed expanded-menu audit covering its opener and panel. A fresh actual journey still must pass. Vite-shaped refused connections are consistent with development-client traffic; shape alone does not prove provenance."
+    }
+  ],
+  "standard_navigation_local_observation": {
+    "tested_source_digest": "83f7a76805a4b1930ca54043f9713b2a78fa842fe48079a12e19f4b513dd63b2",
+    "actual_host": "thin-chrome",
+    "status": "passed-local-observation",
+    "wide_and_narrow_controls_accessible": true,
+    "complete_page_positive_contrast_nodes": [
+      59,
+      41
+    ],
+    "complete_page_forced_colors_positive_contrast_nodes": [
+      59,
+      41
+    ],
+    "expanded_menu_includes_opener_and_panel": true,
+    "expanded_positive_contrast_nodes_by_media": [
+      8,
+      8
+    ],
+    "unresolved_or_violating_nodes": 0,
+    "settings_positive_contrast_nodes_by_width": [
+      87,
+      70
+    ],
+    "settings_forced_colors_positive_contrast_nodes_by_width": [
+      87,
+      70
+    ],
+    "current_request_denials": 0,
+    "compiled_source_files_bound_before_and_after": 7,
+    "independent_local_review_sha256": "bd76bd7be344fef1e75bafcf7bf29cbb60737eb0b4497febbfb12dd1552317db",
+    "whole_journey_or_parent_pass": false
+  },
+  "security_command_layout_observation": {
+    "before_source_digest": "01a38536d66bbcae08f697c773743b3180c99451a9f4da4d0ad011a5196aa138",
+    "after_source_digest": "845f80bf57e6d76a2e9c918454f5b664e7912d5e0ba0ec90c1093f43b3618939",
+    "implementation": "Wrap long Security restart examples within their existing panel while preserving whitespace and every command character.",
+    "fixture_scope": "Actual SecurityPage/component with one fixed synthetic status hook and the full actual styles, on inert source-owned shell structure. This fixture is separate from the real app result.",
+    "widths": [
+      1440,
+      320
+    ],
+    "media": [
+      "normal",
+      "forced-colors"
+    ],
+    "positively_measurable_commands_per_row": 5,
+    "clipped_examples_before": [
+      4,
+      5
+    ],
+    "clipped_examples_after": [
+      0,
+      0
+    ],
+    "same_command_text_lengths": true,
+    "ordinary_browser_and_proxy_retirement_confirmed": true,
+    "fresh_owned_profiles_removed_bytes": 1114112,
+    "independent_geometry_outcome_review_sha256": "d39c57d0a635fb7baed33ad427275a96a9ad4c123c266a5188075f2b8e62a6de",
+    "actual_security_surface_passed": true,
+    "actual_whole_operational_journey_passed": false,
+    "parent_qualification_granted": false
+  },
+  "notification_reference_observation": {
+    "source_digest": "32e0ffef5dcdfeeb5d0580ff561ef7b9a12a5757bac397e9acb1f64943a73727",
+    "source_accessibility_tests_passed": 603,
+    "source_reporting_tests_passed": 148,
+    "source_census_tests_passed": 52,
+    "installed_engine_javascript_dom_component_cases": 1,
+    "other_source_fixtures": "Synthetic DOM, engine and IO ports; no browser or contrast qualification from source fixtures.",
+    "actual_widths": [
+      1440,
+      320
+    ],
+    "actual_media": [
+      "normal",
+      "forced-colors"
+    ],
+    "closed_document_and_open_bell_and_popup_audited": true,
+    "actual_positive_fixed_reference_proofs": 4,
+    "raw_engine_reviews_preserved": 4,
+    "generic_audit_rules_and_product_aria_unchanged": true,
+    "whole_operational_journey_passed": false,
+    "parent_qualification_granted": false
+  },
+  "image_action_diagnosis": {
+    "run_id": "operational-thin-bb894af2358f4e87a2044bc9944ecf8b",
+    "scope": "The existing operational journey with fixed Image action checkpoints in a diagnostic copy. All original assertions are retained. This is separate from the eight original attempts.",
+    "tested_source": {
+      "head": "6b0b7b47748c0792dbacbef5c06cbf3b3e5d3ab2",
+      "source_digest": "75630dfde1cdcbfd530be25f95bf7b09ced7563511db816a844205927e6886a9",
+      "app_source": "source.5931a06a8d6f40ce62b4d281fde8667ddb4434e71e00f2cc76a920dfbae79df4"
+    },
+    "case_status": "failed",
+    "completed_ordered_steps": 15,
+    "case_duration_ms": 12942,
+    "completed_image_actions": [
+      "navigate",
+      "heading",
+      "workflow"
+    ],
+    "rejected_image_action": "prompt-edit",
+    "independent_outcome_review_sha256": "1c8e4fdf899f5f5996215e8b36fc4c482b14dda76103a0abd12ada8c477eba00",
+    "closed_action_evidence_sha256": "8a3ff0db2fe57ee89304484b630b9b405072f2629999de2bae722051b70cee75",
+    "source_label_reproduction_sha256": "65e5bb62441709350a9e3d0f9443302242a75fd16266d7ae66f651575a1a57f9",
+    "independent_source_reproduction_review_sha256": "7f4780b99d0a1d77c229681930e22ebbb65aff709e363ed920623f53a4b4283a",
+    "source_label_reproduction": {
+      "prompt_textarea_labels": 0,
+      "prompt_alternate_name_attributes": 0,
+      "implicit_label_targets_help_button": true,
+      "default_controls_measured": 16,
+      "default_controls_without_label_or_name": 14,
+      "scope": "Actual component and hook rendered as inert markup. The source defect is consistent with the failed live action; this is not a direct observation of live DOM or a corrected app pass."
+    },
+    "source_writer_cases_passed": 6,
+    "source_reader_cases_passed": 9,
+    "compiled_binding_satisfied": true,
+    "ordinary_fixture_retirement_confirmed": true,
+    "raw_app_output_read_or_hashed": false,
+    "portable_journey_pass": false,
+    "parent_pass": false
+  },
+  "image_field_label_observation": {
+    "live_prompt_edit_passed": true,
+    "default_fields_with_explicit_labels_in_component_tests": 16,
+    "face_id_enabled_fields_with_explicit_labels_in_component_tests": 22,
+    "separate_help_controls": true,
+    "original_label_typography_retained": true,
+    "source_component_tests_passed": 6,
+    "model_or_generation_effects": false,
+    "image_contrast_remaining": true,
+    "whole_operational_journey_passed": false,
+    "parent_qualification_granted": false
+  },
+  "image_intro_contrast_observation": {
+    "diagnostic_run_id": "operational-thin-077ee817295e4395976cf67997d29650",
+    "diagnostic_source_digest": "9dde603d24fb6403022c9919183fc18cab542b89465a7890a8012d13e085170a",
+    "diagnostic_case_passed": false,
+    "independent_diagnostic_review_sha256": "95b8a574d9df04affcc45cb1e88f4a9b35ae50f9c9f35fca522b093f381ea819",
+    "diagnostic_outcome_sha256": "64035e89825352c6ee2545194d9b4b485b3a993302c72bf5e1af74b2d5a83ea8",
+    "diagnosed_element": "First paragraph in the Image Generation form",
+    "original_contrast_ratio_milli": 4220,
+    "required_ratio_milli": 4500,
+    "computed_corrected_ratio_milli": 7095,
+    "correction": "Use the existing secondary text color for the intro. Keep the existing system color in forced colors.",
+    "original_feature_run_id": "operational-thin-0521f0199c794dd6b51c5c9071f087a9",
+    "local_feature_passed": true,
+    "parent_pass": false
+  }
+}

@@ -12,6 +12,16 @@ This standard is tool-neutral. `AGENTS.md` is the compact entry point; this docu
 
 ## Required Work Cycle
 
+For contributor-work requests, follow
+`docs/diagnostics/ai-development-control-plane.md`: start or safely reuse the
+local JSON-backed review site and share its verified URL. Use a scoped outcome
+and acceptance contract, current execution receipts and a separate-invocation
+technical disposition. Established local fixes use the lightweight path;
+substantial work retains the roadmap skill and its approval gates. Claims and
+review attestations coordinate cooperative local work; they do not grant new
+authority or prove authenticated identity. Historical roadmap evidence remains
+explicitly declarative.
+
 ### 1. Discover before editing
 
 - Read the repository entry points and use context routing to load only relevant guidance.
@@ -47,6 +57,11 @@ This standard is tool-neutral. `AGENTS.md` is the compact entry point; this docu
 - Plans must identify assumptions, decision gates, affected boundaries, the security impact disposition, validation, and documentation impact.
 - Security-relevant plans must identify abuse/failure cases, owning controls, negative tests, safe rollback, residual risk, and controlled-environment evidence. Security cannot be excluded as a whole.
 - A plan does not grant permission to expand scope or make an unresolved decision.
+- Before requesting roadmap approval, publish and render the complete unapproved
+  draft through the roadmap skill. Verify the live review-site identity, expected
+  nonzero increments/objectives and criterion IDs/counts/details, and share its
+  verified link first. A discovery-only 0/0 record is insufficient. Publication
+  cannot supply approval or authorize implementation.
 
 ### 6. Implement within boundaries
 
@@ -63,6 +78,15 @@ This standard is tool-neutral. `AGENTS.md` is the compact entry point; this docu
 - Verify negative behavior as well as happy paths for security, workspace isolation, validation, and dependency boundaries.
 - Run the dependency security gate when manifests, lockfiles, dependency resolution, workflows, containers, SBOMs, build/install scripts, or release dependency inputs change.
 - Never claim a check passed unless its command completed successfully; report environment limitations and raw failures separately from normalized repository-runner results.
+
+Checkpoint coherent completed, tested and reviewed work chunks before continuing
+to the next chunk on the authorized branch. Pending parent work, increment or
+roadmap qualification does not defer a safe local commit. Review the actual owned
+diff and dependency closure; preserve unrelated staged and unstaged work. Finish
+the candidate's checks/review and release its source claim before changing Git,
+then begin later work from a fresh baseline. Report the real commit identity.
+A checkpoint supplies no parent pass, push, history rewrite or main advancement
+authority. The roadmap skill defines the scoped checkpoint procedure.
 
 ### 8. Reconcile knowledge
 

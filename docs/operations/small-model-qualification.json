@@ -1,0 +1,502 @@
+{
+  "schema_version": "small-model-qualification-v1",
+  "status": "completed",
+  "qualification": "passed",
+  "authority_ref": "user-explicit-accept-0.5B-nine-of-24-and-count-qualification-closed",
+  "model_profile": "qwen05-float32",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+  "precision": "float32",
+  "memory_mode": "standard",
+  "intended_use": [
+    "testing",
+    "low-quality-local-fallback"
+  ],
+  "accepted_quality": {
+    "correct_required": 9,
+    "cases_per_phase": 24,
+    "scope": "Each first and warm phase in every CPU/CUDA, unchecked/constrained repetition; explicit user acceptance applied to existing completed measurements.",
+    "automatic_labeling_certified": false
+  },
+  "closure_scope": "The pinned Standard0.5B testing/low-quality fallback model qualification is closed. This is not whole-roadmap, arbitrary task/model, physical offload or packaged-host qualification.",
+  "evidence": {
+    "bundle": "1283a33f1a7a4d3ca7bf0864d13b3557",
+    "source": "source.56ad3ebade6374fbb7942c008f19aa49b0ef7fdd634417b5ce9358919063e572",
+    "bundle_plan_sha256": "370d15288f80c95e5a3b4fa4a17ba94292f0b431e07b414948e65a873d885e2c",
+    "bundle_index_sha256": "73a7afbfac0c4dd96e7ad39ec505ddec7302417835164d20981d2661394e5ebb",
+    "model_run": "de231b2e772a4e648516215ab517a4f2",
+    "model_plan_sha256": "c404942e999f7dd04c53d029c4c640c462e06d851e9351b28bd4395266daf427",
+    "model_report_sha256": "5a5311b39c471b9246f02530bc9ccfa13a53074aceda64c4968126a909eccb49",
+    "model_index_sha256": "a2f0277c05381d7506c74a13e8527a4b34c99a5492952675c866d8ceeba2ca8e",
+    "corpus_sha256": "8c017723bd8d44bff52f4d5ad8a66cc76eacd5dcbdce7b0097a3d294a7d4039b",
+    "checked_and_unchecked_candidate_algorithms": {
+      "variant": "candidate",
+      "schema_sha256": "c86b484cf503dee8c36c1d434c889c4ec2ebe73e1975e9e4211c7b9798b5351c",
+      "current_runtime_sha256": "2bdb51d0b073d94c1a7cc863d8535b79f2c9b164893ed9e135f6ac2bb6815b75",
+      "algorithms": {
+        "constrained_json_decoder.py": "d7ed65a245c8fd777b3ca7c7a209739f06fc92482971ba3adf2fb8097334ecf0",
+        "example_generation.py": "75c2763ef8776bd4b6237f43ea6b46538c2afc376470ca788547fb99fa36e3a8"
+      },
+      "empty_generator_cache": true
+    },
+    "new_inference_during_review": false,
+    "case_rows_replayed": 576,
+    "distinct_exposed_cases": 24,
+    "cohorts_replayed": 12,
+    "native_exit_zero_count": 12,
+    "cleanup_observed_count": 12
+  },
+  "host_budgets": {
+    "primary_delivery_seconds": {
+      "cpu": 600,
+      "cuda": 300
+    },
+    "sampled_worker_rss_bytes": 4294967296,
+    "reserved_vram_bytes": {
+      "cpu": 0,
+      "cuda": 6442450944
+    },
+    "cpu_trial_admission_gib": 3.0,
+    "guards_changed": false
+  },
+  "cohorts": [
+    {
+      "device": "cpu",
+      "mode": "unchecked",
+      "replicate": 1,
+      "status": "passed",
+      "measurement_sha256": "9a51757fcc689a2a158ab780942f9a81d6e5adbfe27fa9e36dbf7a6ed09c8f2c",
+      "phases": {
+        "first": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 12,
+          "invalid_accepted": 0,
+          "attempts": 36,
+          "repairs": 12,
+          "invalid_output_attempts": 24,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 12,
+          "invalid_accepted": 0,
+          "attempts": 36,
+          "repairs": 12,
+          "invalid_output_attempts": 24,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 244.61978129995987,
+      "peak_rss_bytes": 3551821824,
+      "peak_reserved_vram_bytes": 0,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cpu",
+      "mode": "unchecked",
+      "replicate": 2,
+      "status": "passed",
+      "measurement_sha256": "0ea9b1ac82e815ed576358ff6e4ddd9f0ab29f491278765885c129703c7cddcc",
+      "phases": {
+        "first": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 12,
+          "invalid_accepted": 0,
+          "attempts": 36,
+          "repairs": 12,
+          "invalid_output_attempts": 24,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 12,
+          "invalid_accepted": 0,
+          "attempts": 36,
+          "repairs": 12,
+          "invalid_output_attempts": 24,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 243.83935620007105,
+      "peak_rss_bytes": 3561775104,
+      "peak_reserved_vram_bytes": 0,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cpu",
+      "mode": "unchecked",
+      "replicate": 3,
+      "status": "passed",
+      "measurement_sha256": "efd2d8b4e6eb921356cf744d980d5ce5ba16d70a26783ec5c4c30036386eb80c",
+      "phases": {
+        "first": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 12,
+          "invalid_accepted": 0,
+          "attempts": 36,
+          "repairs": 12,
+          "invalid_output_attempts": 24,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 12,
+          "invalid_accepted": 0,
+          "attempts": 36,
+          "repairs": 12,
+          "invalid_output_attempts": 24,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 243.14636969997082,
+      "peak_rss_bytes": 3560378368,
+      "peak_reserved_vram_bytes": 0,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cpu",
+      "mode": "constrained",
+      "replicate": 1,
+      "status": "passed",
+      "measurement_sha256": "152130f389a4764052baea51755fe64f54d42582d56063f4fca3a45bb320eb2d",
+      "phases": {
+        "first": {
+          "correct": 10,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 10,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 153.0596465000417,
+      "peak_rss_bytes": 3558166528,
+      "peak_reserved_vram_bytes": 0,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cpu",
+      "mode": "constrained",
+      "replicate": 2,
+      "status": "passed",
+      "measurement_sha256": "d795903a48eb900e805b6b06c5160baa3ec1f155fbb9314de55271a558e4c760",
+      "phases": {
+        "first": {
+          "correct": 10,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 10,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 152.71188620000612,
+      "peak_rss_bytes": 3557257216,
+      "peak_reserved_vram_bytes": 0,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cpu",
+      "mode": "constrained",
+      "replicate": 3,
+      "status": "passed",
+      "measurement_sha256": "94fb3c8eeabd56d8ba6d76137efcb4e979258e1e4beb7aa1c2d6e807888ca301",
+      "phases": {
+        "first": {
+          "correct": 10,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 10,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 153.72319499996956,
+      "peak_rss_bytes": 3555635200,
+      "peak_reserved_vram_bytes": 0,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cuda",
+      "mode": "unchecked",
+      "replicate": 1,
+      "status": "passed",
+      "measurement_sha256": "e732fcb0e7695d796554a607e94e83362d3c0b6e34834709fddf87c81983dc39",
+      "phases": {
+        "first": {
+          "correct": 9,
+          "cases": 24,
+          "accepted": 11,
+          "invalid_accepted": 0,
+          "attempts": 37,
+          "repairs": 13,
+          "invalid_output_attempts": 26,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 9,
+          "cases": 24,
+          "accepted": 11,
+          "invalid_accepted": 0,
+          "attempts": 37,
+          "repairs": 13,
+          "invalid_output_attempts": 26,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 57.63168820005376,
+      "peak_rss_bytes": 3796418560,
+      "peak_reserved_vram_bytes": 2218786816,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cuda",
+      "mode": "unchecked",
+      "replicate": 2,
+      "status": "passed",
+      "measurement_sha256": "4391d14bdedc3069977cd27a988d141f3f2b4a1974b343449540ac9eaccbfd69",
+      "phases": {
+        "first": {
+          "correct": 9,
+          "cases": 24,
+          "accepted": 11,
+          "invalid_accepted": 0,
+          "attempts": 37,
+          "repairs": 13,
+          "invalid_output_attempts": 26,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 9,
+          "cases": 24,
+          "accepted": 11,
+          "invalid_accepted": 0,
+          "attempts": 37,
+          "repairs": 13,
+          "invalid_output_attempts": 26,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 58.63001309998799,
+      "peak_rss_bytes": 3781394432,
+      "peak_reserved_vram_bytes": 2218786816,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cuda",
+      "mode": "unchecked",
+      "replicate": 3,
+      "status": "passed",
+      "measurement_sha256": "9aef94a808e0e45d76232cbacc0ae45ba391950fb0bf02186c0c6a6adfa43f69",
+      "phases": {
+        "first": {
+          "correct": 9,
+          "cases": 24,
+          "accepted": 11,
+          "invalid_accepted": 0,
+          "attempts": 37,
+          "repairs": 13,
+          "invalid_output_attempts": 26,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 9,
+          "cases": 24,
+          "accepted": 11,
+          "invalid_accepted": 0,
+          "attempts": 37,
+          "repairs": 13,
+          "invalid_output_attempts": 26,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 56.26817089994438,
+      "peak_rss_bytes": 3802406912,
+      "peak_reserved_vram_bytes": 2218786816,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cuda",
+      "mode": "constrained",
+      "replicate": 1,
+      "status": "passed",
+      "measurement_sha256": "449d74dc37da9cfe3e723fb0beb8c17d94daf69f7bef8c800328f6e5471d54a2",
+      "phases": {
+        "first": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 36.78265619999729,
+      "peak_rss_bytes": 3787288576,
+      "peak_reserved_vram_bytes": 2214592512,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cuda",
+      "mode": "constrained",
+      "replicate": 2,
+      "status": "passed",
+      "measurement_sha256": "e5fab32a3a28cda88c3d1c27b754d9d5f143ae1ad99fd386c60d164ad7d42e90",
+      "phases": {
+        "first": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 36.3913545999676,
+      "peak_rss_bytes": 3798618112,
+      "peak_reserved_vram_bytes": 2214592512,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    },
+    {
+      "device": "cuda",
+      "mode": "constrained",
+      "replicate": 3,
+      "status": "passed",
+      "measurement_sha256": "b4293ac2651f36561303daf7f2b72b5cd14787a29c669f3672233294a89e92d4",
+      "phases": {
+        "first": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        },
+        "warm": {
+          "correct": 12,
+          "cases": 24,
+          "accepted": 22,
+          "invalid_accepted": 0,
+          "attempts": 24,
+          "repairs": 0,
+          "invalid_output_attempts": 0,
+          "user_nine_of_24_passed": true
+        }
+      },
+      "primary_delivery_seconds": 37.04904269997496,
+      "peak_rss_bytes": 3786350592,
+      "peak_reserved_vram_bytes": 2214592512,
+      "resource_budget_passed": true,
+      "native_exit_code": 0,
+      "cleanup_observed": true
+    }
+  ],
+  "historical_assessments_preserved": [
+    "docs/operations/remaining-model-evidence-assessment.json",
+    "docs/operations/model-blocker-evidence-assessment.json",
+    "docs/operations/standard-generation-qualification.json"
+  ],
+  "historical_boundary": "The earlier22/24 and original23/24 assessments, baseline contract failures, paired lost-correct observations and relative-throughput results remain unchanged historical measurements. The user accepts this limited absolute9/24profile; this does not claim those stricter protocols passed.",
+  "remaining_separate_gaps": [
+    "Three1.5B constrained CPU attempts remain memory-denied and its22/24floor is unchanged.",
+    "Actual packaged-host adaptive state, explicit override and visual-builder qualification remain separately pending.",
+    "Native/offload protection, restricted legacy security review, provider/OCR/advanced quality and current owning final qualification retain their independent gaps."
+  ],
+  "future_testing": "Do not rerun these12accepted0.5B candidate cohorts or the9accepted larger-model cohorts to collect already satisfied absolute-quality evidence. The existing frozen remaining selector predates this acceptance; a reviewed successor is required before any remaining-only command. Existing schema/semantic validation, review/approval, authorization and resource controls remain intact.",
+  "security_impact": {
+    "disposition": "security-relevant",
+    "boundary": "Untrusted evidence admission and qualification publication.",
+    "controls": "Exact indexed plan/report/measurement/source/algorithm identities and raw-case replay; finite numeric/status/digest publication and separate review. No raw model text/prompts/credentials, inference, downloads, retained staging or restricted review.",
+    "residual_risk": "Exposed regression cases establish only this limited observed profile, not general population accuracy; same-user operator evidence is not authenticated against a malicious local actor."
+  }
+}

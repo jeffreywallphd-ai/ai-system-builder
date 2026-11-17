@@ -1,4 +1,9 @@
 import { createOrganizationId, type OrganizationId } from "../organization";
+import {
+  isHuggingFaceDatasetCommit,
+  MAX_HUGGING_FACE_DATASET_LICENSE_IDS,
+  readHuggingFaceDatasetLicenseIds,
+} from "../storage/huggingface-dataset-license";
 import { createWorkspaceId, type WorkspaceId } from "../workspace";
 
 export const INGESTION_TASK_SCHEMA_VERSION = "1.0" as const;
@@ -31,6 +36,7 @@ export interface IngestionTaskOutputArtifact {
   readonly sizeBytes: number;
   readonly digest?: IngestionSha256Digest;
   readonly providerRevision?: string;
+  readonly providerLicenseIds?: readonly string[];
   readonly sourceId?: string;
   readonly sourceSnapshotId?: string;
   readonly derivedArtifactKeys?: readonly string[];
@@ -173,12 +179,20 @@ function normalizeFile(value: IngestionTaskFileRecord): IngestionTaskFileRecord 
   if ((nextChunkIndex === 0) !== (lastChunk === undefined)) throw new Error("Ingestion last chunk must match the next chunk index.");
   if (lastChunk && lastChunk.index !== nextChunkIndex - 1) throw new Error("Ingestion last chunk index must immediately precede nextChunkIndex.");
   if (value.status === "pending" && (acceptedBytes !== 0 || nextChunkIndex !== 0)) throw new Error("Pending ingestion files cannot have accepted chunks.");
+  const providerSource = value.providerSource ? normalizeProviderSource(value.providerSource) : undefined;
+  const licenseIds = value.output?.providerLicenseIds;
+  if (licenseIds !== undefined && (!providerSource ||
+      !isHuggingFaceDatasetCommit(providerSource.revision) || providerSource.revision !== value.output?.providerRevision ||
+      !value.output?.sourceSnapshotId || !Array.isArray(licenseIds) || licenseIds.length > MAX_HUGGING_FACE_DATASET_LICENSE_IDS)) {
+    throw new Error("Dataset license evidence requires a bounded list and the exact finalized provider snapshot.");
+  }
   const output = value.output ? {
     key: normalizeStorageKey(value.output.key),
     mediaType: normalizeMediaType(value.output.mediaType),
     sizeBytes: boundedInteger(value.output.sizeBytes, 0, INGESTION_TASK_MAXIMUM_FILE_BYTES, "Output sizeBytes"),
     ...(value.output.digest ? { digest: normalizeIngestionSha256Digest(value.output.digest) } : {}),
     ...(value.output.providerRevision ? { providerRevision: requiredText(value.output.providerRevision, "Output provider revision", 160) } : {}),
+    ...(licenseIds === undefined ? {} : { providerLicenseIds: readHuggingFaceDatasetLicenseIds(licenseIds) }),
     ...(value.output.sourceId ? { sourceId: normalizeId(value.output.sourceId, "Output source id") } : {}),
     ...(value.output.sourceSnapshotId ? { sourceSnapshotId: normalizeId(value.output.sourceSnapshotId, "Output source snapshot id") } : {}),
     ...(value.output.derivedArtifactKeys?.length ? { derivedArtifactKeys: uniqueStorageKeys(value.output.derivedArtifactKeys) } : {}),
@@ -186,7 +200,6 @@ function normalizeFile(value: IngestionTaskFileRecord): IngestionTaskFileRecord 
   if (output && !output.digest && !output.providerRevision) throw new Error("Finalized ingestion outputs require a content digest or exact provider revision.");
   if (value.status === "finalized" && (!output || (value.websiteSource ? (acceptedBytes !== 0 || totalBytes !== 0) : (acceptedBytes !== totalBytes || output.sizeBytes !== totalBytes)))) throw new Error("Finalized ingestion files require a complete bounded output.");
   if (value.status !== "finalized" && output) throw new Error("Only finalized ingestion files may reference an output.");
-  const providerSource = value.providerSource ? normalizeProviderSource(value.providerSource) : undefined;
   const websiteSource = value.websiteSource ? { requestedUrl: normalizeWebsiteUrl(value.websiteSource.requestedUrl) } : undefined;
   const error = value.error ? {
     code: normalizeId(value.error.code, "Ingestion error code"),

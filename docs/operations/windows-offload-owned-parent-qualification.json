@@ -1,0 +1,500 @@
+{
+  "schema_version": "windows-offload-owned-parent-evidence-v1",
+  "status": "reviewed-four-native-component-controls-passed",
+  "scope": "Fresh owned-parent journal only; no global protection fence, production offload or parent-roadmap pass.",
+  "code_commit": "24328fc716fc867d1d21c8c29ecb8ce97154b10e",
+  "source_work": {
+    "work_id": "construct-owned-protected-journal-parent",
+    "receipt_digest": "516e10b1e58dba9ebf9df20f11b222a963d213cdf548b096451350f6c493cf17",
+    "review_digest": "3fedeed9302a7c900b2048b86df63a9d79844d1bf50f76bee539326e5046650f",
+    "focused_test_count": 177,
+    "runtime_core_journal_tests": 102,
+    "fixture_definition_tests": 75,
+    "actual_check_ids": [
+      "offload-resource-lifecycle",
+      "dataset-semantic-curation",
+      "documentation",
+      "agent-support",
+      "architecture"
+    ]
+  },
+  "native_collection": {
+    "cases": [
+      {
+        "accepted": true,
+        "case": "deadline-control",
+        "child": {
+          "allocated_bytes": 0,
+          "api_cleanup_confirmed": false,
+          "api_created": false,
+          "api_handles_closed": false,
+          "api_uncertainty_retained": false,
+          "case": "deadline-control",
+          "collision_parent_created": false,
+          "elapsed_ns": 22495100,
+          "expected_refusal": false,
+          "failure_stage": "none",
+          "guard_retirement_confirmed": false,
+          "history_intentionally_retained": false,
+          "journal_data_bytes": 0,
+          "journal_frames": 0,
+          "last_native_phase": "none",
+          "last_native_return_code": null,
+          "last_os_error_code": null,
+          "live_data_irps_after": 0,
+          "model_started": false,
+          "native_call_count": 0,
+          "outcome": "armed",
+          "parent_delete_child_denied": false,
+          "peak_live_data_irps": 0,
+          "probe_cleanup_confirmed": false,
+          "probe_handles_closed": false,
+          "probe_identity_readback": false,
+          "probe_last_label": "none",
+          "probe_last_native_return_code": null,
+          "probe_native_call_count": 0,
+          "probe_results": [],
+          "probe_uncertainty_retained": false,
+          "probe_unretired_handle_records": 0,
+          "production_composed": false,
+          "repeated_reads": 0,
+          "resize_control_denied": false,
+          "resize_native_return_code": null,
+          "resize_os_error_code": null,
+          "schema_version": "windows-offload-journal-native-v3",
+          "shared_domain_qualified": false,
+          "source_digest": "4973255a6356f78a7a04e8ed9424a480d564c710a361626207e79f6471e7a442",
+          "timer_configured": true,
+          "unretired_handle_records": 0
+        },
+        "failure_stage": "none",
+        "parent": {
+          "case": "deadline-control",
+          "dispatch_after_ready": true,
+          "elapsed_ns": 3355120100,
+          "exit_code": 2,
+          "job_active_zero": true,
+          "limits_read_back": true,
+          "membership_read_back": true,
+          "parent_cleanup_confirmed": true,
+          "process_exit_observed": true,
+          "report_bytes": 1239
+        }
+      },
+      {
+        "accepted": true,
+        "case": "journal-roundtrip",
+        "child": {
+          "allocated_bytes": 4096,
+          "api_cleanup_confirmed": true,
+          "api_created": true,
+          "api_handles_closed": true,
+          "api_uncertainty_retained": false,
+          "case": "journal-roundtrip",
+          "collision_parent_created": false,
+          "elapsed_ns": 439415300,
+          "expected_refusal": false,
+          "failure_stage": "none",
+          "guard_retirement_confirmed": true,
+          "history_intentionally_retained": true,
+          "journal_data_bytes": 2560,
+          "journal_frames": 5,
+          "last_native_phase": "CloseHandle",
+          "last_native_return_code": 1,
+          "last_os_error_code": 995,
+          "live_data_irps_after": 0,
+          "model_started": false,
+          "native_call_count": 2168,
+          "outcome": "observed",
+          "parent_delete_child_denied": false,
+          "peak_live_data_irps": 1,
+          "probe_cleanup_confirmed": false,
+          "probe_handles_closed": false,
+          "probe_identity_readback": false,
+          "probe_last_label": "none",
+          "probe_last_native_return_code": null,
+          "probe_native_call_count": 0,
+          "probe_results": [],
+          "probe_uncertainty_retained": false,
+          "probe_unretired_handle_records": 0,
+          "production_composed": false,
+          "repeated_reads": 8,
+          "resize_control_denied": false,
+          "resize_native_return_code": null,
+          "resize_os_error_code": null,
+          "schema_version": "windows-offload-journal-native-v3",
+          "shared_domain_qualified": false,
+          "source_digest": "4973255a6356f78a7a04e8ed9424a480d564c710a361626207e79f6471e7a442",
+          "timer_configured": true,
+          "unretired_handle_records": 0
+        },
+        "failure_stage": "none",
+        "parent": {
+          "case": "journal-roundtrip",
+          "dispatch_after_ready": true,
+          "elapsed_ns": 528715300,
+          "exit_code": 0,
+          "job_active_zero": true,
+          "limits_read_back": true,
+          "membership_read_back": true,
+          "parent_cleanup_confirmed": true,
+          "process_exit_observed": true,
+          "report_bytes": 1251
+        }
+      },
+      {
+        "accepted": true,
+        "case": "journal-parent-denied",
+        "child": {
+          "allocated_bytes": 0,
+          "api_cleanup_confirmed": false,
+          "api_created": false,
+          "api_handles_closed": false,
+          "api_uncertainty_retained": true,
+          "case": "journal-parent-denied",
+          "collision_parent_created": true,
+          "elapsed_ns": 118790100,
+          "expected_refusal": true,
+          "failure_stage": "none",
+          "guard_retirement_confirmed": false,
+          "history_intentionally_retained": false,
+          "journal_data_bytes": 0,
+          "journal_frames": 0,
+          "last_native_phase": "NtCreateFile",
+          "last_native_return_code": 3221225525,
+          "last_os_error_code": 122,
+          "live_data_irps_after": 0,
+          "model_started": false,
+          "native_call_count": 52,
+          "outcome": "expected-denial",
+          "parent_delete_child_denied": false,
+          "peak_live_data_irps": 0,
+          "probe_cleanup_confirmed": false,
+          "probe_handles_closed": false,
+          "probe_identity_readback": false,
+          "probe_last_label": "none",
+          "probe_last_native_return_code": null,
+          "probe_native_call_count": 0,
+          "probe_results": [],
+          "probe_uncertainty_retained": false,
+          "probe_unretired_handle_records": 0,
+          "production_composed": false,
+          "repeated_reads": 0,
+          "resize_control_denied": false,
+          "resize_native_return_code": null,
+          "resize_os_error_code": null,
+          "schema_version": "windows-offload-journal-native-v3",
+          "shared_domain_qualified": false,
+          "source_digest": "4973255a6356f78a7a04e8ed9424a480d564c710a361626207e79f6471e7a442",
+          "timer_configured": true,
+          "unretired_handle_records": 13
+        },
+        "failure_stage": "none",
+        "parent": {
+          "case": "journal-parent-denied",
+          "dispatch_after_ready": true,
+          "elapsed_ns": 202406400,
+          "exit_code": 0,
+          "job_active_zero": true,
+          "limits_read_back": true,
+          "membership_read_back": true,
+          "parent_cleanup_confirmed": true,
+          "process_exit_observed": true,
+          "report_bytes": 1267
+        }
+      },
+      {
+        "accepted": true,
+        "case": "journal-mutation-denied",
+        "child": {
+          "allocated_bytes": 4096,
+          "api_cleanup_confirmed": true,
+          "api_created": true,
+          "api_handles_closed": true,
+          "api_uncertainty_retained": false,
+          "case": "journal-mutation-denied",
+          "collision_parent_created": false,
+          "elapsed_ns": 821205900,
+          "expected_refusal": false,
+          "failure_stage": "none",
+          "guard_retirement_confirmed": true,
+          "history_intentionally_retained": true,
+          "journal_data_bytes": 2560,
+          "journal_frames": 5,
+          "last_native_phase": "CloseHandle",
+          "last_native_return_code": 1,
+          "last_os_error_code": 995,
+          "live_data_irps_after": 0,
+          "model_started": false,
+          "native_call_count": 2193,
+          "outcome": "observed",
+          "parent_delete_child_denied": true,
+          "peak_live_data_irps": 1,
+          "probe_cleanup_confirmed": true,
+          "probe_handles_closed": true,
+          "probe_identity_readback": true,
+          "probe_last_label": "parent-delete-child",
+          "probe_last_native_return_code": 3221225506,
+          "probe_native_call_count": 131,
+          "probe_results": [
+            {
+              "label": "file-write-data",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "file-append-data",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "file-delete",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "file-write-dac",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "file-write-owner",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "namespace-add-file",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "namespace-add-directory",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "namespace-delete-child",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "namespace-delete",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "namespace-write-dac",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "namespace-write-owner",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "child-create",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "stream-create",
+              "native_status": 3221225506,
+              "output_absent": true
+            },
+            {
+              "label": "parent-delete-child",
+              "native_status": 3221225506,
+              "output_absent": true
+            }
+          ],
+          "probe_uncertainty_retained": false,
+          "probe_unretired_handle_records": 0,
+          "production_composed": false,
+          "repeated_reads": 8,
+          "resize_control_denied": true,
+          "resize_native_return_code": 0,
+          "resize_os_error_code": 5,
+          "schema_version": "windows-offload-journal-native-v3",
+          "shared_domain_qualified": false,
+          "source_digest": "4973255a6356f78a7a04e8ed9424a480d564c710a361626207e79f6471e7a442",
+          "timer_configured": true,
+          "unretired_handle_records": 0
+        },
+        "failure_stage": "none",
+        "parent": {
+          "case": "journal-mutation-denied",
+          "dispatch_after_ready": true,
+          "elapsed_ns": 902388000,
+          "exit_code": 0,
+          "job_active_zero": true,
+          "limits_read_back": true,
+          "membership_read_back": true,
+          "parent_cleanup_confirmed": true,
+          "process_exit_observed": true,
+          "report_bytes": 2357
+        }
+      }
+    ],
+    "controller_diagnostics": {
+      "acknowledged": true,
+      "call_count": 207,
+      "os_error_code": 0,
+      "returned": true,
+      "stage": "runtime-dll",
+      "uncertain_custody": false
+    },
+    "deadline_scope": "Owned diagnostic only; callback delivery needs the Python GIL and host scheduling. Sleep/suspend and indefinitely stuck kernel I/O are not qualified.",
+    "elapsed_ns": 5022356800,
+    "failure_stage": "none",
+    "model_started": false,
+    "old_staging_accessed": false,
+    "parent_qualification_granted": false,
+    "production_composed": false,
+    "qualification_complete": false,
+    "quality_tests_executed": false,
+    "run_id": "95c3b3c6af00456bb82f5b1ac3ed5ae3",
+    "schema_version": "windows-offload-journal-native-v3",
+    "source_bindings": {
+      "cached-ctypes": "99cc4ceddb11b9815a017d49f855cdf3a146fadd1393ce9feee710c5697e8e07",
+      "cached-hashlib": "6026fff1a1f311a2ac13f8243905370008a4470d4d762b0bbb117be14b0f14ac",
+      "cached-json": "a98276ec934a8f9c02d53871a9ebd22e4d59feeecc1e75bc29c78d58c19aec67",
+      "cached-subprocess": "0e589ebd82801feac17dc6471215f6e4465616ffe2fb5cf1745116ee102f75a3",
+      "cached-uuid": "c0dd5eded5e7ba66262286f1cb3e7ccb18e16fb96700634d5e9fe6f61f13c3cd",
+      "dev-tools/scripts/qualification/qualify_windows_offload_journal.py": "5b672e348a8a5bc95deddaabdb3526b08aca2ba8c2cc2d8f185bbdc470ef3285",
+      "dev-tools/scripts/qualification/windows_offload_core_fixture.py": "01a77362960f81f5a69ccd5ee6029c3b98d0b00ca81890a1d0c4c702ee6d85a2",
+      "dev-tools/scripts/qualification/windows_offload_journal_fixture.py": "27c33ba6513700d84dd2d1b7eadc96625cd48fb5bb2367bb765a9842edbf5f3c",
+      "modules/adapters/runtime/python/worker/tasks/local_model_offload.py": "8e382c0d25ff803766ecf3ade67bfa85ddced1558d1b492c22dde3fb1806997f",
+      "modules/adapters/runtime/python/worker/tasks/offload_recovery.py": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364",
+      "modules/adapters/runtime/python/worker/tasks/windows_offload_backend.py": "03a19d1dc5c60eae7c9131a497015bded9a9c3469a78383045c7ed816233da6b",
+      "modules/adapters/runtime/python/worker/tasks/windows_offload_core.py": "6148878a16ec28e4a8d0c255301d2a18165cce4b655b7855cf42ac79bff66cb0",
+      "modules/adapters/runtime/python/worker/tasks/windows_offload_journal.py": "7eb4924863fd5c2953141be689fa37f7d7ff7fbee10ec542c0c9285ec00df925",
+      "runtime-ctypes": "093203aee5ea10b4fc572008448c76425430323a11dac2fc5e5271b72f46fba5",
+      "runtime-dll": "1ac15e2224581fc678bbd17728b9aa538d47b891b72c76499ef07e54cd74f151",
+      "runtime-hashlib": "271b00a30d27c3cdd99b7f70962680f8455d3057b3c103f028e2da31141b91ee",
+      "runtime-image": "cce21c0e8710e304273e98ac4b2b0f5aceb639acbcd2343cbaa5c4e81619c45b",
+      "runtime-json": "0439e6546415d4147396afac324beadb7a8dc2c1e2391dcb541fb34c83986d8f",
+      "runtime-os": "8b9a446b736524e5838cd1d84803885b579c1c13c4063c322a82dcc3f3791258",
+      "runtime-subprocess": "d4db1dbd8de9762fba2ddfb05367d974df8bd6596bef78630896f67b89da519e",
+      "runtime-uuid": "a52bb063cfdda51ce75ff222641d00f5af59189b24cfc42042a3603bd12794c1"
+    },
+    "status": "evidence-collected-review-required"
+  },
+  "actual_native_subprocess_exit_code": 0,
+  "actual_exec_tool_exit_code": 0,
+  "actual_launch_tool_chunk": "4215ff",
+  "actual_completion_tool_chunk": "f75db9",
+  "raw_stdout_bytes": 10365,
+  "raw_stderr_bytes": 0,
+  "raw_stdout_sha256": "00c756501722b3d7ebdae571fc519bc40591826073f677158822d6177d5be1c1",
+  "raw_stdout_matches_guarded_new_summary": true,
+  "effect_plan_sha256": "442e82e66d6ccc450ade9eb44dd964e60421a1592ee299ff208dd325ed34ac2e",
+  "effect_reference_sha256": "60c3faf572dbc0f05bbbf8e3da2347a6e4ffce2e9d391c1cfa5abb7e45e90f51",
+  "result_reference_sha256": "05b6548a2bddb42bb96de6a9bec65ac677ebf255f4580704e5e44759da5be179",
+  "result_audit_sha256": "af42bc6fdc26e3ea64e794234b5f75c837cfc56dcee92452436756b7494f3288",
+  "remaining_invocations": 0,
+  "scoped_resolved_findings": [
+    {
+      "id": "native-journal-namespace-delete-admission-granted",
+      "scope": "Current fresh v3 Journal namespace DELETE request is now explicitly denied C0000022 after creators retire, with positive readback and all14controls. This resolves only the corresponding component admission gap under the newly owned immediate parent.",
+      "history": "The v2 run04604cdb325543d894938ef6c787e145 grant0 remains failed, unchanged historical evidence. No retroactive pass.",
+      "remaining": "The private parent own DELETE/rename and its ancestors, guardian/crash/lifetime, global durable accounting/retainedrestart/modelworker/resources are not qualified."
+    }
+  ],
+  "qualified_mutation_rows": [
+    {
+      "label": "file-write-data",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "file-append-data",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "file-delete",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "file-write-dac",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "file-write-owner",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "namespace-add-file",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "namespace-add-directory",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "namespace-delete-child",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "namespace-delete",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "namespace-write-dac",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "namespace-write-owner",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "child-create",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "stream-create",
+      "native_status": 3221225506,
+      "output_absent": true
+    },
+    {
+      "label": "parent-delete-child",
+      "native_status": 3221225506,
+      "output_absent": true
+    }
+  ],
+  "resize_handle_control": {
+    "returned_code": 0,
+    "win32_error": 5,
+    "scope": "Read-only handle-right control; not independent DACL proof"
+  },
+  "interpretation": [
+    "The current mutation case observed all14exactC0000022/null-output requests after original creators retired and fresh share7 identity/security/data readback. The separate resize handle-right control returned0/error5.",
+    "The mutation case confirmed original2193/probe131callrecords and separate API cleanup/unretired0, then process exit0/Jobzero/parent cleanup. These are separate facts, not capacity credit.",
+    "The known fresh-parent collision retained13uncertain API records. Its childexit0/Jobzero/parent cleanup does not supply API retirement.",
+    "The earlier v2 namespace-delete grant remains failed historical evidence. Only the corresponding current fresh-v3 admission gap is resolved. Old retained data and ancestor/guardian/global-accounting/model-resource qualification are unchanged."
+  ],
+  "component_controls_qualified": true,
+  "qualification_complete": false,
+  "parent_qualification_granted": false,
+  "production_composed": false,
+  "shared_domain_qualified": false,
+  "model_started": false,
+  "accuracy_executed": false,
+  "old_staging_accessed": false,
+  "disk_credit_granted": false,
+  "additional_native_authorized": false,
+  "limits": [
+    "Only the fresh journal component is qualified. New-parent/ancestor rename or deletion, preopened rights, stalled IO, guardian/model-worker crash/restart, shared durable 12 GiB accounting and actual offload resources/delivery/cleanup remain pending. Unknown usage reserves 12 GiB; production stays unavailable. No lease, credit, old-file access or extra run. Accuracy/OCR stay closed; full tests deferred."
+  ]
+}

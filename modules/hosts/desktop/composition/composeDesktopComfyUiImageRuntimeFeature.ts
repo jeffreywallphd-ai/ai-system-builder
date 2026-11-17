@@ -1,7 +1,10 @@
+import { randomUUID } from "node:crypto";
+import { writeContainedFile, deleteContainedFile } from "../../../adapters/filesystem-security";
 import { execFile as nodeExecFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { requireManagedComfyUiInstall, resolveComfyUiAutoInstall } from "../../shared/resolveComfyUiAutoInstall";
 import type { LoggingPort } from "../../../application/ports/logging";
 import type { ApplicationSettingsPort } from "../../../application/ports/settings";
 import type { RuntimeInstallerPort } from "../../../application/ports/runtime-installer";
@@ -52,6 +55,7 @@ export interface ComposeDesktopComfyUiImageRuntimeFeatureOptions {
 export function composeDesktopComfyUiImageRuntimeFeature(
   options: ComposeDesktopComfyUiImageRuntimeFeatureOptions,
 ): any {
+  const comfyUiAutoInstall = resolveComfyUiAutoInstall(process.env);
   const installRoot = resolveComfyUiInstallRoot(
     process.env,
     options.runtimeRootDirectory,
@@ -121,6 +125,8 @@ export function composeDesktopComfyUiImageRuntimeFeature(
     ReturnType<typeof createComfyUiRuntimeSupervisor> | undefined;
   let activeRuntimeDeviceMode: ComfyUiRuntimeDeviceMode | undefined;
   const comfyUiSupervisorPort = {
+    async stop() { await comfyUiSupervisor?.stop(); },
+    getLifecycleState() { return comfyUiSupervisor?.getStatus() ?? "uninitialized"; },
     async start() {
       const persistedValue = (
         await options.applicationSettings.readValues({
@@ -139,6 +145,12 @@ export function composeDesktopComfyUiImageRuntimeFeature(
         gpuType: persistedGpuType,
         cudaTorchWheelIndexUrl,
       });
+      let configuredInstaller: RuntimeInstallerPort | undefined;
+      const installSourceRef = process.env.COMFYUI_INSTALL_REF;
+      if (!comfyUiAutoInstall) {
+        configuredInstaller = await createConfiguredComfyUiInstaller(resolvedRuntimeDeviceMode);
+        await requireManagedComfyUiInstall(configuredInstaller, installRoot, installSourceRef);
+      }
       const modeChanged =
         activeRuntimeDeviceMode !== undefined &&
         activeRuntimeDeviceMode !== resolvedRuntimeDeviceMode;
@@ -147,17 +159,14 @@ export function composeDesktopComfyUiImageRuntimeFeature(
         comfyUiSupervisor = undefined;
       }
       if (!comfyUiSupervisor) {
-        const configuredInstaller = await createConfiguredComfyUiInstaller(
-          resolvedRuntimeDeviceMode,
-        );
         comfyUiSupervisor = createComfyUiRuntimeSupervisor({
           workingDirectory: installRoot,
           pythonExecutable: comfyUiPythonCommand,
-          installer: configuredInstaller,
+          installer: configuredInstaller ?? await createConfiguredComfyUiInstaller(resolvedRuntimeDeviceMode),
           installRoot,
           runtimeDeviceMode: resolvedRuntimeDeviceMode,
-          autoInstall: true,
-          installSourceRef: process.env.COMFYUI_INSTALL_REF,
+          autoInstall: comfyUiAutoInstall,
+          installSourceRef,
           logging: options.loggingPort,
         });
         activeRuntimeDeviceMode = resolvedRuntimeDeviceMode;
@@ -195,11 +204,12 @@ export function composeDesktopComfyUiImageRuntimeFeature(
       baseUrl: process.env.COMFYUI_BASE_URL?.trim() || "http://127.0.0.1:8188",
     }),
     supervisor: comfyUiSupervisorPort,
-    prepareLatentReferenceImage: async ({ artifactId }) => {
+    prepareLatentReferenceImage: async ({ artifactId, workspaceId }) => {
       const artifacts = await options.getArtifacts();
       const result = await artifacts.storage.retrieveArtifact({
         key: artifactId,
-      });
+        maximumBytes: 16 * 1024 * 1024,
+      }, { workspaceId });
       if (!result.ok)
         throw new Error(
           `Unable to read latent reference image artifact '${artifactId}': ${result.error.message}`,
@@ -208,11 +218,11 @@ export function composeDesktopComfyUiImageRuntimeFeature(
         result.value.content instanceof Uint8Array
           ? result.value.content
           : new Uint8Array(result.value.content as ArrayBufferLike);
-      const imageName = `ai-system-builder-latent-${Date.now()}-${Math.random().toString(36).slice(2)}${extensionForImageReference(result.value.descriptor.mediaType, artifactId)}`;
+      const imageName = `ai-system-builder-latent-${randomUUID()}${extensionForImageReference(result.value.descriptor.mediaType, artifactId)}`;
       const inputDirectory = join(installRoot, "input");
-      await mkdir(inputDirectory, { recursive: true });
-      await writeFile(join(inputDirectory, imageName), content);
-      return { imageName };
+      await writeContainedFile({ rootDirectory: inputDirectory, key: imageName, content, overwrite: false });
+      return { imageName, cleanup: async () => { await deleteContainedFile({ rootDirectory: inputDirectory, key: imageName }); } };
+
     },
     mapperOptions: {
       defaultCheckpoint: process.env.COMFYUI_DEFAULT_CHECKPOINT,

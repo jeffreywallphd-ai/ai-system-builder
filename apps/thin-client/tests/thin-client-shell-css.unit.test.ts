@@ -14,8 +14,40 @@ const desktopStylesheetPath = resolve(
 );
 const thinClientStylesheetPath = resolve("apps/thin-client/src/styles/app.css");
 
+const thinSharedImports = [
+  "../../../../modules/ui/shared/styles/application.css",
+  "./feature-overrides.css",
+  "../../../../modules/ui/shared/styles/forced-colors.css",
+];
+
+function readOnlyStyleImports(css: string): string[] {
+  const separator = /(?:[ \t\r\n\f]|\/\*[\s\S]*?\*\/)+/y;
+  const pattern = /@import(?:[ \t\r\n\f]|\/\*[\s\S]*?\*\/)+(["'])([^"'\\\r\n\f]+)\1(?:[ \t\r\n\f]|\/\*[\s\S]*?\*\/)*;/y;
+  const imports: string[] = [];
+  let offset = 0;
+  while (offset < css.length) {
+    separator.lastIndex = offset;
+    if (separator.exec(css)) {
+      offset = separator.lastIndex;
+      continue;
+    }
+    pattern.lastIndex = offset;
+    const match = pattern.exec(css);
+    if (!match) {
+      throw new Error("Expected a quoted stylesheet import");
+    }
+    imports.push(match[2]!);
+    offset = pattern.lastIndex;
+  }
+  return imports;
+}
+
+function expectThinSharedImports(css: string): void {
+  expect(readOnlyStyleImports(css)).toEqual(thinSharedImports);
+}
+
 function readShellCss(): string {
-  return readFileSync(shellCssPath, "utf8");
+  return readFileSync(shellCssPath, "utf8").replace(/\r\n?/g, "\n");
 }
 
 function getRule(css: string, selector: string): string {
@@ -51,23 +83,14 @@ describe("shared application shell styling", () => {
     expect(css).toContain(".ui-shell__menu");
   });
 
-  it("supports shared sidebar collapse and contextual page artwork", () => {
+  it("supports shared sidebar collapse without contextual page artwork", () => {
     const css = readShellCss();
 
     expect(css).toContain(".ui-shell--sidebar-collapsed .ui-shell__body");
     expect(css).toContain("var(--shell-sidebar-collapsed-width)");
     expect(css).toContain(".ui-shell__collapse-button");
-    expect(css).toContain(".ui-shell__page-art");
-    expect(css).toContain(
-      ".ui-shell__main:has(.ui-page-loading-surface) .ui-shell__page-art",
-    );
-    expect(
-      getRule(
-        css,
-        ".ui-shell__main:has(.ui-page-loading-surface) .ui-shell__page-art",
-      ),
-    ).toContain("visibility: hidden");
-    expect(css).toContain(".ui-shell__content--with-art");
+    expect(css).not.toContain(".ui-shell__page-art");
+    expect(css).not.toContain(".ui-shell__content--with-art");
     expect(css).toContain(".ui-shell--sidebar-collapsed .ui-shell__content");
     expect(
       getRule(css, ".ui-shell--sidebar-collapsed .ui-shell__content"),
@@ -94,15 +117,56 @@ describe("shared application shell styling", () => {
     expect(workspaceChangeRule).toContain("block-size: 2.125rem");
   });
 
-  it("is the only shared visual foundation imported by both application entrypoints", () => {
+  it("loads the shared visual foundation before the shared forced-colors override", () => {
     const desktopCss = readFileSync(desktopStylesheetPath, "utf8");
     const thinClientCss = readFileSync(thinClientStylesheetPath, "utf8");
 
     expect(desktopCss).toContain("modules/ui/shared/styles/application.css");
     expect(thinClientCss).toContain("modules/ui/shared/styles/application.css");
-    expect(thinClientCss.trim().split(/\r?\n/).length).toBe(1);
+    expectThinSharedImports(thinClientCss);
+    const desktopImports = readOnlyStyleImports(desktopCss);
+    const desktopShared = [
+      "../../../../../modules/ui/shared/styles/application.css",
+      "../../../../../modules/ui/shared/styles/forced-colors.css",
+    ];
+    expect(desktopImports[0]).toBe(desktopShared[0]);
+    expect(desktopImports.at(-1)).toBe(desktopShared[1]);
+    for (const shared of desktopShared) {
+      expect(desktopImports.filter((value) => value === shared).length).toBe(1);
+    }
     expect(desktopCss).not.toContain("./tokens.css");
     expect(thinClientCss).not.toContain("./tokens.css");
+  });
+
+  it("ignores harmless line formatting and comments in the shared import contract", () => {
+    expectThinSharedImports(thinSharedImports.map((value) => `@import '${value}';`).join(" \n\n/* shared layer */\n"));
+    expectThinSharedImports(thinSharedImports.map((value) => `@import /* layer */ "${value}" /* end */;`).join("\n"));
+  });
+
+  it("rejects missing, duplicate, reordered, and unrecognized style layers", () => {
+    const css = (imports: string[]) => imports.map((value) => `@import "${value}";`).join("\n");
+    for (const imports of [
+      thinSharedImports.slice(0, 1),
+      thinSharedImports.slice(1),
+      [...thinSharedImports, thinSharedImports[2]!],
+      [...thinSharedImports].reverse(),
+      [...thinSharedImports, "./tokens.css"],
+      [...thinSharedImports, "../../../../modules/ui/shared/styles/unknown.css"],
+      [...thinSharedImports, "https://example.invalid/style.css"],
+      [thinSharedImports[0]!.replace("application.css", "applica/*x*/tion.css"), ...thinSharedImports.slice(1)],
+      [thinSharedImports[0]!, thinSharedImports[2]!, thinSharedImports[1]!],
+    ]) {
+      expect(() => expectThinSharedImports(css(imports))).toThrow();
+    }
+    expect(() => expectThinSharedImports(`${css(thinSharedImports)}\nbody { color: red; }`)).toThrow();
+    expect(() => expectThinSharedImports(`${css(thinSharedImports)}\n@import url('./tokens.css');`)).toThrow();
+    expect(() => expectThinSharedImports(`${css(thinSharedImports)}\n/* unclosed`)).toThrow();
+    expect(() => expectThinSharedImports(css(thinSharedImports).replace(";", "/* unclosed;"))).toThrow();
+    for (const invalidWhitespace of ["\u00a0", "\u000b"]) {
+      expect(() => expectThinSharedImports(css(thinSharedImports).replace("@import ", `@import${invalidWhitespace}`))).toThrow();
+      expect(() => expectThinSharedImports(css(thinSharedImports).replace(";", `${invalidWhitespace};`))).toThrow();
+      expect(() => expectThinSharedImports(`${invalidWhitespace}${css(thinSharedImports)}`)).toThrow();
+    }
   });
 
   it("does not retain app-local copies of the shared token or shell layers", () => {

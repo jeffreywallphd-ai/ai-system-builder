@@ -16,6 +16,18 @@ afterEach(() => {
 });
 
 describe("DatasetReviewModal", () => {
+  it("distinguishes a loading or failed page from a verified empty review", async () => {
+    container = document.createElement("div"); document.body.append(container); root = createRoot(container);
+    const render = async (busy: boolean, message?: string) => act(async () => root?.render(<DatasetReviewModal open title="Review ready" onClose={vi.fn()} items={[]} currentIndex={0} decisions={{}} busy={busy} message={message} onCurrentIndexChange={vi.fn()} onApprove={vi.fn()} onReject={vi.fn()} />));
+    await render(true);
+    expect(document.body.querySelector('[role="dialog"] [role="status"]')?.textContent).toBe("Loading review records...");
+    expect(document.body.textContent).not.toContain("There is nothing to review.");
+    await render(false, "Review could not be loaded. Close and try again.");
+    expect(document.body.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain("Review could not be loaded.");
+    expect(document.body.textContent).not.toContain("There is nothing to review.");
+    await render(false);
+    expect(document.body.textContent).toContain("There is nothing to review.");
+  });
   it("moves through sections and reports exact approve and reject decisions", async () => {
     const approve = vi.fn();
     const reject = vi.fn();

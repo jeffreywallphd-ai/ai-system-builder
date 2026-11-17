@@ -1,0 +1,1311 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Contributor control plane",
+        "Roadmap integration",
+        "JSON review site"
+      ],
+      "chunkId": "scope-and-store",
+      "completedAt": "2026-10-21T01:46:13Z",
+      "criteriaIds": [
+        "observable-outcome-and-frozen-acceptance",
+        "reused-elements-fit",
+        "ownership-publication-and-recovery",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Canonical guide, architecture, threat model, ADR and entry routing updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "verified-outcome-delivery-scope-and-store",
+      "incrementId": "verified-outcome-delivery",
+      "summary": "16 delivery/storage tests include competing processes, recovery, frozen scope, claim fencing and actual public CLI execution.",
+      "tests": [
+        "16 delivery/storage tests include competing processes, recovery, frozen scope, claim fencing and actual public CLI execution."
+      ],
+      "title": "Outcome contracts, ownership and recoverable persistence"
+    },
+    {
+      "areas": [
+        "Contributor control plane",
+        "Roadmap integration",
+        "JSON review site"
+      ],
+      "chunkId": "verification-and-review",
+      "completedAt": "2026-10-21T01:46:13Z",
+      "criteriaIds": [
+        "complete-impact-accounting",
+        "candidate-bound-execution-evidence",
+        "independent-review-and-correction",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Canonical guide, architecture, threat model, ADR and entry routing updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "verified-outcome-delivery-verification-and-review",
+      "incrementId": "verified-outcome-delivery",
+      "summary": "Real Node fixture checks, private-output hashing, timeout/output bounds, stale/self-review denial, every-criterion coverage and corrected finding closure pass.",
+      "tests": [
+        "Real Node fixture checks, private-output hashing, timeout/output bounds, stale/self-review denial, every-criterion coverage and corrected finding closure pass."
+      ],
+      "title": "Executed verification and reviewed completion"
+    },
+    {
+      "areas": [
+        "Contributor control plane",
+        "Roadmap integration",
+        "JSON review site"
+      ],
+      "chunkId": "json-review-site",
+      "completedAt": "2026-10-21T01:46:14Z",
+      "criteriaIds": [
+        "dynamic-json-review-site",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Canonical guide, architecture, threat model, ADR and entry routing updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "verified-outcome-delivery-json-review-site",
+      "incrementId": "verified-outcome-delivery",
+      "summary": "5 real HTTP/JSON tests, dynamic DOM tests and real Chrome desktop/mobile navigation and filtering passed; mobile overflow corrected.",
+      "tests": [
+        "5 real HTTP/JSON tests, dynamic DOM tests and real Chrome desktop/mobile navigation and filtering passed; mobile overflow corrected."
+      ],
+      "title": "Live JSON review experience"
+    },
+    {
+      "areas": [
+        "Contributor control plane",
+        "Roadmap integration",
+        "JSON review site"
+      ],
+      "chunkId": "adoption-and-entry",
+      "completedAt": "2026-10-21T01:46:14Z",
+      "criteriaIds": [
+        "single-entry-and-proportionate-workflow",
+        "roadmap-compatibility-and-adoption",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Canonical guide, architecture, threat model, ADR and entry routing updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "verified-outcome-delivery-adoption-and-entry",
+      "incrementId": "verified-outcome-delivery",
+      "summary": "26 roadmap tests include interrupted publication and governed-completion denial; documentation, routing, helper tests and agent-support checks pass.",
+      "tests": [
+        "26 roadmap tests include interrupted publication and governed-completion denial; documentation, routing, helper tests and agent-support checks pass."
+      ],
+      "title": "Roadmap adoption and single entry point"
+    },
+    {
+      "areas": [
+        "Versioned tasks",
+        "Child observations and independent assertions",
+        "Prepared trials and actual CLI"
+      ],
+      "chunkId": "task-trials",
+      "completedAt": "2026-10-21T02:09:44Z",
+      "criteriaIds": [
+        "executable-realistic-evaluations",
+        "protected-grading-and-comparability",
+        "honest-live-agent-boundary",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Contributor guide, architecture, threat model, evaluation standard and portable skill references updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "evaluated-efficient-development-task-trials",
+      "incrementId": "evaluated-efficient-development",
+      "summary": "Five actual artifact task types execute failing and corrected behavior; separate trusted grading rejects early exits and forged stdout; normal imports work.",
+      "tests": [
+        "8 evaluation tests pass, including actual Python, DOM recovery, denial and escalation artifacts."
+      ],
+      "title": "Real coding trials and protected grading"
+    },
+    {
+      "areas": [
+        "Run admission and comparability",
+        "Quality-adjusted metrics",
+        "Exact feedback regression execution"
+      ],
+      "chunkId": "metrics-and-feedback",
+      "completedAt": "2026-10-21T02:09:44Z",
+      "criteriaIds": [
+        "quality-adjusted-efficiency",
+        "feedback-becomes-regression-evidence",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Contributor guide, architecture, threat model, evaluation standard and portable skill references updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "evaluated-efficient-development-metrics-and-feedback",
+      "incrementId": "evaluated-efficient-development",
+      "summary": "Run metadata freezes graded source; comparisons preserve failures and unknown cost; the exact durable repository regression must itself fail then pass unchanged.",
+      "tests": [
+        "Repeated trials, infrastructure separation, duplicate accepted-work denominator, stale-run and unrelated-failure denials pass."
+      ],
+      "title": "Run economics and regression evidence"
+    },
+    {
+      "areas": [
+        "AGENTS routing and guide",
+        "JSON projection and UI",
+        "Roadmap closure and recovery"
+      ],
+      "chunkId": "evaluation-site-integration",
+      "completedAt": "2026-10-21T02:09:44Z",
+      "criteriaIds": [
+        "discoverable-integrated-support",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Contributor guide, architecture, threat model, evaluation standard and portable skill references updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "evaluated-efficient-development-evaluation-site-integration",
+      "incrementId": "evaluated-efficient-development",
+      "summary": "One CLI and AGENTS entry integrate JSON review, evaluations, metrics and feedback; independent findings fixed and focused workflow qualification passes.",
+      "tests": [
+        "38 Python regressions plus Node DOM refresh tests pass.",
+        "Real Chrome desktop/mobile navigation, filtering and overflow checks pass.",
+        "Documentation, agent support (28 packs/23 scenarios), architecture and skill validation pass."
+      ],
+      "title": "Unified CLI and JSON review integration"
+    },
+    {
+      "areas": [
+        "Overall verification",
+        "Security review and residual limits",
+        "Final handoff"
+      ],
+      "chunkId": "overall-qualification",
+      "completedAt": "2026-10-21T02:09:44Z",
+      "criteriaIds": [
+        "overall-qualified-handoff",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Contributor guide, architecture, threat model, evaluation standard and portable skill references updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "evaluated-efficient-development-overall-qualification",
+      "incrementId": "evaluated-efficient-development",
+      "summary": "All-suite executed: standard Node has 36 failures in unchanged application files; E2E and Vitest pass. Focused control-plane checks pass; AI integrations remain skipped.",
+      "tests": [
+        "npm run test:all executed once: standard Node 3030 passed/36 failed/1 skipped; standard Vitest 407 passed; E2E Node 91 passed/2 skipped and Vitest 3 passed; controlled Python AI reports skipped integrations.",
+        "All failed standard-suite files are unchanged in this work; no full-repository green claim is made.",
+        "Independent review confirmed the grader and exact-regression fixes; 38 focused Python cases and both Node wrapper tests pass.",
+        "No manifests, lockfiles, dependency resolution, build/install scripts, workflows, containers or release trees changed; dependency-security rerun is not applicable."
+      ],
+      "title": "Final integrated qualification"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-10-21T02:09:44Z",
+    "summary": "Control plane implemented; 38 focused Python cases, browser and docs/agent-support/architecture checks pass. Full test:all ran with 36 standard failures in unchanged files; controlled AI integrations skipped."
+  },
+  "createdAt": "2026-10-21T01:23:25Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly selected extension of the existing roadmap workflow, with one control-plane CLI, preserved artifacts, and integrated checks and evidence. The user additionally requested reuse of suitable existing control-plane elements without sacrificing quality or fit. Implementation remains authorized subject to approval of the completed roadmap.",
+      "approvedAt": "2026-10-21T01:27:32Z",
+      "approvedFingerprint": "9ed67966e3b90595e5b036fd9f15454093e4e71f39c71ca34a3b069752341c2a",
+      "context": "Both options cover the seven requested improvements and use AGENTS.md as the entry point. The choice determines durable lifecycle ownership, compatibility, migration work, and how future agents discover and execute repository work. Existing implementation authorization does not settle this new architecture choice or approve an unwritten roadmap.",
+      "id": "control-plane-integration",
+      "options": [
+        {
+          "consequences": [
+            "One canonical workflow and one discovery entry point",
+            "No migration to a second capability/slice/packet hierarchy",
+            "All seven improvements land as a small number of cohesive, independently qualified increments",
+            "Live-agent trials and authenticated review integrations remain explicit adapter boundaries with honest unavailable evidence"
+          ],
+          "id": "integrated-evolution",
+          "label": "Extend the existing roadmap workflow",
+          "recommended": true,
+          "summary": "Keep existing roadmap and skill artifacts as the planning authority. Add one documented contributor control-plane CLI backed by bounded helpers for outcomes, claims, candidate-bound verification, review, evaluations, measurements, feedback, and status. AGENTS.md routes future work through that guide. Preserve legacy history with explicit evidence qualification.",
+          "tradeoffs": [
+            "Preserves current contribution habits, approved work, and portable skills",
+            "Requires coordinated changes to the existing roadmap engine, helper seams, routing, tests, and standards",
+            "Adds local integrity controls while documenting the cooperative-local review and execution trust boundary"
+          ]
+        },
+        {
+          "consequences": [
+            "AGENTS.md must distinguish the migration period from the final canonical workflow",
+            "Existing roadmap state needs adapters or versioned conversion before enforcement",
+            "Broader lifecycle and migration qualification precedes a full replacement"
+          ],
+          "id": "standalone-replacement",
+          "label": "Introduce a standalone contributor workflow",
+          "recommended": false,
+          "summary": "Create a separate lifecycle and coordination kernel inspired by the comparison repository, then migrate existing roadmap and skill consumers to it while preserving historical artifacts.",
+          "tradeoffs": [
+            "Provides a cleaner standalone reuse boundary and broader orchestration surface",
+            "Requires an explicit migration and lifecycle-authority cutover",
+            "Increases implementation, compatibility, documentation, and ongoing policy-maintenance work"
+          ]
+        }
+      ],
+      "proposalFingerprint": "9ed67966e3b90595e5b036fd9f15454093e4e71f39c71ca34a3b069752341c2a",
+      "question": "Should the revised control plane extend the existing roadmap workflow or replace it with a standalone contributor workflow?",
+      "selectedOptionId": "integrated-evolution",
+      "status": "approved",
+      "title": "Development control-plane integration"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Keep AGENTS.md short and make it route every applicable future coding task to one canonical control-plane guide and bounded CLI.",
+      "Preserve existing accepted architecture, product behavior, supported hosts, repository gates, and unrelated work.",
+      "Cover all seven improvement areas from the review; use the fewest economically cohesive increments after the integration decision is approved.",
+      "Keep the roadmap state engine declarative and place generic execution, recovery, and verification in contributor infrastructure.",
+      "Classify every changed path, including deletions and both sides of renames; require fresh evidence for substantive candidate or check-policy changes.",
+      "Support local tree snapshots during iteration and an exact final candidate without forcing commits or granting integration, network, credential, publication, or production authority.",
+      "Preserve legacy roadmap readability and history; never silently promote legacy declarations into verified receipts.",
+      "Use independent review provenance with an explicit cooperative-local trust boundary; labels and hashes alone cannot authenticate an independent actor or resist a malicious local administrator.",
+      "Provide actual fixture execution and grading for agent evaluations; distinguish replay, deterministic conformance, externally supplied live runs, and unavailable live evidence.",
+      "Live model/provider use, confidential input egress, substantial spend, remote mutations, and authenticated host integrations require explicit existing authority and configured adapters.",
+      "Reserve aggregate standard, end-to-end, and AI suite execution for overall completion; run focused change-relevant evidence while increments remain.",
+      "After option approval, define and present the full roadmap with acceptance, rollback, security evidence, and exclusions; implementation begins only after that roadmap is approved."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-10-21T01:23:26Z",
+    "securityImpact": {
+      "abuseCases": [
+        "A supplied passed status or reviewer label is treated as verified independent evidence",
+        "A stale receipt or changed check catalog authorizes a different candidate",
+        "A mixed classified and unclassified change escapes required verification",
+        "Arbitrary commands, symlinks, traversal, renames, or deletions escape declared scope",
+        "A concurrent or interrupted write loses work or publishes inconsistent lifecycle state",
+        "Unbounded execution, output, retries, or model use exhausts resources",
+        "Private prompts, credentials, raw logs, or personal identifiers leak into tracked records",
+        "A legacy or rollback path bypasses newly required verification"
+      ],
+      "assets": [
+        "Repository source and policy integrity",
+        "User-authorized scope and approval truth",
+        "Verification and review evidence",
+        "Local work ownership and recovery state",
+        "Protected inputs, model metadata, and sanitized diagnostic output"
+      ],
+      "controls": [
+        "Strict versioned schemas, exact scope and candidate digests, and current check-catalog binding",
+        "Fixed command identities, preflight plans, contained paths, bounded execution and sanitized receipts",
+        "Explicit per-path impact accounting and fail-closed missing evidence",
+        "Candidate-bound review findings, closure evidence, and transparent provenance and identity limits",
+        "Revision-checked publication, locking, recoverable journals, scoped claims, and explicit recovery",
+        "Privacy-minimized measurements with unknown values preserved and safety separated from efficiency scores",
+        "Legacy evidence remains visibly unverified and secure rollback preserves evidence and denial behavior"
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Local digests and append-only conventions do not protect against a malicious actor with unrestricted filesystem or process access",
+        "Cryptographically authenticated reviewer identity and managed execution hosts need explicit integration decisions and controlled-environment qualification",
+        "Provider-backed coding-agent performance cannot be claimed from deterministic fixtures or imported unqualified records",
+        "Platform sandbox and process-tree behavior require real operating-system evidence before stronger isolation guarantees"
+      ],
+      "summary": "Contributor tooling will influence local process execution, implementation scope, evidence freshness, review authority, persistent coordination, and AI evaluation data. Planning records remain inert and grant no execution or external authority.",
+      "trustBoundaries": [
+        "User authority to agent workflow and lifecycle transitions",
+        "Tracked policy and approved scope to bounded local command execution",
+        "Candidate source and test changes to trusted verification and acceptance evidence",
+        "Separate work or review invocations to immutable candidate-bound dispositions",
+        "Concurrent local processes to persistent state and generated projections",
+        "External evaluation results or feedback to deterministic admission and grading"
+      ],
+      "verification": [
+        "Focused positive and denial tests for stale, forged, incomplete, mismatched, and out-of-scope evidence",
+        "Traversal, symlink, deletion, rename, timeout, output-bound, and redaction tests",
+        "Concurrent-writer and interrupted-publication recovery tests on supported local platforms",
+        "End-to-end contributor fixture covering outcome definition, ownership, verification, independent review, correction, and completion",
+        "Real evaluation fixtures with repeated-trial accounting, protected grader checks, and explicit unavailable live evidence",
+        "Documentation and agent-support checks after relevant changes; applicable dependency gate and test:all once at overall completion"
+      ]
+    },
+    "sources": [
+      {
+        "note": "Single discovery entry point, change-impact and security requirements, and roadmap approval gates.",
+        "title": "Agent entry point",
+        "url": "AGENTS.md"
+      },
+      {
+        "note": "Portable planning and continuous execution after explicit option and roadmap approval.",
+        "title": "Roadmap workflow",
+        "url": "skills/manage-implementation-roadmaps/SKILL.md"
+      },
+      {
+        "note": "Evidence records are descriptive; state writes precede generated projections without compare-and-swap publication.",
+        "title": "Roadmap state engine",
+        "url": "skills/manage-implementation-roadmaps/scripts/roadmap.py"
+      },
+      {
+        "note": "Generic command execution belongs in fixed, confined helpers rather than the skill state engine.",
+        "title": "Bounded contributor helpers",
+        "url": "dev-tools/helpers/README.md"
+      },
+      {
+        "note": "Distinguishes routing checks, real agent performance, safety, repeated trials, and comparable cost evidence.",
+        "title": "Agent evaluation standard",
+        "url": "docs/standards/agent-support-evaluation-standards.md"
+      },
+      {
+        "note": "Requires explicit authority, fail-closed evidence, bounded effects, privacy, denial paths, and secure recovery.",
+        "title": "Security-by-design standard",
+        "url": "docs/standards/security-by-design-standards.md"
+      },
+      {
+        "note": "Accepted layered controls remain authoritative; contributor tooling must not expand product execution authority.",
+        "title": "Security architecture",
+        "url": "docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md"
+      },
+      {
+        "note": "Use repeated realistic trials, outcome checks, trajectory constraints, and calibrated qualitative review.",
+        "title": "Agent evaluation research",
+        "url": "https://www.anthropic.com/research/demystifying-evals-for-ai-agents"
+      },
+      {
+        "note": "Connect automation progress to user needs and observable outcomes rather than implementation volume.",
+        "title": "User-focused engineering evidence",
+        "url": "https://dora.dev/capabilities/user-centric-focus/"
+      }
+    ],
+    "summary": "The existing roadmap engine provides durable planning, fingerprinted scope approval, security acceptance, feedback reconciliation, and deterministic rendering. Bounded contributor helpers already own command execution. Completion evidence is currently declarative and lacks candidate-bound execution receipts, mandatory independent technical dispositions, revision-safe coordinated publication, executable coding-agent evaluations, and integrated outcome or efficiency measurement. The comparative review found useful candidate, receipt, review, recovery, and coordination mechanisms in a separate repository, plus coverage and identity limits that should not be reproduced. No existing roadmap owns this contributor control-plane revision. The requested work remains on rebuild."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "single-entry-and-proportionate-workflow",
+      "id": "evidence-1",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "observable-outcome-and-frozen-acceptance",
+      "id": "evidence-2",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "reused-elements-fit",
+      "id": "evidence-3",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "complete-impact-accounting",
+      "id": "evidence-4",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "candidate-bound-execution-evidence",
+      "id": "evidence-5",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "independent-review-and-correction",
+      "id": "evidence-6",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "ownership-publication-and-recovery",
+      "id": "evidence-7",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "roadmap-compatibility-and-adoption",
+      "id": "evidence-8",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-9",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contributor, roadmap, HTTP and browser checks; npm run docs:check; npm run agent-support:check; git diff --check",
+      "criterionId": "dynamic-json-review-site",
+      "id": "evidence-10",
+      "incrementId": "verified-outcome-delivery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "summary": "Local implementation and focused evidence: 16 delivery/storage tests, 5 HTTP/projection tests, 26 roadmap tests, dynamic UI and real Chrome checks; docs and routing gates pass. The cooperative-local identity/execution boundary and unavailable authenticated/provider evidence remain explicit."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "executable-realistic-evaluations",
+      "id": "evidence-11",
+      "incrementId": "evaluated-efficient-development",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "summary": "Five versioned task types grade actual artifacts, with observed failures and corrected passes. Parent assertions consume bounded child observations; a claimed success transcript or forged stdout cannot qualify."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "protected-grading-and-comparability",
+      "id": "evidence-12",
+      "incrementId": "evaluated-efficient-development",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "summary": "Task/grader/controller identity is frozen, extra or missing source and symlinks are refused, runs bind exact graded attempts, and incomparable or stale trials are denied. Tests preserve repeated attempts."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "honest-live-agent-boundary",
+      "id": "evidence-13",
+      "incrementId": "evaluated-efficient-development",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "summary": "The public CLI prepares and grades operator-edited trials without provider commands or credentials. Deterministic fixture, replay, operator-hosted live and unavailable records are distinct; no live-model performance is claimed."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "quality-adjusted-efficiency",
+      "id": "evidence-14",
+      "incrementId": "evaluated-efficient-development",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "summary": "Actual check timing, retries and review corrections are recorded. Comparable manifests preserve null usage, charge all failures against distinct accepted work, bind source/attempt and separate grading from infrastructure. Tests cover frozen measurements and duplicate outcomes."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "feedback-becomes-regression-evidence",
+      "id": "evidence-15",
+      "incrementId": "evaluated-efficient-development",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "summary": "Actual fixture reproduces failure, adds an executable repository regression, separately executes the named test red then green with unchanged assertions, verifies and reviews the correction, and closes feedback. An always-passing new test beside an unrelated failure is rejected. Quality references retain explicit environment/assurance."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "discoverable-integrated-support",
+      "id": "evidence-16",
+      "incrementId": "evaluated-efficient-development",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "summary": "AGENTS starts and links the local review server. One CLI handles lightweight/roadmap work, qualification, claims, recovery, trials, run comparison and feedback. JSON-only projection, dynamic UI and real Chrome desktop/mobile checks pass."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-17",
+      "incrementId": "evaluated-efficient-development",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "summary": "Security-relevant threat model covers scope, recovery, test/grader substitution, ownership, private output, resource bounds, metadata and feedback. Independent review findings were corrected and denial regressions pass. Existing host permissions, cooperative local integrity and operator attestations remain explicit limits."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "overall-qualified-handoff",
+      "id": "evidence-18",
+      "incrementId": "evaluated-efficient-development",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "summary": "Final qualification was executed and reported honestly: focused control-plane tests pass; docs/agent-support/architecture/skill checks pass. npm run test:all is NOT green: standard Node reports 36 failures in unchanged application files; standard Vitest (407) and E2E (91 Node, 3 Vitest) pass. Two controlled AI integrations were skipped. No live-model or whole-repository success claim is made; aggregate logs and reports are retained under artifacts/."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "json-review-site",
+      "impact": "scope-change",
+      "nextAction": "Add the JSON-backed loopback review site to the pending roadmap, record the explicitly supplied approval, and execute both increments continuously.",
+      "recordedAt": "2026-10-21T01:29:52Z",
+      "summary": "The user requests a dynamically populated review site backed by JSON or YAML and approves adding it to the current roadmap. AGENTS.md must start its local server and share the link on workflow work requests.",
+      "targetIncrementId": null
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "3493c423e87d3c9ed63e475a6276cabb07daf07185abbbfc11eaed460dccf8ac",
+      "recordedAt": "2026-10-21T01:23:26Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "b54d3782b592c973f441e48178e957489b44525427264a11fc89d29e1a8c534c",
+      "recordedAt": "2026-10-21T01:23:27Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "95e5a46fa525ece1a68579484beca38e9009f77846e44ab2712891f6431d8a74",
+      "recordedAt": "2026-10-21T01:27:32Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "efbec58678c283269fc42570ac4e07fdc9548f5d5340e418a82bfea406a5518d",
+      "recordedAt": "2026-10-21T01:27:34Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "6ab28088f37aec8d41fcb876baab8f2ce44f00684832d5a942b2e9334f64d36e",
+      "recordedAt": "2026-10-21T01:29:52Z",
+      "sequence": 5,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "87b746d699bb68534627effee2523199c21c7a5a1009d39c2f52285a3ad6b465",
+      "recordedAt": "2026-10-21T01:29:53Z",
+      "sequence": 6,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "34581242d9d2de36581ee7439a6f07e4336522a3eae98d872594f3d794e028d3",
+      "recordedAt": "2026-10-21T01:29:54Z",
+      "sequence": 7,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "d7fdcf29df7ffb4bf5ad6a5c8a2c226160a60846d6e941d29035b3b936a71bf7",
+      "recordedAt": "2026-10-21T01:30:15Z",
+      "sequence": 8,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "fd2629a0d0d28e1f263717a4428ac7cf135e0dcda7edb1fb70d812fe8058a49c",
+      "recordedAt": "2026-10-21T01:30:16Z",
+      "sequence": 9,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "7193ec33230489d57a2cdea5120e387567813ba16ba2dbcb7296cf0d86064f77",
+      "recordedAt": "2026-10-21T01:30:17Z",
+      "sequence": 10,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "8ac82f3409b7aaf18569aa7fbc94aaa38509686d1d3c190458fe1102371710f3",
+      "recordedAt": "2026-10-21T01:46:13Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "22a7b3b4f79b6181e0976d96b9e0ca6b79c4dd5200bb0fdb13d9b3008af70b3f",
+      "recordedAt": "2026-10-21T01:46:13Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3371557477b7585394d66731ac26d2feaf81a2fb8e1c0e0ab3b61e5fd4b73f5f",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "sequence": 13,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "2d9a90addec1d85519be70216c5ff0152802afc35fa7f3d242584dfd1321a138",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "sequence": 14,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3da913d2b1979a51ead1df6328b2e8a86117e28149438ce0363a5b0c811548c9",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d80536589717ff7e27712433404d311e74fbaa8d70bce7b8c5809cafbb840d35",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "548c84d7216ef2cc3aa673ce09a02e2db135b03089612000ae3762c2c95b852f",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c5f702b23d6d0206eddb886c96696aae4311952d8c0c2363af594228d3a0b114",
+      "recordedAt": "2026-10-21T01:46:14Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c5d3c54c706071432182778f99f28db322fecf1ba8b91197fe087ad23dc9f42b",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5727513285fe5b86385e696b633014e3d8c342ad7c1c0811717276a0f8b7b45a",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "sequence": 20,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f3ce7c5469a229410b576786b6985dd5cb01128cdb5410332f098874dec8ea0a",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "sequence": 21,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e4e061e84b4a80cef79f5bbbb441a05c5febd00c72d921251a7c9add71591ab8",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "sequence": 22,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e3c5c6a8811a480d0011b473e6ee63ebbc4651680fb403d4157dde7b31c97c43",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "sequence": 23,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "70b2356db41369f74892bb1c01f3006a171e9a5b671eea3e04a97ceaad6fa31b",
+      "recordedAt": "2026-10-21T01:46:15Z",
+      "sequence": 24,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "796b24f513e1cad1e13e65e987afc62f2b890ce5d93b264952721077c5123992",
+      "recordedAt": "2026-10-21T01:46:16Z",
+      "sequence": 25,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "77fe5235202fe597f3b8c70672714c112b9a8dbc8b515b3df9ad3e04f9428cd8",
+      "recordedAt": "2026-10-21T01:47:18Z",
+      "sequence": 26,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "d90653c0ff1b910e430288c7497730ea5990426fc37689f11f0579c24214a2c2",
+      "recordedAt": "2026-10-21T01:47:18Z",
+      "sequence": 27,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "bf9eded8f4b58adf19d0f2ba8c071c5ec08bfc3205e373298deb7a2fcc42641b",
+      "recordedAt": "2026-10-21T01:47:18Z",
+      "sequence": 28,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "1162450602da0aa92249485fe2d588e670a42549b144eb03f7ab07491621c761",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 29,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "5f6376aedc3999cec22b6fae07c1528334bdd750a9b1bd033a068dabe4f2cf37",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 30,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "aa754820dc01bb57afad5aa395e04dd16695e9512caef7757150cfb4ae89ba34",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 31,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "732c73a3e50cb17d07b1acc566895ed1824a8f52db1fe34b1945b8cf47cef749",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 32,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "187320e1d6ee93cb59fcf0003a1295e9752facb5a541c9d1fbeafc0c526778a1",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 33,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "42fa35d1e477b5615540ca4691af06c3b4f235465f3b9f92fe415b10d116caa7",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 34,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "cdb628b74055094400897333abba8efc36bae16c304a00e8e30de3563f1f7fd6",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 35,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "52bcea5b943ce20d03abeaa6de62650af4196562ea595500b75ffeddbfbe845b",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 36,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bba69fad5ed0304483f95f0ee6b2fa87c270149a00ebef9140060ddb03e7eb6f",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 37,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ef07a803a24ec0109f2b7ed3343fa16bf48453c36007eabbb7534ef0742495b4",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 38,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2caf7e6523e6e4bb9a9da36f661a6f69136a949a8c8531d0d44f59abed7abd8f",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 39,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d2519e42863ae1e97354b7d9809041b7fe60ac70b6afb2d7aec41676a2c3f71e",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 40,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "37f0873d582a6eaefc258ec0332f199825cffef8a9f7fcf5b2acbe2639404ed9",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 41,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "fa33acaf868c103f109a1b5ee73c42ca2db8eb3c4b86fb54ce3941a990c3e0c3",
+      "recordedAt": "2026-10-21T02:09:44Z",
+      "sequence": 42,
+      "type": "roadmap-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Starting only from AGENTS.md, a future agent can discover the canonical guide and CLI, determine whether a lightweight task or approved roadmap applies, inspect the next legal action, and follow one workflow without discovering a competing planning hierarchy. Natural-language routing and installation tests cover the revised behavior.",
+          "id": "single-entry-and-proportionate-workflow",
+          "qualification": "local"
+        },
+        {
+          "description": "New substantial work binds a user or operator outcome, critical journey, observable success and relevant quality constraints to acceptance and scope before implementation. Internal work uses a concrete rationale. Acceptance or policy changes cannot silently weaken the evidence that authorizes the same work.",
+          "id": "observable-outcome-and-frozen-acceptance",
+          "qualification": "local"
+        },
+        {
+          "description": "Reuse suitable generic mechanisms and focused tests from financial-ai-academy revision 8e7ef88de24ef222c8dc3e72a96b76fddc629820 after dependency and license inspection. Preserve applicable notices and record provenance. Keep project-specific CAP/SLI/WRK adapters, approval semantics, browser site, and portfolio UI outside this integration. Where direct copying would introduce incompatible coupling or require an unresolved licensing decision, reuse the design with a documented reason rather than silently changing product licensing.",
+          "id": "reused-elements-fit",
+          "qualification": "local"
+        },
+        {
+          "description": "Each candidate change is classified, including untracked source additions, deletions, and both sides of renames. Mixed classified and unclassified changes fail closed. Selected check IDs, matched paths, deferred checks, plan digest, and policy provenance are deterministic and inspectable. Ordinary internal chunks select focused checks; aggregate suites remain reserved for overall completion.",
+          "id": "complete-impact-accounting",
+          "qualification": "local"
+        },
+        {
+          "description": "A real allowlisted check execution produces a receipt with bound source/test inputs, environment and catalog identity, bounded output digests, artifact integrity, exit status, elapsed time, and timeout disposition. Current qualification rejects forged, incomplete, stale, failed, or mismatched evidence. Routine controller-generated report and evidence projections do not create circular invalidation; material source, test, acceptance, or policy changes invalidate the affected evidence.",
+          "id": "candidate-bound-execution-evidence",
+          "qualification": "local"
+        },
+        {
+          "description": "Substantial governed work needs a separate candidate-bound technical review with explicit invocation provenance and transparent identity assurance. Self-review, stale dispositions, and open blocking findings prevent completion. Substantive corrections receive fresh verification and review; cosmetic observations cannot create arbitrary approval loops. Supplied labels or hashes are never represented as authenticated independent identity.",
+          "id": "independent-review-and-correction",
+          "qualification": "local"
+        },
+        {
+          "description": "Concurrent claim and state-publication tests prove scoped single ownership, revision conflicts, exact-file overlap handling, stale-owner rejection, explicit expiry recovery, preserved history, and idempotent interrupted multi-file publication. Read-only inspection acquires no editing ownership. Claims remain cooperative coordination and do not claim to be an operating-system sandbox.",
+          "id": "ownership-publication-and-recovery",
+          "qualification": "local"
+        },
+        {
+          "description": "Existing roadmap definitions, approvals, completed history, reports, and supported event flows remain readable and resumable through a documented versioned adoption path. Historical declarations are not retroactively promoted to verified receipts. New governed completion requires current evidence, and the complete outcome-to-correction-to-completion workflow executes successfully through the public CLI in an isolated fixture.",
+          "id": "roadmap-compatibility-and-adoption",
+          "qualification": "local"
+        },
+        {
+          "description": "Record the security-relevant design and threat/control mapping for authorization, stale evidence, local process execution, path containment, policy substitution, concurrency, recovery, and privacy. Focused denial, malformed-input, redaction, resource-bound, and failure tests pass. Preserve the external host sandbox and user authority, document local trust limits, and ensure rollback cannot restore unsupported verified completion.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        },
+        {
+          "description": "The server and UI dynamically reflect current versioned JSON state without parsing Markdown. A realistic workflow request starting at AGENTS.md starts or safely reuses the correct repository server and provides its verified loopback link. Changed JSON records update the API and browser view without regeneration. Read-only routes reject remote binding, unexpected Host/Origin, writes, path traversal, private files and malformed/oversized inputs without leaking raw errors. Browser and HTTP tests cover accessible navigation, empty/error states and safe untrusted text rendering.",
+          "id": "dynamic-json-review-site",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-10-21T01:46:16Z",
+      "completedChunks": [
+        "scope-and-store",
+        "verification-and-review",
+        "json-review-site",
+        "adoption-and-entry"
+      ],
+      "completionSummary": "The integrated outcome-to-verification-to-review-to-completion workflow, safe ownership/publication, legacy adoption and dynamic JSON review site are implemented with focused local evidence.",
+      "deliverables": [
+        "One documented development control-plane CLI under dev-tools/helpers/ with a cohesive supporting library, stable JSON results, preflight plans, and a read-only status path",
+        "Versioned outcome, work-scope, claim, candidate, check-plan, execution-receipt, review, and completion contracts with local state confined to documented ignored locations",
+        "A reuse inventory identifying the comparison source revision, copied or adapted elements, carried-forward tests, required notices, intentionally omitted coupling, and ai-system-builder-specific corrections",
+        "A tracked check catalog and bounded execution adapter covering existing relevant repository checks and focused tests without arbitrary command arguments from work specifications",
+        "Revision-safe, recoverable state and projection publication integrated with existing roadmap state, plus scoped ownership and explicit lease recovery",
+        "Current architecture and security design documentation, an accepted ADR recording the approved contributor integration boundary, and a focused contributor-control-plane threat model",
+        "Updated AGENTS.md, root and documentation entry points, the roadmap skill and references, helper documentation, evaluation standard, relevant context routing, and cross-agent installation guidance",
+        "Focused Python and Node regression coverage wired into the existing repository test and agent-support paths, including an end-to-end contributor workflow fixture",
+        "A buildless accessible dynamic review site with a documented versioned JSON projection, bounded read-only API, loopback and Host/Origin enforcement, inert rendering, live refresh, and a fixed safe start/status/stop lifecycle."
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "A second capability/slice/work-packet planning hierarchy or replacement of accepted product architecture",
+        "Automatic Git commits, history rewriting, branch switching, pushes, merges, publication, production mutation, or destructive cleanup",
+        "An unrestricted shell runner, automatic dependency installation, new credentials, automatic network or provider enablement, or expanded host permissions",
+        "A publicly hosted portfolio dashboard, remote-worker scheduler, cross-repository service, or organization identity platform",
+        "Claims that local labels, invocation metadata, append-only files, or hashes defeat an actor with unrestricted local filesystem and process access; authenticated remote review and managed isolation remain successor integrations requiring separate authority and qualification",
+        "Silent product relicensing or copying project-specific source solely to avoid implementing the required ai-system-builder adapter"
+      ],
+      "id": "verified-outcome-delivery",
+      "number": 1,
+      "objective": "Give contributors one usable path from AGENTS.md through scoped work and user outcomes to candidate-bound verification, independent technical review, correction, recovery, and honest completion, while preserving the existing roadmap authority and supporting lightweight tasks.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The current task uses the approved existing roadmap as implementation authority.",
+          "The local contributor boundary is cooperative; host sandbox and external action authority remain unchanged.",
+          "Live model/provider execution and authenticated review hosts are not automatically enabled."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "observable-outcome-and-frozen-acceptance",
+              "reused-elements-fit",
+              "ownership-publication-and-recovery",
+              "security-impact-reviewed"
+            ],
+            "id": "scope-and-store",
+            "outcome": "Work is bounded, revision-safe and recoverable with adapted upstream primitives.",
+            "title": "Outcome contracts, ownership and recoverable persistence"
+          },
+          {
+            "criteriaIds": [
+              "complete-impact-accounting",
+              "candidate-bound-execution-evidence",
+              "independent-review-and-correction",
+              "security-impact-reviewed"
+            ],
+            "id": "verification-and-review",
+            "outcome": "Candidate-bound receipts and separate-invocation dispositions govern completion and corrections.",
+            "title": "Executed verification and reviewed completion"
+          },
+          {
+            "criteriaIds": [
+              "dynamic-json-review-site",
+              "security-impact-reviewed"
+            ],
+            "id": "json-review-site",
+            "outcome": "A safe loopback server and accessible UI reflect current structured state.",
+            "title": "Live JSON review experience"
+          },
+          {
+            "criteriaIds": [
+              "single-entry-and-proportionate-workflow",
+              "roadmap-compatibility-and-adoption",
+              "security-impact-reviewed"
+            ],
+            "id": "adoption-and-entry",
+            "outcome": "Existing artifacts remain supported and future agents discover one usable workflow.",
+            "title": "Roadmap adoption and single entry point"
+          }
+        ],
+        "completionTests": [
+          "All increment-relevant control-plane, roadmap and entry-routing tests once all four chunks exist.",
+          "npm run docs:check; npm run agent-support:check; git diff --check."
+        ],
+        "documentation": [
+          "AGENTS.md and entry READMEs",
+          "Canonical architecture, security threat model, ADR, standards and relevant context routing",
+          "Helper, review-site, skill and installation guidance; upstream provenance and license notices"
+        ],
+        "fingerprint": "47d3ac155020158e4c319023b4a3ad095a0f9ae8d47b6aa57edebb1166c24743",
+        "focusedTests": [
+          "Focused Python control-plane tests per changed module, using short ignored fixture paths on Windows.",
+          "Focused roadmap publication/adoption and contributor-helper Node tests.",
+          "JSON projection, loopback HTTP denial, server lifecycle and browser UI tests."
+        ],
+        "recordedAt": "2026-10-21T01:30:17Z",
+        "rollback": "Refuse new governed completion while preserving state, sources, receipts, review history and recovery journals. Revert additive routing only with explicit legacy qualification; never fabricate receipt-backed passes.",
+        "steps": [
+          "Adapt generic storage/contracts and implement scoped work, candidate identity and recovery.",
+          "Implement trusted check planning/execution, receipts, separate-invocation review and completion guards.",
+          "Build and start the JSON-backed review site; verify browser and HTTP behavior.",
+          "Integrate roadmap publication/adoption, AGENTS discovery, standards, provenance and focused CI coverage."
+        ],
+        "summary": "Deliver one integrated local contributor workflow and JSON-backed review site with reused generic primitives, preserving roadmap authority and explicit legacy qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-21T01:30:16Z",
+          "risks": [
+            "A mixed classified/unclassified change must not inherit a partial check selection.",
+            "A separate local invocation is cooperative review evidence, not authenticated remote identity.",
+            "JSON projections must omit approval notes, raw payloads and paths, render untrusted text inertly, and refuse non-loopback or unexpected-host requests.",
+            "Tests execute project code under the caller sandbox; command allowlists are not hostile-code containment.",
+            "Reused source requires preserved provenance and applicable license notices."
+          ],
+          "sources": [
+            {
+              "title": "Bounded helper implementation",
+              "url": "dev-tools/helpers/run_repository_checks.py"
+            },
+            {
+              "title": "Roadmap regression suite",
+              "url": "skills/manage-implementation-roadmaps/tests/test_roadmap.py"
+            },
+            {
+              "title": "Security-by-design constraints",
+              "url": "docs/standards/security-by-design-standards.md"
+            },
+            {
+              "title": "Agent evaluation standard",
+              "url": "docs/standards/agent-support-evaluation-standards.md"
+            }
+          ],
+          "summary": "Inspect existing declarative roadmap boundaries, helper execution/tests, generic upstream confinement/CAS/receipt/review/lease mechanisms, and the upstream loopback review server. Reuse generic primitives and behavioral cases with provenance; adapt repository authority and JSON projection instead of importing CAP vocabulary. The security screen remains relevant for stale evidence, process/output bounds, scope escape, concurrency and recovery, and the new loopback HTTP boundary."
+        }
+      ],
+      "rollback": "Stop admitting new governed work and leave incomplete work visibly unqualified. Preserve existing roadmap state, approvals, source snapshots, claims, receipts, reviews, and recovery journals. Revert the additive integration only after preserving evidence and updating canonical routing; never reinterpret old declarations as current verification, bypass an unresolved ownership conflict, remove user work, or restore a weaker completion policy.",
+      "startedAt": "2026-10-21T01:30:15Z",
+      "status": "completed",
+      "title": "Outcome-driven delivery with verified completion and safe recovery",
+      "verification": [
+        "While implementing, run the focused helper/control-plane Python tests and nearest roadmap, contributor-helper, routing, and policy regression tests for each coherent chunk only.",
+        "After all increment chunks are implemented, run the complete change-relevant control-plane tests, existing roadmap regression tests, focused contributor-helper and agent-support guard tests, and the isolated CLI workflow covering verification, review, correction, completion, and recovery.",
+        "Run npm run docs:check and npm run agent-support:check for the changed guidance and routing, and git diff --check. Run npm run security:dependencies if dependency, build, workflow, or related supply-chain inputs change.",
+        "Exercise candidate and policy drift, mixed uncovered paths, deletion and rename scope, malformed receipts, self-review, blocking findings, expired owners, competing writers, interrupted publication, timeout/output bounds, unsafe paths, and synthetic sensitive-output non-disclosure.",
+        "Audit reuse provenance, license notice retention, absence of source-repository vocabulary in generic mechanisms, and lack of arbitrary shell or external authority in the CLI.",
+        "Reserve npm run test:all and applicable repository-wide completion gates until both roadmap increments are implemented.",
+        "Run focused JSON projection, HTTP security, server lifecycle, UI behavior and live-refresh browser checks for the dynamic review site; verify that no Markdown parser is used as a data source."
+      ],
+      "workPackages": [
+        {
+          "id": "entry-and-outcomes",
+          "outcome": "AGENTS.md routes future work to one canonical development-control-plane guide and bounded CLI. A lightweight path handles established local fixes; substantial work uses the existing approved roadmap workflow. Versioned work specifications identify the user or operator problem, critical journey, observable success, relevant baseline, quality constraints, scope, acceptance evidence, and explicit internal-only rationale when applicable.",
+          "title": "Canonical entry point and outcome contracts"
+        },
+        {
+          "id": "reuse-and-coordination",
+          "outcome": "Reuse suitable project-neutral contracts, path confinement, locking, revision checks, transaction recovery, receipt, review, provenance, and lease mechanisms and focused tests from the comparison repository through ai-system-builder-owned adapters. Preserve required provenance and license notices. Scoped claims, revision-safe roadmap publication, bounded renewal, explicit recovery, and actionable status prevent silent overwrite and split lifecycle authority.",
+          "title": "Adapt proven local integrity and coordination mechanisms"
+        },
+        {
+          "id": "executed-verification",
+          "outcome": "A tracked check catalog selects required checks for every changed path. A separate bounded runner emits privacy-minimized receipts tied to source inputs, frozen acceptance, current verification policy, environment, executed check IDs, artifacts, failures, and timeouts. The declarative roadmap engine consumes evidence without becoming a shell runner.",
+          "title": "Bounded candidate verification and execution receipts"
+        },
+        {
+          "id": "review-and-completion",
+          "outcome": "Candidate-bound review records preserve findings and explicit closure evidence, distinguish non-blocking cleanup, reject stale or self-reviewed qualifying submissions, and require fresh evidence after substantive corrections. New governed work cannot complete using unsupported passed declarations. Legacy history remains readable and is explicitly distinguished from receipt-backed qualification.",
+          "title": "Independent review, corrections, and compatibility"
+        },
+        {
+          "id": "dynamic-json-review-site",
+          "outcome": "A loopback-only read-only review server presents current roadmaps, work, verification, review, evaluations, metrics and feedback from versioned JSON records through a bounded JSON API. AGENTS.md requires starting or safely reusing the server and providing its link for every workflow work request.",
+          "title": "Dynamic local review site"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "At least five versioned repository-relevant task types have concrete fixtures and independent executable acceptance: defect correction, cross-boundary behavior, a user-facing critical journey, security denial, and decision-gate escalation. The harness grades actual resulting artifacts and behavioral evidence; a scenario transcript claiming success cannot substitute for a successful grader execution.",
+          "id": "executable-realistic-evaluations",
+          "qualification": "local"
+        },
+        {
+          "description": "Trial work cannot silently alter the trusted grader, acceptance, task version, repository/policy identity, or configured permission profile. Repeated runs retain their denominators, failures, and infrastructure dispositions. Comparisons identify changed harnesses, inputs, environments, or grading rules and refuse unsupported equivalence.",
+          "id": "protected-grading-and-comparability",
+          "qualification": "local"
+        },
+        {
+          "description": "Prepared-trial and result-admission seams support an operator's authorized agent host without accepting arbitrary commands or requiring provider credentials for ordinary repository checks. Test doubles, deterministic conformance, replay, externally supplied live trials, and unavailable provider-backed evidence remain explicitly distinct. No live-model performance claim is made from a fixture, supplied label, or an unqualified imported score.",
+          "id": "honest-live-agent-boundary",
+          "qualification": "local"
+        },
+        {
+          "description": "Reports measure elapsed time, retries, check duration, review corrections, and available tokens/cost per accepted qualified task. Unknown costs or usage never become zero, unavailable provider statistics remain explicit, resource limits are bounded, and safety or correctness failure always dominates an efficiency improvement.",
+          "id": "quality-adjusted-efficiency",
+          "qualification": "local"
+        },
+        {
+          "description": "A real workflow fixture records an outcome-linked defect or usability finding, adds a failing regression scenario, qualifies the correction with fresh evidence, and links passing regression coverage before feedback closes. Relevant performance/accessibility evidence is admissible with its own environment and qualification identity; unsupported user-success or production claims remain unavailable.",
+          "id": "feedback-becomes-regression-evidence",
+          "qualification": "local"
+        },
+        {
+          "description": "A future contributor starting at AGENTS.md can prepare a scoped task, run the required checks, obtain and record independent technical review, inspect ownership/recovery, prepare and grade an evaluation trial, compare qualified runs, and trace feedback to regression evidence using the canonical guide and one CLI. The lightweight path avoids requiring a multi-increment roadmap for an established local fix. The JSON-backed review site exposes current evaluation, metric and feedback summaries without revealing local authority or private run records.",
+          "id": "discoverable-integrated-support",
+          "qualification": "local"
+        },
+        {
+          "description": "The security-relevant review covers lower-trust task results and feedback, grader substitution, data minimization, model metadata, resource bounds, path and execution confinement, and integrity of aggregated metrics. Synthetic denial, failure, privacy, and exhaustion tests pass. External agents remain governed by their host permissions and operator authority; local integrity evidence is not represented as malicious-code isolation.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        },
+        {
+          "description": "After both increments are implemented and change-relevant checks pass, execute npm run test:all once and applicable repository-wide documentation, agent-support, architecture, and dependency-security gates. Record raw failures and environment limits honestly, repair and rerun affected evidence where justified, validate generated roadmap artifacts, and retain the temporary report for the subsequent explicit final overall approval.",
+          "id": "overall-qualified-handoff",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-10-21T02:09:44Z",
+      "completedChunks": [
+        "task-trials",
+        "metrics-and-feedback",
+        "evaluation-site-integration",
+        "overall-qualification"
+      ],
+      "completionSummary": "All approved control-plane features are implemented and locally qualified. Full-suite failures outside changed areas and skipped AI integration evidence remain explicit in the final handoff.",
+      "deliverables": [
+        "An executable coding-agent evaluation harness and versioned realistic tasks under dev-tools/agent-evals/, integrated with the existing contributor CLI through bounded operations",
+        "Prepared-trial manifests, protected acceptance inputs, trusted graders, repeatable run accounting, and isolated fixture execution with separately identified deterministic, replay, operator-hosted live, and unavailable evidence",
+        "Versioned privacy-minimized run manifests and comparison reports covering quality, safety, efficiency, retries, rework, environment failures, and comparability limits",
+        "Bounded feedback-to-regression records and quality-evidence references integrated with work status and completion without automatically reprioritizing product scope",
+        "Updated agent-evaluation standards, control-plane guide and CLI examples, AGENTS.md discovery checks, context routing, helper and skill documentation, and applicable provenance notices",
+        "Focused negative and end-to-end tests for real grading, grader integrity, incomparable runs, unknown measurements, unsafe imported results, feedback closure, and protection against rewarding unsafe task completion",
+        "A final concise temporary report with commands, actual outcomes, security disposition, residual risk, and honest distinction between implemented harness capability and externally measured coding-agent performance"
+      ],
+      "dependsOn": [
+        "verified-outcome-delivery"
+      ],
+      "excluded": [
+        "Automatic provider/model enablement, credential collection, confidential input egress, substantial spend, or remote agent execution without existing explicit operator authority",
+        "A model leaderboard, promises of coding-agent superiority, or claiming live performance without qualified actual trials",
+        "Automatic production analytics collection, user tracking, public telemetry export, or product reprioritization from feedback",
+        "Model training, production application feature changes, unrelated UI redesign, or replacement of existing product performance and accessibility qualification",
+        "Claims of authenticated reviewer identity or hostile-code isolation that require a future approved host integration and controlled qualification"
+      ],
+      "id": "evaluated-efficient-development",
+      "number": 2,
+      "objective": "Make the revised control plane useful for improving AI-assisted software delivery by executing and grading realistic repository task trials, comparing quality-adjusted results, measuring bounded run efficiency, and turning meaningful user or operator feedback into durable regression evidence.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Operator-hosted live runs remain explicitly attested; provider invocation is not automatically enabled.",
+          "Real grader execution qualifies artifacts, not authenticated identity or hostile-code containment."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "executable-realistic-evaluations",
+              "protected-grading-and-comparability",
+              "honest-live-agent-boundary",
+              "security-impact-reviewed"
+            ],
+            "id": "task-trials",
+            "outcome": "The harness grades actual artifacts in isolated prepared trials with exact policy identity.",
+            "title": "Real coding trials and protected grading"
+          },
+          {
+            "criteriaIds": [
+              "quality-adjusted-efficiency",
+              "feedback-becomes-regression-evidence",
+              "security-impact-reviewed"
+            ],
+            "id": "metrics-and-feedback",
+            "outcome": "Unknown-preserving qualified comparisons and feedback closure improve outcomes without hiding failure.",
+            "title": "Run economics and regression evidence"
+          },
+          {
+            "criteriaIds": [
+              "discoverable-integrated-support",
+              "security-impact-reviewed"
+            ],
+            "id": "evaluation-site-integration",
+            "outcome": "Future work discovers and uses evaluation/metrics/feedback through AGENTS and the same local site.",
+            "title": "Unified CLI and JSON review integration"
+          },
+          {
+            "criteriaIds": [
+              "overall-qualified-handoff",
+              "security-impact-reviewed"
+            ],
+            "id": "overall-qualification",
+            "outcome": "Focused and once-at-boundary aggregate checks establish the actual local supported boundary.",
+            "title": "Final integrated qualification"
+          }
+        ],
+        "completionTests": [
+          "Change-relevant evaluation, delivery, roadmap, UI and routing tests after implementation.",
+          "Once both increments exist: npm run test:all, docs:check, agent-support:check, architecture:check, and applicable dependency-security gate."
+        ],
+        "documentation": [
+          "Evaluation task/run/feedback guide",
+          "Architecture, threat model and evaluation standards",
+          "AGENTS routing and JSON site contract"
+        ],
+        "fingerprint": "895410faa553bcbfe30086992b9fa563b8bb064267dfd46ab6a43a1363da3212",
+        "focusedTests": [
+          "Focused task-grader, substitution, metric, feedback and CLI tests as each behavior lands.",
+          "Dynamic JSON projection and UI tests for new summaries."
+        ],
+        "recordedAt": "2026-10-21T01:47:18Z",
+        "rollback": "Disable new trial or feedback admission, preserve records and failed attempts, retain increment 1 verified delivery, and never turn unknown measurements or absent live evidence into successful results.",
+        "steps": [
+          "Add five realistic task types and prepare/grade operations using bounded execution.",
+          "Add strict run metadata and comparable quality-adjusted metrics.",
+          "Add outcome-linked feedback with fail-to-pass regression proof.",
+          "Expose the new JSON summaries in the site and finish focused and overall qualification."
+        ],
+        "summary": "Implement prepared coding trials, executable protected graders, honest run accounting, qualified comparisons and feedback closure, then integrate their JSON review views and qualify the complete workflow."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-21T01:47:18Z",
+          "risks": [
+            "A scripted success transcript is not a grader execution or live-model evidence.",
+            "Unknown cost must not become zero, and safety failure cannot be averaged away by speed.",
+            "A trial workspace must not silently rewrite its trusted task, grader or permission profile.",
+            "Feedback closure requires observed failure, correction and fresh passing evidence."
+          ],
+          "sources": [
+            {
+              "title": "Evaluation standard",
+              "url": "docs/standards/agent-support-evaluation-standards.md"
+            },
+            {
+              "title": "Bounded executor",
+              "url": "dev-tools/helpers/control_plane/execution.py"
+            },
+            {
+              "title": "Controller threat model",
+              "url": "docs/security/ai-development-control-plane-threat-model.md"
+            },
+            {
+              "title": "Agent evaluation research",
+              "url": "https://www.anthropic.com/research/demystifying-evals-for-ai-agents"
+            }
+          ],
+          "summary": "The current agent-support assets validate routing, not coding performance. Add isolated repository-relevant task fixtures with fixed trusted artifact graders, explicit operator-hosted live-run admission, unknown-preserving measurements and regression-linked feedback. Reuse the existing bounded execution/record primitives and expose only allowlisted JSON summaries. The security screen remains relevant for grader substitution, lower-trust artifacts, metadata privacy and resource bounds."
+        }
+      ],
+      "rollback": "Disable new evaluation-trial or feedback admission while preserving trial manifests, source references, grading receipts, metric reports, feedback links, and the verified delivery workflow from increment 1. Revert only additive evaluation and measurement behavior after updating routing and standards. Never fabricate a baseline, convert unknown cost to zero, erase a failed trial, weaken the independent grader, or discard regression evidence to make a comparison pass.",
+      "startedAt": "2026-10-21T01:47:18Z",
+      "status": "completed",
+      "title": "Realistic agent evaluations, measured efficiency, and regression feedback",
+      "verification": [
+        "During internal chunks, run only focused evaluation, run-manifest, metric-comparison, feedback, CLI, and nearest routing/skill tests.",
+        "After all increment chunks are implemented, run its change-relevant tests and public CLI fixtures, including actual failing and passing task outputs, correct abstention/escalation, grader substitution, repeated trials, unavailable measurements, incomparable runs, and feedback-to-regression closure.",
+        "Run npm run docs:check, npm run agent-support:check, and git diff --check after affected guidance and context changes.",
+        "At the overall boundary after both increments are implemented, run npm run test:all once, npm run docs:check, npm run agent-support:check, npm run architecture:check, and npm run security:dependencies when supply-chain inputs changed. Run additional builds only when the implementation affects their wiring.",
+        "Validate the roadmap state and generated artifacts; audit the AGENTS.md discovery path and all seven requested improvement areas against actual delivered evidence.",
+        "Record any missing live-provider, authenticated-review-host, dedicated performance, or platform-specific isolation evidence as outside the qualified local boundary rather than as a successful result."
+      ],
+      "workPackages": [
+        {
+          "id": "real-task-evaluations",
+          "outcome": "Versioned repository-relevant tasks cover a defect, a cross-boundary change, a user-facing journey, a security denial, and a correct decision-gate escalation. The harness prepares isolated work areas and executes fixed trusted graders against resulting artifacts, records actual outcomes and permitted behavior, and keeps repeated trial and environment identity comparable.",
+          "title": "Prepared coding tasks and executable acceptance grading"
+        },
+        {
+          "id": "run-economics",
+          "outcome": "The control plane records model and harness versions, instruction/context digests, duration, retries, relevant check timing, review corrections, tokens and cost when available, and approved resource limits. Reports compare time and cost per accepted qualified task, preserve missing values as unknown, and prevent efficiency scores from offsetting safety or correctness failure.",
+          "title": "Privacy-preserving run manifests and quality-adjusted comparisons"
+        },
+        {
+          "id": "feedback-regression-loop",
+          "outcome": "A bounded feedback record links a defect or usability finding to the affected outcome, candidate, acceptance criterion, and regression test or evaluation case. Existing performance and accessibility qualification can be referenced where relevant, and comparison reports distinguish measured improvement, regression, insufficient evidence, and changes requiring a product decision.",
+          "title": "Feedback, quality qualification, and reusable failure scenarios"
+        },
+        {
+          "id": "integrated-qualification",
+          "outcome": "One documented public CLI supports prepared agent trials, grading, run accounting, comparison, and feedback closure through the same discovery and authority model as delivery. Combined fixtures exercise the complete revised control plane, and final repository checks establish the implementation's verified boundary and any unavailable external evidence.",
+          "title": "Public workflow qualification and final handoff"
+        }
+      ]
+    }
+  ],
+  "name": "AI Assisted Development Control Plane",
+  "objective": "Deliver a discoverable, portable development control plane that connects user outcomes to scoped AI-assisted work, candidate-bound verification and independent review, realistic evaluations, measured efficiency, safe recovery, and regression feedback through AGENTS.md.",
+  "paths": {
+    "report": "docs/tmp/ai-development-control-plane-implementation-report.md",
+    "roadmap": "docs/ai-development-control-plane-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/ai-development-control-plane/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-10-21T01:29:54Z",
+    "fingerprint": "e831b4d977aefa27e25f5fefeef6c0db217d51c587531bb4e334a35e5227a946",
+    "note": "The user explicitly approves the current roadmap together with the dynamic JSON-backed review site addition and requests implementation on rebuild."
+  },
+  "schemaVersion": 1,
+  "slug": "ai-development-control-plane",
+  "status": "completed",
+  "updatedAt": "2026-10-21T02:09:44Z"
+}

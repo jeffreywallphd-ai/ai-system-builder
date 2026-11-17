@@ -1,9 +1,13 @@
 import { describe, expect, it } from "../../../../testing/node-test";
 import { createOrganizationId } from "../../../../contracts/organization";
 import type { IngestionSourceRefreshRecord, IngestionSourceSnapshot, IngestionTaskRecord } from "../../../../contracts/ingestion";
+import { encodeArtifactRepoBackingLocator } from "../../../../contracts/storage";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createInMemoryStructuredDocumentStore } from "../../shared";
+import { createStructuredIngestionFilePublicationRepository } from "../createStructuredIngestionFilePublicationRepository";
+import type { IngestionFilePublication, VerifiedIngestionProviderArtifact } from "../../../../application/ports/ingestion";
 import {
+  INGESTION_SOURCE_SNAPSHOT_NAMESPACE,
   INGESTION_TASK_NAMESPACE,
   createStructuredIngestionAcquisitionRepository,
 } from "../createStructuredIngestionAcquisitionRepository";
@@ -60,11 +64,129 @@ function refresh(organizationId?: string): IngestionSourceRefreshRecord {
 }
 
 describe("structured ingestion acquisition repository", () => {
-  it("commits a finalized task and matching source snapshot in one optimistic transaction", async () => {
+  it("rolls back all provider rows if publication is interrupted and reconciles the same committed source", async () => {
+    const documents = createInMemoryStructuredDocumentStore();
+    let interrupt = true;
+    let admissions = 0;
+    const repository = createStructuredIngestionAcquisitionRepository(documents, async (transaction, artifact) => {
+      admissions++;
+      const key = artifact.catalog.storageKey;
+      await transaction.writeDocument("synthetic/provider-catalog", key, artifact.catalog, {expectedRevision:0});
+      if (interrupt) throw new Error("Synthetic failure before backing write.");
+      await transaction.writeDocument("synthetic/provider-binding", key, artifact.binding, {expectedRevision:0});
+    });
+    const {workspaceId, taskId} = task();
+    const source = {provider:"huggingface" as const,repository:"example/synthetic",path:"train.jsonl",revision:"a".repeat(40)};
+    const file = {...task().files[0]!,providerSource:source,status:"pending" as const,
+      totalBytes:0,acceptedBytes:0,nextChunkIndex:0,lastChunk:undefined};
+    const start = await repository.createTask({...task(),kind:"hugging-face",cleanupPending:false,files:[file]});
+    const sourceId = "source.task-1.file-1" as IngestionSourceSnapshot["sourceId"];
+    const snapshotId = "snapshot.task-1.file-1" as IngestionSourceSnapshot["snapshotId"];
+    function prepared(artifactId: string) {
+      const output = {key:artifactId,mediaType:file.mediaType,sizeBytes:0,providerRevision:source.revision,
+        providerLicenseIds:["cc-by-nc-4.0"],sourceId,sourceSnapshotId:snapshotId};
+      const next: IngestionTaskRecord = {...start,status:"succeeded",completedAt:now,revision:2,
+        files:[{...file,status:"finalized",output}]};
+      const captured: IngestionSourceSnapshot = {schemaVersion:"1.0",workspaceId,sourceId,snapshotId,
+        locator:{kind:"hugging-face",repository:source.repository,path:source.path,revision:source.revision,displayName:file.fileName},
+        sizeBytes:0,mediaType:file.mediaType,rawArtifactKey:artifactId,capturedAt:now,providerRevision:source.revision,
+        providerLicenseIds:["cc-by-nc-4.0"]};
+      const artifact: VerifiedIngestionProviderArtifact = {
+        catalog:{workspaceId,storageKey:artifactId,artifactFamily:"tabular",mediaType:file.mediaType,
+          sourceKind:"upload",originalName:source.path,createdAt:now},
+        binding:{workspaceId,artifactId,role:"imported-source",createdAt:now,
+          backing:{kind:"artifact-repo",provider:source.provider,locator:encodeArtifactRepoBackingLocator(source),
+            revision:source.revision,target:source,verification:{exists:true,verifiedAt:now}}},
+      };
+      return {next,captured,artifact};
+    }
+    const commit = repository.saveTaskWithProviderArtifact!;
+    const first = prepared("artifacts/verified-provider-a");
+    const { providerLicenseIds: _omitted, ...legacyOutput } = first.next.files[0]!.output!;
+    const legacyFile = { ...first.next.files[0]!, output: legacyOutput };
+    const foreign = { ...first.artifact, binding:{...first.artifact.binding,workspaceId:createWorkspaceId("workspace-b")} };
+    await expect(commit(first.next,1,first.captured,foreign)).rejects.toThrow("does not match");
+    await expect(commit(first.next,1,{ ...first.captured, providerLicenseIds:["mit"] },first.artifact))
+      .rejects.toThrow("snapshot must match");
+    await expect(commit({ ...first.next, files:[legacyFile] },1,first.captured,first.artifact))
+      .rejects.toThrow("snapshot must match");
+    expect(admissions).toBe(0);
+    await expect(commit(first.next,1,first.captured,first.artifact)).rejects.toThrow("Synthetic failure");
+    expect(await repository.readTask(workspaceId,taskId)).toEqual(start);
+    expect(await repository.readSourceSnapshot(workspaceId,snapshotId)).toBeUndefined();
+    expect((await documents.listDocuments("synthetic/provider-catalog")).length).toBe(0);
+    expect((await documents.listDocuments("synthetic/provider-binding")).length).toBe(0);
+    interrupt = false;
+
+    const committed = await commit(first.next,1,first.captured,first.artifact);
+    const retried = prepared("artifacts/verified-provider-b");
+    expect(await commit(retried.next,1,retried.captured,retried.artifact)).toEqual(committed);
+    expect(admissions).toBe(2);
+    expect((await documents.listDocuments("synthetic/provider-catalog")).length).toBe(1);
+    expect((await documents.listDocuments("synthetic/provider-binding")).length).toBe(1);
+    expect(await repository.readSourceSnapshot(workspaceId,snapshotId)).toEqual(committed.snapshot);
+
+    // Older imports recorded the declaration only in the immutable snapshot.
+    const legacy = { ...committed.task, revision: 3,
+      files:[{ ...committed.task.files[0]!, output: legacyOutput }] };
+    await documents.writeDocument(INGESTION_TASK_NAMESPACE, `${workspaceId}/${taskId}`, legacy, {expectedRevision:2});
+    expect(await commit(retried.next,1,retried.captured,retried.artifact))
+      .toEqual({ task: legacy, snapshot: committed.snapshot });
+    expect(admissions).toBe(2);
+  });
+
+  it("reopens cleanup only for the exact cancelled checkpoint without changing transfer data", async () => {
     const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
-    await repository.createTask(task());
+    const started = await repository.createTask(task());
+    const file = started.files[0]!;
+    const request = {
+      workspaceId: started.workspaceId, taskId: started.taskId, fileId: file.fileId, checkpointId: file.checkpointId,
+      expectedRevision: 1, updatedAt: now,
+    };
+    await expect(repository.markCancelledCheckpointCleanupPending(request)).rejects.toThrow("unavailable");
+    const cancelled = await repository.saveTask({
+      ...started, status: "cancelled", completedAt: now, cleanupPending: false, revision: 2,
+      files: [{ ...file, status: "cancelled" }],
+    }, 1);
+    await expect(repository.saveTask({ ...cancelled, cleanupPending: true, revision: 3 }, 2)).rejects.toThrow("immutable after cleanup");
+    await expect(repository.markCancelledCheckpointCleanupPending({ ...request, expectedRevision: 2,
+      checkpointId: "other-checkpoint" })).rejects.toThrow("unavailable");
+    await expect(repository.markCancelledCheckpointCleanupPending({ ...request, expectedRevision: 2,
+      workspaceId: createWorkspaceId("workspace-b") })).rejects.toThrow("unavailable");
+    await expect(repository.markCancelledCheckpointCleanupPending(request)).rejects.toThrow("revision conflict");
+    expect(await repository.readTask(started.workspaceId, started.taskId)).toEqual(cancelled);
+
+    await repository.markCancelledCheckpointCleanupPending({ ...request, expectedRevision: 2 });
+    const pending = { ...cancelled, cleanupPending: true, revision: 3 };
+    expect(await repository.readTask(started.workspaceId, started.taskId)).toEqual(pending);
+    await expect(repository.saveTask({ ...pending, cleanupPending: false, revision: 4,
+      files: [{ ...file, status: "transferring" }] }, 3)).rejects.toThrow("immutable after cleanup");
+    await repository.markCancelledCheckpointCleanupPending({ ...request, expectedRevision: 3 });
+    await expect(repository.saveTask({ ...pending, cleanupPending: false, revision: 4 }, 3)).rejects.toThrow("revision conflict");
+    expect(await repository.readTask(started.workspaceId, started.taskId)).toEqual({ ...pending, revision: 4 });
+  });
+
+  it("commits a finalized task and matching source snapshot in one optimistic transaction", async () => {
+    const documents = createInMemoryStructuredDocumentStore();
+    const repository = createStructuredIngestionAcquisitionRepository(documents);
+    const ready: IngestionTaskRecord = { ...task(), status: "finalizing", files: [{ ...task().files[0]!, acceptedBytes: 10, nextChunkIndex: 2,
+      lastChunk: { index: 1, sizeBytes: 6, digest: digest("c") } }] };
+    await repository.createTask(ready);
+    const exactSnapshot: IngestionSourceSnapshot = { ...snapshot(), sourceId: "source.task-1.file-1" as never, snapshotId: "snapshot.task-1.file-1" as never,
+      rawArtifactKey: `workspaces/workspace-a/artifacts/files/ingestion/${"a".repeat(32)}`,
+      locator: { kind: "file", displayName: "train.jsonl", originalName: "train.jsonl" } };
+    const publications = createStructuredIngestionFilePublicationRepository(documents);
+    let publication: IngestionFilePublication = { schemaVersion: "1.0", publicationId: "a".repeat(32), workspaceId: ready.workspaceId,
+      taskId: ready.taskId, fileId: ready.files[0]!.fileId, taskCreatedAt: now, checkpointId: "checkpoint-1", fileName: "train.jsonl",
+      mediaType: "application/jsonl", totalBytes: 10, acceptedBytes: 10, nextChunkIndex: 2, expectedSha256: digest("b"),
+      key: exactSnapshot.rawArtifactKey, capturedAt: now, revision: 1, state: "reserved" };
+    await publications.createPublication(publication);
+    for (const state of ["writing", "bytes-acknowledged", "origin-issued", "origin-complete"] as const) {
+      publication = await publications.savePublication({ ...publication, state, revision: publication.revision + 1,
+        ...(state !== "writing" ? { digest: digest("b") } : {}) }, publication.revision);
+    }
     const committedTask: IngestionTaskRecord = {
-      ...task(),
+      ...ready,
       status: "finalizing",
       revision: 2,
       updatedAt: "2026-07-30T04:01:00.000Z",
@@ -75,20 +197,21 @@ describe("structured ingestion acquisition repository", () => {
         nextChunkIndex: 2,
         lastChunk: { index: 1, sizeBytes: 6, digest: digest("c") },
         output: {
-          key: snapshot().rawArtifactKey,
+          key: exactSnapshot.rawArtifactKey,
           mediaType: "application/jsonl",
           sizeBytes: 10,
           digest: snapshot().contentDigest,
-          sourceId: snapshot().sourceId,
-          sourceSnapshotId: snapshot().snapshotId,
+          sourceId: exactSnapshot.sourceId,
+          sourceSnapshotId: exactSnapshot.snapshotId,
         },
       }],
     };
-    await expect(repository.saveTaskWithSourceSnapshot(committedTask, 1, snapshot())).resolves.toMatchObject({
+    await expect(repository.saveTaskWithSourceSnapshot(committedTask, 1, exactSnapshot)).resolves.toMatchObject({
       task: { revision: 2, files: [{ status: "finalized" }] },
-      snapshot: { snapshotId: "snapshot-1" },
+      snapshot: { snapshotId: exactSnapshot.snapshotId },
     });
-    expect(await repository.readSourceSnapshot(createWorkspaceId("workspace-a"), snapshot().snapshotId)).toEqual(snapshot());
+    expect(await repository.readSourceSnapshot(createWorkspaceId("workspace-a"), exactSnapshot.snapshotId)).toEqual(exactSnapshot);
+    expect(await publications.readPublication(ready.workspaceId, ready.taskId, ready.files[0]!.fileId)).toMatchObject({ state: "committed", revision: 6 });
   });
 
   it("does not create a source snapshot when a competing task update wins", async () => {
@@ -109,8 +232,95 @@ describe("structured ingestion acquisition repository", () => {
     const nextSnapshot: IngestionSourceSnapshot = { ...snapshot(), snapshotId: "snapshot-2" as never, contentDigest: digest("d"), previousSnapshotId: snapshot().snapshotId };
     const changed: IngestionSourceRefreshRecord = { ...refresh(), refreshId: "refresh-2" as never, outcome: "changed", currentSnapshotId: nextSnapshot.snapshotId };
     await expect(repository.recordSourceRefreshWithSnapshot(nextSnapshot, changed)).resolves.toMatchObject({ refresh: { outcome: "changed" }, snapshot: { snapshotId: "snapshot-2" } });
+    await expect(repository.recordSourceRefreshWithSnapshot(nextSnapshot, changed)).resolves.toEqual({ refresh: changed, snapshot: nextSnapshot });
     expect((await repository.listSourceSnapshots(createWorkspaceId("workspace-a"), snapshot().sourceId)).length).toBe(2);
     expect(await repository.listSourceRefreshes(createWorkspaceId("workspace-a"), snapshot().sourceId)).toEqual([changed]);
+  });
+
+  it("selects the current source version when several captures share one instant", async () => {
+    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
+    const initial = await repository.createSourceSnapshot(snapshot());
+    const middle: IngestionSourceSnapshot = {
+      ...initial, snapshotId: "snapshot-2" as never, previousSnapshotId: initial.snapshotId,
+      capturedAt: "2026-07-30T04:00:00Z", contentDigest: digest("c"),
+    };
+    const latest: IngestionSourceSnapshot = {
+      ...initial, snapshotId: "snapshot-3" as never, previousSnapshotId: middle.snapshotId, contentDigest: digest("d"),
+    };
+    for (const next of [middle, latest]) {
+      await repository.recordSourceRefreshWithSnapshot(next, {
+        ...refresh(), refreshId: `refresh-${next.snapshotId}` as never, outcome: "changed",
+        previousSnapshotId: next.previousSnapshotId, currentSnapshotId: next.snapshotId,
+      });
+    }
+
+    const { workspaceId, sourceId } = initial;
+    expect(await repository.listSourceSnapshots(workspaceId, sourceId, 1)).toEqual([latest]);
+    expect(await repository.readSourceSnapshot(workspaceId, initial.snapshotId)).toEqual(initial);
+    expect(await repository.readSourceSnapshot(workspaceId, middle.snapshotId)).toEqual(middle);
+
+    const later = await repository.createSourceSnapshot({
+      ...initial, snapshotId: "snapshot-4" as never, capturedAt: "2026-07-30T04:00:00.001Z", contentDigest: digest("e"),
+    });
+    expect(await repository.listSourceSnapshots(workspaceId, sourceId, 1)).toEqual([later]);
+  });
+
+  it("does not save a changed refresh with a missing or different snapshot parent", async () => {
+    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
+    const previous = await repository.createSourceSnapshot(snapshot());
+    const other = await repository.createSourceSnapshot({ ...previous, snapshotId: "snapshot-other" as never, contentDigest: digest("c") });
+    const next: IngestionSourceSnapshot = { ...previous, snapshotId: "snapshot-2" as never, contentDigest: digest("d") };
+    const changed: IngestionSourceRefreshRecord = { ...refresh(), outcome: "changed", currentSnapshotId: next.snapshotId };
+
+    await expect(repository.recordSourceRefreshWithSnapshot(next, changed)).rejects.toThrow("matching snapshot");
+    await expect(repository.recordSourceRefreshWithSnapshot({ ...next, previousSnapshotId: other.snapshotId }, changed)).rejects.toThrow("matching snapshot");
+    expect(await repository.readSourceSnapshot(previous.workspaceId, next.snapshotId)).toBeUndefined();
+    expect(await repository.listSourceRefreshes(previous.workspaceId, previous.sourceId)).toEqual([]);
+    expect(await repository.readSourceSnapshot(previous.workspaceId, other.snapshotId)).toEqual(other);
+  });
+
+  it("does not save an unpaired changed refresh", async () => {
+    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
+    const previous = await repository.createSourceSnapshot(snapshot());
+    const changed: IngestionSourceRefreshRecord = { ...refresh(), outcome: "changed", currentSnapshotId: "snapshot-2" as never };
+
+    await expect(repository.recordSourceRefresh(changed)).rejects.toThrow("matching snapshot");
+    expect(await repository.listSourceRefreshes(previous.workspaceId, previous.sourceId)).toEqual([]);
+  });
+
+  it("does not record a changed refresh when both identifiers normalize to the same old snapshot", async () => {
+    const repository = createStructuredIngestionAcquisitionRepository(createInMemoryStructuredDocumentStore());
+    const initial = snapshot();
+    const previous = await repository.createSourceSnapshot({ ...initial, previousSnapshotId: initial.snapshotId });
+    const changed: IngestionSourceRefreshRecord = {
+      ...refresh(), outcome: "changed", currentSnapshotId: previous.snapshotId,
+      previousSnapshotId: `${previous.snapshotId} ` as IngestionSourceSnapshot["snapshotId"],
+    };
+
+    await expect(repository.recordSourceRefreshWithSnapshot(previous, changed)).rejects.toThrow("matching snapshot");
+    expect(await repository.listSourceRefreshes(previous.workspaceId, previous.sourceId)).toEqual([]);
+    expect(await repository.readSourceSnapshot(previous.workspaceId, previous.snapshotId)).toEqual(previous);
+  });
+
+  it("does not use a previous snapshot with identity or scope inconsistent with its storage key", async () => {
+    const previous = snapshot();
+    const next: IngestionSourceSnapshot = { ...previous, snapshotId: "snapshot-2" as never, contentDigest: digest("d"), previousSnapshotId: previous.snapshotId };
+    const changed: IngestionSourceRefreshRecord = { ...refresh(), outcome: "changed", currentSnapshotId: next.snapshotId };
+    const mismatches = [
+      { snapshotId: "snapshot-other" as IngestionSourceSnapshot["snapshotId"] },
+      { sourceId: "source-other" as IngestionSourceSnapshot["sourceId"] },
+      { workspaceId: createWorkspaceId("workspace-b") },
+      { organizationId: createOrganizationId("organization-b") },
+    ];
+    for (const mismatch of mismatches) {
+      const documents = createInMemoryStructuredDocumentStore();
+      await documents.writeDocument(INGESTION_SOURCE_SNAPSHOT_NAMESPACE, `${previous.workspaceId}/${previous.snapshotId}`, { ...previous, ...mismatch }, { expectedRevision: 0 });
+      const repository = createStructuredIngestionAcquisitionRepository(documents);
+
+      await expect(repository.recordSourceRefreshWithSnapshot(next, changed)).rejects.toThrow("previous source snapshot");
+      expect(await repository.readSourceSnapshot(previous.workspaceId, next.snapshotId)).toBeUndefined();
+      expect(await repository.listSourceRefreshes(previous.workspaceId, previous.sourceId)).toEqual([]);
+    }
   });
 
   it("creates tasks idempotently and applies exact monotonic optimistic revisions", async () => {

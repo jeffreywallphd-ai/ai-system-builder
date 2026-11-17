@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "incrementId": "headless-authoring-and-synchronization",
+  "runId": "2026-11-14t11-09-36-623z-5003557d",
+  "source": "source.407c2ada40e4864c53c1f18fc2b8219a764680d8d1ba641e50e8a36eb0b08b6b",
+  "controlPlaneSource": "f6f24990ee5af289bfc4a9472d3d0e0ee5093980ee6e2e652aad6cfb3ba2b435",
+  "receiptDigest": "d6a7e60b0bf500e3c6ea3043a6e6b0c53a57c64d38597a829bdfbcc5eb2ed6b7",
+  "independentReviewDigest": "c1126a6277925975aa35094742a25f77d53114d478d3a31556682e51dca6231a",
+  "environment": "local-win32-x64",
+  "checks": [
+    {
+      "target": "packaged-desktop",
+      "status": "passed",
+      "durationMs": 93566
+    },
+    {
+      "target": "packaged-desktop",
+      "status": "passed",
+      "durationMs": 13783
+    }
+  ],
+  "allControlPlaneChecks": [
+    {
+      "id": "desktop-headless-chat-task-settings",
+      "status": "passed"
+    },
+    {
+      "id": "headless-workflow-metadata",
+      "status": "passed"
+    },
+    {
+      "id": "headless-system-builder-semantic-edits",
+      "status": "passed"
+    },
+    {
+      "id": "headless-composer-draft-witnesses",
+      "status": "passed"
+    },
+    {
+      "id": "headless-desktop-read-provider",
+      "status": "passed"
+    },
+    {
+      "id": "headless-desktop-activation",
+      "status": "passed"
+    },
+    {
+      "id": "headless-desktop-pinned-mcp",
+      "status": "passed"
+    },
+    {
+      "id": "headless-packaged-desktop-journey",
+      "status": "passed"
+    },
+    {
+      "id": "documentation",
+      "status": "passed"
+    },
+    {
+      "id": "agent-support",
+      "status": "passed"
+    },
+    {
+      "id": "control-plane",
+      "status": "passed"
+    },
+    {
+      "id": "architecture",
+      "status": "passed"
+    },
+    {
+      "id": "focused-tests",
+      "status": "passed"
+    }
+  ],
+  "additionalValidation": [
+    "Desktop TypeScript no-emit check passed."
+  ],
+  "authoringMeasurement": {
+    "cpuThreads": 20,
+    "ramGiB": 16,
+    "runnerNodeVersion": "24.22.1",
+    "desktop": {
+      "electronVersion": "42.11.18",
+      "nodeVersion": "24.19.0"
+    },
+    "fixtureSystems": 1,
+    "plannedSamples": 100,
+    "maximumOutstandingWrites": 1,
+    "documentVisibleBeforeMeasurement": true,
+    "timingStartsBeforeDispatch": true,
+    "electronMainSampledRssMiB": {
+      "baseline": 255,
+      "peak": 259,
+      "samples": 6
+    },
+    "count": 100,
+    "p50Ms": 850.3909000000003,
+    "p95Ms": 882.3531999999977,
+    "maxMs": 895.9618000000046,
+    "failures": 0,
+    "recoveryMs": 851.7185000000027,
+    "delivered": 100
+  },
+  "ownedWorkers": [
+    {
+      "observed": 1,
+      "stillRunning": 0,
+      "cleanupMilliseconds": 205.59829999999783
+    },
+    {
+      "observed": 1,
+      "stillRunning": 0,
+      "cleanupMilliseconds": 218.33780000000843
+    }
+  ],
+  "artifactDigests": {
+    "evidence.json": "20437d1de046b22662b096e747397f94c24012f98ba9ddc2ab766461eecb4169",
+    "headless-desktop-observation.json": "3a3779d26aff47465bad2dd7751ad8971569dd965df96378bd6fe0bbd27937b4",
+    "cleanup-3749d882b00f9b48.json": "10cf1213004bf8ec0d4c483a5238d39f9508be8e197ddd09cbbed8d3e08165f4",
+    "cleanup-bf2a07a0178bb34c.json": "251c8a192f586b305a4af52e517e1a8a7ac8ef8b1a20d1fcbfea6f2c7e3ffef9"
+  },
+  "priorFailedRuns": [
+    {
+      "id": "2026-11-14t10-46-49-780z-d9775c99",
+      "summary": "The app's pairing controls were unavailable after restart. The next fixture explicitly verified the exact owned window's native focus."
+    },
+    {
+      "id": "2026-11-14t10-57-32-759z-34489af8",
+      "summary": "Approved chat and cleanup passed. The authoring fixture had not witnessed readiness before requiring visible delivery of the first committed edit."
+    }
+  ],
+  "scope": [
+    "The packaged desktop and official stdio MCP exercised authoring, exact replay and committed journal restart from an isolated source.",
+    "The approved conversation produced real saved task status through the owned desktop path with a controlled synthetic runtime.",
+    "This qualification establishes no model accuracy, external provider publishing, managed parity, window takeover or production readiness."
+  ]
+}

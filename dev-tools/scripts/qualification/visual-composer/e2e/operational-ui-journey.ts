@@ -1,0 +1,243 @@
+import { expect, type Page, type TestInfo } from "@playwright/test";
+import { failedOperationalObservation, operationalPhases, operationalStatusUrl, OPERATIONAL_PHASE_TIMEOUT_MS, qualifyOperationalObservation, type OperationalHost, type OperationalUiReport } from "../operational-ui-oracles";
+import { qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
+
+/** Actual host UI assertions. Unit/oracle checks alone do not qualify this journey. */
+export async function qualifyOperationalUiJourney(page: Page, info: TestInfo, host: OperationalHost, mode: CriticalAccessibilityMode = "standard"): Promise<OperationalUiReport> {
+  readCriticalAccessibilityMode(mode);
+  const phases: string[] = [];
+  const input = () => ({ schemaVersion: "operational-ui-observation-v1", host, runId: process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID, sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, phases });
+  failedOperationalObservation(input(), mode); // Refuse invalid identity before any UI effect.
+  if (info.project.name !== host) throw new Error("Operational UI host identity does not match its project.");
+  const expected = operationalPhases(host, mode);
+  async function step(phase: string, action: () => Promise<void>) {
+    if (expected[phases.length] !== phase) throw new Error("Unexpected operational UI step.");
+    await action(); phases.push(phase);
+  }
+  let failed = false;
+  let originalViewport: { width: number; height: number } | undefined;
+  try {
+    if (mode === "standard") {
+      const viewport=page.viewportSize();
+      if(!viewport || !Number.isSafeInteger(viewport.width) || viewport.width<=0 || !Number.isSafeInteger(viewport.height) || viewport.height<=0)throw new Error("Operational UI requires an explicit caller viewport.");
+      originalViewport={width:viewport.width,height:viewport.height};
+    }
+    const navigationTrigger=page.getByLabel("Open navigation menu",{exact:true});
+    const navigationMenu=page.getByRole("menu",{name:"Application navigation",exact:true});
+    const workspace=page.locator("header.ui-shell__header").getByRole("combobox",{name:"Select current workspace",exact:true});
+    let workspaceId = "", workspaceName = "";
+    async function homeVisible() {
+      await expect(workspace).toHaveValue(workspaceId);
+      const home=page.locator(".home-page");await expect(home).toHaveCount(1);await expect(home).toBeVisible();
+      await expect(home.getByRole("heading",{level:1})).toHaveText(workspaceName);
+    }
+    async function navigate(name: "Models" | "Image Generation" | "Home") {
+      if(mode === "standard") await page.getByRole("button",{name,exact:true}).click();
+      else {
+        await navigationTrigger.press("Enter");await expect(navigationMenu).toBeVisible();
+        await navigationMenu.getByRole("menuitem",{name,exact:true}).press("Enter");await expect(navigationMenu).toBeHidden();
+      }
+    }
+    await step("navigation-menu-opened",async()=>{
+      await expect(workspace).toBeEnabled();workspaceId=await workspace.inputValue();
+      const selected=workspace.locator("option:checked");await expect(selected).toHaveCount(1);
+      workspaceName=(await selected.textContent())?.trim() ?? "";
+      if(!workspaceId || !workspaceName)throw new Error("Operational UI requires its selected fixture workspace.");
+      if(mode === "standard") await page.setViewportSize({width:320,height:1000});
+      await expect(navigationTrigger).toBeVisible();
+      await navigationTrigger.focus();await navigationTrigger.press("ArrowDown");
+      await expect(navigationTrigger).toHaveAttribute("aria-haspopup","menu");await expect(navigationTrigger).toHaveAttribute("aria-expanded","true");
+      await expect(navigationMenu).toBeVisible();const home=navigationMenu.getByRole("menuitem",{name:"Home",exact:true});
+      await expect(home).toBeFocused();await expect(navigationMenu.locator('[aria-current="page"]')).toHaveCount(1);
+      await home.press("ArrowDown");await expect(navigationMenu.getByRole("menuitem",{name:"Systems",exact:true})).toBeFocused();
+      await navigationMenu.getByRole("menuitem",{name:"Systems",exact:true}).press("ArrowUp");await expect(home).toBeFocused();
+      await home.press("End");await expect(navigationMenu.getByRole("menuitem").last()).toBeFocused();
+      await navigationMenu.getByRole("menuitem").last().press("Home");await expect(home).toBeFocused();
+      await qualifyCriticalSurfaceAccessibility(page,info,"navigation-menu",mode);
+    });
+    await step("navigation-menu-navigated",async()=>{
+      await navigationMenu.getByRole("menuitem",{name:"Models",exact:true}).press("Enter");
+      await expect(page.getByRole("heading",{name:"Model Management",level:1,exact:true})).toBeVisible();await expect(navigationMenu).toBeHidden();await expect(navigationTrigger).toBeFocused();
+      await navigationTrigger.press("Enter");await expect(navigationMenu.getByRole("menuitem",{name:"Models",exact:true})).toHaveAttribute("aria-current","page");
+      await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Enter");await homeVisible();
+    });
+    await step("navigation-menu-focus-returned",async()=>{
+      await navigationTrigger.focus();await navigationTrigger.press("Enter");await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Tab");
+      await expect(navigationMenu).toBeHidden();await expect(page.locator("#application-notification-bell")).toBeFocused();
+      await navigationTrigger.focus();await navigationTrigger.press("Space");await navigationMenu.getByRole("menuitem",{name:"Home",exact:true}).press("Escape");
+      await expect(navigationMenu).toBeHidden();await expect(navigationTrigger).toHaveAttribute("aria-expanded","false");await expect(navigationTrigger).toBeFocused();
+    });
+    if(mode === "native400") {
+      await step("sidebar-responsive-hidden",async()=>{await expect(page.locator(".ui-shell__sidebar")).toHaveCount(1);await expect(page.locator(".ui-shell__sidebar")).toBeHidden();});
+      await step("navigation-trigger-responsive-visible",async()=>{await expect(navigationTrigger).toBeVisible();await expect(navigationMenu).toBeHidden();});
+    } else {
+    await step("sidebar-collapsed", async () => {
+      await page.setViewportSize({width:1440,height:1000});
+      await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
+      await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toBeVisible();
+    });
+    await step("sidebar-restored", async () => {
+      await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
+      await expect(page.getByRole("button", { name: "Collapse sidebar", exact: true })).toBeVisible();
+    });
+    }
+    await step("settings-opened", async () => {
+      await page.locator("header.ui-shell__header").getByRole("button", { name: "Settings", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Settings", level: 1, exact: true })).toBeVisible();
+      await qualifyCriticalSurfaceAccessibility(page, info, "settings", mode);
+    });
+    if (host === "packaged-desktop") {
+      const footer = page.locator('footer[aria-label="Python runtime controls"]');
+      const software = page.locator('section[aria-label="Software status controls"]');
+      async function runtimeStatus(status: "ready" | "stopped") {
+        // Observe the committed UI after its event, including fast batched replies.
+        // This is a paint opportunity, not a native process or timing guarantee.
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+        await expect(footer).toHaveAttribute("aria-busy", "false", { timeout: OPERATIONAL_PHASE_TIMEOUT_MS });
+        await expect(footer.getByRole("alert")).toHaveCount(0);
+        await expect(footer).toContainText(`Status: ${status}`, { timeout: OPERATIONAL_PHASE_TIMEOUT_MS });
+      }
+      await step("runtime-deferred", async () => {
+        await expect(footer).toHaveCount(0);
+        await page.getByRole("button", { name: /^Software status\b/ }).press("Enter");
+        await expect(software).toBeVisible(); await expect(footer).toHaveCount(0);
+      });
+      await step("runtime-initially-stopped", async () => {
+        await software.getByRole("button", { name: /^Python runtime controls\b/ }).press("Enter");
+        await runtimeStatus("stopped");
+      });
+      // The settled display does not prove a new IPC read by itself. Focused
+      // footer tests separately assert exact foreground read dispatch/ownership.
+      await step("runtime-refresh-display-stopped", async () => { await footer.getByRole("button", { name: "Refresh", exact: true }).click(); await runtimeStatus("stopped"); });
+      await step("runtime-start-ready", async () => { await footer.getByRole("button", { name: "Start", exact: true }).click(); await runtimeStatus("ready"); });
+      await step("runtime-view-reopened-ready", async () => {
+        const toggle = software.getByRole("button", { name: /^Python runtime controls\b/ });
+        await toggle.click(); await expect(footer).toHaveCount(0);
+        await toggle.click(); await runtimeStatus("ready");
+      });
+      const stoppedLog = footer.getByRole("listitem").filter({ hasText: "Python runtime process stopped." });
+      const spawnedLog = footer.getByRole("listitem").filter({ hasText: "Python runtime process spawned." });
+      await step("runtime-restart-ready", async () => {
+        const details = footer.locator("details");
+        if (!await details.evaluate(node => (node as HTMLDetailsElement).open)) await details.locator("summary").press("Enter");
+        await expect(details).toHaveJSProperty("open", true);
+        const beforeStopped = await stoppedLog.count(), beforeSpawned = await spawnedLog.count();
+        await footer.getByRole("button", { name: "Restart", exact: true }).click(); await runtimeStatus("ready");
+        await expect(stoppedLog).toHaveCount(beforeStopped + 1);
+        await expect(spawnedLog).toHaveCount(beforeSpawned + 1);
+        const lifecycle = await footer.getByRole("listitem").evaluateAll(nodes => nodes.flatMap(node => {
+          const text = node.textContent ?? "";
+          if (text.endsWith("Python runtime process stopped.")) return ["stopped"];
+          if (text.endsWith("Python runtime process spawned.")) return ["spawned"];
+          return [];
+        }));
+        expect(lifecycle.slice(-2)).toEqual(["stopped", "spawned"]);
+      });
+      await step("runtime-log-cleared", async () => {
+        const details = footer.locator("details");
+        if (!await details.evaluate(node => (node as HTMLDetailsElement).open)) await details.locator("summary").press("Enter");
+        await expect(details).toHaveJSProperty("open", true);
+        await footer.getByRole("button", { name: "Clear log", exact: true }).click(); await runtimeStatus("ready");
+        await expect(footer.getByRole("listitem").filter({ hasText: "Cleared Python runtime activity log." })).toHaveCount(1);
+        await expect(stoppedLog).toHaveCount(0); await expect(spawnedLog).toHaveCount(0);
+      });
+      await step("runtime-stop-reported", async () => { await footer.getByRole("button", { name: "Stop", exact: true }).click(); await runtimeStatus("stopped"); });
+    } else {
+      await page.getByRole("button", { name: "Security", exact: true }).click();
+      const refresh = page.getByRole("button", { name: "Refresh status", exact: true });
+      const panel = refresh.locator("..");
+      async function knownStatus() {
+        await expect(refresh).toBeEnabled({ timeout: OPERATIONAL_PHASE_TIMEOUT_MS });
+        await expect(panel.getByRole("alert")).toHaveCount(0);
+        await expect(panel.locator("p").filter({ hasText: /^Server mode:/ })).toHaveText(/^Server mode: (?:disabled-dev|lan-https-token|oidc-bearer|external-tls|mtls|api-key)$/);
+        await expect(panel.locator("p").filter({ hasText: /^Current listener:/ })).toHaveText(/^Current listener: (?:HTTP only|HTTPS enabled)$/);
+      }
+      await step("security-known", async () => { await expect(refresh).toBeEnabled(); await refresh.click(); await knownStatus(); await qualifyCriticalSurfaceAccessibility(page, info, "security", mode); });
+      const url = operationalStatusUrl(page.url());
+      const fault: Parameters<Page["route"]>[1] = async route => {
+        if (route.request().method() !== "GET") return route.continue();
+        await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ ok: false, error: { code: "unavailable", message: "synthetic-operational-hidden-detail" } }) });
+      };
+      await page.route(url, fault);
+      try {
+        await step("security-fault-visible", async () => { await refresh.click(); await expect(panel.getByRole("alert")).toBeVisible(); await expect(refresh).toBeEnabled(); });
+        await step("security-fault-safe", async () => { await expect(panel).not.toContainText("synthetic-operational-hidden-detail"); });
+      } finally { await page.unroute(url, fault); }
+      await step("security-retry-known", async () => { await refresh.click(); await knownStatus(); });
+      await step("security-controls-restricted", async () => { await expect(panel.locator("input")).toHaveCount(0); await expect(panel.getByRole("button")).toHaveCount(1); });
+    }
+    const bell = page.getByRole("button", { name: /^Notifications(?:,|$)/ });
+    const notifications = page.getByRole("dialog", { name: "Notifications", exact: true });
+    await step("notifications-empty", async () => {
+      await bell.click();await expect(notifications.getByRole("button",{name:"Close notifications",exact:true})).toBeFocused();
+      await expect(notifications).not.toContainText("synthetic-operational-hidden-detail");
+      const markRead=notifications.getByRole("button",{name:"Mark all read",exact:true});
+      if(await markRead.isEnabled())await markRead.click();
+      await expect(markRead).toBeDisabled();
+      const clear=notifications.getByRole("button",{name:"Clear completed",exact:true});
+      if(await clear.isEnabled())await clear.click();
+      await expect(notifications.getByText("No notifications yet.", { exact: true })).toBeVisible();
+      await expect(clear).toBeDisabled();
+      await qualifyCriticalSurfaceAccessibility(page, info, "notifications", mode);
+    });
+    await step("notifications-focus-returned", async () => {
+      await notifications.getByRole("button", { name: "Close notifications", exact: true }).focus();
+      await expect(notifications.getByRole("button", { name: "Close notifications", exact: true })).toBeFocused();
+      await notifications.press("Escape"); await expect(notifications).toBeHidden(); await expect(bell).toBeFocused();
+    });
+    await step("models-discovery-opened", async () => {
+      await navigate("Models");
+      await expect(page.getByRole("heading", { name: "Model Management", level: 1, exact: true })).toBeVisible();
+      if (host === "packaged-desktop") {
+        await page.getByRole("tab", { name: "Find Models", exact: true }).press("Enter");
+        await expect(page.getByRole("textbox", { name: /^Query\b/ })).toBeVisible();
+        await page.getByRole("combobox", { name: /^Task\b/ }).selectOption("other");
+        await page.getByRole("textbox", { name: "Other task tag", exact: true }).fill("qualification-config-only");
+      } else {
+        await expect(page.getByRole("tab", { name: "Train Model", exact: true })).toHaveCount(0);
+        await page.getByRole("textbox", { name: /^Search\b/ }).fill("qualification-config-only");
+      }
+      // Edit local form state only. Search, download and save remain explicit.
+      await qualifyCriticalSurfaceAccessibility(page, info, "models-discovery", mode);
+    });
+    await step("models-inventory-opened", async () => {
+      if (host === "packaged-desktop") {
+        await page.getByRole("tab", { name: "Manage Models", exact: true }).press("Enter");
+        await expect(page.getByRole("button", { name: "Refresh Models", exact: true })).toBeEnabled({ timeout: OPERATIONAL_PHASE_TIMEOUT_MS });
+        await expect(page.getByRole("combobox", { name: /^Lifecycle\b/ })).toBeVisible();
+      } else {
+        await expect(page.getByRole("heading", { name: "Server model inventory", exact: true })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Refresh", exact: true })).toBeEnabled({ timeout: OPERATIONAL_PHASE_TIMEOUT_MS });
+      }
+      await qualifyCriticalSurfaceAccessibility(page, info, "models-inventory", mode);
+    });
+    if (host === "packaged-desktop") await step("model-training-opened", async () => {
+      await page.getByRole("tab", { name: "Train Model", exact: true }).press("Enter");
+      await expect(page.getByRole("list", { name: "Model training workflow", exact: true })).toBeVisible();
+      await expect(page.getByRole("combobox", { name: /^Base model\b/ })).toBeVisible();
+      const method = page.getByRole("combobox", { name: /^Method\b/ });
+      await method.selectOption("lora"); await expect(method).toHaveValue("lora");
+      await qualifyCriticalSurfaceAccessibility(page, info, "model-training", mode);
+    });
+    await step("image-configuration-opened", async () => {
+      await navigate("Image Generation");
+      await expect(page.getByRole("heading", { name: "Image Generation", level: 1, exact: true })).toBeVisible();
+      await expect(page.getByRole("list", { name: "Image generation workflow", exact: true })).toBeVisible();
+      const prompt = page.getByRole("textbox", { name: /^Prompt\b/ });
+      await prompt.fill("Local configuration check."); await expect(prompt).toHaveValue("Local configuration check.");
+      // Do not submit generation, alter runtime settings or repair an install.
+      await qualifyCriticalSurfaceAccessibility(page, info, "image-configuration", mode);
+    });
+    await step("home-returned", async () => {
+      await navigate("Home");await homeVisible();
+    });
+  } catch { failed = true; }
+  finally { if(originalViewport)try {await page.setViewportSize(originalViewport);}catch {failed=true;} }
+  const report = failed ? failedOperationalObservation(input(), mode) : qualifyOperationalObservation(input(), mode);
+  const body = JSON.stringify(report); if (Buffer.byteLength(body) > 8192) throw new Error("Operational UI report exceeded its fixed bound.");
+  try { await info.attach("operational-ui", { body, contentType: "application/json" }); }
+  catch { throw new Error("Operational UI report could not be saved."); }
+  if (report.status !== "passed") throw new Error(`Operational UI step failed: ${report.nextPhase}.`);
+  return report;
+}

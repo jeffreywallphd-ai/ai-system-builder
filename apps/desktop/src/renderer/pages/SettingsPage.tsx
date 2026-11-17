@@ -2,19 +2,30 @@ import { useState } from "react";
 
 import { CollapsiblePanel } from "../components/ui/CollapsiblePanel";
 import { SettingsPanel, SoftwareStatusSection } from "../features/settings";
+import { PageDashboardHeader } from "../../../../../modules/ui/shared";
+import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
+import { HeadlessClientSettings } from "../features/settings/components/HeadlessClientSettings";
 
 export function SettingsPage() {
   const [runtimeExpanded, setRuntimeExpanded] = useState(false);
   const [datasetExpanded, setDatasetExpanded] = useState(false);
   const [publishingExpanded, setPublishingExpanded] = useState(false);
   const [softwareStatusExpanded, setSoftwareStatusExpanded] = useState(false);
+  const [headlessExpanded, setHeadlessExpanded] = useState(false);
 
   return (
     <section className="ui-stack ui-stack--sm">
-      <h1>Settings</h1>
-      <p className="ui-text-muted">Manage global desktop defaults and inspect operational software status.</p>
+      <PageDashboardHeader
+        title="Settings"
+        description="Manage global desktop defaults and inspect operational software status."
+        dashboard={<DesktopPageDashboard kind="settings" />}
+      />
       <SettingsPanel title="Hugging Face" category="huggingface" />
       <SettingsPanel title="Models" category="models" />
+      <CollapsiblePanel title="Local chat clients" isExpanded={headlessExpanded}
+        onToggle={() => setHeadlessExpanded((expanded) => !expanded)}>
+        {headlessExpanded ? <HeadlessClientSettings /> : <p>Manage read-only access for local chat clients.</p>}
+      </CollapsiblePanel>
       <CollapsiblePanel
         title="Runtime settings"
         isExpanded={runtimeExpanded}

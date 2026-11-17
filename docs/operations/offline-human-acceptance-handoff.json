@@ -1,0 +1,333 @@
+{
+  "schema_version": "roadmap-human-acceptance-review-v1",
+  "authority_ref": "explicit-user-offline-human-acceptance",
+  "human_acceptance_owner": "user-offline",
+  "human_test_result": "not-asserted",
+  "scope": "Close only increments with complete implementation, recorded passing retained technical criteria and solely human acceptance outstanding. Preserve original evidence and approvals.",
+  "limitations": [
+    "Legacy technical evidence stays declarative rather than candidate-bound current qualification.",
+    "The exact-task human-only criterion transfer does not qualify hardware; hardware/resource checks remain under controlled-advanced-capabilities-are-qualified.",
+    "No dependency, runtime, provider, security, performance or production acceptance is waived."
+  ],
+  "open_roadmaps_reviewed": [
+    {
+      "roadmap": "asset-experience-layered-customization",
+      "status_before": "implementation-complete-qualification-pending",
+      "evidence_policy": "declarative-legacy",
+      "reason": "Controlled security review is outstanding alongside manual accessibility.",
+      "increments": [
+        {
+          "increment": "production-qualification",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "desktop-thin-accessibility",
+            "security-review"
+          ],
+          "transfer_criteria": []
+        }
+      ]
+    },
+    {
+      "roadmap": "data-management-quality-and-usability",
+      "status_before": "implementation-complete-qualification-pending",
+      "evidence_policy": "declarative-legacy",
+      "reason": "Three human-only increments transfer; private-provider, ingestion-scale and advanced real-hardware/runtime qualification remain technical.",
+      "increments": [
+        {
+          "increment": "guided-trustworthy-foundation",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "transfer-human-acceptance-and-close",
+          "nonpassing_criteria": [
+            "guided-usability-is-qualified"
+          ],
+          "transfer_criteria": [
+            "guided-usability-is-qualified"
+          ]
+        },
+        {
+          "increment": "quality-curation-and-review",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "transfer-human-acceptance-and-close",
+          "nonpassing_criteria": [
+            "quality-review-usability-is-qualified"
+          ],
+          "transfer_criteria": [
+            "quality-review-usability-is-qualified"
+          ]
+        },
+        {
+          "increment": "versioned-dataset-lineage-and-publishing",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "controlled-provider-publication-is-qualified"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "governed-scalable-ingestion",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "controlled-ingestion-scale-is-qualified"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "advanced-preparation-and-synthetic-quality",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "controlled-advanced-capabilities-are-qualified"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "exact-task-adaptive-quality-and-preparation",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "transfer-human-acceptance-and-close",
+          "nonpassing_criteria": [
+            "exact-task-usability-is-qualified"
+          ],
+          "transfer_criteria": [
+            "exact-task-usability-is-qualified"
+          ]
+        }
+      ]
+    },
+    {
+      "roadmap": "functionality-optimization",
+      "status_before": "executing",
+      "evidence_policy": "control-plane-v1",
+      "reason": "Named performance budgets, task-host behavior, real model/hardware trials and failed current full qualification remain technical.",
+      "increments": [
+        {
+          "increment": "responsive-workspace-browse",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "browse-performance-qualified"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "efficient-reliable-task-journeys",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "task-host-qualification"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "quality-preserving-context-efficiency",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "context-runtime-qualified"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "qualified-user-and-model-outcomes",
+          "status_before": "verifying",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "user-task-outcome-targets",
+            "accessibility-outcomes-qualified",
+            "model-quality-resource-outcomes",
+            "full-current-qualification"
+          ],
+          "transfer_criteria": []
+        }
+      ]
+    },
+    {
+      "roadmap": "optional-constrained-json-generation",
+      "status_before": "implementation-complete-qualification-pending",
+      "evidence_policy": "declarative-legacy",
+      "reason": "CPU/accelerator resource, latency and output qualification is mixed with usability.",
+      "increments": [
+        {
+          "increment": "production-hardening-and-qualification",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "representative-resource-and-usability-qualification"
+          ],
+          "transfer_criteria": []
+        }
+      ]
+    },
+    {
+      "roadmap": "security-findings-refresh",
+      "status_before": "blocked",
+      "evidence_policy": "control-plane-v1",
+      "reason": "Implementation, native authority, isolation, runtime, safe records and tooling criteria remain missing or pending.",
+      "increments": [
+        {
+          "increment": "file-and-workspace-authority",
+          "status_before": "blocked",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "host-file-authority",
+            "dataset-source-isolation",
+            "write-owned-model-completion",
+            "scoped-state-integrity",
+            "authentication-result-invariant",
+            "legacy-history-preserved",
+            "security-impact-reviewed"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "runtime-execution-integrity",
+          "status_before": "pending",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "runtime-authority-and-paths",
+            "runtime-resource-budgets",
+            "runtime-recovery-truth",
+            "runtime-provenance",
+            "runtime-private-diagnostics",
+            "supported-runtime-journeys",
+            "security-impact-reviewed"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "canonical-safe-records",
+          "status_before": "pending",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "strict-nested-safe-records",
+            "complete-integrity-input",
+            "trusted-provenance-and-opaque-identity",
+            "readiness-blockers-preserved",
+            "safe-user-facing-compatibility",
+            "security-impact-reviewed"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "development-and-tooling-security",
+          "status_before": "pending",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "bounded-helper-argument-authority",
+            "secure-roadmap-publication",
+            "secure-development-exposure",
+            "issue-traceability-and-qualified-dispositions",
+            "governed-workflow-preserved",
+            "security-impact-reviewed"
+          ],
+          "transfer_criteria": []
+        }
+      ]
+    },
+    {
+      "roadmap": "security-vulnerability-remediation",
+      "status_before": "blocked",
+      "evidence_policy": "declarative-legacy",
+      "reason": "Legacy runtime/security implementation is unresolved and successor remediation owns remaining work.",
+      "increments": [
+        {
+          "increment": "medium-runtime-and-process-hardening",
+          "status_before": "blocked",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "medium-runtime-privilege",
+            "medium-runtime-bounds",
+            "medium-runtime-paths-and-diagnostics",
+            "medium-installer-provenance",
+            "medium-runtime-functionality"
+          ],
+          "transfer_criteria": []
+        },
+        {
+          "increment": "low-hardening-and-security-qualification",
+          "status_before": "pending",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "low-canonical-safe-data",
+            "low-secure-development-boundaries",
+            "low-secure-roadmap-writes",
+            "all-findings-closed",
+            "production-security-gates"
+          ],
+          "transfer_criteria": []
+        }
+      ]
+    },
+    {
+      "roadmap": "system-builder-canvas-reliability",
+      "status_before": "implementation-complete-qualification-pending",
+      "evidence_policy": "control-plane-v1",
+      "reason": "Named-reference performance remains outstanding within a criterion mixed with manual/user qualification; cold22.20second load and prior unexplained Foundation failure remain unresolved.",
+      "increments": [
+        {
+          "increment": "measured-canvas-responsiveness",
+          "status_before": "implemented-pending-qualification",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "reference-and-accessibility-qualification"
+          ],
+          "transfer_criteria": []
+        }
+      ]
+    },
+    {
+      "roadmap": "systems-run-workflow-active-source",
+      "status_before": "roadmap-drafting",
+      "evidence_policy": "declarative-legacy",
+      "reason": "Roadmap remains a draft with unimplemented technical eligibility, lifecycle and host/UI criteria.",
+      "increments": [
+        {
+          "increment": "active-release-workflow-eligibility",
+          "status_before": "pending",
+          "disposition": "retain-technical-qualification",
+          "nonpassing_criteria": [
+            "published-source-correlated",
+            "inactive-releases-hidden",
+            "lifecycle-rechecked",
+            "host-ui-parity",
+            "security-lifecycle-reviewed",
+            "repository-gates"
+          ],
+          "transfer_criteria": []
+        }
+      ]
+    }
+  ],
+  "followup_scope": "Explicit user direction: functionality-optimization, system-builder-canvas-reliability and security-findings-refresh must use agent-executable technical acceptance. Archive human portions of pure/mixed criteria; do not waive technical requirements or assert passes. Earlier open-roadmap review remains historical.",
+  "agent_only_scope_revisions": [
+    {
+      "roadmap": "functionality-optimization",
+      "removed_criteria": [
+        "user-task-outcome-targets"
+      ],
+      "revised_controlled_criteria": [
+        "accessibility-outcomes-qualified"
+      ],
+      "status": "technical-qualification-pending",
+      "invariants": "Original evidence, failed full-current-qualification, completed chunks/plans and technical/model checks retained. Participant scoring/manual AT handled offline; automated UI/accessibility remains pending until exact assertions pass."
+    },
+    {
+      "roadmap": "system-builder-canvas-reliability",
+      "removed_criteria": [],
+      "revised_controlled_criteria": [
+        "reference-and-accessibility-qualification"
+      ],
+      "status": "technical-qualification-pending",
+      "invariants": "Named-reference measured performance and automated both-host journeys/accessibility retained; human/manual acceptance offline. Cold-load and Foundation product findings remain unresolved."
+    },
+    {
+      "roadmap": "security-findings-refresh",
+      "removed_criteria": [],
+      "revised_controlled_criteria": [],
+      "status": "technical-qualification-pending",
+      "invariants": "Audited active criteria: already agent-executable. No scope amendment, scanner closure, native proof or technical waiver."
+    }
+  ]
+}

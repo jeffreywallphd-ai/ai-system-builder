@@ -320,4 +320,23 @@ describe("registerDatasetPreparationApiRoutes", () => {
       error: { code: "not-found" },
     });
   });
+  it("projects only bounded memory facts on authenticated failed task reads", async () => {
+    const get = new Map<string, any>();
+    const memory = { resource: "ram", requiredBytes: 3758096384, availableBytes: 3503902720, allowedOverflowBytes: 0 };
+    registerDatasetPreparationApiRoutes({
+      app: { get: (path, handler) => get.set(path, handler), post: testDouble.fn() },
+      prepareTrainingDatasetUseCase: {
+        readPrepareTrainingDataset: async () => ({ ok: true, value: {
+          requestId: "memory-task", status: "failed", error: { code: "generation_insufficient_resources", message: "Runtime task failed.", details: { memoryShortfall: { ...memory, path: "private-fixture" }, modelId: "private-fixture" } },
+        } }),
+      } as any,
+    });
+    const { record, response } = responseRecorder();
+    await get.get("/api/dataset-preparation/tasks/:requestId")(
+      authenticatedRequest({ params: { requestId: "memory-task" }, query: { workspaceId: "workspace-a" } }), response,
+    );
+    expect(record.body.value.error.memoryShortfall).toEqual(memory);
+    expect(JSON.stringify(record.body)).not.toContain("private-fixture");
+  });
+
 });

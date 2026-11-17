@@ -11,6 +11,7 @@ import {
 import type { SystemBuilderComposerAsset } from "../../../../contracts/system-builder";
 import {
   addSystemComposerAsset,
+  areSystemComposerDraftsEqual,
   attachUnassignedSystemComposerAsset,
   buildSystemComposerTree,
   commitSystemComposerDraft,
@@ -27,6 +28,144 @@ import {
 } from "../systemComposerDraft";
 
 describe("System composer draft operations", () => {
+  it("adds and moves current form fields only to matching form regions", () => {
+    const draft = baseDraft();
+    const formAsset = (id: string) => ({
+      ...asset(id),
+      version: "3.0.0",
+      definitionRef: { kind: "asset-definition-version" as const, id: normalizeAssetId(id), version: "3.0.0" },
+    });
+    const form = addSystemComposerAsset(draft, {
+      asset: formAsset("builtin.form.form"), compositionId: "composition.demo",
+      instanceId: "instance.form", parentInstanceId: "instance.shell", slotId: "content",
+    });
+    expect(form.ok).toBe(true);
+    if (!form.ok) return;
+    const text = { asset: formAsset("builtin.form.text-field"), compositionId: "composition.demo", instanceId: "instance.field" };
+    expect(addSystemComposerAsset(form.value, { ...text, parentInstanceId: "instance.shell", slotId: "content" }).ok).toBe(false);
+    expect(addSystemComposerAsset(form.value, { ...text, parentInstanceId: "instance.form", slotId: "messages" }).ok).toBe(false);
+    const field = addSystemComposerAsset(form.value, { ...text, parentInstanceId: "instance.form", slotId: "fields" });
+    expect(field.ok).toBe(true);
+    if (!field.ok) return;
+    expect(reparentSystemComposerAsset(field.value, {
+      instanceId: text.instanceId, parentInstanceId: "instance.shell", slotId: "content",
+    }).ok).toBe(false);
+    expect(field.value.placements.find((edge) => edge.childInstanceRef.id === text.instanceId)?.parentInstanceRef.id).toBe("instance.form");
+
+    // An older draft may already contain a current field in a Canvas slot.
+    const fieldInstance = field.value.instances.find((item) => item.instanceId === text.instanceId)!;
+    const legacyDraft: SystemComposerDraft = {
+      ...field.value,
+      instances: field.value.instances.map((item) =>
+        item === fieldInstance ? { ...item, selectedConfiguration: { label: "Saved answer", required: true } } : item),
+      placements: field.value.placements.map((edge) =>
+        edge.childInstanceRef.id === text.instanceId
+          ? { ...edge, parentInstanceRef: { kind: "asset-instance", id: normalizeAssetId("instance.shell") },
+              slotId: normalizeAssetSlotId("content"), order: 1 }
+          : edge),
+    };
+    const restored = reparentSystemComposerAsset(legacyDraft, {
+      instanceId: text.instanceId, parentInstanceId: "instance.form", slotId: "fields",
+    });
+    expect(restored.ok).toBe(true);
+    if (!restored.ok) return;
+    expect(restored.value.instances).toEqual(legacyDraft.instances);
+    expect(restored.value.placements).toEqual(field.value.placements);
+    expect(legacyDraft.placements.find((edge) => edge.childInstanceRef.id === text.instanceId)?.parentInstanceRef.id).toBe("instance.shell");
+
+    const put = (current: SystemComposerDraft, id: string, definition: string, parentInstanceId: string, slotId: string) =>
+      addSystemComposerAsset(current, { asset: formAsset(definition), compositionId: "composition.demo",
+        instanceId: id, parentInstanceId, slotId });
+    const inside = put(field.value, "instance.inside", "builtin.ui.section", "instance.form", "fields");
+    expect(inside.ok).toBe(true);
+    if (!inside.ok) return;
+    expect(put(inside.value, "instance.nested", "builtin.form.form", "instance.inside", "content").ok).toBe(false);
+    const outside = put(inside.value, "instance.outside", "builtin.ui.section", "instance.shell", "content");
+    expect(outside.ok).toBe(true);
+    if (!outside.ok) return;
+    const independent = put(outside.value, "instance.independent", "builtin.form.form", "instance.outside", "content");
+    expect(independent.ok).toBe(true);
+    if (!independent.ok) return;
+    expect(reparentSystemComposerAsset(independent.value, {
+      instanceId: "instance.outside", parentInstanceId: "instance.inside", slotId: "content",
+    }).ok).toBe(false);
+    const legacyGroup = { ...independent.value, instances: independent.value.instances.map((item) =>
+      item.instanceId === "instance.outside" ? { ...item, definitionRef: formAsset("builtin.form.field-group").definitionRef } : item) };
+    expect(reparentSystemComposerAsset(legacyGroup, {
+      instanceId: "instance.outside", parentInstanceId: "instance.form", slotId: "fields",
+    }).ok).toBe(false);
+  });
+
+  it("owns immutable snapshots while sharing only unchanged owned data", () => {
+    const caller = baseDraft();
+    const input = { ...caller, instances: caller.instances.map(instance => ({ ...instance, selectedConfiguration: { nested: { values: [false, 0, "", null] } } })) };
+    const initial = createSystemComposerDraftHistory(input);
+    (input.instances[0]!.selectedConfiguration.nested.values as any[]).push("external mutation");
+    expect((initial.present.instances[0]!.selectedConfiguration as any).nested.values).toEqual([false, 0, "", null]);
+    const changedConfiguration = { title: "Changed", nested: { value: "Before" } };
+    const next = commitSystemComposerDraft(initial, { ...initial.present, instances: initial.present.instances.map((instance, index) => index === 1 ? { ...instance, selectedConfiguration: changedConfiguration } : instance) });
+    changedConfiguration.nested.value = "After";
+    expect((next.present.instances[1]!.selectedConfiguration as any).nested.value).toBe("Before");
+    expect(next.present.instances[0]).toBe(initial.present.instances[0]);
+    expect(next.present.placements).toBe(initial.present.placements);
+    expect(Object.isFrozen(next)).toBe(true);
+    expect(Object.isFrozen(next.past)).toBe(true);
+    expect(Object.isFrozen(next.present.instances[1]!.selectedConfiguration)).toBe(true);
+    expect(Object.isFrozen((next.present.instances[1]!.selectedConfiguration as any).nested)).toBe(true);
+    const undone = undoSystemComposerDraft(next);
+    expect(undone.present).toBe(initial.present);
+    expect(redoSystemComposerDraft(undone).present).toBe(next.present);
+    expect(areSystemComposerDraftsEqual(undone.present, initial.present)).toBe(true);
+    expect(commitSystemComposerDraft(initial, JSON.parse(JSON.stringify(initial.present)))).toBe(initial);
+  });
+
+  it("does not trust shallow caller freezes or invoke executable snapshot fields", () => {
+    const raw = baseDraft();
+    const nested = { title: "Initial" };
+    const shallow = Object.freeze({ ...raw, instances: raw.instances.map(instance => ({ ...instance, selectedConfiguration: nested })) });
+    const history = createSystemComposerDraftHistory(shallow);
+    nested.title = "Outside";
+    expect(history.present.instances[0]!.selectedConfiguration?.title).toBe("Initial");
+    let calls = 0;
+    const hostile = Object.defineProperty({}, "title", { enumerable: true, get: () => { calls += 1; return "synthetic-private-marker"; } });
+    expect(() => createSystemComposerDraftHistory({ ...raw, instances: [{ ...raw.instances[0]!, selectedConfiguration: hostile }] })).toThrow("plain data fields");
+    const callback = { toJSON: () => { calls += 1; return "synthetic-private-marker"; } };
+    expect(() => createSystemComposerDraftHistory({ ...raw, instances: [{ ...raw.instances[0]!, selectedConfiguration: callback as any }] })).toThrow();
+    expect(calls).toBe(0);
+    expect(() => areSystemComposerDraftsEqual(raw, { ...raw, instances: [{ ...raw.instances[0]!, selectedConfiguration: hostile }] })).toThrow("plain data fields");
+    expect(calls).toBe(0);
+  });
+
+  it("owns externally supplied past and future entries before retaining them", () => {
+    const past = baseDraft(), present = baseDraft(), future = baseDraft();
+    const configured = (draft: SystemComposerDraft, title: string) => ({ ...draft, instances: draft.instances.map(instance => ({ ...instance, selectedConfiguration: { title } })) });
+    const old = configured(past, "Owned past"), now = configured(present, "Owned present"), later = configured(future, "Owned future");
+    const committed = commitSystemComposerDraft({ past: [old], present: now, future: [] }, configured(now, "New edit"));
+    (old.instances[0]!.selectedConfiguration as any).title = "Caller changed past";
+    expect(undoSystemComposerDraft(undoSystemComposerDraft(committed)).present.instances[0]!.selectedConfiguration?.title).toBe("Owned past");
+    const undone = undoSystemComposerDraft({ past: [old], present: now, future: [later] });
+    (later.instances[0]!.selectedConfiguration as any).title = "Caller changed future";
+    expect(redoSystemComposerDraft(redoSystemComposerDraft(undone)).present.instances[0]!.selectedConfiguration?.title).toBe("Owned future");
+    expect(Object.isFrozen(committed.past[0])).toBe(true);
+  });
+  it("moves down and up within a slot using the final requested sibling order", () => {
+    let draft = baseDraft();
+    for (const suffix of ["one", "two", "three"]) draft = add(draft, `instance.card.${suffix}`, "instance.shell", "content");
+    for (const [suffix, order, expected] of [
+      ["one", 1, ["two", "one", "three"]],
+      ["one", 2, ["two", "three", "one"]],
+      ["three", 0, ["three", "one", "two"]],
+      ["two", 1, ["one", "two", "three"]],
+    ] as const) {
+      const result = reparentSystemComposerAsset(draft, { instanceId: `instance.card.${suffix}`, parentInstanceId: "instance.shell", slotId: "content", order });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const siblings = result.value.placements.filter(item => item.slotId === "content").sort((a, b) => a.order - b.order);
+      expect(siblings.map(item => String(item.childInstanceRef.id))).toEqual(expected.map(id => `instance.card.${id}`));
+      expect(siblings.map(item => item.order)).toEqual([0, 1, 2]);
+      expect(result.value.instances).toBe(draft.instances);
+    }
+  });
   it("adds nested assets and builds the canonical placement hierarchy", () => {
     const result = addSystemComposerAsset(baseDraft(), {
       asset: asset("builtin.card", [{ slotId: "body" }]),
@@ -122,8 +261,8 @@ describe("System composer draft operations", () => {
     if (!moved.ok) return;
     expect(slotChildren(moved.value, "instance.shell", "content")).toEqual([
       "instance.card.middle",
-      "instance.card.one",
       "instance.card.two",
+      "instance.card.one",
     ]);
   });
 
@@ -410,3 +549,17 @@ function asset(
     previewAvailability: "trusted-declarative",
   };
 }
+
+
+it("preserves layout structure through subtree removal and undo/redo serialization", () => {
+  const structure = { schemaVersion: "system-builder-structure.v1" as const, profile: "interactive" as const,
+    layoutPresetRef: { kind: "asset-definition-version" as const, id: normalizeAssetId("builtin.layout.application.standard"), version: "2.0.0" } };
+  const before = add({ ...baseDraft(), structure }, "instance.card", "instance.shell", "content");
+  const removed = removeSystemComposerSubtree(before, "instance.card", new Set(["instance.root", "instance.shell"]));
+  expect(removed.ok).toBe(true); if (!removed.ok) return;
+  expect(removed.value.structure).toEqual(structure);
+  const committed = commitSystemComposerDraft(createSystemComposerDraftHistory(before), removed.value);
+  expect(undoSystemComposerDraft(committed).present.structure).toEqual(structure);
+  expect(redoSystemComposerDraft(undoSystemComposerDraft(committed)).present.structure).toEqual(structure);
+  expect(JSON.parse(JSON.stringify(removed.value)).structure).toEqual(structure);
+});

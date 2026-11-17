@@ -1,0 +1,824 @@
+# Functionality outcome qualification
+
+- Status: implementation procedure; controlled qualification pending
+- Owner: `functionality-optimization`, increment 4
+- Requirements: `functionality-qualification-crosswalk.json`
+- Verification: focused qualification tests and current overall control-plane work
+
+Run `node dev-tools/scripts/qualification/check-functionality-qualification.mjs
+--write` from the repository root. It reads canonical owner state and actual
+source, verifies complete controlled-criterion coverage and writes ignored
+`docs/tmp/functionality-qualification-assessment.json`. A successful assessment
+can report pending qualification; it never approves or completes a roadmap.
+Missing inputs, changed source, unsafe references and owner drift fail closed.
+Keep the review site's roadmap criteria pending until their actual evidence is
+available. Source and owner-state digests bind a report to its observed inputs;
+regenerate it after source or owner changes. Historical passes need current
+source and named environment qualification and are not silently transferred.
+
+## Available evidence and separate owners
+
+Local browse journeys cover packaged desktop and thin-client authoring with
+synthetic records; observer and lifecycle fixtures cover their stated failure
+conditions. The Context comparison records actual isolated native memory/timing
+with deterministic embeddings. These are useful local evidence and do not qualify
+representative hardware or model quality, or every automated accessibility requirement.
+The crosswalk lists existing harnesses for each owner; model/provider harnesses
+remain opt-in. Do not download a model or use credentials through this assessor.
+
+Data Management's guided-foundation, quality-review and exact-task human acceptance
+criteria are handled offline by the user and excluded from technical closure.
+Their original criteria, plans, evidence and prior approvals remain archived in
+owner state; no human test pass or hardware qualification is asserted. See
+`offline-human-acceptance-handoff.json` for the review of all open roadmaps. The
+active crosswalk retains eleven controlled technical or mixed criteria, and exact
+coverage against active owner criteria still fails closed on missing or stale maps.
+
+Asset experience, remaining Data Management and optional constrained JSON retain
+their technical qualification requirements. Security remediation retains pending
+native file-effect tests and separate work. Its restricted legacy Assets review
+requires a separately permitted reviewer; that human action does not prevent
+other approved agent work. The completed Publish lifecycle owns the retired active-source Run and Test draft through `retired-run-test-roadmap.json`; do not restore that superseded surface. This procedure grants none of those
+owners new authority. OCR remains unavailable; hardware availability alone
+cannot satisfy the advanced-capability criterion.
+
+## Agent-executable journeys and accessibility
+
+Human studies and manual acceptance for Functionality and Canvas are user-owned
+offline, outside technical closure. The original five-participant study and manual
+assistive-technology portions remain archived in owner state. Exact scope revisions
+supersede human instructions in original work packages, deliverables, verification
+and completed plans; those are historical approved intent. No human result is
+asserted. Current technical criteria govern qualification, and original failed or
+pending evidence remains unchanged.
+
+Use synthetic records to build useful multi-component systems from scratch on
+packaged desktop and thin client, validate/save/publish through supported paths,
+reopen exact saved structure and verify supported runtime behavior. Keep existing
+Data, Asset, Context and Model task journeys in their owning tests. Unsupported
+runtime/model/provider profiles stay pending. Zero critical data loss and authority
+confusion remain automated journey/security invariants; participant scoring is not
+an automated surrogate.
+
+Declare source/build, OS/browser, viewport/zoom and supported host profiles before
+qualification. Run actual automated keyboard traversal and activation, dialog
+open/close and focus return, loading/error/terminal status, accessible names/roles,
+320 CSS-pixel reflow, computed contrast, text independent of status color and
+reduced-motion assertions. Store sanitized DOM/semantic/visual results, exact
+assertions, failures and retries. Critical automated exceptions prevent
+qualification. The crosswalk links existing meaningful-system host harnesses as
+supporting coverage. Their current journey/axe results do not prove every contrast,
+non-color or reduced-motion obligation: missing exact assertions/profile coverage
+remain pending. Never relabel old passes under revised semantics.
+
+Asset experience, Data Management and constrained JSON now also have explicit legacy mixed-criterion amendments: human acceptance is archived offline, while the same technical IDs, controlled qualification and product approval controls remain. No participant or manual-operator environment remains an active prerequisite in the crosswalk. The crosswalk inventories these owners and does not require their
+qualification to pass merely to prove accurate ownership mapping.
+
+## Model and resource cohorts
+
+The separate [Standard-only protocol](standard-generation-qualification.md) uses
+verified historical selected algorithms over the identical current guarded
+runtime. It preserves the original numeric gates and reports actual remaining
+gaps in [versioned JSON](standard-generation-qualification.json); it never reruns
+offload recovery or transfers a historical/diagnostic pass.
+
+Use only separately authorized, already-installed fixed models. Declare model
+revision, task/corpus/held-out digest, seed, schema, metric and statistical
+tolerance before comparisons. Use existing nine-task training and preparation
+matrices where supported, with separately recorded CPU, accelerator,
+constrained-memory and constrained/unchecked JSON cohorts. Keep cold and warm
+results separate; record RAM/VRAM measurement method, hardware, dependency
+versions, elapsed time, invalid output, failures, retries and cleanup.
+
+Report accepted examples or accepted task outcomes per minute, not raw tokens
+alone. Retain every attempt. A candidate needs no statistically material quality
+regression under the predeclared task metric/tolerance and at least 20 percent
+better accepted-output throughput, or demonstrated compliance with the approved
+resource budget. Do not choose a tolerance after seeing results. Compare only
+matching cohorts; unavailable or skipped runs stay pending. Deterministic Context
+conformance and Python fixtures are not installed-model quality evidence.
+
+For current F4 closure, the later approved policy takes precedence over the
+original comparison rules above. Completed pinned Standard model quality is
+closed at30percent for0.5B and80percent for1.5B; do not repeat those accuracy
+checks. Resource qualification accepts either the original20percent throughput
+improvement or measured compliance with the approved per-profile budgets. See
+[accepted quality](model-software-quality-qualification.json) and the separate
+[Standard resource assessment](functionality-standard-resource-qualification.json).
+Keep original failed relative comparisons, unknown historical flags and denied
+attempts visible. A pre-load denial has no output-quality result. Measurements
+from different source reports stay separate and do not become a new matrix.
+
+The existing Standard harness identifies the measured algorithms and protocol;
+its presence in the crosswalk is an evidence route, not an instruction to rerun
+accepted accuracy. Training and deterministic Context fixtures belong to their
+own tasks. The two real Canvas browse specifications assert the F4 accessibility
+requirements; broader meaningful-system journeys provide additional coverage.
+Actual current host evidence must match the product and driver bytes. Before
+roadmap completion, verify that the committed candidate contains the tested
+dependencies, then obtain fresh overall and exact-target checks and separate
+review. An uncommitted-worktree pass alone does not qualify committed HEAD.
+
+### Task and model expectations
+
+Model size describes a resource/capability class, not a quality guarantee. Declare
+the task, use, precision/coverage targets and failure handling before opening fresh
+validation. Keep expectations separate from model-independent schema, grounding,
+isolation, review, injection and resource controls.
+
+| Model/use class | Realistic expectation and qualification limit |
+| --- | --- |
+| Small general-instruct models, including the pinned 0.5B model | Evaluate narrow tasks with explicit definitions and bounded outputs as review-required proposals. Report useful correct coverage, accepted precision, abstentions and repair cost; expect broader tasks to need more review or remain unsupported. Neither constrained syntax nor a development success implies broad reasoning, reliable automatic acceptance or a universal 95-percent accuracy claim. |
+| Larger or task-specialized models, including the approved 1.5B trial | Measure broader coverage against added load/RAM/VRAM cost on matching cohorts. Size alone does not fix errors; retained 23/24 observations apply to that synthetic task only. Keep unavailable CPU admission pending. |
+| Automatic or high-impact use | Parameter count grants no additional authority. Representative independent semantic/error and operational qualification would be required before changing the existing review or acceptance policy. This experiment changes neither policy. |
+
+The bounded 0.5B caption experiment uses twelve new development cases across three
+unrelated task configurations. Compare the exact current prechange caption with
+one generic clarification in both existing decoding modes and first/warm phases,
+using unchanged profile/settings and owned-child guards. Keep the candidate only
+if it preserves every paired correct case and improves correct accepted outcomes;
+a cost-only benefit must meet the existing 20-percent whole-delivery target across
+matching repeated groups. Otherwise withdraw it. These are development selection
+rules, not new product quality thresholds or unseen validation. Original exposed
+24-case regressions, strict quality/throughput gates and failed observations stay
+unchanged. Freeze any prospective task-specific validation targets and candidate
+before a separate case author supplies fresh validation. No domain answers,
+benchmark-specific heuristics or new few-shot input contract enter production.
+
+The completed caption-only GPU development comparison retained all baseline-correct
+cases. One distinct case improved in both first and warm phases; across the repeated
+observations, correct outcomes increased from 42/48 to 44/48, with 46 accepted in
+each arm. Both constrained arms correctly handled all twelve distinct clear cases
+in each phase. Two wrong accepted outcomes still remain in the candidate's unchecked
+observations. Twelve cases repeated across modes/phases are not 48 independent
+examples or a population accuracy estimate. The three-group median delivery ratios
+were 1.07582 unchecked and 1.01910 constrained, below 1.2; the constrained opaque-label
+pair was slower. These measurements support the predeclared development semantic
+alternative, not a 20-percent cost improvement or automatic acceptance.
+
+The unchanged CPU guard denied the first development child before inference:
+3543986384 bytes required against 1961914368 available after runtime initialization.
+The remaining CPU development is unexecuted/pending. The twelve completed GPU
+children recorded physical exit zero and runtime cleanup; neither supplies CPU
+compatibility. Retain the raw paired/token/resource reports and independent
+recomputation under ignored local evidence. Known-model regressions and future
+independent task-specific validation remain distinct from this development split.
+
+The subsequent exposed 24-case GPU compatibility run used one baseline/candidate
+pair per mode for each approved model. Against the original 442518c4 baseline,
+the 0.5B candidate improved 7 to 12 correct unchecked and 5 to 14 constrained in each
+phase, losing no previously correct case. Both still failed the absolute quality
+floor. This comparison includes existing allowed-label schema constraints and
+other earlier framework changes; it does not isolate the caption. The 1.5B
+unchecked pair retained 23/24, but constrained regressed 23 to 22/24 in both phases,
+losing one distinct correct case. The shared caption clarification was therefore
+withdrawn, restoring the original production wording. Preserve all eight native
+child reports, paired identities, cleanup results and original thresholds.
+One diagnostic pair per cohort is neither the full three-replicate qualification
+nor fresh independent validation; its process exit zero means measurement
+completed, not that quality passed. No new model-size threshold, automatic
+acceptance policy or CPU pass is inferred from these results.
+
+## Whole-host task qualification
+
+The representative controlled download matrix has passed on the declared
+packaged desktop and managed-server/thin-client profiles; see the final controlled
+qualification results below. This does not qualify every model or provider family.
+Record source/build, OS, runtime/dependency versions, transport,
+installed model revision, device, fixture digest and the physical worker identity
+in private operator evidence; retain only sanitized identity digests and counts
+in repository evidence. Use a disposable workspace and synthetic inputs. Never
+terminate unrelated processes or use a real user's data to inject failure.
+
+Use a representative actual-host matrix plus the current family-specific cleanup
+regressions: downloads exercise real API/IPC observation and physical owned-worker
+lifecycle; training, image and Context tests retain their distinct staging, power,
+output-finalization and cancellation paths. A supported-family claim requires its
+own evidence; a representative host check never asserts inference or every family.
+Run a successful task, leave its feature page while active, reopen it and verify
+exact task/result identity. Repeat with workspace navigation, transport disconnect/reconnect,
+explicit cancellation, an owned disposable worker failure and graceful host
+shutdown. Mark unsupported cancellation/families explicitly unavailable; do not
+admit currently denied route families merely to run this procedure. Record all
+attempts, task-status times, output finalizations and resource release times.
+Verify stale workspace responses cannot update the destination, terminal outputs
+finalize once, retries preserve authority and resources are released without an
+open page. Measure healthy-local progress and terminal visibility p95 against the
+approved 2 second target; distinguish transport outages from that denominator.
+Capture the fixture's fixed initial 10-percent API transition and its immutable
+timestamp before reload/navigation, then time its rendered value or a newer
+value. Include reload/recovery time; never replace a missed milestone with a
+later easier transition or retimestamp older UI progress from a newer API read.
+All thirty initial-progress and terminal delays must be finite and nonnegative;
+retain slow samples. Later 50-percent visibility proves updates occur, while
+focused live-observer tests retain the one-second subsequent-update assertion.
+The initial recovery metric does not independently time every later transition.
+Check actual worker exit, staging removal, subscriptions and power leases after
+each terminal/failure/shutdown case. Unreleased resources or ambiguous ownership
+fail the run; cancellation acknowledgment alone is insufficient.
+
+Owned-task reconciler, host shutdown and runtime supervisor tests are supporting
+failure-path fixtures. The Python training E2E runner exercises training only;
+none alone qualifies whole-host observation, physical cleanup or every family.
+
+The separate `playwright.managed-reference.config.ts` launcher uses actual
+PostgreSQL, OIDC/JOSE, organization membership, forced RLS and verified TLS. It
+requires a separately owned disposable database reference under ignored local
+storage, verifies its pinned image/labels and sole loopback port, creates a fresh
+database and nonowner runtime account without administrative privileges, and
+uses separate privileged migration/setup. Local CA trust is scoped to child
+processes; verification is never disabled or installed globally. The frontend is
+a controlled loopback development proxy, not production frontend qualification.
+Missing/invalid credentials, a nonmember and foreign organization are denied;
+an existing foreign workspace is unavailable under the primary context while a
+matched authorized summary succeeds. Credentials, keys and private diagnostics
+remain ignored, never in public reports or browser traces.
+
+The managed authoring journey explicitly selects Systems after workspace
+creation and requires its level-one heading and actual system creation form.
+Home has a Systems dashboard card, so a global heading match alone cannot prove
+route readiness. Preserve original failed runs and use a separate Playwright
+output directory per diagnostic or qualification cohort so a later run cannot
+replace its failure screenshot or DOM. A shortened diagnostic timeout supplies
+failure analysis only; qualification retains the declared default timeout and
+the complete authoring and automated accessibility checks.
+
+Set `MANAGED_REFERENCE_DATABASE` to that owned fixture's private-state reference.
+Use `MANAGED_REFERENCE_LARGE_FIXTURE=1` for the exact large summary/sparse catalog
+test, and `PYTHON_RUNTIME_QUALIFICATION_SCENARIO=observed-download` for fixed task
+tests. The failure cohort uses the finite `worker-failure-download` scenario: only
+the owned fixture exits, with code 23 after 1200 ms. It never kills a foreign
+process. `QUALIFICATION_TASK_DIAGNOSTIC=1` reduces task samples and explicitly
+cannot close qualification. Full task timings use thirty actual observed tasks;
+the transport/model marker contains no weights and never qualifies inference.
+Actual host shutdown requires acknowledgment, exit zero and physical worker exit;
+unexpected death or forced cleanup fails, and all owned cleanup is attempted.
+Owned-task and fault scenarios require at least one exact owned worker identity
+before zero remaining processes can qualify cleanup; browse-only runs may
+legitimately launch no worker.
+
+The desktop disconnect probe must observe actual `ECONNREFUSED` within its
+unchanged three-second window. Closing an already connected health probe can
+first produce `ECONNRESET`; that one demonstrated transient condition retries
+within the same window and never supplies positive evidence. Other errors fail.
+The report records actual refusal and the reset count, bounded by the polling
+window. Same-task IPC retention, eventual API/UI completion and acknowledged
+native cleanup remain separately required. Preserve original reset failures.
+
+Focused lifecycle qualification also drives registered training and dataset
+callbacks through failed, cancelled and failed/`task_timeout` results without
+external feature reads or cancel calls. It asserts real private staging removal,
+one lifecycle completion, released reconciliation ownership, retained workspace
+identity and zero model/output publication. These are synthetic registry tests;
+physical worker shutdown remains the separate host qualification above.
+Fake-clock observation tests enter capped idle/error backoff, then require an
+explicit scoped invalidation to read immediately without advancing time, while
+preserving single-flight, foreign-workspace denial and disposal.
+
+Reference UI tests measure navigation through exact rendered large-summary counts
+and Add/search through the first usable compatible page, with five warmups and
+thirty samples. The actual UI page size is 48; complete traversal must return the
+100 exact compatible definitions from 1000 sparse candidates without duplicates,
+skips or repeated continuations. The independent operation probes retain their
+original exact workloads and budgets. Partial/failed attempts are preserved;
+neither an empty picker nor a successful HTTP envelope qualifies the workload.
+Baseline host diagnostics exposed missing shared authored-asset composition and
+an existing notification left running after completion in another workspace,
+and an exited owned worker whose task stays unavailable instead of receiving an
+authoritative terminal disposition;
+these product findings require fixes and fresh complete runs before closure.
+
+## Installed Context embedding qualification
+
+`run_trained_context_qualification.py` implements the fixed trained MiniLM
+comparison. Before execution it verifies every inert model/tokenizer file against
+the official pinned revision hashes, refuses extra/pickle/redirected files, and
+disables network and pickle loading. It generates the actual bounded package from
+1000/10000/100000 prepared synthetic rows, with eight held-out queries and exactly
+five labeled relevant rows per query. The 100000-row cohort uses separately
+declared 128 dimensions to preserve the 128 MiB member ceiling; the others use 384.
+No quality threshold or package ceiling changes after seeing results. A separate
+1000-row ordinary generation trial omits placement and verifies actual default
+CPU execution; its package/evidence is preserved alongside common CUDA packages.
+
+The unchanged retrieval algorithm and candidate share the current fixed local
+embedding implementation for each matched CPU/CUDA pair. This qualifies the
+retrieval allocation optimization on real model/device cohorts; it does not claim
+the historical release already supported CUDA. Each timed query loads the trained
+model afresh. Five warmups, thirty measurements and three fresh-child memory runs
+include digest/materialization/validation, model load/inference, exact search and
+cleanup. Shared library/CUDA-context initialization is outside the measured
+boundary; OS cache warmth is uncontrolled. Actual embedding weight/input devices,
+runtime versions, recall, exact citations/order/scores, p95, 5 ms sampled incremental
+RSS and VRAM cleanup are retained. CUDA initialization includes a fixed tiny
+matrix multiplication before the readiness/RSS handshake. Its measured persistent
+BLAS-workspace allocation/reservation is reported as a runtime floor; after every
+cohort task-owned model/tensor memory must return to that floor. No cache settings
+or private allocator APIs are changed. See the [PyTorch CUDA semantics](https://docs.pytorch.org/docs/2.6/notes/cuda.html).
+The 4 GiB child ceiling is a test safety bound,
+not an approved generation resource budget. A third matched CPU cohort assigns
+each disposable child to its own unnamed Windows job with enforced 2 GiB process
+and job commit limits before model imports. Native readback verifies assignment,
+limits and peak commit; this is the declared constrained-memory profile, not
+a claim that polling alone enforces memory. Only owned children are restricted;
+no host setting, privilege or unrelated process changes. [Windows extended job limits](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_extended_limit_information)
+bound committed memory independently of the sampled RSS metric. Reduced invocations
+are diagnostic only and cannot report complete qualification. Failures remain in
+per-run JSON; bounded native stderr stays in ignored private diagnostics.
+
+Run with the pinned native Python environment and a separately verified isolated
+model acquisition:
+
+```text
+python -s -B dev-tools/scripts/qualification/run_trained_context_qualification.py --model-manifest .local-codex/model-qualification/minilm-<owned-uuid>/acquisition.json
+```
+
+This procedure is pending. Use a fixed authorized, already-installed embedding
+model/revision and a digest-identified synthetic corpus with predeclared query
+and relevant-citation labels. Declare chunking, dimensions, top-k, seeds, cold
+and warm cohorts, repeat count, precision and measurement method before running.
+Prepare separate unchanged-baseline and candidate packages through the real
+generation/application path with the same corpus/model settings when changing
+generation. For the current retrieval-only allocation delta, compare the two
+algorithms against one shared immutable package generated through the actual
+runtime path, with identical trained embedding execution for each pair. Do not use the
+deterministic synthetic embeddings or tiny random-model test as quality proof.
+
+On each named CPU, accelerator and enforced constrained-memory profile, execute the held-out
+queries through the supported Context operation. Record retrieval recall@5,
+exact citation identities, failures, retries, p95 latency and isolated incremental
+peak RSS, including package/model load and cleanup. The approved targets are
+recall@5 at least 0.90, absolute recall degradation at most 0.02, unchanged exact
+search/citation correctness, at least 25 percent lower incremental peak RSS on
+10000/100000 chunk fixtures and no more than 5 percent p95 latency regression.
+Keep workload dimensions and cold/warm results explicit. Preserve a rejected
+fixture that exceeds an existing resource limit; never enlarge a limit to get a
+pass. Denied/corrupt/wrong-workspace packages and cancellation must still fail
+safely. Keep model/package digests and aggregate metrics, not private text,
+vectors, paths or outputs, in evidence. Unavailable profiles remain pending.
+
+`run_context_efficiency_qualification.py` supplies the bounded deterministic
+allocation comparison; Context tests supply conformance and failure coverage.
+They support this procedure but do not measure installed-model retrieval quality.
+
+## Release decision
+
+After all implementation chunks are recorded, run the configured aggregate suite
+through a serial `overall` work item, applicable repository/build gates and real
+separate-invocation review. Preserve failed attempts and triage failures; a skip
+is not a pass. Link the exact current receipt and owner evidence before recording
+local completion. Every controlled criterion must pass before final roadmap
+completion. While required automated profiles, provider credentials or physical model
+environments are unavailable, technical qualification remains pending. Human
+acceptance is offline and does not block these technical roadmaps.
+
+Rollback withdraws an unqualified candidate and preserves evidence and stronger
+security controls. Never restore weaker authority or declare an unavailable check
+passed to meet a schedule.
+
+Historical aggregate attempts and corrections remain in the owner JSON and
+control-plane record store. Earlier fixture/test-root failures and six headless
+artifact-fixture failures were preserved, corrected and separately reviewed; those
+historical passes do not qualify later source. Find current aggregate evidence
+through the newest current-source work bound to this roadmap and `overall`, never
+through a hardcoded historical pass.
+
+The original-supplier dependency audit now passes with zero runtime and toolchain
+advisories after the approved official toolchain remediation. See
+`docs/security/security-local-controls-qualification.json` for the actual focused
+receipt/review and residual limits. This does not rewrite the existing failed
+`full-current-qualification` declaration or grant a new overall pass. Regenerate
+current source-bound qualification after later edits. The crosswalk inventories
+eleven controlled criteria; current outcomes live in each owning roadmap's JSON
+state. Neither this inventory, a metadata scope change nor the dependency audit
+silently promotes any criterion.
+# Reproduced task and custom-selection defects
+
+Reference qualification must verify scoped custom definitions through both list
+and detail, including foreign-workspace denial and complete sparse continuation.
+Task evidence includes terminal notification reconciliation after workspace return,
+confirmed owned-worker exit in both authoritative API and rendered UI, temporary
+transport uncertainty, cancellation and physical cleanup duration. Supporting
+one-sample diagnostics never supply the thirty-sample timing qualification.
+
+## Installed generation measurement
+
+`run_installed_generation_qualification.py --model-manifest <isolated acquisition>`
+uses the original `qwen05-float32` profile by default. The separately authorized
+`--model-profile qwen15-bfloat16` selects Qwen2.5-1.5B-Instruct revision
+`989aa7980e4cf806f80c7fef2b1adb7bc71aa306`, with native bfloat16 on both matched
+CPU/CUDA variants. Both profiles pin all eight inert file hashes and isolated
+cache identities. Unknown profiles, cross-profile acquisitions and effective
+precision mismatches fail before inference. The original 0.5B float32 plan and
+failed results remain preserved; a new profile never relabels them. The larger
+safe-weight file bound applies only to the explicitly selected 1.5B acquisition;
+production memory admission and all other test/resource/validation bounds remain
+unchanged. The harness performs no download, remote-code or pickle loading, and denies socket
+connections. The source-bound `installed_generation_holdout.json` freezes24new
+balanced synthetic classification cases, their oracle, prompt, actual sampling,
+per-case seeds, three fresh paired replicates and quality/throughput decisions.
+Development cases are excluded. Repeats are timing observations, never additional
+independent semantic cases or a population accuracy claim.
+
+This is the configured structured-layout classification worker function path;
+it does not qualify every preparation recipe, the default UI or whole-host model
+execution. Each CPU/CUDA and constrained/unchecked pair uses the verified unchanged selected
+baseline modules and common pinned inference runtime. First-batch load/inference,
+warm inference and one final unload are reported separately. The primary rate
+charges the whole child's cold load,48requests, failed/invalid attempts, repairs
+and cleanup. All cohorts must meet the predeclared absolute fixture floor and
+paired non-regression/cleanup gates; at least one positive-baseline matched
+generative cohort must demonstrate the20percent gain. Zero-baseline percentage
+gains remain undefined. Unchanged cohorts are reported without an improvement
+claim. Process RSS, actual tensor placement, CUDA allocated/reserved peaks and
+runtime floors, final cache state and observed native child exit accompany each
+run. The disposable6GiB/20minute safety ceilings are not product resource budgets.
+Private diagnostic logs and incremental failure evidence stay in ignored local
+run storage. Only actual complete passing results may qualify the parent roadmap.
+
+The first fixed 1.5B trial reproduced a regression in a candidate with experimental
+prompt field order (23/24 baseline versus 20/24 candidate correct per phase). That
+experiment was withdrawn in favor of the existing sorted canonical prompt
+presentation. Retain the failed/interrupted evidence and retest the same fixed
+cases and gates; development-set improvements never override a failed comparison.
+
+The completed GPU portions of the canonical-presentation follow-up preserved
+23/24 correct in both modes but median whole-delivery gains were only 2.9 percent
+unchecked and 5.3 percent constrained. CPU admission stayed unavailable. Retain
+this failed overall result.
+
+A separate compact-formatting trial passed84 installed grammar checks and28
+independent non-constant string checks, but its first matched constrained pair
+regressed from23/24 baseline correct to18/24 candidate correct in both phases.
+Both children completed cleanup and native exit. The remaining redundant repeats
+were interrupted only on the verified owned process tree; retain the partial
+parent report together with its interruption record. All three unchecked pairs
+preserved23/24 with a median whole-delivery ratio of1.00123. The empty whitespace
+override was withdrawn, restoring the original pinned backend default. This is
+a failed optimization experiment, not a model-quality qualification. CPU retry
+was still denied by the unchanged available-memory guard. Original quality,
+throughput and resource requirements remain active.
+
+The final host matrix on source
+`source.6b4990a4abba2c603460fb911e23c0c602c19be23ece09e5befb29bd39c9da1a`
+passed seven of eight groups, including all nine packaged desktop cases, all six
+thin-client cases, and each managed browse/performance/task/failure journey. The
+owned catalog workload failed its unchanged 200 ms budget at 205.704 ms p95;
+earlier passing observations remain historical. Source inspection found duplicate
+complete passive copying in each definition card/detail read. The correction
+combines bounded admission with private full-body authority matching on the owned
+copy. It retains all bounds, metadata controls, custom-row readability, optional
+validation, workspace isolation and pagination. Focused denial/alias tests and a
+fresh unchanged workload must pass; this component alone does not qualify a
+parent criterion or replace the required current-source host matrix.
+
+The first unchanged six-operation probe after the correction passed on
+`source.f459693377dd421f5d4a6b20ea54f510d6d0c217bf1c60e7ec161eb638e622f7`.
+Catalog p95 was 172.582 ms across the original five warmups and thirty samples;
+the other five operations also met their original budgets. This is a supporting
+observation, not a paired statistical improvement estimate or final host
+qualification. The earlier 205.704 ms failure remains preserved. The focused
+authority/facade suite passed all thirty tests; its initial copy-isolation test
+omitted the existing configuration-schema opt-in, then passed after requesting
+that option without changing production projection behavior.
+
+## Final controlled host and database results
+
+The subsequent frozen matrix on
+`source.e17e30d2c83ce4f62a0bda9f9d39f4bb3584a15f419b15ef1839a69dcd7f8ac7`
+passed all eight groups, including all nine packaged desktop and six thin-client
+cases and the four managed cohorts. Three useful mixed-component systems per
+editor host retained their exact saved structure and declared behavior. Actual
+automated keyboard, focus, reflow and scoped accessibility checks passed on the
+named profiles. The catalog p95 was 188.011 ms within 200 ms; all other fixed
+operation and reference-page budgets passed. The cold Canvas p95 was 6209.8462 ms
+within 15542.8 ms over thirty measured fresh profiles after five warmups. Retain
+the 15949.4652 ms maximum, the small Add p95 regression, earlier failures and
+the unresolved cause of the historical Foundation startup failure.
+
+The Canvas roadmap and functionality browse/task increments have actual
+criterion-specific verification and independent review. Their immutable local
+evidence packets retain the raw report bindings and scope limits. The combined
+suite remains 3953 passed, four skipped and zero failed; its skipped outcomes
+are not rewritten. Context, installed-model and remaining native/security
+qualification are separate.
+
+Both optional PostgreSQL cases were then executed separately, unchanged, against
+fresh databases in the existing isolated loopback fixture. Migration/transaction/
+health/revision conformance and physical runtime database/least-privilege isolation
+each passed, with ordinary child exit zero and no skip. The bounded operator
+verified exact fixture identity and exclusive access, kept credentials in memory
+and private child environments, and restored the exact baseline database, role
+and membership inventory using journaled object identities. Its actual result is
+under ignored `.local-codex/approved-controls/postgres-conformance-df19d477de93757f/`.
+This supplies neither deployment TLS nor native file/model/provider qualification.
+The separate run does not replace the four skipped aggregate events. Independent
+pre-execution review required safe pool errors, bounded waits, independent cleanup
+and owner/partial-pair checks; ten focused delta admission cases passed after
+retained test failures were corrected without weakening those controls.
+
+The trained Context harness admits a read-only native exit observer for the
+validated ready worker before authorizing Windows inference. A redirector's exit
+alone is insufficient. Returned evidence requires actual worker exit zero. An
+unconfirmed exit or blocked reader latches later launches and immediately aborts
+the matrix with its partial report and cleanup pending; confirm exact owned
+cleanup before attempting another invocation. Termination errors still permit
+independent exit confirmation. Termination remains limited to the originally
+spawned launcher tree. Memory/job limits, corpus, metrics and thresholds stay unchanged.
+Injected denial tests and a harmless native handshake fixture qualify this
+lifecycle behavior separately from the full trained-model matrix.
+
+## Completed trained Context comparison
+
+The full offline MiniLM comparison completed on
+`source.44132fa20f5f03ff971cc2641bbbbce23b1a4362c821bfc284c468f4ddb05542`.
+The original matrix, model, corpus, thirty measured queries after five warmups,
+three fresh memory children per arm, and thresholds were preserved. Source and
+model/package checks remained stable. The process returned failure because four
+cohorts missed the memory target; completed measurement is not product
+qualification.
+
+All nine cohorts retained recall at five of 1.0, the in-process comparison reported
+equal IDs/order/citations with zero score delta, and measured p95 latency improved.
+The 1,000-chunk cohorts passed their quality/control checks; the 25 percent RSS
+reduction requirement applies to the larger cohorts below. RSS is the median
+incremental process working-set peak across three fresh children per arm, including
+first lazy imports, fresh model load, validation, inference, search and cleanup.
+Negative reduction means increased memory.
+
+| Chunks | Profile | Baseline / candidate p95 (ms) | RSS reduction | Original gates |
+| --- | --- | --- | --- | --- |
+| 10,000 | CPU | 1470.17 / 361.44 | 1.96% | Failed: RSS |
+| 10,000 | CUDA | 1647.38 / 541.85 | -0.65% | Failed: RSS |
+| 10,000 | CPU, enforced 2 GiB | 1455.63 / 348.46 | 4.82% | Failed: RSS |
+| 100,000 | CPU | 5077.34 / 1068.20 | 50.70% | Passed |
+| 100,000 | CUDA | 5311.03 / 1233.43 | 15.37% | Failed: RSS |
+| 100,000 | CPU, enforced 2 GiB | 5084.30 / 1030.28 | 50.38% | Passed |
+
+The terminal report and per-query progress remain under ignored
+`.local-codex/trained-context/3483a5af86b747df8427e07a2f38a426/`. Reports retain
+sample timings, recalls, comparison digests, native exit and cleanup outcomes.
+Raw returned result sets are not retained, so an independent reviewer can
+recompute metrics and inspect the comparator but cannot replay the exact match
+comparison from persisted answers. Timing children retain numeric memory-profile
+readback; memory-child summaries retain exit and cleanup rather than that full
+readback. Enforcement before each successful return is also covered by the
+harness and focused tests. OS file-cache warmth remains uncontrolled.
+
+The Context runtime criterion remains failed, with the earlier interrupted run
+preserved. These results supply no generative-model CPU admission, installed-model
+quality/resource pass, native file-security qualification or human acceptance.
+Any subsequent diagnostic must retain the original gates and distinguish sampled
+stage RSS from allocation ownership and from this whole-query comparison.
+
+A separately reviewed two-child CPU10k diagnostic then used the identical source,
+fixed MiniLM and a verified copy of the original package. Each fresh child ran
+one synthetic query, retained recall 1.0, confirmed native exit zero and cleanup.
+Five inert admission tests passed, including rejection of preparation, broader
+arguments, a changed operator hash and a missing owned folder. Original full-run
+artifacts remain unchanged; the diagnostic is under ignored
+`.local-codex/trained-context/202ced330bf4454baa7a00c134730e3a/`.
+
+At 5 ms sampling, full-table-validation peak working set was 753.6 MB for the
+baseline and 598.0 MB for the candidate. The candidate's embedding stage,
+including first lazy imports, fresh load and unload, peaked at 744.2 MB.
+Whole-child parent observations were 754.0 and 751.3 MB respectively (decimal
+MB). In this observation the validation improvement moves the highest sampled
+stage to embedding, so a validation-only improvement need not deliver the same
+whole-query memory reduction. This does not identify individual allocations or
+prove a loader fix. Nested stages overlap, two samplers can observe different
+peaks, and instrumentation adds overhead. One query per arm supplies neither
+statistical qualification nor a replacement for the retained four RSS failures.
+
+## Optional low-memory evidence
+
+The user approved the Context criterion's existing environment-budget alternative
+on2026-10-22: prospective whole-query process RSS at most2GiB for each CPU/CUDA
+profile, and query peak allocated/reserved VRAM at most512MiB on the pinned
+MiniLM/current-host matrix. Retain recall, exact results, p95 latency, the enforced
+2GiB constrained-CPU profile and cleanup gates. Re-run all nine cohorts on final
+source before qualification. These limits do not change the retained25percent
+relative-reduction failures or constitute a current passing result.
+
+After the unchanged full trained Context command completes on final source, run
+`python dev-tools/scripts/qualification/assess_context_environment_budget.py
+--report .local-codex/trained-context/<run-id>/report.json
+--expected-source source.<digest>`. The assessor requires all nine cohorts,
+30 timing samples after5 warmups and three fresh memory children per arm. It
+replays recall and exact results from retained synthetic answers, verifies the
+named runtime/device and enforced2GiB job readbacks, and checks both arms against
+the explicit RSS/allocated/reserved budgets. The separate immutable assessment
+binds the original report bytes; original25percent statuses remain unchanged.
+Missing/duplicate schedules, wrong corpus scale/dimensions, foreign citations,
+invalid numeric/device observations and unconfirmed exit/cleanup fail assessment.
+
+The complete final-source rerun on2026-10-22 used
+`source.9ee729399a36010e870a48e76267310ba3ab82d856edf0fb2330c5a17bd5367a`.
+Its separate approved-budget assessment passed all nine cohorts. Both arms stayed
+within2GiB whole-query RSS and512MiB query allocated/reserved VRAM, retained
+recall1.0 and identical IDs/order/citations with zero score delta, and improved
+p95 latency. All required native exits, cleanup and enforced2GiB CPU readbacks
+passed. The largest observed RSS was2,021,883,904bytes; peak allocated/reserved
+query VRAM was101,245,952/111,149,056bytes. These are measurements on the declared
+pinned host/model, not universal allocation guarantees.
+
+| Chunks | Profile | Baseline / candidate p95 (ms) | Original RSS target | Approved budget |
+| --- | --- | --- | --- | --- |
+| 10,000 | CPU | 1529.45 /393.38 | Failed | Passed |
+| 10,000 | CUDA | 1710.14 /591.71 | Failed | Passed |
+| 10,000 | CPU, enforced2GiB | 1484.31 /423.86 | Failed | Passed |
+| 100,000 | CPU | 5069.76 /1070.54 | Passed | Passed |
+| 100,000 | CUDA | 5448.37 /1271.06 | Failed | Passed |
+| 100,000 | CPU, enforced2GiB | 5126.41 /1066.56 | Passed | Passed |
+
+All three1,000-chunk cohorts also passed. The terminal raw report retains the
+four relative-memory failures unchanged and now retains returned synthetic
+answers and full constrained-memory observations for independent replay. Its
+SHA-256 is`454b5b8b08a7b722e664279a0e9a0b23f71d375089ae55368cc3cebd1018be2a`;
+the separate assessment SHA-256 is
+`201c3a1e92175e4126fc955af498983e8080f304b37a49dfc899e0f1f400f615`.
+Both remain under ignored
+`.local-codex/trained-context/b4a4a67e441d45f2a74f256305dc0570/`.
+Current criterion-bound checks and independent review remain separate closure
+requirements. This Context result supplies no generative-model qualification.
+
+The approved optional offload roadmap uses the separate prospective protocol in
+`docs/operations/optional-low-memory-inference.md`. Preserve the original installed
+generation harness, immutable baseline hashes, failed Standard results and6GiB
+sampled abort policy. Optional cohorts compare the same final source in explicit
+Standard/offload modes, retain the original24-case oracle and declared precisions,
+and use a new4GiB sampled abort budget. A denied Standard CPU load supplies no
+paired quality/timing result. Empty-model placement and mocked supplier/UI tests
+are diagnostics/local evidence, not installed-model qualification.
+
+The approved-budget Context target has now completed exact-target qualification:
+receipt `59ee11cd1b8e1a41bd4b889ed4eaf016c18c07a0ba617af79f50ad9689ea1cdc`
+and separate accepted review
+`531b7366456af2f34ee94b34388c24177c07e1b7003e14bc848e2ff66e629630`
+were consumed by `increment-qualified`. All six Context criteria passed; the
+original four relative-memory failures remain in the raw report. This target
+completion does not qualify generation or replace final overall verification.
+
+The newer optional-generation attempts on source `d7d6026c2799` stopped without
+qualification. The 1.5B attempt retained CPU admission/forward failures and an
+incomplete constrained trial at the fixed deadline; retained shared offload
+staging then prevented the next child and the 0.5B attempt from reaching their
+ready handshake. Remaining CPU/CUDA repetitions are pending. See the exact
+reports and limits in `optional-low-memory-inference.md`; neither process absence
+nor a passing synthetic host journey supplies the missing model evidence.
+
+## Separate small-model prompt development
+
+A separately declared Standard-only development screen uses the already approved
+Qwen2.5-0.5B revision and six newly authored synthetic cases across library access,
+shipment storage and recycling. Both arms use current production source and differ
+only in configured task-objective wording. Each decoder mode retains identical
+schema, sample, instruction hierarchy, source quoting, float32 CUDA placement,
+sampling, seeds, repair limit and admission controls. Four serial children cover
+two wordings and two decoder modes, with first/warm repetitions of each case.
+The prospective diagnostic uses a4GiB sampled worker-RSS ceiling and1200-second
+child deadline; neither is a hard allocation guarantee or an amendment to the
+original qualification protocol. Standard creates no offload slot and supplies
+no authority over the retained unknown staging.
+
+Before model execution, characterize actual prompts and final validators without
+weights, and exercise early ready/run acknowledgement with actual native child
+exit observations for both success and failure. Independently review exact
+operator, cases and source bindings. The first model-free preparation attempt
+incorrectly omitted required fixed envelope fields from a synthetic valid response;
+the validator denied it. Only that diagnostic fixture was corrected, and the
+failed attempt remains retained. This was not a production validator failure.
+
+Report each unique case separately from timing repetitions, including wrong
+labels, abstentions/rejections, repairs and operational errors. Keep model load,
+first/warm inference, token observations, unload, sampled RSS and native exit
+evidence visible. Parent elapsed time includes launch, integrity checks, imports,
+CUDA initialization and exit. The narrower child delivery timer begins after
+common imports and CUDA-floor initialization and cannot represent full-child
+cost. Prompt/schema microtimings do not establish model or end-to-end speed.
+
+The predeclared wording-selection rule requires at least one newly correct case,
+no lost baseline-correct case in any matched mode/phase, and no operational,
+resource or cleanup failure. Otherwise retain the existing configuration. These
+six development cases cannot establish population accuracy, justify autonomous
+acceptance, or complete either generation criterion. A0.5B model may be useful
+for measured, narrow proposals with explicit labels and the existing dataset
+review/approval gate; schema validity alone cannot establish semantic correctness.
+Larger models likewise require their own measured utility and resource evidence.
+The original exposed qualification cases, strict targets, failed model attempts
+and pending optional profiles remain unchanged.
+
+The completed2026-10-22 development run retained all48 source requests and54
+generation attempts, including six repairs and12 invalid output attempts. First
+and warm results were identical within each configuration:
+
+| Task wording | Decoder | Correct per6 cases | Wrong labels | Abstained/rejected |
+| --- | --- | --- | --- | --- |
+| Current configured objective | Unchecked | 3 | 0 | 3 |
+| Current configured objective | Constrained | 3 | 2 | 1 |
+| Concise equivalent objective | Unchecked | 5 | 1 | 0 |
+| Concise equivalent objective | Constrained | 0 | 1 | 5 |
+
+The candidate gained two unchecked cases but lost three previously correct
+constrained cases in each phase, so the declared rule selects **retain current
+configuration**. No wording change was adopted. The constrained candidate's
+syntactically valid skips/wrong label demonstrate that JSON validity does not
+establish useful semantics, even on clear short inputs. These observations
+support narrow, explicitly reviewed proposals rather than a general accuracy
+claim for this model. They do not justify reducing the original qualification
+floor or changing the decoder after seeing results.
+
+All four actual native exits were zero and each model unload returned allocated
+and reserved CUDA memory to its observed common-runtime floor. Full parent
+durations were28.41/21.66seconds for the current unchecked/constrained arms and
+18.25/18.31seconds for the candidate arms. One serial run per arm, uncontrolled OS
+cache warmth and differing semantic delivery prevent a speedup claim. The report
+and separate replay assessment remain under ignored
+`.local-codex/standard-generation-development/8f9d977214f14430a4365dd53e0a56ee/`;
+the report SHA-256 is
+`0311c7033daf5a0f7be6649eb2b05028d3eaa4c8cfaf161f8b8a188db968722a`.
+The assessor replays correctness from the finite predicted label and exact case
+ID, rejects incomplete or inconsistent combinations, and independently enforces
+the no-lost-correct selection rule. Its12 no-model tests cover incorrect claimed
+correctness, missing/duplicate cohorts, invalid labels, lost cases, native failure,
+resource breach, operational failure and cleanup drift. Original failures and the
+unresolved offload owner remain unchanged; this development screen closes no
+formal model criterion.
+
+## Historical Standard-only model comparison
+
+The2026-10-22 [Standard-only execution](standard-generation-qualification.md)
+attempted all48 declared owned workers on the frozen current runtime without
+offload/staging operations or new downloads. Its [versioned results](standard-generation-qualification.json)
+retain23 complete measurements,15 memory denials and10 historical-algorithm
+contract failures. Every worker has confirmed native exit0 and observed model
+cleanup. These are local supporting results, not a parent or whole-host pass.
+
+The pinned1.5B BF16 CUDA cohorts score23of24 in every first/warm phase with zero
+lost baseline-correct cases, but median delivery ratios0.962711 unchecked and
+1.018119 constrained miss the unchanged1.20 target. All12 CPU attempts were
+denied. The0.5B Float32 candidate scores9of24 unchecked and12of24 constrained
+on CUDA,12of24 unchecked and10of24 constrained on CPU. Only two constrained CPU
+candidate repetitions completed; the last was denied. Its historical baseline
+has failed or denied cohorts, so no complete matched speedup is established.
+
+These are the original protocol's results, retained without rewriting failed
+relative comparisons or denied attempts. The later user-approved model-quality
+policy is recorded separately below. A denied attempt has no accuracy or model
+delivery measurement. The sampled4GiB worker ceiling is observed process usage,
+not a hard native quota or the available-RAM admission threshold.
+
+## Current model quality and memory-notification checks
+
+The [completed model-quality assessment](model-software-quality-qualification.json)
+uses the explicitly approved floors of30% for the0.5B model and80% for the1.5B
+model. It counts all requested cases in each completed phase. Earlier failures
+and denied runs remain historical evidence; this work does not repeat accuracy
+tests or reinstate the superseded23of24 target. Model quality, measured Standard
+resource budgets, actual host behavior and native/offload qualification are
+separate obligations.
+
+Current host checks use the existing finite synthetic Dataset Preparation worker
+on packaged desktop and thin client. Its fixed3.5GiB required and approximately
+3.26GiB available facts must produce exactly one notification-center record
+instructing the user to free at least243MiB of RAM, with the point-in-time caveat.
+Raw worker copy and inline duplicates must be absent. The journeys retain the
+selected profile and settings, retry, truthful running cancellation, ready-row
+review, explicit save, reopening, queued cancellation and retry. The two existing
+Canvas browse journeys refresh automated accessibility after source changes.
+
+Use the bounded `host-memory-fixture` checks and the existing serial Playwright
+host commands. Synthetic rows exercise real host plumbing without loading a
+model or acquiring an offload lease. Actual native termination, protected
+staging/accounting and model offload resource/lifecycle gaps retain their owning
+qualification; these checks cannot grant them a pass. Human acceptance is offline.
+
+The [current host assessment](current-host-memory-notification-qualification.json)
+records four passed actual journeys on one stable source: desktop/browser Canvas
+browse and desktop/browser memory-notification recovery. Both memory journeys
+verified one243MiB center record and no inline/raw duplicate, then completed the
+retry, cancellation, review, save and reopen paths. It retains both earlier failed
+test runs, exact report/source hashes and controlled-worker shutdown evidence.
+This is current synthetic-host support; owning and final roadmap qualification
+remain separate.
+
+## Measured Standard model resource budgets
+
+The [resource assessment](functionality-standard-resource-qualification.json)
+rehashes the existing indexed reports without rerunning inference. All21
+completed candidate cohorts met their original absolute budgets:600seconds for
+0.5B CPU delivery,1800seconds for1.5B CPU delivery, and300seconds for CUDA
+delivery. The declared sampled process-RSS ceiling is4GiB and CUDA reserved-memory
+budget is6GiB. Model-delivery timing excludes common imports, input verification,
+algorithm selection and CUDA initialization; launcher-to-confirmed-exit timing
+is retained separately.
+
+The reports retain14later and7earlier measurements as separate source cohorts.
+Eight denied attempts have no delivery/accuracy/resource result. The earlier
+larger-model CUDA relative ratios1.0265 and1.0715 missed the original1.20 target;
+the approved absolute-budget alternative does not rewrite those failures.
+Missing historical flags remain unknown, and invalid-output rates count all
+attempts including repairs. Structurally accepted outputs per minute are distinct
+from correct answers per minute. These measured budgets are neither native hard
+limits nor the3/3.5GiB available-RAM admission estimates, and they do not qualify
+actual optional offload or close the composite criterion by themselves.

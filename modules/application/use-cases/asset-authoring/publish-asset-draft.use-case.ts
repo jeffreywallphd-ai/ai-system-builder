@@ -1,3 +1,5 @@
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import { normalizeAuthoredAssetDraftRecord, normalizeAuthoredAssetRecord, normalizePublishAssetDraftCommand, normalizeAuthoredAssetId, type PublishAssetDraftCommand, type PublishAssetDraftResult } from "../../../contracts/asset-authoring";
 import type { AssetDraftRepositoryPort, AssetRevisionRepositoryPort, AuthoredAssetRepositoryPort } from "../../ports/asset-authoring";
 import { fail } from "./asset-authoring-use-case-results";
@@ -5,9 +7,11 @@ import { detectExpectedBaseRevisionConflict } from "./asset-authoring-conflict.s
 import { createPublishedRevisionFromDraft, normalizeGeneratedRevisionId } from "./asset-authoring-versioning.service";
 import { createEditedAuthoredAssetProvenance } from "./asset-authoring-provenance.service";
 const nowIso=()=>new Date().toISOString();
-export interface PublishAssetDraftUseCaseDependencies { assetDraftRepository: AssetDraftRepositoryPort; authoredAssetRepository: AuthoredAssetRepositoryPort; assetRevisionRepository: AssetRevisionRepositoryPort; now?:()=>string; generateAuthoredAssetId:()=>string; generateAssetRevisionId:()=>string; }
+export interface PublishAssetDraftUseCaseDependencies { workspaceAccess: WorkspaceAssetAccessPort; assetDraftRepository: AssetDraftRepositoryPort; authoredAssetRepository: AuthoredAssetRepositoryPort; assetRevisionRepository: AssetRevisionRepositoryPort; now?:()=>string; generateAuthoredAssetId:()=>string; generateAssetRevisionId:()=>string; }
 export class PublishAssetDraftUseCase { constructor(private readonly d:PublishAssetDraftUseCaseDependencies){}
 async execute(command:PublishAssetDraftCommand):Promise<PublishAssetDraftResult>{ let c; try{c=normalizePublishAssetDraftCommand(command);}catch{return fail("validation","Publish asset draft command is invalid.");}
+try {await requireWorkspaceAssetAccess(this.d.workspaceAccess, c.targetWorkspaceId, "asset-authoring.publish-asset-draft", "asset:write");} catch {return fail("unavailable", "Workspace asset operation is not authorized.");}
+
 let draft; try{draft=await this.d.assetDraftRepository.readAssetDraftRecord(c.targetWorkspaceId,c.draftId);}catch{return fail("unavailable","Unable to read asset draft record.");}
 if(!draft) return fail("not-found","Asset draft was not found."); if(draft.status!=="draft") return fail("conflict","Draft status is not publishable.");
 const conflict=detectExpectedBaseRevisionConflict(c.expectedBaseRevision,draft.baseAssetReference?.version); if(conflict) return fail("conflict",conflict.message);

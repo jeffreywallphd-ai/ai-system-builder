@@ -1,7 +1,10 @@
 import { createTransportOperation } from "../transport";
+import { readPythonRuntimeStartupDiagnosticsProperty, type PythonRuntimeStartupDiagnostics } from "../runtime";
 import {
   normalizeDatasetPreparationGenerationCapacitySnapshot,
+  normalizeDatasetPreparationMemoryMode,
   type DatasetPreparationGenerationCapacitySnapshot,
+  type DatasetPreparationMemoryMode,
 } from "../runtime";
 import { createIpcChannel, type IpcChannel, type IpcChannelValue } from "./ipc-channel";
 import { createIpcRequest, type IpcRequest } from "./ipc-request";
@@ -51,6 +54,7 @@ export interface DesktopPythonRuntimeLoadedModel {
   inferenceMode: "text2text" | "causal" | "chat" | "text-to-image";
   device?: "cpu" | "cuda" | "auto";
   torchDtype?: "auto" | "float16" | "bfloat16" | "float32";
+  memoryMode?: DatasetPreparationMemoryMode;
   localPath?: string;
 }
 
@@ -61,6 +65,7 @@ export interface DesktopSystemResourceUsage {
 }
 
 export interface DesktopPythonRuntimeStatusPayload {
+  startupDiagnostics?: PythonRuntimeStartupDiagnostics;
   supervisorStatus: DesktopPythonRuntimeSupervisorStatus;
   healthy: boolean;
   runtimeStatus: string;
@@ -137,6 +142,7 @@ function normalizeBoundary(
 function normalizeStatusPayload(
   payload: DesktopPythonRuntimeStatusPayload,
 ): DesktopPythonRuntimeStatusPayload {
+  const startupDiagnostics = readPythonRuntimeStartupDiagnosticsProperty(payload);
   const normalizedSystemResources = payload.systemResources
     ? {
       memoryUsagePercent: Number.isFinite(payload.systemResources.memoryUsagePercent) ? payload.systemResources.memoryUsagePercent : 0,
@@ -151,6 +157,7 @@ function normalizeStatusPayload(
 
   return {
     supervisorStatus: payload.supervisorStatus,
+    ...(startupDiagnostics ? { startupDiagnostics } : {}),
     healthy: payload.healthy,
     runtimeStatus: payload.runtimeStatus.trim(),
     capabilities: payload.capabilities.map((capability) => capability.trim()).filter((capability) => capability.length > 0),
@@ -165,6 +172,7 @@ function normalizeStatusPayload(
       inferenceMode: model.inferenceMode,
       device: model.device,
       torchDtype: model.torchDtype,
+      ...(model.memoryMode === undefined ? {} : { memoryMode: normalizeDatasetPreparationMemoryMode(model.memoryMode) }),
       localPath: model.localPath?.trim(),
     })),
     activeTaskCount: payload.activeTaskCount ?? 0,

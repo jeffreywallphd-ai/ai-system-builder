@@ -14,14 +14,15 @@ import { DatasetVersionFinalizationService } from "../../../application/services
 import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
-import { TaskType } from "../../../contracts/runtime";
 import { createPythonParquetDatasetReviewAdapter } from "../../../adapters/runtime/python";
 import { asyncLazyObject } from "./lazyProxy";
+import type { PythonRuntimeCapabilitiesResult } from "../../../contracts/runtime";
 
 export interface ComposeDesktopDatasetPreparationFeatureOptions {
   artifacts: any;
   runtime: any;
   getArtifactRemoteFeatures: () => Promise<any>;
+  readWorkerCapabilities?: () => Promise<PythonRuntimeCapabilitiesResult>;
   documents?: StructuredDocumentStore;
   workspaceRepository?: any;
   workspaceAuthorization?: any;
@@ -31,7 +32,6 @@ export interface ComposeDesktopDatasetPreparationFeatureOptions {
 export function composeDesktopDatasetPreparationFeature(
   options: ComposeDesktopDatasetPreparationFeatureOptions,
 ): any {
-  let disposed = false;
   const datasetVersionHasher = createSha256DatasetVersionHasher();
   const datasetVersionRepository = options.documents
     ? createStructuredDatasetVersionRepository(options.documents)
@@ -137,29 +137,10 @@ export function composeDesktopDatasetPreparationFeature(
       }
     : {};
   return {
-    dispose() {
-      disposed = true;
-    },
-    get disposed() {
-      return disposed;
-    },
-    async canDispose() {
-      try {
-        const active = await options.runtime.runtimeTaskRegistry.listTasks({
-          taskTypes: [TaskType.DATASET_PREPARATION],
-          statuses: ["queued", "running", "unknown"],
-        });
-        const activeTaskCount = active.tasks.length;
-        return activeTaskCount > 0
-          ? { blockedReason: "active-runtime-tasks", activeTaskCount }
-          : undefined;
-      } catch {
-        return { blockedReason: "active-task-status-unavailable" };
-      }
-    },
     prepareTrainingDatasetUseCase:
       new PrepareTrainingDatasetFromArtifactsUseCase({
         runtimeTaskRegistry: options.runtime.runtimeTaskRegistry,
+        taskReconciler: options.runtime.taskReconciler,
         storageBindings: options.artifacts.artifactBindings,
         storage: options.artifacts.storage,
         artifactRepoStorage: asyncLazyObject(
@@ -170,9 +151,11 @@ export function composeDesktopDatasetPreparationFeature(
         now: options.now,
         taskPowerLifecycle: options.runtime.taskPowerLifecycle,
         runtimeCapabilityGuard: options.runtime.runtimeCapabilityGuard,
+        readWorkerCapabilities: options.readWorkerCapabilities,
         datasetQualityPolicyProvider:
           createDefaultDatasetQualityPolicyProvider(),
         datasetVersioning,
+        sourceIntegrityHasher: datasetVersionHasher,
       }),
     ...datasetVersionUseCases,
   };

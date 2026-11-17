@@ -1,0 +1,149 @@
+# Headless Skills and UI Takeover Source Coverage
+
+- Status: implementation in progress. See the roadmap and review site for qualification status.
+- Roadmap: [Headless Skills and Revocable UI Takeover](../headless-skills-ui-takeover-implementation-roadmap.md)
+- Executable test paths, case names and host scope: [coverage JSON](headless-skills-ui-takeover-source-coverage.json)
+
+The approved order is desktop, then server and browser. This crosswalk summarizes
+the supplied design without publishing the private source document. Every
+invariant and acceptance scenario has an owning criterion. Server/browser
+parity repeats the applicable checks against the same server authority; it
+does not synchronize desktop and server data.
+
+The JSON record links all 18 invariants and 41 acceptance scenarios to current
+test files and named cases or fixture stages. Each link names its environment.
+The original test-owner wording remains in the record for history. The live
+Windows, Chrome and two-server results apply to their reviewed runs. The shared
+tests exercise races by controlling reply order and time. Their results apply
+to those controlled conditions. Where a scenario still needs evidence from a
+real host, the JSON record describes the missing test.
+
+The packaged Windows run `2026-11-13t20-36-57-540z-e399ba3f` passed on the
+authoring checkpoint in commit `a1894a3a1`. A separate MCP client paired,
+created and renamed a saved system, and saw an ordinary desktop save in the
+same feed. The test dropped the committed create reply, then retried with the
+same key and found one saved system. Restart preserved the original receipt.
+A later competing edit reached a clean Canvas, while a dirty Canvas kept its
+local values and original revision and refused to overwrite the newer save.
+
+On Windows x64 with 20 logical processors, 16 GiB RAM, Node 24.22.1 and
+Electron 42.11.18, the one-system fixture delivered 100 of 100 sequential
+edits. Timing began before dispatch: p50 was 841 ms, p95 was 858 ms, and
+the maximum was 865 ms. Reconnect and replay took 677 ms. The fixture used
+one outstanding mutation at a time and did not measure resource peaks or
+queue saturation. The earlier failed timing attempt remains in local history.
+This is scoped desktop authoring evidence. It does not qualify approved
+conversation execution, window takeover, or the managed server and browser.
+
+The managed Chrome and PostgreSQL run in commit `e1e8d8f60` showed a
+competing save in the Canvas, preserved an unsaved field, and reported
+the conflict in Notifications when the user tried to save. The newer
+saved revision stayed intact. This journey checked the dirty value.
+Undo and out-of-order refetch have their own focused tests.
+
+The run in commit `d1e928a22` dropped the reply to one committed create
+before the MCP client could receive it. Chrome showed the saved system.
+The test closed that client. An already connected client with the same
+registered identity repeated the same request key and received the original
+result. The scoped journal held one change for that request. The server
+restart and same-source host checks remain separate.
+
+A separate Chrome journey observed managed authorization before revoke.
+The user switched workspaces before the save committed. PostgreSQL then
+recorded one revision in the original workspace. Returning to that
+workspace showed the saved field and left the takeover panel closed.
+
+Another managed Chrome test held an older real list reply, rendered a
+newer saved name, and let the app read the old reply. The Manage table
+kept the newer name. Shared tests exercise dirty drafts and retired
+saved-state connections separately.
+
+The local managed host suspended the synthetic account while Chrome
+showed an active takeover. The browser returned control to the user,
+and the account could no longer read, write, or replay saved results.
+Restoring membership kept the earlier save and left the old lease
+closed. The test did not check signing in again after access returned.
+
+The real managed takeover popup sent one stale save. Chrome kept the
+unsaved value and sent no grant or readiness request. Manual controls
+returned when the request ended. The newer saved revision stayed intact.
+
+A separate managed browser test held an authorized response while the
+user revoked control. Chrome later read the complete response body and
+sent zero context publications. The pending read and a new read both
+returned no context. This run did not measure the timeout.
+
+The [matched Windows and Chrome report](headless-matched-host-qualification.json)
+records four packaged Windows tests and three separate Chrome runs on
+the same source. It includes sample counts, timing, queue and save
+outcomes. The report retains earlier failed fixture attempts and
+lists the checks outside the matched run.
+
+## Architectural invariants
+
+| Source | Owning increment | Criterion | Required assertion |
+| --- | --- | --- | --- |
+| INV-01 | headless-authoring-and-synchronization | same-host-and-finite-tool-boundary | same host incarnation; same resource/revision; no independent database or second host |
+| INV-02 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | backend read/mutation works with no lease; revocation does not invoke task cancellation; lease grant changes no backend permissions |
+| INV-03 | revocable-desktop-presentation | exact-window-acceptance-and-reservation | agent credential denied; exact interactive principal/window accepted; forged body identity ineffective |
+| INV-04 | revocable-desktop-presentation | exact-window-acceptance-and-reservation | wrong host/UI incarnation, session, scope or generation rejected; lease ID alone rejected |
+| INV-05 | revocable-desktop-presentation | exact-window-acceptance-and-reservation | parallel accepts have one reservation winner; awaiting-ready reservation blocks silent displacement |
+| INV-06 | revocable-desktop-presentation | immediate-local-revocation-and-exact-retry | gate/fence/control state changes before deferred transport settles; host-unreachable path remains manual |
+| INV-07 | revocable-desktop-presentation | presentation-effect-fencing | held prepare/read/navigation/timer/animation effects suppressed; abort failure is harmless; new lease cannot consume old queue |
+| INV-08 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | same running handle completes; chat connection/status usable; new authorized backend command succeeds |
+| INV-09 | headless-authoring-and-synchronization | committed-change-delivery | lists/tasks update from saved state; route/focus/selection unchanged by update |
+| INV-10 | revocable-desktop-presentation | context-minimization-and-revoke-fence | no producer starts after fence; held producer publishes zero fresh context; queued-unsent discarded; already transmitted bytes explicitly outside guarantee |
+| INV-11 | revocable-desktop-presentation | immediate-local-revocation-and-exact-retry | reconnect/heartbeat/retry/replay cannot revive; new request and click create new authority |
+| INV-12 | revocable-desktop-presentation | immediate-local-revocation-and-exact-retry | attempt plus captured local fence rejects late grant; old immutable revoke target does not end new lease |
+| INV-13 | headless-authoring-and-synchronization | draft-base-and-refetch-ownership | new list metadata cannot update draft base; undo/draft preserved; stale write returns conflict |
+| INV-14 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | human workspace switch changes no agent task target; missing workspace fails closed |
+| INV-15 | headless-authoring-and-synchronization | portable-skill-and-result-contract | saved mutation stays succeeded when reveal detached; no business retry for presentation failure |
+| INV-16 | revocable-desktop-presentation | serial-delivery-and-independent-deduplication | stable principal/client receipt survives reconnect; command dedup scoped to lease/generation; same ID changed payload denied |
+| INV-17 | revocable-desktop-presentation | security-ui-control-reviewed | same denial before/after lease; confirmation description is not authorization; routine skill lacks privileged grants |
+| INV-18 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | new UI incarnation rejects old traffic; host restart invalidates old leases; liveness loss/expiry returns manual |
+
+## Acceptance scenarios
+
+| Source | Owning increment | Criterion | Required assertion |
+| --- | --- | --- | --- |
+| AT-01 | headless-authoring-and-synchronization | same-host-and-finite-tool-boundary | read succeeds; no attachment/context opened |
+| AT-02 | headless-authoring-and-synchronization | revision-safe-semantic-authoring | one authoritative saved result returned; UI absence is allowed |
+| AT-03 | revocable-desktop-presentation | exact-window-acceptance-and-reservation | presentation rejected; fresh context denied |
+| AT-04 | revocable-desktop-presentation | exact-window-acceptance-and-reservation | agent credential denied before reservation mutation |
+| AT-05 | revocable-desktop-presentation | exact-window-acceptance-and-reservation | exact window/workspace activated only after ready; automated product Accept click |
+| AT-06 | revocable-desktop-presentation | exact-window-acceptance-and-reservation | active/activating controller retained; no silent displacement |
+| AT-07 | revocable-desktop-presentation | immediate-local-revocation-and-exact-retry | manual controls before acknowledgment; no confirmation required |
+| AT-08 | revocable-desktop-presentation | immediate-local-revocation-and-exact-retry | local gate stays closed; exact target retained for retry; human actions work |
+| AT-09 | revocable-desktop-presentation | immediate-local-revocation-and-exact-retry | cancel-before-grant and grant-before-cancel permutations; late grant cannot activate |
+| AT-10 | revocable-desktop-presentation | immediate-local-revocation-and-exact-retry | terminal attempt/unknown old target rejected; no recreated lease |
+| AT-11 | revocable-desktop-presentation | immediate-local-revocation-and-exact-retry | new generation remains active; old target receives terminal/stale result |
+| AT-12 | revocable-desktop-presentation | presentation-effect-fencing | captured local fence fails at final effect commit; no route/focus/selection change |
+| AT-13 | revocable-desktop-presentation | presentation-effect-fencing | preview does not open or steal focus; backend result remains available |
+| AT-14 | revocable-desktop-presentation | presentation-effect-fencing | generation guard suppresses effect even when cancellation double does not abort |
+| AT-15 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | saved revision commits; result reports detached presentation; no forced reveal |
+| AT-16 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | same authoritative task handle continues; chat status remains readable; task cancellation not called |
+| AT-17 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | current-authority permitted command succeeds; lease is not required |
+| AT-18 | revocable-desktop-presentation | context-minimization-and-revoke-fence | new collection and publication denied; independent backend read unchanged |
+| AT-19 | headless-authoring-and-synchronization | committed-change-delivery | normal data updates; no implicit focus/route/selection/preview |
+| AT-20 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | agent work remains scoped to original explicit workspace; human selection retained |
+| AT-21 | headless-authoring-and-synchronization | draft-base-and-refetch-ownership | exact dirty values and undo preserved; original record revision/revision ID retained; new saved revision indicated |
+| AT-22 | headless-authoring-and-synchronization | draft-base-and-refetch-ownership | expected original revision causes conflict; neither draft nor other writer overwritten |
+| AT-23 | revocable-desktop-presentation | dirty-handoff-and-reachable-controls | manual state retained; no ready/lease gate; draft preserved |
+| AT-24 | headless-authoring-and-synchronization | durable-retries-and-current-authority | same result identity; one logical create; restart persistence where claimed |
+| AT-25 | headless-authoring-and-synchronization | durable-retries-and-current-authority | fingerprint mismatch rejected; no second effect or result disclosure |
+| AT-26 | revocable-desktop-presentation | serial-delivery-and-independent-deduplication | same command no repeat; payload mismatch denied; serial gap replay bounded; unrecoverable gap detaches |
+| AT-27 | revocable-desktop-presentation | serial-delivery-and-independent-deduplication | old binding/generation refused; no replay into new lease |
+| AT-28 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | new UI/host incarnation starts manual; old grant/readiness/queue rejected; saved data retained |
+| AT-29 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | manual controls restored; heartbeat cannot revive ended lease; backend task lifecycle unchanged |
+| AT-30 | revocable-desktop-presentation | backend-continuity-and-lifecycle-isolation | only exact lease ends; other controller/window unaffected |
+| AT-31 | revocable-desktop-presentation | security-ui-control-reviewed | cross-org/workspace/window denied; no protected payload or identity leak |
+| AT-32 | headless-authoring-and-synchronization | committed-change-delivery | valid cursor replays; expired/invalid/gapped cursor resyncs; current authorization applied |
+| AT-33 | server-browser-and-delivery-qualification | postgres-atomicity-and-worker-delivery | committed outbox survives; dispatch resumes to subscribers on both workers; consumer deduplication tolerates repeats |
+| AT-34 | headless-authoring-and-synchronization | portable-skill-and-result-contract | business success + failed/detached presentation reported separately; mutation call count remains one |
+| AT-35 | server-browser-and-delivery-qualification | security-managed-parity-reviewed | new reads/writes/replay/receipt access denied; attachment ends; in-flight work uses existing policy |
+| AT-36 | revocable-desktop-presentation | dirty-handoff-and-reachable-controls | keyboard-visible shell revoke remains reachable; click executes without confirmation; manual controls/focus restored |
+| AT-37 | headless-authoring-and-synchronization | draft-base-and-refetch-ownership | no revision regression; old workspace/subscription ignored; dirty base unchanged |
+| AT-38 | revocable-desktop-presentation | exact-window-acceptance-and-reservation | old ready cannot activate/displace current reservation; exact local attempt/fence also required |
+| AT-39 | revocable-desktop-presentation | context-minimization-and-revoke-fence | held result publishes zero new values; pretransmitted bytes explicitly not recalled; host queued values discarded once revoke processed |
+| AT-40 | headless-authoring-and-synchronization | durable-retries-and-current-authority | stable tenant/principal/client namespace deduplicates; new chat-session ID does not duplicate; current access rechecked before result |
+| AT-41 | revocable-desktop-presentation | serial-delivery-and-independent-deduplication | old command generation invalidated before advancing; same valid lease cannot authorize obsolete callback; later presentation retained |

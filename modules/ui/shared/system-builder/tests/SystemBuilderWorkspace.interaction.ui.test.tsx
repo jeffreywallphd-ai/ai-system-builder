@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AssetInstance } from "../../../../contracts/asset";
+import { normalizeAssetId, normalizeAssetSlotId, type AssetInstance } from "../../../../contracts/asset";
+import { createWorkspaceId } from "../../../../contracts/workspace";
+import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
+import { readSystemFormAction, SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY, systemBuilderFailure, systemBuilderSuccess } from "../../../../contracts/system-builder";
 import type {
+  PublishedSystemForm,
   SystemBuilderRecord,
   SystemBuilderComposerAsset,
   SystemBuilderRevision,
@@ -18,6 +22,14 @@ import {
   type SystemBuilderClient,
 } from "../SystemBuilderWorkspace";
 import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
+import { readFormActionOptions, SystemFormActionEditor } from "../SystemFormActionEditor";
+import { SystemFormJourney } from "../SystemFormPreview";
+import { SystemManagementWorkspace } from "../SystemManagementWorkspace";
+import { SystemPublishedFormDialog } from "../SystemPublishedFormDialog";
+import type { SystemPublishedFormClient } from "../SystemPublishedFormClient";
+import { readUiControlAttempt, type UiControlRequestView } from "../../../../contracts/headless";
+import { WindowTakeoverControls, WindowTakeoverProvider, useWindowTakeover } from "../../takeover/WindowTakeoverControls";
+import { createWindowTakeoverController, type DraftHandoff } from "../../takeover/windowTakeoverController";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -35,6 +47,819 @@ afterEach(() => {
 });
 
 describe("SystemBuilderWorkspace UI preview", () => {
+  it("submits a published form only after valid answers and reuses the same request on retry", async () => {
+    const form: PublishedSystemForm = {
+      id: "survey", title: "Intake survey",
+      steps: [{ id: "contact", label: "Contact details", conditions: [], defaultDestinationId: "survey",
+        fields: [{ id: "email", label: "Contact", helpText: "", kind: "text", dateKind: "date", required: true, options: [] }] }],
+    };
+    const close = vi.fn();
+    const list = vi.fn(async () => systemBuilderSuccess([form]));
+    const submit = vi.fn<SystemPublishedFormClient["submit"]>()
+      .mockRejectedValueOnce(new Error("Connection lost"))
+      .mockResolvedValueOnce(systemBuilderSuccess({ status: "pending", receiptId: "safe-receipt" }))
+      .mockResolvedValueOnce(systemBuilderSuccess({ status: "already-recorded", receiptId: "safe-receipt" }));
+    const client = { list, submit };
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<SystemPublishedFormDialog workspaceId="workspace-a" releaseId="release-a" client={client} onClose={close} />));
+    const dialog = () => document.querySelector('[role="dialog"]')!;
+    const click = (name: string) => act(async () => button(dialog(), name).click());
+    expect(list).toHaveBeenCalledWith({ workspaceId: "workspace-a", releaseId: "release-a" });
+    await click("Submit form");
+    expect(dialog().textContent).toContain("Enter an answer.");
+    expect(submit).not.toHaveBeenCalled();
+    const input = dialog().querySelector<HTMLInputElement>("input")!;
+    expect(document.activeElement).toBe(input);
+    await act(async () => setInputValue(input, "Synthetic contact"));
+    await click("Submit form");
+    expect(dialog().textContent).toContain("The host did not confirm your submission.");
+    const first = submit.mock.calls[0]![0];
+    expect(first).toEqual({ workspaceId: "workspace-a", releaseId: "release-a", formId: "survey",
+      submissionId: expect.any(String), answers: { email: "Synthetic contact" } });
+    await click("Retry submission");
+    expect(dialog().textContent).toContain("Your submission is still pending.");
+    await click("Retry submission");
+    expect(submit.mock.calls.map(([request]) => request)).toEqual([first, first, first]);
+    expect(dialog().textContent).toContain("Your form was submitted.");
+    expect(document.activeElement?.textContent).toBe("Your form was submitted.");
+    expect(dialog().textContent).not.toContain("Synthetic contact");
+  });
+
+  it("clears a previous release and rejects malformed form data before rendering controls", async () => {
+    const older: PublishedSystemForm = {
+      id: "old", title: "Previous form",
+      steps: [{ id: "start", label: "Page 1", fields: [], conditions: [], defaultDestinationId: "old" }],
+    };
+    const current: PublishedSystemForm = { ...older, id: "current", title: "Current form",
+      steps: [{ id: "start", label: "Page 1", fields: [], conditions: [], defaultDestinationId: "current" }] };
+    const close = vi.fn();
+    const submit = vi.fn<SystemPublishedFormClient["submit"]>();
+    const list = vi.fn<SystemPublishedFormClient["list"]>()
+      .mockResolvedValueOnce(systemBuilderSuccess([older]))
+      .mockResolvedValueOnce(systemBuilderSuccess([{ ...current, steps: [{ ...current.steps[0]!, fields: [null] }] } as unknown as PublishedSystemForm]))
+      .mockResolvedValueOnce(systemBuilderSuccess([{ ...current, steps: [{ ...current.steps[0]!, defaultDestinationId: "start" }] }]))
+      .mockResolvedValueOnce(systemBuilderSuccess([{ ...current, steps: [{ ...current.steps[0]!, fields: [
+        { id: "score", label: "Score", helpText: "", kind: "number", dateKind: "date", required: true, options: [], min: 10, max: 1 },
+      ] }] }]))
+      .mockResolvedValueOnce(systemBuilderSuccess([current]));
+    const client = { list, submit };
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const open = (workspaceId: string, releaseId: string) => act(async () => root!.render(
+      <SystemPublishedFormDialog workspaceId={workspaceId} releaseId={releaseId} client={client} onClose={close} />,
+    ));
+    const dialog = () => document.querySelector('[role="dialog"]')!;
+    await open("workspace-a", "release-a");
+    expect(dialog().textContent).toContain("Previous form");
+    await open("workspace-b", "release-b");
+    expect(dialog().textContent).not.toContain("Previous form");
+    expect(dialog().textContent).toContain("Could not open forms for this published build.");
+    expect(dialog().querySelector("form")).toBeNull();
+    await act(async () => button(dialog(), "Try again").click());
+    expect(dialog().querySelector("form")).toBeNull();
+    await act(async () => button(dialog(), "Try again").click());
+    expect(dialog().querySelector("form")).toBeNull();
+    await act(async () => button(dialog(), "Try again").click());
+    expect(dialog().textContent).toContain("Current form");
+    await act(async () => dialog().querySelector<HTMLButtonElement>('button[aria-label="Close published forms"]')!.click());
+    expect(close).toHaveBeenCalledOnce();
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("keeps oversized answers editable and allows closing after sending", async () => {
+    const form: PublishedSystemForm = { id: "large", title: "Long answers", steps: [{ id: "start", label: "Page 1",
+      conditions: [], defaultDestinationId: "large", fields: Array.from({ length: 9 }, (_, index) => ({
+        id: `response-${index}`, label: `Answer ${index}`, helpText: "", kind: "text", dateKind: "date",
+        required: true, options: [], min: 0, max: 4000,
+      })) }] };
+    const list = vi.fn(async () => systemBuilderSuccess([form]));
+    const submit = vi.fn<SystemPublishedFormClient["submit"]>().mockReturnValue(new Promise(() => {}));
+    const close = vi.fn();
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<SystemPublishedFormDialog workspaceId="workspace-a" releaseId="release-a"
+      client={{ list, submit }} onClose={close} />));
+    const dialog = () => document.querySelector('[role="dialog"]')!;
+    const fields = [...dialog().querySelectorAll<HTMLInputElement>("input")];
+    await act(async () => fields.forEach((field) => setInputValue(field, "a".repeat(3700))));
+    await act(async () => button(dialog(), "Submit form").click());
+    expect(dialog().textContent).toContain("Shorten your answers to 32,768 characters total");
+    expect(submit).not.toHaveBeenCalled();
+    expect(fields[0]?.value.length).toBe(3700);
+    await act(async () => setInputValue(fields[0]!, "a".repeat(3168)));
+    await act(async () => button(dialog(), "Submit form").click());
+    expect(submit).toHaveBeenCalledOnce();
+    expect(dialog().textContent).toContain("Closing it does not stop a submission already sent.");
+    await act(async () => dialog().querySelector<HTMLButtonElement>('button[aria-label="Close published forms"]')!.click());
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("keeps radio labels and required-error focus distinct from similar field IDs", async () => {
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const finish = vi.fn();
+    await act(async () => root!.render(<SystemFormJourney finalLabel="Submit answers" onFinish={finish}
+      form={{ id: "survey", title: "Survey", steps: [{ id: "step", label: "Choices", conditions: [], defaultDestinationId: "survey", fields: [
+        { id: "priority", label: "Priority", helpText: "", kind: "choice", choicePresentation: "radio", required: true,
+          dateKind: "date", options: [{ label: "Low", value: "low" }, { label: "High", value: "high" }] },
+        { id: "priority-option-1", label: "Explain priority", helpText: "A short reason", kind: "text", required: true,
+          dateKind: "date", options: [] },
+      ] }] }} />));
+    const controls = [...container.querySelectorAll<HTMLInputElement>("input")];
+    expect(new Set(controls.map((item) => item.id)).size).toBe(3);
+    const first = controls[0]!;
+    const second = controls[1]!;
+    const explanation = controls[2]!;
+    expect(explanation.labels?.[0]?.textContent).toBe("Explain priority (required)");
+    const submit = () => act(async () => button(container!, "Submit answers").click());
+    await submit();
+    expect(document.activeElement).toBe(first);
+    await act(async () => second.click());
+    await submit();
+    expect(document.activeElement).toBe(explanation);
+    expect(finish).not.toHaveBeenCalled();
+  });
+
+  it("does not offer submission mapping for an ambiguous Create Record setup", async () => {
+    const operation = (id: string, entity: string) => ({
+      ...instance(id, "builtin.data.create-operation", id, { entity }),
+      definitionRef: composerDefinition("builtin.data.create-operation", "Create Record", [], false, "3.0.0").definitionRef,
+    });
+    const recordField = (name: string) => ({
+      ...instance(`fixture.${name}`, "builtin.data.field", name, { name, type: "text" }),
+      definitionRef: composerDefinition("builtin.data.field", "Data Field", [], false, "3.0.0").definitionRef,
+    });
+    expect(readFormActionOptions([recordField("reason"), recordField("constructor")]).recordFields.map((field) => field.name))
+      .toEqual(["reason"]);
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const onSave = vi.fn();
+    const render = (instances: readonly AssetInstance[]) => act(async () => root!.render(
+      <SystemFormActionEditor formId="fixture.form" fields={[]} instances={instances} onSave={onSave} onRemove={() => {}} />,
+    ));
+    await render([operation("fixture.valid", "Request"), operation("fixture.malformed", "Invalid / entity")]);
+    expect(container.textContent).toContain("Keep one Create Record operation");
+    expect(container.querySelector("select")).toBeNull();
+    await render([operation("fixture.malformed", "Invalid / entity")]);
+    expect(container.textContent).toContain("Configure a valid record entity");
+    expect(container.querySelector("select")).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("edits the exact selected form when two forms share a Canvas page", async () => {
+    const page = {
+      ...composerDefinition("builtin.layout.page.single", "Single content", ["content"], false, "3.0.0"),
+      layoutRole: "page-layout" as const,
+      assetType: "page" as const,
+    };
+    const baseShell = layoutDefinition("builtin.layout.application.standard", "Standard", ["content"], "3.0.0");
+    const shell = {
+      ...baseShell,
+      slots: baseShell.slots.map((slot) => ({ ...slot, cardinality: { minItems: 1, maxItems: 8 }, acceptedDefinitionRefs: [page.definitionRef] })),
+    };
+    const rootDefinition = composerDefinition("builtin.system.system", "System root", ["application-shell"], false, "3.0.0");
+    const formContainer = (id: string, name: string, slots = ["fields"]) => {
+      const definition = composerDefinition(id, name, slots, true, "3.0.0");
+      return { ...definition, slots: definition.slots.map((slot) => ({
+        ...slot, cardinality: { minItems: 0, maxItems: 24 },
+      })) };
+    };
+    const form = formContainer("builtin.form.form", "Form", ["fields", "actions", "messages"]);
+    const group = formContainer("builtin.form.field-group", "Field Group");
+    const resourceBrowser = composerDefinition("builtin.shell.resource-browser", "Resource browser", ["states"], false, "3.0.0");
+    const textField = {
+      ...composerDefinition("builtin.form.text-field", "Text Field", [], false, "3.0.0"),
+      configurationSchema: { fields: [
+        { fieldId: "label", valueKind: "string", label: "Label", required: false },
+        { fieldId: "required", valueKind: "boolean", label: "Required", required: false },
+      ] } as SystemBuilderComposerAsset["configurationSchema"],
+    };
+    const catalog = [
+      rootDefinition, shell, page, form, group, textField, resourceBrowser,
+      { ...composerDefinition("builtin.form.submit-action", "Submit button", [], false, "3.0.0"),
+        configurationSchema: { fields: [
+          { fieldId: "label", valueKind: "string", label: "Button label", required: false, defaultValue: "Submit" },
+          { fieldId: "confirmationRequired", valueKind: "boolean", label: "Confirmation required", required: false, defaultValue: false },
+        ] } as SystemBuilderComposerAsset["configurationSchema"] },
+      { ...composerDefinition("builtin.form.validation-message", "Validation message", [], false, "3.0.0"),
+        configurationSchema: { fields: [{ fieldId: "message", valueKind: "string", label: "Message", required: false }] } as SystemBuilderComposerAsset["configurationSchema"] },
+      composerDefinition("builtin.form.radio-group", "Radio buttons", [], false, "3.0.0"),
+      composerDefinition("builtin.form.checkbox-field", "Checkbox", [], false, "3.0.0"),
+      {
+        ...composerDefinition("builtin.form.select-field", "Choice", [], false, "3.0.0"),
+        configurationSchema: { fields: [
+          { fieldId: "staticOptions", valueKind: "array", label: "Options", required: false },
+          { fieldId: "optionsSource", valueKind: "string", label: "Options source", required: false },
+        ] } satisfies SystemBuilderComposerAsset["configurationSchema"],
+      },
+      {
+        ...composerDefinition("builtin.form.number-field", "Number Field", [], false, "3.0.0"),
+        configurationSchema: { fields: [
+          { fieldId: "minimum", valueKind: "number", label: "Minimum", required: false },
+          { fieldId: "maximum", valueKind: "number", label: "Maximum", required: false },
+        ] } satisfies SystemBuilderComposerAsset["configurationSchema"],
+      },
+      composerDefinition("builtin.ui.section", "Section", ["content"], false, "3.0.0"),
+      { ...composerDefinition("builtin.data.create-operation", "Create Request", [], false, "3.0.0"), assetType: "tool" as const },
+      { ...composerDefinition("builtin.data.field", "Data Field", [], false, "3.0.0"), assetType: "schema" as const },
+    ];
+    const byDefinition = (id: string) => catalog.find((asset) => asset.definitionId === id)!.definitionRef;
+    const intake = { ...instance("fixture.intake", form.definitionId, "Intake", { title: "Intake" }), definitionRef: form.definitionRef };
+    const questionnaire = { ...instance("fixture.questionnaire", form.definitionId, "Questionnaire", { title: "Questionnaire" }), definitionRef: form.definitionRef };
+    const intakeStep = { ...instance("fixture.intake-step", group.definitionId, "First step", { title: "First step" }), definitionRef: group.definitionRef };
+    const questionnaireStep = { ...instance("fixture.questionnaire-step", group.definitionId, "First step", { title: "First step" }), definitionRef: group.definitionRef };
+    const submit = { ...instance("fixture.submit", "builtin.form.submit-action", "Submit button", { label: "Send" }), definitionRef: byDefinition("builtin.form.submit-action") };
+    const message = { ...instance("fixture.message", "builtin.form.validation-message", "Validation message", { message: "Check your answers" }),
+      definitionRef: byDefinition("builtin.form.validation-message") };
+    const browser = { ...instance("fixture.browser", resourceBrowser.definitionId, "Resource browser", {}), definitionRef: resourceBrowser.definitionRef };
+    const section = { ...instance("fixture.state-section", "builtin.ui.section", "State content", {}), definitionRef: byDefinition("builtin.ui.section") };
+    const fixture = [
+      { ...instance("fixture.root", rootDefinition.definitionId, "Portal", {}), definitionRef: rootDefinition.definitionRef },
+      { ...instance("fixture.shell", shell.definitionId, "Standard", {}), definitionRef: shell.definitionRef },
+      { ...instance("fixture.page", page.definitionId, "Main page", {}), definitionRef: page.definitionRef },
+      { ...instance("fixture.operation", "builtin.data.create-operation", "Create Request", { entity: "Request" }),
+        definitionRef: byDefinition("builtin.data.create-operation") },
+      { ...instance("fixture.text-record", "builtin.data.field", "Reason", { name: "reason", label: "Reason", type: "text" }),
+        definitionRef: byDefinition("builtin.data.field") },
+      { ...instance("fixture.number-record", "builtin.data.field", "Count", { name: "count", label: "Count", type: "number" }),
+        definitionRef: byDefinition("builtin.data.field") },
+      intake, questionnaire, intakeStep, questionnaireStep, browser, section, submit, message,
+    ];
+    const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: normalizeAssetId(item.instanceId) });
+    const place = (parent: AssetInstance, child: AssetInstance, slot: string, order: number) => ({
+      schemaVersion: "asset-placement.v1" as const, placementId: `place.${child.instanceId}`, slotId: normalizeAssetSlotId(slot),
+      parentInstanceRef: ref(parent), childInstanceRef: ref(child), order,
+    });
+    const initial: SystemBuilderRevision = {
+      revisionId: normalizeSystemBuilderRevisionId("fixture.r1"), systemId: normalizeSystemBuilderSystemId("fixture"),
+      targetWorkspaceId: createWorkspaceId("workspace-a"), revisionNumber: 1,
+      composition: { compositionId: normalizeAssetId("fixture.composition"), compositionType: "system",
+        displayName: "Portal", version: "0.1.0", lifecycleStatus: "draft",
+        rootInstanceRefs: [ref(fixture[0]!)], instanceRefs: fixture.map(ref), bindingRefs: [],
+        provenance: { sourceKind: "human-authored" } },
+      instances: fixture, bindings: [],
+      structure: { schemaVersion: "system-builder-structure.v1", profile: "interactive", layoutPresetRef: shell.definitionRef },
+      placements: [
+        { schemaVersion: "asset-placement.v1", placementId: "place.shell", slotId: normalizeAssetSlotId("application-shell"),
+          parentInstanceRef: ref(fixture[0]!), childInstanceRef: ref(fixture[1]!), order: 0 },
+        { schemaVersion: "asset-placement.v1", placementId: "place.page", slotId: normalizeAssetSlotId("content"),
+          parentInstanceRef: ref(fixture[1]!), childInstanceRef: ref(fixture[2]!), order: 0 },
+        place(fixture[2]!, intake, "content", 0),
+        place(fixture[2]!, browser, "content", 1),
+        place(browser, section, "states", 0),
+        place(section, questionnaire, "content", 0),
+        place(intake, intakeStep, "fields", 0),
+        place(questionnaire, questionnaireStep, "fields", 0),
+        place(questionnaire, submit, "actions", 0),
+        place(intake, message, "messages", 0),
+      ],
+      validationIssues: [], createdAt: "2026-07-19T00:00:00.000Z", createdBy: "person-1",
+    };
+    const record: SystemBuilderRecord = {
+      systemId: initial.systemId, targetWorkspaceId: initial.targetWorkspaceId, name: "Portal",
+      status: "validated", revision: 1, currentRevisionId: initial.revisionId, composition: initial.composition,
+      createdAt: initial.createdAt, updatedAt: initial.createdAt, createdBy: "person-1", updatedBy: "person-1",
+    };
+    const other = { ...record, systemId: normalizeSystemBuilderSystemId("alternate"), name: "Other portal" };
+    const otherRevision = {
+      ...initial, systemId: other.systemId,
+      composition: { ...initial.composition, instanceRefs: fixture.slice(0, 3).map(ref) },
+      instances: fixture.slice(0, 3), placements: initial.placements!.slice(0, 2),
+    };
+    let latest = initial;
+    const saveRevision = vi.fn<SystemBuilderClient["saveRevision"]>(async (input) => {
+      latest = { ...initial, revisionNumber: 2, composition: input.composition, instances: input.instances,
+        placements: input.placements, bindings: input.bindings };
+      return { ok: true as const, value: latest };
+    });
+    const listComposerAssets = vi.fn(async (input: ListSystemBuilderComposerAssetsQuery) => ({
+      ok: true as const,
+      value: { items: input.searchText ? catalog.filter((asset) => asset.definitionId === input.searchText) : catalog },
+    }));
+    const client: SystemBuilderClient = { ...clientFor(record, initial), saveRevision, listComposerAssets,
+      list: async () => ({ ok: true, value: [record, other] }),
+      readComposerAsset: async ({definitionRef}) => ({
+        ok: true, value: catalog.find((item) => item.definitionRef.id === definitionRef.id && item.version === definitionRef.version)!,
+      }),
+      readRevision: async ({systemId}) => ({ ok: true, value: systemId === other.systemId ? otherRevision : latest }) };
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const id = (i: number) => `e38b2781-e605-4de3-83e1-${String(i).padStart(12, "0")}`;
+    const target = readUiControlAttempt({ hostIncarnationId: id(1), windowId: id(2), uiIncarnationId: id(3),
+      workspaceId: "workspace-a", requestId: id(4), attemptId: id(5) })!;
+    const request: UiControlRequestView = { target, agentSessionId: id(6), taskId: id(7), status: "pending", expiresAt: 5000 };
+    const heldAccept = vi.fn(() => new Promise<undefined>(() => {}));
+    let readDraft: (() => DraftHandoff) | undefined;
+    const controller = createWindowTakeoverController({
+      now: () => 0,
+      readDraft: () => readDraft?.() ?? { status: "busy" },
+      port: { accept: heldAccept, ready: vi.fn(async () => undefined), revoke: vi.fn(async () => true) },
+    });
+    const control = { controller, registerDraft(read: () => DraftHandoff) {
+      readDraft = read;
+      return () => { if (readDraft === read) readDraft = undefined; };
+    } };
+    function FixtureComposer() {
+      const { presentationAttached } = useWindowTakeover();
+      return <SystemBuilderWorkspace workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} takeoverReadOnly={presentationAttached} />;
+    }
+    const mount = () => root!.render(
+      <WindowTakeoverProvider control={control}>
+        <WindowTakeoverControls />
+        <FixtureComposer />
+      </WindowTakeoverProvider>,
+    );
+    await act(async () => mount());
+    const find = <T extends HTMLElement>(label: string, selector: string) => {
+      const group = [...container!.querySelectorAll("label")].find((element) =>
+        [...element.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent ?? "").join("").trim() === label);
+      const control = group?.querySelector<T>(selector);
+      if (!control) throw new Error(`Missing ${label}`);
+      return control;
+    };
+    const click = (name: string) => act(async () => button(container!, name).click());
+    const fill = (label: string, value: string) => act(async () => setInputValue(find<HTMLInputElement>(label, "input"), value));
+    const choose = (label: string, name: string) => act(async () => {
+      const select = find<HTMLSelectElement>(label, "select");
+      select.value = [...select.options].find((item) => item.text === name)!.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    const tab = (name: string) => [...container!.querySelectorAll<HTMLButtonElement>('[role="tablist"][aria-label="Form pages"] [role="tab"]')]
+      .find((item) => item.textContent === name);
+    const choosePage = (name: string) => act(async () => tab(name)!.click());
+    const chooseElement = (name: string) => choose("Element", name);
+    const properties = () => container!.querySelector('aside[aria-label="Properties"]')!;
+    const visibleElement = () => container!.querySelector('section[aria-label="Element appearance"]')!;
+    const removalDialog = () => document.querySelector('[role="dialog"]')!;
+    const removeField = (name: string) => act(async () => {
+      const trigger = [...container!.querySelectorAll<HTMLButtonElement>('button[aria-label^="Remove field:"]')]
+        .find((item) => item.getAttribute("aria-label") === `Remove field: ${name}`)!;
+      trigger.focus(); trigger.click();
+    });
+    const editButton = (name: string) => container!.querySelector<HTMLButtonElement>(`[aria-label="Edit Form: ${name}"]`)!;
+    const expandStates = () => act(async () => container!.querySelector<HTMLButtonElement>('button[aria-expanded="false"][aria-controls$="-states-content"]')?.click());
+    const editForm = async (name: string) => {
+      if (name === "Questionnaire" && !editButton(name)) await expandStates();
+      await act(async () => editButton(name).click());
+    };
+    await vi.waitFor(() => expect(editButton("Intake")).toBeTruthy());
+    expect([...container!.querySelectorAll('[role="tab"]')].some((tab) => tab.textContent === "Form")).toBe(false);
+    expect(container!.querySelectorAll("button[data-edit-form-id]")).toHaveLength(1);
+    await expandStates();
+    expect(container!.querySelectorAll("button[data-edit-form-id]")).toHaveLength(2);
+    await editForm("Intake");
+    expect(document.activeElement).toBe(button(container!, "Back to Canvas"));
+    expect(container!.querySelector("h4")?.textContent).toBe("Intake");
+    expect(container!.textContent).toContain("Canvas page Main page");
+    expect([...container!.querySelectorAll("button")].some((item) => item.textContent === "Remove form page")).toBe(false);
+    await chooseElement("Validation message");
+    const messageInput = visibleElement().querySelector<HTMLInputElement>('input[id="message"]')!;
+    expect(messageInput.value).toBe("Check your answers");
+    expect(properties().querySelector('input[id="message"]')).toBeNull();
+    await act(async () => setInputValue(messageInput, "Check the request details"));
+    await click("New Form Page +");
+    const addedTab = tab("Page 2")!;
+    expect(addedTab.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(addedTab);
+    expect(button(container!, "New Form Page +").getAttribute("role")).toBeNull();
+    expect(document.getElementById(addedTab.getAttribute("aria-controls")!)?.getAttribute("aria-labelledby")).toBe(addedTab.id);
+    expect(document.getElementById(tab("First step")!.getAttribute("aria-controls")!)?.hidden).toBe(true);
+    await act(async () => addedTab.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
+    expect(document.activeElement).toBe(tab("First step"));
+    expect(tab("First step")?.getAttribute("aria-selected")).toBe("true");
+    await act(async () => tab("First step")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(document.activeElement).toBe(addedTab);
+    await click("Undo");
+    expect(tab("Page 2")).toBeUndefined();
+    await click("Redo");
+    expect(tab("Page 2")?.getAttribute("aria-selected")).toBe("true");
+    await act(async () => {
+      const title = find<HTMLInputElement>("Form page name", "input");
+      expect(title.closest('[role="tabpanel"]')).not.toBeNull();
+      expect(properties().contains(title)).toBe(false);
+      title.focus(); title.value = "Details"; title.blur();
+    });
+    expect(tab("Details")?.getAttribute("aria-selected")).toBe("true");
+    await click("Add field");
+    await act(async () => {
+      const label = find<HTMLInputElement>("Field label", "input");
+      const expanded = container!.querySelector<HTMLButtonElement>('.system-form-composer__element-heading button[aria-expanded="true"]')!;
+      expect(document.activeElement).toBe(expanded);
+      expect(document.getElementById(expanded.getAttribute("aria-controls")!)?.contains(label)).toBe(true);
+      label.focus();
+      label.value = "Request reason";
+      label.blur();
+    });
+    await act(async () => find<HTMLInputElement>("Required answer", "input").click());
+    expect(listComposerAssets).toHaveBeenCalledWith(expect.objectContaining({
+      workspaceId: "workspace-a", slotId: "fields", compatibleOnly: true, searchText: "builtin.form.text-field",
+    }));
+    await click("Back to Canvas");
+    expect(document.activeElement).toBe(editButton("Intake"));
+    const canvas = container!.querySelector(".system-composer__canvas")!;
+    const pages = [...canvas.querySelectorAll('.system-composer__canvas-node[data-layout-container="true"]')]
+      .filter((item) => item.querySelector(":scope > .system-composer__canvas-node-heading small")?.textContent?.includes("builtin.layout.page.single@"));
+    expect(pages.map((item) => item.querySelector(":scope > .system-composer__canvas-node-heading strong")?.textContent))
+      .toEqual(["Main page"]);
+    expect(editButton("Intake").closest("article")?.textContent).toContain("Request reason");
+    await expandStates();
+    expect(editButton("Questionnaire").closest("article")?.textContent).not.toContain("Request reason");
+    await editForm("Intake");
+    await choosePage("Details");
+    await click("Request reason");
+    expect(button(container!, "Request reason").getAttribute("aria-expanded")).toBe("true");
+    expect(visibleElement().contains(find<HTMLInputElement>("Field label", "input"))).toBe(true);
+    expect(properties().contains(find<HTMLInputElement>("Required answer", "input"))).toBe(true);
+    expect(visibleElement().querySelector('input[type="checkbox"]')).toBeNull();
+    expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
+    await click("Request reason");
+    const collapsed = button(container!, "Request reason");
+    expect(collapsed.getAttribute("aria-expanded")).toBe("false");
+    expect(document.getElementById(collapsed.getAttribute("aria-controls")!)?.hidden).toBe(true);
+    expect(visibleElement()).toBeNull();
+    await click("Request reason");
+    expect(find<HTMLInputElement>("Field label", "input").value).toBe("Request reason");
+    await click("Undo");
+    expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(false);
+    await click("Redo");
+    expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
+    await choosePage("First step");
+    expect([...find<HTMLSelectElement>("Element", "select").options].map((item) => item.text)).not.toContain("Request reason");
+    await choose("Field type", "Checkbox");
+    await click("Add field");
+    await act(async () => {
+      const label = find<HTMLInputElement>("Field label", "input");
+      label.focus();
+      label.value = "Fast path";
+      label.blur();
+    });
+    await choose("Answer field", "Fast path");
+    await choose("Default route", "Details");
+    await choose("Compare with", "Selected");
+    await choose("Go to form page", "Finish form");
+    await click("Add route rule");
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    expect(properties().querySelector('[aria-label="Routes after this page"]')).not.toBeNull();
+    await removeField("Fast path");
+    expect(removalDialog().textContent).toContain("Remove Fast path from the form?");
+    expect(document.activeElement).toBe(button(removalDialog(), "Cancel"));
+    await act(async () => button(removalDialog(), "Cancel").click());
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    let loseSave!: (result: Awaited<ReturnType<SystemBuilderClient["saveRevision"]>>) => void;
+    saveRevision.mockImplementationOnce(() => new Promise(resolve => { loseSave = resolve; }));
+    await act(async () => controller.update(request));
+    const clickConsent = (name: string) => act(async () =>
+      button(document.querySelector(".ui-window-takeover-consent-overlay [role='dialog']")!, name).click());
+    await clickConsent("Accept automation takeover");
+    expect(saveRevision).not.toHaveBeenCalled();
+    await removeField("Fast path");
+    await clickConsent("Save changes and accept takeover");
+    expect(controller.getSnapshot().status).toBe("activating");
+    expect(removalDialog().querySelector(".ui-modal-body")?.hasAttribute("inert")).toBe(true);
+    expect(button(container!, "Discard changes").disabled).toBe(true);
+    await act(async () => button(removalDialog(), "Remove field").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    await act(async () => loseSave(systemBuilderFailure("system-builder.stale-record-revision", "This system changed.")));
+    expect(controller.getSnapshot().status).toBe("manual");
+    expect(heldAccept).not.toHaveBeenCalled();
+    expect(saveRevision).toHaveBeenCalledWith(expect.objectContaining({ expectedRecordRevision: record.revision }));
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    expect(button(container!, "Discard changes").disabled).toBe(false);
+    saveRevision.mockClear();
+    saveRevision.mockImplementationOnce(async input => {
+      latest = { ...initial, revisionId: normalizeSystemBuilderRevisionId("portal.r2"), revisionNumber: 2,
+        composition: input.composition, instances: input.instances, bindings: input.bindings, placements: input.placements,
+        validationIssues: [{ severity: "error", category: "composition", message: "Fixture diagnostic" }] };
+      return systemBuilderSuccess(latest);
+    });
+    await act(async () => controller.update({ ...request, target: { ...target, requestId: id(9), attemptId: id(10) } }));
+    await clickConsent("Accept automation takeover");
+    await clickConsent("Save changes and accept takeover");
+    expect(controller.getSnapshot().status).toBe("manual");
+    expect(heldAccept).not.toHaveBeenCalled();
+    expect(container!.textContent).toContain("Fixture diagnostic");
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    await click("Discard changes");
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    expect(saveRevision).toHaveBeenCalledTimes(1);
+    saveRevision.mockClear();
+    if (!removalDialog()) await removeField("Fast path");
+    await act(async () => button(removalDialog(), "Remove field").click());
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).toBeNull();
+    expect(document.activeElement).toBe(tab("First step"));
+    expect(container!.textContent).not.toContain("When Fast path is selected");
+    await click("Undo");
+    expect(container!.querySelector('[aria-label="Remove field: Fast path"]')).not.toBeNull();
+    expect(container!.textContent).toContain("When Fast path is selected, go to Finish form.");
+    await act(async () => [...container!.querySelectorAll("summary")].find((item) => item.textContent === "After submission")!.click());
+    expect([...find<HTMLSelectElement>("Record action", "select").options].map((item) => item.text))
+      .toEqual(["Choose an action", "Create Request (Request)"]);
+    await choose("Record action", "Create Request (Request)");
+    await choose("Form answer to send", "Request reason");
+    expect([...find<HTMLSelectElement>("Destination record field", "select").options].map((item) => item.text))
+      .toEqual(["Choose a field", "Reason"]);
+    await choose("Destination record field", "Reason");
+    await click("Add mapping");
+    await click("Set submission action");
+    expect(properties().textContent).toContain("Request reason → Reason");
+    await choosePage("Details");
+    await act(async () => {
+      const trigger = button(container!, "Remove form page"); trigger.focus(); trigger.click();
+    });
+    expect(removalDialog().textContent).toContain("All child fields and controls will also be removed (1 total).");
+    await act(async () => button(removalDialog(), "Remove form page").click());
+    expect(tab("Details")).toBeUndefined();
+    expect(tab("First step")?.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(tab("First step"));
+    expect(container!.textContent).not.toContain("Request reason → Reason");
+    await click("Undo");
+    expect(tab("Details")).not.toBeUndefined();
+    expect(properties().textContent).toContain("Request reason → Reason");
+    const previewButton = button(container!, "Preview form");
+    await act(async () => { previewButton.focus(); previewButton.click(); });
+    const preview = document.querySelector('[role="dialog"]')!;
+    const press = (name: string) => act(async () => button(preview, name).click());
+    await press("Next page");
+    const answer = preview.querySelector<HTMLInputElement>('input[type="text"]')!;
+    await press("Finish preview");
+    expect(answer.getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(answer);
+    await act(async () => setInputValue(answer, "Sample answer"));
+    await press("Back");
+    await act(async () => preview.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+    await press("Finish preview");
+    expect(preview.textContent).toContain("Answers included: Fast path.");
+    expect(preview.textContent).toContain("Configured action: Create Record. Preview did not run the action.");
+    expect(preview.textContent).not.toContain("Request reason");
+    expect(saveRevision).not.toHaveBeenCalled();
+    await act(async () => preview.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
+    expect(document.activeElement).toBe(previewButton);
+    await click("Back to Canvas");
+    await editForm("Questionnaire");
+    expect(container!.querySelector("h4")?.textContent).toBe("Questionnaire");
+    expect([...find<HTMLSelectElement>("Element", "select").options].map((option) => option.text.trim()))
+      .toEqual(["Questionnaire", "First step", "Submit button"]);
+    await chooseElement("Submit button");
+    const controlLabel = visibleElement().querySelector<HTMLInputElement>('input[id="label"]')!;
+    expect(controlLabel.value).toBe("Send");
+    await act(async () => setInputValue(controlLabel, "Send questionnaire"));
+    const confirmation = () => properties().querySelector<HTMLInputElement>('input[id="confirmationRequired"]')!;
+    expect(visibleElement().querySelector('input[id="confirmationRequired"]')).toBeNull();
+    await act(async () => confirmation().click());
+    await click("Reset appearance defaults");
+    expect(visibleElement().querySelector<HTMLInputElement>('input[id="label"]')?.value).toBe("Submit");
+    expect(confirmation().checked).toBe(true);
+    await act(async () => setInputValue(visibleElement().querySelector<HTMLInputElement>('input[id="label"]')!, "Send questionnaire"));
+    await click("Reset behavior defaults");
+    expect(visibleElement().querySelector<HTMLInputElement>('input[id="label"]')?.value).toBe("Send questionnaire");
+    expect(confirmation().checked).toBe(false);
+    await choose("Field type", "Choice");
+    await click("Add field");
+    await fill("New option label", "Hardware");
+    await click("Add option");
+    await act(async () => {
+      const value = find<HTMLInputElement>("Submitted value for Hardware", "input");
+      expect(properties().contains(value)).toBe(true);
+      expect(visibleElement().contains(find<HTMLInputElement>("Choice label 1", "input"))).toBe(true);
+      value.focus(); value.value = "hardware"; value.blur();
+    });
+    await fill("New option label", "hardware");
+    await click("Add option");
+    expect(find<HTMLInputElement>("Submitted value for hardware", "input").value).toBe("hardware-2");
+    await act(async () => visibleElement().querySelector<HTMLButtonElement>('[aria-label="Remove choice 2"]')!.click());
+    await fill("New option label", "Software");
+    await click("Add option");
+    await choose("Field type", "Number");
+    await click("Add field");
+    await chooseElement("Number Field");
+    const fillBound = (label: string, value: string) => act(async () => {
+      const bound = find<HTMLInputElement>(label, "input");
+      bound.focus(); bound.value = value; bound.blur();
+    });
+    await fillBound("Minimum value", "1");
+    await fillBound("Maximum value", "10");
+    await choose("Field type", "Radio buttons");
+    await click("Add field");
+    await chooseElement("Radio buttons");
+    await fill("New option label", "By email");
+    await click("Add option");
+    await click("Preview form");
+    const questionnairePreview = document.querySelector('[role="dialog"]')!;
+    const numberAnswer = questionnairePreview.querySelector<HTMLInputElement>('input[type="number"]')!;
+    await act(async () => setInputValue(numberAnswer, "5"));
+    // A browser number control can expose empty value with an incomplete native edit.
+    Object.defineProperty(numberAnswer, "validity", { configurable: true, value: { badInput: true } });
+    await act(async () => setInputValue(numberAnswer, ""));
+    await act(async () => button(questionnairePreview, "Finish preview").click());
+    expect(numberAnswer.getAttribute("aria-invalid")).toBe("true");
+    expect(questionnairePreview.textContent).toContain("Enter a number.");
+    Object.defineProperty(numberAnswer, "validity", { configurable: true, value: { badInput: false } });
+    await act(async () => setInputValue(numberAnswer, ""));
+    const radio = questionnairePreview.querySelector<HTMLInputElement>('input[type="radio"][value="By email"]')!;
+    await act(async () => radio.click());
+    await act(async () => button(questionnairePreview, "Clear selection").click());
+    expect(radio.checked).toBe(false);
+    expect(document.activeElement).toBe(radio);
+    await act(async () => radio.click());
+    await act(async () => button(questionnairePreview, "Finish preview").click());
+    expect(questionnairePreview.textContent).toContain("Answers included: Radio buttons.");
+    await act(async () => questionnairePreview.querySelector<HTMLButtonElement>('[aria-label="Close preview"]')!.click());
+    await click("Save and validate revision");
+    await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(1));
+    expect(latest.bindings).toHaveLength(3);
+    const action = latest.bindings.map(readSystemFormAction).find(Boolean);
+    expect(action?.operationId).toBe("fixture.operation");
+    expect(action?.mappings).toEqual([{ fieldId: latest.instances.find((item) => item.displayName === "Request reason")?.instanceId, recordField: "reason" }]);
+    expect(latest.instances.find((item) => item.displayName === "Number Field")?.selectedConfiguration)
+      .toEqual({ label: "Number Field", minimum: 1, maximum: 10 });
+    expect(latest.instances.find((item) => item.instanceId === submit.instanceId)?.selectedConfiguration)
+      .toEqual({ label: "Send questionnaire", confirmationRequired: false });
+    expect(latest.instances.find((item) => item.instanceId === message.instanceId)?.selectedConfiguration)
+      .toEqual({ message: "Check the request details" });
+    expect(latest.instances.find((item) => item.displayName === "Choice")?.selectedConfiguration?.staticOptions)
+      .toEqual([expect.objectContaining({ label: "Hardware", value: "hardware" }), expect.objectContaining({ label: "Software", value: "Software" })]);
+    expect(latest.instances.find((item) => item.displayName === "Request reason")?.selectedConfiguration)
+      .toEqual({ label: "Request reason", required: true });
+    // Simulate reopening a revision with a direct field placed from Canvas between the steps.
+    const details = latest.instances.find((item) => item.displayName === "Details")!;
+    const detailsPlacement = latest.placements!.find((edge) => edge.childInstanceRef.id === details.instanceId)!;
+    const canvasField = { ...instance("fixture.direct-field", textField.definitionId, "Canvas field", {}),
+      definitionRef: textField.definitionRef };
+    latest = { ...latest, composition: { ...latest.composition, instanceRefs: [...latest.composition.instanceRefs, ref(canvasField)] },
+      instances: [...latest.instances, canvasField], placements: [
+        ...latest.placements!.map((edge) => edge === detailsPlacement ? { ...edge, order: 2 } : edge),
+        { ...detailsPlacement, placementId: "place.direct-field", order: 1, childInstanceRef: ref(canvasField) },
+      ] };
+    act(() => root!.unmount());
+    root = createRoot(container);
+    await act(async () => mount());
+    await editForm("Intake");
+    expect(tab("Fields outside form pages")).toBeUndefined();
+    expect(container.querySelector('[aria-label="Fields outside form pages"]')).not.toBeNull();
+    await click("Canvas field");
+    expect(find<HTMLInputElement>("Field label", "input").value).toBe("Canvas field");
+    await choosePage("Details");
+    await chooseElement("Request reason");
+    expect(find<HTMLInputElement>("Field label", "input").value).toBe("Request reason");
+    expect(container!.textContent).toContain("Request reason → Reason");
+    await chooseElement("Details");
+    await click("Move form page up");
+    expect([...container.querySelectorAll('[role="tablist"][aria-label="Form pages"] [role="tab"]')].map((item) => item.textContent))
+      .toEqual(["Details", "First step"]);
+    expect([...container.querySelectorAll("button")].some((item) => item.textContent === "Remove form page")).toBe(false);
+    await click("Save and validate revision");
+    await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(2));
+    expect(latest.placements!.find((edge) => edge.childInstanceRef.id === canvasField.instanceId)?.order).toBe(1);
+    expect(latest.placements!.find((edge) => edge.childInstanceRef.id === intake.instanceId)?.parentInstanceRef.id).toBe("fixture.page");
+    expect(latest.placements!.find((edge) => edge.childInstanceRef.id === questionnaire.instanceId)?.parentInstanceRef.id).toBe(section.instanceId);
+    const beforeCanvasMove = latest;
+    await click("Back to Canvas");
+    const intakeSelect = container!.querySelector<HTMLButtonElement>(
+      '.system-composer__canvas-node[data-instance-id="fixture.intake"] > .system-composer__canvas-node-heading > .system-composer__canvas-node-select',
+    )!;
+    await act(async () => intakeSelect.click());
+    await click("Layers");
+    await click("Move down");
+    await editForm("Intake");
+    await choosePage("Details");
+    await chooseElement("Request reason");
+    expect(find<HTMLInputElement>("Required answer", "input").checked).toBe(true);
+    expect(properties().textContent).toContain("Request reason → Reason");
+    await click("Save and validate revision");
+    await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(3));
+    expect(latest.instances).toEqual(beforeCanvasMove.instances);
+    expect(latest.bindings).toEqual(beforeCanvasMove.bindings);
+    const placementByChild = (revision: SystemBuilderRevision) =>
+      Object.fromEntries(revision.placements!.map((edge) => [edge.childInstanceRef.id, edge]));
+    const beforePlacements = placementByChild(beforeCanvasMove);
+    expect(placementByChild(latest)).toEqual({
+      ...beforePlacements,
+      [intake.instanceId]: { ...beforePlacements[intake.instanceId], order: 1 },
+      [browser.instanceId]: { ...beforePlacements[browser.instanceId], order: 0 },
+    });
+    await click("Back to Canvas");
+    await editForm("Questionnaire");
+    await chooseElement("Number Field");
+    expect(find<HTMLInputElement>("Maximum value", "input").value).toBe("10");
+    await click("Back to Canvas");
+    expect(document.activeElement).toBe(editButton("Questionnaire"));
+    expect(editButton("Questionnaire").closest('[data-slot-id="states"]')?.getAttribute("data-collapsed")).toBe("false");
+    await click("Connections");
+    await choose("System", "Other portal");
+    await click("Edit system");
+    expect(button(container!, "Design").getAttribute("aria-selected")).toBe("true");
+    expect(container!.querySelector('button[data-edit-form-id]')).toBeNull();
+    expect(container!.querySelector('[role="tablist"][aria-label="Form pages"]')).toBeNull();
+  });
+
+  it("reopens the saved empty first form from Manage without adding a field or saving", async () => {
+    const rootDefinition = composerDefinition("builtin.system.system", "System root", ["application-shell"], false, "3.0.0");
+    const page = { ...composerDefinition("builtin.layout.page.single", "Page", ["content"], false, "3.0.0"),
+      layoutRole: "page-layout" as const, assetType: "page" as const };
+    const baseShell = layoutDefinition("builtin.layout.application.minimal", "Minimal", ["content"], "3.0.0");
+    const shell = { ...baseShell, slots: baseShell.slots.map((slot) => ({ ...slot, acceptedDefinitionRefs: [page.definitionRef] })) };
+    const form = composerDefinition("builtin.form.form", "Form", ["fields"], true, "3.0.0");
+    const formPage = composerDefinition("builtin.form.field-group", "Field Group", ["fields"], true, "3.0.0");
+    const section = composerDefinition("builtin.ui.section", "Section", ["content"], false, "3.0.0");
+    const catalog = [rootDefinition, page, shell, form, formPage, section];
+    const initialAssets = [rootDefinition, shell, page, section, form, formPage].map((item, index) => ({
+      ...instance(`new.instance.${index}`, item.definitionId, index === 4 ? "Survey" : index === 5 ? "Page 1" : item.displayName,
+        index === 4 ? { title: "Survey" } : index === 5 ? { title: "Page 1" } : {}), definitionRef: item.definitionRef,
+    }));
+    const ref = (item: AssetInstance) => ({ kind: "asset-instance" as const, id: normalizeAssetId(item.instanceId) });
+    const refs = initialAssets.map(ref);
+    const initial: SystemBuilderRevision = {
+      revisionId: normalizeSystemBuilderRevisionId("new.r1"), systemId: normalizeSystemBuilderSystemId("new"),
+      targetWorkspaceId: createWorkspaceId("workspace-a"), revisionNumber: 1,
+      composition: { compositionId: normalizeAssetId("new.composition"), compositionType: "system", displayName: "Survey",
+        version: "0.1.0", lifecycleStatus: "draft", rootInstanceRefs: [refs[0]!], instanceRefs: refs, bindingRefs: [],
+        provenance: { sourceKind: "human-authored" }, metadata: { [SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY]: refs[4]!.id } },
+      instances: initialAssets, bindings: [],
+      structure: { schemaVersion: "system-builder-structure.v1", profile: "interactive", layoutPresetRef: shell.definitionRef },
+      placements: ["application-shell", "content", "content", "content", "fields"].map((slot, index) => ({
+        schemaVersion: "asset-placement.v1", placementId: `place.${index}`, slotId: normalizeAssetSlotId(slot),
+        parentInstanceRef: refs[index]!, childInstanceRef: refs[index + 1]!, order: 0,
+      })),
+      validationIssues: [], createdAt: "2026-07-19T00:00:00.000Z", createdBy: "person-1",
+    };
+    const record: SystemBuilderRecord = {
+      systemId: initial.systemId, targetWorkspaceId: initial.targetWorkspaceId, name: "Survey", status: "validated",
+      revision: 1, currentRevisionId: initial.revisionId, composition: initial.composition,
+      createdAt: initial.createdAt, updatedAt: initial.createdAt, createdBy: "person-1", updatedBy: "person-1",
+    };
+    let created = false;
+    let savedRevision = initial;
+    const create = vi.fn(async (_input: Parameters<SystemBuilderClient["create"]>[0]) => {
+      created = true;
+      return { ok: true as const, value: record };
+    });
+    const saveRevision = vi.fn(async () => { throw new Error("The empty first form should already be saved."); });
+    const client: SystemBuilderClient = { ...clientFor(record, initial), create, saveRevision,
+      list: async () => ({ ok: true, value: created ? [record] : [] }),
+      readRevision: async () => ({ ok: true, value: savedRevision }),
+      listManagement: async () => ({ ok: true, value: {
+        items: created ? [{ systemId: record.systemId, name: record.name, designStatus: record.status,
+          archived: false, publicationStatus: "unpublished", recordRevision: 1, currentRevisionId: initial.revisionId,
+          assetCount: initialAssets.length, releaseCount: 0, createdAt: record.createdAt, updatedAt: record.updatedAt,
+          actions: { canPreview: true, canOpenInCompose: true, canDelete: true, canRestore: false, deleteStrategy: "archive" } }] : [],
+        totalCount: created ? 1 : 0, query: { view: "active", sort: "updated-desc", limit: 20 },
+      } }),
+      listComposerAssets: async (query) => ({ ok: true, value: { items: catalog.filter((item) =>
+        !query.searchText || item.definitionId === query.searchText)
+        .map((item) => ({ ...item, compatibility: { status: "not-evaluated" as const } })) } }),
+    };
+    function Systems() {
+      const [manage, setManage] = useState(false);
+      const [systemId, setSystemId] = useState<string>();
+      return <NotificationTestHarness>
+        <button onClick={() => setManage(true)}>Manage</button>
+        {manage ? <SystemManagementWorkspace workspaceId="workspace-a" client={client}
+          onOpenInCompose={(id) => { setSystemId(id); setManage(false); }} /> :
+          <SystemBuilderWorkspace workspaceId="workspace-a" client={client} initialSystemId={systemId} />}
+      </NotificationTestHarness>;
+    }
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<Systems />));
+    const click = (name: string) => act(async () => button(container!, name).click());
+    await act(async () => setInputValue(container!.querySelector<HTMLInputElement>('input[placeholder="Customer portal"]')!, "Survey"));
+    await click("Create form system");
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledWith({ workspaceId: "workspace-a", name: "Survey", profile: "interactive", starter: "form" });
+    expect(container.querySelector("h4")?.textContent).toBe("Survey");
+    await click("Manage");
+    await click("Open in Compose");
+    expect(container.querySelector("h4")?.textContent).toBe("Survey");
+    expect(container.querySelector('[aria-label="Form pages"] [role="tab"][aria-selected="true"]')?.textContent).toBe("Page 1");
+    expect(container.textContent).toContain("Canvas page Page");
+    expect(saveRevision).not.toHaveBeenCalled();
+    await click("Back to Canvas");
+    expect(container.querySelector<HTMLButtonElement>("button[data-edit-form-id]")?.dataset.editFormId).toBe(refs[4]!.id);
+    expect(container.querySelectorAll('[data-instance-id="new.instance.2"]')).toHaveLength(1);
+    expect([...container.querySelectorAll('[aria-label="Composer mode"] [role="tab"]')].map((item) => item.textContent)).toEqual(["Design", "Connections"]);
+
+    // With no starter preference (or a stale one), embedded forms stay on Canvas.
+    for (const metadata of [undefined, { [SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY]: "removed-form" }]) {
+      savedRevision = { ...initial, composition: { ...initial.composition, metadata } };
+      await click("Manage");
+      await click("Open in Compose");
+      expect(container.querySelector('[aria-label="Form pages"]')).toBeNull();
+      expect(container.querySelector("button[data-edit-form-id]")).not.toBeNull();
+    }
+    expect(saveRevision).not.toHaveBeenCalled();
+  });
+
   it("defers the layout catalog until Create system is submitted and then shows the loading wheel", async () => {
     const pendingCatalog = new Promise<never>(() => undefined);
     const listComposerAssets = vi.fn(() => pendingCatalog);
@@ -594,6 +1419,12 @@ describe("SystemBuilderWorkspace UI preview", () => {
         ],
       },
     }));
+    const layoutReply = Promise.withResolvers<void>();
+    const resolvedLayoutPreview = previewLayoutChange.getMockImplementation()!;
+    previewLayoutChange.mockImplementationOnce(async () => {
+      await layoutReply.promise;
+      return resolvedLayoutPreview();
+    });
     const onBuildAndTest = vi.fn();
     const client = {
       ...clientFor(record, revision),
@@ -645,7 +1476,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
             items: [
               composerDefinition("builtin.system.system", "System root", [
                 "application-shell",
-              ]),
+              ], false, "3.0.0"),
             ],
             nextCursor: "composer-page-2",
           },
@@ -697,9 +1528,20 @@ describe("SystemBuilderWorkspace UI preview", () => {
         initialCanvas.querySelectorAll<HTMLElement>("[data-slot-id]"),
       ).map((slot) => slot.dataset.slotId),
     ).toEqual(["top-bar", "content"]);
-    await act(async () => minimalChoice.click());
+    minimalChoice.focus();
+    await act(async () => {
+      minimalChoice.click();
+      // JSDOM does not move focus when the parent fieldset becomes disabled.
+      container!.tabIndex = -1;
+      container!.focus();
+      container!.blur();
+    });
+    expect(minimalChoice.matches(":disabled")).toBe(true);
+    expect(document.activeElement).toBe(document.body);
+    await act(async () => layoutReply.resolve());
     await vi.waitFor(() => {
       expect(container!.textContent).toContain("Unsaved changes");
+      expect(document.activeElement).toBe(minimalChoice);
       expect(container!.textContent).not.toContain(
         "The Canvas updated automatically",
       );
@@ -707,10 +1549,37 @@ describe("SystemBuilderWorkspace UI preview", () => {
         "available from Add element on a compatible container",
       );
     });
+    const failedLayout = Promise.withResolvers<void>();
+    previewLayoutChange.mockImplementationOnce(async () => {
+      await failedLayout.promise;
+      return systemBuilderFailure("fixture.layout-unavailable", "The test layout is unavailable.");
+    });
+    const standardChoice = container!.querySelector<HTMLInputElement>('input[value="builtin.layout.application.standard"]')!;
+    standardChoice.focus();
+    await act(async () => {
+      standardChoice.click();
+      container!.focus();
+      container!.blur();
+    });
+    await act(async () => failedLayout.resolve());
+    await vi.waitFor(() => expect(document.activeElement).toBe(minimalChoice));
+    expect(standardChoice.checked).toBe(false);
+
+    const noFocusSteal = Promise.withResolvers<void>();
+    previewLayoutChange.mockImplementationOnce(async () => {
+      await noFocusSteal.promise;
+      return systemBuilderFailure("fixture.layout-unavailable", "The test layout is unavailable.");
+    });
+    await act(async () => standardChoice.click());
+    const outsideEditor = button(container!, "Edit system");
+    outsideEditor.focus();
+    await act(async () => noFocusSteal.resolve());
+    await vi.waitFor(() => expect(standardChoice.matches(":disabled")).toBe(false));
+    expect(document.activeElement).toBe(outsideEditor);
     await act(async () =>
       container
         .querySelector<HTMLButtonElement>(
-          'button[aria-label="Add an element inside Standard shell"]',
+          '[data-slot-id="content"] button[aria-label="Add element to Content in Standard shell" i]',
         )!
         .click(),
     );
@@ -720,6 +1589,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
       expect(current?.textContent).toContain("Preserved top bar");
       return current!;
     });
+    const title = document.getElementById(assetDialog.getAttribute("aria-labelledby")!);
+    expect(title?.textContent).toBe("Add an element to Standard shell");
+    expect(title?.firstChild?.textContent).toBe("Add an element");
+    expect(assetDialog.querySelector(".system-composer__asset-picker-destination")?.textContent).toBe("Destination: Standard shell");
     expect(assetDialog.textContent).toContain("Unassigned visual assets");
     await act(async () =>
       assetDialog
@@ -736,7 +1609,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     );
     expect(changedCanvas.textContent).not.toContain("Unassigned visual assets");
     expect(container!.textContent).not.toContain("Asset Palette");
-    expect(previewLayoutChange).toHaveBeenCalledTimes(1);
+    expect(previewLayoutChange).toHaveBeenCalledTimes(3);
     await act(async () => button(container, "Undo").click());
     await vi.waitFor(() => {
       expect(container!.textContent).not.toContain(
@@ -1009,7 +1882,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
       createdBy: "person-1",
       updatedBy: "person-1",
     } as SystemBuilderRecord;
-    const client = clientFor(record, revision);
+    const client = {
+      ...clientFor(record, revision),
+      listComposerAssets: async () => ({ ok: true as const, value: { items: [
+        composerDefinition("builtin.shell.page", "Requests page", [], false, "1.0.0"),
+        { ...composerDefinition("builtin.security.authorization-policy", "Read policy", [], false, "1.0.0"), assetType: "policy" as const },
+      ] } }),
+    };
 
     container = document.createElement("div");
     document.body.append(container);
@@ -1055,7 +1934,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(dialog.textContent).toContain("Configured requests");
     expect(dialog.textContent).toContain("1 frontend surface");
     expect(dialog.textContent).toContain("1 unavailable");
-    expect(dialog.textContent).toContain("does not execute backend logic");
+    expect(dialog.textContent).toContain("No backend code runs.");
     expect(dialog.textContent).not.toContain("Denied by default");
     const mobileViewport = Array.from(
       dialog.querySelectorAll<HTMLButtonElement>("button"),
@@ -1395,8 +2274,19 @@ describe("SystemBuilderWorkspace UI preview", () => {
         ]).get(String(input.definitionRef.id))!,
       }),
     );
+    let listRecord: SystemBuilderRecord | undefined = record;
+    const outstandingReads = new Map<string, (value: { ok: true; value: SystemBuilderRevision }) => void>();
+    let deferNewer = false;
+    const readRevision = vi.fn(async ({ revisionId }: Parameters<SystemBuilderClient["readRevision"]>[0]) => deferNewer && revisionId
+      ? new Promise<{ ok: true; value: SystemBuilderRevision }>((resolve) => { outstandingReads.set(revisionId, resolve); })
+      : ({
+      ok: true as const,
+      value: revisionId === "system-revision-3" ? { ...revision, revisionNumber: 3, revisionId: normalizeSystemBuilderRevisionId("system-revision-3") } : revision,
+    }));
     const client = {
       ...clientFor(record, revision),
+      list: async () => ({ ok: true as const, value: listRecord ? [listRecord] : [] }),
+      readRevision,
       saveRevision,
       listComposerAssets,
       readComposerAsset,
@@ -1452,9 +2342,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
         ([input]) => input.parentDefinitionRef,
       ),
     ).toHaveLength(0);
-    expect(
-      listComposerAssets.mock.calls.filter(([input]) => input.searchText),
-    ).toHaveLength(0);
+    expect(listComposerAssets.mock.calls.map(([input]) => input.searchText).sort()).toEqual(
+      [rootDetail.definitionId, shellDetail.definitionId, historyDetail.definitionId].sort(),
+    );
+    expect(listComposerAssets.mock.calls.every(([input]) => input.limit === 200)).toBe(true);
     expect(
       Array.from(container.querySelectorAll("button")).some((candidate) =>
         ["Clone", "Archive", "Restore"].includes(
@@ -1565,6 +2456,156 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(
       JSON.stringify(saveRevision.mock.calls[0]?.[0].instances),
     ).not.toMatch(/sampleUserMessage|sampleAssistantMessage|previewValue/);
+
+    listRecord = { ...record, revision: 3, currentRevisionId: normalizeSystemBuilderRevisionId("system-revision-3") };
+    await act(async () => {
+      await button(container!, "Properties").click();
+      await button(container!, "Layers").click();
+    });
+    const latestShell = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'))
+      .find((entry) => entry.textContent?.includes("Standard shell"));
+    expect(latestShell).toBeDefined();
+    await act(async () => latestShell!.click());
+    await act(async () => button(container!, "Properties").click());
+    const nextTitle = await vi.waitFor(() => {
+      const input = container!.querySelector<HTMLInputElement>("#title");
+      expect(input).not.toBeNull();
+      return input!;
+    });
+    await act(async () => setInputValue(nextTitle, "Keep my local title"));
+    saveRevision.mockImplementationOnce(async () => ({
+      ok: false, error: { code: "system-builder.stale-record-revision", message: "This system changed. Reopen it before saving." },
+    }) as never);
+    await act(async () => {
+      root!.render(<SystemBuilderWorkspace workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} activeSystemsRevision={1} />);
+    });
+    await vi.waitFor(() => expect(container!.textContent).toContain("A newer saved version exists."));
+    await act(async () => button(container!, "Save and validate revision").click());
+    await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledTimes(2));
+    expect(saveRevision.mock.calls[1]?.[0].expectedRecordRevision).toBe(2);
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Keep my local title");
+    // Undo reaches the saved checkpoint. The already-observed external change
+    // can then replace the clean graph and its obsolete redo history.
+    await act(async () => button(container!, "Undo").click());
+    await vi.waitFor(() => expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Portal"));
+    await act(async () => setInputValue(container.querySelector<HTMLInputElement>("#title")!, "Local edits to discard"));
+    await act(async () => button(container!, "Discard changes").click());
+    await vi.waitFor(() => expect(readRevision).toHaveBeenLastCalledWith({
+      workspaceId: "workspace-a", systemId: String(record.systemId), revisionId: "system-revision-3",
+    }));
+
+    await act(async () => button(container!, "Layers").click());
+    const refreshedShell = [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]')]
+      .find((item) => item.textContent?.includes("Standard shell"));
+    expect(refreshedShell).toBeDefined();
+    await act(async () => refreshedShell!.click());
+    await act(async () => button(container!, "Properties").click());
+    const finalTitle = await vi.waitFor(() => {
+      const field = container!.querySelector<HTMLInputElement>("#title");
+      expect(field).not.toBeNull();
+      return field!;
+    });
+    await act(async () => setInputValue(finalTitle, "Keep after archive"));
+    listRecord = undefined;
+    await act(async () => {
+      root!.render(<SystemBuilderWorkspace workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} activeSystemsRevision={2} />);
+    });
+    await vi.waitFor(() => expect(container!.textContent).toContain("This saved system is no longer in the list."));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Keep after archive");
+    await act(async () => button(container!, "Discard changes").click());
+    expect(container.querySelector(".system-composer__workspace")).toBeNull();
+
+    // Reopen the base, then hold two different clean refreshes and return them
+    // out of order. Neither refresh may change the selected asset or focus.
+    listRecord = record;
+    const open = (activeSystemsRevision: number, managedSavedRefresh?: { isCurrent: () => boolean }) => act(async () => {
+      root!.render(<SystemBuilderWorkspace key="new-composer" workspaceId="workspace-a" client={client}
+        initialSystemId={String(record.systemId)} activeSystemsRevision={activeSystemsRevision}
+        managedSavedRefresh={managedSavedRefresh} />);
+    });
+    await open(3);
+    await vi.waitFor(() => expect(container!.querySelector(".system-composer__workspace")).not.toBeNull());
+    await act(async () => button(container!, "Layers").click());
+    const selectedShell = [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"]')]
+      .find((item) => item.textContent?.includes("Standard shell"));
+    expect(selectedShell).toBeDefined();
+    await act(async () => selectedShell!.click());
+    await act(async () => button(container!, "Properties").click());
+    const focusedTitle = await vi.waitFor(() => {
+      const field = container!.querySelector<HTMLInputElement>("#title");
+      expect(field).not.toBeNull();
+      return field!;
+    });
+    focusedTitle.focus();
+    deferNewer = true;
+    const changed = (number: number, title: string): SystemBuilderRevision => ({
+      ...revision, revisionNumber: number, revisionId: normalizeSystemBuilderRevisionId(`system-revision-${number}`),
+      instances: revision.instances.map((item) => item.instanceId === shellInstance.instanceId
+        ? { ...item, selectedConfiguration: { ...item.selectedConfiguration, title } } : item),
+    });
+    const third = changed(3, "Older saved title");
+    const fourth = changed(4, "Newer saved title");
+    listRecord = { ...record, revision: 3, currentRevisionId: third.revisionId };
+    await open(4);
+    await vi.waitFor(() => expect(outstandingReads.has(third.revisionId)).toBe(true));
+    listRecord = { ...record, revision: 4, currentRevisionId: fourth.revisionId };
+    await open(5);
+    await vi.waitFor(() => expect(outstandingReads.has(fourth.revisionId)).toBe(true));
+    await act(async () => outstandingReads.get(fourth.revisionId)!({ ok: true, value: fourth }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Newer saved title");
+    expect(document.activeElement).toBe(focusedTitle);
+    await act(async () => outstandingReads.get(third.revisionId)!({ ok: true, value: third }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Newer saved title");
+
+    const fifth = changed(5, "External title");
+    listRecord = { ...record, revision: 5, currentRevisionId: fifth.revisionId };
+    await open(6);
+    await vi.waitFor(() => expect(outstandingReads.has(fifth.revisionId)).toBe(true));
+    await act(async () => setInputValue(focusedTitle, "Unsaved while waiting"));
+    await act(async () => outstandingReads.get(fifth.revisionId)!({ ok: true, value: fifth }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("Unsaved while waiting");
+    expect(container.textContent).toContain("A newer saved version exists.");
+    outstandingReads.delete(fifth.revisionId);
+    await act(async () => button(container!, "Undo").click());
+    await vi.waitFor(() => expect(outstandingReads.has(fifth.revisionId)).toBe(true));
+    await act(async () => outstandingReads.get(fifth.revisionId)!({ ok: true, value: fifth }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("External title");
+
+    let connected = true;
+    const sixth = changed(6, "Retired connection title");
+    listRecord = { ...record, revision: 6, currentRevisionId: sixth.revisionId };
+    await open(6, { isCurrent: () => connected });
+    await vi.waitFor(() => expect(outstandingReads.has(sixth.revisionId)).toBe(true));
+    connected = false;
+    await act(async () => outstandingReads.get(sixth.revisionId)!({ ok: true, value: sixth }));
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("External title");
+
+    let finishList!: (value: Awaited<ReturnType<SystemBuilderClient["list"]>>) => void;
+    const heldList = new Promise<Awaited<ReturnType<SystemBuilderClient["list"]>>>((resolve) => { finishList = resolve; });
+    let started = false;
+    const originalList = client.list;
+    client.list = () => { started = true; return heldList; };
+    let visible = true;
+    try {
+      await open(6, { isCurrent: () => visible });
+      await vi.waitFor(() => expect(started).toBe(true));
+      visible = false;
+      await act(async () => finishList({ ok: true, value: [] }));
+      expect(container!.textContent).not.toContain("The open view is still here.");
+    } finally { client.list = originalList; }
+
+    const view = container.querySelector(".system-composer__workspace");
+    const focusedField = container.querySelector<HTMLInputElement>("#title")!;
+    focusedField.focus();
+    listRecord = undefined;
+    await open(6, { isCurrent: () => true });
+    await vi.waitFor(() => expect(container!.textContent).toContain("The open view is still here."));
+    expect(container.querySelector(".system-composer__workspace")).toBe(view);
+    expect(container.querySelector<HTMLInputElement>("#title")?.value).toBe("External title");
+    expect(document.activeElement).toBe(focusedField);
+    expect(button(container, "Edit system").disabled).toBe(true);
   });
 });
 

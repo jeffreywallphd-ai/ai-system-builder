@@ -1,0 +1,906 @@
+"""Finite operational UI qualification must not hide unrelated or explicit test impact."""
+from pathlib import Path
+import json
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+HELPERS = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(HELPERS))
+from control_plane import catalog
+from control_plane.contracts import ControlError
+import run_focused_checks
+
+ROOT = HELPERS.parents[1]
+CONFIG = "dev-tools/config/contributor-check-profiles.json"
+TESTS = [
+    "apps/desktop/src/renderer/features/python-runtime/tests/use-python-runtime-footer.unit.test.tsx",
+    "apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx",
+    "apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts",
+    "modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
+    "modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx",
+    "modules/ui/shared/notifications/tests/notificationState.unit.test.ts",
+    "modules/ui/shared/notifications/tests/TaskObservationProvider.interaction.ui.test.tsx",
+    "modules/ui/shared/notifications/tests/taskObservation.unit.test.ts",
+    "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx",
+    "modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx",
+    "modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx",
+    "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
+    "modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx",
+    "apps/desktop/src/renderer/features/models/tests/model-training-notification-bridge.unit.test.tsx",
+    "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx",
+    "apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx",
+    "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-notification-bridge.unit.test.tsx",
+    "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx",
+    "apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx",
+    "apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx",
+    "apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx",
+    "apps/thin-client/src/features/image-generation/tests/use-image-generation-feature.unit.test.tsx",
+    "apps/desktop/src/renderer/tests/app-shell-visible-page.ui.test.tsx",
+    "apps/desktop/src/renderer/tests/app-navigation.ui.test.tsx",
+    "apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx",
+    "apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+    "apps/thin-client/src/tests/app-routing.ui.test.tsx",
+    "modules/ui/shared/page-dashboard/tests/PageDashboard.interaction.ui.test.tsx",
+    "modules/ui/shared/page-dashboard/tests/dashboardMetrics.unit.test.ts",
+    "apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts",
+    "apps/desktop/src/renderer/features/runtime-readiness/tests/runtime-readiness-ui-wording.unit.test.ts",
+    "apps/desktop/src/renderer/features/runtime-readiness/tests/runtime-readiness-client-boundary.unit.test.ts",
+    "apps/desktop/src/renderer/features/runtime-readiness/tests/desktop-runtime-readiness-client.unit.test.ts",
+    "apps/desktop/src/renderer/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
+    "apps/thin-client/src/features/runtime-readiness/tests/thin-client-runtime-readiness-client.unit.test.ts",
+    "apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+    "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py"
+]
+TESTS += [
+    "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts",
+    "dev-tools/helpers/tests/test_control_plane_ui_run_evidence_profile.py",
+]
+TESTS += [
+    "dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts"
+]
+
+TESTS += ['dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts']
+
+TESTS += ['dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts',
+ 'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py',
+ 'dev-tools/scripts/qualification/tests/test_training_qualification_worker.py']
+
+TESTS += ['apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts']
+TESTS += ['dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_observe_windows_process_exit.py']
+
+# Exact literal commands, preserving the twelve-file Windows bound.
+TESTS += ['dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts',
+ 'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts',
+ 'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts',
+ 'apps/server/src/tests/shutdownServerResources.unit.test.ts',
+ 'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts']
+
+TESTS += ['dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts',
+ 'dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs',
+ 'apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx',
+ 'modules/ui/shared/settings/tests/SettingField.unit.test.tsx',
+ 'modules/application/use-cases/tests/settings.use-cases.unit.test.ts']
+
+TESTS += ['modules/application/use-cases/tests/train-model.use-case.unit.test.ts']
+TESTS += ['modules/adapters/runtime/python/worker/tests/test_train_model_task.py']
+
+EXPECTED_COMMANDS = [['node',
+  '--import',
+  'tsx',
+  '--test',
+  '--',
+  'apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts',
+  'apps/desktop/src/renderer/features/runtime-readiness/tests/desktop-runtime-readiness-client.unit.test.ts',
+  'apps/desktop/src/renderer/features/runtime-readiness/tests/runtime-readiness-client-boundary.unit.test.ts',
+  'apps/desktop/src/renderer/features/runtime-readiness/tests/runtime-readiness-ui-wording.unit.test.ts',
+  'apps/desktop/src/renderer/tests/app-navigation.ui.test.tsx',
+  'apps/desktop/src/renderer/tests/app-shell-visible-page.ui.test.tsx',
+  'apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx',
+  'apps/server/src/tests/shutdownServerResources.unit.test.ts',
+  'apps/thin-client/src/features/runtime-readiness/tests/thin-client-runtime-readiness-client.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/desktop-owned-cleanup.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/desktop-restart-cleanup.unit.test.ts'],
+ ['node',
+  '--import',
+  'tsx',
+  '--test',
+  '--',
+  'dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/owned-task-qualification-profile.unit.test.ts'],
+ ['node',
+  '--import',
+  'tsx',
+  '--test',
+  '--',
+  'dev-tools/scripts/qualification/tests/qualification-report-wiring.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/qualification-reporting.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/runtime-lifecycle-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/task-visibility-measurement.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs',
+  'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts',
+  'modules/application/use-cases/tests/settings.use-cases.unit.test.ts',
+  'modules/application/use-cases/tests/train-model.use-case.unit.test.ts'],
+ ['node',
+  '--import',
+  'tsx',
+  '--test',
+  '--',
+  'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts',
+  'modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx',
+  'modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx',
+  'modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx',
+  'modules/ui/shared/notifications/tests/model-download-notification-boundaries.ui.test.tsx',
+  'modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts',
+  'modules/ui/shared/notifications/tests/notificationState.unit.test.ts',
+  'modules/ui/shared/notifications/tests/taskObservation.unit.test.ts',
+  'modules/ui/shared/page-dashboard/tests/dashboardMetrics.unit.test.ts'],
+ ['node',
+  'dev-tools/helpers/run_vitest_checks.mjs',
+  '--',
+  'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-feature.unit.test.tsx',
+  'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-low-memory.ui.test.tsx',
+  'apps/desktop/src/renderer/features/dataset-preparation/tests/dataset-preparation-notification-bridge.unit.test.tsx',
+  'apps/desktop/src/renderer/features/image-generation/tests/image-generation-ownership.unit.test.tsx',
+  'apps/desktop/src/renderer/features/image-generation/tests/use-image-generation-feature.unit.test.tsx',
+  'apps/desktop/src/renderer/features/models/tests/desktop-training-preload.ui.test.tsx',
+  'apps/desktop/src/renderer/features/models/tests/model-training-notification-bridge.unit.test.tsx',
+  'apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx',
+  'apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts',
+  'apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx',
+  'apps/desktop/src/renderer/features/python-runtime/tests/use-python-runtime-footer.unit.test.tsx',
+  'apps/desktop/src/renderer/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts',
+  'apps/thin-client/src/features/image-generation/tests/use-image-generation-feature.unit.test.tsx',
+  'apps/thin-client/src/features/page-dashboard/tests/summary-clients.unit.test.ts',
+  'apps/thin-client/src/features/runtime-readiness/components/runtimeSetupViewModel.unit.test.ts',
+  'apps/thin-client/src/pages/tests/settings-recovery.ui.test.tsx',
+  'apps/thin-client/src/tests/app-routing.ui.test.tsx',
+  'apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx',
+  'dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/desktop-owned-cleanup-failures.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/native-asset-system-admission.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/native-lifecycle-ocr-admission.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/operational-ui-oracles.unit.test.ts',
+  'dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts',
+  'modules/ui/shared/context-management/tests/context-task-notification-boundaries.unit.test.tsx',
+  'modules/ui/shared/notifications/tests/TaskObservationProvider.interaction.ui.test.tsx',
+  'modules/ui/shared/notifications/tests/notification-center-actions.ui.test.tsx',
+  'modules/ui/shared/page-dashboard/tests/PageDashboard.interaction.ui.test.tsx',
+  'modules/ui/shared/settings/tests/SettingField.unit.test.tsx'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/helpers/tests',
+  '-p',
+  'test_control_plane_operational_ui_profile.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/helpers/tests',
+  '-p',
+  'test_control_plane_ui_run_evidence_profile.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/scripts/qualification/tests',
+  '-p',
+  'test_observe_windows_process_exit.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/scripts/qualification/tests',
+  '-p',
+  'test_training_host_prerequisites.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'unittest',
+  'discover',
+  '-s',
+  'dev-tools/scripts/qualification/tests',
+  '-p',
+  'test_training_qualification_worker.py'],
+ [sys.executable,
+  '-B',
+  '-m',
+  'pytest',
+  '-c',
+  'dev-tools/config/pytest-focused.ini',
+  '--noconftest',
+  '-p',
+  'no:cacheprovider',
+  '-q',
+  '--',
+  'modules/adapters/runtime/python/worker/tests/test_train_model_task.py']]
+
+SETTINGS_AUTOMATIC = ['dev-tools/scripts/qualification/visual-composer/owned-host-shutdown.mjs',
+ 'dev-tools/scripts/qualification/visual-composer/settings-host-launch-plan.mjs',
+ 'dev-tools/scripts/qualification/visual-composer/settings-host-global-setup.mjs',
+ 'dev-tools/scripts/qualification/visual-composer/settings-host-server-entry.ts',
+ 'dev-tools/scripts/qualification/visual-composer/settings-host-oracles.ts',
+ 'dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts',
+ 'dev-tools/config/playwright.settings-host-desktop.config.ts',
+ 'dev-tools/config/playwright.settings-host-thin.config.ts',
+ 'dev-tools/scripts/qualification/tests/settings-host-launch-plan.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/owned-host-shutdown.unit.test.mjs',
+ 'dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts',
+ 'dev-tools/scripts/qualification/tests/settings-host-wiring.unit.test.mjs']
+
+class OperationalUiProfile(unittest.TestCase):
+    def test_training_start_sources_are_finite_borrowed_impact(self):
+        sources = ['modules/application/use-cases/model/train-model.use-case.ts', 'modules/application/use-cases/tests/train-model.use-case.unit.test.ts', 'modules/application/use-cases/README.md']
+        test = 'modules/application/use-cases/tests/train-model.use-case.unit.test.ts'
+        self.assertEqual(self.profile()["test_paths"], TESTS)
+        self.assertIn(test, self.profile()["test_paths"])
+        for source in sources:
+            self.assertIn(source, self.profile()["source_paths"])
+            self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        for missing, remove_test, required, paths, generic in [
+            (None, False, ["operational-ui"], sources, False),
+            (None, False, ["operational-ui", "focused-tests"], sources, True),
+            (None, False, ["operational-ui"], sources + ["modules/application/use-cases/model/unknown.ts"], True),
+            (test, False, ["operational-ui"], sources, False),
+            *[(source, source == test, ["operational-ui"], sources, True) for source in sources],
+        ]:
+            with self.subTest(missing=missing, remove_test=remove_test, required=required, paths=paths), tempfile.TemporaryDirectory(prefix="training-start-profile-") as directory:
+                root=Path(directory);profile=self.profile()
+                if missing:profile["source_paths"].remove(missing)
+                if remove_test:profile["test_paths"].remove(test)
+                self.fixture(root,profile)
+                ids={row["id"]for row in catalog.plan(root,paths,required,"synthetic-candidate")["selected"]}
+                self.assertIn("operational-ui",ids);self.assertEqual("focused-tests"in ids,generic)
+        with tempfile.TemporaryDirectory(prefix="training-start-borrowed-")as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            ids={row["id"]for row in catalog.plan(root,sources,["documentation"],"synthetic-candidate")["selected"]}
+            self.assertNotIn("operational-ui",ids);self.assertIn("focused-tests",ids)
+
+    def test_training_form_component_is_finite_borrowed_impact(self):
+        component = "apps/desktop/src/renderer/features/models/components/TrainModelTab.tsx"
+        test = "apps/desktop/src/renderer/features/models/tests/model-training-observation.unit.test.tsx"
+        self.assertIn(component, self.profile()["source_paths"])
+        self.assertNotIn(component, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        self.assertEqual(self.profile()["test_paths"], TESTS)
+        for incomplete, required, paths, operational, generic in [
+            (False, ["operational-ui"], [component, test], True, False),
+            (False, ["operational-ui", "focused-tests"], [component, test], True, True),
+            (True, ["operational-ui"], [component, test], True, True),
+            (False, ["operational-ui"], [component, test, "apps/desktop/src/renderer/features/models/unreviewed.tsx"], True, True),
+            (False, ["documentation"], [component], False, True),
+        ]:
+            with self.subTest(incomplete=incomplete, required=required, paths=paths), tempfile.TemporaryDirectory(prefix="training-form-profile-") as directory:
+                root = Path(directory); profile = self.profile()
+                if incomplete: profile["source_paths"].remove(component)
+                self.fixture(root, profile)
+                selected = {row["id"] for row in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                self.assertEqual("operational-ui" in selected, operational)
+                self.assertEqual("focused-tests" in selected, generic)
+
+    def test_image_host_sources_preserve_fixed_runners_and_unknown_impact(self):
+        import copy
+        paths = ['dev-tools/scripts/qualification/visual-composer/image-generation-host-oracles.ts', 'dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/e2e/image-generation-host-journey.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-launch-plan.mjs', 'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-inputs.mjs', 'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-fixture.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-input-records.ts', 'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-shutdown.mjs', 'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs', 'dev-tools/scripts/qualification/visual-composer/image-host-server-entry.ts', 'dev-tools/scripts/qualification/visual-composer/image-host-global-setup.mjs', 'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs', 'dev-tools/config/playwright.image-host-desktop.config.ts', 'dev-tools/config/playwright.image-host-thin.config.ts', 'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts']
+        borrowed = ['dev-tools/scripts/qualification/visual-composer/image-host-launch-plan.d.mts', 'dev-tools/scripts/qualification/visual-composer/image-host-inputs.d.mts', 'dev-tools/scripts/qualification/visual-composer/image-host-shutdown.d.mts', 'dev-tools/scripts/qualification/visual-composer/e2e/desktop-main-cleanup.ts', 'apps/server/src/tests/shutdownServerResources.unit.test.ts', 'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts', 'dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs']
+        self.assertEqual(self.profile()["test_paths"][65:74], ['dev-tools/scripts/qualification/tests/image-generation-host-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/image-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-inputs.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-input-records.unit.test.ts', 'dev-tools/scripts/qualification/tests/image-host-shutdown.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-wiring.unit.test.mjs', 'dev-tools/scripts/qualification/tests/image-host-preview.unit.test.ts', 'apps/server/src/tests/shutdownServerResources.unit.test.ts', 'modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts'])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[46:64], paths)
+        for source in paths + borrowed:
+            self.assertIn(source, self.profile()["source_paths"])
+            if source in borrowed: self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+            for incomplete, required, generic in [(False,["operational-ui"],False),(False,["operational-ui","focused-tests"],True),(True,["operational-ui"],True)]:
+                with self.subTest(source=source,incomplete=incomplete), tempfile.TemporaryDirectory(prefix="image-host-profile-") as directory:
+                    root=Path(directory);profile=copy.deepcopy(self.profile())
+                    if incomplete:
+                        profile["source_paths"].remove(source)
+                        if source in profile["test_paths"]: profile["test_paths"].remove(source)
+                    self.fixture(root,profile)
+                    if source in ["modules/hosts/shared/resolveComfyUiAutoInstall.unit.test.ts", "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs"]:
+                        # Its existing dedicated profile independently covers this
+                        # borrowed regression even if Operational omits it.
+                        configuration=json.loads((root / CONFIG).read_bytes())
+                        neighbor = "comfyui-host-policy" if source.startswith("modules/") else "host-setup-policy"
+                        configuration["profiles"][neighbor]=json.loads((ROOT / CONFIG).read_bytes())["profiles"][neighbor]
+                        (root / CONFIG).write_text(json.dumps(configuration))
+                        generic = "focused-tests" in required
+                    ids={c["id"] for c in catalog.plan(root,[source],required,"synthetic-candidate")["selected"]}
+                    self.assertIn("operational-ui",ids);self.assertEqual("focused-tests" in ids,generic)
+        with tempfile.TemporaryDirectory(prefix="image-host-unknown-") as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            ids={c["id"] for c in catalog.plan(root,[paths[0],"dev-tools/scripts/qualification/visual-composer/unknown-image.ts"],["operational-ui"],"synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests",ids)
+
+    def test_owned_native_observation_has_finite_sources_and_preserves_fallback(self):
+        new = ["dev-tools/scripts/qualification/tests/owned-native-process-exit.unit.test.mjs",
+               "dev-tools/scripts/qualification/tests/test_observe_windows_process_exit.py"]
+        self.assertEqual(self.profile()["test_paths"][63:65], new)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[44:46], new)
+        borrowed = ["dev-tools/scripts/qualification/observe_windows_process_exit.py",
+                    "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.mjs",
+                    "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"]
+        for source in borrowed:
+            self.assertIn(source, self.profile()["source_paths"])
+            self.assertNotIn(source, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        for source in new + borrowed:
+            for incomplete, required, generic in [(False,["operational-ui"],False),
+                                                    (False,["operational-ui","focused-tests"],True),
+                                                    (True,["operational-ui"],True)]:
+                with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix="owned-native-profile-") as directory:
+                    root=Path(directory); profile=self.profile()
+                    if incomplete:
+                        profile["source_paths"].remove(source)
+                        if source in profile["test_paths"]: profile["test_paths"].remove(source)
+                    self.fixture(root,profile)
+                    ids={c["id"] for c in catalog.plan(root,[source],required,"synthetic-candidate")["selected"]}
+                    self.assertIn("operational-ui",ids);self.assertEqual("focused-tests" in ids,generic)
+        with tempfile.TemporaryDirectory(prefix="owned-native-unknown-") as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            ids={c["id"] for c in catalog.plan(root,[new[0],"dev-tools/scripts/qualification/unknown-process.py"],["operational-ui"],"synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests",ids)
+
+    def test_image_draft_sources_keep_exact_coverage_and_generic_fallback(self):
+        import copy
+        paths = ['apps/desktop/src/renderer/features/image-generation/hooks/image-generation-draft-state.ts', 'apps/desktop/src/renderer/features/image-generation/tests/image-generation-draft-state.unit.test.ts', 'apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts']
+        self.assertEqual(self.profile()['test_paths'][62:63], [paths[1]])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[41:44], paths)
+        for source in paths:
+            for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
+                with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='image-draft-profile-') as directory:
+                    root=Path(directory);profile=copy.deepcopy(self.profile())
+                    if incomplete:
+                        profile['source_paths'].remove(source)
+                        if source in profile['test_paths']:profile['test_paths'].remove(source)
+                    self.fixture(root,profile)
+                    ids={c['id'] for c in catalog.plan(root,[source],required,'synthetic-candidate')['selected']}
+                    self.assertIn('operational-ui',ids);self.assertEqual('focused-tests' in ids,generic)
+        with tempfile.TemporaryDirectory(prefix='image-draft-unknown-') as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            ids={c['id'] for c in catalog.plan(root,[paths[0],"apps/desktop/src/renderer/features/image-generation/unknown.ts"],['documentation'],'synthetic-candidate')['selected']}
+            self.assertIn('focused-tests',ids)
+
+    def test_training_sources_are_finite_and_cannot_hide_unknown_impact(self):
+        import copy
+        paths = ['dev-tools/scripts/qualification/visual-composer/e2e/model-training-journey.ts', 'dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts', 'dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.mjs', 'dev-tools/scripts/qualification/visual-composer/training-host-prerequisites.py', 'dev-tools/scripts/qualification/visual-composer/training-host-fixture.ts', 'dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py', 'dev-tools/scripts/qualification/visual-composer/training-host-global-setup.mjs', 'dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py', 'dev-tools/scripts/qualification/tests/test_training_qualification_worker.py', 'dev-tools/config/playwright.training-host.config.ts']
+        self.assertEqual(self.profile()['test_paths'][58:62], ['dev-tools/scripts/qualification/tests/model-training-oracles.unit.test.ts', 'dev-tools/scripts/qualification/tests/training-host-launch-plan.unit.test.mjs', 'dev-tools/scripts/qualification/tests/test_training_host_prerequisites.py', 'dev-tools/scripts/qualification/tests/test_training_qualification_worker.py'])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[29:41], paths)
+        declaration='dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.d.mts'
+        self.assertIn(declaration,self.profile()['source_paths'])
+        self.assertNotIn(declaration,catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])
+        for source in paths:
+            for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
+                with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='training-profile-') as directory:
+                    root=Path(directory); profile=copy.deepcopy(self.profile())
+                    if incomplete:
+                        profile['source_paths'].remove(source)
+                        if source in profile['test_paths']: profile['test_paths'].remove(source)
+                    self.fixture(root,profile)
+                    ids={c['id'] for c in catalog.plan(root,[source],required,'synthetic-candidate')['selected']}
+                    self.assertIn('operational-ui',ids);self.assertEqual('focused-tests' in ids,generic)
+        with tempfile.TemporaryDirectory(prefix='training-unknown-profile-') as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            ids={c['id'] for c in catalog.plan(root,[paths[0],"dev-tools/scripts/qualification/visual-composer/unknown-training.py"],['documentation'],'synthetic-candidate')['selected']}
+            self.assertIn('focused-tests',ids)
+
+    def test_native_data_sources_retain_exact_coverage_and_unknown_fallback(self):
+        source = "dev-tools/scripts/qualification/visual-composer/e2e/provided-dataset-version-journey.ts"
+        core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
+        admission = "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts"
+        oracle = "dev-tools/scripts/qualification/tests/asset-authoring-journey-oracles.unit.test.ts"
+        declaration = "dev-tools/scripts/qualification/visual-composer/owned-native-process-exit.d.mts"
+        collection = "dev-tools/scripts/qualification/tests/provided-dataset-host-launch-plan.unit.test.mjs"
+        self.assertEqual(self.profile()["test_paths"][41:43], [admission, oracle])
+        self.assertEqual(len(self.profile()["test_paths"]), 83)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 78)
+        self.assertIn(declaration, self.profile()["source_paths"])
+        self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        self.assertIn(collection, self.profile()["source_paths"])
+        self.assertNotIn(collection, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="operational-native-data-") as directory:
+            root = Path(directory)
+            self.fixture(root, self.profile())
+            # This source also activates the existing browser profile. Keep that
+            # independent group selected; the fixture must provide its schema.
+            configuration = {"schema_version":"contributor-check-profiles-v1","profiles":{
+                "operational-ui":self.profile(),
+                "dataset-version-browser":{"test_paths":["modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts"],"source_paths":[source]},
+            }}
+            (root / CONFIG).write_text(json.dumps(configuration))
+            for paths, required, generic in [([core, source, admission, declaration, collection], ["documentation"], False),
+                ([core, source], ["focused-tests"], True), ([core, source, "modules/unknown/unreviewed.ts"], ["documentation"], True)]:
+                with self.subTest(paths=paths, required=required):
+                    ids = {c["id"] for c in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                    self.assertIn("operational-ui", ids)
+                    self.assertIn("dataset-version-browser", ids)
+                    self.assertEqual("focused-tests" in ids, generic)
+            for missing in [source, declaration, collection]:
+                profile = self.profile()
+                profile["source_paths"].remove(missing)
+                configuration["profiles"]["operational-ui"] = profile
+                configuration["profiles"]["dataset-version-browser"]["source_paths"] = [source]
+                (root / CONFIG).write_text(json.dumps(configuration))
+                ids = {c["id"] for c in catalog.plan(root, [core,source,declaration,collection], ["documentation"], "synthetic-candidate")["selected"]}
+                self.assertEqual("focused-tests" in ids, missing != source)
+                if missing == source:
+                    # Another selected owner covers it until BOTH declarations
+                    # omit it. Physical source presence alone grants no coverage.
+                    configuration["profiles"]["dataset-version-browser"]["source_paths"] = [admission]
+                    (root / CONFIG).write_text(json.dumps(configuration))
+                    ids = {c["id"] for c in catalog.plan(root, [core,source,declaration,collection], ["documentation"], "synthetic-candidate")["selected"]}
+                    self.assertIn("focused-tests", ids)
+
+    def test_native_desktop_helper_is_exact_borrowed_coverage(self):
+        helper = "dev-tools/scripts/qualification/visual-composer/e2e/native-desktop-zoom.ts"
+        core = "dev-tools/scripts/qualification/tests/operational-desktop-case.unit.test.ts"
+        self.assertEqual(len(self.profile()["test_paths"]), 83)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 78)
+        self.assertIn(helper, self.profile()["source_paths"])
+        self.assertNotIn(helper, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="operational-native-desktop-") as directory:
+            root = Path(directory)
+            self.fixture(root, self.profile())
+            for paths, required, operational, generic in [
+                ([core, helper, CONFIG], ["documentation"], True, False),
+                ([helper], ["documentation"], False, True),
+                ([core, helper], ["focused-tests"], True, True),
+                ([core, helper, "dev-tools/scripts/qualification/visual-composer/e2e/unreviewed.ts"], ["documentation"], True, True),
+            ]:
+                with self.subTest(paths=paths, required=required):
+                    ids = {check["id"] for check in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                    self.assertEqual("operational-ui" in ids, operational)
+                    self.assertEqual("focused-tests" in ids, generic)
+            incomplete = self.profile()
+            incomplete["source_paths"].remove(helper)
+            (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"operational-ui": incomplete}}))
+            ids = {check["id"] for check in catalog.plan(root, [core, helper], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+
+    def test_native_zoom_type_coverage_is_borrowed_and_preserves_fallback(self):
+        declaration = "dev-tools/scripts/qualification/visual-composer/native-browser-zoom.d.mts"
+        core = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
+        self.assertEqual(len(self.profile()["test_paths"]), 83)
+        self.assertEqual(len(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]), 78)
+        self.assertIn(declaration, self.profile()["source_paths"])
+        self.assertNotIn(declaration, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="operational-native-profile-") as directory:
+            root = Path(directory)
+            self.fixture(root, self.profile())
+            for paths, required, operational, generic in [
+                ([core, declaration, CONFIG], ["documentation"], True, False),
+                ([declaration], ["documentation"], False, True),
+                ([core, declaration], ["focused-tests"], True, True),
+                ([core, declaration, "dev-tools/scripts/qualification/visual-composer/unreviewed.mts"], ["documentation"], True, True),
+            ]:
+                with self.subTest(paths=paths, required=required):
+                    ids = {check["id"] for check in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                    self.assertEqual("operational-ui" in ids, operational)
+                    self.assertEqual("focused-tests" in ids, generic)
+            incomplete = self.profile()
+            incomplete["source_paths"].remove(declaration)
+            (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"operational-ui": incomplete}}))
+            ids = {check["id"] for check in catalog.plan(root, [core, declaration], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+
+    def test_exact_menu_sources_keep_unknown_incomplete_and_explicit_generic_guards(self):
+        menu = ["modules/ui/shared/hooks/useNavigationMenu.ts", "apps/desktop/src/renderer/components/layout/AppShell.tsx", "apps/thin-client/src/components/layout/AppShell.tsx"]
+        borrowed = ["modules/ui/shared/index.ts", "modules/ui/shared/hooks/README.md", CONFIG, "dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py"]
+        with tempfile.TemporaryDirectory(prefix="operational-menu-profile-") as directory:
+            root = Path(directory); self.fixture(root, self.profile())
+            for paths, required, generic in [(menu + borrowed, ["documentation"], False), (menu, ["focused-tests"], True), (menu + ["modules/ui/shared/hooks/unreviewed.ts"], ["documentation"], True)]:
+                with self.subTest(paths=paths, required=required):
+                    plan = catalog.plan(root, paths, required, "synthetic-candidate"); ids = {check["id"] for check in plan["selected"]}
+                    self.assertIn("operational-ui", ids); self.assertEqual("focused-tests" in ids, generic)
+            for missing in [menu[0], borrowed[0], borrowed[1]]:
+                profile = self.profile(); profile["source_paths"].remove(missing); (root / CONFIG).write_text(json.dumps({"schema_version":"contributor-check-profiles-v1","profiles":{"operational-ui":profile}}))
+                self.assertIn("focused-tests", {check["id"] for check in catalog.plan(root, menu + borrowed, ["documentation"], "synthetic-candidate")["selected"]})
+
+    def test_menu_borrowed_files_alone_do_not_activate_operational_profile(self):
+        with tempfile.TemporaryDirectory(prefix="operational-menu-profile-") as directory:
+            root = Path(directory); self.fixture(root, self.profile())
+            for source in ["modules/ui/shared/index.ts", "modules/ui/shared/hooks/README.md", "dev-tools/helpers/control_plane/catalog.py", "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py", "dev-tools/README.md"]:
+                with self.subTest(source=source):
+                    ids = {check["id"] for check in catalog.plan(root, [source], ["documentation"], "synthetic-candidate")["selected"]}
+                    self.assertNotIn("operational-ui", ids)
+
+    def test_shared_borrowed_files_do_not_activate_operational_checks_in_other_profiles(self):
+        for name, source, test in [
+            ("system-build-publication-ui", "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts", "modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx"),
+            ("system-runtime-conversation-ui", "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts", "apps/desktop/src/system-runtime/tests/SystemRuntimeApp.interaction.ui.test.tsx"),
+            ("system-runtime-conversation-ui", "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts", "apps/desktop/src/system-runtime/tests/SystemRuntimeApp.interaction.ui.test.tsx"),
+            ("asset-authoring-ui", "dev-tools/scripts/qualification/visual-composer/e2e/asset-authoring-journey.ts", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),
+            ("system-canvas-authoring-ui", "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts", "dev-tools/scripts/qualification/tests/meaningful-system-oracles.unit.test.ts"),
+            ("dataset-version-browser", "dev-tools/scripts/qualification/visual-composer/e2e/manual-context-host-journey.ts", "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts"),
+            ("dataset-version-browser", "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-dataset-versions.e2e.spec.ts", "modules/ui/shared/dataset-version/tests/datasetVersionReplay.unit.test.ts"),
+            ("asset-authoring-ui", "dev-tools/scripts/qualification/visual-composer/e2e/isolated-desktop-case.ts", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),
+            ("asset-authoring-ui", "dev-tools/README.md", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),
+            ("asset-authoring-ui", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx", "modules/ui/shared/notifications/tests/TransientNotificationPublisher.interaction.ui.test.tsx"),
+            ("desktop-startup-ui", "apps/desktop/src/renderer/README.md", "apps/desktop/src/renderer/tests/app-lazy-pages.ui.test.tsx"),
+        ]:
+            with self.subTest(profile=name), tempfile.TemporaryDirectory(prefix="operational-profile-") as directory:
+                root = Path(directory)
+                path = root / CONFIG
+                path.parent.mkdir(parents=True)
+                path.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {name: {"test_paths": [test], "source_paths": [source]}}}))
+                ids = {check["id"] for check in catalog.plan(root, [source], [name], "synthetic-candidate")["selected"]}
+                self.assertEqual(ids.intersection(catalog.QUALIFICATION_PROFILES), {name})
+
+    def profile(self):
+        return json.loads((ROOT / CONFIG).read_bytes())["profiles"]["operational-ui"]
+
+    def fixture(self, root, profile):
+        path = root / CONFIG
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"operational-ui": profile}}))
+
+    def test_exact_operational_files_keep_their_literal_node_and_vitest_runners(self):
+        self.assertEqual(self.profile()["test_paths"], TESTS)
+        commands = run_focused_checks.profile_commands(ROOT, "operational-ui")
+        self.assertEqual(commands, EXPECTED_COMMANDS)
+        self.assertTrue(set(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"]).issubset(self.profile()["source_paths"]))
+
+    def test_review_browser_sources_keep_finite_coverage_and_generic_fallback(self):
+        import copy
+        paths = ['dev-tools/scripts/qualification/visual-composer/e2e/review-site-journey.ts', 'dev-tools/scripts/qualification/visual-composer/review-site-oracles.ts', 'dev-tools/scripts/qualification/tests/review-site-oracles.unit.test.ts', 'dev-tools/config/playwright.review-site.config.ts']
+        self.assertEqual(self.profile()['test_paths'][56], paths[2])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[22:26], paths)
+        for source in paths:
+            for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
+                with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='review-browser-profile-') as directory:
+                    root=Path(directory);profile=copy.deepcopy(self.profile())
+                    if incomplete:
+                        profile['source_paths'].remove(source)
+                        if source in profile['test_paths']:profile['test_paths'].remove(source)
+                    self.fixture(root,profile)
+                    ids={c['id'] for c in catalog.plan(root,[source],required,'synthetic-candidate')['selected']}
+                    self.assertIn('operational-ui',ids);self.assertEqual('focused-tests' in ids,generic)
+
+    def test_website_host_sources_preserve_finite_routing_and_borrowed_guards(self):
+        import copy
+        paths = ['dev-tools/scripts/qualification/visual-composer/e2e/website-acquisition-journey.ts', 'dev-tools/scripts/qualification/visual-composer/website-acquisition-oracles.ts', 'dev-tools/scripts/qualification/tests/website-acquisition-oracles.unit.test.ts']
+        self.assertEqual(self.profile()['test_paths'][57:58], [paths[2]])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])[26:29], paths)
+        borrowed = 'dev-tools/scripts/qualification/visual-composer/e2e/thin-client-ingestion.e2e.spec.ts'
+        self.assertIn(borrowed, self.profile()['source_paths'])
+        self.assertNotIn(borrowed, catalog.QUALIFICATION_PROFILE_PATTERNS['operational-ui'])
+        for source in paths:
+            for incomplete, required, generic in [(False,['documentation'],False),(False,['focused-tests'],True),(True,['documentation'],True)]:
+                with self.subTest(source=source,incomplete=incomplete,required=required), tempfile.TemporaryDirectory(prefix='website-host-profile-') as directory:
+                    root=Path(directory); profile=copy.deepcopy(self.profile())
+                    if incomplete:
+                        profile['source_paths'].remove(source)
+                        if source in profile['test_paths']: profile['test_paths'].remove(source)
+                    self.fixture(root,profile)
+                    ids={c['id'] for c in catalog.plan(root,[source],required,'synthetic-candidate')['selected']}
+                    self.assertIn('operational-ui',ids); self.assertEqual('focused-tests' in ids,generic)
+
+    def test_auto_selection_preserves_unknown_and_explicit_generic_tests(self):
+        with tempfile.TemporaryDirectory(prefix="operational-profile-") as directory:
+            root = Path(directory)
+            self.fixture(root, self.profile())
+            hook = "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts"
+            for paths, required, generic in [
+                ([hook, CONFIG], ["documentation"], False),
+                (["modules/ui/shared/notifications/tests/notificationMigrationInventory.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/visual-composer/technical-accessibility-observation.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"], ["documentation"], False),
+                (["dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts"], ["documentation"], False),
+                ([hook], ["focused-tests"], True),
+                ([hook, "modules/unknown/changed.ts"], ["documentation"], True),
+            ]:
+                with self.subTest(paths=paths):
+                    plan = catalog.plan(root, paths, required, "synthetic-candidate")
+                    ids = {check["id"] for check in plan["selected"]}
+                    self.assertIn("operational-ui", ids)
+                    self.assertEqual("focused-tests" in ids, generic)
+                    self.assertEqual(ids.intersection(catalog.QUALIFICATION_PROFILES), {"operational-ui"})
+            ids = {check["id"] for check in catalog.plan(root, ["apps/desktop/src/renderer/unrelated.ts"], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertNotIn("operational-ui", ids)
+
+    def test_exact_shared_styles_have_finite_ownership_without_hiding_other_style_impact(self):
+        styles = (
+            "modules/ui/shared/styles/components/home.css",
+            "modules/ui/shared/styles/components/notifications.css",
+        )
+        unknown = "modules/ui/shared/styles/components/unreviewed.css"
+        self.assertEqual(self.profile()["test_paths"], TESTS)
+        for style in styles:
+            for required, paths, incomplete, generic in [
+                (["documentation"], [style, CONFIG], False, False),
+                (["focused-tests"], [style], False, True),
+                (["documentation"], [style, unknown], False, True),
+                (["documentation"], [style], True, True),
+            ]:
+                with self.subTest(style=style, required=required, paths=paths, incomplete=incomplete), tempfile.TemporaryDirectory(prefix="shared-style-owner-") as directory:
+                    root = Path(directory)
+                    profile = self.profile()
+                    if incomplete:
+                        profile["source_paths"] = [name for name in profile["source_paths"] if name != style]
+                    self.fixture(root, profile)
+                    ids = {row["id"] for row in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                    self.assertIn("operational-ui", ids)
+                    self.assertEqual("focused-tests" in ids, generic)
+        with tempfile.TemporaryDirectory(prefix="unrelated-style-owner-") as directory:
+            root = Path(directory)
+            self.fixture(root, self.profile())
+            ids = {row["id"] for row in catalog.plan(root, [unknown], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertNotIn("operational-ui", ids)
+            self.assertIn("focused-tests", ids)
+
+    def test_incomplete_declared_source_coverage_retains_generic_tests(self):
+        with tempfile.TemporaryDirectory(prefix="operational-profile-") as directory:
+            root = Path(directory)
+            profile = self.profile()
+            hook = "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts"
+            profile["source_paths"] = [path for path in profile["source_paths"] if path != hook]
+            self.fixture(root, profile)
+            ids = {check["id"] for check in catalog.plan(root, [hook], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+
+    def test_unsafe_and_ai_tests_are_not_executable_profile_entries(self):
+        for path in ["../outside.test.ts", "apps/settings/source.ts", "modules/model/example.ai.test.ts", "modules/runtime/tests/test_context_generation_ai_e2e.py"]:
+            with self.subTest(path=path), tempfile.TemporaryDirectory(prefix="operational-profile-") as directory:
+                root = Path(directory)
+                self.fixture(root, {"test_paths": [path], "source_paths": TESTS})
+                with patch.object(run_focused_checks, "snapshot", return_value={"files": {path: "synthetic"}}):
+                    with self.assertRaises(ControlError):
+                        run_focused_checks.profile_commands(root, "operational-ui")
+
+    def test_missing_valid_test_paths_and_missing_candidate_members_are_denied(self):
+        path = "apps/desktop/valid-missing.test.ts"
+        for exists in (False, True):
+            with self.subTest(file_exists=exists), tempfile.TemporaryDirectory(prefix="operational-profile-") as directory:
+                root = Path(directory)
+                self.fixture(root, {"test_paths": [path], "source_paths": [path]})
+                if exists:
+                    target = root / path
+                    target.parent.mkdir(parents=True)
+                    target.write_text('import { test } from "vitest"; test("inert", () => {});')
+                with patch.object(run_focused_checks, "snapshot", return_value={"files": {}}):
+                    with self.assertRaises(ControlError):
+                        run_focused_checks.profile_commands(root, "operational-ui")
+
+
+    def test_settings_host_sources_have_finite_coverage_and_unknown_or_explicit_fallback(self):
+        v="dev-tools/scripts/qualification/visual-composer/"
+        core=v+"e2e/settings-host-journey.ts"
+        declarations=[v+"owned-host-shutdown.d.mts",v+"settings-host-launch-plan.d.mts"]
+        entry=v+"settings-host-server-entry.ts"
+        self.assertIn(entry,SETTINGS_AUTOMATIC)
+        self.assertIn(entry,self.profile()["source_paths"])
+        self.assertIn(entry,catalog.QUALIFICATION_PROFILE_PATTERNS["host-setup-policy"])
+        self.assertNotIn(entry,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        additions=[source for source in SETTINGS_AUTOMATIC if source != entry]
+        self.assertEqual(len(additions),11)
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[64:75],additions)
+        for source in additions:
+            self.assertIn(source,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+            self.assertIn(source,self.profile()["source_paths"])
+        for source in declarations:
+            self.assertIn(source,self.profile()["source_paths"])
+            self.assertNotIn(source,catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="settings-host-profile-") as directory:
+            root=Path(directory);self.fixture(root,self.profile())
+            for paths,required,generic in [(additions+declarations,["documentation"],False),
+                ([core,*declarations],["focused-tests"],True),([core,v+"unreviewed-settings.ts"],["documentation"],True)]:
+                ids={c["id"] for c in catalog.plan(root,paths,required,"synthetic-candidate")["selected"]}
+                self.assertIn("operational-ui",ids);self.assertEqual("focused-tests" in ids,generic)
+            for missing in [core,*declarations]:
+                profile=self.profile();profile["source_paths"].remove(missing)
+                (root/CONFIG).write_text(json.dumps({"schema_version":"contributor-check-profiles-v1","profiles":{"operational-ui":profile}}))
+                ids={c["id"] for c in catalog.plan(root,[core,*declarations],["documentation"],"synthetic-candidate")["selected"]}
+                self.assertIn("focused-tests",ids)
+
+    def test_training_worker_diagnostics_borrow_only_the_existing_fake_worker_suite(self):
+        core = "dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts"
+        worker = "modules/adapters/runtime/python/worker/tasks/train_model.py"
+        unit = "modules/adapters/runtime/python/worker/tests/test_train_model_task.py"
+        profile = self.profile()
+        self.assertEqual(profile["test_paths"][-1], unit)
+        self.assertEqual(profile["source_paths"][-3:], [worker, unit, "modules/adapters/runtime/python/worker/README.md"])
+        self.assertEqual(len(profile["test_paths"]), 83)
+        self.assertEqual(len(profile["source_paths"]), 197)
+        self.assertNotIn(worker, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        self.assertNotIn(unit, catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])
+        with tempfile.TemporaryDirectory(prefix="training-worker-diagnostic-profile-") as directory:
+            root = Path(directory)
+            self.fixture(root, profile)
+            for paths, required, selected, generic in [
+                ([worker], ["documentation"], False, True),
+                ([core, worker, unit], ["documentation"], True, False),
+                ([core, worker], ["focused-tests"], True, True),
+                ([core, worker, "modules/adapters/runtime/python/worker/tasks/unknown.py"], ["documentation"], True, True),
+            ]:
+                with self.subTest(paths=paths, required=required):
+                    ids = {check["id"] for check in catalog.plan(root, paths, required, "synthetic-candidate")["selected"]}
+                    self.assertEqual("operational-ui" in ids, selected)
+                    self.assertEqual("focused-tests" in ids, generic)
+            incomplete = self.profile()
+            incomplete["source_paths"].remove(worker)
+            (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {"operational-ui": incomplete}}))
+            ids = {check["id"] for check in catalog.plan(root, [core, worker], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+
+    def test_shared_workspace_navigation_keeps_complete_and_fallback_ownership(self):
+        common = "dev-tools/scripts/qualification/visual-composer/e2e/functional-host-common.ts"
+        paths = [common,
+                 "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+                 "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+                 "dev-tools/scripts/qualification/visual-composer/e2e/settings-host-journey.ts",
+                 "dev-tools/scripts/qualification/tests/settings-host-oracles.unit.test.ts"]
+        profile = self.profile()
+        functional = json.loads((ROOT / CONFIG).read_bytes())["profiles"]["functional-host-ui"]
+        self.assertEqual(profile["test_paths"], TESTS)
+        self.assertIn(common, profile["source_paths"])
+        self.assertEqual(list(catalog.QUALIFICATION_PROFILE_PATTERNS["operational-ui"])[-1], common)
+        self.assertTrue(any(name not in functional["source_paths"] + functional["test_paths"] for name in paths))
+        for incomplete, both, required, affected, generic in [
+            (False, False, ["operational-ui"], paths, False),
+            (False, False, ["operational-ui", "focused-tests"], paths, True),
+            (True, False, ["operational-ui"], paths, False),
+            (True, True, ["operational-ui"], paths, True),
+            (False, False, ["operational-ui"], paths + ["dev-tools/scripts/qualification/visual-composer/e2e/unknown-navigation.ts"], True),
+        ]:
+            with self.subTest(incomplete=incomplete, both=both, required=required, affected=affected), tempfile.TemporaryDirectory(prefix="workspace-navigation-owner-") as directory:
+                root = Path(directory)
+                selected_profile = self.profile()
+                selected_functional = json.loads(json.dumps(functional))
+                if incomplete:
+                    selected_profile["source_paths"].remove(common)
+                if both:
+                    selected_functional["source_paths"].remove(common)
+                self.fixture(root, selected_profile)
+                for name in set(functional["source_paths"] + functional["test_paths"]):
+                    target = root / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes((ROOT / name).read_bytes())
+                (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                    "operational-ui": selected_profile, "functional-host-ui": selected_functional,
+                }}))
+                ids = {row["id"] for row in catalog.plan(root, affected, required, "synthetic-candidate")["selected"]}
+                self.assertIn("functional-host-ui", ids)
+                self.assertIn("operational-ui", ids)
+                self.assertEqual("focused-tests" in ids, generic)
+
+
+    def test_provided_data_navigation_documentation_keeps_complete_and_fallback_ownership(self):
+        prefix = "dev-tools/scripts/qualification/"
+        doc = prefix + "visual-composer/provided-dataset-qualification.md"
+        critical = prefix + "visual-composer/e2e/critical-surface-accessibility.ts"
+        paths = [critical, doc, CONFIG,
+                 "dev-tools/helpers/tests/test_control_plane_operational_ui_profile.py",
+                 prefix + "tests/critical-surface-accessibility.unit.test.ts"]
+        paths += [prefix + "visual-composer/e2e/" + name for name in [
+            "provided-dataset-version-journey.ts", "saved-row-review-host-journey.ts",
+            "source-context-host-journey.ts", "manual-context-host-journey.ts",
+            "thin-client-dataset-versions.e2e.spec.ts", "packaged-desktop-dataset-versions.e2e.spec.ts"]]
+        profile = self.profile()
+        dataset = json.loads((ROOT / CONFIG).read_bytes())["profiles"]["dataset-version-browser"]
+        self.assertTrue(doc in profile["source_paths"], "The provided-journey guide needs exact profile coverage.")
+        self.assertEqual(profile["test_paths"], TESTS)
+        for missing, both, explicit, unknown, generic in [
+            (None, False, False, False, False), (doc, False, False, False, False),
+            (doc, True, False, False, True),
+            (critical, False, False, False, True), (None, False, True, False, True),
+            (None, False, False, True, True),
+        ]:
+            with self.subTest(missing=missing, both=both, explicit=explicit, unknown=unknown), tempfile.TemporaryDirectory(prefix="provided-navigation-owner-") as directory:
+                root = Path(directory)
+                declared = self.profile()
+                selected_dataset = json.loads(json.dumps(dataset))
+                if missing:
+                    declared["source_paths"].remove(missing)
+                if both:
+                    selected_dataset["source_paths"].remove(missing)
+                self.fixture(root, declared)
+                (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                    "operational-ui": declared, "dataset-version-browser": selected_dataset,
+                }}))
+                affected = paths + ([prefix + "visual-composer/e2e/unreviewed-navigation.ts"] if unknown else [])
+                required = ["operational-ui", "dataset-version-browser"] + (["focused-tests"] if explicit else [])
+                ids = {row["id"] for row in catalog.plan(root, affected, required, "synthetic-candidate")["selected"]}
+                self.assertTrue({"operational-ui", "dataset-version-browser"}.issubset(ids))
+                self.assertEqual("focused-tests" in ids, generic)
+
+    def test_composed_styles_and_navigation_use_selected_coverage_and_one_config_read(self):
+        style = "modules/ui/shared/styles/forced-colors.css"
+        navigation = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
+        profiles = json.loads((ROOT / CONFIG).read_bytes())["profiles"]
+        for unknown, explicit, generic in [(False, False, False), (True, False, True), (False, True, True)]:
+            with self.subTest(unknown=unknown, explicit=explicit), tempfile.TemporaryDirectory(prefix="composed-feature-owner-") as directory:
+                root = Path(directory)
+                self.fixture(root, profiles["operational-ui"])
+                (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                    "operational-ui": profiles["operational-ui"], "shared-forced-colors": profiles["shared-forced-colors"],
+                }}))
+                affected = [style, navigation] + (["modules/ui/shared/styles/unknown-feature.css"] if unknown else [])
+                required = ["documentation"] + (["focused-tests"] if explicit else [])
+                with patch.object(catalog, "read_json", wraps=catalog.read_json) as read:
+                    ids = {row["id"] for row in catalog.plan(root, affected, required, "synthetic-candidate")["selected"]}
+                self.assertTrue({"operational-ui", "shared-forced-colors"}.issubset(ids))
+                self.assertEqual("focused-tests" in ids, generic)
+                self.assertEqual(read.call_count, 1)
+
+    def test_unselected_declarations_cannot_cover_unknown_impact(self):
+        unknown = "modules/ui/shared/styles/unknown-feature.css"
+        with tempfile.TemporaryDirectory(prefix="unselected-feature-owner-") as directory:
+            root = Path(directory)
+            profile = self.profile()
+            self.fixture(root, profile)
+            (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                "operational-ui": profile,
+                "shared-forced-colors": {"source_paths": [unknown], "test_paths": [TESTS[0]]},
+            }}))
+            with patch.object(catalog, "read_json", wraps=catalog.read_json) as read:
+                ids = {row["id"] for row in catalog.plan(root, [unknown], ["documentation"], "synthetic-candidate")["selected"]}
+            self.assertIn("focused-tests", ids)
+            self.assertNotIn("shared-forced-colors", ids)
+            self.assertNotIn("operational-ui", ids)
+            self.assertEqual(read.call_count, 0)
+
+    def test_every_selected_profile_is_validated_before_fallback_is_removed(self):
+        source = "dev-tools/scripts/qualification/visual-composer/e2e/critical-surface-accessibility.ts"
+        for bad in [[], [None], [TESTS[0], TESTS[0]], [f"dev-tools/example-{i}.test.mjs" for i in range(101)], "invalid"]:
+            with self.subTest(bad=type(bad).__name__), tempfile.TemporaryDirectory(prefix="invalid-selected-owner-") as directory:
+                root = Path(directory)
+                self.fixture(root, self.profile())
+                (root / CONFIG).write_text(json.dumps({"schema_version": "contributor-check-profiles-v1", "profiles": {
+                    "operational-ui": self.profile(),
+                    "shared-forced-colors": {"source_paths": [source], "test_paths": bad},
+                }}))
+                with self.assertRaises(ControlError):
+                    catalog.plan(root, [source], ["operational-ui", "shared-forced-colors"], "synthetic-candidate")
+
+
+if __name__ == "__main__":
+    unittest.main()

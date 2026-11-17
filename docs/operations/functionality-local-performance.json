@@ -1,0 +1,293 @@
+{
+  "schema_version": "functionality-local-performance-v1",
+  "qualification": "local-observations-only",
+  "controlled_profiles": "pending-unavailable-environments",
+  "limitations": [
+    "Runtime database lifecycle is in-memory, not native SQLite durability.",
+    "No physical model execution, participant or manual accessibility qualification.",
+    "Core unchanged baseline covers validation/resolution/build; other operations have candidate observations only."
+  ],
+  "core_baseline": {
+    "schemaVersion": 1,
+    "environmentId": "windows-node24-local-fixture",
+    "sourceRevision": "slice.76d2d3a4879e7f6dd8659e3780ed49616726c93ff3cadba2353aa19d4d5c936b",
+    "recordedAt": "2026-10-21T04:16:54.001Z",
+    "status": "failed",
+    "operations": [
+      {
+        "operation": "studio.validate",
+        "workload": "500 instances and 1000 bindings, warm definition cache",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 17.073,
+        "maximumMilliseconds": 350,
+        "status": "passed"
+      },
+      {
+        "operation": "implementation.resolve",
+        "workload": "500 candidate releases with revocation and compatibility evidence",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 7.399,
+        "maximumMilliseconds": 150,
+        "status": "passed"
+      },
+      {
+        "operation": "system.build",
+        "workload": "500 instances with trusted implementations and in-memory artifact sink",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 3066.29,
+        "maximumMilliseconds": 2500,
+        "status": "failed"
+      }
+    ],
+    "qualification": "local-fixture-observation-only",
+    "sourceIdentity": "sha256-of-declared-source-slice"
+  },
+  "core_candidate": {
+    "schemaVersion": 1,
+    "environmentId": "windows-node24-local-fixture",
+    "sourceRevision": "slice.762635516ebe969bd285fda9ac57240bd5dd95a5e259fcc4efed9b6f3362cba6",
+    "recordedAt": "2026-10-21T04:22:14.902Z",
+    "status": "passed",
+    "operations": [
+      {
+        "operation": "studio.validate",
+        "workload": "500 instances and 1000 bindings, warm definition cache",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 15.853,
+        "maximumMilliseconds": 350,
+        "status": "passed"
+      },
+      {
+        "operation": "implementation.resolve",
+        "workload": "500 candidate releases with revocation and compatibility evidence",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 7.739,
+        "maximumMilliseconds": 150,
+        "status": "passed"
+      },
+      {
+        "operation": "system.build",
+        "workload": "500 instances with trusted implementations and in-memory artifact sink",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 127.638,
+        "maximumMilliseconds": 2500,
+        "status": "passed"
+      }
+    ],
+    "qualification": "local-fixture-observation-only",
+    "sourceIdentity": "sha256-of-declared-source-slice"
+  },
+  "six_operation_candidate": {
+    "schemaVersion": 1,
+    "environmentId": "local-win32-node24-fixture",
+    "sourceRevision": "source.65a80c3e56f48aea542b6a60cb5f753f3d6b7fbbed60367610035346aa129b35",
+    "recordedAt": "2026-10-21T04:23:42.130Z",
+    "status": "passed",
+    "operations": [
+      {
+        "operation": "catalog.browse",
+        "workload": "1000 authorized summaries, warm local store",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 187.544,
+        "maximumMilliseconds": 200,
+        "status": "passed"
+      },
+      {
+        "operation": "studio.validate",
+        "workload": "500 instances and 1000 bindings, warm definition cache",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 20.628,
+        "maximumMilliseconds": 350,
+        "status": "passed"
+      },
+      {
+        "operation": "implementation.resolve",
+        "workload": "500 candidate releases with revocation and compatibility evidence",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 7.811,
+        "maximumMilliseconds": 150,
+        "status": "passed"
+      },
+      {
+        "operation": "system.build",
+        "workload": "500 instances with trusted implementations and in-memory artifact sink",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 129.465,
+        "maximumMilliseconds": 2500,
+        "status": "passed"
+      },
+      {
+        "operation": "system.preview",
+        "workload": "2 MiB supported artifact at the release-bound preview boundary",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 1.957,
+        "maximumMilliseconds": 750,
+        "status": "passed"
+      },
+      {
+        "operation": "runtime.handoff",
+        "workload": "active trusted reference deployment with empty capability set",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 0.36,
+        "maximumMilliseconds": 500,
+        "status": "passed"
+      }
+    ]
+  },
+  "composer_io": {
+    "fixture": "1000-candidates-100-compatible-page25",
+    "baseline_detail_collection_reads": 1006,
+    "candidate_detail_collection_reads": 153,
+    "baseline_response_bytes": 84690,
+    "candidate_response_bytes": 84690,
+    "results_identical": true,
+    "measurement": "real repository + facade, same complete sparse candidate traversal; no timing qualification"
+  },
+  "current_six_operation_candidate": {
+    "schemaVersion": 1,
+    "environmentId": "local-win32-node24-fixture",
+    "sourceRevision": "source.0d1dead9cf3a399d75d39070d1775dd0ab4c1bcc2f0699181e1978fa2ecbae14",
+    "recordedAt": "2026-10-21T04:56:37.164Z",
+    "status": "passed",
+    "operations": [
+      {
+        "operation": "catalog.browse",
+        "workload": "1000 authorized summaries, warm local store",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 157.19,
+        "maximumMilliseconds": 200,
+        "status": "passed"
+      },
+      {
+        "operation": "studio.validate",
+        "workload": "500 instances and 1000 bindings, warm definition cache",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 20.318,
+        "maximumMilliseconds": 350,
+        "status": "passed"
+      },
+      {
+        "operation": "implementation.resolve",
+        "workload": "500 candidate releases with revocation and compatibility evidence",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 7.581,
+        "maximumMilliseconds": 150,
+        "status": "passed"
+      },
+      {
+        "operation": "system.build",
+        "workload": "500 instances with trusted implementations and in-memory artifact sink",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 127.27,
+        "maximumMilliseconds": 2500,
+        "status": "passed"
+      },
+      {
+        "operation": "system.preview",
+        "workload": "2 MiB supported artifact at the release-bound preview boundary",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 2.143,
+        "maximumMilliseconds": 750,
+        "status": "passed"
+      },
+      {
+        "operation": "runtime.handoff",
+        "workload": "active trusted reference deployment with empty capability set",
+        "percentile": 95,
+        "sampleCount": 30,
+        "observedP95Milliseconds": 0.326,
+        "maximumMilliseconds": 500,
+        "status": "passed"
+      }
+    ]
+  },
+  "source_stability": "CLI captured source before imports and verified it unchanged after measurements.",
+  "browser_journeys": {
+    "qualification": "local-real-host-fixtures",
+    "evidence": {
+      "schemaVersion": 1,
+      "runId": "2026-10-21t04-54-28-560z-746aca52",
+      "environmentId": "local-win32-x64",
+      "sourceRevision": "source.0d1dead9cf3a399d75d39070d1775dd0ab4c1bcc2f0699181e1978fa2ecbae14",
+      "startedAt": "2026-10-21T04:54:28.549Z",
+      "completedAt": "2026-10-21T04:56:06.638Z",
+      "status": "passed",
+      "checks": [
+        {
+          "id": " / thin-chrome / thin-client-browse.e2e.spec.ts / thin client preserves the complete browse authoring journey",
+          "target": "thin-chrome",
+          "status": "passed",
+          "durationMs": 4993
+        },
+        {
+          "id": " / packaged-desktop / packaged-desktop-browse.e2e.spec.ts / packaged desktop preserves the complete browse authoring journey",
+          "target": "packaged-desktop",
+          "status": "passed",
+          "durationMs": 30978
+        }
+      ],
+      "digest": "ee6f2e96395376457c8604c52cb8573fcaa5a52a04b8b83002fd96ac8533db98"
+    },
+    "coverage": [
+      "exact searched asset identity",
+      "add/place and undo/redo",
+      "rendered preview",
+      "save and fresh renderer reopen",
+      "keyboard and modal focus return",
+      "real320CSSpixel reflow and reachable controls"
+    ],
+    "pending": [
+      "manual accessibility",
+      "participant outcomes",
+      "real model hardware",
+      "named controlled performance profiles"
+    ],
+    "evidence_status": "historical-paired-host-run-before-later-source-and-dependency-edits",
+    "additional_observations": [
+      {
+        "qualification": "local-packaged-desktop-synthetic-fixture-only",
+        "evidence_status": "historical-after-later-runtime-source-edits",
+        "evidence": {
+          "schemaVersion": 1,
+          "runId": "2026-10-21t10-13-41-969z-b8663247",
+          "environmentId": "local-win32-x64",
+          "sourceRevision": "source.881101124ca83f56c9c4a69a4d590149f85d10d1cf90b3baadb654fa9194893b",
+          "startedAt": "2026-10-21T10:13:41.933Z",
+          "completedAt": "2026-10-21T10:14:59.398Z",
+          "status": "passed",
+          "checks": [
+            {
+              "id": " / packaged-desktop / packaged-desktop-browse.e2e.spec.ts / packaged desktop preserves the complete browse authoring journey",
+              "target": "packaged-desktop",
+              "status": "passed",
+              "durationMs": 32355
+            }
+          ],
+          "digest": "1875f089994676bb8d8b0786d06aef9564222a140677bd06291f3b60adb05895"
+        },
+        "binding_policy": "Root package.json and package-lock.json are included alongside modules/apps/dev-tools source; actual drift regression and independent smoke digest review passed.",
+        "work_id": "security-toolchain-evidence-source-binding",
+        "receipt_digest": "b31b9e2d38b4edd09a02e76c8d6930973f79941b394bed6042aaa7d59375963b",
+        "review_digest": "e2faeb1bfc9dbb7a035deba2899f6df494269a0b1e2b34502df630f7e64ca7c3",
+        "limitations": "Desktop-only run before subsequent runtime edits. Does not establish current thin-client browser, reference-performance, manual accessibility, participant or real-model qualification; original zero-advisory gate remains failed."
+      }
+    ]
+  }
+}

@@ -55,6 +55,39 @@ class EmptyCompositionRepository implements AssetCompositionRepositoryPort {
 const now = () => new Date("2026-05-09T12:00:00.000Z");
 
 describe("InstallSystemAssetPackService", () => {
+  it("does not call an edited stored body already installed just because its marker matches", async () => {
+    const repository = new MemoryDefinitionRepository();
+    const manifest = singleEntryManifest();
+    const installer = service(repository);
+    await installer.install({ manifest, now });
+    const stored = await repository.getDefinition(manifest.assets[0]!.definitionRef);
+    assert.ok(stored);
+    await repository.saveDefinition({ ...stored, displayName: "Edited existing content" });
+    repository.saveCount = 0;
+    const result = await installer.install({ manifest, now });
+    assert.equal(result.status, "failed");
+    assert.equal(result.skippedEntryCount, 0);
+    assert.equal(repository.saveCount, 0);
+    assert.equal((await repository.getDefinition(manifest.assets[0]!.definitionRef))?.displayName, "Edited existing content");
+  });
+
+  it("rejects active stored records before reading their install markers", async () => {
+    const repository = new MemoryDefinitionRepository();
+    const manifest = singleEntryManifest();
+    await service(repository).install({ manifest, now });
+    const stored = await repository.getDefinition(manifest.assets[0]!.definitionRef);
+    assert.ok(stored);
+    let callbacks = 0;
+    const active = Object.defineProperty({ ...stored }, "metadata", { enumerable: true, get() { callbacks++; return stored.metadata; } });
+    repository.getDefinition = async () => active;
+    repository.saveCount = 0;
+    const result = await service(repository).install({ manifest, now });
+    assert.equal(callbacks, 0);
+    assert.equal(result.status, "failed");
+    assert.equal(repository.saveCount, 0);
+    assert.doesNotMatch(JSON.stringify(result), /Edited existing content/);
+  });
+
   it("validate-only mode validates the manifest and persists nothing", async () => {
     const repository = new MemoryDefinitionRepository();
     const result = await service(repository).install({

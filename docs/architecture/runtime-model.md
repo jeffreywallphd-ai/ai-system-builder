@@ -1,5 +1,39 @@
 # Runtime Model
 
+The Python worker's direct script entrypoint binds relative imports to its own
+deployment directory through a fixed private package. The flat packaged worker
+does not depend on repository ancestor paths or modify `sys.path`. A conflicting
+private package or cached submodule fails startup. Every reused private module
+must match its exact deployed file or namespace directory. Package-mode imports and the existing authenticated
+loopback launch configuration remain unchanged.
+
+Generation's optional accelerator total originates in the authenticated worker's
+existing capability response, not the JS host's device namespace. The worker uses
+a lazy fixed read-only system-driver query with bounded public waiting/output,
+worker-local cache and one active probe retained through actual exit/output
+retirement. Unsupported or ambiguous visibility and MIG configurations stay
+unknown. Hosts copy only the current sanitized positive-safe-integer fact.
+This advisory total establishes neither free VRAM, Torch compatibility, process
+ownership nor task admission. Existing model, memory and offload guards remain
+authoritative; telemetry never imports a model or changes runtime topology.
+
+Standard CPU admission retains a narrowly calibrated estimate for two
+user-approved pinned safe-weight trials:3GiB available physical RAM for
+Qwen2.5-0.5B Float32 (at most2GiB estimated loaded weights), and3.5GiB for
+Qwen2.5-1.5B BF16 (at most3GiB loaded weights). Explicit CPU/chat/Standard mode,
+no adapter, regular safe-weight/config files and their exact approved SHA256 are
+required; other inputs retain the conservative estimate. Available RAM is checked
+after verification. This estimate changes no precision, loading mode, overflow
+policy, native ownership or execution deadline. It is an empirical qualification
+candidate, not a physical quota or evidence of successful inference. New model
+measurements and sampled4GiB qualification-process limits remain independent.
+
+Desktop compilation follows ADR-0044: the pinned Forge Vite pipeline emits a
+self-contained Node/Electron main, independent sandbox-compatible CJS preloads
+and separate product/published-runtime renderers. Relative asset URLs and the
+packaged worker resource preserve installed behavior; development file serving
+is confined to source/dependency roots on loopback.
+
 - Status: current
 - Related decisions: `docs/adr/ADR-0002-typescript-first-runtime-model.md`, `docs/adr/ADR-0010-python-runtime.md`, `docs/adr/ADR-0011-runtime-task-registry.md`, `docs/adr/ADR-0012-image-generation-runtime.md`, `docs/adr/ADR-0013-host-owned-runtime-execution-and-feature-placement.md`, `docs/adr/ADR-0014-runtime-installer.md`
 - Verification: `docs/architecture/architecture-verification.md`
@@ -9,6 +43,79 @@
 Assets may declare runtime requirements, but they must not create a parallel runtime readiness model. Asset requirements should reference shared `RuntimeCapabilityId` values and can be structurally validated before execution or composition. Runtime readiness remains the transport-neutral answer to whether a required capability is currently available, and validation must not execute runtimes or probe heavy sidecars.
 
 ## Runtime posture
+
+Accepted downloads, Context, dataset preparation, training and image work register a bounded
+host-owned lifecycle lease. Reconciliation runs without renderer polling, is
+single-flight per owned request, and retains transient failures for retry. Host
+callbacks preserve the accepting organization context. Review-required data stays
+available for explicit save/discard while active power releases. Preparation
+review staging remains owned until its explicit review action; training input
+staging can release while its separate generated candidate stays available.
+Shutdown closes admission before cancellation, stops the workers, then settles
+owned cleanup before persistence closes. A confirmed worker stop is required for
+forced terminal cleanup; network errors and historical log text are insufficient.
+Each worker stop is attempted independently. Failed stops, delayed admissions
+and cleanup failures retain ownership and keep persistence open for retry.
+Supervisor starts share one preparation flight and reject launch after a stop
+changes the lifecycle generation. Server shutdown starts its task fence before
+waiting for active HTTP requests to close.
+
+Owned Python/ComfyUI termination waits at most five seconds for exit/close or
+existing terminal process properties. A signal request, generic error, refused
+signal or timeout cannot release process/task ownership. Shared stop flights
+retain failures for explicit retry; late health, capability, preparation and old
+process callbacks cannot change a replacement's status. Failed spawn ownership
+can retire on close. ComfyUI startup timeout also preserves an unconfirmed child.
+An externally attached Python worker cannot be reported stopped without owned
+termination authority; even idle attachment can leave host shutdown pending for
+external coordination. This local contract proves only the direct owned child;
+descendant/launcher-tree and physical runtime qualification remain pending.
+Failed external health/capability reads retain the attachment classification and
+cannot authorize spawning a replacement. A later healthy attachment may recover
+readiness while termination remains an external obligation.
+
+Image start reserves persisted workspace and organization ownership before
+dispatch. Read, cancel and finalize recheck workspace authorization and the
+accepted task owner before runtime I/O or cached completion. Caller correlation
+IDs cannot select the runtime task identity. Finalization serializes concurrent
+calls and preserves each successful persistence/registration step across partial
+retries. Its 1024-request session receipt bound refuses new work at capacity;
+receipts are never evicted into a replayable state. This is session recovery,
+not a durable crash-recovery protocol. Artifact-backed output arrays must be
+complete and unchanged; raw and artifact-backed completions share evidence rules.
+
+The shell's session-owned observer coalesces equal task reads and serializes
+families within a workspace. Downloads, Context, training, dataset preparation
+and images share scoped observation with one-second active reads,
+bounded idle/error backoff, immediate explicit invalidation and hidden-window
+suspension. Unsubscription and reader replacement reject late results. Neither
+observer state nor cached completion grants resource authority. Training,
+preparation and image pages retain opaque session recovery IDs; thin-client
+image drafts and desktop preparation drafts are bounded per workspace. Image
+finalization has an explicit retry action that preserves the generation ID.
+
+ComfyUI queue deletion acknowledges a request even when a prompt is running.
+Cancellation is confirmed only for removal of a previously queued prompt, with
+no remaining queue or history entry. Running cancellation remains pending; no
+global interruption is used. The adapter's default 30-minute execution deadline
+requests cancellation and retains inputs if termination cannot be confirmed.
+A lost submission reply retains potentially consumed inputs at the bounded
+active-task limit until confirmed worker stop. Known safe failed cleanup retries
+without a renderer. See the upstream [queue endpoint](https://github.com/Comfy-Org/ComfyUI/blob/master/server.py)
+and [queue implementation](https://github.com/Comfy-Org/ComfyUI/blob/master/execution.py).
+
+Context save/discard/cancel serialize with status reconciliation. Duplicate saves
+return the saved session receipt. Dataset approvals coalesce only identical
+scope-bound review decisions; changed fingerprints or names conflict. Training
+retains successful storage, publication and registration steps through supported
+session retries, and retries outstanding cleanup before lifecycle completion.
+These session receipts do not qualify durable multi-store crash recovery or
+unavailable physical runtime environments.
+
+Standalone model publishing remains explicitly unavailable because no publishing
+worker is implemented. A readiness hint cannot admit that unsupported task.
+The supported explicit training save workflow retains its existing publishing
+port and approval semantics.
 
 `ai-system-builder` is **TypeScript-first**.
 
@@ -91,6 +198,20 @@ Readiness does not replace `RuntimeTaskRegistryPort`. Readiness answers whether 
 
 Runtime Task Registry reads are read-side lifecycle operations, not readiness checks. `getTaskStatus`, `cancelTask`, and `listTasks` must not start Python, start ComfyUI, install, repair, or perform heavy sidecar probes. Router-level task correlation may use current-process `requestId` indexes and safe delegate reads to recover missing correlation, but missing tasks must produce explicit unknown/not-found status (including `recordType: "not-found"` when no task family is known) or structured task errors rather than synthetic records that imply accepted work. Unknown/not-found task status must not fake an invalid `TaskType`; use the explicit `recordType: "not-found"` status contract when the task family is genuinely unknown, or a valid task family when a delegate knows it. `listTasks` is best-effort across task families: adapters that track current-process records should return them, and adapters without a safe list endpoint or delegates that fail during listing should report sanitized unsupported task-family metadata or warnings without breaking unrelated delegate listings. Delegate warning details may include delegate name, requested task types, and `failureKind`, but not raw exception messages or environment/path/protocol details. Readiness-guard-rejected starts happen before task creation; transports should return unavailable start failures and no pollable task id, and later status reads for that caller correlation id should remain unknown/not-found unless a task was actually accepted.
 
+Managed Context execution has one narrower pre-dispatch dependency stage.
+`lancedb==0.34.0` and `pyarrow==25.0.0` are installed from the packaged exact
+`requirements-context.txt` during normal Python runtime setup. An explicit RAG
+generation, saved-artifact inspection, or query start repeats an asynchronous
+idempotent probe/install/re-probe before worker acceptance; concurrent requests
+for the same managed command and worker directory share one in-flight ensure.
+When installation is needed, the host-side task record exposes only fixed
+installing/completed or sanitized retryable-failure progress so workspace
+notifications remain live while the event loop continues serving reads.
+Package-manager output, commands, environment, and paths stay adapter-private.
+This exception applies only to an explicit state-changing Context start:
+readiness, capability, task status/list, Context list, and ordinary detail
+metadata reads never invoke the ensure.
+
 Model downloads use `TaskType.MODEL_DOWNLOAD` and the same start/read/list/cancel
 lifecycle in desktop and server hosts. Start requests return promptly; UI and
 compatibility clients poll through short requests. The application-owned model
@@ -100,7 +221,24 @@ success. Python cache handles and resolved host paths remain private completion
 data: they may be passed to the model registry but must not enter generic task
 records, API/IPC/preload responses, notification state, or logs.
 
+Model download start captures the normalized registration request and host
+organization and user before it asks the runtime to admit a task. Listing and
+cancellation use the same owner throughout each request, including after the
+registry replies. The completion command still requires current model write
+permission. These checks cover one running host; durable registration and
+restart recovery need separate evidence.
+
 ## Dataset Preparation and Model Training Task Profiles
+
+The text-training adapter resolves the required base-model reference before
+loading datasets. The fixed local-format allowlist maps JSON Lines to the
+Datasets `json` builder, retaining local file paths and split roles. It never
+uses the `jsonl` format label as a remote dataset identifier. Saved-model
+validation rejects malformed or unreadable safetensors and invalid or empty
+shard indexes. Native reader failures discard partial tensor facts and return
+fixed invalid-result errors. Missing reader dependencies keep the separate
+normal-warning and publish-denial behavior. Validation reports identify the
+registered model through an opaque reference instead of its local path.
 
 Dataset preparation is the dataset-producing contract boundary. Model training is the model-producing runtime task boundary. Dataset preparation requests may declare a task profile that describes the dataset shape being prepared for a training family. Model training requests may carry the selected training task so the runtime can validate task support and tag generated model records, but model training remains responsible for base model selection, training method, hyperparameters, output registration, and validation.
 
@@ -114,8 +252,26 @@ Dataset preparation tasks with textual training inputs declare whether text fiel
 
 Token-constrained JSON is an optional Python-adapter capability for local causal
 and chat generation. The shared output-shape compiler remains the authority: its
-canonical exact schema is used for prompting, the model-bound next-token
-processor, parsing, validation, and later role mapping. The adapter accepts only
+canonical exact schema governs prompting, parsing, validation and later role
+mapping. The model-bound next-token processor may use a proven equivalent
+encoding of disjoint conditional object branches: a required string discriminator
+must have distinct constants, and replaced properties must be exact known
+subsets. Every other root rule is retained in each complete branch. Original and
+expanded forms share the existing combined byte/node/property/choice bounds and
+cache accounting; unsupported or over-budget lowering keeps the original form.
+The original schema and fingerprint remain the final validation authority.
+The pinned constrained backend retains its default whitespace policy. A compact
+formatting experiment preserved parsed values but regressed held-out model
+quality and was withdrawn. Lexical equivalence does not establish unchanged
+sampled outcomes. Original validation and cache/resource bounds remain authoritative.
+Prompt schema/examples preserve the existing sorted canonical presentation and
+exact values. Experimental prompt ordering was withdrawn after a fixed-model
+quality regression; it is not an interface contract or a qualification shortcut.
+Token constraint representation and sorted integrity identity remain separate.
+Built-in classification shapes constrain a finite configured label set when it
+fits the existing choice limits; larger recipes retain their prior bounded
+parsing/semantic policy. Existing saved schemas are never rewritten.
+The adapter accepts only
 a bounded non-recursive schema subset, keeps a bounded model-local LRU of
 compiled processors, resets a reused processor before each generation, and
 requires EOS after an accepting state. Checked mode fails closed on dependency,
@@ -125,10 +281,33 @@ and must retain strict parsing plus every semantic, grounding, safety,
 quarantine, and approval check.
 
 The worker advertises `dataset-preparation.constrained-json` only when exact
-reviewed Outlines, Outlines Core, and jsonschema pins are available on Python
+reviewed Outlines, Outlines Core, jsonschema and LLGuidance pins are available on Python
 3.10 through 3.13. Baseline worker support outside that conditional range does
 not imply decoder support. Capability reads are bounded import/version checks;
 they do not install dependencies, load a model, or compile a schema.
+
+The private lazy token-mask compiler shares one projected tokenizer per loaded
+model. It preserves Core's singleton-token conversion, excludes EOS aliases and
+vocabulary holes, and masks padded model-score positions. It accepts at most
+1,048,576 vocabulary entries/IDs, 64 MiB of projected bytes, 64 KiB per token,
+256 KiB of regex and 512 KiB of generated grammar. Vocabulary bounds precede
+native tokenizer construction; regex bounds precede grammar conversion, and
+generated-grammar bounds precede matcher construction. The existing four-processor/256 KiB schema cache remains. Each
+processor permits at most eight batch rows; the current dataset host uses one.
+Explicit native limits allow 2,000 items per row, 1,000,000 initial lexer fuel,
+200,000 step fuel, 50,000 step items, 65,536 lexer states and 500,000 grammar
+symbols. Large lexemes are not precomputed. These are complexity limits, not a
+hard process RAM guarantee or a replacement for model-memory admission.
+
+Native log level is zero and verbose errors are disabled. Constructor, consume
+and mask errors fail before sampling with fixed public codes. EOS additionally
+requires a healthy accepting state. The processor imports no compiled mask
+kernel and uses owned byte masks with ordinary eager Torch operations. This
+changes no inference engine, prompt, schema language, whitespace rule, final
+validator, worker topology, offload authority or model-loading policy.
+Tokenizer-only comparisons and footprint checks do not qualify model accuracy,
+GPU memory, retained staging or parent roadmap completion.
+
 
 The model schema contains only fields the model may generate. If source
 attribution is selected, the UI displays its locked companion fields, and the
@@ -149,13 +328,23 @@ the workflow presents those bounded readable names in an explicit checkbox list.
 The eventual training use case remains authoritative for artifact ownership,
 local backing, schema, and fingerprint validation.
 
-Dataset preparation UI should present task choices before lower-level settings, keep nonessential settings collapsed by default, and group prompt/model/parameter controls under automated data-formatting language rather than a hardcoded QA-generation or model-override concept. Saved training settings are a renderer convenience for reloading preparation choices such as task, formatting, model, split, and output options; they must not silently preserve selected source artifacts or replace runtime contracts. Source artifact lists should be filtered by the selected task family so LLM tasks show text/document/structured sources and diffusion/vision tasks show image sources plus structured manifests.
+Dataset preparation UI should present task choices before lower-level settings, keep nonessential settings collapsed by default, and group prompt/model/parameter controls under automated data-formatting language rather than a hardcoded QA-generation or model-override concept. Saved training settings are a renderer convenience for reloading preparation choices such as task, formatting, model, split, and output options; they may retain selected artifact identities only in a bounded, per-workspace in-memory session draft. Restored identities must be revalidated against the current authorized catalog before use; drafts must not persist artifact payloads, grant authority, cross workspace boundaries, or replace runtime contracts. Source artifact lists should be filtered by the selected task family so LLM tasks show text/document/structured sources and diffusion/vision tasks show image sources plus structured manifests.
 
 Current Python model training support includes causal language model training over text-like dataset files using LoRA, QLoRA, or full fine-tuning through Transformers. The text training path accepts the LLM instruction, classification, extraction, embedding-pair, and reranker training tasks, formats those row schemas into causal-LM training text, and records task tags/metadata on generated model candidates. The multimodal training path accepts diffusion LoRA, vision classification, vision detection, and vision segmentation manifests. Diffusion training supports LoRA adapter output for Diffusers-compatible text-to-image models. Vision training supports LoRA adapter output and full fine-tuning for image classification, object detection, and semantic segmentation models through Transformers image processors and task-specific model classes. Vision LoRA uses PEFT adapter serialization and preserves recognized task heads as trainable modules when the selected model exposes them. For image manifests generated from workspace artifacts, the application model-training use case stages referenced source artifact bytes into runtime-local files and passes runtime-only source path metadata to the Python worker.
 
 Model training reports structured progress after every completed microbatch and
 remains cancellable through the shared task lifecycle. Every desktop status,
 cancel, save, and discard request is bound to the workspace recorded at start.
+The Python task registry confirms a training start only when the worker accepts
+the exact host task ID and type, reports a queued or running state, and agrees
+with the host workspace if it supplies one. A different start cannot replace a
+tracked training task. If a start fails, its temporary setup progress is removed.
+Before dispatch, the application creates a temporary output folder for the run.
+The worker must report that folder. Preview and save check its filesystem
+identity. Discard and confirmed failure or cancellation retire that same
+checked folder. If start acknowledgement is uncertain, the application retains
+the folder and counts it against the session limit. Concurrent native changes
+and model cache deletion or reveal require separate qualification.
 After a training run reaches any terminal state, the desktop may offer one
 runtime unload action for that run. Its visibility must not depend on the
 generation-model cache inventory because training models are task-local and do
@@ -225,7 +414,23 @@ contained ComfyUI input root. Randomized staging names are deleted after
 terminal task status and after preparation, submission, or runtime-read
 failures; callers cannot supply host paths or staging filenames.
 
-Configured shared model storage is host-owned runtime-adjacent input, not a runtime install root and not workspace persistence. The model registry/checkpoint resolver may scan the configured host-local folder for Hugging Face cache directories and checkpoint files, then resolve selected shared models for the executing host's ComfyUI/Python runtime. Desktop uses the desktop machine's configured folder; server/thin-client mode uses a folder readable by the server process. Thin clients must not assume the browser's local filesystem path is usable by the server. An explicitly confirmed desktop model deletion may remove the stored model's local files only through an adapter that canonicalizes the target beneath the generated-model cache or configured shared model root, rejects links and root/outside/traversal targets, and fails before removing the registry record when file deletion is unsafe or unsuccessful. Hugging Face snapshot deletion removes the owning models cache repository directory so unreferenced snapshot blobs are not left behind; a standalone checkpoint record deletes only its recorded checkpoint file.
+Configured shared model storage is host-owned runtime-adjacent input, not a runtime install root and not workspace persistence. The model registry/checkpoint resolver may scan the configured host-local folder for Hugging Face cache directories and checkpoint files, then resolve selected shared models for the executing host's ComfyUI/Python runtime. Desktop uses the desktop machine's configured folder; server/thin-client mode uses a folder readable by the server process. Thin clients must not assume the browser's local filesystem path is usable by the server.
+
+Physical model deletion and reveal accept identity only and require their own
+qualified native capability. Shared/provider caches and imported locations are
+reference-only; lexical containment cannot establish exclusive ownership. The
+current authority adapter denies physical effects before registry removal while
+native identity and protected owned publication/recovery remain unimplemented.
+ADR-0043 governs those implementation and qualification obligations.
+
+Generated-model storage preserves the HF cache layout for fresh outputs but
+never recursively removes a selected target. Observed existing targets and
+non-ENOENT filesystem uncertainty deny. Exclusive staging, requested-root and
+child-link validation, staged-tree bounds and cooperative identity checks precede
+publication; unknown/substituted cleanup is retained. Collision tests qualify
+the current Windows fixtures, not hostile parent substitution, crash recovery
+or atomic no-replace behavior on every platform. A cache output alone grants
+no native deletion ownership or protected publication receipt.
 
 `SERVER_RUNTIME_ROOT` and `SERVER_STORAGE_ROOT` should be separate. Remote execution placement should be implemented in host composition through adapter/client substitution, not by changing application/domain logic.
 
@@ -250,6 +455,25 @@ its launch identity.
 ADR-0013 is the canonical cross-host runtime ownership ADR.
 
 ## Runtime security guidance
+
+Dataset cancellation transport success is not terminal lifecycle evidence.
+Desktop preserves the exact cancel identity, flag and status; both UIs retain
+the active task and continue observing after requested, refused, unknown or
+failed cancellation. Only a terminal task read determines the final UI outcome;
+late cancellation replies cannot overwrite it or another workspace/session.
+Pending quality reviews remain owned until discard is explicitly confirmed.
+Running dataset preparation currently cannot be force-cancelled through the
+worker contract; the UI must not stop its shared Python worker as a workaround.
+
+ComfyUI and Git repair require explicit host `allowUpdate: true` before status,
+filesystem, Git or dependency commands. Missing permission and `false` fail with
+`update-not-authorized`; `forceRepair` expresses intent and cannot grant update
+authority. Every targeted, missing-install and full repair fallback preserves
+the normalized host request. Desktop repair approval also requires its configured
+pinned ref. Automatic supervisor repair carries no update approval and therefore
+fails closed with operator recovery required. Initial `ensureInstalled` remains a
+distinct installation operation; this repair control does not qualify unmanaged
+checkout provenance, dependency reproducibility or physical runtime behavior.
 
 Runtime adapters must harden process invocation against command injection, control/redact runtime environment variables, and avoid exposing runtime temp paths to clients. Python/ComfyUI runtime logs must redact secrets. Model/plugin/download flows are supply-chain inputs and need explicit risk controls. Runtime security is part of the system security architecture, but runtime code remains in runtime adapters rather than being moved into a monolithic security module. See ADR-0015.
 
@@ -284,3 +508,933 @@ resolution requires its exact same-workspace full base-model record, submits the
 base and adapter identities together, validates the adapter's declared base
 association and contained local snapshot, and attaches it with the exact
 reviewed PEFT runtime dependency. Warm reuse also matches the adapter revision.
+
+An asynchronous Python spawn error followed by exit/close retires the owned child
+without converting its failed startup outcome into a successful stopped state.
+The diagnostic failure remains observable until explicit stop or a valid retry;
+explicit stop still requires and records confirmed termination separately.
+
+Desktop task controllers for image generation, dataset preparation and Context are
+lazy retained for the host lifetime. Their private reviews, in-flight starts,
+partial finalization and completed receipts remain available after runtime
+completion and navigation. Workspace-required public task listings cannot prove
+host-wide disposal eligibility. Heavy runtime owners retain explicit stop/unload
+controls. Other disposable features serialize disposal with provider reuse and
+retain the same owner on guard or cleanup uncertainty.
+
+Nonempty unmanaged Git install roots are never adopted from editable origin
+configuration. Managed reuse requires matching target, normalized install root
+and requested canonical repository URL. ComfyUI repair checks installed/missing
+status and exact target/root before fallback or targeted Python/pip effects;
+unknown or failed authority denies. Explicit update approval remains necessary.
+Missing/empty roots can use the separate initial installation operation.
+These marker consistency checks are not proof of current tree bytes, immutable
+source provenance or native filesystem identity; those qualifications remain
+pending. Recovery must not relabel or overwrite an unmanaged tree in place.
+
+Only ENOENT establishes a missing filesystem entry. Permission, I/O, invalid
+directory and indeterminate read failures return unavailable/failed authority
+and cannot enter initial clone, directory creation or metadata-write effects.
+Repair preflight also requires the canonical repository identity returned by
+the installer; absent or substituted source identity denies before execution.
+
+Image-generation request bounds are pure shared contracts used by the application
+and ComfyUI runtime/mapper. Effective selected host defaults are checked before
+supervisor startup, reference preparation or prompt submission. Existing limits
+remain:10000-character positive/negative text,64..4096 dimensions,16777216 pixels,
+1..200 steps,1..8 images, finite CFG(0,50] and denoise[0,1], at most3 face references.
+Invalid batches are rejected rather than floored. Primitive/descriptor checks reject
+coercion and accessors; engine hints are bounded JSON data, and seeds are safe
+integers. Workspace authority, queue/history limits, deadlines and truthful
+cancellation remain intact. These caps do not prove combined workload GPU capacity,
+per-actor fairness or physical model qualification; those remain pending.
+Admission consumes one detached descriptor-safe request snapshot before authority,
+model, runtime-start or reference-preparation awaits. Nested reference collections,
+reference identities and hint data cannot change through caller-owned aliases after
+validation. Prompts retain their exact allowed content; display sanitization is not
+used to construct runtime input.
+
+Python dependency setup diagnostics use the explicit `python-dependency-outcomes-v1`
+projection: finite operation/platform/backend/stage outcomes, safe exit codes,
+grouped retry/failure counts and explicit overall success. They retain no command,
+argument, path, index URL, environment inspection, output or exception transcript.
+Repeated stages are grouped by their finite stage/backend identities. Raw results
+remain local to operational parsing/retry/failure paths. At most the latest worker
+and model-training summaries are retained in immutable session memory. Trusted
+observers receive the same minimized immutable summaries; observer failures cannot
+change setup outcomes. No automatic filesystem persistence occurs, and legacy
+`diagnosticsFile` paths are ignored. Optional persistent sinks remain unavailable
+until private storage authority, bounds, retention and physical qualification are
+established. Security audit records remain separately governed.
+
+Model download task reads and explicit completion require returned registry records
+to match the exact requested task id, task type and workspace before projection or
+registration. Listing independently filters task type instead of relying on the
+adapter filter alone. Cancellation confirms only an acknowledgement for the exact
+requested id; substituted acknowledgements fail without reporting cancellation
+success. These checks supplement frozen organization/principal/workspace and
+current write authority, and do not qualify native provenance or durable recovery.
+
+If the runtime returns an ID that is already owned by a retained download, the
+controller refuses the new request. It keeps the original owner and does not
+cancel that task. A fresh controller cannot adopt an old task from the model
+registry. Local tests reopen a synthetic saved registry and confirm that stale
+requests leave it unchanged. This does not restore tasks after a restart.
+An async read, list, cancel, or completion can use a reply only for the exact
+download entry it started with. Retired entries cannot start a registry write or
+publish late results to a replacement. The host reserves an observed runtime ID
+until it confirms the original task ended or its worker stopped and any pending
+cancellation calls settle, even if the entry has left the activity history.
+# Confirmed worker exit and task recovery
+
+The Python foundation fails only its accepted unfinished tasks after the owned
+supervisor confirms process exit. It fences admission and in-flight read races,
+retains observed terminal results in a bounded private cache, and preserves
+explicit cancellation recovery. A network failure remains transport uncertainty.
+UI notifications retain bounded identities of live work across workspace changes
+so returning reconciles its terminal outcome without replaying unrelated history.
+
+## Optional bounded generation profile
+
+ADR-0045 adds the explicit Dataset Preparation `offload-v1` profile. Standard
+remains default. Exact worker capability checks precede staging/start, and loaded
+model status preserves the profile identity through HTTP/IPC. The shared runtime
+does not silently reuse the profile for conversation, training or Context.
+
+The native Qwen2 path independently checks safe-weight/tokenizer source bindings,
+meta-model tensor shapes/ties and finite CPU/CUDA placement. Admission separates
+weight residency, source/conversion transients, largest-layer execution, bounded
+prefill/KV/runtime headroom and owned disk staging. One exclusive cached-generator
+slot owns original-input references and private staging; task completion alone
+does not remove referenced files. Per-request views retain distinct generation
+parameters. Atomic unload/task-admission fencing and serialized model execution
+prevent teardown racing another user of the same cached model. Unconfirmed cleanup
+retains ownership, with exact removal-progress retry and no ambient slot adoption.
+The owning limits, support matrix and qualification boundaries are in
+`docs/operations/optional-low-memory-inference.md`. These cooperative controls do
+not qualify pending native filesystem/ACL races or impose a kernel memory quota.
+
+## Private Windows file-identity prerequisite
+
+The private model adapter includes a source-built Windows x64/NTFS read-only
+inspection mechanism. It is deliberately absent from feature composition and the
+model barrel. The existing production model-location authority remains unavailable.
+The fixed installed compiler/SDK builder and actual disposable tests are documented
+in `dev-tools/README.md`; no package or model download is involved.
+
+The helper opens a drive root, then at most 128 ancestor components relative to
+retained directory handles, rejecting reparse points. Ancestors permit write
+sharing but deny delete sharing. The inspected root and at most 63 children deny
+write/delete sharing. Read-data/list access makes those Windows sharing checks
+effective; no bytes are read and no write/delete access is requested. Children
+are strict single ASCII components opened with `NtCreateFile` and
+`FILE_OPEN_REPARSE_POINT`. Each object must have the expected full volume/file
+identity, supported type and single-link regular-file status. Owner and complete
+DACL observations remain private and are compared again before reverse release.
+Owner equality and DACL protection flags are observations, never authorization.
+
+The TypeScript lease requires an expected identity and binary SHA-256, uses fixed
+argv with no shell, checks the hello against its actual direct child PID, and
+bounds input, output, handles and time. Its 10-second lease and 2-second shutdown
+require actual native close; unconfirmed close fences further admission across
+adapter instances. Synchronous pipe-write errors reject the adopted response
+promise through the same shutdown path without orphan rejections. The executable independently bounds framing and has a
+60-second watchdog. All facts are private and frozen.
+
+This qualifies the local read-only mechanism on the tested Windows/NTFS profile,
+not production binary protection or a hostile path-to-execution race. Cooperative
+hash checks cannot replace protected packaging. Retained handles do not prevent
+new descendants or guarantee stable tree size, immutable ACLs, content ownership,
+byte integrity, durable provenance, crash recovery, deletion or reveal. Other
+platforms/filesystems and those higher-level controls remain pending. Existing
+unknown offload staging and shared/provider/imported caches are never adopted.
+
+## Automatic recovery and admission ordering
+
+Reserve non-cancellable Dataset admission before its HTTP POST. An uncertain
+acknowledgement retains that bounded owner until an exact terminal observation,
+consistent cancellation or actual owned exit; unknown responses and elapsed time
+are not release evidence. Task and direct-download automatic recovery share one
+synchronous admission fence. No Dataset owner may exist when recovery commits,
+and new starts cannot enter its stop/start interval. Unconfirmed recovery failure
+continues to deny admission while allowing status reads. Actual owned lifecycle
+recovery, rather than a healthy read, clears the fence. Existing native ownership
+and offload staging requirements remain separate.
+
+### Browser model controls and asynchronous replies
+
+Models uses a committed workspace/API-client session for browse, inventory,
+reference, download, details, file and registry-delete actions. A replaced or closed
+session cannot dispatch follow-up inventory work or apply old completion state.
+The optional default client is stable for that mounted session. Inventory reads
+retain the 12-second bound and clear owned timers after settlement or retirement.
+
+Reference save, download start and record delete share synchronous pending-action
+admission. A download reply must identify the requested workspace/model/task;
+legacy completed downloads and saved references must match the requested model.
+Host-owned accepted downloads stay observable through the notification subsystem.
+Page retirement never asserts cancellation or worker exit. Registry deletion
+requires exact confirmed record acknowledgement and requests deleteLocalFiles=false.
+
+File dialogs use selected record identity and a local request sequence. Close,
+selection or workspace/client replacement invalidates earlier file results. Model
+files load only after explicit selection of Show model files. Unexpected exceptions
+are not public diagnostic payloads. Focused renderer/client tests do not qualify
+physical downloads, real model execution, native ownership or the final UI matrix.
+
+### Desktop training presentation ownership
+
+The training hook creates a committed workspace/model-client session. Layout
+retirement invalidates old action replies, input follow-ups, model-status reads
+and settings callbacks. The replacement clears selected input identities and
+reconciles an opaque saved run through the current client. Leaving the page never
+asserts task cancellation or physical worker termination. A recovered run keeps
+Start disabled and Stop available until current status proves its outcome.
+
+A synchronous session action owner covers start/stop/review/unload before busy
+render. Only the accepted run may update observation or cancellation. A separate
+review-run identity admits explicit save/discard once, retaining review after
+unconfirmed, foreign or nonterminal results. Save requires a matching succeeded
+result without pending review and a registered output model; discard requires a
+matching cancelled result without pending review. Inventory refresh failure after
+a confirmed save cannot turn that save into failure.
+
+Seed and LoRA dropout use explicit numeric values rather than truthiness, so zero
+is preserved. Other runtime/resource/provider policies are unchanged. Public
+action failures use fixed Notifications copy; active progress remains in the form.
+Nine rendered task variants assert model identity, Parquet train plus JSONL
+validation input, method and explicit review without executing a model. The
+provider-default settings panel is outside those new form oracles. Actual
+training, host/native and final combined qualification remain separate.
+
+Recovery storage writes also require the current committed session. A delayed
+Start reply cannot replace a newer saved run. Once observation proves terminal
+review, a pending Stop reply or rejection cannot restore active-run state.
+An uncertain Stop retains observation and controls and publishes a fixed error
+through Notifications without converting the active task to failed.
+
+### Image presentation request ownership
+
+Both image hooks retire a committed workspace/client session before late reads or
+actions can change presentation. Start and mutating controls use synchronous
+ownership; status replies must name the accepted request. Unknown or foreign
+status retains observation and request identity. Recovery storage writes require
+the current session. A workspace change clears source/model form identities.
+
+Finalization admits one pending attempt and requires one to eight complete
+registered assets with distinct asset and artifact identities. Failure retains
+the same request for retry. A late cancellation cannot replace confirmed output.
+The current form rejects values outside the existing request contract bounds,
+including fractional dimensions, unsafe seeds and non-finite enabled FaceID
+settings. A disabled FaceID does not send its inactive settings.
+
+Unexpected failures use fixed public copy. Generation errors publish through
+workspace Notifications instead of duplicate status/result banners. Field
+validation, progress and explicit retry controls remain contextual. Focused
+fixtures exercise the actual hooks and notification consumers; they do not prove
+physical image quality, host execution or native retirement. Host authorization,
+resource admission, finalization and supported cancellation remain authoritative.
+
+A consumer refresh failure cannot revoke a confirmed browser generation. Desktop
+preview URLs created by the retired presentation session are released on client
+replacement as well as page exit. Focused regressions cover both cases.
+
+Retired Refresh actions return before advancing list-read identities or changing
+loading state. Browser generation callbacks update only after React commits a
+render; a suspended replacement cannot take ownership of confirmed output.
+
+### Training notification status integrity
+
+Training Notifications follow the accepted run in the committed workspace/client
+session. Unknown or mismatched status stays uncertain and retries. Progress uses
+validated integer counts and fixed copy; runtime free text and error details do
+not enter notification history. Matching terminal outcomes are not replayed by a
+duplicate start event. Focused rendered tests do not qualify physical training.
+
+### Download notification scope
+
+The shared download bridge validates the complete current-workspace page before
+optional completion calls. Pages contain at most 100 unique contract-valid task
+identities and closed statuses. Captured identity fields stay fixed across awaits;
+completion must match the requested task, workspace and model. Committed client
+retirement rejects late replies. Existing bounded live/terminal history behavior
+still reconciles navigation without replaying unrelated terminal history.
+
+Public download messages are fixed. Progress keeps valid ordered integer counts
+or a finite percentage when counts are absent; only known units are displayed.
+Invalid values and runtime error/progress text stay out of notification history.
+These renderer checks supplement host/application authorization and do not grant
+provider, download, registration, model-quality or native execution authority.
+
+### Context notification progress
+
+The Context shell bridge validates the complete task page before notification
+publication, including the existing100-task bound, normalized512-character IDs,
+unique identities and known Context families/statuses. Current committed scope
+checks also fence shared snapshots and retired client replies. Unknown status
+stays unknown and is not presented as confirmed failure.
+
+Notification copy is fixed by state and task family. The exact managed vector
+database installation hint remains available. Embedding count copy is derived
+from validated numeric progress and known chunk units; other runtime free text
+is not displayed. Invalid numeric progress and unknown units are omitted. These
+presentation checks preserve host authorization and do not qualify actual RAG,
+models, native runtime or complete host execution.
+
+The closed `python_runtime_worker_exited` error code on a failed download retains
+the existing fixed worker-stop notice used by the desktop and managed recovery
+journeys. Snapshot capture keeps only that known code and fixed copy. Arbitrary
+messages, forged message-only exit claims and uncertain statuses cannot supply
+this classification. Other failed downloads keep the generic safe action hint.
+
+Owned-download host journeys assert the fixed public running message,
+`Downloading model.`, rather than the synthetic worker progress text. Numeric
+progress, timing, request identity, workspace fencing, reconnect, cancellation,
+idempotent completion and owned shutdown checks remain unchanged. Source
+collection and local bridge tests do not qualify an actual host run.
+
+The focused browser model-reference UI fixture joins the actual API client,
+loopback HTTP routes, application use cases and durable local registry. It checks
+reference save/reopen, workspace-separated inventory, cancelled deletion, explicit
+record-only deletion and safe failure/retry. The fixed synthetic browse provider
+and fixture credential middleware do not qualify remote provider integration,
+production authentication, full-app mounting, model execution or native file
+effects. Ambient model discovery is disabled. Each test retires only its owned
+listener and bounded new regular temporary tree; it never opens saved app tokens.
+
+Desktop Models applies asynchronous views only to their committed workspace and
+client lifetime. Fresh object leases distinguish Strict Mode effect replay from
+earlier calls. Exact tickets keep the latest inventory, browse and detail reads;
+retirement clears selections, confirmations and public outcomes. Completed model
+actions refresh the latest committed inventory filter. A failed refresh remains
+visible instead of being replaced by an unrelated success message.
+
+One confirmed deletion is admitted at a time. Its acknowledgement must match the
+record, confirm registry removal, match requested local-file effects and report
+no unrequested backing-artifact removal. Uncertain acknowledgement retains the
+confirmation. Error copy is fixed and public-safe. These UI checks grant no
+native effect, physical IPC, provider or whole-app qualification. Existing host
+ownership and file-effect denials remain authoritative.
+
+Each deletion confirmation has its own object identity. Closing, reopening or
+editing it retires the earlier identity, even for the same record. A late delete
+result may refresh current inventory but cannot close a newer confirmation or
+publish its success or failure there. The same rule applies during refresh.
+
+Focused Desktop Models integration mounts the actual feature and joins its
+client to the real preload factory, registered handlers, application use cases
+and fresh durable JSON registry through an injected in-process invoke port.
+The journeys cover pagination, saved references, workspace separation, reopened
+registry state, exact deletion and safe failure. The existing native-location
+denial adapter remains in place. This tier does not qualify physical Electron
+IPC, sender authorization, production SQLite, whole-app or provider/model behavior.
+
+Image start transports keep the workspace identifier in application request
+context, separate from generation options. Their mapping step inspects a passive descriptor snapshot of the generation
+settings and removes only the known workspace field. Other unknown fields still reach the fixed application allowlist and
+deny before task creation. Correlation and request identities are preserved.
+
+The composed browser image test mounts the real feature/client and loopback HTTP
+routes over task ownership, finalization, filesystem PNG bytes, catalog, primary
+binding and reopened JSON image registry. It verifies exact output and retry
+without duplicate persistence, plus refused cancellation and workspace isolation.
+The engine, HTTP access policy, passive reads and preview URL facility are
+fixtures. Physical image inference, browser pixel decoding, production SQLite,
+whole-host security and final roadmap qualification remain separate.
+
+The HTTP image start route snapshots passive body descriptors before reading
+workspace context or diagnostic fields. Rejected snapshots retain header
+correlation only. Diagnostics record model presence, never the model selector
+or prompt. These rules also apply to failed start summaries.
+
+Training form progress uses fixed queued/running/terminal messages. Epoch and
+batch counters are independently shown only for nonnegative safe integer current
+values, positive safe integer totals and current within total. Zero current is
+preserved. Invalid counters leave the task and controls active and fall back to
+a fixed waiting message. Runtime progress text and internal run identifiers stay
+out of public status copy. Validation reports show availability without exposing
+a local report path. The run identity remains internal for observation, recovery
+and explicit save/discard; these presentation changes grant no task authority.
+
+The Training default-model selector consumes the Models client
+`localFilesAvailable` flag. The real client strips local paths before presentation;
+selection must not require those hidden paths. An explicit boolean flag takes
+precedence, with the existing path-presence fallback retained for legacy injected
+clients. Full/merged forms, preferred text models, preparation-source preference
+and newest-record ordering stay intact. These are form defaults only: requests
+carry the selected record ID, and application ownership, loading and runtime
+guards still decide whether training can start.
+
+The composed Training UI fixture uses the actual model client, preload contracts,
+registered IPC handlers, training use case, generated-model filesystem adapter
+and reopened JSON registry. Its finite worker verifies two staged dataset byte
+streams and supplies bounded synthetic output bytes. Save/Discard remain explicit.
+A registration failure retains review and its first storage result; retry registers
+once without recopying. Refused Stop retains the task, and foreign review is
+denied before runtime I/O. The invoke link, input bindings/artifact listings, worker and
+passive settings/runtime reads are fixtures. Physical Electron/sender policy,
+training semantics, native atomic publication and production SQLite remain separate.
+
+The Training renderer bridge uses the canonical status, cancel and review request
+types. Every method requires the existing workspace identity; the Models client
+normalizes that identity before entering a status-read bridge. Real preload
+function assignment and a rejected-workspace regression cover this boundary.
+The composed input byte store is also real; input bindings and artifact listings
+remain finite fixtures rather than a complete artifact-host qualification.
+
+Desktop model downloads acquire a synchronous pending-action ticket before the
+start bridge call. A second immediate click in the same view cannot admit another
+task, and Find Models disables Download until that start request returns. The
+existing workspace/client lifetime rejects late replies and clears retired tickets.
+This is request admission, not a ban on separately requested concurrent tasks.
+The composed download fixture joins the actual feature/client/preload, registered
+handlers, task use case, notification center and reopened JSON model registry.
+Finite offline task/completion records supply synthetic files. It checks progress
+across feature navigation and workspace return, single registration, failure and
+explicit retry, foreign completion refusal and confirmed cancellation. Physical
+IPC/sender policy, actual model downloads, native effects and production SQLite
+remain separate qualification.
+
+Browser download journeys also join mounted Models, the actual secure API client,
+loopback HTTP model routes, owned task use case, shared notifications and a reopened
+JSON registry. They verify one immediate start, progress during feature navigation,
+visible workspace separation, exact single registration and subsequent inventory
+refresh. Repeated completion remains idempotent; unauthenticated fixture requests
+never enter the worker, an explicit authorized retry succeeds, and foreign
+completion is refused before worker reads. Access middleware and task/completion
+records are finite fixtures. This is not production authentication, a real model
+download, a physical browser shell, native file effects or production SQLite
+qualification. No production client/controller change was needed for these cases.
+
+### Desktop reference-save admission and retirement
+
+Desktop reference Save now uses a synchronous ticket in the existing committed
+model-client/workspace scope. A repeated click cannot dispatch another IPC save
+before busy rendering. The visible Save control is disabled while pending. Only
+that ticket is released after settlement; failed saves permit explicit retry.
+Lease retirement suppresses completion notification and inventory follow-up while
+an accepted save retains its original backend workspace/model input. Other model
+actions, provider policy, registry identity and native file guards are unchanged.
+
+Five added composed cases reuse the existing mounted desktop Models/client/
+preload/registered-handler/use-case/JSON-registry journey. They assert one IPC
+admission, exact durable reference metadata, safe pre-delegate failure/retry and
+late completion after changed workspace/client or unmount. The actual registry
+is separate from finite provider, in-process invoke and held/failing delegate
+fixtures. Drained requests and identity/containment/link/type/byte-checked roots
+plus restored test globals bound cleanup. No physical app/sender authorization,
+SQLite, actual provider/model/OCR, native restart or final/parent proof follows.
+Accepted model accuracy/OCR results remain closed.
+
+### Desktop image preview workspace and composed regression
+
+Desktop generated-image preview requests include the active workspace in the
+existing artifact-client context. A valid saved image must not lose its preview
+because presentation omitted the scope required by the media reader. This does
+not change media authorization or infer authority from the renderer value.
+
+Three joined Desktop cases use the actual feature/client/preload/registered IPC/
+application finalizer and fresh PNG/catalog/bindings/JSON registry. They verify
+exact generation settings, persisted dimensions/pixels/digest, registry reopen,
+workspace isolation, finalization retry without duplicate copy, and continued
+observation after refused cancellation. In-process invoke, finite runtime/access
+and passive inventory/settings/media fixtures do not qualify physical host,
+production sender/authentication/SQLite, actual ComfyUI/model or native effects.
+Existing browser joined evidence and accepted model/OCR results remain intact.
+
+### Desktop image navigation drafts
+
+The Desktop image form retains only a bounded navigation draft in renderer
+memory. The key includes the current image, model and artifact client identities
+and the canonical workspace. Default clients use the current preload bridge as
+their owner. Replacing any owner retires the prior view before draft writes; a
+retired callback cannot change the next workspace or client draft.
+
+Each owner context retains at most eight workspace drafts. A draft contains only
+the twenty known form fields and at most 128 KiB of serialized UTF-8 data. Reads
+and writes copy values. An inadmissible latest edit removes any older cached
+draft, so navigation cannot restore stale text. Cache refusal does not prevent
+normal form use. Weak owner keys permit retired client contexts to be collected.
+
+No prompt, error, preview, generated result or success state is added to browser
+or disk storage by this cache. Full document reload keeps the existing opaque
+task-ID recovery path, which must re-read the actual scoped task. Unsent form
+text does not survive a process reload. This local navigation fix does not
+qualify real ComfyUI generation, native cleanup or the deferred combined tests.
+
+
+## Qualification process observation compatibility
+
+The private qualification observer separates long task observation from short
+controlled-host shutdown. PID-only Python callers may use only the exact
+630000/690000/930000/990000/1200000/1230000/1290000/2430000/2490000-millisecond windows
+already generated by the approved qualification controllers, or a positive
+short wait up to 30000 milliseconds. The separate 1200000-millisecond installed-generation wait has no added grace. The other execution windows are
+600/900/1200/2400 seconds plus existing startup and retirement grace. Arbitrary
+long waits fail before native access. Root-bound observation and the CLI retain
+the 30-second limit; the CLI exposes no timeout argument.
+
+Both paths retain live read-only process handles through actual exit checks.
+The change restores controller compatibility without changing process launch,
+execution deadlines, resource guards, cleanup or ownership policy. An unknown
+exit remains a failure. PID-only evidence cannot establish a protected job,
+stable retained tree, durable accounting or restart authority. Native identity
+fixtures can qualify read-only identity behavior; they cannot qualify a staging
+fence because read-only identity still permits child creation. Actual offload
+protection and recovery qualification remain pending.
+
+
+## Versioned read-only Windows identity support
+
+The private Windows x64/NTFS helper accepts a bounded drive-root request and
+strict single child components relative to held parent handles. It rejects
+observed reparse points, identity/type mismatches, multiple file links and
+write/delete sharing conflicts. It revalidates held facts before release; the
+adapter requires actual helper close and fences reuse after unknown exit.
+It is uncomposed support under ADR-0043, with no production effect capability.
+
+The adapter accepts a single reply for the active greeting or request, including
+replies split across pipe reads. It rejects extra bytes in a reply or output
+received while no request is active and requests child termination. This
+checks observed pipe framing. The protocol does not echo a request identifier.
+
+When the user asks to remove local model files along with the record, the
+application waits for an explicit deletion acknowledgement. A missing path,
+missing file-effects port or unconfirmed deletion preserves the model record
+and stops before catalog writes. Record-only removal does not call the file
+port. The `model-file-delete-ack` profile covers this application decision and
+the disabled production adapter with model-free tests.
+
+When a removal requests cleanup of related artifact records, a missing catalog
+service or an unconfirmed result also preserves the model record. A confirmed
+absence permits a retry to finish and is omitted from the removed-record list.
+Artifact catalog deletion requires its own authorization.
+
+The fixed `windows-file-identity` profile runs only two model-free unit files.
+Actual installed-toolchain/native fixtures are separate observations; their
+identity and exit evidence cannot prove a stable tree fence. New child files
+remain possible while an identity lease is held. Owner/DACL observations do not
+grant protected journal, deletion, reveal, publication, crash recovery, a fresh
+offload lease or production binary provenance. Those controls remain pending.
+No existing retained data or production model source is adopted by this helper.
+
+
+## Private guarded offload consumer
+
+ADR-0045's recovery integration is adapter-private. A trusted parent owner
+supplies a worker context to the real generator/cache, pinned loader and lease;
+model/task JSON and public runtime ports carry no such authority. An omitted
+ordinary context preserves the existing empty-root behavior. Explicit guarded
+requests refuse missing authority before model/path inspection and cannot reuse
+an ordinary or different live owner's cache. Fresh loading and cached forward
+have separate admission checks. Supplier interruption fences the context.
+
+The owner pins its native backend and lease before callbacks. Its backend
+contract requires protected durable reservation before writing and native seal
+before reuse. Worker reference release is distinct from parent-confirmed native
+retirement; pending/uncertain cleanup remains charged and cannot stop the shared
+worker. Readiness, marker files, serialized arithmetic and interface tests grant
+no native capability. No production backend is composed. Native protection,
+protected journal, owned-job/reader lifetime, applicable model execution policy
+and actual offload resource qualification remain pending. Accepted accuracy is
+not rerun by the fixed resource-only gate or model-free lifecycle profile.
+
+
+## Private fresh Windows offload Core
+
+The Python adapter now contains a concrete Windows staging Core and an existing
+`_NativeOffloadBackend` implementation. Construction is effect-free. Explicit
+private preparation and fresh-only operations use held native objects, strict
+metadata and one-attempt custody; no runtime source imports dev-tools.
+
+Core composition requires live protected accounting and an exact standalone
+worker owner. Reserve, create, quiesce/seal, reuse, reference release and native
+retirement remain separate acknowledgements. Missing producers, malformed replies
+or uncertain lifetimes deny reuse and retain charge. The current factory stays
+backendless and advertises no guarded capability. Synthetic real-lease tests
+are source evidence, not actual Windows or resource qualification.
+
+Backend admission and confirmed retirement use the same lock. Retirement
+removes the backend from the owner registry. A stale call stops before it
+can retain the backend or Core again. A call that overlaps a live operation
+still records uncertainty and keeps custody.
+
+The Core also keeps its owner slot until the executor acknowledges fresh
+staging cleanup. If slot removal is interrupted, the Core restores the slot
+before unlocking and withholds proof of retirement. Calls to a released Core
+cannot create a new slot for it. Read-binding retirement also checks for
+uncertainty under the custody lock before releasing its records.
+The accounting journal releases its owner slot after the executor confirms
+retirement. It restores the slot if removal is interrupted. A call to an
+already released journal cannot reopen its slot or mark its accounting failed.
+The guarded parent confirms its lease retirement only after its owner record
+is removed. An interrupted removal keeps the owner in custody. A late failure
+report leaves a confirmed retirement closed.
+
+The initial implementation supports only its new protected-current-user namespace
+and optional index file. It refuses unsupported inherited/retained trees; unknown
+old staging retains the full12GiB charge. Production accounting/domain/fence
+composition, worker/crash and real model delivery remain pending. No model-specific
+hard Job ceiling is chosen.
+
+
+A mandatory private finite-execution producer also gates Core preparation and
+native dispatch. No real producer is composed. Its callback must execute exactly
+once, on the admitted thread, and finish before returning the exact result.
+Skipped, duplicate, early, foreign-thread and unknown replies retain custody.
+Core/backend state locks do not span execution callbacks. Canonical self-origin
+and API-owner checks deny copied owners before callbacks. A successful raced
+break is not an aborted cancellation and cannot authorize native retirement.
+
+
+### Fresh-only Core component runner
+
+An explicit dev-tools standalone owner can collect initial actual-Core evidence
+without composing the production runtime. Its private fixture port is admitted
+after actual suspended creation-time Job assignment, parent exact membership and
+limit checks, child self-readback and a fixed handshake. No caller JSON/readiness
+flag grants a runtime capability. Four byte-exact adapter files load in a private
+namespace; the ordinary tasks package and managed runtime are not qualified.
+
+One-shot self-only diagnostic timers, strongly retained native slots and bounded
+preopened reports avoid an unbounded Python thread-start/pipe-reader mechanism.
+Exact process exit, Job-active-zero and one-attempt parent retirement are separate
+from child Core cleanup. Expected collision retains Core custody. Timer delivery
+needs the GIL/host scheduler and does not prove suspend or stuck kernel-I/O bounds.
+The current factory stays backendless. No production finite owner, model Job
+quota, protected durable journal, retained-tree or worker/crash readiness follows.
+
+
+### Unused read-binding retirement
+
+The adapter Core has a separate private retirement path for an unused prepared
+read chain. It requires the canonical accounting binding to have no receiver or
+started/completed borrow, and refuses every staging/reservation/protection/guard
+state. Exact original containers, handle records, native slot generations and
+all identities are captured and checked before the first close. Callback changes
+or unknown closure retain that snapshot; closed handles are never queried again.
+
+Read-binding retirement is not staging retirement. The existing live journal
+witness additionally requires the private staging fact and the exact borrowed
+consumer. No serialized proof, capacity credit, journal frame or production
+admission follows from closing read handles. Custody release follows exact
+execution acknowledgement. Admission uses only canonical prepared owners, with
+shared-lock membership/capacity/snapshot publication. Interrupted removal restores
+both reserved entries before that lock releases. Both acknowledged removals form
+an explicit release commit. A later caller interruption cannot re-admit the
+completed owner or invent unknown native work; the terminal Core retains its
+closed snapshot. Ordinary Core dispatch also denies terminal reuse before
+custody insertion.
+The finite process owner, shared accounting/fence and worker/resource composition
+remain pending. Source fixtures are not current native or parent qualification.
+
+
+### Independent protected journal ownership
+
+The Python journal implements `_ProtectedJournalPort` in the same adapter layer.
+It reuses Core's typed Windows primitives with its own retained resources and a
+source-fixed sibling namespace, never Core's sealed namespace/index inventory.
+The canonical Core binding admits one anchor borrower during Core dispatch.
+Borrowed handles are not closed by the journal; its independent duplicate and
+native custody survive Core retirement. A release witness is an original live
+object backed by fully settled Core cleanup, not a path, identity byte string,
+retired boolean or serialized certificate.
+
+The bounded append-only protocol has five 512-byte frames, strict sequence,
+generation/root binding, previous digest and padding checks. Checksums detect
+corruption and are not authority. Complete native IO, separate flush and exact
+held-object readback precede acknowledgement. Record/IO bookkeeping failures
+are terminal; valid prefixes cannot repair or reopen old journals. Journal
+history and its charged overhead remain after successful handle retirement.
+
+The authoritative shared domain covers unknown and all other owned charges plus
+the complete 128 KiB journal reservation within unchanged12GiB. It also must own
+a stable mutable-file/namespace fence throughout bootstrap and transitions.
+The journal API's DACL/sharing/file-RH checks and before/after metadata checks do
+not create that missing authority. No shared-domain/fence producer is selected.
+Unknown12GiB refuses even bootstrap writes; no fresh flag, new root/process or
+numeric view resets capacity. Finite execution and exact worker producers remain
+required. The production factory is still backendless and never advertises a
+new success from source fixtures.
+
+Core and journal dispatches stay separate. Reservation precedes Core creation;
+worker quiescence precedes Core seal and durable journal seal. Reference release
+never means process exit. Exact worker retirement, acknowledged Core cleanup,
+durable credit and journal-native retirement are distinct; credit cannot query
+Core's closed handles or hide an uncertain operation. Source fixtures use the
+real consumer and explicit synthetic dependencies only. The earlier native Core
+result, this source work, actual journal/worker/resource qualification and final
+combined tests remain separate. Accepted accuracy/OCR and all model limits stay
+unchanged.
+
+
+### Persistent Windows read-session source
+
+The private runtime execution producer keeps the real Core and execution port
+in one isolated, model-free child. An owned CRT controller performs blocking
+launch and anonymous-pipe IO. Creation-time Job and handle lists admit exactly
+request-read, response-write, ready-event and dispatch-event handles. The Job is
+parent-only, limits active processes to one and caps only the inert child at
+512 MiB. No ambient stdio, arbitrary command, model task or public root enters
+this role. Explicit host cache configuration is frozen once without discovery.
+
+Fixed source buffers and observed executable paths/image hashes bind the launch
+and child-local calls. These checks do not establish tamper protection for every
+installed runtime dependency. The allowed state graph is initialize/read-bind/
+read-retire/finish, with initialize/finish allowed only without a Core. One
+120-second operation budget includes cancellation and response work; there is no
+idle-session timer. Timer generation transitions are atomic. Callback retirement
+requires the original deletion-completion event and acknowledged close.
+
+Caller timeout performs no blocking cleanup. Unknown native outcomes retain the
+original graph and the single admission slot. Known Core read retirement remains
+a separate fact from timer, transport, process and controller retirement. Only
+actual thread exit and all original close acknowledgements permit successful
+session release. Fixed normal/terminal record pools bound parent metadata across
+the four operations. No unconditional GIL, scheduler or stuck-kernel deadline is
+claimed. This read-only source supplies no journal/domain fence, writer, capacity
+credit, restart adoption or production readiness. Native qualification remains
+separate from the fifteen-file model-free source profile.
+
+
+### Failed owned read-session retirement
+
+The private execution owner separates immutable native-return settlement from
+normal operation acknowledgement and records each caller's exit from its
+effectful path. This is not application-thread termination. All lifetime intents
+remain canonical after active-list pruning. An unsettled creation, resume,
+acquisition or close denies terminal admission; partial startup is not adopted.
+
+A fully observed fenced IO session may start one retained CRT reaper using a
+single 120-second budget and the existing bounded normal/reserved ledger. Its
+fixed actions target only original controller IO, the captured idle event into
+fenced refusal, and the original private IO Job. Cancellation acknowledgement
+or NOT_FOUND does not settle the original IO. Original thread/process exit,
+Job active zero, native settlement and one-attempt original closes precede
+reaper body completion. Actual reaper exit and its own acknowledged closes
+precede the final proof and registry release. The reaper thread signal is its
+completion observation; a body-done flag alone cannot release custody.
+
+The caller's reaper-exit wait may overlap an exact retained original close
+intent; it neither consumes that intent nor treats it as successful. Native
+functions execute outside state/ledger locks. Failed or interrupted native
+publication retains the entire original plus terminal graph. A completely
+published final proof allows pure idempotent registry reconciliation only.
+
+Successful cleanup yields a failed-but-retired session and preserves actual
+Core read acknowledgements independently. It supplies no disk credit, writer
+authority, model cancellation, factory readiness or unconditional OS/GIL/kernel
+time guarantee. Actual Windows failure/crash/managed-runtime and offload resource
+qualification remains separate from synthetic source tests.
+
+Terminal query outputs are pinned to their original typed buffers. Identity
+checks after native return and bounded immutable scalar observations prevent a
+favorable replacement field from supplying exit or Job-count proof. Interrupted
+request allocation, list/map insertion or active/busy publication fences the
+original before retry; both request and exit records remain bounded to four.
+Pure state, replay and concurrent-admission denial does not poison a healthy
+owner. Final budget observation is repeated after settlement validation.
+
+Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.
+
+
+### Fixed journal object protection
+
+The private Windows Journal/Core source admits explicit current-principal owners
+on newly created fixed objects. It retains finite original protection attempts
+before native queries or DACL setters. The final descriptor denies specific
+mutation, delete, WRITE_DAC and WRITE_OWNER rights and includes explicit OWNER
+RIGHTS for READ_CONTROL. The journal creates its own fixed parent and children,
+then seals the file, namespace and immediate parent before genesis. Core post-quiescence sealing proceeds
+leaf first while retaining its existing namespace/stage result order.
+
+Later charge-sensitive checks consume the exact API-owned protection attempt,
+original handle slot/value/identity and exact owner/DACL readback. Security
+queries retain their allocation outputs before dispatch and bound self-relative
+descriptor, ACL and SID reads. An interrupted or unknown result retains custody.
+The held original writer is distinct from a newly opened writable reference.
+No descriptor widening, child creation or supplier handoff is allowed after seal.
+
+This boundary begins at sealed admission after trusted private construction.
+It does not revoke unknown preopened writable handles or claim hostile same-user
+protection. Existing domain precharge/bootstrap checks remain mandatory; no real
+shared domain or production factory is selected. Typed synthetic tests establish
+source behavior only. Actual NTFS denial/original-writer controls, shared durable
+accounting, model-worker/crash recovery, retained restart and resource/delivery
+qualification remain pending. Unknown storage still reserves all 12 GiB.
+
+### Construction-owned immediate parent
+
+Journal bootstrap creates its own fixed private parent only after the existing
+shared-domain precharge, binding and mutation-fence assertions. The Core borrow
+callback remains read/duplicate-only. An API-local, original directory-creation
+record binds exclusive creation, FILE_CREATED, current-token owner/private ACL,
+identity, thread, handle slot/value and generation. Two records per API cover
+Core's two directories or Journal's parent and namespace. Existing path reads,
+ACL lookalikes, copied records and incomplete creation cannot supply this record.
+
+The Journal parent capability consumes the same construction record and original
+third canonical protection row. Its three fixed targets are file, namespace and
+parent; Core still protects exactly its two existing targets. All fixed children
+precede final parent sealing. Check, write and flush consume the same sealed
+capability and exact owner/security/identity readback. Directory inventory binds
+each '..' entry to its actual immediate parent, not the earlier cache ancestor.
+
+This adds no production domain, capacity credit or default readiness. A new
+private parent alone cannot prove ancestor stability, guardian/crash lifetime,
+shared durable 12 GiB accounting, retained restart or model-worker resources.
+Those remain separate pending requirements. Source tests and v3 fixture
+definitions do not supersede the actual failed v2 Windows observation.
+
+### Safe-weight supplier directory boundary
+
+Within ADR-0045, the admitted safe-file route keeps the verified supplier disk
+index in memory and omits `offload_folder`. Transformers 4.51.3 and Accelerate
+1.14.0 support that index without a supplier directory destination. The exact
+version gate, safe-loading flags, original shard/path/dtype/name coverage and
+tied-alias validation remain in force; there is no unsafe fallback.
+
+The positive `OwnedOffloadLease` reservation, owner-marker staging, seal and
+reference-controlled release remain required. This change is not a reference-only
+or zero-staging lifecycle contract and does not enable an unavailable guarded
+backend. Existing native protection, global accounting, worker/crash, retained
+restart and model-resource qualification remain pending.
+
+
+### Optional Qwen2 input and supplier adapter
+
+The runtime adapter's private `bounded_model_inputs.py` consumes an original
+`LocalModelInventory`. It exposes no core/transport API. Bounded hash-checked
+metadata supplies native tokenizer construction and generation defaults, while
+complete inspected checkpoint keys/shards feed the pinned Transformers lower
+safe-weight loading seam. Existing Accelerate dispatch receives the in-memory
+safe index, device map and skip keys. Native dtype/attention/meta initialization,
+tied aliases, ownership and resource validation remain in the runtime adapter.
+Outer model/tokenizer resolvers and alternate conversion paths are excluded.
+
+This is internal implementation under the accepted optional-profile architecture,
+not a new engine or model-worker design. The existing read-only native protocol
+and unavailable production factory remain unchanged. Source-level tests cannot
+supply original-source custody, lazy-forward lifetime, worker/crash/restart or
+process-memory evidence. Tiny real-supplier parity is a separate qualification.
+
+### Original-source ancestor sharing
+
+The private original-source API uses read/write sharing only for nonterminal
+ancestor directories. The selected inventory directory, including a drive root
+when selected directly, and every exact file retain read-only sharing. Every
+held object denies delete sharing; desired access stays read/list, attributes
+and synchronization only. This matches the existing native file-identity helper.
+Relative original-handle traversal, reparse/type/identity/default-stream checks,
+file Read oplocks, exact hashes, finite reservations and original retirement
+remain unchanged. Synthetic ABI tests establish this split and retained custody
+on selected-directory/file writer denial. They do not identify the target of the
+earlier sharing failure, qualify actual Windows races or supply discovery,
+shared-domain, model-worker, restart, resource or readiness authority.
+
+## Original mapper output custody
+
+The closed Source mapper retains the actual scalar and output handle before
+reading the last-error code. It also snapshots only its fixed IO, file metadata
+and mapped-region layouts before that getter or later validation can change
+them. Unknown or interrupted publication keeps the original partial graph and
+denies retry or cleanup credit. Consumers use typed copies of captured bytes;
+changed original buffers or output slots cannot supply favorable evidence.
+
+Focused fake-ABI tests cover getter failure, rewritten file identity, IO status
+and mapped-region facts, later buffer mutation and invalid output layouts. This
+adds no Native call, new case, wire field, quota or production capability. The
+strict801 witness and all old failed observations stay unchanged. A separate
+sharing-denial same-file proof and actual Windows qualification remain pending.
+Accepted accuracy/OCR stay closed; unknown staging remains fully charged12GiB.
+
+## Original Source call returns
+
+The private Source owner retains original scalar and acquisition-slot returns
+before the last-error getter. It copies only synchronously successful file-open
+IO status and fixed file-ID outputs. Original pointer types,base addresses and
+spans bind those copies. Existing open and identity consumers use captured typed
+bytes; changed slots,buffers,binding or validator observations deny ACK.
+
+Getter or copy failure keeps physical return custody separate from uncompleted
+public fields. Passive access to retained facts does not require healthy current
+owner aliases and grants no Native action or cleanup credit. Pending async IRPs
+and other metadata are not newly qualified. This adds no Native call or quota.
+Actual Windows same-file,source/cache,worker/accounting/restart/resource proof
+remains pending. Accepted accuracy/OCR stay closed. The strict801 case and prior failures stay unchanged.
+Bookkeeping now reserves 12 KiB per existing call inside the unchanged512MiB
+qualification admission. Model RAM guards and all row/time ceilings are unchanged.
+
+### Fixed sharing-open refusal composition
+
+The original Source child now has one negative-only four-call held probe as a
+concrete consumer of the existing Source table and original call custody. It
+binds the terminal parent, fixed weight filename, exact typed arguments and
+outputs before effects. A one-use input check in the original Source call runs
+after its error setter and immediately before Native dispatch. The guard adds
+no abstract producer or public runtime capability.
+
+A separate closed case and eight-field witness represent only an unchanged
+share1 open refused with `STATUS_SHARING_VIOLATION`. Existing default and strict
+oplock801 contracts stay separate. The original parent checks child9/Job0 and
+matching mapped-file IDs before mapping retirement. Only this new case shares
+nonterminal mapper directories to permit other readers and writers; the selected directory
+and writer still deny delete and keep their original sharing rules. No new
+principal, process topology, quota, timeout, accounting credit or production
+composition follows. Actual native and restart/resource qualification is pending.
+
+### Interrupted optional generation ownership
+
+The existing bounded generator poisons its shared cache owner when any
+BaseException interrupts an entered supplier or constrained-decoder generation
+call. It re-raises the same object without closing or replacing the bundle,
+decoder or lease. Existing and future request views deny reuse. Resource and
+source admission before generation remain separate; completed decoder-output
+validation retains its bounded repair path. This adds no worker-stop authority,
+native protection, borrower-retirement proof or production capability.
+
+Indexed Hugging Face snapshot validation binds the snapshot directory to the
+requested model's exact repository under the canonical configured cache. Copied
+shards remain supported. Index files and shards may link directly to regular
+blobs in that same repository; external, cross-repository and directory/reparse
+aliases are refused. The index read enforces its byte limit before JSON parsing,
+including growth after metadata checks. Every map value and shard is checked.
+These are cooperative filesystem checks, not immutable native-file authority or
+additional cache-deletion authority. Model-free copied-layout and controlled-link
+regressions supply source evidence only. Missing actual file-symlink privilege is
+reported as a filesystem-coverage skip, never a successful linked download,
+provider transfer, native protection, inference or parent-roadmap qualification.
+
+Desktop startup diagnostics use the existing status operation and a closed optional
+report. The host retains instance-owned facts outside lazy foundation composition,
+including a rejected composition. Actual supervisor admission supplies each attempt
+identity; coalesced/skipped starts add no attempt, and retired callbacks cannot
+replace later facts. Context/Worker observations preserve original setup policy and
+errors. Only the existing explicit Worker inspection reads fixed package metadata,
+without importing those packages; earlier Context failure leaves versions unknown.
+Version comparisons are observational and add no repair trigger or readiness claim.
+Desktop interpreter discovery honors an explicit command. Its automatic probes
+prefer Python 3.10–3.13, then accept a verified Python 3.14 for the core worker.
+On Windows, the `py` launcher can discover Python 3.14 installed alongside the
+default interpreter.
+When no supported candidate is found, the platform default reaches the existing
+dependency gates. Settings uses the normalized unsupported-Python failure to
+explain how to install a supported interpreter and retry after reopening.
+
+The Desktop main process checks the selected installed worker before admitting
+the shell. The bounded local check uses the Context and core Worker dependency
+predicates and requires Torch. It covers the worker entry point and rejects an
+unsupported interpreter, missing dependencies or an unsuccessful probe. The
+development command can provision prerequisites in the checkout, then passes
+the checked command to the main process. Worker process start remains owned by
+the existing feature and explicit runtime controls.
+
+Settings copies only the cached normalized report with bounded serialization, never
+legacy status/logs, local paths, credentials or model inventory. Status reads and
+Copy add no composition, interpreter, install, provider or model action. Clipboard
+completion notices retire with their view. Source fixtures do not diagnose another
+machine or qualify actual provider, native, inference or parent-roadmap behavior.
+Startup history retains its latest 64 observations with an explicit truncation
+fact. Attempt retirement is separate from confirmed worker termination. Effective
+launch controls are captured before optional observers, while the trusted launch
+preparation writes authentication into the private attempt-local child environment.

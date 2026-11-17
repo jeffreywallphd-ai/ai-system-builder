@@ -1,0 +1,1704 @@
+"""Portable denial evidence; native cases require explicit controlled opt-in."""
+from pathlib import Path
+import contextlib
+import ctypes
+import importlib.util
+import hashlib
+import io
+import json
+import os
+import sys
+import tempfile
+import builtins
+from types import SimpleNamespace
+import unittest
+from unittest.mock import patch
+
+SOURCE=Path(__file__).resolve().parents[1]/"owned_command_job.py"
+spec=importlib.util.spec_from_file_location("owned_command_job_under_test",SOURCE)
+job=importlib.util.module_from_spec(spec);sys.modules[spec.name]=job;spec.loader.exec_module(job)
+
+
+class PortableNativePolicyTests(unittest.TestCase):
+    def setUp(self):
+        self.pending=dict(job._PENDING);self.live=dict(job._LIVE);self.issued=dict(job._ISSUED)
+
+    def tearDown(self):
+        # Restore only injected test objects; production has no reset API.
+        job._PENDING.clear();job._PENDING.update(self.pending)
+        job._LIVE.clear();job._LIVE.update(self.live)
+        job._ISSUED.clear();job._ISSUED.update(self.issued)
+
+    def issued_intent(self,phase):
+        return job._remember(job._Intent(phase,(),SOURCE.parent,{},.01,SOURCE.parent,{},{}))
+
+    @contextlib.contextmanager
+    def source_session_subject(self,role='source-session'):
+        with tempfile.TemporaryDirectory(prefix="source job role ") as directory:
+            root=Path(directory).resolve();base=root/"base/python.exe"
+            base.parent.mkdir();base.write_bytes(b"fixed Base image")
+            dll=base.parent/"python312.dll";dll.write_bytes(b"fixed runtime DLL")
+            runtime={str(path):job._digest(path) for path in (base,dll)}
+            hashes={}
+            for name in job._SOURCE_SESSION_FILES:
+                path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"fixed_source = True\n")
+                hashes[name]=job._digest(path)
+            run=root/".local-codex/native-source-session-host-v1/runs"/("a"*32)
+            folder=run/role;(folder/"t").mkdir(parents=True)
+            windows=root/"Windows";(windows/"System32").mkdir(parents=True)
+            with patch.object(job,"_REPO",root),patch.object(job.sys,"_base_executable",str(base)), \
+                 patch.dict(os.environ,{"SystemRoot":str(windows),"WINDIR":str(windows),
+                    "PATH":"untrusted-search-path","SECRET_TOKEN":"never-forward",
+                    "PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"ocr-documents"},clear=True), \
+                 patch.object(job,"_Win",side_effect=AssertionError("No Native construction")) as native:
+                yield SimpleNamespace(root=root,base=base,dll=dll,run=run,folder=folder,native=native,
+                    args=dict(run=run,folder=folder,reviewed_file_hashes=hashes,
+                              runtime_file_hashes=runtime,review_digest="b"*64))
+
+    def test_source_role_has_one_fixed_command_environment_and_original_budget(self):
+        with self.source_session_subject() as case:
+            intent=job._reviewed_source_session_intent(**case.args)
+            self.assertIs(job._ISSUED[id(intent)],intent)
+            self.assertEqual(intent.argv,(str(case.base),"-I","-S","-B",
+                str(case.root/job._SOURCE_SESSION_FILES[-2]),"--native"))
+            self.assertEqual((intent.phase,intent.seconds,intent.cwd),("source-session",180,case.folder))
+            self.assertEqual(set(intent.environment),{"SystemRoot","WINDIR","PATH","TEMP","TMP"})
+            self.assertEqual(intent.environment["PATH"],os.pathsep.join((str(case.base.parent),str(case.root/"Windows/System32"))))
+            self.assertEqual(intent.environment["TEMP"],str(case.folder/"t"))
+            self.assertEqual(job._memory_limits(intent),(1024**3,2*1024**3))
+            self.assertEqual(job.MEMBERS,32);self.assertEqual(len(intent.consumer_hashes),14)
+            job._validate_intent(intent,case.folder)
+            with self.assertRaises(TypeError):intent.environment["PATH"]="replacement"
+            case.native.assert_not_called()
+
+    def test_source_role_refuses_all_command_runtime_environment_or_budget_selectors(self):
+        with self.source_session_subject() as case:
+            for selector in ("command","cwd","environment","python_executable","seconds","process_bytes","job_bytes"):
+                with self.subTest(selector=selector),self.assertRaises(TypeError):
+                    job._reviewed_source_session_intent(**case.args,**{selector:"untrusted"})
+            self.assertNotIn("source-session",job._FIXTURES)
+            with self.assertRaises(job.NativeFailure):job._fixture_intent("source-session",case.folder)
+            case.native.assert_not_called()
+
+    def test_distinct_mapped_denial_role_has_literal_command_and_same_original_limits(self):
+        with self.source_session_subject('source-shared-map-denial')as case:
+            intent=job._reviewed_source_map_denial_intent(**case.args)
+            self.assertEqual(intent.phase,'source-shared-map-denial')
+            self.assertEqual(intent.argv,(str(case.base),'-I','-S','-B',
+                str(case.root/job._SOURCE_SESSION_FILES[-2]),'--native-shared-write-denial'))
+            self.assertEqual(intent.seconds,180)
+            self.assertEqual(job._memory_limits(intent),(1024**3,2*1024**3))
+            job._validate_intent(intent,case.folder)
+            with self.assertRaises(job.NativeFailure):job._reviewed_source_session_intent(**case.args)
+            with self.assertRaises(job.NativeFailure):job._source_session_intent('source-other',**case.args)
+            for selector in ('command','case','environment','seconds','job_bytes'):
+                with self.assertRaises(TypeError):job._reviewed_source_map_denial_intent(**case.args,**{selector:'other'})
+            (case.root/job._SOURCE_SESSION_FILES[0]).write_bytes(b'changed')
+            with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+            case.native.assert_not_called()
+
+    def test_sharing_denial_role_is_literal_bounded_and_cannot_select_another_case(self):
+        with self.source_session_subject('source-sharing-open-denial')as case:
+            intent=job._reviewed_source_sharing_denial_intent(**case.args)
+            self.assertEqual(intent.argv,(str(case.base),'-I','-S','-B',
+                str(case.root/job._SOURCE_SESSION_FILES[-2]),'--native-sharing-open-denial'))
+            self.assertEqual((intent.phase,intent.seconds),('source-sharing-open-denial',180))
+            self.assertEqual(job._memory_limits(intent),(1024**3,2*1024**3))
+            self.assertEqual(len(intent.consumer_hashes),14)
+            job._validate_intent(intent,case.folder)
+            for issuer in (job._reviewed_source_session_intent,job._reviewed_source_map_denial_intent):
+                with self.assertRaises(job.NativeFailure):issuer(**case.args)
+            for selector in ('command','case','environment','seconds','job_bytes','process_bytes'):
+                with self.subTest(selector=selector),self.assertRaises(TypeError):
+                    job._reviewed_source_sharing_denial_intent(**case.args,**{selector:'other'})
+            (case.root/job._SOURCE_SESSION_FILES[0]).write_bytes(b'changed')
+            with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+            case.native.assert_not_called()
+
+    def test_source_role_requires_exact_source_and_runtime_witness_sets(self):
+        with self.source_session_subject() as case:
+            for field in ("reviewed_file_hashes","runtime_file_hashes"):
+                for mutation in ("missing","extra","bad-value"):
+                    wrong=dict(case.args[field])
+                    if mutation=="missing":wrong.pop(next(iter(wrong)))
+                    elif mutation=="extra":wrong["untrusted"]="0"*64
+                    else:wrong[next(iter(wrong))]="not-a-hash"
+                    with self.subTest(field=field,mutation=mutation),self.assertRaises(job.NativeFailure):
+                        job._reviewed_source_session_intent(**{**case.args,field:wrong})
+            case.native.assert_not_called()
+
+    def test_source_role_revalidates_code_and_runtime_before_native_preparation(self):
+        with self.source_session_subject() as case:
+            intent=job._reviewed_source_session_intent(**case.args)
+            for path in (case.root/job._SOURCE_SESSION_FILES[0],case.base,case.dll):
+                before=path.read_bytes();path.write_bytes(before+b" changed")
+                with self.subTest(path=path.name),self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+                path.write_bytes(before)
+            case.native.assert_not_called()
+
+    def test_source_role_freshness_pending_owner_and_unknown_roles_fail_closed(self):
+        with self.source_session_subject() as case:
+            with self.assertRaises(job.NativeFailure):
+                job._reviewed_source_session_intent(**{**case.args,"folder":case.run/"wrong"})
+            job._PENDING[123]=object()
+            with self.assertRaises(job.NativeFailure):job._reviewed_source_session_intent(**case.args)
+            job._PENDING.pop(123)
+            for path in (case.folder/"stdout.log",case.folder/"t/old.tmp"):
+                path.write_bytes(b"retained")
+                with self.subTest(path=path.name),self.assertRaises(job.NativeFailure):
+                    job._reviewed_source_session_intent(**case.args)
+                path.unlink()
+            intent=job._reviewed_source_session_intent(**case.args)
+            (case.folder/"stderr.log").write_bytes(b"earlier output")
+            with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+            case.native.assert_not_called()
+
+    def test_source_role_does_not_select_ocr_grade_from_environment_or_accept_copied_identity(self):
+        for scenario in (None,"ocr-documents","dataset-profile"):
+            env={} if scenario is None else {"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":scenario}
+            intent=job._remember(job._Intent("source-session",(),SOURCE.parent,env,180,SOURCE.parent,{},{}))
+            self.assertEqual(job._memory_limits(intent),(1024**3,2*1024**3))
+            with self.assertRaises(job.NativeFailure):job._memory_limits(job.copy.copy(intent))
+        for phase in ("source-session:command","source-session-extra"):
+            with self.assertRaises(job.NativeFailure):job._memory_limits(self.issued_intent(phase))
+
+    def test_native_fixture_intent_uses_the_original_interpreter_and_pins_its_bytes(self):
+        with tempfile.TemporaryDirectory(prefix="fixed native interpreter ") as directory:
+            root = Path(directory).resolve()
+            base = root / "base/python.exe"
+            base.parent.mkdir()
+            base.write_bytes(b"inert original interpreter")
+            family = root / "family"
+            folder = family / ("a" * 32) / "stdio"
+            folder.mkdir(parents=True)
+            redirector = root / "venv/Scripts/python.exe"
+            with patch.object(job.sys, "executable", str(redirector)), \
+                 patch.object(job.sys, "_base_executable", str(base)), \
+                 patch.object(job, "_REPO", root), \
+                 patch.object(job, "_SELFTEST_RUNS", family), \
+                 patch.object(job, "_Win") as native:
+                intent = job._fixture_intent("stdio", folder)
+                self.assertEqual(intent.argv, (str(base), "-I", "-S", "-B", str(job._MODULE), "--fixture", "stdio"))
+                self.assertEqual(intent.seconds, 8)
+                job._validate_intent(intent, folder)
+                base.write_bytes(b"changed interpreter")
+                with self.assertRaisesRegex(job.NativeFailure, "reviewed-consumer-drift"):
+                    job._validate_intent(intent, folder)
+                native.assert_not_called()
+
+    def test_native_fixture_leaf_does_not_launch_a_venv_redirector(self):
+        with tempfile.TemporaryDirectory(prefix="fixed native leaf ") as directory:
+            base = Path(directory).resolve() / "python.exe"
+            base.write_bytes(b"inert original interpreter")
+            with patch.object(job.sys, "executable", str(base.parent / "venv/Scripts/python.exe")), \
+                 patch.object(job.sys, "_base_executable", str(base)), \
+                 patch.object(job.subprocess, "Popen", side_effect=RuntimeError("stop before launch")) as launch, \
+                 patch.object(job, "_Win") as native:
+                with self.assertRaisesRegex(RuntimeError, "stop before launch"):
+                    job.fixture("hold")
+                self.assertEqual(tuple(launch.call_args.args[0]), (str(base), "-I", "-S", "-B", str(job._MODULE), "--fixture", "leaf"))
+                self.assertEqual(launch.call_args.kwargs["creationflags"], job.DETACHED_PROCESS)
+                native.assert_not_called()
+
+    def test_fixed_fixture_command_has_closed_roles_and_guardian_flags(self):
+        with tempfile.TemporaryDirectory(prefix="fixed native roles ") as directory:
+            base = Path(directory).resolve() / "python.exe"
+            base.write_bytes(b"inert original interpreter")
+            with patch.object(job.sys, "_base_executable", str(base)):
+                for role in ("before-resume", "after-descendant"):
+                    self.assertEqual(job._fixed_fixture_command("--guardian", role),
+                                     (str(base), "-I", "-S", "-B", str(job._MODULE), "--guardian", role))
+                for argument, role in (("--command", "stdio"), ("--fixture", "training-budget"),
+                                       ("--guardian", "leaf"), ("--fixture", "stdio extra"),
+                                       (object(), "stdio"), ("--fixture", object())):
+                    with self.subTest(argument=argument, role=role), self.assertRaises(job.NativeFailure):
+                        job._fixed_fixture_command(argument, role)
+
+    def test_fixed_fixture_command_refuses_unknown_or_unusable_interpreter(self):
+        with tempfile.TemporaryDirectory(prefix="fixed native identity ") as directory:
+            root = Path(directory).resolve()
+            empty = root / "python.exe"
+            empty.write_bytes(b"")
+            directory_image = root / "directory/python.exe"
+            directory_image.mkdir(parents=True)
+            for original in (None, "python.exe", str(root / "pythonw.exe"),
+                             str(root / "missing/python.exe"), str(empty), str(directory_image)):
+                with self.subTest(original=original), \
+                     patch.object(job.sys, "_base_executable", original), \
+                     self.assertRaises((job.NativeFailure, OSError)):
+                    job._fixed_fixture_command("--fixture", "stdio")
+
+    def fake_owned(self):
+        native=SimpleNamespace(k=SimpleNamespace(CloseHandle=lambda handle:True))
+        with patch.object(job,"_validate_intent"),patch.object(job,"_Win",return_value=native):
+            return job._OwnedJob(self.issued_intent("fixture:stdio"),SOURCE.parent)
+
+    def test_job_memory_profiles_are_fixed_and_require_an_issued_identity(self):
+        for phase in ("package", "fixture:stdio", "fixture:failure", "fixture:hold", "ocr-runtime-import"):
+            self.assertEqual(job._job_memory_limit(self.issued_intent(phase)),2*1024**3)
+        for phase in ("ui", "ui-thin", "ui-desktop", "fixture:ui-budget"):
+            self.assertEqual(job._job_memory_limit(self.issued_intent(phase)),3*1024**3)
+        for phase in ("shell", "ui:custom", "fixture:unknown", None, True):
+            with self.subTest(phase=phase),self.assertRaises(job.NativeFailure):
+                job._job_memory_limit(self.issued_intent(phase))
+        unissued=job._Intent("ui",(),SOURCE.parent,{},.01,SOURCE.parent,{},{})
+        with self.assertRaises(job.NativeFailure):job._job_memory_limit(unissued)
+
+    def test_approved_ocr_limits_are_fixed_and_standard_and_legacy_limits_stay_separate(self):
+        for phase in ("package","ui","ui-thin","ui-desktop","ocr-runtime-import","ocr-runtime-import-v2","fixture:ui-budget","fixture:ocr-budget"):
+            for scenario in (None,"dataset-profile","ocr-documents"):
+                with self.subTest(phase=phase,scenario=scenario):
+                    env={} if scenario is None else {"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":scenario}
+                    intent=job._remember(job._Intent(phase,(),SOURCE.parent,env,.01,SOURCE.parent,{},{}))
+                    is_ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or phase in ("package","ui","ui-thin","ui-desktop") and scenario=="ocr-documents"
+                    expected=(2,4) if is_ocr else (1,3 if phase in ("ui","ui-thin","ui-desktop","fixture:ui-budget") else 2)
+                    self.assertEqual(job._memory_limits(intent),tuple(value*1024**3 for value in expected))
+        forged=job._Intent("ocr-runtime-import-v2",(),SOURCE.parent,{},.01,SOURCE.parent,{},{})
+        with self.assertRaises(job.NativeFailure):job._process_memory_limit(forged)
+
+    def test_direct_runtime_factory_pins_base_venv_context_and_rejects_selectors_or_stale_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();runtime=root/".local-codex/ocr-cached-runtime-v1/venv"
+            python=runtime/"Scripts/python.exe";python.parent.mkdir(parents=True);python.write_bytes(b"fixed redirector fixture")
+            base=root/"base/python.exe";base.parent.mkdir();base.write_bytes(b"fixed direct base fixture")
+            config=runtime/"pyvenv.cfg";config.write_text("home = "+str(base.parent)+"\n",encoding="utf8")
+            runs=root/".local-codex/native-ocr-runtime-import-v2/runs";run=runs/("a"*32);folder=run/"runtime-import"
+            for name in ("t","h"):(folder/name).mkdir(parents=True)
+            with patch.object(job,"_REPO",root),patch.object(job,"_OCR_IMPORT_V2_RUNS",runs), \
+                    patch.object(job,"_OCR_IMPORT_RUNS",root/".local-codex/native-ocr-runtime-import-v1/runs"), \
+                    patch.object(job,"_OCR_IMPORT_PYTHON_SHA",job._digest(python)), \
+                    patch.object(job,"_OCR_IMPORT_CONFIG_SHA",job._digest(config)), \
+                    patch.object(job,"_OCR_IMPORT_BASE_SHA",job._digest(base)), \
+                    patch.object(job.sys,"_base_executable",str(base)), \
+                    patch.dict(os.environ,{"SystemRoot":str(root/"Windows"),"SECRET_TOKEN":"never-forward"},clear=True), \
+                    patch.object(job,"_Win") as native:
+                args=dict(run=run,folder=folder,review_digest="b"*64)
+                intent=job._reviewed_ocr_runtime_import_intent_v2(**args)
+                self.assertEqual(intent.argv,(str(base),"-I","-B","-c",job._OCR_IMPORT_SCRIPT_V2))
+                self.assertNotIn("-S",intent.argv);self.assertEqual(intent.seconds,20)
+                self.assertEqual(job._memory_limits(intent),(2*1024**3,4*1024**3))
+                self.assertEqual(intent.environment["__PYVENV_LAUNCHER__"],str(python))
+                self.assertEqual(intent.environment["AISB_OCR_EXPECTED_PREFIX"],str(runtime))
+                self.assertEqual(intent.environment["AISB_OCR_EXPECTED_BASE"],str(base))
+                for secret in ("SECRET_TOKEN","APPDATA","LOCALAPPDATA","PYTHONPATH"):
+                    self.assertNotIn(secret,intent.environment)
+                self.assertEqual(set(intent.consumer_hashes),{str(python),str(config),str(base)})
+                for selector in ("command","environment","process_bytes","python_executable"):
+                    with self.subTest(selector=selector),self.assertRaises(TypeError):
+                        job._reviewed_ocr_runtime_import_intent_v2(**args,**{selector:"arbitrary"})
+                with self.assertRaises(job.NativeFailure):job._reviewed_ocr_runtime_import_intent_v2(**{**args,"folder":run/"wrong"})
+                (folder/"03-final.json").write_bytes(b"old-result")
+                with self.assertRaises(job.NativeFailure):job._reviewed_ocr_runtime_import_intent_v2(**args)
+                self.assertEqual((folder/"03-final.json").read_bytes(),b"old-result")
+                (folder/"03-final.json").unlink()
+                # The earlier consumer writes runs/FENCED.json, not just its parent.
+                for fence_root in (job._OCR_IMPORT_RUNS,job._OCR_IMPORT_V2_RUNS,job._OCR_IMPORT_RUNS.parent,job._OCR_IMPORT_V2_RUNS.parent):
+                    fence_root.mkdir(parents=True,exist_ok=True)
+                    fence=fence_root/"FENCED.json";fence.write_bytes(b"uncertain diagnostic owner")
+                    with self.subTest(fence_root=fence_root),self.assertRaises(job.NativeFailure):
+                        job._reviewed_ocr_runtime_import_intent_v2(**args)
+                    self.assertEqual(fence.read_bytes(),b"uncertain diagnostic owner");fence.unlink()
+                original_config=config.read_bytes()
+                config.write_text("home = "+str(root/"wrong-base")+"\n",encoding="utf8")
+                with patch.object(job,"_OCR_IMPORT_CONFIG_SHA",job._digest(config)),self.assertRaises(job.NativeFailure):
+                    job._reviewed_ocr_runtime_import_intent_v2(**args)
+                config.write_bytes(original_config)
+                base.write_bytes(b"changed base")
+                with self.assertRaises(job.NativeFailure):job._reviewed_ocr_runtime_import_intent_v2(**args)
+                native.assert_not_called()
+
+    def test_new_family_refuses_an_uncertain_prior_family_without_changing_its_fence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();family=root/"old-family";family.mkdir()
+            fence=family/"FENCED.json";fence.write_bytes(b"preserved prior uncertainty")
+            with patch.object(job,"_REPO",root):
+                with self.assertRaises(job.NativeFailure):job._prior_family_clear(family)
+                self.assertEqual(fence.read_bytes(),b"preserved prior uncertainty")
+                job._prior_family_clear(root/"absent-family")
+                self.assertFalse((root/"absent-family").exists())
+
+    def test_runtime_import_factory_has_no_caller_command_environment_or_budget(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary).resolve();runtime=root/".local-codex/ocr-cached-runtime-v1/venv"
+            (runtime/"Scripts").mkdir(parents=True)
+            python=runtime/"Scripts/python.exe";python.write_bytes(b"synthetic-executable-not-run")
+            config=runtime/"pyvenv.cfg";config.write_bytes(b"synthetic-config")
+            family=root/".local-codex/native-ocr-runtime-import-v1/runs"
+            run=family/("1"*32);folder=run/"runtime-import"
+            (folder/"t").mkdir(parents=True);(folder/"h").mkdir()
+            with patch.object(job,"_REPO",root),patch.object(job,"_OCR_IMPORT_RUNS",family), \
+                    patch.object(job,"_OCR_IMPORT_PYTHON_SHA",job._digest(python)), \
+                    patch.object(job,"_OCR_IMPORT_CONFIG_SHA",job._digest(config)), \
+                    patch.dict(os.environ,{"SystemRoot":str(root/"Windows"),"SECRET_TOKEN":"never-forward"},clear=True):
+                intent=job._reviewed_ocr_runtime_import_intent(run=run,folder=folder,review_digest="a"*64)
+                self.assertEqual(intent.argv,(str(python),"-c",job._OCR_IMPORT_SCRIPT))
+                self.assertEqual(intent.cwd,folder);self.assertEqual(intent.seconds,20)
+                self.assertEqual(job._job_memory_limit(intent),2*1024**3)
+                self.assertNotIn("SECRET_TOKEN",intent.environment)
+                self.assertEqual(intent.environment["HOME"],str(folder/"h"))
+                self.assertEqual(intent.environment["PIP_NO_INDEX"],"1")
+                with self.assertRaises(TypeError):
+                    job._reviewed_ocr_runtime_import_intent(run=run,folder=folder,review_digest="a"*64,command="arbitrary")
+                with self.assertRaises(job.NativeFailure):
+                    job._reviewed_ocr_runtime_import_intent(run=run,folder=run/"other",review_digest="a"*64)
+                (folder/"01-before-import.json").write_bytes(b"old-result")
+                with self.assertRaises(job.NativeFailure):
+                    job._reviewed_ocr_runtime_import_intent(run=run,folder=folder,review_digest="a"*64)
+                self.assertEqual((folder/"01-before-import.json").read_bytes(),b"old-result")
+                python.write_bytes(b"changed-runtime")
+                with self.assertRaises(job.NativeFailure):
+                    job._reviewed_ocr_runtime_import_intent(run=run,folder=folder,review_digest="a"*64)
+
+    def drain_bytes(self,phase,chunks,maximum=8*1024**2,stream_name="stdout"):
+        with tempfile.TemporaryDirectory() as temporary:
+            owned=self.fake_owned();owned.folder=Path(temporary)
+            owned.intent=self.issued_intent(phase)
+            iterator=iter(chunks)
+            def read(handle,buffer,capacity,count,overlapped):
+                try:chunk=next(iterator)
+                except StopIteration:return 0
+                self.assertLessEqual(len(chunk),capacity)
+                ctypes.memmove(buffer,chunk,len(chunk))
+                ctypes.cast(count,ctypes.POINTER(ctypes.c_uint32)).contents.value=len(chunk)
+                return 1
+            owned.n.k.ReadFile=read
+            with patch.object(job.c,"get_last_error",return_value=109,create=True),patch.object(job,"LOG_CAP",maximum):
+                owned._drain(stream_name,123)
+            # Remove only this injected fake owner; no real native handles exist.
+            job._LIVE.pop(id(owned),None)
+            return (owned,(owned.folder/(stream_name+".log")).read_bytes())
+
+    def test_runtime_import_discards_supplier_bytes_and_first_line_before_retention(self):
+        private=b"supplier exception /private/path token=secret\n"
+        for phase in ("ocr-runtime-import","ocr-runtime-import-v2"):
+            with self.subTest(phase=phase):
+                owned,saved=self.drain_bytes(phase,[private,b"more private bytes"])
+                self.assertEqual(saved,b"");self.assertTrue(owned.first.empty())
+                self.assertEqual(owned.log_state["stdout"]["observed_bytes"],len(private)+18)
+                self.assertEqual(owned.log_state["stdout"]["bytes"],0)
+                self.assertEqual(owned.log_state["stdout"]["sha256"],hashlib.sha256(b"").hexdigest())
+                self.assertTrue(owned.log_state["stdout"]["raw_content_discarded"])
+                self.assertFalse(owned.pipe_error.is_set())
+                error_owner,error_saved=self.drain_bytes(phase,[private],stream_name="stderr")
+                self.assertEqual(error_saved,b"");self.assertTrue(error_owner.first.empty())
+                self.assertEqual(error_owner.log_state["stderr"]["observed_bytes"],len(private))
+                self.assertTrue(error_owner.log_state["stderr"]["raw_content_discarded"])
+        normal,normal_saved=self.drain_bytes("fixture:stdio",[b"fixed-line\n"])
+        self.assertEqual(normal_saved,b"fixed-line\n")
+        self.assertEqual(normal.first.get_nowait(),b"fixed-line")
+        self.assertNotIn("raw_content_discarded",normal.log_state["stdout"])
+
+    def test_runtime_import_discard_does_not_disable_observed_byte_overflow(self):
+        for phase in ("ocr-runtime-import","ocr-runtime-import-v2"):
+            with self.subTest(phase=phase):
+                owned,saved=self.drain_bytes(phase,[b"123456789"],maximum=8)
+                self.assertEqual(saved,b"");self.assertTrue(owned.overflow.is_set())
+                self.assertEqual(owned.log_state["stdout"]["observed_bytes"],9)
+                self.assertTrue(owned.log_state["stdout"]["complete"])
+
+    def test_source_role_discards_stderr_without_hiding_bytes_overflow_or_stdout(self):
+        private=b"private synthetic stderr\n"
+        owner,saved=self.drain_bytes("source-session",[private],stream_name="stderr")
+        self.assertEqual(saved,b"");self.assertEqual(owner.log_state["stderr"]["observed_bytes"],len(private))
+        self.assertTrue(owner.log_state["stderr"]["raw_content_discarded"])
+        self.assertTrue(owner.first.empty())
+        self.assertEqual(owner.log_state["stderr"]["sha256"],hashlib.sha256(b"").hexdigest())
+        overflow,saved=self.drain_bytes("source-session",[b"123456789"],maximum=8,stream_name="stderr")
+        self.assertEqual(saved,b"");self.assertTrue(overflow.overflow.is_set())
+        stdout,saved=self.drain_bytes("source-session",[b'{"status":"observed"}\n'])
+        self.assertEqual(saved,b'{"status":"observed"}\n')
+        self.assertEqual(stdout.first.get_nowait(),b'{"status":"observed"}')
+        self.assertNotIn("raw_content_discarded",stdout.log_state["stdout"])
+
+    def test_runtime_import_facts_distinguish_import_and_accelerator_failures_without_messages(self):
+        original_import=builtins.__import__
+        for failure in (None,"import","accelerator-check"):
+            with self.subTest(failure=failure),tempfile.TemporaryDirectory() as temporary:
+                def available():
+                    if failure=="accelerator-check":raise RuntimeError("private supplier message")
+                    return False
+                torch=SimpleNamespace(cuda=SimpleNamespace(is_available=available))
+                def imported(name,*args,**kwargs):
+                    if name=="torch":
+                        if failure=="import":raise ImportError("private supplier message")
+                        return torch
+                    return original_import(name,*args,**kwargs)
+                before=Path.cwd()
+                try:
+                    os.chdir(temporary)
+                    with patch.object(builtins,"__import__",side_effect=imported):
+                        if failure is None:exec(compile(job._OCR_IMPORT_SCRIPT,"<fixed-diagnostic>","exec"),{})
+                        else:
+                            with self.assertRaises(SystemExit) as exit:
+                                exec(compile(job._OCR_IMPORT_SCRIPT,"<fixed-diagnostic>","exec"),{})
+                            self.assertEqual(exit.exception.code,1)
+                    files=sorted(Path(temporary).glob("*.json"))
+                    self.assertEqual(len(files),2 if failure=="import" else 3)
+                    self.assertTrue(all(file.stat().st_size<=1024 for file in files))
+                    self.assertTrue(all(b"private supplier" not in file.read_bytes() for file in files))
+                    final=json.loads(Path("03-final.json").read_bytes())
+                    self.assertEqual(final["success"],failure is None)
+                    self.assertEqual(final["imported"],failure!="import")
+                    self.assertEqual(final["failure_stage"],failure)
+                    self.assertEqual(final["pid"],os.getpid())
+                finally:os.chdir(before)
+
+    def execute_direct_import_fixture(self,identity_change=None,failure=None):
+        original_import=builtins.__import__;torch_imports=[]
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();prefix=root/"venv";base=root/"base/python.exe"
+            flags=SimpleNamespace(isolated=1,no_user_site=1,dont_write_bytecode=1,no_site=0)
+            python=SimpleNamespace(executable=str(prefix/"Scripts/python.exe"),prefix=str(prefix),exec_prefix=str(prefix),
+                _base_executable=str(base),base_prefix=str(base.parent),base_exec_prefix=str(base.parent),flags=flags)
+            attributes={"executable":"executable","prefix":"prefix","exec_prefix":"exec_prefix", "base_executable":"_base_executable","base_prefix":"base_prefix","base_exec_prefix":"base_exec_prefix"}
+            if identity_change in attributes:setattr(python,attributes[identity_change],str(root/"wrong"))
+            if identity_change in ("isolated","no_user_site","bytecode_disabled","site_enabled"):
+                attribute={"bytecode_disabled":"dont_write_bytecode","site_enabled":"no_site"}.get(identity_change,identity_change)
+                setattr(flags,attribute,1 if attribute=="no_site" else 0)
+            metadata=SimpleNamespace(version=lambda name:"0" if identity_change=="guidance_distribution" else "1.9.1",
+                distribution=lambda name:SimpleNamespace(locate_file=lambda item:prefix/"Lib/site-packages"))
+            def available():
+                if failure=="accelerator-check":raise RuntimeError("private supplier message")
+                return False
+            def imported(name,*args,**kwargs):
+                if name=="sys":return python
+                if name=="importlib":return SimpleNamespace(metadata=metadata)
+                if name=="torch":
+                    torch_imports.append(name)
+                    if failure=="import":raise ImportError("private supplier message")
+                    return SimpleNamespace(cuda=SimpleNamespace(is_available=available))
+                return original_import(name,*args,**kwargs)
+            before=Path.cwd()
+            try:
+                os.chdir(root)
+                with patch.dict(os.environ,{"AISB_OCR_EXPECTED_PREFIX":str(prefix),"AISB_OCR_EXPECTED_BASE":str(base)}), \
+                        patch.object(builtins,"__import__",side_effect=imported):
+                    if identity_change or failure:
+                        with self.assertRaises(SystemExit) as stopped:exec(compile(job._OCR_IMPORT_SCRIPT_V2,"<fixed-direct-diagnostic>","exec"),{})
+                        self.assertEqual(stopped.exception.code,1)
+                    else:exec(compile(job._OCR_IMPORT_SCRIPT_V2,"<fixed-direct-diagnostic>","exec"),{})
+                files=sorted(root.glob("*.json"));self.assertLessEqual(len(files),3)
+                for file in files:
+                    self.assertLessEqual(file.stat().st_size,1024)
+                    self.assertNotIn(b"private supplier",file.read_bytes())
+                    self.assertNotIn(str(root).encode(),file.read_bytes())
+                facts={file.name:json.loads(file.read_bytes()) for file in files}
+            finally:os.chdir(before)
+        return facts,torch_imports
+
+    def test_direct_probe_denies_each_wrong_runtime_identity_before_torch_import(self):
+        for field in ("executable","prefix","exec_prefix","base_executable","base_prefix","base_exec_prefix",
+                      "isolated","no_user_site","bytecode_disabled","site_enabled","guidance_distribution"):
+            with self.subTest(field=field):
+                facts,imports=self.execute_direct_import_fixture(identity_change=field)
+                self.assertEqual(imports,[])
+                self.assertEqual(set(facts),{"01-before-import.json","03-final.json"})
+                identity=facts["01-before-import.json"]["identity"]
+                self.assertFalse(identity[field]);self.assertTrue(all(type(value) is bool for value in identity.values()))
+                final=facts["03-final.json"]
+                self.assertFalse(final["success"]);self.assertFalse(final["imported"])
+                self.assertEqual(final["failure_stage"],"runtime-identity")
+                self.assertEqual(final["error_type"],"RuntimeIdentityMismatch")
+
+    def test_direct_probe_records_typed_import_and_query_outcomes_with_its_own_pid(self):
+        for failure in (None,"import","accelerator-check"):
+            with self.subTest(failure=failure):
+                facts,imports=self.execute_direct_import_fixture(failure=failure)
+                self.assertEqual(imports,["torch"])
+                self.assertTrue(all(facts["01-before-import.json"]["identity"].values()))
+                self.assertEqual(len(facts),2 if failure=="import" else 3)
+                for value in facts.values():
+                    self.assertEqual(value["schema_version"],"ocr-runtime-import-fact-v2")
+                    self.assertEqual(value["pid"],os.getpid());self.assertEqual(value["parent_pid"],os.getppid())
+                final=facts["03-final.json"]
+                self.assertEqual(final["success"],failure is None)
+                self.assertEqual(final["imported"],failure!="import")
+                self.assertEqual(final["failure_stage"],failure)
+                self.assertIs(final["accelerator_available"],False if failure is None else None)
+
+    def test_ocr_readback_refuses_standard_limits_partial_increases_and_guard_drift(self):
+        for process,aggregate,flags,members,passes in (
+            (2,4,job.LIMIT_FLAGS,32,True),(1,4,job.LIMIT_FLAGS,32,False),(2,3,job.LIMIT_FLAGS,32,False),
+            (3,4,job.LIMIT_FLAGS,32,False),(2,5,job.LIMIT_FLAGS,32,False),
+            (2,4,job.LIMIT_FLAGS & ~job.KILL_CLOSE,32,False),(2,4,job.LIMIT_FLAGS,33,False)):
+            with self.subTest(process=process,aggregate=aggregate,flags=flags,members=members):
+                def query(handle,kind,pointer,size,returned):
+                    value=ctypes.cast(pointer,ctypes.POINTER(job.Limits)).contents
+                    value.basic.flags=flags;value.basic.active_limit=members
+                    value.process_memory=process*1024**3;value.job_memory=aggregate*1024**3
+                    return 1
+                owned=object.__new__(job._OwnedJob);owned.job=123;owned.owned={"job":123}
+                owned.intent=self.issued_intent("ocr-runtime-import-v2")
+                owned.n=SimpleNamespace(k=SimpleNamespace(QueryInformationJobObject=query))
+                if passes:self.assertEqual(owned.limits().job_memory,4*1024**3)
+                else:
+                    with self.assertRaises(job.NativeFailure):owned.limits()
+
+    def test_job_limit_readback_rejects_a_different_profile_or_other_ceiling(self):
+        for phase,reported,flags,members,process_bytes,passes in (
+            ("ui",3*1024**3,job.LIMIT_FLAGS,32,1024**3,True),
+            ("fixture:ui-budget",3*1024**3,job.LIMIT_FLAGS,32,1024**3,True),
+            ("package",2*1024**3,job.LIMIT_FLAGS,32,1024**3,True),
+            ("ui",2*1024**3,job.LIMIT_FLAGS,32,1024**3,False),
+            ("package",3*1024**3,job.LIMIT_FLAGS,32,1024**3,False),
+            ("fixture:stdio",3*1024**3,job.LIMIT_FLAGS,32,1024**3,False),
+            ("ui",3*1024**3,job.LIMIT_FLAGS,33,1024**3,False),
+            ("ui",3*1024**3,job.LIMIT_FLAGS,32,2*1024**3,False),
+            ("ui",3*1024**3,job.LIMIT_FLAGS & ~job.KILL_CLOSE,32,1024**3,False),
+        ):
+            with self.subTest(phase=phase,reported=reported,passes=passes):
+                def query(handle,kind,pointer,size,returned):
+                    value=ctypes.cast(pointer,ctypes.POINTER(job.Limits)).contents
+                    value.basic.flags=flags;value.basic.active_limit=members
+                    value.process_memory=process_bytes;value.job_memory=reported
+                    return 1
+                owned=object.__new__(job._OwnedJob);owned.job=123;owned.owned={"job":123}
+                owned.intent=self.issued_intent(phase)
+                owned.n=SimpleNamespace(k=SimpleNamespace(QueryInformationJobObject=query))
+                if passes:self.assertEqual(owned.limits().job_memory,reported)
+                else:
+                    with self.assertRaises(job.NativeFailure):owned.limits()
+
+    def test_cli_cannot_select_a_numeric_memory_budget(self):
+        with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
+            job._parser().parse_args(["--native-selftest","--job-bytes",str(4*1024**3)])
+
+    def completion_source(self,rows,repeat=False):
+        iterator=iter(rows)
+        def read(port,message,key,detail,timeout):
+            self.assertEqual((port,timeout),(55,0))
+            try:kind,pid=rows[0] if repeat else next(iterator)
+            except StopIteration:return 0
+            ctypes.cast(message,ctypes.POINTER(ctypes.c_uint32)).contents.value=kind
+            ctypes.cast(key,ctypes.POINTER(ctypes.c_size_t)).contents.value=job.COMPLETION_KEY
+            ctypes.cast(detail,ctypes.POINTER(ctypes.c_void_p)).contents.value=pid
+            return 1
+        return read
+
+    def test_limit_notifications_retain_only_advisory_numbers_without_opening_processes(self):
+        owned=self.fake_owned();owned.owned["completion-port"]=55
+        owned.n.k.GetQueuedCompletionStatus=self.completion_source([(6,41),(3,42),(9,43),(10,44)])
+        with patch.object(job.c,"get_last_error",return_value=258,create=True):owned.poll_events()
+        self.assertEqual(owned.events,[6,3,9,10])
+        self.assertEqual(owned.limit_messages,[3,9,10])
+        self.assertEqual(owned.limit_notifications,[{"message":3,"reported_pid":None},{"message":9,"reported_pid":43},{"message":10,"reported_pid":44}])
+        self.assertFalse(hasattr(owned.n.k,"OpenProcess"))
+
+    def test_limit_notification_pid_is_null_unless_a_positive_uint32_is_reported(self):
+        owned=self.fake_owned();owned.owned["completion-port"]=55
+        owned.n.k.GetQueuedCompletionStatus=self.completion_source([(9,None),(9,0),(9,0x100000000),(10,0xffffffff)])
+        with patch.object(job.c,"get_last_error",return_value=258,create=True):owned.poll_events()
+        self.assertEqual([row["reported_pid"] for row in owned.limit_notifications],[None,None,None,0xffffffff])
+        self.assertEqual(owned.limit_messages,[9,9,9,10])
+
+    def test_limit_notification_collection_keeps_existing_poll_and_total_event_bounds(self):
+        owned=self.fake_owned();owned.owned["completion-port"]=55
+        owned.n.k.GetQueuedCompletionStatus=self.completion_source([(9,43)],repeat=True)
+        owned.poll_events()
+        self.assertEqual(len(owned.events),128);self.assertEqual(len(owned.limit_notifications),128)
+        owned.events.extend([6]*(4096-len(owned.events)))
+        owned.poll_events()
+        self.assertTrue(owned.event_overflow)
+        self.assertEqual(len(owned.events),4096);self.assertEqual(len(owned.limit_notifications),128)
+
+    def test_root_number_survives_handle_retirement_but_is_not_process_identity(self):
+        owned=self.fake_owned();owned.process=SimpleNamespace(process=56,pid=1234);owned.job=54
+        owned.owned={"job":54,"root":56}
+        owned.threads=[SimpleNamespace(join=lambda timeout:None,is_alive=lambda:False)]
+        owned.n.exit_code=lambda *args:0;owned.n.inheritable=lambda handle:False
+        owned.limit_messages=[9];owned.limit_notifications=[{"message":9,"reported_pid":1234}]
+        with patch.object(owned,"accounting",return_value={"total":1,"active":0,"terminated":0}),patch.object(owned,"poll_events"),patch.object(owned,"limits",return_value=SimpleNamespace(peak_process=0,peak_job=0)):
+            result=owned.finish("observed-native-limit-hit")
+        self.assertTrue(result["cleanup_confirmed"]);self.assertIsNone(owned.process)
+        self.assertEqual(result["created_root_pid"],1234);self.assertFalse(result["reported_pids_are_process_identity"])
+        result["observed_limit_notifications"][0]["reported_pid"]=9999
+        self.assertEqual(owned.finish()["observed_limit_notifications"],[{"message":9,"reported_pid":1234}])
+        self.assertEqual(owned.finish()["reason"],"observed-native-limit-hit")
+
+    def test_zero_shutdown_oracle_is_strict_about_count_and_type(self):
+        self.assertTrue(job.strict_shutdown_codes([0,0],2))
+        for values,count in (([97],1),([23],1),([False],1),([0.0],1),([],0),([0],True),([0],2)):
+            with self.subTest(values=values,count=count):self.assertFalse(job.strict_shutdown_codes(values,count))
+
+    def test_cli_has_no_command_pid_path_or_qualify_route(self):
+        for values in (("--command","whoami"),("--pid","42"),("--cwd","C:/"),("--qualify",)):
+            with self.subTest(values=values),contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):job._parser().parse_args(values)
+
+    def test_unknown_fixture_is_denied_before_native_or_directory_work(self):
+        with self.assertRaises(job.NativeFailure):job._fixture_intent("../other",Path("unowned"))
+
+    def test_unknown_host_phase_is_denied_before_native_work(self):
+        for phase in ("shell","ui-thin --project=packaged-desktop","ui-desktop/..","ui:thin","",None,True,[],{}):
+            with self.subTest(phase=phase),patch.object(job,"_digest",side_effect=AssertionError("identity read after unknown role")),patch.object(job,"_regular_directory",side_effect=AssertionError("directory work after unknown role")),self.assertRaises(job.NativeFailure):
+                job._reviewed_host_intent(phase,candidate=Path("none"),node_executable=Path("none"),node_sha256="",run=Path("none"),folder=Path("none"),reviewed_file_hashes={},environment={},environment_sha256="",review_digest="")
+
+    @contextlib.contextmanager
+    def serial_provided_subject(self):
+        with tempfile.TemporaryDirectory(prefix="serial provided policy ") as directory:
+            root=Path(directory).resolve();candidate=root/".local-codex/q/abc123ef/c"
+            helpers=candidate/".local-codex/native-fixed-host-operator/v1";helpers.mkdir(parents=True)
+            run=candidate/".local-codex/native-fixed-host-operator/runs"/("a"*32);folder=run/"serial-provided"
+            for path in (folder,candidate.parent/"t",candidate.parent/"h/AppData/Local",candidate.parent/"h/AppData/Roaming"):path.mkdir(parents=True,exist_ok=True)
+            node=root/"node.exe";node.write_bytes(b"inert reviewed Node image")
+            base=root/"base/python.exe";base.parent.mkdir();base.write_bytes(b"inert original Python image")
+            dll=base.with_name("python312.dll");dll.write_bytes(b"inert Python runtime identity")
+            files={}
+            for name in job._SERIAL_PROVIDED_FILES:
+                (helpers/name).write_bytes(b"fixed reviewed source; never executed")
+                files[name]=job._digest(helpers/name)
+            env={"NODE_OPTIONS":"","PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"dataset-profile",
+                 "AISB_LOCAL_DESKTOP_UI_RUN":str(run),"HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1",
+                 "PIP_NO_INDEX":"1","PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1","TEMP":str(candidate.parent/"t"),
+                 "TMP":str(candidate.parent/"t"),"HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h"),
+                 "APPDATA":str(candidate.parent/"h/AppData/Roaming"),"LOCALAPPDATA":str(candidate.parent/"h/AppData/Local")}
+            args=dict(candidate=candidate,node_executable=node,node_sha256=job._digest(node),python_executable=base,
+                runtime_file_hashes={str(file):job._digest(file) for file in (base,dll)},run=run,folder=folder,
+                reviewed_file_hashes=files,environment=env,
+                environment_sha256=job._digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode()),
+                review_digest="b"*64)
+            with patch.object(job,"_REPO",root),patch.object(job.sys,"_base_executable",str(base)), \
+                 patch.object(job,"_Win") as native,patch.object(job.subprocess,"Popen") as popen:
+                yield SimpleNamespace(root=root,candidate=candidate,helpers=helpers,run=run,folder=folder,
+                    node=node,base=base,dll=dll,args=args,native=native,popen=popen)
+
+    @contextlib.contextmanager
+    def reviewed_host_profile_subject(self,phase):
+        with self.serial_provided_subject() as case:
+            if phase=="serial-provided":
+                call=job._reviewed_serial_provided_intent;args=dict(case.args);folder=case.folder
+            else:
+                folder=case.run/phase;folder.mkdir()
+                args={key:case.args[key] for key in ("candidate","node_executable","node_sha256","run","environment","environment_sha256","review_digest")}
+                args.update(folder=folder,reviewed_file_hashes={name:case.args["reviewed_file_hashes"][name] for name in job._CONSUMER_FILES})
+                def call(**values):return job._reviewed_host_intent(phase,**values)
+            yield SimpleNamespace(call=call,args=args,folder=folder,home=case.candidate.parent/"h",native=case.native,popen=case.popen)
+
+    def test_host_profile_denies_missing_or_misdirected_appdata_before_issue(self):
+        for phase in ("package","ui","ui-thin","ui-desktop","serial-provided"):
+            for key in ("APPDATA","LOCALAPPDATA"):
+                for kind in ("missing","home","other-profile"):
+                    with self.subTest(phase=phase,key=key,kind=kind),self.reviewed_host_profile_subject(phase) as case:
+                        env=dict(case.args["environment"])
+                        if kind=="missing":del env[key]
+                        else:env[key]=str(case.home if kind=="home" else case.home.parent/"other-profile")
+                        args={**case.args,"environment":env,"environment_sha256":job._digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode())}
+                        with patch.object(job,"_remember") as issue,self.assertRaisesRegex(job.NativeFailure,"short-owned-appdata"):
+                            case.call(**args)
+                        issue.assert_not_called();case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_host_profile_denies_absent_or_file_appdata_before_issue(self):
+        for phase in ("package","ui","ui-thin","ui-desktop","serial-provided"):
+            for key in ("APPDATA","LOCALAPPDATA"):
+                for kind in ("missing","file"):
+                    with self.subTest(phase=phase,key=key,kind=kind),self.reviewed_host_profile_subject(phase) as case:
+                        leaf=Path(case.args["environment"][key]);leaf.rmdir()
+                        if kind=="file":leaf.write_bytes(b"not a profile directory")
+                        with patch.object(job,"_remember") as issue,self.assertRaises(job.NativeFailure):
+                            case.call(**case.args)
+                        issue.assert_not_called();case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_host_profile_directory_drift_is_denied_before_native_creation(self):
+        for phase in ("package","ui","ui-thin","ui-desktop","serial-provided"):
+            for key in ("APPDATA","LOCALAPPDATA"):
+                for kind in ("missing","file"):
+                    with self.subTest(phase=phase,key=key,kind=kind),self.reviewed_host_profile_subject(phase) as case:
+                        intent=case.call(**case.args);job._validate_intent(intent,case.folder)
+                        leaf=Path(case.args["environment"][key]);leaf.rmdir()
+                        if kind=="file":leaf.write_bytes(b"replaced after intent issue")
+                        with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+                        case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_host_profile_reparse_directory_is_denied_at_issue_and_revalidation(self):
+        for phase in ("ui-thin","serial-provided"):
+            for key in ("APPDATA","LOCALAPPDATA"):
+                with self.subTest(phase=phase,key=key),self.reviewed_host_profile_subject(phase) as case:
+                    intent=case.call(**case.args);leaf=Path(case.args["environment"][key]);original=Path.lstat
+                    def inspect(path):
+                        info=original(path)
+                        if path==leaf:return SimpleNamespace(st_mode=info.st_mode,st_file_attributes=0x400)
+                        return info
+                    with patch.object(Path,"lstat",inspect):
+                        with patch.object(job,"_remember") as issue,self.assertRaises(job.NativeFailure):case.call(**case.args)
+                        issue.assert_not_called()
+                        with self.assertRaises(job.NativeFailure):job._validate_intent(intent,case.folder)
+                    case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_has_one_fixed_original_python_command_and_standard_budget(self):
+        with self.serial_provided_subject() as case:
+            intent=job._reviewed_serial_provided_intent(**case.args)
+            self.assertEqual(intent.phase,"serial-provided")
+            self.assertEqual(intent.argv,(str(case.base),"-I","-S","-B",str(case.helpers/"serial-provided.py")))
+            self.assertEqual(intent.seconds,1500)
+            self.assertEqual(job._memory_limits(intent),(1024**3,3*1024**3))
+            self.assertEqual(job.MEMBERS,32)
+            self.assertEqual(set(intent.consumer_hashes),{str(case.helpers/name) for name in job._SERIAL_PROVIDED_FILES}|{str(case.node),str(case.base),str(case.dll)})
+            job._validate_intent(intent,case.folder)
+            with self.assertRaises((AttributeError,TypeError)):intent.seconds=9999
+            with self.assertRaises(TypeError):intent.environment["NODE_OPTIONS"]="--eval"
+            case.args["environment"]["NODE_OPTIONS"]="changed after issuance"
+            case.args["runtime_file_hashes"][str(case.base)]="0"*64
+            self.assertEqual(intent.environment["NODE_OPTIONS"],"")
+            self.assertEqual(intent.consumer_hashes[str(case.base)],job._digest(case.base))
+            job._validate_intent(intent,case.folder)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_rejects_commands_phases_and_budget_selectors(self):
+        with self.serial_provided_subject() as case:
+            for key in ("command","argv","phase","seconds","job_bytes","process_bytes","consumer_files","bounded_files"):
+                with self.subTest(key=key),self.assertRaises(TypeError):
+                    job._reviewed_serial_provided_intent(**case.args,**{key:"caller choice"})
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_never_uses_unbounded_digest_for_its_references(self):
+        with self.serial_provided_subject() as case:
+            original=job._digest
+            def source_only(file):
+                if file==job._MODULE:return original(file)
+                raise AssertionError("Unbounded reference digest is not permitted")
+            with patch.object(job,"_digest",source_only):
+                intent=job._reviewed_serial_provided_intent(**case.args)
+                job._validate_intent(intent,case.folder)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_witness_capture_runtime_before_io(self):
+        with self.serial_provided_subject() as case:
+            expected=dict(case.args["runtime_file_hashes"]);original=job._training_file
+            def mutate_caller(file,identity):
+                count=original(file,identity)
+                if file==case.node:case.args["runtime_file_hashes"].pop(str(case.base),None)
+                return count
+            with patch.object(job,"_training_file",mutate_caller):
+                intent=job._reviewed_serial_provided_intent(**case.args)
+            self.assertEqual({key:intent.consumer_hashes.get(key) for key in expected},expected)
+            job._validate_intent(intent,case.folder)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_witness_capture_helpers_before_io(self):
+        with self.serial_provided_subject() as case:
+            expected={str(case.helpers/name):value for name,value in case.args["reviewed_file_hashes"].items()}
+            original=job._training_file
+            def mutate_caller(file,identity):
+                count=original(file,identity)
+                if file==case.base:case.args["reviewed_file_hashes"].clear()
+                return count
+            with patch.object(job,"_training_file",mutate_caller):
+                intent=job._reviewed_serial_provided_intent(**case.args)
+            self.assertEqual({key:intent.consumer_hashes.get(key) for key in expected},expected)
+            job._validate_intent(intent,case.folder)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_rejects_oversized_or_redirected_helper_before_open(self):
+        for unsafe in ("oversized","redirected"):
+            with self.subTest(unsafe=unsafe),self.serial_provided_subject() as case:
+                target=case.helpers/"serial-provided.py"
+                if unsafe=="oversized":
+                    content=b"x"*(512*1024+1);target.write_bytes(content)
+                    case.args["reviewed_file_hashes"][target.name]=hashlib.sha256(content).hexdigest()
+                original_open,original_resolve,original_digest=Path.open,Path.resolve,job._digest
+                def no_unsafe_open(file,*args,**kwargs):
+                    if file==target:raise AssertionError("Unsafe reference must not be opened")
+                    return original_open(file,*args,**kwargs)
+                def resolve(file,*args,**kwargs):
+                    if unsafe=="redirected" and file==target:return case.root/"outside.py"
+                    return original_resolve(file,*args,**kwargs)
+                def source_only(file):
+                    if file==job._MODULE:return original_digest(file)
+                    raise AssertionError("Unbounded reference digest is not permitted")
+                with patch.object(Path,"open",no_unsafe_open),patch.object(Path,"resolve",resolve), \
+                     patch.object(job,"_digest",source_only),self.assertRaises(job.NativeFailure):
+                    job._reviewed_serial_provided_intent(**case.args)
+                case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_requires_exact_helpers_runtime_and_owned_locations(self):
+        with self.serial_provided_subject() as case:
+            changes=[{"folder":case.run/"ui-thin"},{"candidate":case.root},
+                     {"python_executable":case.base.parent/"venv/Scripts/python.exe"},
+                     {"runtime_file_hashes":{str(case.base):job._digest(case.base)}},
+                     {"reviewed_file_hashes":{name:value for name,value in case.args["reviewed_file_hashes"].items() if name!="serial-provided.py"}},
+                     {"reviewed_file_hashes":{**case.args["reviewed_file_hashes"],"arbitrary.py":"0"*64}},
+                     {"environment_sha256":"0"*64}]
+            for patch_values in changes:
+                with self.subTest(fields=list(patch_values)),self.assertRaises(job.NativeFailure):
+                    job._reviewed_serial_provided_intent(**{**case.args,**patch_values})
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_denies_other_scenarios_and_injected_node_flags(self):
+        with self.serial_provided_subject() as case:
+            for patch_values in ({"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"ocr-documents"},
+                                 {"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"generation"},
+                                 {"NODE_OPTIONS":"--eval caller"},{"PYTHONPATH":"caller directory"}):
+                env={**case.args["environment"],**patch_values}
+                args={**case.args,"environment":env,"environment_sha256":job._digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode())}
+                with self.subTest(fields=patch_values),self.assertRaises(job.NativeFailure):
+                    job._reviewed_serial_provided_intent(**args)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_post_issue_source_or_runtime_drift_denies_native_dispatch(self):
+        owned_type=job._OwnedJob
+        with self.serial_provided_subject() as case:
+            intent=job._reviewed_serial_provided_intent(**case.args)
+            for file in (case.helpers/"serial-provided.py",case.helpers/"global-setup.mjs",case.node,case.base,case.dll):
+                original=file.read_bytes();file.write_bytes(b"unreviewed replacement")
+                try:
+                    with self.subTest(file=file.name),self.assertRaises(job.NativeFailure):owned_type(intent,case.folder)
+                finally:file.write_bytes(original)
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_does_not_issue_behind_a_current_owner(self):
+        for registry in (job._LIVE,job._PENDING):
+            with self.subTest(active=registry is job._LIVE),self.serial_provided_subject() as case:
+                owner=object();registry[id(owner)]=owner
+                try:
+                    with self.assertRaises(job.NativeFailure):job._reviewed_serial_provided_intent(**case.args)
+                    case.native.assert_not_called();case.popen.assert_not_called()
+                finally:del registry[id(owner)]
+
+    def test_serial_provided_preserves_all_current_family_stop_markers(self):
+        for level in (0,1,2,3):
+            with self.subTest(level=level),self.serial_provided_subject() as case:
+                parent=[case.folder,case.run,case.run.parent,case.run.parent.parent][level]
+                marker=parent/"FENCED.json";marker.write_bytes(b"unknown earlier owner")
+                with self.assertRaisesRegex(job.NativeFailure,"family-remains-fenced"):
+                    job._reviewed_serial_provided_intent(**case.args)
+                self.assertEqual(marker.read_bytes(),b"unknown earlier owner")
+                case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_refuses_existing_outputs_and_new_post_issue_fences(self):
+        owned_type=job._OwnedJob
+        with self.serial_provided_subject() as case:
+            intent=job._reviewed_serial_provided_intent(**case.args)
+            marker=case.run.parent/"FENCED.json";marker.write_bytes(b"new uncertain owner")
+            with self.assertRaisesRegex(job.NativeFailure,"family-remains-fenced"):
+                owned_type(intent,case.folder)
+            self.assertEqual(marker.read_bytes(),b"new uncertain owner")
+            case.native.assert_not_called();case.popen.assert_not_called()
+        with self.serial_provided_subject() as case:
+            (case.folder/"stdout.log").write_bytes(b"retained original output")
+            with self.assertRaisesRegex(job.NativeFailure,"fresh-output-required"):
+                job._reviewed_serial_provided_intent(**case.args)
+            self.assertEqual((case.folder/"stdout.log").read_bytes(),b"retained original output")
+            case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_serial_provided_denies_broken_or_unreadable_stop_entries(self):
+        for unreadable in (False,True):
+            with self.subTest(unreadable=unreadable),self.serial_provided_subject() as case:
+                marker=case.run.parent/"FENCED.json";original=Path.lstat
+                def inspect(path):
+                    if path==marker:
+                        if unreadable:raise PermissionError("synthetic stop-marker denial")
+                        return SimpleNamespace()  # lstat still sees a broken entry.
+                    return original(path)
+                with patch.object(Path,"lstat",inspect),self.assertRaises((job.NativeFailure,PermissionError)):
+                    job._reviewed_serial_provided_intent(**case.args)
+                case.native.assert_not_called();case.popen.assert_not_called()
+
+    def test_host_scenarios_keep_exact_commands_and_select_only_the_approved_ocr_budget(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();candidate=root/".local-codex/q/abc123ef/c"
+            helpers=candidate/".local-codex/native-fixed-host-operator/v1";helpers.mkdir(parents=True)
+            run=candidate/".local-codex/native-fixed-host-operator/runs"/("a"*32)
+            node=root/"node.exe";node.write_bytes(b"synthetic identity only; never executed")
+            hashes={}
+            for name in job._CONSUMER_FILES:
+                (helpers/name).write_bytes(b"synthetic reviewed helper identity")
+                hashes[name]=job._digest(helpers/name)
+            for folder in (run/"package",run/"ui",run/"ui-thin",run/"ui-desktop",candidate.parent/"t",candidate.parent/"h/AppData/Local",candidate.parent/"h/AppData/Roaming"):
+                folder.mkdir(parents=True,exist_ok=True)
+            env={"NODE_OPTIONS":"", "AISB_LOCAL_DESKTOP_UI_RUN":str(run),
+                 "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1","PIP_NO_INDEX":"1",
+                 "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1", "TEMP":str(candidate.parent/"t"),
+                 "TMP":str(candidate.parent/"t"),"HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h"),
+                 "APPDATA":str(candidate.parent/"h/AppData/Roaming"),"LOCALAPPDATA":str(candidate.parent/"h/AppData/Local")}
+            with patch.object(job,"_REPO",root):
+                for scenario in ("dataset-profile","ocr-documents","ocr-document","ocr-documents --command", ""):
+                    for phase in ("package","ui","ui-thin","ui-desktop"):
+                        with self.subTest(scenario=scenario,phase=phase):
+                            values={**env,"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":scenario}
+                            kwargs=dict(candidate=candidate,node_executable=node,node_sha256=job._digest(node),run=run,
+                                folder=run/phase,reviewed_file_hashes=hashes,environment=values,
+                                environment_sha256=hashlib.sha256(json.dumps(values,sort_keys=True,separators=(",",":")).encode()).hexdigest(),review_digest="b"*64)
+                            if scenario not in ("dataset-profile","ocr-documents"):
+                                with self.assertRaises(job.NativeFailure):job._reviewed_host_intent(phase,**kwargs)
+                            else:
+                                intent=job._reviewed_host_intent(phase,**kwargs)
+                                expected=(str(node),str(helpers/"offline-package.mjs")) if phase=="package" else (
+                                    str(node),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),*{"ui":("--project=thin-chrome","--project=packaged-desktop"),"ui-thin":("--project=thin-chrome",),"ui-desktop":("--project=packaged-desktop",)}[phase])
+                                self.assertEqual(intent.argv,expected)
+                                self.assertEqual(intent.folder,run/phase)
+                                self.assertEqual(intent.seconds,420)
+                                wrong_folder=run/("ui" if phase!="ui" else "ui-thin")
+                                with self.assertRaisesRegex(job.NativeFailure,"fixed-host-run"):
+                                    job._reviewed_host_intent(phase,**{**kwargs,"folder":wrong_folder})
+                                expected=(2,4) if scenario=="ocr-documents" else (1,2 if phase=="package" else 3)
+                                self.assertEqual(job._memory_limits(intent),tuple(value*1024**3 for value in expected))
+                                self.assertEqual(job.PROCESS_BYTES,1024**3);self.assertEqual(job.MEMBERS,32)
+
+    def test_single_host_witness_tamper_and_post_issue_drift_are_denied(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();candidate=root/".local-codex/q/abc123ef/c"
+            helpers=candidate/".local-codex/native-fixed-host-operator/v1";helpers.mkdir(parents=True)
+            run=candidate/".local-codex/native-fixed-host-operator/runs"/("a"*32)
+            node=root/"node.exe";node_bytes=b"synthetic reviewed Node identity; never executed";node.write_bytes(node_bytes)
+            helper_bytes=b"synthetic reviewed helper identity"
+            for name in job._CONSUMER_FILES:(helpers/name).write_bytes(helper_bytes)
+            hashes={name:job._digest(helpers/name) for name in job._CONSUMER_FILES}
+            for folder in (run/"ui-thin",run/"ui-desktop",candidate.parent/"t",candidate.parent/"h/AppData/Local",candidate.parent/"h/AppData/Roaming"):
+                folder.mkdir(parents=True,exist_ok=True)
+            env={"NODE_OPTIONS":"","AISB_LOCAL_DESKTOP_UI_RUN":str(run),"HF_HUB_OFFLINE":"1",
+                 "TRANSFORMERS_OFFLINE":"1","PIP_NO_INDEX":"1","PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1",
+                 "TEMP":str(candidate.parent/"t"),"TMP":str(candidate.parent/"t"),
+                 "HOME":str(candidate.parent/"h"),"USERPROFILE":str(candidate.parent/"h"),
+                 "APPDATA":str(candidate.parent/"h/AppData/Roaming"),"LOCALAPPDATA":str(candidate.parent/"h/AppData/Local")}
+            with patch.object(job,"_REPO",root),patch.object(job,"_Win") as native:
+                for scenario in ("dataset-profile","ocr-documents"):
+                    for phase in ("ui-thin","ui-desktop"):
+                        with self.subTest(scenario=scenario,phase=phase):
+                            values={**env,"PYTHON_RUNTIME_QUALIFICATION_SCENARIO":scenario}
+                            kwargs=dict(candidate=candidate,node_executable=node,node_sha256=job._digest(node),run=run,
+                                folder=run/phase,reviewed_file_hashes=dict(hashes),environment=values,
+                                environment_sha256=hashlib.sha256(json.dumps(values,sort_keys=True,separators=(",",":")).encode()).hexdigest(),review_digest="b"*64)
+                            intent=job._reviewed_host_intent(phase,**kwargs)
+                            job._validate_intent(intent,run/phase)
+                            altered_hashes={**hashes,"global-setup.mjs":"0"*64}
+                            for overrides,code in (({"node_sha256":"0"*64},"reviewed-node-identity"),
+                                    ({"reviewed_file_hashes":altered_hashes},"consumer-source-drift"),
+                                    ({"environment_sha256":"0"*64},"reviewed-environment-drift"),
+                                    ({"environment":{**values,"SAFE_CHANGED_VALUE":"changed"}},"reviewed-environment-drift")):
+                                with self.assertRaisesRegex(job.NativeFailure,code):
+                                    job._reviewed_host_intent(phase,**{**kwargs,**overrides})
+                            values["NODE_OPTIONS"]="changed after issuance"
+                            self.assertEqual(intent.environment["NODE_OPTIONS"],"")
+                            job._validate_intent(intent,run/phase)
+                            values["NODE_OPTIONS"]=""
+                            for file,original in ((helpers/"global-setup.mjs",helper_bytes),(node,node_bytes)):
+                                file.write_bytes(b"changed after issuance")
+                                try:
+                                    with self.assertRaisesRegex(job.NativeFailure,"reviewed-consumer-drift"):
+                                        job._validate_intent(intent,run/phase)
+                                finally:file.write_bytes(original)
+                                job._validate_intent(intent,run/phase)
+                            with patch.object(job,"_implementation_hashes",return_value={"owned_command_job.py":"0"*64}):
+                                with self.assertRaisesRegex(job.NativeFailure,"launcher-source-drift"):
+                                    job._validate_intent(intent,run/phase)
+                            unissued=job._Intent(intent.phase,intent.argv,intent.cwd,intent.environment,intent.seconds,
+                                intent.folder,intent.source_hashes,intent.consumer_hashes)
+                            with self.assertRaisesRegex(job.NativeFailure,"external-intent-denied"):
+                                job._validate_intent(unissued,run/phase)
+                native.assert_not_called()
+            self.assertEqual({p.name for p in helpers.iterdir()},set(job._CONSUMER_FILES))
+            self.assertTrue(all(not list((run/phase).iterdir()) for phase in ("ui-thin","ui-desktop")))
+
+    @contextlib.contextmanager
+    def training_policy_fixture(self):
+        """Inert reference bytes only; no interpreter, model or command runs."""
+        with tempfile.TemporaryDirectory(prefix="training policy with spaces ") as directory:
+            root=Path(directory).resolve();run=root/".local-codex/native-training-host-v1/runs"/("a"*32)
+            short=root/".local-codex/q"/("a"*8);base=root/"installed/Python312/python.exe"
+            node=root/"tools/node.exe";prefix=root/"artifacts/tmp/lancedb-python312-ai-runtime"
+            def put(file,content):
+                file.parent.mkdir(parents=True,exist_ok=True);file.write_bytes(content);return file
+            put(base,b"inert interpreter identity; never executed");put(node,b"inert Node identity; never executed")
+            put(prefix/"Scripts/python.exe",b"inert redirector identity")
+            put(prefix/"pyvenv.cfg",f"home = {base.parent}\ninclude-system-site-packages = true\nversion = 3.12.8\n".encode())
+            runtime=[prefix/"Scripts/python.exe",prefix/"pyvenv.cfg",base,put(base.parent/"python312.dll",b"inert DLL identity")]
+            for name,version in job._TRAINING_PACKAGES:
+                runtime.append(put(base.parent/"Lib/site-packages"/f"{name}-{version}.dist-info/METADATA",f"Name: {name}\nVersion: {version}\n".encode()))
+            helpers=root/".local-codex/native-training-host-operator/v1"
+            files={name:put(helpers/name,b"inert reviewed consumer identity\n") for name in job._CONSUMER_FILES}
+            files.update({name:put(root/name,b"inert reviewed source identity\n") for name in job._TRAINING_SOURCES})
+            for phase in job._TRAINING_DEADLINES:(run/phase).mkdir(parents=True)
+            for folder in (short/"t",short/"h/AppData/Local",short/"h/AppData/Roaming",short/"c/node_modules"):
+                folder.mkdir(parents=True,exist_ok=True)
+            package=short/"o/ai-system-builder-win32-x64"
+            app=put(package/"ai-system-builder.exe",b"inert packaged application identity")
+            main=put(package/"resources/worker/main.py",files[job._TRAINING_SOURCES[5]].read_bytes())
+            (root/".local-codex/training-inputs").mkdir(parents=True)
+            manifest=root/".local-codex/training-inputs/tiny-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/input.json"
+            kwargs={"node_executable":node,"node_sha256":job._digest(node),"run":run,
+                "reviewed_file_hashes":{name:job._digest(file) for name,file in files.items()},
+                "runtime_file_hashes":{str(file):job._digest(file) for file in runtime},"review_digest":"b"*64}
+            package_hashes={"application_sha256":job._digest(app),"worker_main_sha256":job._digest(main)}
+            with patch.object(job,"_REPO",root),patch.object(job.sys,"_base_executable",str(base)),patch.object(job.sys,"executable",str(base)),patch.dict(os.environ,{"SystemRoot":str(root/"Windows"),"WINDIR":str(root/"Windows"),"HF_TOKEN":"synthetic-private-never-inherited","OPENAI_API_KEY":"synthetic-private-never-inherited"}):
+                yield root,kwargs,manifest,package_hashes
+
+    def test_training_roles_fix_commands_environment_deadlines_and_existing_budget(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
+            run=kwargs["run"];base=Path(job.sys._base_executable)
+            created=job._reviewed_training_intent("training-input-create",**kwargs,folder=run/"training-input-create",input_manifest_sha256=None)
+            self.assertEqual(created.argv,(str(base),"-I","-B",str(root/job._TRAINING_SOURCES[0]),"--create-tiny-input"))
+            manifest.parent.mkdir();manifest.write_bytes(b'{"inert_manifest_identity_only":true}\n');manifest_hash=job._digest(manifest)
+            issued=[created]
+            for phase,seconds in (("training-readiness",300),("training-package",420),("training-ui",690)):
+                extra={"package_hashes":package_hashes} if phase=="training-ui" else {}
+                intent=job._reviewed_training_intent(phase,**kwargs,folder=run/phase,input_manifest_sha256=manifest_hash,**extra)
+                issued.append(intent);self.assertEqual(intent.seconds,seconds)
+                self.assertEqual(intent.cwd,run/phase if phase=="training-readiness" else root/".local-codex/q/aaaaaaaa/c" if phase=="training-package" else root)
+                job._validate_intent(intent,run/phase)
+                self.assertEqual(intent.environment["PYTHON_RUNTIME_QUALIFICATION_SCENARIO"],"training-model-host")
+                self.assertEqual(intent.environment["VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION"],manifest.relative_to(root).as_posix())
+                self.assertEqual(intent.environment["VISUAL_COMPOSER_TRAINING_INPUT_SHA256"],manifest_hash)
+                self.assertNotIn("HF_TOKEN",intent.environment);self.assertNotIn("OPENAI_API_KEY",intent.environment)
+                self.assertEqual(intent.environment["HOME"],str(root/".local-codex/q/aaaaaaaa/h"))
+                self.assertEqual(intent.environment["NODE_OPTIONS"],"")
+                with self.assertRaises(TypeError):intent.environment["NODE_OPTIONS"]="--require untrusted.js"
+                self.assertEqual(job._memory_limits(intent),(2*1024**3,4*1024**3))
+                if phase=="training-readiness":self.assertEqual(intent.argv[-1],"--inspect-prerequisites")
+                if phase=="training-package":self.assertEqual(intent.argv,(str(kwargs["node_executable"]),str(root/".local-codex/native-training-host-operator/v1/offline-package.mjs")))
+                if phase=="training-ui":
+                    self.assertEqual(intent.argv[-3],"--project=packaged-desktop")
+                    self.assertEqual(intent.argv[-2:],("--grep","packaged desktop trains one local adapter, reviews privately, saves and reopens it$"))
+            self.assertEqual(created.seconds,120)
+            self.assertEqual(created.cwd,run/"training-input-create")
+            budget=job._training_budget_intent(run=run,folder=run/"training-budget",review_digest="b"*64)
+            self.assertEqual(budget.argv[-2:],("--fixture","training-budget"));self.assertEqual(budget.seconds,8)
+            self.assertEqual(job._memory_limits(budget),(2*1024**3,4*1024**3))
+            self.assertNotIn("training-budget",job._FIXTURES)
+            with self.assertRaises(job.NativeFailure):job._fixture_intent("training-budget",run/"training-budget")
+            unissued=job._Intent(budget.phase,budget.argv,budget.cwd,budget.environment,budget.seconds,budget.folder,budget.source_hashes,budget.consumer_hashes)
+            with self.assertRaises(job.NativeFailure):job._memory_limits(unissued)
+            native.assert_not_called()
+
+    def test_training_unknown_roles_and_caller_execution_or_quota_selectors_are_denied(self):
+        for phase in (None,True,[],{},"shell","ui","training-ui --grep other","training-budget"):
+            with self.subTest(phase=phase),patch.object(job,"_training_file",side_effect=AssertionError("file read after unknown role")),self.assertRaises(job.NativeFailure):
+                job._reviewed_training_intent(phase,node_executable=Path("none"),node_sha256="",run=Path("none"),folder=Path("none"),reviewed_file_hashes={},runtime_file_hashes={},input_manifest_sha256=None,review_digest="")
+        with self.training_policy_fixture() as (_root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
+            manifest.parent.mkdir();manifest.write_bytes(b"inert manifest identity\n")
+            for key,value in (("command","other.exe"),("cwd",Path("foreign")),("seconds",999999),("environment",{"NODE_OPTIONS":"--require other.js"}),("job_bytes",99),("base_executable",Path("other.exe"))):
+                with self.subTest(key=key),self.assertRaises(TypeError):
+                    job._reviewed_training_intent("training-ui",**kwargs,folder=kwargs["run"]/"training-ui",input_manifest_sha256=job._digest(manifest),package_hashes=package_hashes,**{key:value})
+            native.assert_not_called()
+
+    def test_training_witness_substitutions_and_reused_input_slot_never_reach_native(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
+            run=kwargs["run"];manifest.parent.mkdir();manifest.write_bytes(b"inert manifest identity\n");h=job._digest(manifest)
+            for override in ({"node_sha256":"0"*64},{"runtime_file_hashes":{}},{"reviewed_file_hashes":{}},
+                             {"folder":run/"training-readiness"},{"input_manifest_sha256":"0"*64},
+                             {"package_hashes":{**package_hashes,"worker_main_sha256":"0"*64}},
+                             {"package_hashes":{**package_hashes,"application_sha256":"0"*64}},
+                             {"package_hashes":{**package_hashes,"extra_selector":"unknown"}}):
+                values={**kwargs,"folder":run/"training-ui","input_manifest_sha256":h,"package_hashes":package_hashes,**override}
+                with self.subTest(override=list(override)),self.assertRaises(job.NativeFailure):job._reviewed_training_intent("training-ui",**values)
+            with self.assertRaisesRegex(job.NativeFailure,"training-input-slot-already-exists"):
+                job._reviewed_training_intent("training-input-create",**kwargs,folder=run/"training-input-create",input_manifest_sha256=None)
+            config=root/"artifacts/tmp/lancedb-python312-ai-runtime/pyvenv.cfg";original=config.read_bytes()
+            for replacement in (original.replace(b"version = 3.12.8",b"version = 3.14.0"),original.replace(b"include-system-site-packages = true",b"include-system-site-packages = false"),original+b"home = duplicate\n"):
+                config.write_bytes(replacement);hashes={**kwargs["runtime_file_hashes"],str(config):job._digest(config)}
+                with self.assertRaises(job.NativeFailure):
+                    job._reviewed_training_intent("training-ui",**{**kwargs,"runtime_file_hashes":hashes},folder=run/"training-ui",input_manifest_sha256=h,package_hashes=package_hashes)
+            config.write_bytes(original)
+            marker=object();job._PENDING[id(marker)]=marker
+            with patch.object(job,"_training_file",side_effect=AssertionError("identity access after pending owner")),self.assertRaises(job.NativeFailure):
+                job._reviewed_training_intent("training-ui",**kwargs,folder=run/"training-ui",input_manifest_sha256=h,package_hashes=package_hashes)
+            job._PENDING.pop(id(marker));native.assert_not_called()
+
+    def test_training_issued_sources_and_package_are_bounded_and_checked_again_before_native(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,package_hashes),patch.object(job,"_Win") as native:
+            run=kwargs["run"];manifest.parent.mkdir();manifest.write_bytes(b"inert manifest identity\n")
+            intent=job._reviewed_training_intent("training-ui",**kwargs,folder=run/"training-ui",input_manifest_sha256=job._digest(manifest),package_hashes=package_hashes)
+            for file in (manifest,kwargs["node_executable"],root/".local-codex/native-training-host-operator/v1/global-setup.mjs",root/".local-codex/q/aaaaaaaa/o/ai-system-builder-win32-x64/resources/worker/main.py"):
+                original=file.read_bytes();file.write_bytes(b"changed source witness\n")
+                with self.assertRaises(job.NativeFailure):job._validate_intent(intent,run/"training-ui")
+                file.write_bytes(original);job._validate_intent(intent,run/"training-ui")
+            helper=root/".local-codex/native-training-host-operator/v1/global-setup.mjs"
+            helper.write_bytes(b"x"*(512*1024+1))
+            with self.assertRaisesRegex(job.NativeFailure,"training-file-kind-or-bound"):job._validate_intent(intent,run/"training-ui")
+            native.assert_not_called()
+
+    def test_training_reference_times_use_each_windows_api_and_still_detect_change(self):
+        with self.training_policy_fixture() as (_root,kwargs,_manifest,_package),patch.object(job,"_Win") as native:
+            file=kwargs["node_executable"];stamp=file.lstat().st_ctime_ns;original=os.fstat
+            def observed(fd,offset):
+                info=original(fd)
+                values={key:getattr(info,key) for key in ("st_dev","st_ino","st_size","st_mtime_ns","st_nlink","st_mode")}
+                return SimpleNamespace(**values,st_ctime_ns=stamp+offset,st_file_attributes=getattr(info,"st_file_attributes",0))
+            # Windows named stat can expose a different ctime meaning from
+            # descriptor stat. Both observations must remain stable themselves.
+            with patch.object(job.os,"fstat",side_effect=lambda fd:observed(fd,100)):
+                self.assertEqual(job._training_file(file,kwargs["node_sha256"]),file.stat().st_size)
+            offsets=iter((100,200))
+            with patch.object(job.os,"fstat",side_effect=lambda fd:observed(fd,next(offsets))),self.assertRaises(job.NativeFailure):
+                job._training_file(file,kwargs["node_sha256"])
+            native.assert_not_called()
+
+    def test_training_package_cache_cannot_shadow_dependencies_before_native(self):
+        with self.training_policy_fixture() as (root,kwargs,manifest,_package),patch.object(job,"_Win") as native:
+            run=kwargs["run"];manifest.parent.mkdir();manifest.write_bytes(b"inert manifest identity\n")
+            intent=job._reviewed_training_intent("training-package",**kwargs,folder=run/"training-package",input_manifest_sha256=job._digest(manifest))
+            job._validate_intent(intent,run/"training-package")
+            cache=root/".local-codex/q/aaaaaaaa/c/node_modules";foreign=cache/"unreviewed.js";foreign.write_bytes(b"never imported\n")
+            with self.assertRaisesRegex(job.NativeFailure,"training-candidate-cache-not-empty"):
+                job._reviewed_training_intent("training-package",**kwargs,folder=run/"training-package",input_manifest_sha256=job._digest(manifest))
+            with self.assertRaisesRegex(job.NativeFailure,"training-candidate-cache-not-empty"):
+                job._validate_intent(intent,run/"training-package")
+            native.assert_not_called()
+
+    def test_single_host_successor_requires_the_previous_owner_to_retire(self):
+        native=SimpleNamespace(k=SimpleNamespace(CloseHandle=lambda handle:True))
+        with patch.object(job,"_validate_intent"),patch.object(job,"_Win",return_value=native) as create:
+            first=job._OwnedJob(self.issued_intent("ui-thin"),SOURCE.parent)
+            with self.assertRaisesRegex(job.NativeFailure,"active-owned-state-blocks-successor"):
+                job._OwnedJob(self.issued_intent("ui-desktop"),SOURCE.parent)
+            self.assertEqual(create.call_count,1)
+            retired=first.finish()
+            self.assertTrue(retired["cleanup_confirmed"])
+            self.assertNotIn(id(first),job._LIVE)
+            second=job._OwnedJob(self.issued_intent("ui-desktop"),SOURCE.parent)
+            self.assertEqual(create.call_count,2)
+            self.assertTrue(second.finish()["cleanup_confirmed"])
+        # This is a portable injected-owner oracle, not physical process proof.
+        job._retain_pending(object())
+        with patch.object(job,"_validate_intent"),patch.object(job,"_Win") as create:
+            with self.assertRaisesRegex(job.NativeFailure,"uncertain-owned-state-blocks-successor"):
+                job._OwnedJob(self.issued_intent("ui-thin"),SOURCE.parent)
+            create.assert_not_called()
+
+    @contextlib.contextmanager
+    def reviewed_retry_subject(self):
+        with tempfile.TemporaryDirectory(prefix="native reviewed retry ") as directory:
+            root = Path(directory).resolve()
+            module = root / "dev-tools/helpers/native-qualification/owned_command_job.py"
+            family = root / ".local-codex/native-ocr-budget-command-selftests-v4"
+            prior = family / ("a" * 32)
+            (prior / "stdio").mkdir(parents=True)
+            sources = {}
+            for name in job._RETRY_SOURCE_FILES:
+                file = module.parent / name
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_bytes(b"fixed reviewed source\n")
+                sources[name] = job._digest(file)
+            base = root / "base/python.exe"
+            base.parent.mkdir()
+            base.write_bytes(b"fixed original interpreter\n")
+            paths = {"family-stop": family / "FENCED.json", "suite-stop": prior / "FENCED.json",
+                     "suite": prior / "observation.json", "stdio": prior / "stdio/observation.json",
+                     "stdout": prior / "stdio/stdout.log", "stderr": prior / "stdio/stderr.log"}
+            paths["stdout"].write_bytes(b"fixed-native-stdout\n")
+            paths["stderr"].write_bytes(b"fixed-native-stderr\n")
+            job.dump(paths["family-stop"], {"suite": str(prior), "reason": "native-selftest-failed-or-unconfirmed", "automatic_successor_allowed": False})
+            job.dump(paths["suite-stop"], {"reason": "native-selftest-failed-or-unconfirmed", "repeat_authority": False, "fixture_retained": True})
+            job.dump(paths["suite"], {
+                "schema_version": "actual-fixed-host-native-selftest-v1", "passed": False,
+                "cases": [{"case": "stdio", "passed": False, "error_type": "NativeFailure", "diagnostic": "native-private-stdio"}],
+                "source_unchanged": True, "expected_native_cases": 9, "actual_platform": "win32",
+                "portable_pass_claimed": False, "old_process_or_fence_adopted": False,
+                "actual_package_or_UI_executed": False, "model_provider_retained_stage_used": False,
+            })
+            job.dump(paths["stdio"], {
+                "root_exit_code": 0, "job_accounting": {"total": 3, "active": 0, "terminated": 0},
+                "command_passed": True, "cleanup_confirmed": True, "all_owned_handles_close_acknowledged": True,
+                "cleanup_errors": [], "assigned_at_creation": True, "resumed_after_membership": True,
+                "fence_required": False, "forced_owned_job_termination": False, "automatic_retry_allowed": False,
+                "log_overflow": False, "reason": None,
+                "limits": {"flags": job.LIMIT_FLAGS, "process_bytes": job.PROCESS_BYTES,
+                           "job_bytes": job.JOB_BYTES, "active_limit": job.MEMBERS},
+                "logs": {name: {"complete": True, "path": str(paths[name]), "bytes": 20,
+                                "observed_bytes": 20, "sha256": job._digest(paths[name]), "cap_bytes": job.LOG_CAP}
+                         for name in ("stdout", "stderr")},
+            })
+            hashes = {name: job._digest(file) for name, file in paths.items()}
+            args = dict(prior_suite=prior, proof_hashes=hashes, source_hashes=sources,
+                        interpreter_sha256=job._digest(base), review_digest="b" * 64)
+            with patch.object(job, "_REPO", root), patch.object(job, "_MODULE", module), \
+                 patch.object(job, "_SELFTEST_RUNS", family), \
+                 patch.object(job, "_PREVIOUS_SELFTEST_RUNS", root / "absent-previous-family"), \
+                 patch.object(job.sys, "_base_executable", str(base)), \
+                 patch.object(job, "os", SimpleNamespace(name="nt", fstat=os.fstat, fsync=os.fsync, environ={})), \
+                 patch.object(job.c, "sizeof", return_value=8), \
+                 patch.object(job, "_native_selftest_suite", return_value={"injected_suite_only": True}) as suite, \
+                 patch.object(job, "_OwnedJob", side_effect=AssertionError("No native execution in portable tests")) as native:
+                yield SimpleNamespace(root=root, family=family, prior=prior, module=module, base=base,
+                                      paths=paths, args=args, suite=suite, native=native,
+                                      claim=family / job._REVIEWED_RETRY_CLAIM)
+
+    def test_reviewed_retry_consumes_one_claim_before_its_fixed_suite(self):
+        with self.reviewed_retry_subject() as case:
+            original = {name: path.read_bytes() for name, path in case.paths.items()}
+            def observe(suite, source, *, retry):
+                self.assertTrue(case.claim.is_file())
+                self.assertEqual(json.loads(case.claim.read_bytes())["suite"], suite.name)
+                self.assertEqual(suite.parent, case.family)
+                self.assertEqual(source, {"owned_command_job.py": job._digest(case.module)})
+                retry["validate"]()
+                return {"injected_suite_only": True}
+            case.suite.side_effect = observe
+            self.assertEqual(job._reviewed_native_selftest_retry(**case.args), {"injected_suite_only": True})
+            self.assertEqual({name: path.read_bytes() for name, path in case.paths.items()}, original)
+            with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                job._reviewed_native_selftest_retry(**case.args)
+            case.suite.assert_called_once()
+            case.native.assert_not_called()
+            with self.assertRaisesRegex(job.NativeFailure, "remains fenced"):
+                job.native_selftest()
+
+    def test_reviewed_retry_refuses_incomplete_or_incompatible_prior_native_proof(self):
+        cases = [("cleanup_confirmed", False), ("all_owned_handles_close_acknowledged", False),
+                 ("cleanup_errors", ["unknown"]), ("fence_required", True), ("reason", "timeout"),
+                 ("command_passed", False), ("forced_owned_job_termination", True),
+                 ("job_accounting", {"total": 3, "active": 1, "terminated": 0}),
+                 ("job_accounting", {"total": 3, "active": False, "terminated": 0})]
+        for field, value in cases:
+            with self.subTest(field=field, value=value), self.reviewed_retry_subject() as case:
+                body = json.loads(case.paths["stdio"].read_bytes()); body[field] = value
+                case.paths["stdio"].write_text(json.dumps(body), encoding="utf8")
+                case.args["proof_hashes"]["stdio"] = job._digest(case.paths["stdio"])
+                with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                self.assertFalse(case.claim.exists()); case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_refuses_changed_source_interpreter_or_saved_bytes(self):
+        for target in ("source", "interpreter", "stdio"):
+            with self.subTest(target=target), self.reviewed_retry_subject() as case:
+                file = {"source": case.module, "interpreter": case.base, "stdio": case.paths["stdio"]}[target]
+                file.write_bytes(b"changed bytes")
+                with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                self.assertFalse(case.claim.exists()); case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_requires_all_exact_witness_keys(self):
+        for key in ("proof_hashes", "source_hashes"):
+            with self.subTest(key=key), self.reviewed_retry_subject() as case:
+                case.args[key]["unknown"] = "c" * 64
+                with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                self.assertFalse(case.claim.exists()); case.suite.assert_not_called()
+
+    def test_reviewed_retry_refuses_incomplete_saved_streams(self):
+        for field, value in (("complete", False), ("bytes", 19), ("observed_bytes", 21), ("path", "unrelated.log")):
+            with self.subTest(field=field), self.reviewed_retry_subject() as case:
+                body = json.loads(case.paths["stdio"].read_bytes())
+                body["logs"]["stdout"][field] = value
+                case.paths["stdio"].write_text(json.dumps(body), encoding="utf8")
+                case.args["proof_hashes"]["stdio"] = job._digest(case.paths["stdio"])
+                with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                self.assertFalse(case.claim.exists()); case.suite.assert_not_called()
+
+    def test_reviewed_retry_refuses_multiply_linked_proof(self):
+        with self.reviewed_retry_subject() as case:
+            os.link(case.paths["stdout"], case.root / "extra-stdout-link")
+            with self.assertRaisesRegex(job.NativeFailure, "retry-proof-file"):
+                job._reviewed_native_selftest_retry(**case.args)
+            self.assertFalse(case.claim.exists()); case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_treats_every_existing_claim_as_consumed(self):
+        for directory in (False, True):
+            with self.subTest(directory=directory), self.reviewed_retry_subject() as case:
+                if directory: case.claim.mkdir()
+                else: case.claim.write_bytes(b"incomplete old claim")
+                with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                    job._reviewed_native_selftest_retry(**case.args)
+                case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_does_not_read_proofs_behind_a_broken_claim_entry(self):
+        with self.reviewed_retry_subject() as case:
+            original = Path.lstat
+            def inspect(path):
+                if path == case.claim: return SimpleNamespace()
+                return original(path)
+            with patch.object(Path, "lstat", inspect), patch.object(job, "_validate_reviewed_retry") as proof:
+                with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                    job._reviewed_native_selftest_retry(**case.args)
+                proof.assert_not_called(); case.suite.assert_not_called(); case.native.assert_not_called()
+
+    def test_reviewed_retry_refuses_active_or_uncertain_current_owners(self):
+        for registry in (job._LIVE, job._PENDING):
+            with self.subTest(registry=registry is job._LIVE), self.reviewed_retry_subject() as case:
+                owner = object(); registry[id(owner)] = owner
+                try:
+                    with self.assertRaises(job.NativeFailure): job._reviewed_native_selftest_retry(**case.args)
+                    self.assertFalse(case.claim.exists()); case.suite.assert_not_called()
+                finally: del registry[id(owner)]
+
+    def test_reviewed_retry_keeps_claim_consumed_after_uncertain_flush(self):
+        with self.reviewed_retry_subject() as case:
+            with patch.object(job.os, "fsync", side_effect=OSError("injected flush failure")):
+                with self.assertRaises(OSError): job._reviewed_native_selftest_retry(**case.args)
+            self.assertTrue(case.claim.is_file()); case.suite.assert_not_called(); case.native.assert_not_called()
+            with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                job._reviewed_native_selftest_retry(**case.args)
+
+    def test_reviewed_retry_does_not_reissue_after_suite_failure(self):
+        with self.reviewed_retry_subject() as case:
+            case.suite.side_effect = job.NativeFailure("injected native suite failure")
+            with self.assertRaisesRegex(job.NativeFailure, "injected native suite failure"):
+                job._reviewed_native_selftest_retry(**case.args)
+            self.assertTrue(case.claim.is_file())
+            with self.assertRaisesRegex(job.NativeFailure, "already-consumed"):
+                job._reviewed_native_selftest_retry(**case.args)
+            case.suite.assert_called_once(); case.native.assert_not_called()
+
+    def test_reviewed_retry_fixture_intent_pins_approved_bytes_before_native_creation(self):
+        owned_type = job._OwnedJob
+        for target in ("source", "interpreter"):
+            with self.subTest(target=target), self.reviewed_retry_subject() as case:
+                def inspect(suite, source, *, retry):
+                    folder = suite / "stdio"; folder.mkdir()
+                    intent = job._fixture_intent("stdio", folder, retry=retry)
+                    self.assertEqual(dict(intent.source_hashes), {"owned_command_job.py": case.args["source_hashes"]["owned_command_job.py"]})
+                    self.assertEqual(dict(intent.consumer_hashes), {str(case.base): case.args["interpreter_sha256"]})
+                    (case.module if target == "source" else case.base).write_bytes(b"unreviewed replacement")
+                    with patch.object(job, "_Win") as native:
+                        with self.assertRaises(job.NativeFailure): owned_type(intent, folder)
+                        native.assert_not_called()
+                    next_folder = folder.parent / "failure"; next_folder.mkdir()
+                    with self.assertRaisesRegex(job.NativeFailure, "retry-proof-drift"):
+                        job._fixture_intent("failure", next_folder, retry=retry)
+                    return {"injected_dispatch_denial": True}
+                case.suite.side_effect = inspect
+                self.assertEqual(job._reviewed_native_selftest_retry(**case.args), {"injected_dispatch_denial": True})
+                self.assertTrue(case.claim.is_file()); case.native.assert_not_called()
+
+    def test_reviewed_retry_guardian_refuses_between_case_drift_before_popen(self):
+        for target in ("source", "interpreter"):
+            with self.subTest(target=target), self.reviewed_retry_subject() as case:
+                def inspect(suite, source, *, retry):
+                    (case.module if target == "source" else case.base).write_bytes(b"unreviewed replacement")
+                    with patch.object(job.subprocess, "Popen") as popen, patch.object(job, "_Win") as native:
+                        with self.assertRaises(job.NativeFailure): job.crash_case("before-resume", retry=retry)
+                        popen.assert_not_called(); native.assert_not_called()
+                    return {"injected_dispatch_denial": True}
+                case.suite.side_effect = inspect
+                self.assertEqual(job._reviewed_native_selftest_retry(**case.args), {"injected_dispatch_denial": True})
+                self.assertTrue(case.claim.is_file()); case.native.assert_not_called()
+
+    def test_final_selftest_check_never_passes_a_retained_or_uncertain_owner(self):
+        cases = [{"passed": True} for _ in range(9)]
+        for registry in (job._LIVE, job._PENDING):
+            with self.subTest(active=registry is job._LIVE):
+                owner = object(); registry[id(owner)] = owner
+                try:
+                    with self.assertRaises(job.NativeFailure):
+                        job._selftest_suite_passes(cases, job._implementation_hashes())
+                finally: del registry[id(owner)]
+        self.assertFalse(job._selftest_suite_passes(cases[:8], job._implementation_hashes()))
+        self.assertFalse(job._selftest_suite_passes([{ "passed": False }, *cases[:8]], job._implementation_hashes()))
+
+    def test_current_family_stop_marker_refuses_existing_files_and_dangling_links(self):
+        for exists, linked in ((True, False), (False, True)):
+            with self.subTest(exists=exists, linked=linked), \
+                 patch.object(job, "os", SimpleNamespace(name="nt")), \
+                 patch.object(job.c, "sizeof", return_value=8), \
+                 patch.object(job, "_prior_family_clear"), \
+                 patch.object(job, "_regular_directory"), \
+                 patch.object(Path, "exists", return_value=exists), \
+                 patch.object(Path, "is_symlink", return_value=linked), \
+                 patch.object(Path, "lstat", return_value=SimpleNamespace()), \
+                 patch.object(job, "_implementation_hashes", side_effect=AssertionError("Fence was missed")) as source, \
+                 patch.object(job, "_OwnedJob") as native:
+                with self.assertRaisesRegex(job.NativeFailure, "native selftest lifecycle remains fenced"):
+                    job.native_selftest()
+                source.assert_not_called()
+                native.assert_not_called()
+
+    def test_absent_current_family_marker_reaches_source_verification_before_new_job(self):
+        with patch.object(job, "os", SimpleNamespace(name="nt")), \
+             patch.object(job.c, "sizeof", return_value=8), \
+             patch.object(job, "_prior_family_clear"), \
+             patch.object(job, "_regular_directory"), \
+             patch.object(Path, "exists", return_value=False), \
+             patch.object(Path, "is_symlink", return_value=False), \
+             patch.object(Path, "lstat", side_effect=FileNotFoundError()), \
+             patch.object(job, "_implementation_hashes", side_effect=job.NativeFailure("source witness requested")) as source, \
+             patch.object(job, "_OwnedJob") as native:
+            with self.assertRaisesRegex(job.NativeFailure, "source witness requested"):
+                job.native_selftest()
+            source.assert_called_once_with()
+            native.assert_not_called()
+
+    def test_unreadable_current_family_marker_denies_a_fresh_run(self):
+        with patch.object(job, "os", SimpleNamespace(name="nt")), \
+             patch.object(job.c, "sizeof", return_value=8), \
+             patch.object(job, "_prior_family_clear"), \
+             patch.object(job, "_regular_directory"), \
+             patch.object(Path, "lstat", side_effect=PermissionError("injected marker access denial")), \
+             patch.object(job, "_implementation_hashes") as source, \
+             patch.object(job, "_OwnedJob") as native:
+            with self.assertRaises(PermissionError):
+                job.native_selftest()
+            source.assert_not_called()
+            native.assert_not_called()
+
+    def test_unissued_intent_cannot_reach_native_creation(self):
+        with self.assertRaises(job.NativeFailure):job._validate_intent(object(),Path("none"))
+
+    def test_pending_exact_owner_blocks_successor_without_reset_api(self):
+        previous=dict(job._PENDING);owner=object()
+        try:
+            job._retain_pending(owner)
+            self.assertIs(job._PENDING[id(owner)],owner)
+            with self.assertRaises(job.NativeFailure):job._assert_no_pending()
+            self.assertFalse(hasattr(job,"clear_pending"))
+        finally:job._PENDING.clear();job._PENDING.update(previous)
+
+    def test_failed_close_stays_in_exact_owned_handle_ledger(self):
+        class Kernel:
+            def CloseHandle(self,handle):return False
+        class Native:k=Kernel()
+        owned=object.__new__(job._OwnedJob);owned.n=Native();owned.owned={"job":123};owned.cleanup_errors=[]
+        self.assertFalse(owned.close("job"))
+        self.assertEqual(owned.owned,{"job":123});self.assertEqual(owned.cleanup_errors,["close-job:NativeFailure"])
+        self.assertIs(job._PENDING[id(owned)],owned)
+
+    def test_explicit_inherited_list_excludes_job_root_read_and_port_handles(self):
+        owned=object.__new__(job._OwnedJob)
+        owned.owned={"stdin":11,"stdout-write":12,"stderr-write":13,"stdout-read":14,"stderr-read":15,"job":16,"completion-port":17,"root":18}
+        self.assertEqual(owned._inherited_stdio_handles(),(11,12,13))
+
+    def test_redirected_fixture_parent_is_denied(self):
+        root=SOURCE.parent.resolve()
+        with self.assertRaises(job.NativeFailure):job._regular_directory(root.parent,root)
+
+    def test_owner_is_registered_before_native_initialization_and_failure_stays_pending(self):
+        def fail():
+            self.assertEqual(len(job._LIVE),1)
+            raise OSError("injected native adapter failure")
+        with patch.object(job,"_validate_intent"),patch.object(job,"_Win",side_effect=fail):
+            with self.assertRaises(OSError):job._OwnedJob(object(),SOURCE.parent)
+        self.assertEqual(len(job._PENDING),1)
+        with patch.object(job,"_validate_intent"),patch.object(job,"_Win") as native:
+            with self.assertRaises(job.NativeFailure):job._OwnedJob(object(),SOURCE.parent)
+            native.assert_not_called()
+
+    def run_with_phase_clock(self, prepared_at, resumed_at, exited_at, *, descendants=False):
+        owned = self.fake_owned()
+        owned.process = SimpleNamespace(process=55)
+        clock = [0.0]
+
+        def prepare():
+            clock[0] = prepared_at
+
+        def resume():
+            clock[0] = resumed_at
+
+        def wait(_process, _milliseconds):
+            clock[0] = exited_at
+            return 0
+
+        def sleep(seconds):
+            clock[0] += seconds
+
+        completed = {
+            "root_exit_code": 0, "cleanup_confirmed": True,
+            "forced_owned_job_termination": descendants, "log_overflow": False,
+            "observed_limit_messages": [], "completion_message_overflow": False,
+        }
+        with patch.object(job.time, "monotonic", side_effect=lambda: clock[0]), \
+             patch.object(job.time, "sleep", side_effect=sleep), \
+             patch.object(owned, "prepare", side_effect=prepare), \
+             patch.object(owned, "resume", side_effect=resume) as resumed, \
+             patch.object(owned.n.k, "WaitForSingleObject", side_effect=wait, create=True) as waited, \
+             patch.object(owned, "accounting", return_value={"active": int(descendants)}), \
+             patch.object(owned, "poll_events"), \
+             patch.object(owned, "finish", side_effect=lambda reason: {**completed, "reason": reason}):
+            result = owned.run()
+        return result, resumed.call_count, waited.call_count, clock[0]
+
+    def test_expired_preparation_never_resumes_the_suspended_command(self):
+        result, resumes, waits, _ = self.run_with_phase_clock(.02, .02, .02)
+        self.assertEqual(result["reason"], "timeout")
+        self.assertFalse(result["command_passed"])
+        self.assertEqual((resumes, waits), (0, 0))
+
+    def test_resume_does_not_restart_the_phase_execution_budget(self):
+        result, resumes, waits, _ = self.run_with_phase_clock(.004, .02, .02)
+        self.assertEqual(result["reason"], "timeout")
+        self.assertFalse(result["command_passed"])
+        self.assertEqual((resumes, waits), (1, 0))
+
+    def test_timely_preparation_resume_and_root_exit_can_still_pass(self):
+        result, resumes, waits, _ = self.run_with_phase_clock(.002, .004, .006)
+        self.assertIsNone(result["reason"])
+        self.assertTrue(result["command_passed"])
+        self.assertEqual((resumes, waits), (1, 1))
+
+    def test_root_exit_observed_after_the_phase_deadline_stays_failed(self):
+        result, resumes, waits, _ = self.run_with_phase_clock(.002, .004, .02)
+        self.assertEqual(result["reason"], "timeout")
+        self.assertFalse(result["command_passed"])
+        self.assertEqual((resumes, waits), (1, 1))
+
+    def test_descendant_grace_cannot_extend_the_phase_deadline(self):
+        result, resumes, waits, elapsed = self.run_with_phase_clock(.002, .004, .008, descendants=True)
+        self.assertEqual(result["reason"], "timeout")
+        self.assertFalse(result["command_passed"])
+        self.assertEqual((resumes, waits), (1, 1))
+        self.assertLessEqual(elapsed, .03)
+
+    def test_partial_prepare_failure_retains_exact_job_and_blocks_new_launch(self):
+        owned=self.fake_owned()
+        def fail_prepare():
+            owned.job=123;owned.owned["job"]=123
+            raise OSError("injected prepare failure")
+        with patch.object(owned,"prepare",side_effect=fail_prepare),patch.object(owned,"accounting",side_effect=OSError("injected readback")):
+            result=owned.run()
+        self.assertFalse(result["command_passed"]);self.assertFalse(result["cleanup_confirmed"])
+        self.assertEqual(owned.owned,{"job":123});self.assertIs(job._PENDING[id(owned)],owned)
+        with self.assertRaises(job.NativeFailure):job._assert_no_pending()
+
+    def test_raised_native_close_keeps_handle_and_other_closes_continue(self):
+        owned=self.fake_owned();owned.owned={"stdout-read":11,"stderr-read":12}
+        calls=[]
+        def close(handle):
+            calls.append(handle)
+            if handle==11:raise OSError("injected CloseHandle")
+            return True
+        owned.n.k.CloseHandle=close
+        result=owned.finish()
+        self.assertEqual(calls,[11,12]);self.assertEqual(owned.owned,{"stdout-read":11})
+        self.assertFalse(result["cleanup_confirmed"]);self.assertIs(job._PENDING[id(owned)],owned)
+
+    def test_injected_pipe_read_failure_is_not_success_or_cleanup_proof(self):
+        owned=self.fake_owned();owned.process=SimpleNamespace(process=55);owned.job=54
+        owned.owned={"job":54,"root":55,"stdout-read":56}
+        owned.n.k.ReadFile=lambda *args:(_ for _ in ()).throw(OSError("injected read"))
+        with patch.object(Path,"open",return_value=io.BytesIO()):owned._drain("stdout",56)
+        self.assertTrue(owned.pipe_error.is_set());self.assertFalse(owned.log_state["stdout"]["complete"])
+        owned.threads=[SimpleNamespace(join=lambda timeout:None,is_alive=lambda:False)]
+        owned.n.exit_code=lambda *args:0;owned.n.inheritable=lambda handle:False
+        with patch.object(owned,"accounting",return_value={"total":1,"active":0,"terminated":1}),patch.object(owned,"poll_events"),patch.object(owned,"limits",return_value=SimpleNamespace(peak_process=0,peak_job=0)):
+            result=owned.finish()
+        self.assertFalse(result["cleanup_confirmed"]);self.assertIn("stdout-read",owned.owned)
+        self.assertIs(job._PENDING[id(owned)],owned)
+
+    def test_finished_owner_returns_isolated_cached_result_without_native_reentry(self):
+        owned=self.fake_owned();first=owned.finish()
+        self.assertTrue(first["cleanup_confirmed"]);self.assertNotIn(id(owned),job._LIVE)
+        with patch.object(owned,"accounting",side_effect=AssertionError("stale native call")),patch.object(owned,"close",side_effect=AssertionError("stale close")):
+            second=owned.finish();second["cleanup_errors"].append("caller mutation")
+            self.assertEqual(owned.finish(),first)
+            for operation in (owned.prepare,owned.resume,owned.run):
+                with self.assertRaises(job.NativeFailure):operation()
+
+    def test_pending_uncertainty_denies_prepared_resume_before_native_query(self):
+        owned=self.fake_owned();owned.phase="prepared";job._retain_pending(owned)
+        with patch.object(owned,"limits",side_effect=AssertionError("native read after pending")):
+            with self.assertRaises(job.NativeFailure):owned.resume()
+
+    def test_protocol_tail_has_a_deadline_even_when_pipe_never_reaches_eof(self):
+        native=SimpleNamespace(k=SimpleNamespace(PeekNamedPipe=lambda *args:1))
+        with patch.dict(sys.modules,{"msvcrt":SimpleNamespace(get_osfhandle=lambda descriptor:123)}),patch.object(job,"_Win",return_value=native),patch.object(job.time,"monotonic",side_effect=[0,2]),patch.object(job.time,"sleep"):
+            with self.assertRaisesRegex(job.NativeFailure,"fixed-tail-timeout"):
+                job.bounded_eof(SimpleNamespace(fileno=lambda:0),1,4096)
+
+    def observer_fixture(self,*,stream_error=False,detach_error=False,native_close_error=False):
+        events=[]
+        class Stream:
+            closed=False
+            def __init__(self,name):self.name=name
+            def close(self):
+                events.append("stream-"+self.name)
+                if stream_error and self.name=="stdin":raise OSError("injected stream close")
+                self.closed=True
+        class Handle:
+            def Detach(self):
+                events.append("detach")
+                if detach_error:raise OSError("injected Detach")
+                return 99
+        process=SimpleNamespace(stdin=Stream("stdin"),stdout=Stream("stdout"),stderr=Stream("stderr"),_handle=Handle(),returncode=71,poll=lambda:71)
+        def close(handle):
+            events.append(handle)
+            if native_close_error:raise OSError("injected observer close")
+            return True
+        observer={"process":process,"copied":[88],"guardian_raw":None,"launch_attempted":True}
+        job._register_owner(observer)
+        return observer,SimpleNamespace(k=SimpleNamespace(CloseHandle=close)),events
+
+    def test_observer_stream_close_exception_does_not_skip_other_exact_resources(self):
+        observer,native,events=self.observer_fixture(stream_error=True)
+        self.assertFalse(job._cleanup_observer(observer,native))
+        self.assertIn("stream-stderr",events);self.assertIn(88,events);self.assertIn(99,events)
+        self.assertIs(job._PENDING[id(observer)],observer)
+        self.assertFalse(observer["process"].stdin.closed)
+
+    def test_observer_detach_exception_retains_popen_and_closes_other_handles(self):
+        observer,native,events=self.observer_fixture(detach_error=True)
+        self.assertFalse(job._cleanup_observer(observer,native));self.assertIn(88,events)
+        self.assertIsNotNone(observer["process"]._handle);self.assertIs(job._PENDING[id(observer)],observer)
+
+    def test_observer_native_close_exception_retains_raw_and_duplicate_handles(self):
+        observer,native,events=self.observer_fixture(native_close_error=True)
+        self.assertFalse(job._cleanup_observer(observer,native))
+        self.assertEqual(observer["copied"],[88]);self.assertEqual(observer["guardian_raw"],99)
+        count=len(events);self.assertFalse(job._cleanup_observer(observer,native));self.assertEqual(len(events),count)
+        self.assertIs(job._PENDING[id(observer)],observer)
+
+    def test_observer_success_is_terminal_and_does_not_detach_retired_handle_again(self):
+        observer,native,events=self.observer_fixture()
+        self.assertTrue(job._cleanup_observer(observer,native));count=len(events)
+        self.assertTrue(job._cleanup_observer(observer,native));self.assertEqual(len(events),count)
+        self.assertNotIn(id(observer),job._LIVE)
+
+    def test_unobserved_popen_outcome_is_pending_before_any_successor(self):
+        observer={"process":None,"copied":[],"guardian_raw":None,"launch_attempted":True}
+        job._register_owner(observer)
+        self.assertFalse(job._cleanup_observer(observer,None));self.assertIs(job._PENDING[id(observer)],observer)
+        with self.assertRaises(job.NativeFailure):job._register_owner(object())
+
+    def test_native_limits_are_finite_and_exclude_breakaway(self):
+        self.assertEqual(job.PROCESS_BYTES,1024**3);self.assertEqual(job.JOB_BYTES,2*1024**3);self.assertEqual(job.MEMBERS,32)
+        self.assertEqual(job.LIMIT_FLAGS,0x2308)
+        self.assertEqual(job.LIMIT_FLAGS & (0x800|0x1000),0)
+
+    def test_atomic_creation_uses_detached_pipe_only_flags_and_explicit_attributes(self):
+        calls={"attributes":[]};inherited=set();next_pipe=iter(((11,12),(13,14)))
+        def pipe(read,write,*args):
+            read._obj.value,write._obj.value=next(next_pipe);inherited.add(write._obj.value)
+            return 1
+        def initialize(storage,count,flags,size):
+            size._obj.value=128
+            return int(storage is not None)
+        def attribute(storage,flags,name,value,size,*args):
+            calls["attributes"].append((name,tuple(value._obj)))
+            return 1
+        def create(*args):
+            calls["flags"]=args[5];calls["inherit"]=args[4]
+            return 0  # Stop at the boundary; no native command is launched.
+        native=SimpleNamespace(k=SimpleNamespace(CreateJobObjectW=lambda *args:1,SetInformationJobObject=lambda *args:1,CreateIoCompletionPort=lambda *args:2,CreatePipe=pipe,SetHandleInformation=lambda *args:1,CreateFileW=lambda *args:30,InitializeProcThreadAttributeList=initialize,UpdateProcThreadAttribute=attribute,CreateProcessW=create,DeleteProcThreadAttributeList=lambda *args:None),inheritable=lambda handle:handle in inherited or handle==30)
+        intent=job._remember(job._Intent("fixture:stdio",("fixed-python","-I"),SOURCE.parent,{},.01,SOURCE.parent,{},{}))
+        with patch.object(job,"_validate_intent"),patch.object(job,"_Win",return_value=native),patch.object(job.c,"get_last_error",return_value=122,create=True):
+            owned=job._OwnedJob(intent,SOURCE.parent)
+            with patch.object(owned,"limits"),self.assertRaisesRegex(job.NativeFailure,"atomic-process-create"):owned.prepare()
+        self.assertEqual(calls["flags"],0x80000|0x4|0x400|0x8)
+        self.assertEqual(calls["flags"] & (0x08000000|0x01000000|0x10),0)
+        self.assertIs(calls["inherit"],True)
+        self.assertEqual(calls["attributes"],[(job.JOB_LIST_ATTRIBUTE,(1,)),(job.HANDLE_LIST_ATTRIBUTE,(30,12,14))])
+
+    def test_fixed_leaf_uses_detached_without_breakaway_or_no_window(self):
+        with patch.object(job.subprocess,"Popen",return_value=SimpleNamespace(_handle=55)) as popen,patch.object(job,"_Win",return_value=SimpleNamespace(identity=lambda handle:{"pid":42,"creation_ticks":43})),patch.object(job.time,"sleep"),contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(job.fixture("timeout"),97)
+        self.assertEqual(popen.call_args.kwargs["creationflags"],0x8)
+        self.assertTrue(popen.call_args.kwargs["close_fds"])
+
+    def test_fixed_guardian_uses_detached_and_unknown_launch_stays_pending(self):
+        with patch.object(job,"_Win",return_value=object()),patch.object(job.subprocess,"Popen",side_effect=OSError("injected pre-launch denial")) as popen:
+            with self.assertRaises(job.NativeFailure):job.crash_case("before-resume")
+        self.assertEqual(popen.call_args.kwargs["creationflags"],0x8)
+        self.assertTrue(popen.call_args.kwargs["close_fds"])
+        self.assertEqual(len(job._PENDING),1)
+
+    def test_ocr_revision_uses_a_new_family_and_keeps_the_previous_fence_guard(self):
+        self.assertEqual(job._SELFTEST_RUNS,job._REPO/".local-codex/native-ocr-budget-command-selftests-v4")
+        self.assertEqual(job._PREVIOUS_SELFTEST_RUNS,job._REPO/".local-codex/native-ui-budget-command-selftests-v3")
+        self.assertNotEqual(job._SELFTEST_RUNS,job._REPO/".local-codex/native-command-selftests")
+        self.assertNotEqual(job._SELFTEST_RUNS,job._REPO/".local-codex/native-detached-command-selftests-v2")
+
+    def test_protocol_reader_uses_polling_not_daemon_thread(self):
+        # The callable owns no asynchronous reader whose stream could be closed
+        # under an unknown blocked read; native pipe drains are tracked separately.
+        self.assertNotIn("Thread",job.bounded_line.__code__.co_names)
+        self.assertIn("PeekNamedPipe",job.bounded_line.__code__.co_names)
+
+    def test_import_does_not_create_pending_jobs_or_launch_processes(self):
+        self.assertEqual(job._PENDING,{})
+        self.assertEqual(job._LIVE,{})
+        self.assertFalse(hasattr(job,"run_command"));self.assertFalse(hasattr(job,"terminate_pid"))
+
+
+class ControlledWindowsNativeTests(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get("AISB_RUN_FIXED_NATIVE_QUALIFICATION")=="1" and os.name=="nt" and ctypes.sizeof(ctypes.c_void_p)==8,"pending physical Windows qualification; explicit model-free native opt-in required")
+    def test_actual_nine_native_lifecycle_and_standard_ocr_budget_cases(self):
+        result=job.run_native_selftests()
+        self.assertTrue(result["passed"]);self.assertEqual(result["expected_native_cases"],9)
+        self.assertEqual(len(result["cases"]),9);self.assertTrue(all(item["passed"] for item in result["cases"]))
+        self.assertEqual(result["limits"],{"process_bytes":1024**3,"job_bytes":2*1024**3,"ui_job_bytes":3*1024**3,"ocr_process_bytes":2*1024**3,"ocr_job_bytes":4*1024**3,"active_limit":32})
+        self.assertFalse(result["portable_pass_claimed"])
+
+
+if __name__=="__main__":unittest.main()

@@ -1,5 +1,5 @@
 import type { AssetReference } from "../../../contracts/asset";
-import type { AssetAuthoringDiagnostic, AssetAuthoringEffectiveSourceSummary, AssetOverrideRecord } from "../../../contracts/asset-authoring";
+import type { AssetAuthoringDiagnostic, AssetAuthoringEffectiveSourceSummary, AssetOverrideRecord, AuthoredAssetRecord, AuthoredAssetRevisionRecord } from "../../../contracts/asset-authoring";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { AssetCustomizationTargetReaderPort, AssetDraftRepositoryPort, AssetOverrideRepositoryPort, AssetRevisionRepositoryPort, AuthoredAssetRepositoryPort } from "../../ports/asset-authoring";
 
@@ -18,20 +18,13 @@ export class WorkspaceAssetAuthoringReadModelService {
     const authored = await this.dependencies.authoredAssetRepository?.findAuthoredAssetByBaseReference(workspaceId, assetReference);
     if (authored) {
       const revision = await this.dependencies.assetRevisionRepository?.readAssetRevisionRecord(workspaceId, authored.authoredAssetId, authored.currentRevisionId);
-      return {
-        targetWorkspaceId: workspaceId,
-        effectiveSourceKind: "workspace-authored",
-        authoredAssetId: authored.authoredAssetId,
-        revisionId: authored.currentRevisionId,
-        revisionLabel: revision?.revision,
-        currentRevision: revision?.revision,
-        assetReference,
-        effectiveAssetReference: authored.assetReference,
-        provenanceKind: authored.provenance.kind,
-        diagnostics: revision ? authored.diagnostics : [...(authored.diagnostics ?? []), diag("asset-authoring-current-revision-missing", "Current authored revision is unavailable.")],
-      };
+      return authoredSummary(workspaceId, assetReference, authored, revision);
     }
 
+    return this.readOverrideSourceSummary(workspaceId, assetReference);
+  }
+
+  private async readOverrideSourceSummary(workspaceId: WorkspaceId, assetReference: AssetReference): Promise<AssetAuthoringEffectiveSourceSummary | undefined> {
     const activeOverride = await this.dependencies.assetOverrideRepository?.findActiveOverrideForTarget(workspaceId, assetReference);
     if (activeOverride) return this.mapOverride(workspaceId, assetReference, activeOverride);
 
@@ -43,6 +36,21 @@ export class WorkspaceAssetAuthoringReadModelService {
     }
 
     return undefined;
+  }
+
+  public async readEffectiveSourceSummaries(workspaceId: WorkspaceId, references: readonly AssetReference[]): Promise<readonly (AssetAuthoringEffectiveSourceSummary | undefined)[]> {
+    if (!Array.isArray(references) || references.length > 250) throw new Error("Invalid bounded source references.");
+    const authoredRepository = this.dependencies.authoredAssetRepository;
+    const revisionRepository = this.dependencies.assetRevisionRepository;
+    if (!authoredRepository?.findAuthoredAssetsByBaseReferences || !revisionRepository?.readAssetRevisionRecords) return Promise.all(references.map(reference => this.readEffectiveSourceSummary(workspaceId, reference)));
+    const authored = await authoredRepository.findAuthoredAssetsByBaseReferences(workspaceId, references);
+    const requestedRevisions = authored.flatMap(record => record ? [{authoredAssetId: record.authoredAssetId, revisionId: record.currentRevisionId}] : []);
+    const revisions = await revisionRepository.readAssetRevisionRecords(workspaceId, requestedRevisions);
+    let revisionIndex = 0;
+    return Promise.all(references.map((reference, index) => {
+      const record = authored[index];
+      return record ? authoredSummary(workspaceId, reference, record, revisions[revisionIndex++]) : this.readOverrideSourceSummary(workspaceId, reference);
+    }));
   }
 
   private mapOverride(workspaceId: WorkspaceId, assetReference: AssetReference, override: AssetOverrideRecord): AssetAuthoringEffectiveSourceSummary {
@@ -80,4 +88,19 @@ function diag(code: string, message: string): AssetAuthoringDiagnostic {
 
 function sameRef(left: AssetReference, right: AssetReference): boolean {
   return left.kind === right.kind && left.id === right.id && (left.version ?? "") === (right.version ?? "");
+}
+
+function authoredSummary(workspaceId: WorkspaceId, assetReference: AssetReference, authored: AuthoredAssetRecord, revision: AuthoredAssetRevisionRecord | undefined): AssetAuthoringEffectiveSourceSummary {
+  return {
+        targetWorkspaceId: workspaceId,
+        effectiveSourceKind: "workspace-authored",
+        authoredAssetId: authored.authoredAssetId,
+        revisionId: authored.currentRevisionId,
+        revisionLabel: revision?.revision,
+        currentRevision: revision?.revision,
+        assetReference,
+        effectiveAssetReference: authored.assetReference,
+        provenanceKind: authored.provenance.kind,
+        diagnostics: revision ? authored.diagnostics : [...(authored.diagnostics ?? []), diag("asset-authoring-current-revision-missing", "Current authored revision is unavailable.")],
+      };
 }

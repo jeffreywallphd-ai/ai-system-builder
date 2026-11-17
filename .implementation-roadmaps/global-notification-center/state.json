@@ -729,6 +729,12 @@
       "recordedAt": "2026-07-30T00:05:25Z",
       "sequence": 33,
       "type": "final-approval-recorded"
+    },
+    {
+      "eventFingerprint": "5c2c942229ed894cbc9bb95a094381fa2a4cb5b2812da7ceb901e77c749b24ff",
+      "recordedAt": "2026-10-22T12:44:41Z",
+      "sequence": 34,
+      "type": "completion-status-normalized"
     }
   ],
   "increments": [
@@ -1192,6 +1198,6 @@
   },
   "schemaVersion": 1,
   "slug": "global-notification-center",
-  "status": "final-approved",
-  "updatedAt": "2026-07-30T00:05:25Z"
+  "status": "completed",
+  "updatedAt": "2026-10-22T12:44:41Z"
 }

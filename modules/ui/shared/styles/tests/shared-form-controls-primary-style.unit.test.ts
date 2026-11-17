@@ -11,7 +11,7 @@ describe("shared form control styles", () => {
         "modules/ui/shared/styles/components/controls.css",
       ),
       "utf8",
-    );
+    ).replace(/\r\n?/g, "\n");
 
     expect(styles).toMatch(
       /:where\(fieldset\)\s*\{[^}]*border: 1px solid var\(--color-border\)/s,

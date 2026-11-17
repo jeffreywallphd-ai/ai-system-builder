@@ -1,0 +1,137 @@
+{
+  "schema_version": "windows-offload-component-evidence-v1",
+  "status": "four-native-component-checks-passed",
+  "scope": "Fresh tiny-file Windows staging component only. This record does not complete a roadmap criterion.",
+  "source_commit": "95aee53b46d32b112fd8ec0e0f2207f770f51ee6",
+  "source_candidate": "987a211d03915acb111bdf433c3a95020ffc675c39779d9781cb8ae6f736c69b",
+  "native_report_schema": "windows-offload-core-native-v2",
+  "run_id": "47bac6b4de524ddd8ff3016d92a9769b",
+  "root_exit_code": 0,
+  "elapsed_ns": 4144535400,
+  "facts": [
+    {
+      "case": "deadline-control",
+      "actual_child_exit": 2,
+      "job_active_zero": true,
+      "parent_handles_retired": true,
+      "parent_elapsed_ns": 3115363800,
+      "core_cleanup": false,
+      "core_uncertainty_retained": false,
+      "core_native_calls": 0,
+      "timer_configured": true,
+      "last_native_phase": "none",
+      "last_native_code": null
+    },
+    {
+      "case": "empty-stage",
+      "actual_child_exit": 0,
+      "job_active_zero": true,
+      "parent_handles_retired": true,
+      "parent_elapsed_ns": 267611700,
+      "core_cleanup": true,
+      "core_uncertainty_retained": false,
+      "core_native_calls": 351,
+      "timer_configured": true,
+      "last_native_phase": "CloseHandle",
+      "last_native_code": 1
+    },
+    {
+      "case": "one-index",
+      "actual_child_exit": 0,
+      "job_active_zero": true,
+      "parent_handles_retired": true,
+      "parent_elapsed_ns": 555288400,
+      "core_cleanup": true,
+      "core_uncertainty_retained": false,
+      "core_native_calls": 394,
+      "timer_configured": true,
+      "last_native_phase": "CloseHandle",
+      "last_native_code": 1
+    },
+    {
+      "case": "namespace-denied",
+      "actual_child_exit": 0,
+      "job_active_zero": true,
+      "parent_handles_retired": true,
+      "parent_elapsed_ns": 180590200,
+      "core_cleanup": false,
+      "core_uncertainty_retained": true,
+      "core_native_calls": 68,
+      "timer_configured": true,
+      "last_native_phase": "NtCreateFile",
+      "last_native_code": 3221225525
+    }
+  ],
+  "source_bindings": {
+    "cached-ctypes": "99cc4ceddb11b9815a017d49f855cdf3a146fadd1393ce9feee710c5697e8e07",
+    "cached-hashlib": "6026fff1a1f311a2ac13f8243905370008a4470d4d762b0bbb117be14b0f14ac",
+    "cached-json": "a98276ec934a8f9c02d53871a9ebd22e4d59feeecc1e75bc29c78d58c19aec67",
+    "cached-subprocess": "0e589ebd82801feac17dc6471215f6e4465616ffe2fb5cf1745116ee102f75a3",
+    "cached-uuid": "c0dd5eded5e7ba66262286f1cb3e7ccb18e16fb96700634d5e9fe6f61f13c3cd",
+    "dev-tools/scripts/qualification/qualify_windows_offload_core.py": "1cf18647a8dd45ddfe04c490a4b796d74904f01a99c496f29c91fec6dd05b0d1",
+    "dev-tools/scripts/qualification/windows_offload_core_fixture.py": "67c492309f06f1a7582a969a92b658e9c78e5bed680e37f69331bc71cb967ed3",
+    "modules/adapters/runtime/python/worker/tasks/local_model_offload.py": "8e382c0d25ff803766ecf3ade67bfa85ddced1558d1b492c22dde3fb1806997f",
+    "modules/adapters/runtime/python/worker/tasks/offload_recovery.py": "ac5c285b78e5a5d3b85828830bb1b0d0eba610f814dc44e457e13d604ab8a364",
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_backend.py": "03a19d1dc5c60eae7c9131a497015bded9a9c3469a78383045c7ed816233da6b",
+    "modules/adapters/runtime/python/worker/tasks/windows_offload_core.py": "08d95fbdacb6eb2f4e6d5f25a6beee838e1ee219f53e040efe12845c956f2a9e",
+    "runtime-ctypes": "093203aee5ea10b4fc572008448c76425430323a11dac2fc5e5271b72f46fba5",
+    "runtime-dll": "1ac15e2224581fc678bbd17728b9aa538d47b891b72c76499ef07e54cd74f151",
+    "runtime-hashlib": "271b00a30d27c3cdd99b7f70962680f8455d3057b3c103f028e2da31141b91ee",
+    "runtime-image": "cce21c0e8710e304273e98ac4b2b0f5aceb639acbcd2343cbaa5c4e81619c45b",
+    "runtime-json": "0439e6546415d4147396afac324beadb7a8dc2c1e2391dcb541fb34c83986d8f",
+    "runtime-os": "8b9a446b736524e5838cd1d84803885b579c1c13c4063c322a82dcc3f3791258",
+    "runtime-subprocess": "d4db1dbd8de9762fba2ddfb05367d974df8bd6596bef78630896f67b89da519e",
+    "runtime-uuid": "a52bb063cfdda51ce75ff222641d00f5af59189b24cfc42042a3603bd12794c1"
+  },
+  "evidence_hashes": {
+    "plan-03.json": "d9b8e87706a8bcb3e16c8b97a30e31994631428432f4701119929cfead4bb5a3",
+    "independent-native-effect-preflight-01.json": "d5c8ff98195a97a5886f665603ead32a5a16bdae68b46c64b1cdc5f377a1f01d",
+    "actual-host-tool-observation-01.json": "2be2fe0f1cb3f53c37bbf382e7eda9d64a06e558770dca630c7e066e0887f0ab",
+    "actual-summary-01.json": "3ea4b2eef95d70ecaa67199ce24df0cab6552969ec5832b82374a8a60ec5eae2",
+    "author-result-check-01.json": "afa5ec6087bd3959b7d053300c1cca845e6dfc443fe986c4a6877d16faa8d41b",
+    "independent-actual-result-audit-01.json": "d6e501854d0e408778c3537488d0b4755e6aba5a359643ce5a1e1e753a9688ac"
+  },
+  "source_work": {
+    "work_id": "truthful-child-timer-reporting",
+    "receipt_digest": "e612aa3fd0bb3e6d42f843fe00578d0e6f2daa7a94358ae2cc956b706970fc43",
+    "review_digest": "dc1fb3ac334946c87838f5a3eaf3c4e2cdef220beec751588a5c71d75e4d4f65",
+    "review_reference_sha256": "dd22dfd35916cc113bae1da4119bdc276b001d15ba757c0c7d9105d5b8fd1491"
+  },
+  "limits": {
+    "total_diagnostic_seconds": 120,
+    "control_child_seconds": 3,
+    "maximum_active_children": 1,
+    "inert_process_commit_bytes": 536870912,
+    "inert_job_commit_bytes": 536870912,
+    "upfront_allocation": false,
+    "model_policy_change": false,
+    "child_report_bytes": 8192,
+    "final_summary_bytes": 32768
+  },
+  "deadline_scope": "Owned diagnostic only; callback delivery needs the Python GIL and host scheduling. Sleep/suspend and indefinitely stuck kernel I/O are not qualified.",
+  "history": {
+    "native1_original_reports_preserved": true,
+    "native1_false_timer_fields_not_qualified": true,
+    "native1_actual_result_audit_sha256": "b71aebde12c11a3e1eb8f201d28f5f84ae75aa13d46936f68ed2e405d5ac072e"
+  },
+  "interpretation": {
+    "timer_configuration": "All four children acknowledged timer configuration. Only the dedicated control proves actual timer delivery and observed child exit.",
+    "positive_cases": "The empty and two-byte index cases confirmed Core cleanup and handle closure.",
+    "expected_denial": "An existing namespace produced the exact expected collision. Core uncertainty and files were retained; parent-owned process retirement was verified separately.",
+    "sampled_os_error": "A last OS error value is not itself failure after a successful return. Native operation results and each full case oracle determine the recorded outcome."
+  },
+  "pending_agent_work": [
+    "Production finite native-operation boundary",
+    "Protected durable disk accounting",
+    "Exact worker shutdown, crash handling and recovery",
+    "Retained-tree protection and supported staging inventories",
+    "Actual optional offload resource and lifecycle delivery",
+    "Final shared system test campaign after feature work"
+  ],
+  "accepted_model_accuracy_reopened": false,
+  "accepted_ocr_reopened": false,
+  "old_staging_accessed": false,
+  "model_started": false,
+  "production_composed": false,
+  "parent_qualification_granted": false
+}

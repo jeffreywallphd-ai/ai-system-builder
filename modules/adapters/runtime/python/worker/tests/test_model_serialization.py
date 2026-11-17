@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import tempfile
+import unittest
 
 from modules.adapters.runtime.python.worker.tasks.model_serialization import save_adapter_pretrained, save_full_model_pretrained
 
@@ -37,22 +39,27 @@ class _FakeTokenizer:
         (out / "tokenizer.json").write_text("{}", encoding="utf-8")
 
 
-def test_save_full_model_writes_sharded_index(tmp_path: Path) -> None:
-    result = save_full_model_pretrained(_FakeModel(), _FakeTokenizer(), tmp_path, max_shard_size="1KB")
-    assert result["serializationFormat"] == "sharded-safetensors"
-    assert (tmp_path / "model.safetensors.index.json").exists()
+class ModelSerializationTests(unittest.TestCase):
+    def test_save_full_model_writes_sharded_index(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            tmp_path = Path(directory)
+            result = save_full_model_pretrained(_FakeModel(), _FakeTokenizer(), tmp_path, max_shard_size="1KB")
+            self.assertEqual(result["serializationFormat"], "sharded-safetensors")
+            self.assertTrue((tmp_path / "model.safetensors.index.json").exists())
+
+    def test_save_adapter_writes_adapter_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            tmp_path = Path(directory)
+            result = save_adapter_pretrained(
+                _FakeAdapterModel(), _FakeTokenizer(), tmp_path, base_model_id="org/base",
+            )
+            self.assertEqual(result["serializationFormat"], "adapter-safetensors")
+            self.assertTrue((tmp_path / "adapter_model.safetensors").exists())
+            self.assertTrue((tmp_path / "adapter_config.json").exists())
+            config = json.loads((tmp_path / "adapter_config.json").read_text(encoding="utf-8"))
+            self.assertEqual(config["base_model_name_or_path"], "org/base")
+            self.assertNotIn("private", json.dumps(config))
 
 
-def test_save_adapter_writes_adapter_files(tmp_path: Path) -> None:
-    result = save_adapter_pretrained(
-        _FakeAdapterModel(),
-        _FakeTokenizer(),
-        tmp_path,
-        base_model_id="org/base",
-    )
-    assert result["serializationFormat"] == "adapter-safetensors"
-    assert (tmp_path / "adapter_model.safetensors").exists()
-    assert (tmp_path / "adapter_config.json").exists()
-    config = json.loads((tmp_path / "adapter_config.json").read_text(encoding="utf-8"))
-    assert config["base_model_name_or_path"] == "org/base"
-    assert "private" not in json.dumps(config)
+if __name__ == "__main__":
+    unittest.main()

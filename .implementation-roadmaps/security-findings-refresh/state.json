@@ -1,0 +1,1729 @@
+{
+  "blockerReclassifications": [
+    {
+      "assignment": {
+        "actionLocation": "Security roadmap file-and-workspace-authority native file-operation implementation",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "Supported-host native concurrency and cache-compatibility evidence plus exact-candidate independent review satisfy the unchanged owning security criteria.",
+        "requiredAction": "Finish and independently qualify approved identity-preserving native file operations and atomic source-record binding. Keep unsafe file effects disabled; preserve authorization, provenance, concurrency and supported-cache checks.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "model-file-effect-native-qualification",
+      "originalBlocker": {
+        "id": "model-file-effect-native-qualification",
+        "kind": "technical",
+        "recordedAt": "2026-10-21T03:35:01Z",
+        "requiredAction": "Keep file effects fail-closed until a qualified identity-preserving host primitive and atomic provenance binding are available. Preserve all findings and current partial evidence; continue the independent functionality roadmap as requested.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "Independent review found unresolved host file-effect concurrency and supported-cache compatibility issues. Authentication, scoped revisions, library creation and source staging have focused passing regressions; model file-effect completion is not claimed."
+      },
+      "originalDigest": "16e901ea8b3f78327aac6c49c2c3629e19b0cb906530ef3eb3c693525f388041",
+      "reason": "Approved implementation and physical qualification work remains. No new human permission, privilege or unavailable named host has been established by this record.",
+      "recordedAt": "2026-10-23T18:49:25Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "Security roadmap approved native file-control design and qualification fixtures",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "Current supported-host evidence and independent review prove protected ownership, publication, concurrency and supported model-cache behavior required by the unchanged security criteria.",
+        "requiredAction": "Implement and independently qualify the already approved exclusive-ownership/native design. Keep all unproven physical effects pending and preserve supported model-cache workflows.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "approved-native-design-qualification-pending",
+      "originalBlocker": {
+        "id": "approved-native-design-qualification-pending",
+        "kind": "technical",
+        "recordedAt": "2026-10-21T11:12:44Z",
+        "requiredAction": "Implement and independently review the selected exclusive-ownership/native design; retain unavailable physical effects and pending qualification until actual supported-host evidence is available. Continue independent bounded controls meanwhile.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "Native design direction is approved, but the identity-preserving implementation, protected ownership publication and supported-cache positive/race qualification are not yet demonstrated. The original native blocker remains unresolved."
+      },
+      "originalDigest": "8e9e973b920e4913a55a1e3bfaa71c96eaf91a157e60005ac3b85f0981dafecb",
+      "reason": "The design is already approved. Missing implementation and qualification do not themselves require human intervention. The earlier unresolved technical concern and all failed evidence remain.",
+      "recordedAt": "2026-10-23T18:49:25Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed",
+        "actionOwner": "human",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.",
+        "requiredAction": "Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadmap owners.",
+        "responsibleRole": "Repository owner"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "legacy-authority-independent-review-unavailable",
+      "originalBlocker": {
+        "id": "legacy-authority-independent-review-unavailable",
+        "kind": "dependency",
+        "recordedAt": "2026-10-22T16:25:38Z",
+        "requiredAction": "Obtain an allowed independent review and fresh exact-candidate checks for the legacy authorization component. Do not retry the blocked review through another mechanism or mark author tests as independent review. Continue unrelated permitted work and preserve native/effect/record/process qualification requirements.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "Legacy Assets authorization fixes passed their four registered checks and desktop/server type/build checks, but the separately invoked review was stopped before review by an external cybersecurity restriction. No reviewer identity, acceptance or parent qualification has been fabricated. Existing native identity/effect blockers remain unresolved."
+      },
+      "originalDigest": "32148fa707a8621462350eb77558d96dcd2b7050fa71ec9fb8e1a16c3b2de6b0",
+      "reason": "An independent security review is needed. The repository owner must arrange a permitted review.",
+      "recordedAt": "2026-10-23T18:49:25Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "Existing security-legacy-assets-workspace-authority work; Security file-and-workspace-authority/security-impact-reviewed and Assets production-qualification/security-review",
+        "actionOwner": "agent",
+        "authorityRef": "user-automated-only-security-review-no-owner-assessment",
+        "completionCondition": "Required current security checks and separately permitted independent review validate the actual candidate. An unperformed restricted assessment remains pending; this responsibility change cannot qualify or resolve it.",
+        "requiredAction": "Continue permitted automated security checks and remediate their findings. Preserve the restricted legacy Assets assessment as unperformed; do not retry it through another agent, tool or route. Reconcile only actually satisfied technical evidence without inventing independent review.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-automated-only-security-review-no-owner-assessment",
+      "blockerId": "legacy-authority-independent-review-unavailable",
+      "originalBlocker": {
+        "actionLocation": "Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed",
+        "actionOwner": "human",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.",
+        "id": "legacy-authority-independent-review-unavailable",
+        "kind": "dependency",
+        "recordedAt": "2026-10-22T16:25:38Z",
+        "requiredAction": "Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadmap owners.",
+        "resolution": null,
+        "resolvedAt": null,
+        "responsibleRole": "Repository owner",
+        "status": "open",
+        "summary": "Legacy Assets authorization fixes passed their four registered checks and desktop/server type/build checks, but the separately invoked review was stopped before review by an external cybersecurity restriction. No reviewer identity, acceptance or parent qualification has been fabricated. Existing native identity/effect blockers remain unresolved."
+      },
+      "originalDigest": "7031895059b25dd96e48d3318a0f3672c152ed1525851cbe1366cb906dd73e83",
+      "reason": "The user explicitly declines conducting or arranging an owner security review and requests only permitted automated work. Remove the owner action request without changing technical acceptance, evidence or the restriction.",
+      "recordedAt": "2026-10-24T06:06:46Z",
+      "revisedSummary": "The repository owner is not required to conduct or arrange a security review. Permitted automated checks and remediation remain agent-owned. The shared independent assessment of the existing legacy Assets authorization change is still unperformed because that review was restricted. Existing test results remain historical evidence; no separate reviewer acceptance or parent qualification is invented."
+    }
+  ],
+  "blockers": [
+    {
+      "actionLocation": "Security roadmap file-and-workspace-authority native file-operation implementation",
+      "actionOwner": "agent",
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "completionCondition": "Supported-host native concurrency and cache-compatibility evidence plus exact-candidate independent review satisfy the unchanged owning security criteria.",
+      "id": "model-file-effect-native-qualification",
+      "kind": "technical",
+      "recordedAt": "2026-10-21T03:35:01Z",
+      "requiredAction": "Finish and independently qualify approved identity-preserving native file operations and atomic source-record binding. Keep unsafe file effects disabled; preserve authorization, provenance, concurrency and supported-cache checks.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Coding agent",
+      "status": "open",
+      "summary": "Independent review found unresolved host file-effect concurrency and supported-cache compatibility issues. Authentication, scoped revisions, library creation and source staging have focused passing regressions; model file-effect completion is not claimed."
+    },
+    {
+      "actionLocation": "Security roadmap approved native file-control design and qualification fixtures",
+      "actionOwner": "agent",
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "completionCondition": "Current supported-host evidence and independent review prove protected ownership, publication, concurrency and supported model-cache behavior required by the unchanged security criteria.",
+      "id": "approved-native-design-qualification-pending",
+      "kind": "technical",
+      "recordedAt": "2026-10-21T11:12:44Z",
+      "requiredAction": "Implement and independently qualify the already approved exclusive-ownership/native design. Keep all unproven physical effects pending and preserve supported model-cache workflows.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Coding agent",
+      "status": "open",
+      "summary": "Native design direction is approved, but the identity-preserving implementation, protected ownership publication and supported-cache positive/race qualification are not yet demonstrated. The original native blocker remains unresolved."
+    },
+    {
+      "actionLocation": "Existing security-legacy-assets-workspace-authority work; Security file-and-workspace-authority/security-impact-reviewed and Assets production-qualification/security-review",
+      "actionOwner": "agent",
+      "authorityRef": "user-automated-only-security-review-no-owner-assessment",
+      "completionCondition": "Required current security checks and separately permitted independent review validate the actual candidate. An unperformed restricted assessment remains pending; this responsibility change cannot qualify or resolve it.",
+      "id": "legacy-authority-independent-review-unavailable",
+      "kind": "dependency",
+      "recordedAt": "2026-10-22T16:25:38Z",
+      "requiredAction": "Continue permitted automated security checks and remediate their findings. Preserve the restricted legacy Assets assessment as unperformed; do not retry it through another agent, tool or route. Reconcile only actually satisfied technical evidence without inventing independent review.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Coding agent",
+      "status": "open",
+      "summary": "The repository owner is not required to conduct or arrange a security review. Permitted automated checks and remediation remain agent-owned. The shared independent assessment of the existing legacy Assets authorization change is still unperformed because that review was restricted. Existing test results remain historical evidence; no separate reviewer acceptance or parent qualification is invented."
+    }
+  ],
+  "chunks": [
+    {
+      "areas": [
+        "Security authentication service",
+        "Asset revision and User Library persistence",
+        "Legacy roadmap handoff"
+      ],
+      "chunkId": "legacy-auth-and-scoped-state",
+      "completedAt": "2026-10-21T02:52:35Z",
+      "criteriaIds": [
+        "legacy-history-preserved",
+        "authentication-result-invariant",
+        "scoped-state-integrity"
+      ],
+      "documentation": [
+        "Owning security and persistence architecture updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "file-and-workspace-authority-legacy-auth-and-scoped-state",
+      "incrementId": "file-and-workspace-authority",
+      "summary": "Frozen legacy remaining work without modifying its completed prefix. Reject malformed/anonymous verifier results before success audit, retain same-id workspace revisions, and atomically reject library target/source collisions.",
+      "tests": [
+        "Red regressions reproduced all three defects; focused authentication, revision, library and promotion tests now pass."
+      ],
+      "title": "Freeze legacy ownership and protect authenticated scoped state"
+    },
+    {
+      "areas": [
+        "Dataset source staging",
+        "Scoped binding resolution and remote localization"
+      ],
+      "chunkId": "workspace-bound-dataset-staging",
+      "completedAt": "2026-10-21T02:52:36Z",
+      "criteriaIds": [
+        "dataset-source-isolation"
+      ],
+      "documentation": [
+        "Owning security and persistence architecture updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "file-and-workspace-authority-workspace-bound-dataset-staging",
+      "incrementId": "file-and-workspace-authority",
+      "summary": "Removed raw-key fallback and denied unbound/conflicting workspace sources before reads. Remote localization now allocates immutable generated keys and preserves file format metadata.",
+      "tests": [
+        "Focused preparation/quality/version tests passed; real object-adapter integration proves equal source ids in separate workspaces retain distinct content."
+      ],
+      "title": "Stage only workspace-authorized dataset sources"
+    }
+  ],
+  "completion": null,
+  "completionSuite": "all",
+  "createdAt": "2026-10-21T02:28:56Z",
+  "currentIncrementId": "file-and-workspace-authority",
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly selected: Create a governed successor roadmap (Recommended): preserve all history, reconcile unresolved work and validated new findings, and use the revised verification workflow. This selection approves the planning design only; the user requested no implementation and has not approved the completed roadmap.",
+      "approvedAt": "2026-10-21T02:29:02Z",
+      "approvedFingerprint": "a41d4dcffa709734a72a0663d4180116db94a6084c8a8adca51bbc59141eab93",
+      "context": "The legacy security roadmap is executing increment 5 of 6 after four completed increments. It predates governed receipts. The new contributor guide prescribes a successor for adopting control-plane-v1; changing active legacy scope directly would need approval reconciliation and would retain legacy completion semantics.",
+      "id": "security-remediation-continuity",
+      "options": [
+        {
+          "consequences": [
+            "Preserve the four completed increments and the incomplete fifth/pending sixth exactly.",
+            "Do not transfer old approvals or claim incomplete work complete.",
+            "After complete-roadmap approval, record the legacy handoff and freeze parallel execution, then use new receipts, criteria review and overall all-suite qualification."
+          ],
+          "id": "governed-successor",
+          "label": "Create a governed successor roadmap",
+          "recommended": true,
+          "summary": "Preserve all history, reconcile unresolved work and validated new findings, and use the revised verification workflow.",
+          "tradeoffs": [
+            "Requires one current-source rebaseline and an explicit handoff from the unfinished legacy increment.",
+            "Provides one future execution owner and current executed evidence without retroactively relabeling old declarations."
+          ]
+        },
+        {
+          "consequences": [
+            "Preserve completed increments and completed chunks.",
+            "Obtain renewed scope approval before changing active or pending definitions.",
+            "Use explicit helper checks where possible but keep the historical evidence limitation visible."
+          ],
+          "id": "amend-legacy",
+          "label": "Amend and continue the legacy roadmap",
+          "recommended": false,
+          "summary": "Keep the existing roadmap as owner, reconcile its active increment and append or revise remaining work under renewed approval.",
+          "tradeoffs": [
+            "Less artifact migration, but active-increment scope and old approval validity must be reconciled.",
+            "Retains declarative legacy engine completion semantics; it cannot transparently acquire the new evidence policy."
+          ]
+        }
+      ],
+      "proposalFingerprint": "a41d4dcffa709734a72a0663d4180116db94a6084c8a8adca51bbc59141eab93",
+      "question": "How should current findings and unresolved legacy work be governed without rewriting completed history?",
+      "selectedOptionId": "governed-successor",
+      "status": "approved",
+      "title": "Security remediation continuity and evidence policy"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:41Z",
+      "approvedFingerprint": "6887e390e61902668fc34526c500e78df57c05c8111692b6adad75ef5e6f56f4",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "native-model-effects",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Qualified identity-preserving native adapter; Windows first; reveal independently qualified.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Keep all physical model effects unavailable indefinitely.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "6887e390e61902668fc34526c500e78df57c05c8111692b6adad75ef5e6f56f4",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Native model file effects"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:41Z",
+      "approvedFingerprint": "fdf0122bcfe78eb8279a451a8db58b5c211f9cf71bebe5c54059b78c285b153d",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "exclusive-model-ownership",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Delete only exclusively application-owned content with protected provenance and crash-consistent publication; external and shared caches remain reference-only.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Permit mutation of shared provider cache trees.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "fdf0122bcfe78eb8279a451a8db58b5c211f9cf71bebe5c54059b78c285b153d",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Model ownership and shared caches"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:42Z",
+      "approvedFingerprint": "876f9e29805e296d15888d175b3d553d6108487aa98a5c47a0d812f7086807a2",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "aggregate-resource-admission",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Per-principal admission and organization aggregate storage/concurrency reservations with streaming enforcement and recovery reconciliation.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Only per-request byte and concurrency limits.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "876f9e29805e296d15888d175b3d553d6108487aa98a5c47a0d812f7086807a2",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Aggregate resource budgets"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:42Z",
+      "approvedFingerprint": "04c8c6cdd0567734b678d681c7e11fcacd8bf0baef39697573cd739eafebfabd",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "session-diagnostics",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Session-only outcomes by default; optional persistence requires private bounded storage with explicit size and retention limits; audit stays separate.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Automatic shared-temporary-directory persistence.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "04c8c6cdd0567734b678d681c7e11fcacd8bf0baef39697573cd739eafebfabd",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Diagnostic persistence"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:42Z",
+      "approvedFingerprint": "bbebc7dfde0643601a08147c6fd601f4e5a8ba97eb28ed3b574252782b670b56",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "opaque-image-identities",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Persisted random opaque identifiers with indexed owner-scoped lookup and explicit legacy migration.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Source-derived public identifiers.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "bbebc7dfde0643601a08147c6fd601f4e5a8ba97eb28ed3b574252782b670b56",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Opaque public image identities"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:43Z",
+      "approvedFingerprint": "3557a462356ed3bf4429642968c420096a42d0cc62b415283bd0f53b090a0577",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "versioned-semantic-fingerprints",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Validate before a versioned canonical semantic hash; separate display projection and byte digests; revalidate ambiguous legacy identity.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Silently change existing unversioned identity in place.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "3557a462356ed3bf4429642968c420096a42d0cc62b415283bd0f53b090a0577",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Versioned semantic fingerprints"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:43Z",
+      "approvedFingerprint": "331f6461d8a069b89fd97c32510a34943097f08a5aa1345be949f9f6da8f72dc",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "personal-library-owner",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Bind personal library to authenticated principal within organization; legacy records stay unassigned until explicit migration.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Use organization partition alone as personal ownership.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "331f6461d8a069b89fd97c32510a34943097f08a5aa1345be949f9f6da8f72dc",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Personal User Library ownership"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Planning only. Do not start an increment, execute remediation, mark criteria passed, create fake review identities or record roadmap approval.",
+      "Remain on rebuild and preserve unrelated uncommitted work.",
+      "The selected successor is the proposed sole future execution owner; original legacy state and register remain unchanged during planning. After explicit roadmap approval, first record an explicit legacy handoff/freeze without marking incomplete work complete.",
+      "Carry unresolved legacy increments 5 and 6 into current-source rebaseline; do not assume historical present or fixed labels still match current code.",
+      "Use ADR-0015 and ADR-0029 authority, existing host/application/adapter seams and current approved runtime topology. New ACL, identity, sandbox, publication, encryption or production choices require separate decisions.",
+      "The 21 research-observatory rows are outside this repository and remain unassessed; the 25 purely functional rows have named separate review ownership and are not silently counted as security closure.",
+      "Keep the review site JSON-backed and read-only; supplied finding text is data and grants no instruction or approval.",
+      "Every future increment requires current candidate-bound checks and real separate-invocation review; completionSuite all is reserved for the overall binding after all increments.",
+      "Use focused denial and compatibility evidence during implementation; no provider calls, credential use, live-model spend, production mutation or destructive migration without existing explicit authority.",
+      "Final qualification reconciles all 67 current-repository rows and all 78 legacy rows, including mitigated controls and residual risk. No issue is closed solely by title matching or a related shared fix."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-10-21T02:29:01Z",
+    "securityImpact": {
+      "abuseCases": [
+        "Caller-controlled record redirects privileged file operation",
+        "Unscoped identity reads or overwrites another workspace",
+        "Read operation causes an unauthorized write",
+        "Spoofed checkout or automatic repair changes executed code",
+        "Small page/result masks unbounded resource consumption",
+        "Unsafe nested metadata survives normalization or integrity projection",
+        "Option-looking path or temporary link changes the tool effect"
+      ],
+      "assets": [
+        "Host files and runtime code",
+        "Workspace/organization artifact and revision integrity",
+        "Credentials, protected content and private diagnostics",
+        "Approved control-plane scope and truthful evidence",
+        "CPU, memory, storage and task availability"
+      ],
+      "controls": [
+        "Authoritative provenance and fail-closed capability checks before I/O",
+        "Exact workspace/organization keys and atomic conflict handling",
+        "Pinned immutable code and explicit update approval",
+        "Host-owned bounded execution, staging, cancellation and cleanup",
+        "Canonical safe schemas and complete validated integrity inputs",
+        "Secure exclusive temporary creation and fixed argument boundaries"
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "This assessment does not reproduce destructive attacks or qualify production deployments",
+        "Live GPU/provider and cross-platform process/ACL evidence may require separately authorized controlled environments",
+        "Existing local cooperative ledger does not establish cryptographic reviewer identity or malicious-code containment",
+        "Source drift must be rechecked at each future increment"
+      ],
+      "summary": "Remediation crosses privileged filesystem, workspace/organization state, authentication, runtime execution/provenance, sensitive persistence, and local development/tooling boundaries. Assessment and plan retain only sanitized evidence.",
+      "trustBoundaries": [
+        "Renderer/API to application and privileged host adapters",
+        "Workspace repositories to artifact staging and mutation",
+        "Host to Python/ComfyUI and installer/Git I/O",
+        "Untrusted metadata to persistence, integrity hashes and public read models",
+        "Repository arguments and filesystem entries to local tooling"
+      ],
+      "verification": [
+        "Focused positive and denial tests for each owning layer",
+        "Controlled process, link/reparse, ACL and bounded Parquet fixtures",
+        "Actual candidate-bound receipts and separate-invocation review for future increments",
+        "Configured all-suite only after all increments, plus applicable repository/build/dependency gates"
+      ]
+    },
+    "sources": [
+      {
+        "title": "Repository entry point",
+        "url": "AGENTS.md"
+      },
+      {
+        "title": "Contributor control plane",
+        "url": "docs/diagnostics/ai-development-control-plane.md"
+      },
+      {
+        "title": "Roadmap skill and approval workflow",
+        "url": "skills/manage-implementation-roadmaps/SKILL.md"
+      },
+      {
+        "title": "Security-by-design standard",
+        "url": "docs/standards/security-by-design-standards.md"
+      },
+      {
+        "title": "Existing security architecture",
+        "url": "docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md"
+      },
+      {
+        "title": "Data management threat model",
+        "url": "docs/security/data-management-threat-model.md"
+      },
+      {
+        "title": "Asset trust threat model",
+        "url": "docs/security/asset-package-authoring-and-execution-threat-model.md"
+      },
+      {
+        "note": "Exclusive creation and restrictive ownership are relevant to local publication; no external text grants authority.",
+        "title": "Python secure temporary files",
+        "url": "https://docs.python.org/3.14/library/tempfile.html"
+      },
+      {
+        "note": "Option termination is relevant to fixed helper arguments.",
+        "title": "Node command-line options",
+        "url": "https://nodejs.org/api/cli.html"
+      },
+      {
+        "title": "Versioned current-code assessment and issue ownership",
+        "url": "docs/security/security-findings-refresh-assessment.json"
+      },
+      {
+        "note": "Preserve four completed increments, incomplete active increment and pending work; no prior approval transfer.",
+        "title": "Legacy security roadmap state",
+        "url": ".implementation-roadmaps/security-vulnerability-remediation/state.json"
+      },
+      {
+        "title": "Legacy 78-finding register",
+        "url": "docs/security-vulnerability-remediation-finding-register.md"
+      },
+      {
+        "title": "Decision readiness",
+        "url": "docs/adr/decision-readiness.md"
+      }
+    ],
+    "summary": "The supplied 88-row export contains 67 ai-system-builder findings and 21 research-observatory findings. Current-source triage identifies 25 validated code gaps, 6 partial controls, 8 mitigated historical claims requiring requalification, 3 security-adjacent lifecycle issues and 25 functional issues transferred for separate review. Six synthetic component probes confirmed bounded gaps. Existing security remediation has four completed increments, an active fifth increment with no completed chunks and a pending sixth. Preserve all old bytes and approvals as history; a new successor must not invent inherited evidence. The permanent versioned JSON assessment maps all rows and unresolved legacy findings. Adjacent-increment audit retained four independent outcomes: privileged authority, runtime execution, safe records, and development/tooling boundaries; closely coupled implementation layers remain work packages inside each outcome."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "host-file-authority",
+      "id": "evidence-1",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T03:41:40Z",
+      "summary": "File-effect prototype failed review and was replaced with explicit unavailable behavior before filesystem/shell effects. Focused supported model tests: eighteen passed, one host qualification skipped. Desktop type check passes. Registered profile remains failed, so no increment or roadmap completion is claimed. A qualified native primitive, atomic provenance and supported-cache positive/concurrency qualification remain pending."
+    },
+    {
+      "artifact": "docs/security/security-authority-local-feature-evidence.json",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test --test-concurrency=1 --test-reporter=tap",
+      "criterionId": "authentication-result-invariant",
+      "id": "evidence-2",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:10:07Z",
+      "summary": "Two tests passed. Malformed, anonymous, and unauthenticated verifier results are denied before a success audit. Valid authenticated identity is preserved and the audit does not include the token."
+    },
+    {
+      "artifact": "docs/security/security-authority-local-feature-evidence.json",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test --test-concurrency=1 --test-reporter=tap",
+      "criterionId": "scoped-state-integrity",
+      "id": "evidence-3",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:10:08Z",
+      "summary": "Eighteen related tests passed. The same asset and revision IDs remain separate across workspaces, and concurrent library writes keep the existing record and report a conflict."
+    },
+    {
+      "artifact": "docs/security/security-authority-local-feature-evidence.json",
+      "command": null,
+      "criterionId": "legacy-history-preserved",
+      "id": "evidence-4",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:10:09Z",
+      "summary": "Validated the frozen legacy roadmap against its pre-handoff record. All four completed increments, 12 original chunks, 15 evidence rows and original approval remain intact. The 10 unresolved criteria have exactly one primary owner each in the approved successor. No completion or approval transferred."
+    },
+    {
+      "artifact": "modules/adapters/storage/filesystem/artifact-store/tests/filesystem-organization-isolation.integration.test.ts",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test --test-concurrency=1 --test-reporter=tap -- modules/adapters/storage/filesystem/artifact-store/tests/filesystem-organization-isolation.integration.test.ts modules/application/use-cases/tests/prepare-training-dataset-from-artifacts.use-case.unit.test.ts modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts modules/adapters/transport/api-express/dataset-preparation/tests/register-dataset-preparation-api-routes.unit.test.ts modules/adapters/storage/filesystem/artifact-catalog/tests/local-artifact-storage-binding.adapter.unit.test.ts",
+      "criterionId": "dataset-source-isolation",
+      "id": "evidence-5",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:25:32Z",
+      "summary": "Passed 37 focused tests. Two organizations using the same workspace and source IDs staged only their own files. A missing or foreign binding stopped the request before a storage read, provider call or worker start. Valid selected sources still staged. The tests used synthetic data and did not contact a real provider or start a model."
+    },
+    {
+      "artifact": "docs/security/model-download-route-authority-evidence.json",
+      "command": "python dev-tools/helpers/run_focused_checks.py --profile model-download-ownership",
+      "criterionId": "write-owned-model-completion",
+      "id": "evidence-6",
+      "incrementId": "file-and-workspace-authority",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T21:27:46Z",
+      "summary": "Read and list leave model records unchanged. Only the original organization, workspace and principal with write permission can complete a download. Concurrent retries write one record. A fresh controller rejects stale requests after reopening a local sample registry."
+    }
+  ],
+  "evidencePolicy": "control-plane-v1",
+  "feedback": [
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "continue-independent-security-fixes",
+      "impact": "later-increment",
+      "nextAction": "After releasing the current checkout claim, implement bounded independent security fixes with exact scope, denial tests, current execution receipts and separate technical reviews. Reverify complete original increments when the blocked dependency can legitimately close.",
+      "recordedAt": "2026-10-21T06:30:13Z",
+      "summary": "The user explicitly directed continuing available work when an individual security item is blocked. Preserve the native model file-effect blocker, all acceptance criteria and original increment dependencies. Discrete established independent fixes may proceed serially as separately claimed and reviewed lightweight work, with their parent finding/increment recorded; these records do not complete a later roadmap increment or qualify missing controlled evidence.",
+      "targetIncrementId": null
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "authorized-dependency-audit-vulnerabilities",
+      "impact": "within-increment",
+      "nextAction": "Continue independent available work and triage smallest compatible locked dependency repairs. Re-run required audit and focused affected-tool checks; source/owner-bound final qualification must include the actual outcome.",
+      "recordedAt": "2026-10-21T09:36:13Z",
+      "summary": "Explicit registry payload authorization received. Required read-only audit now executed and failed:2runtime advisories(1critical/1moderate),52full-tree advisories(4critical/37high/11moderate). Previous pending transmission reason is resolved; dependency remediation/current re-audit is required. No gate suppressed and unavailable controlled qualification remains pending.",
+      "targetIncrementId": "development-and-tooling-security"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "compatible-dependency-patch-audit-result",
+      "impact": "within-increment",
+      "nextAction": "Continue supported Vitest/Forge compatibility migrations; keep unpatched matcher supplier choice pending explicit direction. Re-run unchanged audit/SBOM and affected compatibility checks, then current final owner evidence.",
+      "recordedAt": "2026-10-21T09:52:55Z",
+      "summary": "Compatible official patch refresh and focused tooling/architecture/docs/agent gates pass; server and thin-client builds pass. Actual authorized audit now reports0runtime advisories and31full-tree affected packages(2critical/24high/5moderate). Failed baseline retained. Full dependency gate remains failed, not an unavailable controlled check.",
+      "targetIncrementId": "development-and-tooling-security"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "retain-original-matcher-supplier",
+      "impact": "within-increment",
+      "nextAction": "Preserve original supplier and unchanged zero-advisory gate. Implement and verify official toolchain migrations; report actual residual failed audit separately from unavailable controlled qualification.",
+      "recordedAt": "2026-10-21T09:55:16Z",
+      "summary": "User explicitly retained the original matcher supplier and directed that tooling qualification remain pending. Do not adopt the reviewed third-party derivative or suppress the advisory. Continue official compatible patches/migrations and other independent work.",
+      "targetIncrementId": "development-and-tooling-security"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "official-toolchain-integration-result",
+      "impact": "within-increment",
+      "nextAction": "Keep matcher qualification pending as directed, preserve the failing zero-advisory gate and independent local review. Continue diagnostics minimization and remaining available functionality/security evidence; no unavailable controlled or native qualification becomes a pass.",
+      "recordedAt": "2026-10-21T10:07:41Z",
+      "summary": "Official Forge8/Vitest4 integration and explicit CJS/ESM adapter export correction pass focused tooling, documentation, architecture and agent checks. Current Windows packaged desktop browse/save/reopen smoke passes1of1. Failed resolver, stale tmp expectations and initial ESM package attempt remain retained. Actual audit reports0runtime advisories,7high full-tree affected package entries,0critical/moderate; all remaining advisories are through the retained original matcher chain.",
+      "targetIncrementId": "development-and-tooling-security"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "reviewed-runtime-outcomes-and-smoke-binding",
+      "impact": "within-increment",
+      "nextAction": "Retain original supplier per explicit user decision, failed dependency gate, private-directory/native/retention and all15controlled qualification gaps. Continue current evidence reconciliation, bounded authority-control review and final functionality aggregate; no scanner or roadmap closure.",
+      "recordedAt": "2026-10-21T10:23:01Z",
+      "summary": "Bounded R40 persisted-outcome minimization passes22focused tests,28independent synthetic persistence probes and desktop types. Runtime/docs/agent/architecture checks pass, but receipt05a9b6261642c490e2ca14de86be1fc763898d2959fbc81a65612c5f58cca3e4 remains unqualified on7high original-matcher entries. Independent review found and corrected root dependency omission in smoke identity; fresh desktop1of1 smoke passed, bounded identity work completed with actual independent review. Earlier failures and observations remain retained. Subsequent runtime edits make that smoke a historical observation.",
+      "targetIncrementId": "runtime-execution-integrity"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "current-authority-review-and-paired-host-replay",
+      "impact": "within-increment",
+      "nextAction": "Run final functionality all-suite and repository gates against frozen source. Retain original supplier, failed7high toolchain entries, native/durable/owner policy and15controlled gaps; no parent/security/scanner or final roadmap closure.",
+      "recordedAt": "2026-10-21T10:36:24Z",
+      "summary": "Current authority work independently accepts7explicit local criteria on532890f8.../c9e34a9c...; parentI1native qualification remains blocked. Review reproduced a same-workspace different download task id causing projection/registration. Bounded exact-ID/type/workspace/list/cancel correction is completed on28d8f188.../e61d8036..., with retained red probe and14passing regressions. Current two-host synthetic browse/save/reopen replay passes2of2; evidence artifacts/qualification/visual-composer/runs/2026-10-21t10-31-32-600z-7bfd9df7/evidence.json, digest a405ee5d2ca3cc1deabfd74248fba02138eca6862342dd0b44bb807e0457e479, source source.5c7fcd761c168bfcaf81cde51b0bd24c66157e0bbdc1f1399837d030a2c87869.",
+      "targetIncrementId": "file-and-workspace-authority"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "reviewed-final-source-checkpoint-readiness",
+      "impact": "within-increment",
+      "nextAction": "Preserve reviewed implementation as a rebuild checkpoint, original supplier and failed zero-advisory gate. Keep native/durable/policy-owner gaps and15controlled criteria pending; both roadmaps remain open and completion-conditioned main promotion remains pending. Earlier paired-host2of2 observation is historical after test/profile edits. Released precursor work and failed qualification records remain historical; use newest canonical overall binding and actual freshness for current evidence.",
+      "recordedAt": "2026-10-21T10:56:20Z",
+      "summary": "Corrected final all-suite and7nondependency gates pass on source-stable receipt079a16a3c8eef412d8530306a8e154aaab2dfe976ad873483b60db1657245336 with actual independent nonqualifying local review. Standard3282Node+433Vitest and E2E92Node+3Vitest pass;4Node skips retained. AI command0 under offline settings does not qualify real models. Previous6fixture failures and all older failed/passing history remain preserved; exact17test fixture correction independently accepted without weakening actions or changing runtime/global APIs. Exact final audit observation matches receipt:0runtime and7high toolchain affected entries.",
+      "targetIncrementId": "file-and-workspace-authority"
+    },
+    {
+      "category": "decision",
+      "disposition": "accepted",
+      "id": "approved-native-and-policy-resumption",
+      "impact": "later-increment",
+      "nextAction": "Implement the selected controls, maintain current-source receipts and independent review; complete roadmaps and promote main only when every required gate actually qualifies.",
+      "recordedAt": "2026-10-21T11:12:43Z",
+      "summary": "The seven recommended native/policy options are explicitly approved. Record implementation in bounded separately reviewed work while preserving parent increment dependencies and all unavailable qualification. Original dependency supplier remains retained without a gate waiver.",
+      "targetIncrementId": "runtime-execution-integrity"
+    },
+    {
+      "category": "decision",
+      "disposition": "accepted",
+      "id": "approved-policy-baseline-reviewed",
+      "impact": "later-increment",
+      "nextAction": "Implement independently scoped selected controls. Preserve the original supplier, failed dependency gate and unavailable controlled qualification.",
+      "recordedAt": "2026-10-21T11:30:53Z",
+      "summary": "ADR0043 records the seven explicitly approved remediation options. Documentation and agent checks pass on82f8af83...; actual independent review18899371... accepts only the decision baseline. No native/resource/owner implementation or qualification is claimed.",
+      "targetIncrementId": "runtime-execution-integrity"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "session-outcomes-implemented-local",
+      "impact": "later-increment",
+      "nextAction": "Preserve failed gates and pending persistent-sink/native qualification. Per explicit user ordering, continue approved Canvas roadmap next.",
+      "recordedAt": "2026-10-21T11:45:20Z",
+      "summary": "Approved session-only setup diagnostic policy implemented: no automatic files or pathname-selected persistence, two latest immutable operation summaries, synchronous/asynchronous observer failures contained.23focused tests and security-runtime/docs/architecture pass. Current receipt18ebf0eac5135eb4fce6dcbffdef26f694ce602ae101202fe66a48fe4db4d7ca remains failed: original-supplier dependency gate and owned Python context tests with unavailable LanceDB. No complete finding or qualified work closure.",
+      "targetIncrementId": "runtime-execution-integrity"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "available-local-security-increment3-and4-resumed",
+      "impact": "within-increment",
+      "nextAction": "Implement approved ADR0043 versioned semantic fingerprints and persisted opaque image identities, requalify existing local controls/tooling and update finding evidence; leave actual native/physical/environment gaps pending.",
+      "recordedAt": "2026-10-21T17:26:23Z",
+      "summary": "User explicitly directs completion of security increment tasks that can proceed locally. Parent I1/I2 native file-effect blockers do not make independent I3/I4 controls impossible. The finding ledger already records local R43/R45/R48/R49/R51/R52/R53/R68/R74 and R42/R46/R47/R54/R87 work; R44 opaque views and R50 complete versioned semantic fingerprints remain clear code gaps. Preserve current native blockers and ordered parent status, use independently scoped reviewed component work, then reconcile current evidence without fabricated closure.",
+      "targetIncrementId": "canonical-safe-records"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "r50-complete-versioned-fingerprint-local-reviewed",
+      "impact": "within-increment",
+      "nextAction": "Continue independently scoped R45 stored-content revalidation, R44 opaque identity and tooling evidence reconciliation; preserve ordered parent dependencies/native pending state.",
+      "recordedAt": "2026-10-21T17:45:06Z",
+      "summary": "Completed independently scoped R50 utility correction security-r50-versioned-semantic-fingerprint. Current correction receipt fb8c11a13ded5fa5785a611946fac9bb4a3a4a9022fb8993eaa4fa10a704912e and actual accepted separate review37146dcc4d7c0f5015c337d0c47d301e1277815d8813c1b6a3c3d5abd7a97cd4 cover complete passive validated semantic-v2 input, exact full encoded-byte bounds, malformed tag denial, explicit legacy revalidation and immutable Foundation compatibility.36focused tests/serverbuild and all4registered gates passed. Earlier red/failed attempts and both closed review findings remain retained. This is local component evidence, not parent increment or native/installer trust closure.",
+      "targetIncrementId": "canonical-safe-records"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "r45-stored-body-reuse-local-reviewed",
+      "impact": "within-increment",
+      "nextAction": "Finish R44 private opaque identity component and reconcile tooling evidence before the authorized agent-only acceptance revision; then diagnose coldload/Foundation startup findings without performance fixes.",
+      "recordedAt": "2026-10-21T17:57:59Z",
+      "summary": "Completed independent local R45 component security-r45-installed-content-revalidation. Receipt fb7b7b5087cfd8fbe91a8ba72ee9b706f719fe477cf2a78e823692ed5cf1860d and actual separate review9cc750529eb0c2dc9f5ff4314ce885ac0c1572e410601910306fad4e490f3c1e qualify exact complete passive stored-body comparison before seed/install reuse, no getter/proxy/toJSON execution, unchanged idempotent catalogs and explicit refresh compatibility.49focusedtests/serverbuild and4registeredgates passed; independent additional28denial/recoverycases passed. Read-side classification remains separately qualified; immutable oldhashes are unchanged and package-integrity/native/parent proof remains pending.",
+      "targetIncrementId": "canonical-safe-records"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "r44-private-image-identities-local-reviewed",
+      "impact": "within-increment",
+      "nextAction": "Reconcile current available I4 tooling/dependency/workflow evidence, then apply authorized agent-only acceptance revision and diagnose22.2secondcoldload/Foundation startup without load-time fixes.",
+      "recordedAt": "2026-10-21T18:02:14Z",
+      "summary": "Completed R44 independent local component security-r44-persisted-opaque-image-identities, receipt1954b181fe1560013c5edc318b0656dc374efeb4127f99dd428b564bfa06628b and actual separate accepted reviewd8d1842c51c321af39fb2e9ccfad69a9b00cbee4d8f512456cea07db462ca3bb.67focused tests,7actualElectron SQLite tests, serverbuild and4registered gates passed. Persisted random owner-scoped aliases and coherent CAS public admission replace source-derived identities; exact source reauthorization, interrupted recovery, organization freeze, registration and no-skipped-image cursor compatibility were independently probed. Preserve native/ACL/hostileDB/legacy-reference migration and parent pending limits; no scanner closure.",
+      "targetIncrementId": "canonical-safe-records"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "local-tooling-reconciliation-reviewed",
+      "impact": "within-increment",
+      "nextAction": "Retain native parent/reparse/ACL, LAN/deployment and ordered parent-roadmap qualification pending. Security active acceptance is already agent-executable and receives no human scope amendment.",
+      "recordedAt": "2026-10-21T18:15:10Z",
+      "summary": "Completed bounded tooling evidence reconciliation with all five focused gates including the authorized original-supplier zero-advisory audit. Current receipt a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40; separate accepted review 8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098. All 88 original finding dispositions retained; no scanner closure asserted.",
+      "targetIncrementId": "development-and-tooling-security"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "review-site-support-and-agent-only-scope-visible",
+      "impact": "within-increment",
+      "nextAction": "Use the linked completed component records to inspect local implementation; retain each actual technical pending/failed qualification and existing completion authority.",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "summary": "The dynamic review projection now shows 79 validated links from completed reviewed local security component work to 25 of 26 parent criteria. Runtime provenance intentionally has no completed qualified supporting record. Parent criterion outcomes, planned chunks, original failures/native qualification and scanner finding dispositions remain preserved. Actual malformed/forged/failed/self-reviewed lineage denial tests and independent review accepted the display; no security closure is inferred.",
+      "targetIncrementId": "file-and-workspace-authority"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "desktop-ingestion-missing-origin-binding",
+      "impact": "within-increment",
+      "nextAction": "After optional/functionality qualification, assess and repair the ingestion origin publication within the existing security roadmap scope; preserve native race and recovery qualification gaps and the failed desktop run.",
+      "recordedAt": "2026-10-22T05:45:00Z",
+      "summary": "Native optional-host run25 exposed an existing supported desktop Add data defect: governed ingestion finalizes and catalogs an explicit-key file but creates no primary local storage binding, so Dataset Preparation denies the source before runtime. Retain fail-closed read behavior; fix only at authoritative ingestion publication/recovery with ownership, conditional metadata, byte integrity and retry tests. Upload-seeded optional-mode host evidence does not cover this path.",
+      "targetIncrementId": "runtime-execution-integrity"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "user-unified-security-backlog-20261022",
+      "impact": "within-increment",
+      "nextAction": "Use this as the single active security execution owner, retain the legacy plan as merged history, and assess current code/tests before scheduling residual work. No new criterion, completion or approval is inferred.",
+      "recordedAt": "2026-10-22T13:31:46Z",
+      "summary": "The user requested merging both security roadmaps, removing duplicate execution and revalidating remaining concerns. Existing approved successor ownership is retained; original completed history, evidence and pending technical qualification are preserved.",
+      "targetIncrementId": "file-and-workspace-authority"
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "c2cf9458d41c3db757608d08f41c1d198edbc8b29ed7f3c561eea7c06d9169ec",
+      "recordedAt": "2026-10-21T02:29:01Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "ba1e6cbf199a71ae41bbfa0bab485a6cdce30575bea5021b066dd0f2ff06087a",
+      "recordedAt": "2026-10-21T02:29:01Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "4a2beb316f1f35596fe1ebb9c4e8ba7f495aa4bd1f446c0d0a16e5d7c5534d19",
+      "recordedAt": "2026-10-21T02:29:02Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "26640a181445ed1c634c52f8facdaa33fc7e2b6d326ee4d4eee7dd9e2a54a23e",
+      "recordedAt": "2026-10-21T02:29:02Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "01f6e5090143ebd32157cb1ae795671a5472a70218fafbaa1063c237d4cb3991",
+      "recordedAt": "2026-10-21T02:34:11Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "742512ce9fb0a6585cb447f081bc751041a7bb2a0931373355fdfc7b55ecf3b2",
+      "recordedAt": "2026-10-21T02:38:44Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "3403b9f66ca54e5bc2c0c9f8ed11d72282f7716696e617755ed93a516013e9b1",
+      "recordedAt": "2026-10-21T02:38:44Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "468e8b11752bef54cd95af9104a46d76e29e7e7b2759821ccf89d6815b13b92a",
+      "recordedAt": "2026-10-21T02:38:45Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "eb51182381eb3c14bd4220f5f2ab4518da38b0e889827e6c90dfaca8f031c1e0",
+      "recordedAt": "2026-10-21T02:52:35Z",
+      "sequence": 9,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "2cf48e28956ca804a8491b375fe390d039a93812e59be37bc4f87dbd6a8fded6",
+      "recordedAt": "2026-10-21T02:52:36Z",
+      "sequence": 10,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "297f96778c70f597ac62169ed2c6da2f2df306bdc735ee5e086d07f462fa5332",
+      "recordedAt": "2026-10-21T03:35:01Z",
+      "sequence": 11,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "06fa48c5bb52bacd01a04628d7fab2e2d5b16551ca40ac7234bb5e3114518d2c",
+      "recordedAt": "2026-10-21T03:41:40Z",
+      "sequence": 12,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7f82f84383add2d56f845495e34eb6e237b0ecb74185511830896bed076c6468",
+      "recordedAt": "2026-10-21T06:30:13Z",
+      "sequence": 13,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "a8c4c2d766bd8bfb45c2e746447052c2e50e30a8abf7a769180d1e7ae731ed43",
+      "recordedAt": "2026-10-21T09:36:13Z",
+      "sequence": 14,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b6c8dba261af71e90ddb6f4bf212d664e3ee5e5650bee9991a4da9dc33592802",
+      "recordedAt": "2026-10-21T09:52:55Z",
+      "sequence": 15,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "4f8f6320def42b1af793f00f530cde847434e21d961bfae0b271851edc8c64f4",
+      "recordedAt": "2026-10-21T09:55:16Z",
+      "sequence": 16,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "c2fb4ebba37a27060f0991a04ae1cb6294413e3363d48fb76819cdfbabf5c1f6",
+      "recordedAt": "2026-10-21T10:07:41Z",
+      "sequence": 17,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "82f56092e74ffc6b9b42f1c1ce68a455bab7911c46619b022ec731af470b841d",
+      "recordedAt": "2026-10-21T10:23:01Z",
+      "sequence": 18,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "406dc7a91b7d7ca2f82b3184748bd353e1dcd46ba7075f2e62c4f6b5eced74a0",
+      "recordedAt": "2026-10-21T10:36:24Z",
+      "sequence": 19,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "042e1530670f824086f8e66f439f00a1f9a0b918e5ab24f963b59adb2bc73e5e",
+      "recordedAt": "2026-10-21T10:56:20Z",
+      "sequence": 20,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "8bcc772c358720b8c05d4048c5580041bf564445953e36c40720e61a298357c9",
+      "recordedAt": "2026-10-21T11:12:41Z",
+      "sequence": 21,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "16d7faf5a046f2c78086bdb1cc64cce4881bf27ac793bd077f05b3bd12cfa606",
+      "recordedAt": "2026-10-21T11:12:41Z",
+      "sequence": 22,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "8f50a440158af6533db62918e072ce6dde1dda7f83b603ff6f131507680215fc",
+      "recordedAt": "2026-10-21T11:12:41Z",
+      "sequence": 23,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "731f9dce3ab4931b89b05acacab180d0f92cf65e663cefb94de55870d2b4957c",
+      "recordedAt": "2026-10-21T11:12:41Z",
+      "sequence": 24,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "6df18b62e88120e6d9b7e2853a2b63ded692a4e76051d3b4fa5e4974b0cb7182",
+      "recordedAt": "2026-10-21T11:12:42Z",
+      "sequence": 25,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "85ac15b86b06b3a29885bf85a34c1b3630573dbf6db76ef67b9c1c347294c900",
+      "recordedAt": "2026-10-21T11:12:42Z",
+      "sequence": 26,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "f7f8e2ce71dbc9ccf4b90cd18687d222732675f5ff4b42ed05da164a496cbec3",
+      "recordedAt": "2026-10-21T11:12:42Z",
+      "sequence": 27,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "466fe2aa65c507550004bbee1ff96b0ec84c86e7a6b2b047ff0a3d80f6d04fed",
+      "recordedAt": "2026-10-21T11:12:42Z",
+      "sequence": 28,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "c6307029d5a5cef9617817a391b0f02b03a7255f421e250bb0d217bdf3fd50e8",
+      "recordedAt": "2026-10-21T11:12:42Z",
+      "sequence": 29,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "5edcb4293848ae9863cbe3b05015e82241c01beb28566685767057ecee380624",
+      "recordedAt": "2026-10-21T11:12:42Z",
+      "sequence": 30,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "76ea3e5c1e925e80a30958a715ca496eea886718d249635704c81119cd95b967",
+      "recordedAt": "2026-10-21T11:12:43Z",
+      "sequence": 31,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "4ae93a4dcea6f21f4244ab8a8e2841e8db7804ea6872d8229e56a7c3e4a1e9ee",
+      "recordedAt": "2026-10-21T11:12:43Z",
+      "sequence": 32,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "35ee9d004e4b108b4c922c1a022ad9142f6d1a2db77db6fa5ce777f532bf312c",
+      "recordedAt": "2026-10-21T11:12:43Z",
+      "sequence": 33,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "e93512cccf23eb9bca5d34f77a67d7cd70a9568551a913021c57ffb3da00c2ec",
+      "recordedAt": "2026-10-21T11:12:43Z",
+      "sequence": 34,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "27b698c7bf9f5cfd5cea77b7d65bd73bcd69c458a66793bca3f60c14c9a01fcb",
+      "recordedAt": "2026-10-21T11:12:43Z",
+      "sequence": 35,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "4c3d0d0c7957ee82853a4a34ae6f0abfcc05412cc600a1a182cf5a91a3dfeac6",
+      "recordedAt": "2026-10-21T11:12:43Z",
+      "sequence": 36,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b6996f71835b709dfc9a90db11043d2ffa5322427195088e6ffeea2f707ef1de",
+      "recordedAt": "2026-10-21T11:12:44Z",
+      "sequence": 37,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "ec31c9571a6fce35238e76e945e24587ccc052269e36dd077b055d3952916037",
+      "recordedAt": "2026-10-21T11:30:53Z",
+      "sequence": 38,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b3ae40bd2830e7f8ce461803f921f2209f23a4e493b8bfaae25ee245ad315c58",
+      "recordedAt": "2026-10-21T11:45:20Z",
+      "sequence": 39,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "e6c24eefdc6af4b20f648e3397674dd177ecd43494d8ad0568253d92e9385cc4",
+      "recordedAt": "2026-10-21T17:26:23Z",
+      "sequence": 40,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "7d6843361b39414a7379ffd3c8ca424015c16c13be0017cb8a7a0c471f63e677",
+      "recordedAt": "2026-10-21T17:45:06Z",
+      "sequence": 41,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "1e5c4a5ede84d973aacd031415dc6f2ecbf51030e6ab17b95b10c8828db7dc35",
+      "recordedAt": "2026-10-21T17:57:59Z",
+      "sequence": 42,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "8c58c8304aed5460292f094f9547e3098c2db93c322c9942be60bca1629a0735",
+      "recordedAt": "2026-10-21T18:02:14Z",
+      "sequence": 43,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "adef3613cb4807a251e14e0cd7ee5df5a834446921a4099e39362744149e557a",
+      "recordedAt": "2026-10-21T18:15:10Z",
+      "sequence": 44,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "59862d48e41fdb6c856a91850cf6058301b4ca9412c1e79a512d733a7fe50744",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "sequence": 45,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "464ba65d1572f595389523832a82e15988f2f38d5abb042779432ec240b7c5d9",
+      "recordedAt": "2026-10-22T05:45:00Z",
+      "sequence": 46,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "5ad90356ec698cbfd21c07f918040967d82d235050aaaa631ffdbb035bf5756c",
+      "recordedAt": "2026-10-22T13:31:46Z",
+      "sequence": 47,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "1affd3e88b75efacff57e2dccd711f8e015374d8f84392b5feb04cb2ce4abb79",
+      "recordedAt": "2026-10-22T16:25:38Z",
+      "sequence": 48,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "b074dbab7e409ae503035354c4346f69039980764db6af8054cff1666ef9e9b5",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 49,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "c8da655af56e1ac22c1a95718d5d58662f5018337961834e43806cef8f2d374c",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 50,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "b21a1231438b4cf55f7eb7d226a1686f3b7f2b416148bf474bda748d4a483bed",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 51,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "c0cb16b8d14eab38795ab5cd1138935aaecdd17a1ba75ee3e59365535fba991a",
+      "recordedAt": "2026-10-24T06:06:46Z",
+      "sequence": 52,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "842a4ac3a35891acda0f565ea20d08c295e55bdcc8623283638754374ca80c28",
+      "recordedAt": "2026-11-06T13:10:07Z",
+      "sequence": 53,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "65d97d0240d5b15737460b2a92b727919cbe680a9c2149f5b46345795a5e6830",
+      "recordedAt": "2026-11-06T13:10:08Z",
+      "sequence": 54,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5ba176df228d78e836898fc85bf310fec1ff125e017a72a300e176990c266779",
+      "recordedAt": "2026-11-06T13:10:09Z",
+      "sequence": 55,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "289b87b77bd5d61bfd4b042c3fa21682042d898f10b119d541273cf98e6a547a",
+      "recordedAt": "2026-11-06T13:25:32Z",
+      "sequence": 56,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3f663cd15149d94713ecba4ea29136c1ed19776120972114f9e79496a403a70c",
+      "recordedAt": "2026-11-06T21:27:46Z",
+      "sequence": 57,
+      "type": "evidence-recorded"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "A renderer-supplied path, broad mutable root or forged record cannot trigger model deletion or shell/network reveal; legitimate host-owned model operations succeed with denial-before-I/O and link/reparse replacement coverage.",
+          "id": "host-file-authority",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Dataset preparation cannot resolve/read/localize a source outside the authoritative workspace/organization, including same identifiers and missing bindings; valid selected sources still stage.",
+          "id": "dataset-source-isolation",
+          "qualification": "local"
+        },
+        {
+          "description": "Model read/list routes perform zero registry writes. Authorized download completion records one idempotent model write under frozen organization/workspace authority; read-only, wrong-tenant and replay paths cannot register models.",
+          "id": "write-owned-model-completion",
+          "qualification": "local"
+        },
+        {
+          "description": "Revision writes with identical asset/revision identifiers retain both workspace records; library promotion conflicts are atomic and preserve existing records, including concurrent attempts.",
+          "id": "scoped-state-integrity",
+          "qualification": "local"
+        },
+        {
+          "description": "Required authentication rejects anonymous/unauthenticated/malformed verifier contexts and never audits them as success; valid authenticated contexts retain supported behavior.",
+          "id": "authentication-result-invariant",
+          "qualification": "local"
+        },
+        {
+          "description": "Legacy completed increments, chunks and evidence are preserved; active incomplete work is explicitly reconciled without invented completion or approval transfer. Only this approved successor may own future remaining remediation.",
+          "id": "legacy-history-preserved",
+          "qualification": "local"
+        },
+        {
+          "description": "Refresh the owning threat/control review; prove denial before side effects, bounded sanitized failures, supported success, residual risks and rollback that never restores a known-vulnerable path.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [
+        "legacy-auth-and-scoped-state",
+        "workspace-bound-dataset-staging"
+      ],
+      "deliverables": [
+        "Current controls and regression evidence for R02, R03, R26, R27, R66, R77 and R79; preserve current mitigations for R09, R10 and R28.",
+        "Application/port policies, strict request mutations, host provenance, safe location migration and affected desktop/server transport/client behavior.",
+        "Explicit legacy handoff notes with unchanged completed history and no transferred approvals; exact issue-to-work/criterion links in versioned JSON."
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "New workspace ACL/group model or cross-organization sharing",
+        "Real user file deletion, destructive migration, provider publication or production mutation",
+        "Purely functional CSV issues owned by the separate functionality review; supported-flow failures introduced by these controls remain in scope"
+      ],
+      "id": "file-and-workspace-authority",
+      "number": 1,
+      "objective": "Remove caller-controlled authority from destructive model operations, dataset staging, read-side model registration and scoped state writes, while preserving safe model management and workspace workflows.",
+      "plan": {
+        "assumptions": [
+          "No new identity provider, workspace ACL or destructive user-data migration is authorized.",
+          "Qualification uses synthetic disposable resources only."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "legacy-history-preserved",
+              "authentication-result-invariant",
+              "scoped-state-integrity"
+            ],
+            "id": "legacy-auth-and-scoped-state",
+            "outcome": "Legacy history retained; malformed authentication denied and workspace/library writes cannot overwrite another identity.",
+            "title": "Freeze legacy ownership and protect authenticated scoped state"
+          },
+          {
+            "criteriaIds": [
+              "dataset-source-isolation"
+            ],
+            "id": "workspace-bound-dataset-staging",
+            "outcome": "Scoped bindings and catalog identity are verified before source reads or localization.",
+            "title": "Stage only workspace-authorized dataset sources"
+          },
+          {
+            "criteriaIds": [
+              "host-file-authority",
+              "write-owned-model-completion"
+            ],
+            "id": "owned-model-effects",
+            "outcome": "Host-owned provenance controls file effects and immutable execution authority owns model registration.",
+            "title": "Constrain model host file effects and completion writes"
+          },
+          {
+            "criteriaIds": [
+              "host-file-authority",
+              "dataset-source-isolation",
+              "write-owned-model-completion",
+              "scoped-state-integrity",
+              "authentication-result-invariant",
+              "legacy-history-preserved",
+              "security-impact-reviewed"
+            ],
+            "id": "authority-qualification",
+            "outcome": "Focused tests, disposable filesystem qualification, owning documentation and separate review evidence all criteria.",
+            "title": "Qualify authority denials and supported workflows"
+          }
+        ],
+        "completionTests": [
+          "Run source-owned focused tests and documentation/architecture gates for changed surfaces.",
+          "Run affected host build/type checks if wiring changes.",
+          "Verify the current candidate through the control plane and obtain a real independent criterion review.",
+          "Reserve the all-suite command for after all four increments."
+        ],
+        "documentation": [
+          "Owning security architecture and model/file/staging README guidance",
+          "Sanitized finding-to-evidence ledger and legacy handoff notes"
+        ],
+        "fingerprint": "de117ee4c388c787bea0a48843145fbe5fbefdeaacf946c0a5a6a8eb94fc0dd8",
+        "focusedTests": [
+          "Security service verifier-result regressions.",
+          "Asset authoring cross-workspace revision and concurrent library collision tests.",
+          "Dataset binding scope, unbound and conflicting-source tests with zero denied storage/provider I/O.",
+          "Model patch, download finalization, IPC and disposable filesystem containment/link/replacement tests."
+        ],
+        "recordedAt": "2026-10-21T02:38:45Z",
+        "rollback": "Retain legacy history and safe data; disable unavailable host file effects or source staging rather than reintroducing caller path, raw-key, unchecked auth or overwrite fallbacks.",
+        "steps": [
+          "Record the non-completing legacy freeze and baseline reconciliation.",
+          "Add focused denial regressions, then correct authentication, scoped revisions and atomic library promotion.",
+          "Bind dataset reads and localization to one authoritative scope without raw-key fallback.",
+          "Separate model metadata from host-owned locations and registration from read polling.",
+          "Run focused completion checks and disposable Windows filesystem qualification, update owning docs and obtain independent technical review."
+        ],
+        "summary": "Implement the approved first security slice through existing ports with red regressions, explicit immutable authority and host-owned effects."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-21T02:38:44Z",
+          "risks": [
+            "Security-relevant: renderer paths, forged binding identities and anonymous verifier results must not confer host file or tenant authority.",
+            "Atomic create/conflict semantics must preserve existing records across concurrent promotion attempts.",
+            "Disposable Windows filesystem qualification must prove containment and link/replacement denials; no user files may be targeted.",
+            "Rollback must preserve fail-closed authority and cannot restore raw-key or read-side write fallbacks."
+          ],
+          "sources": [
+            {
+              "title": "Approved assessment and source identity ledger",
+              "url": "docs/security/security-findings-refresh-assessment.json"
+            },
+            {
+              "title": "Authentication orchestration",
+              "url": "modules/application/services/security/verify-transport-authentication.service.ts"
+            },
+            {
+              "title": "Revision persistence",
+              "url": "modules/adapters/persistence/asset-authoring/createLocalAssetAuthoringRepositoryAdapters.ts"
+            },
+            {
+              "title": "Dataset preparation",
+              "url": "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts"
+            }
+          ],
+          "summary": "Current source confirms caller-editable model locations, read-owned download finalization, unscoped dataset binding resolution, unchecked verifier contexts, workspace-omitting revision replacement, and promotion upserts. Reuse scoped request context, atomic document mutations, host composition and security error seams. The latest user request explicitly authorizes implementation; the prior planning-only hold is superseded."
+        }
+      ],
+      "rollback": "Retain existing records and safe provenance migration checkpoints; disable local file deletion/reveal or source staging when authority is unavailable. Roll back paired consumers only while keeping no-follow containment, scoped keys, conflict denial and authentication invariants. Never restore arbitrary renderer paths, raw-key fallback or read-authorized writes.",
+      "startedAt": "2026-10-21T02:38:44Z",
+      "status": "implementing",
+      "title": "Protect host files and workspace integrity",
+      "verification": [
+        "Use focused model contract/use-case, local registry, owned-file adapter, desktop IPC/sender, dataset staging/binding, authentication, revision repository and library promotion tests. Add red regressions before repairs.",
+        "Controlled disposable filesystem fixtures cover UNC/network paths, broad roots, symlink/reparse/hard-link or replacement races as supported; never target user or production files.",
+        "Use mocked provider/storage ports to prove zero denied I/O and same-organization/workspace identity isolation. Exercise normal delete/reveal/download/preparation flows and migration guidance.",
+        "Run only changed-surface completion checks: documentation, architecture, affected server/thin-client or desktop type/build checks when wiring changes. Current candidate receipt and real separate-invocation review cover every criterion.",
+        "Reserve npm run test:all and repository-wide completion qualification for the overall binding after all four increments; no live provider or GPU work is implied."
+      ],
+      "workPackages": [
+        {
+          "id": "legacy-handoff-and-source-rebaseline",
+          "outcome": "After explicit roadmap approval, record a non-completing legacy handoff/freeze, preserve the exact completed prefix, verify source drift and map all acceptance IDs to bounded control-plane work. No parallel legacy execution owner remains.",
+          "title": "Reconcile legacy work and current source"
+        },
+        {
+          "id": "owned-model-locations",
+          "outcome": "Use host-derived model/download provenance and narrow application capabilities for deletion and reveal. Renderer metadata or mutable discovery roots cannot establish delete authority. Reject network/alternate paths and no-follow identity changes before shell or deletion I/O. Migrate existing records fail-closed with actionable UI guidance.",
+          "title": "Host-owned model locations and file effects"
+        },
+        {
+          "id": "scoped-artifact-staging",
+          "outcome": "Resolve catalog/bindings using authoritative workspace and organization, deny conflicting or unbound raw-key fallbacks before retrieval/localization, and use one scoped context through all storage and task paths.",
+          "title": "Workspace-authorized dataset sources"
+        },
+        {
+          "id": "authorized-state-transitions",
+          "outcome": "Move model registration to an authorized write-owned completion transition; bind task ownership to immutable organization/workspace/principal context. Reject unauthenticated verifier results, retain workspace in revision replacement keys, and atomically reject library identity collisions.",
+          "title": "Explicit authorized writes and collision safety"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "All lifecycle/configuration/file effects require host-derived authority and exact private contained staging; spoofed workers, unsafe base names, alternate roots, unsafe shard members and substituted outputs fail before protected I/O.",
+          "id": "runtime-authority-and-paths",
+          "qualification": "local"
+        },
+        {
+          "description": "Generation parameters, task admission/history, model downloads, storage/finalization, stdio and Parquet review are bounded in time/bytes/concurrency/scan work; malformed and over-limit requests fail safely while supported bounded work succeeds.",
+          "id": "runtime-resource-budgets",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Concurrent starts produce at most one owned worker; spawn failure, queue exhaustion, timeout, cancellation, feature disposal and partial output cleanup preserve authoritative task state and permit healthy subsequent work.",
+          "id": "runtime-recovery-truth",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Spoofed origins, wrong commits, dirty/unmanaged trees and unapproved code-changing repairs are rejected. Approved pinned repairs preserve exact revision/audit and secure rollback; allowUpdate false never fetches or changes code.",
+          "id": "runtime-provenance",
+          "qualification": "local"
+        },
+        {
+          "description": "Public task/API/IPC/UI records and persisted diagnostics exclude secrets, paths, protected content, command arguments and shared queue payloads. Diagnostic directories/files have supported-platform private ownership and finite retention.",
+          "id": "runtime-private-diagnostics",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Authorized supported download, dataset preparation, generation, training/validation and repair journeys retain progress, stop, error and retry behavior. Unsupported publishing or unavailable hardware remains explicit rather than a fabricated pass.",
+          "id": "supported-runtime-journeys",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Refresh the owning threat/control review; prove denial before side effects, bounded sanitized failures, supported success, residual risks and rollback that never restores a known-vulnerable path.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Current-source disposition and owned controls for R07, R08, R25, R30, R32, R33, R40, R41, R57, R60 and R81; retain R04-R06, R29 and R31 mitigations.",
+        "Rebaseline all unresolved runtime legacy findings F10, F11, F27, F28, F30-F34, F36-F39, F41-F48, F68 and F70-F77, including items not repeated in the new CSV.",
+        "Host/adapter/worker/IPC parity, bounded policies, lifecycle and provenance regressions, threat-model and operator recovery updates."
+      ],
+      "dependsOn": [
+        "file-and-workspace-authority"
+      ],
+      "excluded": [
+        "New runtime topology, engine, public capability or malicious-code sandbox guarantee",
+        "Unapproved runtime downloads/updates, live provider publication, model spend or production process mutation",
+        "Reimplementing unrelated functional features; coordinate shared lifecycle files with the separate functional roadmap"
+      ],
+      "id": "runtime-execution-integrity",
+      "number": 2,
+      "objective": "Carry forward unresolved legacy increment 5 as a complete bounded, host-owned, authenticated, provenance-verified and recoverable runtime slice, with truthful user task state and sanitized output.",
+      "plan": null,
+      "research": [],
+      "rollback": "Retain prior verified runtime revisions and private staging manifests, terminate incompatible owned workers and roll back code/config atomically. Keep launch authentication, path containment, task admission and exact capabilities enforced; disable an unavailable workflow instead of reviving unauthenticated attach, unapproved updates or unbounded execution.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Bound and verify runtime execution",
+      "verification": [
+        "Focused TypeScript and Python worker tests for the active package only; injected runtime/provider doubles prove no denied invocation and exact ownership.",
+        "Controlled bounded fixtures cover decompression-heavy/high-offset Parquet, oversized generation/download/output, process hangs/crashes, noisy stdio, duplicate starts, cancellation races, orphan cleanup, wrong refs/dirty checkouts and private filesystem permissions.",
+        "Use local non-network Git fixtures for provenance and repair; no upstream install/update or provider credential use is implied by planning or fixture execution.",
+        "After this complete slice, run affected runtime/host/API/IPC integration and relevant build/documentation/architecture checks; run dependency security only when dependency/build/release inputs actually change.",
+        "Record controlled hardware/OS evidence as pending until it actually runs. Final aggregate all-suite belongs only to the overall binding after every increment."
+      ],
+      "workPackages": [
+        {
+          "id": "runtime-privilege-and-safe-staging",
+          "outcome": "Keep launch identity and exact lifecycle capabilities host-owned; replace input/output path authority with validated private handles, safe names, no-follow containment and deterministic cleanup. Remove renderer roots, package indexes and request-selected global modes.",
+          "title": "Runtime authority and private staging"
+        },
+        {
+          "id": "bounded-work-and-review",
+          "outcome": "Apply existing host-configured bounds plus finite per-actor/workspace admission to generation, model downloads, Parquet bytes/decompression/scan/pages, queue/history, finalization and logs. Reject over-budget work before costly allocation and prove healthy subsequent work.",
+          "title": "Admission, Parquet paging and resource budgets"
+        },
+        {
+          "id": "cancellation-and-recovery",
+          "outcome": "Serialize concurrent starts; handle asynchronous spawn failure, deadlines, worker replacement, terminal eviction and feature disposal using authoritative task scope. UI stop remains stopping until acknowledged; no orphan tasks or false success.",
+          "title": "Truthful cancellation and process recovery"
+        },
+        {
+          "id": "pinned-install-and-repair",
+          "outcome": "Verify canonical repository identity, clean tree and exact approved commit before adopting or executing. Honor allowUpdate false across dependency repair; code changes require explicit pinned approval, audit and an equally secure rollback.",
+          "title": "Verified runtime adoption and explicit repair"
+        },
+        {
+          "id": "private-diagnostics-and-workflow-qualification",
+          "outcome": "Use private bounded redacted diagnostics and safe task summaries. Qualify supported model/download/validate/train, dataset, image and install/repair failure-to-retry flows without real secrets or invented provider/GPU passes.",
+          "title": "Private diagnostics and supported runtime journeys"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Unknown or unsafe nested fields, compound secret keys, platform paths, raw payloads and unbounded values cannot persist or reappear in execution, readiness or projection records. Valid schema-defined summaries survive round trips.",
+          "id": "strict-nested-safe-records",
+          "qualification": "local"
+        },
+        {
+          "description": "Any integrity-relevant manifest change changes its validated canonical digest; unsafe content is rejected before hashing rather than silently omitted. Semantic exclusions are explicit and cannot be mistaken for full artifact integrity.",
+          "id": "complete-integrity-input",
+          "qualification": "local"
+        },
+        {
+          "description": "Forged built-in markers/catalog identifiers cannot grant trusted status; exact verified content/version authority governs classification. Public resource-view identifiers do not embed source/request/task identifiers and remain stable across supported reads.",
+          "id": "trusted-provenance-and-opaque-identity",
+          "qualification": "local"
+        },
+        {
+          "description": "Missing, stale, invalid, conflicted, unsupported or authority-denied composition/readiness preconditions remain blocking through validation and persistence; no later success or refresh silently erases them.",
+          "id": "readiness-blockers-preserved",
+          "qualification": "local"
+        },
+        {
+          "description": "Legitimate prompt capability names, authoring/readiness summaries and user-safe messages remain available. Security tests prove protected content removal without using substring bans as a replacement for typed output contracts.",
+          "id": "safe-user-facing-compatibility",
+          "qualification": "local"
+        },
+        {
+          "description": "Refresh the owning threat/control review; prove denial before side effects, bounded sanitized failures, supported success, residual risks and rollback that never restores a known-vulnerable path.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Remediation and compatibility evidence for R43-R45, R48-R53, R68 and R74, plus legacy F57-F65.",
+        "Strict normalizers/repositories/read models, defined integrity-vs-semantic fingerprint behavior, trusted provenance and opaque-ID migration.",
+        "Sanitized legacy read/migration treatment, focused safe-data regressions and canonical security/contract documentation."
+      ],
+      "dependsOn": [
+        "runtime-execution-integrity"
+      ],
+      "excluded": [
+        "Broad replacement of unrelated contract families or removal of legitimate AI/product vocabulary",
+        "New signature service, external trust authority, public registry or library-sharing architecture",
+        "Pure functional CSV transport/UI fixes except compatibility affected directly by these security controls"
+      ],
+      "id": "canonical-safe-records",
+      "number": 3,
+      "objective": "Enforce canonical safe persistence and public projections, complete integrity inputs and authoritative trust/readiness semantics while preserving legitimate user-facing labels and summaries.",
+      "plan": null,
+      "research": [],
+      "rollback": "Retain validated original records and schema/version checkpoints. Keep rejection/redaction, blocker preservation and verified trust in effect; an older reader must refuse incompatible stronger records rather than expose raw data. Do not roll back by restoring sanitized integrity projections or forged built-in flags.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Preserve safe metadata and trusted asset identity",
+      "verification": [
+        "Convert the six assessment observations into narrow durable regressions for the owning reusable components; current probe outputs are not remediation evidence.",
+        "Focused contract, repository, asset-pack fingerprint, view provider, readiness and transport projection tests cover nested extras, credential naming styles, Windows/UNC/POSIX paths, spoofed provenance, digest changes and blocker retention.",
+        "Test valid labels, explanatory safety notes, prompt capabilities and authorized read summaries alongside denials; retain unsafe legacy records fail-closed with an explicit migration or corrective action.",
+        "After the full increment, run only affected integration/build checks plus documentation, architecture and agent-support checks where changed. Use current receipts and criterion-complete independent review."
+      ],
+      "workPackages": [
+        {
+          "id": "strict-safe-record-schemas",
+          "outcome": "Reconstruct execution, readiness and projection records through explicit safe fields; reject nested unknown/unsafe metadata and bound depth/size. Cover compound credential names, platform paths and read-side legacy records without blanket vocabulary bans.",
+          "title": "Strict nested records and diagnostic projections"
+        },
+        {
+          "id": "validated-integrity-and-trust",
+          "outcome": "Validate full manifests before canonical integrity hashing; document any separate semantic fingerprint exclusions. Derive built-in status from verified catalog/version/content authority and produce stable opaque source identifiers.",
+          "title": "Complete integrity hashing and verified built-in provenance"
+        },
+        {
+          "id": "readiness-and-user-safe-compatibility",
+          "outcome": "Retain all authoritative composition/readiness blockers; no ready status erases a security precondition. Keep legitimate prompt labels, authoring summaries and actionable error messages through typed allowlisted response schemas.",
+          "title": "Retained readiness denials and meaningful safe UI"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Existing option-looking paths, ambiguous paths and unsupported target types are rejected, tool argv includes a correct option boundary, and valid scoped checks still execute. Plans cannot grant arbitrary command or import authority.",
+          "id": "bounded-helper-argument-authority",
+          "qualification": "local"
+        },
+        {
+          "description": "Roadmap init/apply/render and recovery use private exclusive creation and verified atomic targets; predictable links, reparse parent substitution and interrupted writes cannot overwrite a file outside approved outputs or invent a pass.",
+          "id": "secure-roadmap-publication",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Default development listeners are loopback-only, public requests cannot downgrade authentication, and explicit LAN token operation protects both browser-to-proxy and proxy-to-server legs. Unsupported/insecure configurations fail closed with operator guidance.",
+          "id": "secure-development-exposure",
+          "qualification": "local"
+        },
+        {
+          "description": "Every current-repository CSV row and legacy finding has a current disposition, owner and relevant denial/supported-flow evidence. Duplicates retain individual traceability; mitigated and controlled-environment claims stay pending until proven. Other-repository and pure functional work are not counted as repaired security issues.",
+          "id": "issue-traceability-and-qualified-dispositions",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "AGENTS remains the single entry point; the loopback review site still reads versioned JSON with distinct chunks and criteria; work claims, fixed checks, current receipts, independent review and final qualification refuse stale evidence. Skill routing and recovery remain portable.",
+          "id": "governed-workflow-preserved",
+          "qualification": "local"
+        },
+        {
+          "description": "Refresh the owning threat/control review; prove denial before side effects, bounded sanitized failures, supported success, residual risks and rollback that never restores a known-vulnerable path.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Remediation evidence for R42, R46, R47, R54 and R87 plus legacy F56, F66, F67 and F69.",
+        "Portable bounded helpers and roadmap-write regressions, secure dev configuration and operator guidance, without arbitrary command interfaces.",
+        "Versioned finding ledger with explicit source/criteria/work/receipt/review links and final current-source dispositions, plus secure rollback and residual qualification notes."
+      ],
+      "dependsOn": [
+        "canonical-safe-records"
+      ],
+      "excluded": [
+        "Remote/public review-site hosting, authenticated reviewer service or remote-agent execution",
+        "Changing real production configuration, rotating credentials, publishing packages or deploying software",
+        "Implementing the 21 other-repository or 25 separately owned functional findings; security-relevant dependencies must be coordinated explicitly"
+      ],
+      "id": "development-and-tooling-security",
+      "number": 4,
+      "objective": "Close the local development and tooling trust boundaries, preserve the governed workflow, and reconcile issue-level qualification before final overall validation.",
+      "plan": null,
+      "research": [],
+      "rollback": "Preserve the current governed state, journals and issue evidence. Disable unsafe helper targets or non-loopback development exposure if compatibility fails; never restore option injection, link-following publication, public auth downgrade or plaintext credential transport. Reopen affected issue dispositions after any rollback.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Secure development hosts and contributor tooling",
+      "verification": [
+        "Focused helper/roadmap tests cover option terminators, safe real files, malicious-looking but inert path fixtures, private permissions, link/reparse substitution, lock contention and interrupted publication without touching user data.",
+        "Focused Vite proxy/TLS/config and security-route tests cover loopback defaults, explicit LAN selection, plaintext token refusal, downgrade denial and permitted public discovery.",
+        "Validate generated artifacts and issue JSON; run skill validator, documentation/agent-support checks and changed control-plane/site regressions. No check suite is marked passed by a roadmap declaration.",
+        "After every increment and its changed-surface checks actually pass, create overall work with acceptance overall-validation and check completion-all. Run npm run test:all once plus applicable docs, architecture, agent-support, build, deployment, packaging and dependency gates. Scope each optional gate to actual changed inputs and do not infer provider/GPU/production qualification from local tests.",
+        "Before roadmap-completed, obtain a current separate-invocation review of the overall candidate and all required controlled evidence. Keep the temporary report until explicit final overall user approval."
+      ],
+      "workPackages": [
+        {
+          "id": "safe-tool-arguments-and-publication",
+          "outcome": "Reject option-like or unsupported file arguments before fixed tools, terminate option parsing and retain path containment. Use exclusive unpredictable private temporary files in verified parent directories and atomic replace; preserve recoverability and portability without following links/reparse substitutions.",
+          "title": "Confined tool arguments and secure atomic publication"
+        },
+        {
+          "id": "explicit-secure-development-exposure",
+          "outcome": "Keep authentication mode startup-owned, remove public downgrade authority, bind dev hosts to loopback by default and require explicit operator LAN exposure. Token-bearing browser/proxy traffic must retain configured end-to-end transport protection.",
+          "title": "Startup-owned auth and explicit secure LAN development"
+        },
+        {
+          "id": "issue-ledger-and-controlled-qualification",
+          "outcome": "Recheck all 67 current-repository rows and all 78 legacy rows against current source, regression, supported-flow and required controlled evidence. Keep the 21 other-repository and 25 functional dispositions explicit. Reconcile threat models, operator recovery, skill tests, JSON review data and scope ownership; then use the separate overall work binding for one aggregate qualification.",
+          "title": "Complete issue ledger and secure workflow handoff"
+        }
+      ]
+    }
+  ],
+  "name": "Security Findings Refresh and Governed Remediation",
+  "objective": "Plan one governed successor for validated current security gaps and unresolved legacy runtime/hardening work, preserving completed history and supported user workflows. This proposal is planning only: no implementation, roadmap approval, production effects or legacy completion are authorized.",
+  "paths": {
+    "report": "docs/tmp/security-findings-refresh-implementation-report.md",
+    "roadmap": "docs/security-findings-refresh-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/security-findings-refresh/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-10-21T11:12:43Z",
+    "fingerprint": "2001a785c7764a9275afbeb96ec95b463735b0e4fb6fda768658b5ed07b9b018",
+    "note": "The user renewed implementation authority for both existing roadmaps with the approved seven remediation options. Existing increments, completed chunks and evidence remain unchanged; unavailable qualification and failed dependency gates are not waived."
+  },
+  "schemaVersion": 1,
+  "slug": "security-findings-refresh",
+  "status": "executing",
+  "updatedAt": "2026-11-06T21:27:46Z"
+}

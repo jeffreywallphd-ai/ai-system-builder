@@ -19,6 +19,8 @@ from fastapi.responses import JSONResponse
 
 from .models import (
     CancelPythonRuntimeTaskResult,
+    ContextArtifactOperationTaskRequest,
+    ContextGenerationTaskRequest,
     EnsureModelDownloadRequest,
     EnsureModelDownloadResult,
     LocalModelConfig,
@@ -42,6 +44,7 @@ from .models import (
 )
 from .tasks.example_generation import ensure_generation_model_downloaded
 from .tasks.constrained_json_decoder import get_constrained_json_decoder_runtime_status
+from .generation_capacity import read_local_accelerator_memory_bytes
 from .tasks.local_text_generation import (
     describe_loaded_generation_models,
     ensure_generation_adapter_is_available,
@@ -50,7 +53,17 @@ from .tasks.local_text_generation import (
     unload_generation_models,
 )
 from .tasks.model_validation import validate_model_output
-from .tasks.prepare_training_dataset import prepare_training_dataset
+from .tasks.context_generation import (
+    ContextGenerationCancellationRequested,
+    generate_context_artifact,
+)
+from .tasks.context_artifact_operation import (
+    ContextArtifactOperationCancellationRequested,
+    operate_on_context_artifact,
+)
+from .tasks.prepare_training_dataset import DatasetPreparationCancellationRequested, prepare_training_dataset
+from .ocr.protocol import OcrContractError, OcrUnavailable
+from .ocr.task_sources import CAPABILITY as OCR_TASK_CAPABILITY, task_ocr_sources
 from .tasks.review_dataset import review_dataset
 from .tasks.train_model import TrainingCancellationRequested, train_model
 
@@ -65,6 +78,10 @@ _TASK_ERROR_STAGES = {"normalization", "chunking", "generation", "split"}
 
 
 def _safe_task_error_code(error: Exception) -> str:
+    if isinstance(error, OcrUnavailable):
+        return "ocr_unavailable"
+    if isinstance(error, OcrContractError):
+        return "ocr_input_invalid"
     candidate = getattr(error, "error_code", None)
     return (
         candidate
@@ -74,11 +91,39 @@ def _safe_task_error_code(error: Exception) -> str:
 
 
 def _safe_task_error_stage(error: Exception) -> str | None:
+    if isinstance(error, (OcrUnavailable, OcrContractError)):
+        return "normalization"
     candidate = getattr(error, "stage", None)
     return candidate if candidate in _TASK_ERROR_STAGES else None
 
 
+def _safe_task_error_details(error: Exception) -> dict:
+    details = {"diagnosticClass": type(error).__name__}
+    # Notification history is a public diagnostic sink. Copy no arbitrary details.
+    if _safe_task_error_code(error) != "generation_insufficient_resources":
+        return details
+    raw = getattr(error, "details", None)
+    value = raw.get("memoryShortfall") if isinstance(raw, dict) else None
+    if not isinstance(value, dict):
+        return details
+    resource = value.get("resource")
+    fields = ("requiredBytes", "availableBytes", "allowedOverflowBytes")
+    if type(resource) is not str or resource not in {"ram", "vram", "combined"} or not all(
+        type(value.get(key)) is int and 0 <= value[key] <= 1024 ** 5 for key in fields
+    ):
+        return details
+    required, available, overflow = (value[key] for key in fields)
+    if required <= available + overflow or resource == "vram" and overflow != 0:
+        return details
+    details["memoryShortfall"] = {"resource": resource, **{key: value[key] for key in fields}}
+    return details
+
+
 def _safe_task_error_message(error: Exception) -> str:
+    if isinstance(error, OcrUnavailable):
+        return "Text recognition is unavailable. Choose an installed Windows recognition language, or turn off scanned-PDF recognition."
+    if isinstance(error, OcrContractError):
+        return "The scanned PDF or its settings could not be verified. Select the source again and check the recognition language."
     if getattr(error, "error_code", None) == "model_download_invalid_snapshot":
         return "Downloaded files did not form a complete model. Retry to resume and verify the saved files."
     if getattr(error, "error_code", None) == "model_download_interrupted":
@@ -89,6 +134,7 @@ app = FastAPI(title="ai-system-builder python runtime worker", version=WORKER_VE
 TASK_EXECUTOR = ThreadPoolExecutor(max_workers=1)
 TASK_REGISTRY_LOCK = Lock()
 TASK_REGISTRY: dict[str, dict[str, Any]] = {}
+MODEL_UNLOAD_IN_PROGRESS = False
 TASK_WAIT_POLL_SECONDS = 1.0
 TASK_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
@@ -275,6 +321,12 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
 
     if request.taskType == "prepare-training-dataset":
         payload = PrepareTrainingDatasetRequest.model_validate(request.payload)
+        # Validate the complete source map before resolving even the output root.
+        task_ocr_sources(payload)
+
+        def preparation_cancelled() -> bool:
+            with TASK_REGISTRY_LOCK:
+                return TASK_REGISTRY.get(request.requestId, {}).get("cancellationRequested") is True
 
         def on_generation_progress(progress: dict[str, Any]) -> None:
             processed = progress.get("processedChunkCount") or 0
@@ -330,7 +382,57 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
             payload,
             on_generation_progress=on_generation_progress,
             output_directory=_runtime_output_directory(payload),
+            cancelled=preparation_cancelled,
         ).model_dump(mode="json")
+
+    if request.taskType == "generate-context-artifact":
+        payload = ContextGenerationTaskRequest.model_validate(request.payload)
+
+        def check_context_cancellation() -> None:
+            with TASK_REGISTRY_LOCK:
+                cancellation_requested = TASK_REGISTRY.get(
+                    request.requestId,
+                    {},
+                ).get("cancellationRequested") is True
+            if cancellation_requested:
+                raise ContextGenerationCancellationRequested(
+                    "Context generation cancellation requested."
+                )
+
+        def on_context_progress(progress: dict[str, Any]) -> None:
+            check_context_cancellation()
+            _update_task(request.requestId, progress=progress)
+            print(
+                json.dumps({"event": "runtime.context_generation.progress"}),
+                flush=True,
+            )
+
+        return generate_context_artifact(
+            payload,
+            on_progress=on_context_progress,
+            cancellation_check=check_context_cancellation,
+        )
+
+    if request.taskType == "context-artifact-operation":
+        payload = ContextArtifactOperationTaskRequest.model_validate(
+            request.payload
+        )
+
+        def check_context_operation_cancellation() -> None:
+            with TASK_REGISTRY_LOCK:
+                cancellation_requested = TASK_REGISTRY.get(
+                    request.requestId,
+                    {},
+                ).get("cancellationRequested") is True
+            if cancellation_requested:
+                raise ContextArtifactOperationCancellationRequested(
+                    "Context artifact operation cancellation requested."
+                )
+
+        return operate_on_context_artifact(
+            payload,
+            cancellation_check=check_context_operation_cancellation,
+        )
 
     if request.taskType == "review-dataset":
         payload = ReviewDatasetRequest.model_validate(request.payload)
@@ -360,6 +462,7 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
                 model
                 for model in describe_loaded_generation_models()
                 if model.get("modelId") == runtime_model_id
+                and model.get("memoryMode", "standard") == "standard"
                 and model.get("adapterModelId") == adapter_model_id
                 and model.get("adapterRevision") == adapter_revision
             ),
@@ -479,6 +582,8 @@ def _ensure_model_download_data(
 
 def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRuntimeTaskResult:
     with TASK_REGISTRY_LOCK:
+        if MODEL_UNLOAD_IN_PROGRESS:
+            raise RuntimeError("Generation model cleanup is in progress. Retry after completion.")
         if not TASK_REQUEST_ID_PATTERN.fullmatch(request.requestId):
             raise RuntimeError("Runtime task request identifier is invalid.")
         _prune_terminal_tasks_locked()
@@ -521,7 +626,12 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                     data=data,
                     completedAt=_now_iso(),
                 )
-        except TrainingCancellationRequested:
+        except (
+            DatasetPreparationCancellationRequested,
+            TrainingCancellationRequested,
+            ContextGenerationCancellationRequested,
+            ContextArtifactOperationCancellationRequested,
+        ):
             _update_task(
                 request.requestId,
                 status="cancelled",
@@ -553,7 +663,7 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                     errorCode=error_code,
                     stage=error_stage,
                     message=_safe_task_error_message(error),
-                    details={"diagnosticClass": type(error).__name__},
+                    details=_safe_task_error_details(error),
                     retryable=getattr(error, "retryable", False) is True,
                 ),
                 completedAt=_now_iso(),
@@ -581,9 +691,12 @@ def health() -> PythonRuntimeHealthCheckResult:
 
 @app.get("/capabilities", response_model=PythonRuntimeCapabilitiesResult)
 def capabilities() -> PythonRuntimeCapabilitiesResult:
+    from .tasks.bounded_model_loader import offload_runtime_available
     supported = [
         "prepare-training-dataset",
         "review-dataset",
+        "generate-context-artifact",
+        "context-artifact-operation",
         "ensure-model-download",
         "model-status",
         "unload-model",
@@ -592,9 +705,18 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
         "validate-model",
         "conversation-text-generation",
     ]
-    if get_constrained_json_decoder_runtime_status().available:
+    decoder_available = get_constrained_json_decoder_runtime_status().available
+    if decoder_available:
         supported.append("dataset-preparation.constrained-json")
-    return PythonRuntimeCapabilitiesResult(runtimeId=RUNTIME_ID, capabilities=supported)
+    if offload_runtime_available():
+        supported.append("dataset-preparation.offload-v1")
+    if platform.system() == "Windows":
+        # Protocol support only; no engine/process/language probe at startup.
+        supported.append(OCR_TASK_CAPABILITY)
+    return PythonRuntimeCapabilitiesResult(
+        runtimeId=RUNTIME_ID, capabilities=supported,
+        totalAcceleratorMemoryBytes=read_local_accelerator_memory_bytes() if decoder_available else None,
+    )
 
 
 @app.post("/tasks/start", response_model=StartPythonRuntimeTaskResult)
@@ -624,17 +746,41 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
     if record["status"] == "cancelled":
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="cancelled", cancelled=True, message="Task is already cancelled.", metadata=record.get("metadata"))
     if record["status"] == "running":
-        if record.get("taskType") == "train-model":
+        if record.get("taskType") in {
+            "train-model",
+            "generate-context-artifact",
+            "context-artifact-operation",
+            "prepare-training-dataset",
+        }:
             with TASK_REGISTRY_LOCK:
                 current = TASK_REGISTRY.get(request_id)
                 if current is not None:
                     current["cancellationRequested"] = True
                     current["progress"] = {
                         "stage": "cancelling",
-                        "message": "Stopping model training after the current batch.",
+                        "message": (
+                            "Stopping dataset preparation after the current bounded operation."
+                            if record.get("taskType") == "prepare-training-dataset"
+                            else
+                            "Stopping context generation after the current chunk."
+                            if record.get("taskType") == "generate-context-artifact"
+                            else "Stopping context retrieval."
+                            if record.get("taskType") == "context-artifact-operation"
+                            else "Stopping model training after the current batch."
+                        ),
                     }
                     current["updatedAt"] = _now_iso()
-            return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="running", cancelled=False, message="Model training cancellation requested.", metadata=record.get("metadata"))
+            message = (
+                "Dataset preparation cancellation requested."
+                if record.get("taskType") == "prepare-training-dataset"
+                else
+                "Context generation cancellation requested."
+                if record.get("taskType") == "generate-context-artifact"
+                else "Context retrieval cancellation requested."
+                if record.get("taskType") == "context-artifact-operation"
+                else "Model training cancellation requested."
+            )
+            return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="running", cancelled=False, message=message, metadata=record.get("metadata"))
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="running", cancelled=False, message="Task is already running and cannot be force-cancelled.", metadata=record.get("metadata"))
     return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status=record["status"], cancelled=False, message="Task is no longer cancellable.", metadata=record.get("metadata"))
 
@@ -713,8 +859,18 @@ def model_status() -> ModelStatusResult:
 
 @app.post("/models/unload", response_model=UnloadModelsResult)
 def unload_models() -> UnloadModelsResult | JSONResponse:
-    active_task_count = _active_task_count()
-    if active_task_count > 0:
-        return JSONResponse(status_code=409, content={"error": PythonRuntimeError(code="model_unload_blocked", message="Cannot unload generation model while a runtime task is active.", details={"activeTaskCount": active_task_count}, retryable=True).model_dump(mode="json")})
-    unloaded = unload_generation_models()
-    return UnloadModelsResult(unloadedModels=[LoadedModelDescriptor.model_validate(model) for model in unloaded], activeTaskCount=0)
+    global MODEL_UNLOAD_IN_PROGRESS
+    from .tasks.local_model_offload import OffloadAdmissionError
+    with TASK_REGISTRY_LOCK:
+        active_task_count = sum(task.get("status") in {"queued", "running"} for task in TASK_REGISTRY.values())
+        if active_task_count > 0 or MODEL_UNLOAD_IN_PROGRESS:
+            return JSONResponse(status_code=409, content={"error": PythonRuntimeError(code="model_unload_blocked", message="Cannot unload generation model while a runtime task or cleanup is active.", details={"activeTaskCount": active_task_count}, retryable=True).model_dump(mode="json")})
+        MODEL_UNLOAD_IN_PROGRESS = True
+    try:
+        unloaded = unload_generation_models()
+        return UnloadModelsResult(unloadedModels=[LoadedModelDescriptor.model_validate(model) for model in unloaded], activeTaskCount=0)
+    except OffloadAdmissionError:
+        return JSONResponse(status_code=409, content={"error": PythonRuntimeError(code="model_cleanup_pending", message="Model cleanup could not be confirmed. Ownership is retained; retry unloading after completion.", retryable=True).model_dump(mode="json")})
+    finally:
+        with TASK_REGISTRY_LOCK:
+            MODEL_UNLOAD_IN_PROGRESS = False

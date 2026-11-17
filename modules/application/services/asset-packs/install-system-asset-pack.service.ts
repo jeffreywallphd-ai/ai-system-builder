@@ -1,3 +1,4 @@
+import { isDeepStrictEqual, types } from "node:util";
 import type {
   AssetDefinition,
   AssetMetadata,
@@ -11,6 +12,7 @@ import type { AssetDefinitionRepositoryPort } from "../../ports/asset";
 import type { AssetUseCaseResult } from "../../use-cases/asset";
 import { validateAssetDefinition, type AssetValidationResult } from "../asset";
 import { runAssetPackQualityGates } from "./asset-pack-quality-gates.service";
+import { captureAssetPackFingerprintInput } from "./asset-pack-fingerprint-input";
 import {
   validateAssetPackAssetEntry,
   validateAssetPackManifest,
@@ -59,18 +61,21 @@ export interface InstallSystemAssetPackServiceDependencies {
   readonly definitionRepository: AssetDefinitionRepositoryPort;
   readonly registerAssetDefinition?: {
     execute(definition: AssetDefinition): Promise<AssetUseCaseResult<AssetDefinition>>;
+    executeMany?(definitions: readonly AssetDefinition[], expected: readonly (AssetDefinition | undefined)[]): Promise<AssetUseCaseResult<readonly AssetDefinition[]>>;
   };
 }
 
 type PlannedInstallAction =
   | {
       readonly kind: "install";
+      readonly expected?: AssetDefinition;
       readonly entry: AssetPackManifest["assets"][number];
       readonly definition: AssetDefinition;
       readonly definitionRef: AssetReference;
     }
   | {
       readonly kind: "refresh";
+      readonly expected: AssetDefinition;
       readonly entry: AssetPackManifest["assets"][number];
       readonly definition: AssetDefinition;
       readonly definitionRef: AssetReference;
@@ -149,6 +154,37 @@ export class InstallSystemAssetPackService {
     const skippedDefinitionRefs: AssetReference[] = [];
     let failedEntryCount = 0;
 
+    const canBatch = this.dependencies.definitionRepository.saveDefinitions &&
+      (!this.dependencies.registerAssetDefinition || this.dependencies.registerAssetDefinition.executeMany);
+    if (canBatch) {
+      for (let offset = 0; offset < plan.actions.length; offset += 250) {
+        const batch = plan.actions.slice(offset, offset + 250);
+        const writes = batch.filter((action): action is Exclude<PlannedInstallAction, { kind: "skip" }> => action.kind !== "skip");
+        let saved = true;
+        if (writes.length) {
+          try {
+            const definitions = writes.map(a => a.definition);
+            const expected = writes.map(a => a.expected);
+            const registered = this.dependencies.registerAssetDefinition
+              ? await this.dependencies.registerAssetDefinition.executeMany!(definitions, expected)
+              : { ok: true, value: await this.dependencies.definitionRepository.saveDefinitions!(definitions, expected) };
+            saved = registered.ok;
+          } catch { saved = false; }
+        }
+        for (const action of batch) {
+          if (action.kind === "skip") { skippedDefinitionRefs.push(action.definitionRef); diagnostics.push(action.diagnostic); }
+          else if (!saved) {
+            failedEntryCount++;
+            diagnostics.push({ severity: "error", code: "definition-save-failed", message: SAFE_FAILURE_MESSAGE,
+              entryId: action.entry.entryId, definitionRef: action.definitionRef, metadata: { operation: action.kind } });
+          } else {
+            installedDefinitionRefs.push(action.definitionRef);
+            diagnostics.push({ severity: "info", code: action.kind === "refresh" ? "definition-refreshed" : "definition-installed",
+              message: "System-owned definition was installed.", entryId: action.entry.entryId, definitionRef: action.definitionRef });
+          }
+        }
+      }
+    } else {
     for (const action of plan.actions) {
       if (action.kind === "skip") {
         skippedDefinitionRefs.push(action.definitionRef);
@@ -194,6 +230,7 @@ export class InstallSystemAssetPackService {
         entryId: action.entry.entryId,
         definitionRef: action.definitionRef,
       });
+    }
     }
 
     if (failedEntryCount > 0) {
@@ -269,11 +306,36 @@ export class InstallSystemAssetPackService {
     const actions: PlannedInstallAction[] = [];
     let failedEntryCount = 0;
 
-    for (const entry of input.manifest.assets) {
+    let storedBatch: readonly (AssetDefinition | undefined)[] | undefined;
+    let batchReadFailed = false;
+    if (this.dependencies.definitionRepository.getDefinitions) {
+      try {
+        const values: (AssetDefinition | undefined)[] = [];
+        for (let offset = 0; offset < input.manifest.assets.length; offset += 250) {
+          const refs = input.manifest.assets.slice(offset, offset + 250).map(e => definitionReference(e.definition));
+          const batch = await this.dependencies.definitionRepository.getDefinitions(refs);
+          if (types.isProxy(batch) || !Array.isArray(batch) || batch.length !== refs.length) throw new Error(SAFE_FAILURE_MESSAGE);
+          for (let n = 0; n < batch.length; n++) {
+            const descriptor = Object.getOwnPropertyDescriptor(batch, String(n));
+            if (!descriptor || !("value" in descriptor)) throw new Error(SAFE_FAILURE_MESSAGE);
+            values.push(descriptor.value);
+          }
+        }
+        storedBatch = values;
+      } catch { batchReadFailed = true; }
+    }
+    for (const [index, entry] of input.manifest.assets.entries()) {
       const definitionRef = definitionReference(entry.definition);
       let existing: AssetDefinition | undefined;
       try {
-        existing = await this.dependencies.definitionRepository.getDefinition(definitionRef);
+        if (batchReadFailed) throw new Error(SAFE_FAILURE_MESSAGE);
+        const stored = storedBatch ? storedBatch[index] : await this.dependencies.definitionRepository.getDefinition(definitionRef);
+        if (stored !== undefined) {
+          const captured = captureAssetPackFingerprintInput(stored);
+          if (!captured || typeof captured !== "object" || Array.isArray(captured)) throw new Error(SAFE_FAILURE_MESSAGE);
+          existing = captured as unknown as AssetDefinition;
+          if (existing.definitionId !== definitionRef.id || existing.version !== definitionRef.version) throw new Error(SAFE_FAILURE_MESSAGE);
+        }
       } catch {
         failedEntryCount += 1;
         diagnostics.push({
@@ -313,7 +375,7 @@ export class InstallSystemAssetPackService {
       }
 
       if (input.allowSystemDefinitionRefresh === true && isRefreshableSystemDefinition(existingMetadata, input.manifest, entry)) {
-        actions.push({ kind: "refresh", entry, definition: enrichedDefinition, definitionRef });
+        actions.push({ kind: "refresh", entry, definition: enrichedDefinition, definitionRef, expected: existing });
         continue;
       }
 
@@ -441,14 +503,20 @@ function isMatchingInstalledDefinition(
   entry: AssetPackManifest["assets"][number],
   metadata: SystemPackDefinitionMetadata | undefined,
 ): boolean {
-  return (
+  if (!(
     metadata?.packId === manifest.packId &&
     metadata.packVersion === manifest.version &&
     metadata.entryId === entry.entryId &&
     metadata.fingerprint === entry.fingerprint &&
     existing.definitionId === entry.definition.definitionId &&
     existing.version === entry.definition.version
-  );
+  )) return false;
+  try {
+    // The legacy marker identifies an expected source, never the stored body.
+    // Reconstruct only the permitted operational enrichment and compare all content.
+    const expected = withSystemPackMetadata(entry.definition, manifest, entry, new Date(metadata.installedAt));
+    return isDeepStrictEqual(existing, captureAssetPackFingerprintInput(expected));
+  } catch { return false; }
 }
 
 function isRefreshableSystemDefinition(

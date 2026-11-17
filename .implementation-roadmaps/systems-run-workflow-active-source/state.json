@@ -1,5 +1,16 @@
 {
-  "blockers": [],
+  "blockers": [
+    {
+      "id": "superseded-by-publish-lifecycle",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T14:04:25Z",
+      "requiredAction": "Execute current Publish lifecycle and security successor work only. Preserve this draft as mapped history; its six criteria have existing primary and companion owners. No implementation, approval or qualification pass is asserted for this unstarted draft.",
+      "resolution": null,
+      "resolvedAt": null,
+      "status": "open",
+      "summary": "Superseded unapproved proposal: the completed Publish lifecycle explicitly absorbed active-source eligibility and removed the standalone Run and Test surface. Recreating that surface contradicts the later user direction."
+    }
+  ],
   "chunks": [],
   "completion": null,
   "createdAt": "2026-07-29T03:25:06Z",
@@ -224,6 +235,12 @@
       "recordedAt": "2026-07-29T04:05:14Z",
       "sequence": 9,
       "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "b815c8a86a5c4a4ad27fcf42e7195152768171f8c37b3f48729df9375af5c687",
+      "recordedAt": "2026-10-22T14:04:25Z",
+      "sequence": 10,
+      "type": "blocker-recorded"
     }
   ],
   "increments": [
@@ -329,6 +346,6 @@
   "roadmapApproval": null,
   "schemaVersion": 1,
   "slug": "systems-run-workflow-active-source",
-  "status": "roadmap-drafting",
-  "updatedAt": "2026-07-29T04:05:14Z"
+  "status": "blocked",
+  "updatedAt": "2026-10-22T14:04:25Z"
 }

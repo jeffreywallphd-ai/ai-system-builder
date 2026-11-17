@@ -1,0 +1,169 @@
+{
+  "schema_version": "roadmap-user-support-descriptions-v1",
+  "support": [
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c94669eb05f0d8d3c992d69a53fcfaaaf8139834b98a81c005b3ac83c73118a6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The shared contracts and MCP test launcher were repaired.",
+          "The focused tests passed for secure connections, request scope, and public replies."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4ef02b6e691fff5653c7a487ab0c1a2f6cb0b5d088423eb6a139c7d9898bdada",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The roadmap still needs the combined repository tests and independent review."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b0eedc867a27638a19616713ff4a5741d015b11921a0359e8010a74fa0dd5817",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the packaged Windows app, the user approved a plan that saves a selected CSV and creates a system.",
+          "The second step waited for the file save.",
+          "The client received the same save reference on retry.",
+          "Data showed one saved CSV with the expected contents."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "249fb69d04f157f57db5716b44c92c8b361db25ddc64e0dd202a689cfa558446",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers saving a selected local file on Desktop.",
+          "Managed browser import, provider sources, dataset review and exact app reveal still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e56b4e31726a7bbcbbb5f7bf67738ea46bcddd7bcc9a394444eaee91b1413b7a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the Managed browser, the user prepared one CSV for the configured chat client.",
+          "The client read the file type and size.",
+          "Cancel removed access to the preview.",
+          "The usual Add data action saved one copy."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5b3b279780b2f6073e930bc7fb82f3eee269510cf99bd48f87bcd41f7c6ec29d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Saving through an approved Managed plan, importing provider sources, preparing datasets and opening them from chat still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "05d082c476168a2d795736fc630fef33d5d6f3fa7caeb4167a1f91b153f4e47a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both Managed approval screens showed the selected file and permission to save it.",
+          "The user approved the plan in the app popup.",
+          "The client saved one CSV and received the same reference on retry.",
+          "The next step waited for the file save."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5124908527675eeb0b10095ca15c29e7e9501241c406f5f23088766ff027a10f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider imports, dataset preparation and opening the exact dataset from chat still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8994d1ea63008c7513f9925af790c4f324f2d92852c6a6ab11d04296a3ed5e15",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the database test, two imports of the same selected file returned the same saved source.",
+          "An error while saving the source details left no partial records.",
+          "The test used a simulated provider reply."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1feb208b85115a47dad186a02fb89e6fc6539ebc3740921de1759c4a5fed0b1c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider imports from the chat client, dataset preparation and opening data from chat still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "af98873509205d23bfc11e72bf5aa29188d733c1546fdc89096ed3c58ab438e0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Data panel test prepared one Parquet file for the selected chat client.",
+          "A paired-client test verified the file type and exact revision.",
+          "Tests refused access from another client and stopped preview after cancellation.",
+          "The packaged Windows app refused a preview for an unselected file."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f0bd81f0d9c4afbc27073d8f1b1e9dd4c77dc6dfc4d822d8f91b1b06c4613613",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider import after approval, Managed browser preview, dataset preparation and opening data from chat still need work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f21d16ee24a71ae7c93bb994ff4dea7c2b940543d97b9e94c999d1132628b314",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Managed browser test prepared one Parquet file for the configured chat client.",
+          "The chat client read the exact revision and could no longer preview that file after cancellation.",
+          "The test used Chrome over local HTTPS, with PostgreSQL and a simulated repository listing."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6b745d7d4b22dfd9a8662fdb2f2fa73052ccbed2a0aac0a79867c69ebb86aca0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider import after approval, dataset preparation and opening data from chat still need work."
+        ]
+      }
+    },
+    {"kind": "support-scope", "source_text_sha256": "e16077a4a4fcf241436d33fa1eb0775f0b9989e76cb6e278b4b6da31ee4fd726", "user_description": {"owner": "agent", "sentences": ["The Data picker shows the license declared in the provider listing.", "The open-license filters keep matching datasets and clear earlier file choices."]}},
+    {"kind": "support-limitation", "source_text_sha256": "1124ca7040258d36498f8a1494a7cb811f773e9141013f75363628f9451a534e", "user_description": {"owner": "agent", "sentences": ["This test used a simulated listing.", "Saved-revision license evidence and full Data journeys have separate checks."]}},
+    {"kind": "support-scope", "source_text_sha256": "bb168b501191bca2589057aa710d9e34b8acd73e84736d7cde9453aaada3c84f", "user_description": {"owner": "agent", "sentences": ["The Desktop and Server tests saved the license codes for the exact imported revision.", "An import can still finish when the license information is unavailable."]}},
+    {"kind": "support-limitation", "source_text_sha256": "7e6743378329cbbbdb35e4878feac573de04f1441eed62a9173aef742ebcdc42", "user_description": {"owner": "agent", "sentences": ["The tests used a simulated provider.", "Approving provider imports in chat and testing the full Data workflow still need work."]}},
+    {"kind": "support-scope", "source_text_sha256": "bfa79857b0fc5c0b119046571553ad48dc14479e70623383d0b7c59929bc4155", "user_description": {"owner": "agent", "sentences": ["Add Data shows the saved license for each imported file.", "A file can show an unknown license. Older imports remain readable."]}},
+    {"kind": "support-limitation", "source_text_sha256": "565d9c5555b19ab266a1dce7c3ff3f37a957e23540d9976f314b5a4736702a00", "user_description": {"owner": "agent", "sentences": ["The tests used a simulated provider.", "Approving provider imports in chat and testing the full Data workflow still need work."]}}
+  ]
+}

@@ -15,6 +15,11 @@ export function createStructuredAssetStudioAssetDraftRepository(
   documents: StructuredDocumentStore,
 ): AssetStudioAssetDraftRepositoryPort {
   return {
+    async readPublishedAssetReferences(workspaceId) {
+      return (await documents.listDocuments<AssetStudioAssetDraftRecord>(NAMESPACE)).filter(document => document.value.workspaceId === workspaceId).map(document => normalizeAssetStudioAssetDraftRecord(document.value))
+        .filter(record => record.status === "published")
+        .map(record => ({...record.definitionRef}));
+    },
     async create(record) {
       const normalized = normalizeAssetStudioAssetDraftRecord(record);
       const key = recordKey(normalized.workspaceId, normalized.draftId);

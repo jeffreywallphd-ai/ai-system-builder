@@ -15,6 +15,8 @@ _MAX_COLUMNS = 256
 _MAX_DISPLAY_TEXT_BYTES = 8_192
 _MAX_DISPLAY_ROW_BYTES = 32 * 1_024
 _BATCH_SIZE = 1_024
+# Mirrors the existing contracts/storage retrieval maximum; not a decoded-memory budget.
+_MAX_INPUT_BYTES = 64 * 1024 * 1024
 
 
 def review_dataset(request: ReviewDatasetRequest) -> dict[str, Any]:
@@ -24,26 +26,28 @@ def review_dataset(request: ReviewDatasetRequest) -> dict[str, Any]:
         raise RuntimeError("Dataset review requires the installed Parquet runtime.") from error
     working_directory = _working_directory(request)
     input_path = _contained_file(working_directory, request.inputPath)
-    parquet = pq.ParquetFile(input_path)
-    total_rows = int(parquet.metadata.num_rows)
-    if len(parquet.schema_arrow.names) > _MAX_COLUMNS:
-        raise RuntimeError("This dataset has too many columns for row review.")
+    if not 0 < input_path.stat().st_size <= _MAX_INPUT_BYTES:
+        raise RuntimeError("Dataset review requires a bounded non-empty Parquet source.")
+    with pq.ParquetFile(input_path) as parquet:
+        total_rows = int(parquet.metadata.num_rows)
+        if len(parquet.schema_arrow.names) > _MAX_COLUMNS:
+            raise RuntimeError("This dataset has too many columns for row review.")
 
-    if request.operation == "read":
-        return _read_page(parquet, total_rows, request.page, request.pageSize)
-    if request.operation == "reject" and total_rows <= 1:
-        raise RuntimeError("The only remaining row cannot be rejected.")
-    output_path = _contained_output(working_directory, request.outputHandle)
-    if request.operation == "replace" and request.replacementRow is None:
-        raise RuntimeError("Edited dataset values are required.")
-    return _revise_row(
-        parquet,
-        output_path,
-        total_rows,
-        request.rowIndex,
-        request.rowFingerprint,
-        request.replacementRow if request.operation == "replace" else None,
-    )
+        if request.operation == "read":
+            return _read_page(parquet, total_rows, request.page, request.pageSize)
+        if request.operation == "reject" and total_rows <= 1:
+            raise RuntimeError("The only remaining row cannot be rejected.")
+        output_path = _contained_output(working_directory, request.outputHandle)
+        if request.operation == "replace" and request.replacementRow is None:
+            raise RuntimeError("Edited dataset values are required.")
+        return _revise_row(
+            parquet,
+            output_path,
+            total_rows,
+            request.rowIndex,
+            request.rowFingerprint,
+            request.replacementRow if request.operation == "replace" else None,
+        )
 
 
 def _read_page(
@@ -56,19 +60,32 @@ def _read_page(
     if offset >= total_rows:
         return {"totalRows": total_rows, "rows": []}
     rows: list[dict[str, Any]] = []
+    # Footer counts locate the requested window without decoding preceding groups.
+    groups: list[int] = []
     current = 0
-    for batch in parquet.iter_batches(batch_size=max(page_size, 64)):
-        batch_rows = batch.to_pylist()
-        next_current = current + len(batch_rows)
+    first_row = 0
+    end = min(total_rows, offset + page_size)
+    for group_index in range(parquet.metadata.num_row_groups):
+        group_end = current + int(parquet.metadata.row_group(group_index).num_rows)
+        if current < end and group_end > offset:
+            if not groups:
+                first_row = current
+            groups.append(group_index)
+        current = group_end
+        if current >= end:
+            break
+    if not groups:
+        raise RuntimeError("Dataset review row metadata is inconsistent.")
+    current = first_row
+    for batch in parquet.iter_batches(batch_size=max(page_size, 64), row_groups=groups):
+        next_current = current + batch.num_rows
         if next_current <= offset:
             current = next_current
             continue
         start = max(0, offset - current)
-        for local_index in range(start, len(batch_rows)):
-            row_index = current + local_index
-            if len(rows) >= page_size:
-                return {"totalRows": total_rows, "rows": rows}
-            row = batch_rows[local_index]
+        take = min(batch.num_rows - start, page_size - len(rows))
+        for local_index, row in enumerate(batch.slice(start, take).to_pylist()):
+            row_index = current + start + local_index
             editable = _is_editable_value(row, depth=0) and len(
                 json.dumps(
                     row,
@@ -91,6 +108,8 @@ def _read_page(
                 }
             )
         current = next_current
+        if len(rows) >= page_size:
+            break
     return {"totalRows": total_rows, "rows": rows}
 
 

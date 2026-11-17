@@ -10,6 +10,15 @@ import {
 } from "../FoundationAssetPreview";
 
 describe("FoundationAssetPreview", () => {
+  it("gives the assistant response a named status without hiding its text", () => {
+    const response = (configuration?: Record<string, string>) => renderToStaticMarkup(
+      <FoundationAssetPreview definitionId="conversation.assistant-text-response-output" configuration={configuration} presentation="composed" />,
+    );
+    expect(response()).toMatch(/<p[^>]*role="status"[^>]*aria-label="Assistant response"[^>]*>The assistant response will appear here\.<\/p>/);
+    expect(response({ accessibilityLabel: "Support response", content: "Your request was received." }))
+      .toMatch(/<p[^>]*role="status"[^>]*aria-label="Support response"[^>]*>Your request was received\.<\/p>/);
+  });
+
   it("renders accessible form, table, conversation, and fail-closed policy representatives", () => {
     const form = renderToStaticMarkup(
       <FoundationAssetPreview definitionId="builtin.feature.record-form" />,

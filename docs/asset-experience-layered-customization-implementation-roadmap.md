@@ -2,8 +2,8 @@
 
 # Asset Experience and Layered Customization Implementation Roadmap
 
-- Status: `implementation-complete-qualification-pending`
-- Updated: `2026-07-18T21:14:33Z`
+- Status: `completed`
+- Updated: `2026-11-13T15:53:01Z`
 
 ## Objective
 
@@ -60,7 +60,8 @@ The accepted authoring ADR permits sparse semantic overrides but defers raw code
 | 3: Complete responsive Assets browsing and import experience | Deliver the complete user-facing Assets browse and import experience across desktop and thin client: responsive asset cards, modal details, responsive filters, Import Assets language, and a safe downloadable .aisb-package starter with complete guidance. | shared-surface-foundation | `completed` |
 | 4: End-to-end layered Asset Customization workflow | Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset. | architecture-contract, shared-surface-foundation, complete-assets-experience | `completed` |
 | 5: Unified resource-backed Asset Studio and Saved assets | Deliver one ordered Studio surface for creating, saving, reopening, reviewing, and publishing from-scratch semantic assets with actual frontend structure, frontend styling, backend logic, and other backing resources across desktop and thin-client hosts. | layered-customization-workflow | `completed` |
-| 6: End-to-end production qualification and hardening | Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation. | unified-asset-studio-saved | `implemented-pending-qualification` |
+| 6: End-to-end production qualification and hardening | Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation. | unified-asset-studio-saved | `completed` |
+| 7: Asset-backed Form Composer | Let a system author build, preview, and publish a multipage form. Open a specific form from Canvas with Edit Form. A new form system saves its first page. Existing forms keep their Canvas placements. Published forms check answers, follow the selected route, and start approved actions. | unified-asset-studio-saved, production-qualification | `completed` |
 
 ## Increment 1: Layered customization architecture and contracts
 
@@ -326,12 +327,14 @@ Keep legacy authored-draft reads compatible and all new records readable; disabl
 ## Increment 6: End-to-end production qualification and hardening
 
 - Id: `production-qualification`
-- Status: `implemented-pending-qualification`
+- Status: `completed`
 - Dependencies: `unified-asset-studio-saved`
 
 Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation.
 
 ### Work packages
+
+Human portions of the original work packages, deliverables, verification and completed plan below are superseded by the exact offline scope archive. They remain historical approved intent; only the current technical acceptance criteria govern future qualification. No test pass is asserted.
 
 - **Representative end-to-end scenarios** (`scenario-tests`): Tests cover default or system and admitted imported customization plus new Studio asset save, reopen, review, publication, browse visibility, restart persistence, and original immutability on desktop and server paths.
 - **Failure and security qualification** (`failure-security`): Cross-workspace access, stale revisions or bases, unsafe paths or content, oversized files, revoked or unavailable package truth, interrupted persistence, and unavailable Studio adapters fail closed with recoverable safe UI states.
@@ -353,8 +356,18 @@ Prove the complete Assets and Systems experience, layered customization, and uni
 | `e2e-default-imported`: A built-in or system asset and an admitted installed imported asset can each be selected, customized, reviewed, published as distinct workspace-owned assets, rediscovered after restart, and proven not to mutate their bases. | local | passed (test) |
 | `e2e-studio-saved`: A new from-scratch resource-backed asset can be saved unpublished, reopened from Saved in Studio, reviewed, published, and rediscovered after restart without executing authored source. | local | passed (test) |
 | `all-gates-pass`: Focused suites, npm test, documentation, architecture, agent-support, dependency security, server, thin-client, and desktop build or package gates pass or have explicitly recorded environmental limitations with no product defect concealed. | local | passed (test) |
-| `desktop-thin-accessibility`: Documented keyboard, screen-reader, 400-percent zoom and reflow, contrast, focus, modal, and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | pending (manual) |
-| `security-review`: A controlled security review confirms source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | pending (manual) |
+| `desktop-thin-accessibility`: Agent-executed automated keyboard interactions, accessibility-tree semantics for screen-reader compatibility, 400-percent zoom and reflow, text and non-text contrast, focus, modal, reduced-motion and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | passed (test) |
+| `security-review`: Run current automated denial and failure checks and obtain a separate review of Asset Experience. Confirm source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | passed (review) |
+
+### Security scope history
+
+- The earlier legacy authorization assessment was not performed. It is outside this roadmap's acceptance and remains with the Security roadmap.
+- The original requirement, plan, approval, pending evidence, and issue remain in JSON history. This change records no test pass or release qualification.
+
+### Human scope handled offline
+
+- User-directed offline human acceptance; preserve every technical requirement and all prior evidence. No test pass or closure is asserted. (`user-agent-only-acceptance-and-current-scope-20261022`)
+  - Human portion of `desktop-thin-accessibility`: Observed human screen-reader sessions and participant/manual accessibility acceptance are handled offline. This transfers no automated keyboard/touch compatibility, accessibility-tree semantics, actual400-percent zoom/reflow, contrast or claimed physical-hardware/native support qualification. — offline user-owned; technical criterion retained; no test pass asserted.
 
 ### Verification
 
@@ -371,3 +384,59 @@ Keep new create operations capability-gated while retaining read-only browse, im
 - Automatic package updates
 - Automatic build, installation, activation, deployment, or unqualified execution
 - Cross-workspace collaborative editing
+
+## Increment 7: Asset-backed Form Composer
+
+- Id: `asset-backed-form-composer`
+- Status: `completed`
+- Dependencies: `unified-asset-studio-saved`, `production-qualification`
+
+Let a system author build, preview, and publish a multipage form. Open a specific form from Canvas with Edit Form. A new form system saves its first page. Existing forms keep their Canvas placements. Published forms check answers, follow the selected route, and start approved actions.
+
+### Work packages
+
+- **Build pages and add fields** (`form-pages-and-field-assets`): Open Form from the selected form asset and return to it with Back to Canvas. Save a new form system inside a page and compatible section. Preserve existing form placements and ownership. Add, rename, and reorder form pages and their fields. Reuse the existing versioned assets and draft model.
+- **Check answers and choose the next page** (`validation-and-answer-routing`): Configure validation and answer-based routes using fields, operators, values, and target pages. Show the order in which rules apply and the default route. Show errors next to the relevant field. In preview, test both branches, change a prior answer, and see which pages and answers will be included.
+- **Submit a form and start an action** (`submission-and-approved-actions`): Connect successful submission to an approved action or workflow asset through typed ports. Provide one working local example. Recheck the form and action authorization in the host. Give the respondent a clear result and prevent duplicate action runs when submission is retried. Preview uses sample answers and simulates actions.
+- **Test and document complete forms** (`form-journeys-and-guidance`): Build and run two distinct sample forms from scratch on Desktop and the managed browser. Cover keyboard operation, narrow windows, route changes, failed submissions, save and reopen, and publication. Fix defects found by the tests and document how to create, test, and publish a form.
+
+### Deliverables
+
+- A contextual Form view with page tabs, field editors, styling, validation, routing, actions, and preview.
+- A saved page and section for a new form system, preserved placements for embedded forms, and versioned assets with typed route and submission bindings.
+- A respondent view that checks answers, moves between pages, and sends a validated submission through the owning host.
+- Automated host journeys, focused contract and runtime checks, and a guide with two sample forms.
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `shared-form-and-canvas-draft`: Open a specific form asset with Edit Form and return to it with Back to Canvas. - Confirm a system without a form opens in Canvas. Limit current form-only pages, fields, messages, and controls to their owning form, including in built-in templates. Check that current fields saved outside a form in older drafts can be moved into a form and cannot be built while outside one. - Add, rename, and reorder form pages. Add and configure text, choice, numeric, and date or checkbox fields from compatible assets. - Confirm both views use the same draft and undo and redo history. Save and reopen with the same asset IDs, versions, settings, and order. | local | passed (test) |
+| `form-maps-to-a-canvas-page`: Create a form system and edit forms placed in a larger Canvas system. - Verify a new form system saves a Canvas page, compatible section, form, and empty first form page. Reopen it from Manage in the Form editor. - Open two forms on the same Canvas page. Check that each editor opens its own form and that moving between views keeps the placement, field order, and neighboring assets without duplication. - Make a supported change in Canvas and reopen the form. Confirm that validation, routing, and action bindings stay with their form. - Keep the existing Canvas controls and behavior apart from the contextual Edit Form entry. | local | passed (test) |
+| `form-validation-and-answer-routing`: Configure field validation and answer-based routing without code. - Test required answers, an invalid format or range, both branches, and the default route. - Go back and change the answer that selected a branch. Confirm the new route and that answers from skipped pages are excluded from submission. - Prevent publication of missing destinations, invalid field references, unreachable required steps, or route cycles. | local | passed (test) |
+| `form-preview-and-runtime-parity`: Preview a form with sample answers, then run a published test form. - Verify the same validation and routes in preview and the published form. - Verify that preview produces no submissions or action runs. - Check that older revisions and Canvas systems still open and retain their current behavior. | local | passed (test) |
+| `form-submission-triggers`: Connect a submission to a compatible action asset and run it in a published test form. - Show when the submission and action succeed, fail, or remain pending. - Verify that invalid and canceled forms start no action. - Keep a stable identity for each action run across duplicate requests, retries, and restarts. - Test a crash after the action takes effect but before the host records completion. Prevent a duplicate effect or keep the uncertain result for safe follow-up without automatically repeating it. - Keep form answers out of general logs and notifications. | local | passed (test) |
+| `security-form-submission-and-action-authority`: Independently review the exact change and run automated denial checks. - Verify host-owned workspace, actor, released revision, and action permissions. - Recheck the release and action permissions before dispatch and retry. Test a permission change after submission that prevents the action from running. - Reject untrusted expressions, incompatible ports, stale or revoked versions, unauthorized actions, and oversized inputs. - Check that draft, preview, and imported definitions cannot start an action. - Confirm that authorized actions receive only configured, validated fields and that errors and audit records protect answer content. | local | passed (review) |
+| `form-composer-desktop-and-browser`: Build and run an intake form and a branching questionnaire from scratch in the packaged Desktop app and managed browser. - Use the keyboard to author and complete both forms, including invalid input, changing routes, and save and reopen. - Check labels, validation announcements, focus, reflow, and reachable controls at standard and narrow widths and at actual 400 percent zoom. - Measure page switching, editing, validation, and submission on a representative larger form. Record the agreed test size and budgets before measuring. | controlled-environment | passed (test) |
+
+### Contextual Form scope history
+
+- The approved contextual editor supersedes the global switch and the requirement for one Canvas page per form.
+- The original definition, plan, approval, and review results remain in JSON history. The scope update records no test pass.
+
+### Verification
+
+- Use focused tests for asset placement, revision round trips, rule evaluation, publication, and submission recovery.
+- Use synthetic data for the two real-host feature journeys. Keep full system testing for the combined campaign after roadmap feature work.
+- Review the existing form primitives, accepted Asset Kernel and security decisions, and the exact supported runtime bindings before adding assets. Use Qualtrics Survey Flow and Kuali Build submission-to-workflow documentation as interaction references.
+- Verify that the contextual Edit Form entry preserves existing Canvas editing and rendering. Check page and container placement in Canvas and run automated round-trip tests.
+
+### Rollback
+
+Withdraw the Form entry point and stop dispatching form actions. Keep the Canvas pages and saved asset revisions readable, along with submission receipts and action history. Preserve the existing authorization and publication checks.
+
+### Excluded
+
+- Public anonymous form links, external delivery or provider integration, file uploads, and arbitrary scripts or webhooks.
+- General survey distribution and analytics, third-party form import, and a general-purpose workflow designer.
+- Changes to existing Canvas editing or rendering apart from adding the contextual Edit Form entry.

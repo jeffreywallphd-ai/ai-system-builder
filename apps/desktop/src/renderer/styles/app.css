@@ -3,3 +3,5 @@
 @import "./components/python-runtime-footer.css";
 @import "./components/settings.css";
 @import "./components/dataset-preparation.css";
+
+@import "../../../../../modules/ui/shared/styles/forced-colors.css";

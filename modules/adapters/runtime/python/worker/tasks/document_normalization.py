@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import html
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import re
+from typing import TYPE_CHECKING, Callable
 from zipfile import BadZipFile, ZipFile
 
+from ..ocr.protocol import (
+    OcrCancelled, OcrContractError, OcrDocument,
+)
+
+if TYPE_CHECKING:
+    from ..ocr.task_sources import OcrTaskSources
 from ..models import (
     DatasetPreparationSourceInput,
     DatasetPreparationWarning,
@@ -19,24 +26,26 @@ class NormalizedRegion:
     start: int
     end: int
     page_number: int | None = None
-    confidence: float = 1.0
+    confidence: float | None = 1.0
 
 
 @dataclass
 class NormalizedDocument:
     artifact_id: str
-    markdown: str
+    markdown: str = field(repr=False)
     media_type: str | None
-    source_path: str
+    source_path: str = field(repr=False)
     regions: list[NormalizedRegion] | None = None
     extraction_quality: float = 1.0
+    ocr_document: OcrDocument | None = field(default=None, repr=False)
 
 
 @dataclass
 class _NormalizedContent:
-    markdown: str
+    markdown: str = field(repr=False)
     regions: list[NormalizedRegion]
     extraction_quality: float
+    ocr_document: OcrDocument | None = field(default=None, repr=False)
 
 
 @dataclass
@@ -182,6 +191,48 @@ def _normalize_pdf(path: Path) -> _NormalizedContent:
     )
 
 
+def _check_cancelled(cancelled: Callable[[], bool]) -> None:
+    try:
+        value = cancelled()
+        if type(value) is not bool:
+            raise ValueError()
+    except Exception:
+        raise OcrContractError("Document preparation could not check cancellation safely.") from None
+    if value:
+        raise OcrCancelled("Text recognition was cancelled.")
+
+
+def _normalize_scanned_pdf(source: bytes, language: str,
+                           cancelled: Callable[[], bool]) -> _NormalizedContent:
+    _check_cancelled(cancelled)
+    # Windows/process composition is loaded only for explicit PDF OCR. Standard
+    # normalization and module import never probe or construct a supplier.
+    from ..ocr.provider import local_provider
+    from ..ocr.recognition import recognize_pdf_document
+
+    result = recognize_pdf_document(source, language, local_provider(), cancelled)
+    parts: list[str] = []
+    regions: list[NormalizedRegion] = []
+    cursor = 0
+    for page in result.pages:
+        if not page.lines:
+            continue
+        if parts:
+            parts.append("\n\n")
+            cursor += 2
+        for index, line in enumerate(page.lines):
+            if index:
+                parts.append("\n")
+                cursor += 1
+            start = cursor
+            parts.append(line.text)
+            cursor += len(line.text)
+            regions.append(NormalizedRegion("line", start, cursor, page.number, None))
+    text = "".join(parts)
+    _check_cancelled(cancelled)
+    return _NormalizedContent(text, regions, _extraction_quality(text), result)
+
+
 def _normalize_docx(path: Path) -> _NormalizedContent:
     try:
         from docx import Document
@@ -250,30 +301,46 @@ def _normalize_source_to_markdown(source: DatasetPreparationSourceInput) -> _Nor
 def normalize_sources_to_markdown(
     source_inputs: list[DatasetPreparationSourceInput],
     config: DocumentNormalizationConfig,
+    *,
+    ocr: OcrTaskSources | None = None,
+    cancelled: Callable[[], bool] = lambda: False,
 ) -> DocumentNormalizationResult:
     if config.targetFormat != "markdown":
         raise ValueError(f"Unsupported normalization target format: {config.targetFormat}")
+    if not callable(cancelled):
+        raise OcrContractError("Document preparation could not check cancellation safely.")
+    if ocr is not None:
+        from ..ocr.task_sources import OcrTaskSources
+        if type(ocr) is not OcrTaskSources:
+            raise OcrContractError("Scanned-PDF source identities could not be verified.")
+        ocr.assert_inputs(source_inputs)  # Validate every pair before the first read.
 
     policy = config.unsupportedDocumentPolicy or "fail"
     warnings: list[DatasetPreparationWarning] = []
     normalized: list[NormalizedDocument] = []
     skipped = 0
 
-    for source in source_inputs:
-        try:
-            content = _normalize_source_to_markdown(source)
-            normalized.append(
-                NormalizedDocument(
-                    artifact_id=source.artifactId,
-                    markdown=content.markdown,
-                    media_type=source.mediaType,
-                    source_path=source.localPath,
-                    regions=content.regions,
-                    extraction_quality=content.extraction_quality,
-                )
-            )
-        except Exception as error:
-            if policy == "skip":
+    for source_index, source in enumerate(source_inputs):
+        _check_cancelled(cancelled)
+        if ocr is not None:
+            # OCR admission, I/O, integrity, cancellation and supplier failures
+            # are never eligible for the unsupported-document skip policy.
+            from ..ocr.source_snapshot import capture_source
+            try:
+                captured = capture_source(ocr.bindings[source_index], stage_root=ocr.stage_root,
+                                          local_path=source.localPath, artifact_id=source.artifactId,
+                                          cancelled=cancelled)
+            except OcrCancelled:
+                raise OcrCancelled("Text recognition was cancelled.") from None
+            except Exception:
+                raise OcrContractError("The staged PDF could not be verified for text recognition.") from None
+            content = _normalize_scanned_pdf(captured, ocr.language, cancelled)
+        else:
+            try:
+                content = _normalize_source_to_markdown(source)
+            except Exception as error:
+                if policy != "skip":
+                    raise
                 skipped += 1
                 warning_code = "document_normalization_skipped"
                 if ".doc (legacy Microsoft Word)" in str(error):
@@ -289,8 +356,20 @@ def normalize_sources_to_markdown(
                     )
                 )
                 continue
-            raise
+        _check_cancelled(cancelled)
+        normalized.append(
+            NormalizedDocument(
+                artifact_id=source.artifactId,
+                markdown=content.markdown,
+                media_type=source.mediaType,
+                source_path=source.localPath,
+                regions=content.regions,
+                extraction_quality=content.extraction_quality,
+                ocr_document=content.ocr_document,
+            )
+        )
 
+    _check_cancelled(cancelled)
     return DocumentNormalizationResult(
         documents=normalized,
         skipped_document_count=skipped,

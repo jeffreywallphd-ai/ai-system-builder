@@ -1,6 +1,7 @@
 import type { RegisterSystemBuilderApiRoutesDependencies } from "../../api-express/system-builder";
 import {
   DESKTOP_SYSTEM_BUILDER_CHANNELS,
+  DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS,
   createIpcError,
   createIpcFailureResponse,
   createIpcSuccessResponse,
@@ -13,6 +14,7 @@ import {
 import { normalizeAssetId } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import type { IpcMainHandlePort } from "../ipcMainHandlePort";
+import { parsePublishedFormsList, parsePublishedFormSubmit, presentPublishedFormResult } from "../../system-builder/publishedFormTransport";
 
 export interface RegisterSystemBuilderIpcDependencies extends Omit<
   RegisterSystemBuilderApiRoutesDependencies,
@@ -24,6 +26,13 @@ export interface RegisterSystemBuilderIpcDependencies extends Omit<
 export function registerSystemBuilderIpc(
   d: RegisterSystemBuilderIpcDependencies,
 ): void {
+  const forms = d.publishedForms;
+  if (forms) {
+    handle(d, "listPublishedForms", async (payload) => presentPublishedFormResult(await forms.list(parsePublishedFormsList(payload)),
+      "Could not open forms for this published build."));
+    handle(d, "submitPublishedForm", async (payload) => presentPublishedFormResult(await forms.submit(parsePublishedFormSubmit(payload)),
+      "Could not submit this published form."));
+  }
   handle(d, "create", (p) =>
     d.create.execute({
       ...p,
@@ -170,14 +179,17 @@ export function registerSystemBuilderIpc(
   );
 }
 
+const SYSTEM_BUILDER_IPC_CHANNELS = { ...DESKTOP_SYSTEM_BUILDER_CHANNELS, ...DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS };
+
 function handle(
   d: RegisterSystemBuilderIpcDependencies,
-  operation: keyof typeof DESKTOP_SYSTEM_BUILDER_CHANNELS,
+  operation: keyof typeof SYSTEM_BUILDER_IPC_CHANNELS,
   run: (payload: Record<string, unknown>) => Promise<any>,
 ): void {
-  const channels = DESKTOP_SYSTEM_BUILDER_CHANNELS[operation];
+  const channels = SYSTEM_BUILDER_IPC_CHANNELS[operation];
+  const publishedForm = operation === "listPublishedForms" || operation === "submitPublishedForm";
   d.ipcMain.handle(channels.request.value, async (_event, request: any) => {
-    const context = {
+    const context = publishedForm ? {} : {
       requestId: request?.requestId,
       correlationId: request?.correlationId,
     };
@@ -193,7 +205,7 @@ function handle(
           : createIpcFailureResponse(
               createIpcError(
                 channels.response as any,
-                value.error.code?.includes("not-found")
+                value.error.code === "system-form.forbidden" ? "forbidden" : value.error.code?.includes("not-found")
                   ? "not-found"
                   : value.error.code?.includes("stale")
                     ? "conflict"

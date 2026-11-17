@@ -1,3 +1,7 @@
+import { captureStudioDraftCreate, captureStudioDraftUpdate, captureStudioDraftRead, captureStudioDraftList, captureStudioDraftTransition } from "../../services/asset-studio/capture-studio-requests";
+import type { AssetDefinitionPublicationPort } from "../../ports/asset-publication";
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import type { AssetDefinition, AssetReference } from "../../../contracts/asset";
 import {
   ASSET_IMPLEMENTATION_BACKING_RESOURCE_MEDIA_TYPE,
@@ -47,6 +51,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
 
   public constructor(
     private readonly dependencies: {
+      readonly workspaceAccess: WorkspaceAssetAccessPort;
+      readonly publication: AssetDefinitionPublicationPort;
       readonly drafts: AssetStudioAssetDraftRepositoryPort;
       readonly definitions: AssetDefinitionRepositoryPort;
       readonly implementations: AssetImplementationRepositoryPort;
@@ -71,6 +77,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: CreateAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftCreate(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.create", "asset:write");
       if (command.sourceLegacyDraftId) {
         const existing = await this.findLegacyDraft(
           command.workspaceId,
@@ -149,6 +157,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: UpdateAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftUpdate(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.update", "asset:write");
       const current = await this.readRecord(
         command.workspaceId,
         command.draftId,
@@ -187,6 +197,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     query: ReadAssetStudioAssetDraftQuery,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftView>> {
     try {
+      query = captureStudioDraftRead(query);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, query.workspaceId, "asset-studio.asset-draft.read", "asset:read");
       const record = await this.readRecord(query.workspaceId, query.draftId);
       if (!record) {
         return studioFailure(
@@ -210,6 +222,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     query: ListAssetStudioAssetDraftsQuery,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftListView>> {
     try {
+      query = captureStudioDraftList(query);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, query.workspaceId, "asset-studio.asset-draft.list", "asset:read");
       const page = await this.dependencies.drafts.list(query);
       return studioSuccess({
         drafts: page.records.map(toSummary),
@@ -227,6 +241,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: TransitionAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftTransition(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.review", "asset:write");
       const current = await this.readRecord(
         command.workspaceId,
         command.draftId,
@@ -298,6 +314,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: TransitionAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftTransition(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.publish", "asset:write");
       const current = await this.readRecord(
         command.workspaceId,
         command.draftId,
@@ -308,14 +326,16 @@ export class AssetStudioAssetDraftWorkflowUseCase {
           "Studio asset draft was not found.",
         );
       }
-      if (current.revision !== command.expectedRevision) {
+      // A lost response leaves the editor at its reviewed revision. Only the
+      // exact already-published receipt may reconcile that one-step transition.
+      if (current.revision !== command.expectedRevision &&
+          !(current.status === "published" && current.revision === command.expectedRevision + 1)) {
         return studioFailure(
           "asset-studio.asset-draft.conflict",
           "Studio asset draft revision is stale.",
         );
       }
-      if (current.status === "published") return studioSuccess(current);
-      if (current.status !== "reviewed" || !current.review) {
+      if (!["reviewed", "published"].includes(current.status) || !current.review) {
         return studioFailure(
           "asset-studio.asset-draft.conflict",
           "Only a reviewed Studio asset draft can be published.",
@@ -343,25 +363,9 @@ export class AssetStudioAssetDraftWorkflowUseCase {
           "The exact asset definition identity now has different content.",
         );
       }
-      if (!existing)
-        await this.dependencies.definitions.saveDefinition(definition);
-      const at = this.dependencies.now();
-      const next = normalizeAssetStudioAssetDraftRecord({
-        ...current,
-        status: "published",
-        revision: current.revision + 1,
-        publication: {
-          definitionRef: current.definitionRef,
-          implementationDraftId: current.implementationDraftId,
-          sourceSnapshotId: current.review.sourceSnapshotId,
-          publishedAt: at,
-          publishedBy: command.actorId,
-        },
-        updatedAt: at,
-      });
-      return studioSuccess(
-        await this.dependencies.drafts.update(next, command.expectedRevision),
-      );
+      return studioSuccess(await this.dependencies.publication.publishStudio({
+        current, definition, actorId: command.actorId, publishedAt: this.dependencies.now(),
+      }));
     } catch {
       return studioFailure(
         "asset-studio.asset-draft.unavailable",
@@ -374,6 +378,8 @@ export class AssetStudioAssetDraftWorkflowUseCase {
     command: TransitionAssetStudioAssetDraftCommand,
   ): Promise<AssetStudioResult<AssetStudioAssetDraftRecord>> {
     try {
+      command = captureStudioDraftTransition(command);
+      await requireWorkspaceAssetAccess(this.dependencies.workspaceAccess, command.workspaceId, "asset-studio.asset-draft.abandon", "asset:write");
       const current = await this.readRecord(
         command.workspaceId,
         command.draftId,

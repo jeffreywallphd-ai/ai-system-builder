@@ -33,6 +33,7 @@ export * as effectiveAssetProjections from "./effective-asset-projections";
 
 export * as assetComposition from "./asset-composition";
 export * as systemBuilder from "./system-builder";
+export * as headless from "./headless";
 export * as systemReview from "./system-review";
 export * as systemDeployment from "./system-deployment";
 export * as systemRunWorkflow from "./system-run-workflow";

@@ -1,19 +1,23 @@
 import type { UserLibraryAssetListQuery, UserLibraryAssetRepositoryPort, UserLibraryAssetSourceIdentityQuery } from "../../../application/ports/user-library";
+import { UserLibraryAssetConflictError } from "../../../application/ports/user-library";
 import type { UserLibraryAssetId, UserLibraryAssetRecord, UserLibraryAssetReference, UserLibraryAssetVersion } from "../../../contracts/user-library";
 import { createUserLibraryAssetId, createUserLibraryAssetVersion, normalizeUserLibraryAssetRecord } from "../../../contracts/user-library";
 import { cloneJson, LocalUserLibraryRecordStore, type LocalUserLibraryRecordStoreOptions } from "./local-user-library-record-store";
-import { assetReferenceEquals, pageRecords, replaceRecord, textValuesMatch, upsertRecord } from "./local-user-library-repository-helpers";
+import { assetReferenceEquals, pageRecords, replaceRecord, textValuesMatch } from "./local-user-library-repository-helpers";
 
 export function createLocalUserLibraryAssetRepositoryAdapter(options: LocalUserLibraryRecordStoreOptions): UserLibraryAssetRepositoryPort {
   const store = new LocalUserLibraryRecordStore(options);
 
   return {
     async saveUserLibraryAssetRecord(record: UserLibraryAssetRecord): Promise<UserLibraryAssetRecord> {
-      const validRecord = normalizeUserLibraryAssetRecord(record);
-      await store.mutateCollection("assets", (assets) => ({
-        records: sortAssets(upsertRecord(assets, validRecord, assetStorageKey)),
-        result: undefined,
-      }));
+      const validRecord = cloneJson(normalizeUserLibraryAssetRecord(record));
+      await store.mutateCollection("assets", (assets) => {
+        if (assets.some((asset) => assetStorageKey(asset) === assetStorageKey(validRecord) ||
+          matchesSourceIdentity(asset, validRecord))) {
+          throw new UserLibraryAssetConflictError();
+        }
+        return { records: sortAssets([...assets, validRecord]), result: undefined };
+      });
       return cloneJson(validRecord);
     },
     async updateUserLibraryAssetRecord(record: UserLibraryAssetRecord): Promise<UserLibraryAssetRecord> {

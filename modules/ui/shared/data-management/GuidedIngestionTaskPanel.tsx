@@ -1,11 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   INGESTION_TASK_RECOMMENDED_CHUNK_BYTES,
+  normalizeIngestionTaskTransportCommand,
   type IngestionTaskRecord,
   type IngestionTaskTransportCommand,
   type IngestionTaskTransportValue,
 } from "../../../contracts/ingestion";
+import { readAppHeadlessLocalFileSelectionValue, type AppHeadlessLocalFileSelectionValue,
+  type DesktopLocalFileSelectionInput } from "../../../contracts/headless";
+import { describeHuggingFaceDatasetLicense, type DatasetLicenseCategory,
+  type HuggingFaceDatasetSummary } from "../../../contracts/storage";
 import { useOptionalNotificationCenter } from "../notifications/NotificationProvider";
 import { WorkflowSequence, WorkflowStep } from "../components/WorkflowSequence";
 
@@ -14,6 +19,23 @@ export interface GuidedIngestionTaskClient {
     workspaceId: string;
     command: IngestionTaskTransportCommand;
   }): Promise<IngestionTaskTransportValue>;
+}
+
+export interface GuidedHeadlessFileClient {
+  listClients(workspaceId: string): Promise<readonly string[]>;
+  select(input: DesktopLocalFileSelectionInput): Promise<AppHeadlessLocalFileSelectionValue | undefined>;
+  selectProvider?(input: DesktopLocalFileSelectionInput): Promise<AppHeadlessLocalFileSelectionValue | undefined>;
+}
+
+interface ChatFileScope {
+  readonly client?: GuidedHeadlessFileClient;
+}
+
+interface PreparedLocalFile {
+  readonly scope: ChatFileScope;
+  readonly source: "files" | "hugging-face";
+  readonly request: DesktopLocalFileSelectionInput;
+  readonly receipt?: AppHeadlessLocalFileSelectionValue;
 }
 
 export interface GuidedHuggingFaceBrowserClient {
@@ -31,12 +53,7 @@ export interface GuidedHuggingFaceBrowserClient {
   }>;
   browseHuggingFaceNamespaceDatasets?: (input: {
     namespace: string;
-  }) => Promise<
-    readonly {
-      readonly namespace: string;
-      readonly repository: string;
-    }[]
-  >;
+  }) => Promise<readonly HuggingFaceDatasetSummary[]>;
   browseHuggingFaceDatasetParquetFiles?: (input: {
     repository: string;
     revision?: string;
@@ -53,19 +70,25 @@ export interface GuidedHuggingFaceBrowserClient {
 export interface GuidedIngestionTaskPanelProps {
   readonly client?: GuidedIngestionTaskClient;
   readonly sourceBrowserClient?: GuidedHuggingFaceBrowserClient;
+  readonly headlessFileClient?: GuidedHeadlessFileClient;
   readonly workspaceId?: string;
   readonly onComplete?: () => void;
 }
 
 type SourceKind = "files" | "website" | "hugging-face";
 type WebsiteScope = "pages" | "sitemap";
-type HuggingFaceDataset = Awaited<
-  ReturnType<
-    NonNullable<
-      GuidedHuggingFaceBrowserClient["browseHuggingFaceNamespaceDatasets"]
-    >
-  >
->[number];
+type ProviderLicenseFilter = "all" | "creative-commons" | "other-open";
+const providerLicenseLabel: Record<DatasetLicenseCategory, string> = {
+  "creative-commons": "Open Creative Commons",
+  "other-open": "Other open license",
+  "non-open": "Non-open license",
+  unknown: "License unknown",
+};
+function providerLicenseText(license: ReturnType<typeof describeHuggingFaceDatasetLicense>) {
+  const declared = license.ids.filter((id) => id !== "unknown");
+  const label = providerLicenseLabel[license.category];
+  return declared.length ? `${label} (${declared.join(", ")})` : label;
+}
 type HuggingFaceDatasetFile = Awaited<
   ReturnType<
     NonNullable<
@@ -86,9 +109,22 @@ type ProviderFilesByRepository = Readonly<
   Record<string, readonly HuggingFaceDatasetFile[]>
 >;
 
-export function GuidedIngestionTaskPanel({
+export function GuidedIngestionTaskPanel(props: GuidedIngestionTaskPanelProps) {
+  const [scope, setScope] = useState({ client: props.client, browser: props.sourceBrowserClient,
+    workspaceId: props.workspaceId, key: 0 });
+  if (scope.client !== props.client || scope.browser !== props.sourceBrowserClient ||
+      scope.workspaceId !== props.workspaceId) {
+    setScope({ client: props.client, browser: props.sourceBrowserClient,
+      workspaceId: props.workspaceId, key: scope.key + 1 });
+    return null;
+  }
+  return <ScopedIngestionTaskPanel key={scope.key} {...props} />;
+}
+
+function ScopedIngestionTaskPanel({
   client,
   sourceBrowserClient,
+  headlessFileClient,
   workspaceId,
   onComplete,
 }: GuidedIngestionTaskPanelProps) {
@@ -99,9 +135,9 @@ export function GuidedIngestionTaskPanel({
   const [websiteInput, setWebsiteInput] = useState("");
   const [maximumPages, setMaximumPages] = useState(10);
   const [providerNamespace, setProviderNamespace] = useState("");
-  const [providerDatasets, setProviderDatasets] = useState<
-    readonly HuggingFaceDataset[]
-  >([]);
+  const [providerDatasets, setProviderDatasets] = useState<readonly HuggingFaceDatasetSummary[]>([]);
+  const [providerLicenseFilter, setProviderLicenseFilter] = useState<ProviderLicenseFilter>("all");
+  const providerLicenseDescriptionId = useId();
   const [selectedProviderRepositories, setSelectedProviderRepositories] =
     useState<ReadonlySet<string>>(() => new Set());
   const [providerFilesByRepository, setProviderFilesByRepository] =
@@ -115,18 +151,112 @@ export function GuidedIngestionTaskPanel({
   const [providerTokenState, setProviderTokenState] =
     useState<ProviderTokenState>({ status: "idle" });
   const [task, setTask] = useState<IngestionTaskRecord>();
+  const [lastProviderImport, setLastProviderImport] = useState<readonly {
+    id: string; name: string; license: string;
+  }[]>([]);
   const [error, setError] = useState<string>();
+  const [chatScope, setChatScope] = useState<ChatFileScope>({ client: headlessFileClient });
+  if (chatScope.client !== headlessFileClient) setChatScope({ client: headlessFileClient });
+  const currentChatScope = useRef(chatScope);
+  useLayoutEffect(() => { currentChatScope.current = chatScope; }, [chatScope]);
+  const [chatClients, setChatClients] = useState<{ scope: ChatFileScope; ids: readonly string[] }>();
+  const headlessClients = chatClients?.scope === chatScope ? chatClients.ids : [];
+  const [selectedHeadlessClient, setSelectedHeadlessClient] = useState("");
+  const [preparedLocalFile, setPreparedLocalFile] = useState<PreparedLocalFile>();
+  const [startedForChat, setStartedForChat] = useState(false);
+  const [copiedReference, setCopiedReference] = useState(false);
   const [working, setWorking] = useState(false);
+  const [statusNeedsConfirmation, setStatusNeedsConfirmation] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cancelledRef = useRef(false);
   const currentTaskIdRef = useRef<string | undefined>(undefined);
+  const mountedRef = useRef(true);
+  const operationSequenceRef = useRef(0);
+  const activeOperationRef = useRef<number | undefined>(undefined);
+  const statusRequestRef = useRef(false);
+  const latestTaskRef = useRef<IngestionTaskRecord | undefined>(undefined);
+  const providerBrowseSequenceRef = useRef(0);
+  const providerBrowseRef = useRef<number | undefined>(undefined);
+  const providerFilesCurrentRef = useRef(false);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; cancelledRef.current = true; };
+  }, []);
+  const canChooseChatClient = (sourceKind === "files" && files.length === 1) ||
+    (sourceKind === "hugging-face" && headlessFileClient?.selectProvider !== undefined &&
+      selectedProviderFileKeys.size === 1);
+  useEffect(() => {
+    const fileClient = chatScope.client;
+    if (!fileClient || !workspaceId || !canChooseChatClient) {
+      setChatClients(undefined);
+      setSelectedHeadlessClient("");
+      return;
+    }
+    let active = true;
+    let request = 0;
+    const refresh = () => {
+      const current = ++request;
+      void fileClient.listClients(workspaceId).catch(() => [] as readonly string[]).then(clients => {
+        if (!active || current !== request || currentChatScope.current !== chatScope) return;
+        setChatClients({ scope: chatScope, ids: clients });
+        setSelectedHeadlessClient(selected => clients.includes(selected) ? selected :
+          clients.length === 1 ? clients[0]! : "");
+      });
+    };
+    refresh();
+    window.addEventListener("focus", refresh);
+    return () => { active = false; window.removeEventListener("focus", refresh); };
+  }, [chatScope, workspaceId, canChooseChatClient]);
+
+  const ownsOperation = (token: number) => mountedRef.current && activeOperationRef.current === token;
+  function beginOperation(keepCurrentTask = false) {
+    const token = ++operationSequenceRef.current;
+    activeOperationRef.current = token;
+    cancelledRef.current = false;
+    if (!keepCurrentTask) latestTaskRef.current = undefined;
+    setStatusNeedsConfirmation(false);
+    setWorking(true);
+    setError(undefined);
+    return {
+      token,
+      client: { execute: async (input: Parameters<GuidedIngestionTaskClient["execute"]>[0]) => {
+        if (!ownsOperation(token) || cancelledRef.current) throw new Error("This task is no longer active.");
+        const value = await client!.execute(input);
+        if (!ownsOperation(token)) throw new Error("This task response is no longer active.");
+        return value;
+      } },
+      accept: (value: IngestionTaskTransportValue) => {
+        if (!ownsOperation(token)) throw new Error("This task response is no longer active.");
+        return acceptTask(value);
+      },
+      isActive: () => ownsOperation(token) && !cancelledRef.current,
+    };
+  }
+  function finishOperation(token: number, waitingForSelection = false) {
+    if (!ownsOperation(token)) return;
+    const latest = latestTaskRef.current;
+    if (latest && !isTerminalTask(latest) && (!waitingForSelection || cancelledRef.current)) {
+      setStatusNeedsConfirmation(true);
+      setWorking(true);
+    } else {
+      activeOperationRef.current = undefined;
+      setWorking(false);
+    }
+  }
   const websiteUrls = useMemo(() => lines(websiteInput), [websiteInput]);
+  const visibleProviderDatasets = useMemo(
+    () => providerDatasets
+      .map((dataset) => ({ ...dataset, license: describeHuggingFaceDatasetLicense(dataset.licenseIds) }))
+      .filter(({ license }) => providerLicenseFilter === "all" || license.category === providerLicenseFilter),
+    [providerDatasets, providerLicenseFilter],
+  );
   const selectedProviderDatasets = useMemo(
     () =>
-      providerDatasets.filter((dataset) =>
+      visibleProviderDatasets.filter((dataset) =>
         selectedProviderRepositories.has(dataset.repository),
       ),
-    [providerDatasets, selectedProviderRepositories],
+    [visibleProviderDatasets, selectedProviderRepositories],
   );
   const loadedProviderFiles = useMemo(
     () => Object.values(providerFilesByRepository).flat(),
@@ -140,8 +270,8 @@ export function GuidedIngestionTaskPanel({
     [loadedProviderFiles, selectedProviderFileKeys],
   );
   const allProviderDatasetsSelected =
-    providerDatasets.length > 0 &&
-    providerDatasets.every((dataset) =>
+    visibleProviderDatasets.length > 0 &&
+    visibleProviderDatasets.every((dataset) =>
       selectedProviderRepositories.has(dataset.repository),
     );
   const allProviderFilesSelected =
@@ -241,11 +371,35 @@ export function GuidedIngestionTaskPanel({
     }
   }
 
+  function changeProviderDatasets(next: ReadonlySet<string>): void {
+    if (providerBrowseRef.current !== undefined || activeOperationRef.current !== undefined) return;
+    providerFilesCurrentRef.current = false;
+    setSelectedProviderRepositories(next);
+    setProviderFilesByRepository({});
+    setSelectedProviderFileKeys(new Set());
+    setProviderBrowseState({ status: "idle" });
+  }
+
+  function changeProviderNamespace(value: string): void {
+    if (providerBrowseRef.current !== undefined || activeOperationRef.current !== undefined || value === providerNamespace) return;
+    setProviderNamespace(value);
+    setProviderDatasets([]);
+    changeProviderDatasets(new Set());
+  }
+
+  function changeProviderLicenseFilter(value: string): void {
+    if (providerBrowseRef.current !== undefined || activeOperationRef.current !== undefined ||
+        preparedLocalFile || value === providerLicenseFilter ||
+        (value !== "all" && value !== "creative-commons" && value !== "other-open")) return;
+    setProviderLicenseFilter(value);
+    changeProviderDatasets(new Set());
+  }
+
   function toggleAllProviderDatasets(): void {
-    setSelectedProviderRepositories(
+    changeProviderDatasets(
       allProviderDatasetsSelected
         ? new Set()
-        : new Set(providerDatasets.map((dataset) => dataset.repository)),
+        : new Set(visibleProviderDatasets.map((dataset) => dataset.repository)),
     );
   }
 
@@ -260,15 +414,22 @@ export function GuidedIngestionTaskPanel({
   async function findProviderDatasets(): Promise<void> {
     const browse = sourceBrowserClient?.browseHuggingFaceNamespaceDatasets;
     if (
-      !browse ||
+      !browse || !mountedRef.current || providerBrowseRef.current !== undefined ||
       working ||
       providerBrowseState.status === "loading" ||
       !providerNamespace.trim()
     )
       return;
+    const request = ++providerBrowseSequenceRef.current;
+    providerBrowseRef.current = request;
+    providerFilesCurrentRef.current = false;
+    const current = () => mountedRef.current && providerBrowseRef.current === request;
+    setProviderDatasets([]); setSelectedProviderRepositories(new Set());
+    setProviderFilesByRepository({}); setSelectedProviderFileKeys(new Set());
     setProviderBrowseState({ status: "loading", message: "Finding datasets…" });
     try {
       const datasets = await browse({ namespace: providerNamespace.trim() });
+      if (!current()) return;
       setProviderDatasets(datasets);
       setSelectedProviderRepositories(new Set());
       setProviderFilesByRepository({});
@@ -282,6 +443,7 @@ export function GuidedIngestionTaskPanel({
             },
       );
     } catch (reason) {
+      if (!current()) return;
       setProviderBrowseState({
         status: "error",
         message: safeUiError(
@@ -289,18 +451,25 @@ export function GuidedIngestionTaskPanel({
           "Datasets could not be loaded. Check the Hugging Face settings and try again.",
         ),
       });
+    } finally {
+      if (providerBrowseRef.current === request) providerBrowseRef.current = undefined;
     }
   }
 
   async function loadSelectedProviderFiles(): Promise<void> {
     const browse = sourceBrowserClient?.browseHuggingFaceDatasetParquetFiles;
     if (
-      !browse ||
+      !browse || !mountedRef.current || providerBrowseRef.current !== undefined ||
       working ||
       providerBrowseState.status === "loading" ||
       selectedProviderDatasets.length === 0
     )
       return;
+    const request = ++providerBrowseSequenceRef.current;
+    providerBrowseRef.current = request;
+    providerFilesCurrentRef.current = false;
+    const current = () => mountedRef.current && providerBrowseRef.current === request;
+    setProviderFilesByRepository({}); setSelectedProviderFileKeys(new Set());
     setProviderBrowseState({
       status: "loading",
       message: "Loading files from the selected datasets…",
@@ -315,7 +484,9 @@ export function GuidedIngestionTaskPanel({
             ] as const,
         ),
       );
+      if (!current()) return;
       const filesByRepository = Object.fromEntries(entries);
+      providerFilesCurrentRef.current = true;
       setProviderFilesByRepository(filesByRepository);
       setSelectedProviderFileKeys(new Set());
       const count = Object.values(filesByRepository).flat().length;
@@ -329,6 +500,7 @@ export function GuidedIngestionTaskPanel({
             },
       );
     } catch (reason) {
+      if (!current()) return;
       setProviderBrowseState({
         status: "error",
         message: safeUiError(
@@ -336,6 +508,8 @@ export function GuidedIngestionTaskPanel({
           "Dataset files could not be loaded. Check the selection and try again.",
         ),
       });
+    } finally {
+      if (providerBrowseRef.current === request) providerBrowseRef.current = undefined;
     }
   }
 
@@ -365,15 +539,36 @@ export function GuidedIngestionTaskPanel({
   const acceptTask = (
     value: IngestionTaskTransportValue,
   ): IngestionTaskRecord => {
+    if (!mountedRef.current) throw new Error("This task response is no longer active.");
     if (value.kind !== "task")
       throw new Error("The ingestion task response was incomplete.");
+    if (value.task.workspaceId !== workspaceId ||
+        (currentTaskIdRef.current && value.task.taskId !== currentTaskIdRef.current)) {
+      throw new Error("The ingestion task response did not match this workspace or task.");
+    }
+    if (latestTaskRef.current && value.task.revision < latestTaskRef.current.revision) return latestTaskRef.current;
+    latestTaskRef.current = value.task;
     setTask(value.task);
     currentTaskIdRef.current = value.task.taskId;
     upsertTaskActivity(value.task);
+    if (cancelledRef.current && !isTerminalTask(value.task) && !statusRequestRef.current) {
+      queueMicrotask(() => { if (mountedRef.current) void cancel(); });
+    }
     return value.task;
   };
 
   function completeSuccessfully(): void {
+    const completed = latestTaskRef.current;
+    if (completed?.kind === "hugging-face" && completed.status === "succeeded") {
+      setLastProviderImport(completed.files.map(file => ({
+        id: file.fileId,
+        name: file.providerSource
+          ? `${file.providerSource.repository} · ${file.providerSource.path}`
+          : file.fileName,
+        license: providerLicenseText(describeHuggingFaceDatasetLicense(file.output?.providerLicenseIds)),
+      })));
+    }
+    providerFilesCurrentRef.current = false;
     setSourceKind("files");
     setFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -388,80 +583,169 @@ export function GuidedIngestionTaskPanel({
     setProviderBrowseState({ status: "idle" });
     setProviderToken("");
     setTask(undefined);
+    setPreparedLocalFile(undefined);
+    setStartedForChat(false);
+    setCopiedReference(false);
     setError(undefined);
     currentTaskIdRef.current = undefined;
+    latestTaskRef.current = undefined;
     notifications?.setPanelOpen(true);
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     onComplete?.();
   }
 
-  async function start(): Promise<void> {
-    if (!client || !workspaceId || working) return;
-    setError(undefined);
-    setWorking(true);
+  async function confirmPreparedFile(prepared: PreparedLocalFile, isActive: () => boolean) {
+    const { scope, request, source } = prepared;
+    if (currentChatScope.current !== scope) return;
+    const current = () => isActive() && currentChatScope.current === scope;
+    const pending = source === "files" ? scope.client?.select(request) : scope.client?.selectProvider?.(request);
+    const selected = await pending?.catch(reason => {
+      if (current()) throw reason;
+    });
+    if (!current()) return;
+    const receipt = readAppHeadlessLocalFileSelectionValue(selected, request);
+    if (!receipt) throw new Error("The file is staged. Check that the chat client is still paired, then try preparing it again.");
+    setPreparedLocalFile({ ...prepared, receipt });
+  }
+
+  async function retryPreparedFile() {
+    if (!client || !headlessFileClient || !preparedLocalFile || preparedLocalFile.scope !== currentChatScope.current ||
+        preparedLocalFile.receipt ||
+        activeOperationRef.current !== undefined || statusRequestRef.current || cancelledRef.current) return;
+    const operation = beginOperation(true);
+    try {
+      await confirmPreparedFile(preparedLocalFile, operation.isActive);
+    } catch (reason) {
+      if (operation.isActive()) setError(safeUiError(reason));
+    } finally {
+      finishOperation(operation.token, true);
+    }
+  }
+
+  async function start(registeredClientId?: string): Promise<void> {
+    if (!client || !workspaceId || activeOperationRef.current !== undefined ||
+        statusRequestRef.current || preparedLocalFile) return;
+    if (registeredClientId && (!canChooseChatClient ||
+        (sourceKind === "hugging-face" && selectedProviderFiles.length !== 1) ||
+        !headlessClients.includes(registeredClientId))) return;
+    if (sourceKind === "hugging-face" && (providerBrowseRef.current !== undefined || !providerFilesCurrentRef.current)) return;
+    const operation = beginOperation();
     setTask(undefined);
-    cancelledRef.current = false;
+    setLastProviderImport([]);
+    setPreparedLocalFile(undefined);
+    setStartedForChat(Boolean(registeredClientId));
+    setCopiedReference(false);
     currentTaskIdRef.current = undefined;
+    let waitingForSelection = false;
     try {
       const completed =
         sourceKind === "files"
-          ? await addFiles(client, workspaceId, files, acceptTask, cancelledRef)
+          ? await addFiles(operation.client, workspaceId, files, operation.accept, cancelledRef, !registeredClientId)
           : sourceKind === "website"
             ? await addWebsite(
-                client,
+                operation.client,
                 workspaceId,
                 websiteScope,
                 websiteUrls,
                 maximumPages,
-                acceptTask,
+                operation.accept,
+                operation.isActive,
               )
             : await addProviderFiles(
-                client,
+                operation.client,
                 workspaceId,
                 selectedProviderFiles,
-                acceptTask,
+                operation.accept,
+                operation.isActive,
+                !registeredClientId,
               );
+      if (!operation.isActive()) return;
       if (completed.status === "failed")
         throw new Error(
           completed.files.find((file) => file.error)?.error?.message ??
             "Some data could not be added.",
         );
       if (completed.status === "succeeded") completeSuccessfully();
+      else if (registeredClientId && (completed.status === "queued" || completed.status === "transferring")) {
+        const file = completed.files[0];
+        if (!file || completed.files.length !== 1 || file.acceptedBytes !== file.totalBytes)
+          throw new Error("The file transfer did not finish. Check the upload before preparing it for chat.");
+        if (sourceKind === "website" || (sourceKind === "hugging-face" && completed.status !== "queued"))
+          throw new Error("The selected repository file could not be prepared for chat.");
+        const request: DesktopLocalFileSelectionInput = { workspaceId: completed.workspaceId, taskId: completed.taskId,
+          fileId: file.fileId, taskRevision: completed.revision, registeredClientId, expectedSelectionRevision: 0 };
+        waitingForSelection = true;
+        const prepared = { scope: chatScope, request, source: sourceKind };
+        setPreparedLocalFile(prepared);
+        await confirmPreparedFile(prepared, operation.isActive);
+      }
     } catch (reason) {
-      if (!cancelledRef.current) setError(safeUiError(reason));
+      if (ownsOperation(operation.token) && !cancelledRef.current) setError(safeUiError(reason));
     } finally {
-      setWorking(false);
+      finishOperation(operation.token, waitingForSelection);
     }
   }
 
   async function cancel(): Promise<void> {
+    if (!mountedRef.current || statusRequestRef.current) return;
     cancelledRef.current = true;
-    const taskId = currentTaskIdRef.current;
-    if (client && workspaceId && taskId) {
-      try {
-        acceptTask(
-          await client.execute({
-            workspaceId,
-            command: { action: "cancel", taskId },
-          }),
-        );
-      } catch {
-        setError(
-          "The cancellation could not be confirmed. Check the task status before retrying.",
-        );
-      }
+    if (preparedLocalFile) {
+      setPreparedLocalFile(undefined);
+      setCopiedReference(false);
+      setWorking(true);
     }
-    setWorking(false);
+    const taskId = currentTaskIdRef.current;
+    if (!client || !workspaceId || !taskId) {
+      setStatusNeedsConfirmation(true);
+      setError("The task is still starting. Cancellation will be requested when its identity is available.");
+      return;
+    }
+    await reconcileTask("cancel", taskId);
+  }
+
+  async function reconcileTask(action: "cancel" | "read", taskId: string): Promise<void> {
+    if (!client || !workspaceId || statusRequestRef.current || !mountedRef.current) return;
+    const token = activeOperationRef.current;
+    statusRequestRef.current = true;
+    setCheckingStatus(true);
+    try {
+      const response = await client.execute({ workspaceId, command: { action, taskId } });
+      if (!mountedRef.current || activeOperationRef.current !== token || currentTaskIdRef.current !== taskId) return;
+      const confirmed = acceptTask(response);
+      if (isTerminalTask(confirmed)) {
+        activeOperationRef.current = undefined;
+        cancelledRef.current = true;
+        setWorking(false);
+        setStatusNeedsConfirmation(false);
+        setError(undefined);
+        setPreparedLocalFile(undefined);
+        setCopiedReference(false);
+        if (confirmed.status === "succeeded") completeSuccessfully();
+      } else {
+        setStatusNeedsConfirmation(true);
+        setWorking(true);
+        setError("The task has not stopped. Check task status before starting another task.");
+      }
+    } catch {
+      if (mountedRef.current && activeOperationRef.current === token) {
+        setStatusNeedsConfirmation(true);
+        setWorking(true);
+        setError("The task status could not be confirmed. Check task status before starting another task.");
+      }
+    } finally {
+      statusRequestRef.current = false;
+      if (mountedRef.current) setCheckingStatus(false);
+    }
   }
 
   async function resume(): Promise<void> {
-    if (!client || !workspaceId || !task || task.status !== "failed") return;
-    setWorking(true);
-    setError(undefined);
-    cancelledRef.current = false;
+    if (!client || !workspaceId || !task || task.status !== "failed" || startedForChat ||
+        activeOperationRef.current !== undefined) return;
+    const operation = beginOperation();
     try {
-      const resumed = acceptTask(
-        await client.execute({
+      if (task.kind === "file-batch") normalizedSelectedFiles(files);
+      const resumed = operation.accept(
+        await operation.client.execute({
           workspaceId,
           command: { action: "resume", taskId: task.taskId },
         }),
@@ -474,19 +758,21 @@ export function GuidedIngestionTaskPanel({
             : undefined;
       const completed = action
         ? await runWithPolling(
-            client,
+            operation.client,
             workspaceId,
             { action, taskId: task.taskId },
-            acceptTask,
+            operation.accept,
+            operation.isActive,
           )
         : await transferFilesToTask(
-            client,
+            operation.client,
             workspaceId,
             files,
             resumed,
-            acceptTask,
+            operation.accept,
             cancelledRef,
           );
+      if (!ownsOperation(operation.token)) return;
       if (completed.status === "failed")
         throw new Error(
           completed.files.find((file) => file.error)?.error?.message ??
@@ -494,9 +780,9 @@ export function GuidedIngestionTaskPanel({
         );
       if (completed.status === "succeeded") completeSuccessfully();
     } catch (reason) {
-      setError(safeUiError(reason));
+      if (ownsOperation(operation.token) && !cancelledRef.current) setError(safeUiError(reason));
     } finally {
-      setWorking(false);
+      finishOperation(operation.token);
     }
   }
 
@@ -504,12 +790,34 @@ export function GuidedIngestionTaskPanel({
     client &&
     workspaceId &&
     !working &&
+    !preparedLocalFile &&
     (sourceKind === "files"
       ? files.length > 0
       : sourceKind === "website"
         ? websiteUrls.length > 0
         : selectedProviderFiles.length > 0),
   );
+  const canPrepareForChat = Boolean(canChooseChatClient &&
+    headlessClients.length && !preparedLocalFile);
+  const isPreparedChatCurrent = preparedLocalFile?.scope === chatScope;
+  const visibleError = !preparedLocalFile || isPreparedChatCurrent ? error : undefined;
+  const preparedReference = isPreparedChatCurrent && preparedLocalFile?.receipt ? JSON.stringify({
+    workspaceId: preparedLocalFile.receipt.workspaceId, taskId: preparedLocalFile.receipt.taskId,
+    fileId: preparedLocalFile.receipt.fileId, taskRevision: preparedLocalFile.receipt.taskRevision,
+  }) : undefined;
+
+  async function copyPreparedReference() {
+    if (!preparedReference || currentChatScope.current !== chatScope) return;
+    try {
+      await navigator.clipboard.writeText(preparedReference);
+      if (mountedRef.current && !cancelledRef.current && currentChatScope.current === chatScope &&
+          currentTaskIdRef.current === preparedLocalFile?.request.taskId) setCopiedReference(true);
+    } catch {
+      if (mountedRef.current && !cancelledRef.current && currentChatScope.current === chatScope &&
+          currentTaskIdRef.current === preparedLocalFile?.request.taskId)
+        setError("The reference could not be copied. Select the reference to copy it manually.");
+    }
+  }
   return (
     <WorkflowSequence ariaLabel="Add data workflow">
       <WorkflowStep
@@ -517,7 +825,7 @@ export function GuidedIngestionTaskPanel({
         description="Choose where the data is coming from. Recommended limits are applied automatically."
         active
       >
-        <fieldset className="ui-choice-group" disabled={working}>
+        <fieldset className="ui-choice-group" disabled={working || Boolean(preparedLocalFile)}>
           <legend className="ui-sr-only">Data source</legend>
           <div className="ui-choice-list">
             <label className="ui-choice">
@@ -563,8 +871,8 @@ export function GuidedIngestionTaskPanel({
                 className="ui-file-input"
                 type="file"
                 multiple
-                disabled={working}
-                accept=".csv,.json,.jsonl,.parquet,text/csv,application/json,application/jsonl,application/vnd.apache.parquet"
+                disabled={working || Boolean(preparedLocalFile)}
+                accept=".csv,.json,.jsonl,.parquet,.pdf,text/csv,application/json,application/jsonl,application/vnd.apache.parquet,application/pdf"
                 onChange={(event) =>
                   setFiles(Array.from(event.target.files ?? []))
                 }
@@ -578,8 +886,8 @@ export function GuidedIngestionTaskPanel({
                     : `${files.length} files selected`}
                 </p>
                 <ul>
-                  {files.map((file) => (
-                    <li key={`${file.name}-${file.size}-${file.lastModified}`}>
+                  {files.map((file, index) => (
+                    <li key={`${index}:${file.name}`}>
                       {file.name}
                     </li>
                   ))}
@@ -741,7 +1049,7 @@ export function GuidedIngestionTaskPanel({
                 disabled={working || providerBrowseState.status === "loading"}
                 placeholder="Hugging Face name"
                 onInput={(event) =>
-                  setProviderNamespace(event.currentTarget.value)
+                  changeProviderNamespace(event.currentTarget.value)
                 }
               />
             </label>
@@ -778,7 +1086,8 @@ export function GuidedIngestionTaskPanel({
                     type="button"
                     aria-pressed={allProviderDatasetsSelected}
                     disabled={
-                      working || providerBrowseState.status === "loading"
+                      working || providerBrowseState.status === "loading" ||
+                      !visibleProviderDatasets.length
                     }
                     onClick={toggleAllProviderDatasets}
                   >
@@ -787,13 +1096,29 @@ export function GuidedIngestionTaskPanel({
                       : "Select all"}
                   </button>
                 </div>
+                <label className="ui-field">
+                  Dataset license
+                  <select
+                    value={providerLicenseFilter}
+                    disabled={working || providerBrowseState.status === "loading" || Boolean(preparedLocalFile)}
+                    onChange={(event) => changeProviderLicenseFilter(event.currentTarget.value)}
+                  >
+                    <option value="all">All data</option>
+                    <option value="creative-commons">Open Creative Commons</option>
+                    <option value="other-open">Other open licenses</option>
+                  </select>
+                </label>
+                <p>License labels come from the Hugging Face listing.</p>
+                {!visibleProviderDatasets.length && <p role="status">No datasets match this license filter.</p>}
                 <fieldset className="ui-choice-group">
                   <legend className="ui-sr-only">Select datasets</legend>
                   <div className="ui-choice-list">
-                    {providerDatasets.map((dataset) => (
+                    {visibleProviderDatasets.map((dataset, index) => (
                       <label className="ui-choice" key={dataset.repository}>
                         <input
                           type="checkbox"
+                          aria-label={dataset.repository}
+                          aria-describedby={`${providerLicenseDescriptionId}-${index}`}
                           checked={selectedProviderRepositories.has(
                             dataset.repository,
                           )}
@@ -801,7 +1126,7 @@ export function GuidedIngestionTaskPanel({
                             working || providerBrowseState.status === "loading"
                           }
                           onChange={(event) =>
-                            setSelectedProviderRepositories(
+                            changeProviderDatasets(
                               toggleSet(
                                 selectedProviderRepositories,
                                 dataset.repository,
@@ -810,7 +1135,12 @@ export function GuidedIngestionTaskPanel({
                             )
                           }
                         />
-                        <span>{dataset.repository}</span>
+                        <span>
+                          {dataset.repository}{" "}
+                          <small id={`${providerLicenseDescriptionId}-${index}`}>
+                            {providerLicenseText(dataset.license)}
+                          </small>
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -952,7 +1282,48 @@ export function GuidedIngestionTaskPanel({
             </p>
           </div>
         ) : null}
-        {error ? <p role="alert">{error}</p> : null}
+        {lastProviderImport.length > 0 && (
+          <details className="ui-stack ui-stack--xs">
+            <summary>Imported file licenses ({lastProviderImport.length})</summary>
+            <ul className="ui-stack ui-stack--xs">
+              {lastProviderImport.map(file => <li key={file.id}>{file.name} — {file.license}</li>)}
+            </ul>
+          </details>
+        )}
+        {canPrepareForChat ? (
+          <div className="ui-row ui-row--wrap ui-gap-sm">
+            <label className="ui-field">
+              <span className="ui-label">Chat client</span>
+              <select aria-label="Chat client" value={selectedHeadlessClient} disabled={working}
+                onChange={event => setSelectedHeadlessClient(event.currentTarget.value)}>
+                <option value="">Choose a chat client</option>
+                {headlessClients.map(id => <option value={id} key={id}>Client {id.slice(0, 8)} ({id.slice(-4)})</option>)}
+              </select>
+            </label>
+            <button type="button" className="ui-button ui-button--outline"
+              disabled={!canStart || !selectedHeadlessClient}
+              onClick={() => void start(selectedHeadlessClient)}>
+              Prepare for chat
+            </button>
+          </div>
+        ) : null}
+        {preparedLocalFile ? (
+          <div className="ui-stack ui-stack--xs" aria-live="polite">
+            {preparedReference ? <>
+              <p>{preparedLocalFile.source === "hugging-face"
+                ? "Ready for the selected chat client to preview the repository file."
+                : "Ready for the selected chat client to preview."}</p>
+              <textarea className="ui-textarea" aria-label="File reference" readOnly rows={2} value={preparedReference} />
+              <button type="button" className="ui-button ui-button--outline" disabled={working}
+                onClick={() => void copyPreparedReference()}>{copiedReference ? "Reference copied" : "Copy file reference"}</button>
+            </> : isPreparedChatCurrent ? <>
+              <p>The file is staged. Chat preparation is awaiting confirmation.</p>
+              <button type="button" className="ui-button ui-button--outline" disabled={working || checkingStatus}
+                onClick={() => void retryPreparedFile()}>Try preparing again</button>
+            </> : <p>The chat connection changed. Cancel this upload before preparing the file again.</p>}
+          </div>
+        ) : null}
+        {visibleError ? <p role="alert">{visibleError}</p> : null}
         <div className="ui-row ui-row--wrap ui-gap-sm">
           <button
             type="button"
@@ -962,20 +1333,28 @@ export function GuidedIngestionTaskPanel({
           >
             {working ? "Adding data…" : "Add data"}
           </button>
-          {working ? (
+          {working || preparedLocalFile ? (
             <button
               type="button"
               className="ui-button ui-button--outline"
+              disabled={checkingStatus}
               onClick={() => void cancel()}
             >
               Cancel
             </button>
           ) : null}
-          {task?.status === "failed" &&
+          {statusNeedsConfirmation && currentTaskIdRef.current ? (
+            <button type="button" className="ui-button ui-button--outline" disabled={checkingStatus}
+              onClick={() => void reconcileTask("read", currentTaskIdRef.current!)}>
+              Check task status
+            </button>
+          ) : null}
+          {task?.status === "failed" && !startedForChat &&
           task.files.some((file) => file.error?.retryable) ? (
             <button
               type="button"
               className="ui-button ui-button--outline"
+              disabled={working}
               onClick={() => void resume()}
             >
               Try again
@@ -987,24 +1366,48 @@ export function GuidedIngestionTaskPanel({
   );
 }
 
+function fileIdentity(name: string, size: number): string {
+  return JSON.stringify([name, size]);
+}
+
+function normalizedSelectedFiles(files: readonly File[]) {
+  const command = normalizeIngestionTaskTransportCommand({
+    action: "create-files",
+    files: files.map(file => ({
+      fileName: file.name,
+      mediaType: file.type || mediaTypeFromName(file.name.trim()),
+      sizeBytes: file.size,
+    })),
+  });
+  if (command.action !== "create-files") throw new Error("The file selection is invalid.");
+  const byIdentity = new Map<string, File>();
+  for (const [index, file] of command.files.entries()) {
+    const key = fileIdentity(file.fileName, file.sizeBytes);
+    if (byIdentity.has(key)) {
+      throw new Error(
+        "Two selected files have the same name and size. Rename one file and select the files again.",
+      );
+    }
+    byIdentity.set(key, files[index]!);
+  }
+  return { command, byIdentity };
+}
+
 async function addFiles(
   client: GuidedIngestionTaskClient,
   workspaceId: string,
   files: readonly File[],
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
   cancelled: { current: boolean },
+  finalize = true,
 ): Promise<IngestionTaskRecord> {
+  // Use the contract's canonical names for both admission and byte selection.
+  // Raw File names can differ while the server normalizes them to one name.
+  const { command } = normalizedSelectedFiles(files);
   const task = accept(
     await client.execute({
       workspaceId,
-      command: {
-        action: "create-files",
-        files: files.map((file) => ({
-          fileName: file.name,
-          mediaType: file.type || mediaTypeFromName(file.name),
-          sizeBytes: file.size,
-        })),
-      },
+      command,
     }),
   );
   return transferFilesToTask(
@@ -1014,6 +1417,7 @@ async function addFiles(
     task,
     accept,
     cancelled,
+    finalize,
   );
 }
 async function transferFilesToTask(
@@ -1023,15 +1427,17 @@ async function transferFilesToTask(
   startingTask: IngestionTaskRecord,
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
   cancelled: { current: boolean },
+  finalize = true,
 ): Promise<IngestionTaskRecord> {
+  if (isTerminalTask(startingTask)) return startingTask;
+  const { byIdentity } = normalizedSelectedFiles(files);
   let task = startingTask;
+  if (new Set(task.files.map(file => fileIdentity(file.fileName, file.totalBytes))).size !== task.files.length) {
+    throw new Error("This task contains files with the same name and size. Start a new task with renamed files.");
+  }
   for (const taskFile of task.files) {
     if (taskFile.status === "finalized") continue;
-    const file = files.find(
-      (candidate) =>
-        candidate.name === taskFile.fileName &&
-        candidate.size === taskFile.totalBytes,
-    );
+    const file = byIdentity.get(fileIdentity(taskFile.fileName, taskFile.totalBytes));
     if (!file)
       throw new Error(
         `Select ${taskFile.fileName} again to resume its transfer.`,
@@ -1060,9 +1466,11 @@ async function transferFilesToTask(
           },
         }),
       );
+      if (isTerminalTask(task)) return task;
       offset = end;
       chunkIndex += 1;
     }
+    if (!finalize) continue;
     task = accept(
       await client.execute({
         workspaceId,
@@ -1073,7 +1481,7 @@ async function transferFilesToTask(
         },
       }),
     );
-    if (task.status === "failed" || task.status === "cancelled") return task;
+    if (isTerminalTask(task)) return task;
   }
   return task;
 }
@@ -1085,6 +1493,7 @@ async function addWebsite(
   urls: readonly string[],
   maximumPages: number,
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
+  isActive: () => boolean,
 ): Promise<IngestionTaskRecord> {
   const task = accept(
     await client.execute({
@@ -1095,11 +1504,13 @@ async function addWebsite(
       },
     }),
   );
+  if (["succeeded", "failed", "cancelled"].includes(task.status)) return task;
   return runWithPolling(
     client,
     workspaceId,
     { action: "run-website", taskId: task.taskId },
     accept,
+    isActive,
   );
 }
 async function addProviderFiles(
@@ -1107,6 +1518,8 @@ async function addProviderFiles(
   workspaceId: string,
   files: readonly HuggingFaceDatasetFile[],
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
+  isActive: () => boolean,
+  run = true,
 ): Promise<IngestionTaskRecord> {
   const task = accept(
     await client.execute({
@@ -1121,11 +1534,13 @@ async function addProviderFiles(
       },
     }),
   );
+  if (!run || ["succeeded", "failed", "cancelled"].includes(task.status)) return task;
   return runWithPolling(
     client,
     workspaceId,
     { action: "run-hugging-face", taskId: task.taskId },
     accept,
+    isActive,
   );
 }
 async function runWithPolling(
@@ -1136,6 +1551,7 @@ async function runWithPolling(
     readonly taskId: string;
   },
   accept: (value: IngestionTaskTransportValue) => IngestionTaskRecord,
+  isActive: () => boolean,
 ): Promise<IngestionTaskRecord> {
   let settled = false;
   let result: IngestionTaskTransportValue | undefined;
@@ -1151,7 +1567,9 @@ async function runWithPolling(
     },
   );
   while (!settled) {
+    if (!isActive()) throw new Error("This task is no longer active.");
     await Promise.race([completion, delay(500)]);
+    if (!isActive()) throw new Error("This task is no longer active.");
     if (!settled) {
       try {
         accept(
@@ -1197,7 +1615,9 @@ function mediaTypeFromName(name: string): string {
         ? "application/json"
         : extension === "parquet"
           ? "application/vnd.apache.parquet"
-          : "application/octet-stream";
+          : extension === "pdf"
+            ? "application/pdf"
+            : "application/octet-stream";
 }
 function safeUiError(
   error: unknown,
@@ -1210,6 +1630,10 @@ function safeUiError(
     ? value
     : fallback;
 }
+function isTerminalTask(task: IngestionTaskRecord): boolean {
+  return task.status === "succeeded" || task.status === "failed" || task.status === "cancelled";
+}
+
 function taskMessage(task: IngestionTaskRecord): string {
   return task.status === "succeeded"
     ? "Data is ready."

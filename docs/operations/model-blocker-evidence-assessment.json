@@ -1,0 +1,1389 @@
+{
+  "schema_version": "model-blocker-evidence-assessment-v1",
+  "authority_ref": "user-review-latest-model-evidence",
+  "bundle_id": "4a779a6ada06447daff32bdba8c39286",
+  "collection_status": "evidence-collected-review-required",
+  "parent_qualification_complete": false,
+  "closable_criteria": [],
+  "source_identity": "source.1ecc8a1630b75b7af07c4b288c508414702ebb7558eb82de306e9db7ac1c600c",
+  "started_at": "2026-10-23T01:07:24.909931+00:00",
+  "finished_at": "2026-10-23T02:25:41.159415+00:00",
+  "plan_sha256": "351f24e01f8d56262669062062ae680f2873de8c178fef43d31f22f7c7f303c2",
+  "bundle_index_sha256": "2c383f2b0a14e9e8436a5726bce9e37dcfd5758bff9e1244c1ee4290ab7476c5",
+  "summary_sha256": "15dc20610f674914b3f2cc9c06fee7932aeda87c4be54e5b5fc47d66c660aead",
+  "restart_of": {
+    "run_id": "8fc3b0da93464a4c831087a3d5c1efdd",
+    "plan_sha256": "63323e13957bdd64653937e709f5846a1c4085fce4a4fd1df3a4ad36a45e6bed"
+  },
+  "evidence_summary": ".local-codex/model-blocker-tests/4a779a6ada06447daff32bdba8c39286/summary.json",
+  "verification": {
+    "root_and_subrun_indexes_verified": true,
+    "current_source_matched_before_metadata_updates": true,
+    "independent_review_required": true,
+    "new_model_execution": false,
+    "completed_case_semantics_and_available_paired_metrics_replayed": true
+  },
+  "attempt_counts": {
+    "measured": 23,
+    "denied-memory": 16,
+    "failed": 9
+  },
+  "worker_attempts": 48,
+  "complete_case_observations": 1104,
+  "native_exit_zero_count": 48,
+  "observed_model_cleanup_count": 48,
+  "profiles": [
+    {
+      "profile": "qwen15-bfloat16",
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+      "precision": "bfloat16",
+      "memory_mode": "standard",
+      "protocol": "standard-generation-protocol-v2",
+      "intended_use": "measured-task-proposals",
+      "run_id": "0d0322c4a9264a6990c2d1ef9e0f519d",
+      "plan_sha256": "0e05726703854e5aee13e62df09d9c0ddbf829c2d7fe8e6e7800f455df32de70",
+      "report_sha256": "ecf18a4654fddd6829f606e08ad9273e2b097244dc1d33bab4658835bf7f2b90",
+      "evidence_index_sha256": "fbdf6213f9f6af09d109b40a5794b1d4d7fa64bdc2ea9c7a95b89aa82d0b31ee",
+      "status": "not-qualified-see-cohorts",
+      "comparison_profile_qualified": false,
+      "historical_protocol_qualified": false,
+      "attempt_counts": {
+        "measured": 14,
+        "denied-memory": 10
+      },
+      "host_limits": {
+        "devices": [
+          "cpu",
+          "cuda"
+        ],
+        "deadline_seconds_by_device": {
+          "cpu": 2400,
+          "cuda": 1200
+        },
+        "cooperative_stop_seconds_by_device": {
+          "cpu": 2160,
+          "cuda": 1080
+        },
+        "primary_delivery_budget_seconds": {
+          "cpu": 1800,
+          "cuda": 300
+        },
+        "reserved_vram_budget_bytes": {
+          "cpu": 0,
+          "cuda": 6442450944
+        },
+        "intended_use": "measured-task-proposals",
+        "automatic_label_quality_floor": 23,
+        "scope": "Prospective absolute host budgets; original1.20 comparison and23of24 automation gates remain separate and unchanged."
+      },
+      "cohorts": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "attempt_counts": {
+            "measured": 2,
+            "denied-memory": 4
+          },
+          "baseline_statuses": [
+            "measured",
+            "denied-memory",
+            "denied-memory"
+          ],
+          "measurement_complete": false,
+          "quality_passed": false,
+          "legacy_throughput_target_met": false,
+          "legacy_median_delivery_ratio": null,
+          "candidate_observations": [
+            {
+              "replicate": 1,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "c91cdcb8c3667628964f8872dd204707a66948f48a9d3c4e45d20a42af9aafc8",
+              "first_correct": 22,
+              "warm_correct": 22,
+              "primary_delivery_seconds": 1388.0814126000041,
+              "peak_rss_bytes": 3770601472,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 0,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 22,
+                  "seconds": 694.936051000026,
+                  "accuracy": 0.9166666666666666,
+                  "correct_per_minute": 1.8994553500289633
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 22,
+                  "seconds": 690.2752774000401,
+                  "accuracy": 0.9166666666666666,
+                  "correct_per_minute": 1.9122805686621906
+                }
+              },
+              "user_22_of_24_quality_check": "passed"
+            },
+            {
+              "replicate": 2,
+              "status": "denied-memory",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "59d5ffb73c662e205e58e1a91ad8539b1b39a0592fd3426727463312f1273ea5",
+              "user_22_of_24_quality_check": "pending"
+            },
+            {
+              "replicate": 3,
+              "status": "denied-memory",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "18d9cde4bd35b786c19c274367a321c2ba6973899d8108bf728434e62b5b6c87",
+              "user_22_of_24_quality_check": "pending"
+            }
+          ],
+          "pairs": [
+            {
+              "replicate": 1,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 22,
+                  "lost_correct": 1,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7300271984423965,
+                    0.9897436587187498
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 22,
+                  "lost_correct": 1,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7300271984423965,
+                    0.9897436587187498
+                  ]
+                }
+              ],
+              "delivery_ratio": 0.8771328229461983
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "attempt_counts": {
+            "denied-memory": 6
+          },
+          "baseline_statuses": [
+            "denied-memory",
+            "denied-memory",
+            "denied-memory"
+          ],
+          "measurement_complete": false,
+          "quality_passed": false,
+          "legacy_throughput_target_met": false,
+          "legacy_median_delivery_ratio": null,
+          "candidate_observations": [
+            {
+              "replicate": 1,
+              "status": "denied-memory",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "21625bdff07c4ec59f960f979c0ea6e4d50695908e37eb8eb2c8df530786e730",
+              "user_22_of_24_quality_check": "pending"
+            },
+            {
+              "replicate": 2,
+              "status": "denied-memory",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "bccbc84c10dbf8d26d6853c6f371cf779cb6461a363d6da085e59ec52869aa13",
+              "user_22_of_24_quality_check": "pending"
+            },
+            {
+              "replicate": 3,
+              "status": "denied-memory",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "30e65f8e92e3eb6d6152c280f3f2f0fa3124457ab90db30ca72f32571294ddeb",
+              "user_22_of_24_quality_check": "pending"
+            }
+          ],
+          "pairs": []
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "attempt_counts": {
+            "measured": 6
+          },
+          "baseline_statuses": [
+            "measured",
+            "measured",
+            "measured"
+          ],
+          "measurement_complete": true,
+          "quality_passed": true,
+          "legacy_throughput_target_met": false,
+          "legacy_median_delivery_ratio": 1.0265259108730365,
+          "candidate_observations": [
+            {
+              "replicate": 1,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "8d2b49eba4580731b4320abee58a09a3c888c9879460a9b7eaf45afdfc1fab98",
+              "first_correct": 23,
+              "warm_correct": 23,
+              "primary_delivery_seconds": 50.42906029999722,
+              "peak_rss_bytes": 3904274432,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": true,
+              "peak_reserved_vram_bytes": 3368026112,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 23.740514800068922,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 58.128478325836205
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 22.43596150004305,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 61.50839579562267
+                }
+              },
+              "user_22_of_24_quality_check": "passed"
+            },
+            {
+              "replicate": 2,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "97d5c39d90ff981c925e02ad3cf0bae292f891bce0959c3296e7c2fc78fd238f",
+              "first_correct": 23,
+              "warm_correct": 23,
+              "primary_delivery_seconds": 49.986830099951476,
+              "peak_rss_bytes": 3903225856,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": true,
+              "peak_reserved_vram_bytes": 3368026112,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 23.170089300023392,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 59.55954602206073
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 22.522480699932203,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 61.27211377759796
+                }
+              },
+              "user_22_of_24_quality_check": "passed"
+            },
+            {
+              "replicate": 3,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "9d15e9f6747b5dd4bc345967f369592262fc02c36060605e49d26c976132ed91",
+              "first_correct": 23,
+              "warm_correct": 23,
+              "primary_delivery_seconds": 51.22324469999876,
+              "peak_rss_bytes": 3915120640,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": true,
+              "peak_reserved_vram_bytes": 3368026112,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 23.201370000024326,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 59.4792462685847
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 23.73242899996694,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 58.14828309407024
+                }
+              },
+              "user_22_of_24_quality_check": "passed"
+            }
+          ],
+          "pairs": [
+            {
+              "replicate": 1,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 1.076132757128105
+            },
+            {
+              "replicate": 2,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 1.0265259108730365
+            },
+            {
+              "replicate": 3,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 0.9767133435812564
+            }
+          ]
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "attempt_counts": {
+            "measured": 6
+          },
+          "baseline_statuses": [
+            "measured",
+            "measured",
+            "measured"
+          ],
+          "measurement_complete": true,
+          "quality_passed": true,
+          "legacy_throughput_target_met": false,
+          "legacy_median_delivery_ratio": 1.0715321978725236,
+          "candidate_observations": [
+            {
+              "replicate": 1,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "ccb9aed1f2be5168d493e0298717f424239a19c24b4d15048bdc1c72001d48e2",
+              "first_correct": 23,
+              "warm_correct": 23,
+              "primary_delivery_seconds": 41.71239370002877,
+              "peak_rss_bytes": 3907756032,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": true,
+              "peak_reserved_vram_bytes": 3363831808,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 19.60783250001259,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 70.38003818112551
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 17.818807999952696,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 77.44625790926439
+                }
+              },
+              "user_22_of_24_quality_check": "passed"
+            },
+            {
+              "replicate": 2,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "eece20492bd07a5e6c5e3eee3327869ebd31cd6179d8e1c6567726718ba399b0",
+              "first_correct": 23,
+              "warm_correct": 23,
+              "primary_delivery_seconds": 41.533953699981794,
+              "peak_rss_bytes": 3905150976,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": true,
+              "peak_reserved_vram_bytes": 3363831808,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 19.477808300056495,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 70.84986045354997
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 17.656944599933922,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 78.15621735626698
+                }
+              },
+              "user_22_of_24_quality_check": "passed"
+            },
+            {
+              "replicate": 3,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "ff5dddceb2d9d6837eb4d2583e52b113053a1937d722b3a90c34d99a962b5478",
+              "first_correct": 23,
+              "warm_correct": 23,
+              "primary_delivery_seconds": 41.27983750007115,
+              "peak_rss_bytes": 3900788736,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": true,
+              "peak_reserved_vram_bytes": 3363831808,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 19.395786600071006,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 71.14947325698809
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 23,
+                  "seconds": 17.57287799997721,
+                  "accuracy": 0.9583333333333334,
+                  "correct_per_minute": 78.5301075897636
+                }
+              },
+              "user_22_of_24_quality_check": "passed"
+            }
+          ],
+          "pairs": [
+            {
+              "replicate": 1,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 1.0715321978725236
+            },
+            {
+              "replicate": 2,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 1.0138253007216937
+            },
+            {
+              "replicate": 3,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 1.100079330497227
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile": "qwen05-float32",
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "precision": "float32",
+      "memory_mode": "standard",
+      "protocol": "standard-generation-protocol-v2",
+      "intended_use": "reviewed-proposals-only",
+      "run_id": "ab252d1b839f47b69aa4d6187dedcf9a",
+      "plan_sha256": "e5e40934f6d8698657b912b8cb2a60de83a45efc6afc962f9e02c17d95d16822",
+      "report_sha256": "4eb02aa2d81fcfb29f1aad52ffe54ba5d185f822a528676c741c38d709cd6c97",
+      "evidence_index_sha256": "331e68373cb558b388375c8d1caeb32edf431502c7f32cdf96234fc4ece716a8",
+      "status": "not-qualified-see-cohorts",
+      "comparison_profile_qualified": false,
+      "historical_protocol_qualified": false,
+      "attempt_counts": {
+        "failed": 9,
+        "measured": 9,
+        "denied-memory": 6
+      },
+      "host_limits": {
+        "devices": [
+          "cpu",
+          "cuda"
+        ],
+        "deadline_seconds_by_device": {
+          "cpu": 1200,
+          "cuda": 1200
+        },
+        "cooperative_stop_seconds_by_device": {
+          "cpu": 1080,
+          "cuda": 1080
+        },
+        "primary_delivery_budget_seconds": {
+          "cpu": 600,
+          "cuda": 300
+        },
+        "reserved_vram_budget_bytes": {
+          "cpu": 0,
+          "cuda": 6442450944
+        },
+        "intended_use": "reviewed-proposals-only",
+        "automatic_label_quality_floor": 23,
+        "scope": "Prospective absolute host budgets; original1.20 comparison and23of24 automation gates remain separate and unchanged."
+      },
+      "cohorts": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "attempt_counts": {
+            "failed": 3,
+            "measured": 3
+          },
+          "baseline_statuses": [
+            "failed",
+            "failed",
+            "failed"
+          ],
+          "measurement_complete": false,
+          "quality_passed": false,
+          "legacy_throughput_target_met": false,
+          "legacy_median_delivery_ratio": null,
+          "candidate_observations": [
+            {
+              "replicate": 1,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "25e7654db821b858112944cf7d927d10ab95364417e66839e78b2d0cd3a84eb1",
+              "first_correct": 12,
+              "warm_correct": 12,
+              "primary_delivery_seconds": 244.81174310005736,
+              "peak_rss_bytes": 3545460736,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 0,
+              "phases": {
+                "first": {
+                  "generator_invocations": 36,
+                  "output_attempts": 36,
+                  "invalid_output_attempts": 24,
+                  "invalid_output_rate": 0.6666666666666666,
+                  "operational_errors": 0,
+                  "repairs": 12,
+                  "correct": 12,
+                  "seconds": 122.88121009990573,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 5.8593172985082145
+                },
+                "warm": {
+                  "generator_invocations": 36,
+                  "output_attempts": 36,
+                  "invalid_output_attempts": 24,
+                  "invalid_output_rate": 0.6666666666666666,
+                  "operational_errors": 0,
+                  "repairs": 12,
+                  "correct": 12,
+                  "seconds": 118.9522614000598,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 6.05284835719515
+                }
+              },
+              "user_22_of_24_quality_check": "failed"
+            },
+            {
+              "replicate": 2,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "3f8fd96f89e2d5c979b72ec045ea3cfb4cf1f57908614cecb9ecf734440c0301",
+              "first_correct": 12,
+              "warm_correct": 12,
+              "primary_delivery_seconds": 241.19015809998382,
+              "peak_rss_bytes": 3550302208,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 0,
+              "phases": {
+                "first": {
+                  "generator_invocations": 36,
+                  "output_attempts": 36,
+                  "invalid_output_attempts": 24,
+                  "invalid_output_rate": 0.6666666666666666,
+                  "operational_errors": 0,
+                  "repairs": 12,
+                  "correct": 12,
+                  "seconds": 118.92746310005896,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 6.054110473997348
+                },
+                "warm": {
+                  "generator_invocations": 36,
+                  "output_attempts": 36,
+                  "invalid_output_attempts": 24,
+                  "invalid_output_rate": 0.6666666666666666,
+                  "operational_errors": 0,
+                  "repairs": 12,
+                  "correct": 12,
+                  "seconds": 118.77983489993494,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 6.061634961915529
+                }
+              },
+              "user_22_of_24_quality_check": "failed"
+            },
+            {
+              "replicate": 3,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "2d2b31bf4fa57c122a2ff00ee0314a4f636cef910d185e1e409f0e9a9c2f7498",
+              "first_correct": 12,
+              "warm_correct": 12,
+              "primary_delivery_seconds": 241.77107719995547,
+              "peak_rss_bytes": 3545878528,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 0,
+              "phases": {
+                "first": {
+                  "generator_invocations": 36,
+                  "output_attempts": 36,
+                  "invalid_output_attempts": 24,
+                  "invalid_output_rate": 0.6666666666666666,
+                  "operational_errors": 0,
+                  "repairs": 12,
+                  "correct": 12,
+                  "seconds": 119.56622359994799,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 6.021767505253157
+                },
+                "warm": {
+                  "generator_invocations": 36,
+                  "output_attempts": 36,
+                  "invalid_output_attempts": 24,
+                  "invalid_output_rate": 0.6666666666666666,
+                  "operational_errors": 0,
+                  "repairs": 12,
+                  "correct": 12,
+                  "seconds": 119.32183390005957,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 6.034101022978331
+                }
+              },
+              "user_22_of_24_quality_check": "failed"
+            }
+          ],
+          "pairs": []
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "attempt_counts": {
+            "denied-memory": 6
+          },
+          "baseline_statuses": [
+            "denied-memory",
+            "denied-memory",
+            "denied-memory"
+          ],
+          "measurement_complete": false,
+          "quality_passed": false,
+          "legacy_throughput_target_met": false,
+          "legacy_median_delivery_ratio": null,
+          "candidate_observations": [
+            {
+              "replicate": 1,
+              "status": "denied-memory",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "3a6e94943db7bf52a8c10012fc95d6286d9978d194175e2395475c20938fa8de",
+              "user_22_of_24_quality_check": "pending"
+            },
+            {
+              "replicate": 2,
+              "status": "denied-memory",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "04d07c545182d35fd88e91cba8a340c4fce54b85e882ea510e16fe69c5677081",
+              "user_22_of_24_quality_check": "pending"
+            },
+            {
+              "replicate": 3,
+              "status": "denied-memory",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "f6904c12e6a847c43d19b3b1192bfab269954622c49da8b3a1ffa15eb090570c",
+              "user_22_of_24_quality_check": "pending"
+            }
+          ],
+          "pairs": []
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "attempt_counts": {
+            "failed": 3,
+            "measured": 3
+          },
+          "baseline_statuses": [
+            "failed",
+            "failed",
+            "failed"
+          ],
+          "measurement_complete": false,
+          "quality_passed": false,
+          "legacy_throughput_target_met": false,
+          "legacy_median_delivery_ratio": null,
+          "candidate_observations": [
+            {
+              "replicate": 1,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "6d375bfbb9175693c69ccd3689d1a20c798c936edfb4c31a8b4ff086839384d5",
+              "first_correct": 9,
+              "warm_correct": 9,
+              "primary_delivery_seconds": 52.71703970001545,
+              "peak_rss_bytes": 3792547840,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 2218786816,
+              "phases": {
+                "first": {
+                  "generator_invocations": 37,
+                  "output_attempts": 37,
+                  "invalid_output_attempts": 26,
+                  "invalid_output_rate": 0.7027027027027027,
+                  "operational_errors": 0,
+                  "repairs": 13,
+                  "correct": 9,
+                  "seconds": 24.797465899959207,
+                  "accuracy": 0.375,
+                  "correct_per_minute": 21.77641869449605
+                },
+                "warm": {
+                  "generator_invocations": 37,
+                  "output_attempts": 37,
+                  "invalid_output_attempts": 26,
+                  "invalid_output_rate": 0.7027027027027027,
+                  "operational_errors": 0,
+                  "repairs": 13,
+                  "correct": 9,
+                  "seconds": 24.146305999951437,
+                  "accuracy": 0.375,
+                  "correct_per_minute": 22.363669208908643
+                }
+              },
+              "user_22_of_24_quality_check": "failed"
+            },
+            {
+              "replicate": 2,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "830d18d39bb30caaa65fe80698130f0626ea69515cf706e98d9efa6c9cd35072",
+              "first_correct": 9,
+              "warm_correct": 9,
+              "primary_delivery_seconds": 53.37700510001741,
+              "peak_rss_bytes": 3797286912,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 2218786816,
+              "phases": {
+                "first": {
+                  "generator_invocations": 37,
+                  "output_attempts": 37,
+                  "invalid_output_attempts": 26,
+                  "invalid_output_rate": 0.7027027027027027,
+                  "operational_errors": 0,
+                  "repairs": 13,
+                  "correct": 9,
+                  "seconds": 25.319748800015077,
+                  "accuracy": 0.375,
+                  "correct_per_minute": 21.32722580563984
+                },
+                "warm": {
+                  "generator_invocations": 37,
+                  "output_attempts": 37,
+                  "invalid_output_attempts": 26,
+                  "invalid_output_rate": 0.7027027027027027,
+                  "operational_errors": 0,
+                  "repairs": 13,
+                  "correct": 9,
+                  "seconds": 24.459051699959673,
+                  "accuracy": 0.375,
+                  "correct_per_minute": 22.077716120158914
+                }
+              },
+              "user_22_of_24_quality_check": "failed"
+            },
+            {
+              "replicate": 3,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "1bd750ecf13541ca8cccb75582238c009d2d702a17094667dba2d7ab114d8f27",
+              "first_correct": 9,
+              "warm_correct": 9,
+              "primary_delivery_seconds": 54.794356400030665,
+              "peak_rss_bytes": 3797041152,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 2218786816,
+              "phases": {
+                "first": {
+                  "generator_invocations": 37,
+                  "output_attempts": 37,
+                  "invalid_output_attempts": 26,
+                  "invalid_output_rate": 0.7027027027027027,
+                  "operational_errors": 0,
+                  "repairs": 13,
+                  "correct": 9,
+                  "seconds": 26.548615999985486,
+                  "accuracy": 0.375,
+                  "correct_per_minute": 20.34004333786346
+                },
+                "warm": {
+                  "generator_invocations": 37,
+                  "output_attempts": 37,
+                  "invalid_output_attempts": 26,
+                  "invalid_output_rate": 0.7027027027027027,
+                  "operational_errors": 0,
+                  "repairs": 13,
+                  "correct": 9,
+                  "seconds": 24.513302400009707,
+                  "accuracy": 0.375,
+                  "correct_per_minute": 22.02885564695625
+                }
+              },
+              "user_22_of_24_quality_check": "failed"
+            }
+          ],
+          "pairs": []
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "attempt_counts": {
+            "failed": 3,
+            "measured": 3
+          },
+          "baseline_statuses": [
+            "failed",
+            "failed",
+            "failed"
+          ],
+          "measurement_complete": false,
+          "quality_passed": false,
+          "legacy_throughput_target_met": false,
+          "legacy_median_delivery_ratio": null,
+          "candidate_observations": [
+            {
+              "replicate": 1,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "2e6c1b6ef06eb6455f0f566e4e6d657f0b0cf90b837bd28c81347f4299a20f94",
+              "first_correct": 12,
+              "warm_correct": 12,
+              "primary_delivery_seconds": 35.850885699968785,
+              "peak_rss_bytes": 3783061504,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 2214592512,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 12,
+                  "seconds": 16.77335250005126,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 42.925229169171736
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 12,
+                  "seconds": 15.314951900043525,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 47.01288026885372
+                }
+              },
+              "user_22_of_24_quality_check": "failed"
+            },
+            {
+              "replicate": 2,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "694f811c29c46c375385be9ac4cf8412859bb68dba6ee932503892b7be9f4cf2",
+              "first_correct": 12,
+              "warm_correct": 12,
+              "primary_delivery_seconds": 36.141072499915026,
+              "peak_rss_bytes": 3786723328,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 2214592512,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 12,
+                  "seconds": 18.61483810003847,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 38.67882149340381
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 12,
+                  "seconds": 14.383335100021213,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 50.05793127902152
+                }
+              },
+              "user_22_of_24_quality_check": "failed"
+            },
+            {
+              "replicate": 3,
+              "status": "measured",
+              "native_exit_code": 0,
+              "cleanup_passed": true,
+              "measurement_sha256": "b854c0daaa381857dcdc1ab8a42f3adc6db08a6c9dfc73375a3583f9dac5e243",
+              "first_correct": 12,
+              "warm_correct": 12,
+              "primary_delivery_seconds": 35.27367879997473,
+              "peak_rss_bytes": 3800301568,
+              "host_budget_met": true,
+              "automatic_label_fixture_floor_met": false,
+              "peak_reserved_vram_bytes": 2214592512,
+              "phases": {
+                "first": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 12,
+                  "seconds": 16.586848699953407,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 43.40788374117276
+                },
+                "warm": {
+                  "generator_invocations": 24,
+                  "output_attempts": 24,
+                  "invalid_output_attempts": 0,
+                  "invalid_output_rate": 0.0,
+                  "operational_errors": 0,
+                  "repairs": 0,
+                  "correct": 12,
+                  "seconds": 14.872906500007957,
+                  "accuracy": 0.5,
+                  "correct_per_minute": 48.41017456807214
+                }
+              },
+              "user_22_of_24_quality_check": "failed"
+            }
+          ],
+          "pairs": []
+        }
+      ]
+    }
+  ],
+  "criterion_assessments": [
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "assessment": "failed",
+      "criterion_qualified": false,
+      "reason": "User accepts the completed1.5B absolute quality check at22/24; all7 completed1.5B candidate observations meet it. Original protocol23/24 and paired no-lost-correct results remain historical. The CPU pair loses one baseline-correct case, required CPU repetitions are incomplete, and0.5B quality/matched baselines remain insufficient. GPU quality and prospective resource budgets are valid partial evidence; no full canonical model criterion closes."
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "representative-resource-and-usability-qualification",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "1.5B constrained GPU quality/resource evidence is valid direct-model support. Both model profiles lack constrained CPU completion, and the bundle does not exercise packaged-host adaptive default, explicit override or visual-builder UI. The full criterion stays pending."
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "Native retained-tree protection, durable accounting and owned-worker crash proof are unqualified. Do not inspect staging, call offload readiness, acquire leases or attempt low-memory inference. More free RAM cannot clear this dependency."
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "bounded-loading-and-staging",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "Native retained-tree protection, durable accounting and owned-worker crash proof are unqualified. Do not inspect staging, call offload readiness, acquire leases or attempt low-memory inference. More free RAM cannot clear this dependency."
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "Native retained-tree protection, durable accounting and owned-worker crash proof are unqualified. Do not inspect staging, call offload readiness, acquire leases or attempt low-memory inference. More free RAM cannot clear this dependency."
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "automated-optional-mode-journeys",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "Native retained-tree protection, durable accounting and owned-worker crash proof are unqualified. Do not inspect staging, call offload readiness, acquire leases or attempt low-memory inference. More free RAM cannot clear this dependency."
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "File-effect authority, protected native ownership and restricted legacy review remain separate security concerns. Standard worker observations do not qualify shared-host admission, downloads, native effects or security recovery; no restricted review is retried."
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "File-effect authority, protected native ownership and restricted legacy review remain separate security concerns. Standard worker observations do not qualify shared-host admission, downloads, native effects or security recovery; no restricted review is retried."
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "This fixed classification comparison is partial generation support. Private-provider ingestion needs separately authorized credentials/repository; OCR/layout/semantic/critic/advanced-resource and UI qualification need their supported runtime and exact task oracles. No new provider, runtime or model is acquired."
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "advanced-content-processing-preserves-structure-and-lineage",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "This fixed classification comparison is partial generation support. Private-provider ingestion needs separately authorized credentials/repository; OCR/layout/semantic/critic/advanced-resource and UI qualification need their supported runtime and exact task oracles. No new provider, runtime or model is acquired."
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "semantic-curation-improves-measured-quality",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "This fixed classification comparison is partial generation support. Private-provider ingestion needs separately authorized credentials/repository; OCR/layout/semantic/critic/advanced-resource and UI qualification need their supported runtime and exact task oracles. No new provider, runtime or model is acquired."
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "synthetic-examples-are-validated-before-admission",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "This fixed classification comparison is partial generation support. Private-provider ingestion needs separately authorized credentials/repository; OCR/layout/semantic/critic/advanced-resource and UI qualification need their supported runtime and exact task oracles. No new provider, runtime or model is acquired."
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "advanced-preparation-and-synthetic-quality",
+      "criterion_id": "controlled-advanced-capabilities-are-qualified",
+      "assessment": "pending",
+      "criterion_qualified": false,
+      "reason": "This fixed classification comparison is partial generation support. Private-provider ingestion needs separately authorized credentials/repository; OCR/layout/semantic/critic/advanced-resource and UI qualification need their supported runtime and exact task oracles. No new provider, runtime or model is acquired."
+    }
+  ],
+  "limits": [
+    "The user revised the absolute quality acceptance to22/24 after this run and accepts completed1.5B observations. This is a separately labeled retrospective acceptance, not a claim the original23/24 protocol or paired no-regression/completeness checks passed.",
+    "Fixed exposed24case regression, first/warm repetitions; not fresh unseen validation or a population-accuracy claim.",
+    "Prospective Windows-v2 absolute resource targets do not reinterpret historical protocols or waive paired no-regression, cohort completeness or resource denials. Legacy1.20 throughput results remain separate.",
+    "0.5B is reviewed-proposals-only; resource success and valid JSON do not certify label correctness or useful general capability.",
+    "The bundle exercises current guarded Standard generation only. It grants no native file effects, shared-host recovery, retained-stage protection/accounting, offload, private provider, OCR/layout/semantic/critic or packaged-host UI qualification.",
+    "The old interrupted8f08 attempt retains unknown cleanup; these48 observed exits and cleanups do not retroactively qualify it.",
+    "No downloads, credentials, staging inspection, offload leases, restricted legacy security review or new model inference occurred during this assessment."
+  ],
+  "preserved_history": [
+    "docs/operations/standard-generation-qualification.json",
+    "docs/operations/standalone-model-evidence-assessment.json"
+  ],
+  "security_disposition": "security-relevant: source/hash/case replay and finite numeric publication; no raw model output, prompts, private payloads or absolute machine paths.",
+  "user_acceptance_policy": {
+    "authority_ref": "user-explicit-22-of-24-acceptance",
+    "minimum_correct_per_phase": 22,
+    "case_count_per_phase": 24,
+    "original_protocol_minimum_correct": 23,
+    "evaluation_timing": "retrospective-user-acceptance",
+    "original_protocol_results_unchanged": true,
+    "completed_1_5b_absolute_quality_check": "passed",
+    "scope": "Accept the completed1.5B candidate absolute-quality observations at22/24. This is separate from frozen protocol qualification, paired no-lost-correct, missing repetitions, memory/resource evidence, smaller-model results and whole-host/native/offload requirements."
+  },
+  "case_row_accounting": {
+    "complete_measured_rows": 1104,
+    "failed_partial_rows": 21,
+    "classifiable_partial_rows": 12,
+    "unclassified_running_partial_rows": 9,
+    "all_retained_rows": 1125,
+    "partial_rows_with_predicted_label": 9,
+    "rejected_partial_rows_without_predicted_label": 3,
+    "scope": "The9running accepted historical-baseline rows lack predictions and remain unclassified. They are not guessed correct or included in complete measured results."
+  }
+}

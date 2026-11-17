@@ -13,10 +13,10 @@ describe("RevealModelInFolderUseCase", () => {
       localPath: "C:\\models\\model-1",
       createdAt: "2026-07-31T00:00:00.000Z",
     }));
-    const revealPath = testDouble.fn(async () => undefined);
+    const revealModelLocation = testDouble.fn(async () => undefined);
     const useCase = new RevealModelInFolderUseCase({
       modelRegistry: { getModelRecord },
-      modelLocationRevealer: { revealPath },
+      modelLocationRevealer: { revealModelLocation },
     });
 
     const result = await useCase.execute({
@@ -25,16 +25,16 @@ describe("RevealModelInFolderUseCase", () => {
     });
 
     expect(getModelRecord).toHaveBeenCalledWith("workspace-a", "model-1");
-    expect(revealPath).toHaveBeenCalledWith("C:\\models\\model-1");
+    expect(revealModelLocation).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "model-1" });
     expect(result).toEqual({ modelRecordId: "model-1", revealed: true });
     expect(JSON.stringify(result)).not.toContain("C:\\models");
   });
 
   it("fails closed when the record has no local location", async () => {
-    const revealPath = testDouble.fn(async () => undefined);
+    const revealModelLocation = testDouble.fn(async () => undefined);
     const useCase = new RevealModelInFolderUseCase({
       modelRegistry: { getModelRecord: testDouble.fn(async () => undefined) },
-      modelLocationRevealer: { revealPath },
+      modelLocationRevealer: { revealModelLocation },
     });
 
     let failure: unknown;
@@ -47,7 +47,7 @@ describe("RevealModelInFolderUseCase", () => {
       failure = error;
     }
     expect(failure).toMatchObject({ code: "not-found" });
-    expect(revealPath).not.toHaveBeenCalled();
+    expect(revealModelLocation).not.toHaveBeenCalled();
   });
 
   it("sanitizes host reveal failures", async () => {
@@ -65,7 +65,7 @@ describe("RevealModelInFolderUseCase", () => {
         })),
       },
       modelLocationRevealer: {
-        revealPath: testDouble.fn(async () => {
+        revealModelLocation: testDouble.fn(async () => {
           throw new Error("shell failed at C:\\private\\model-1");
         }),
       },
@@ -82,7 +82,7 @@ describe("RevealModelInFolderUseCase", () => {
     }
     expect(failure).toMatchObject({
       code: "unavailable",
-      message: "The model folder could not be opened.",
+      message: "The model folder could not be opened. File actions are pending host qualification; use your file manager.",
     });
   });
 });

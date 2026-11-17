@@ -1,0 +1,250 @@
+# Provided-data and manual Context journeys
+
+Data and Context transitions use the mounted navigation layout. At ordinary
+widths they select the visible sidebar. At narrow widths, including native 400%
+zoom, they open the existing Application navigation menu and activate its exact
+menu item with Enter. A hidden, missing or duplicate control fails the journey;
+the driver never forces a click or changes the viewport. The browser restart
+step selects Settings in the header to avoid the separate sidebar entry.
+Inert driver tests establish selector and failure behavior only. Actual host,
+accessibility and restart qualification still require a fresh reviewed run.
+
+This private qualification composition tests saved dataset versions and a manual Context pack in the real
+packaged Desktop app and the browser app. It does not generate model output.
+Normal qualification commands keep their existing controlled worker.
+
+The fixed worker admits one small synthetic CSV, classification, provided rows,
+validation and splitting, JSON Lines output, and the normal review operation.
+It delegates to the packaged production task, quality checks and output writer.
+It also admits one fixed synthetic manual Context pack and bounded pack inspection
+through their production tasks.
+It rejects other task types, model generation, OCR, model downloads, advanced processing,
+external paths, directory links and inputs larger than 16 KiB. Offline flags,
+launch authentication and production runtime dependency preparation remain active.
+Failure records contain closed error categories, not source data or exceptions.
+
+## Observing dependency preparation
+
+The private server composition calls the real shared Context-then-Worker
+preparer. It does not skip heavy imports, replace dependency checks or relax
+memory limits. Both ordinary hosts use that same helper, but this composition
+must be reported as a controlled override. Source unit checks do not qualify an
+actual host run.
+
+Before a dependency command is dispatched, a synchronous sink can write its
+closed stage label. Actual command return or throw has a separate record.
+`returned` never means success. No command, path, environment, output, error,
+credential or process ID is included. Unavailable diagnostics cannot change the
+underlying preparation result or establish which process reached a memory limit.
+
+Each server session exclusively creates `provided-server-cache-1` or
+`provided-server-cache-2`. An existing cache is refused without adoption or
+inspection of its contents. Ordinary ancestor/cache identities are checked before
+and after bounded writes. This is not a native filesystem fence. At most 256
+exclusive records of at most 1 KiB are written with flush and acknowledged close.
+Stages, sequence and paired phase labels must agree. An uncertain write or close
+fences later records; partial files are retained without deletion, name reuse or
+a second close attempt. Source revision and controlled-composition labels scope
+each record. Neither an observation nor a completed journal grants readiness,
+process ownership, protected accounting, restart authority or roadmap completion.
+
+The preparer validates the fixed worker command, arguments, packaged worker
+directory, source, cache, offline flags and non-privileged loopback port before
+delegation. Production rejects this private composition. Launch credentials are
+rotated by the original foundation after preparation; no pre-launch token is
+required or recorded. Existing real-host deadlines and resource limits remain.
+
+The browser test uses a dedicated organization and the production local SQLite
+adapter through an explicit test-only composition seam. The Settings restart
+action closes background tasks, the listener, composition persistence and the
+externally owned SQLite connection before opening them again. A failed close
+prevents another owner. A fresh exclusive second-session record is required;
+an HTTP readiness response alone does not prove restart. This is not PostgreSQL
+deployment qualification.
+
+Both tests import eight synthetic classification rows, prepare and explicitly
+save them, verify complete bytes and digests, inspect history and comparison,
+restore the supported setup, and explicitly prepare and save a second version.
+They check the original bytes and lineage again after complete host restart.
+They also prepare and discard once through the restarted runtime. Desktop keeps
+the same app data and uses a fresh worker evidence cache for each session.
+Its closed restart phase names give each shutdown a separate acknowledgment
+and exclusive report. Existing ordinary shutdown filenames remain unchanged.
+
+The Desktop training task has a short explicit label for its select. Its help
+button is separate from that label. A real-component regression checks label
+association, independent help and task changes. The app journeys open the output
+settings before using a hidden format control: Advanced settings and Output file
+in Desktop, or the containing Advanced settings disclosure in the browser app.
+
+The focused launch-plan test also exercises Playwright's actual module-loading
+order. Its import-only global setup loads the shared ESM modules first. Both app
+specs must then collect and skip with the required scenario absent, while a third
+app-free test executes the shared restart-path resolver through a native file-URL
+import. This catches TypeScript/CommonJS and ESM loading conflicts without opening
+an app, browser or worker. It does not replace either real host journey.
+
+The separately reviewed fixed operator binds the exact source identity, Python
+executable, package and two selected tests. It uses the existing `dataset-profile`
+native role: 1 GiB per process, 2 GiB package job, 3 GiB UI job, 32 members, and
+the existing time, environment, ownership and retirement checks. Do not select
+the OCR role or raise limits after failure. Source checks alone do not run or
+qualify these host journeys. Retain actual failed and incomplete evidence.
+
+This work supports Data increment 3 and the comprehensive daily UI increment. It does not grant parent qualification,
+remote provider card rendering, remote cleanup, scale, advanced quality gains,
+model accuracy or OCR qualification. Existing successful provider and OCR
+evidence remains separate; do not repeat accepted model accuracy checks.
+
+The same two app cases also use mounted Context controls to enter the fixed
+`daily-context-fixture.json`, prepare it, open formatted review, approve its
+section and explicitly save. They read the current public catalog/detail and
+bounded artifact bytes. The oracle requires exact workspace and artifact identity,
+one manual entry/no sources, the known content digest, valid package entries and
+the stored-byte digest/size. Restart must preserve that exact snapshot.
+
+The extra private worker operations permit only manual generation with the
+declared bytes and pack inspection, never model generation, embedding or RAG.
+Context staging is an immediate regular child of the existing fixed operator's
+temp root. Its existing candidate/run/temp bindings must match. No new launcher,
+quota, recovery or old-owner path is introduced. Existing native limits remain.
+Focused tests exercise admission/denial, actual model-free task delegation,
+snapshot-oracle refusals and Playwright module collection. Skipped app cases do
+not qualify UI selectors, app behavior or native retirement. Actual source-bound
+app execution and final combined testing remain pending until separately run.
+
+After restart and exact saved-byte validation, both manual Context cases prepare
+and discard another fixed pack. The saved pack must remain unchanged. They then
+check that lowercase confirmation cannot delete, cancel deletion and recheck
+the original bytes. Only the exact pack created by this journey is eligible for
+confirmed deletion. Its public catalog entry must disappear, detail access must
+fail and removal must survive renderer reload. The bounded catalog oracle rejects
+missing retained records, substitutions, duplicates and lookalike removal claims.
+
+Real mounted component tests cover exact confirmation, cancelled deletion, single
+dispatch and catalog refresh. Local oracle/component passes and source collection
+do not run the apps, prove physical backing-file erasure, qualify native shutdown
+or complete the parent roadmap. Existing actual-host execution remains pending.
+
+Discard and cancelled deletion compare the entire before/after public catalog,
+including every declared item field, independent of list order. Confirmed removal
+must leave exactly the original catalog minus the selected artifact. Immutable
+scalar snapshots prevent caller mutation from hiding an extra publication, a
+changed unrelated entry or unrelated deletion. Retaining the original pack alone
+cannot establish no publication.
+
+The same two cases now contain a saved Parquet row-review journey in a second
+workspace created through Home. Its fixed `daily-row-review-fixture.json` is
+uploaded through Add data. Provided classification prepares Parquet; explicit
+approval saves the original. Dataset Review edits the first row and rejects the
+second into two immutable successors. Public reads verify all stored artifact
+bytes/digests/sizes, exact ordered rows, source identity, parent chain, recipe
+operations/fingerprints and inherited quality policy. A restart must preserve
+all three complete records and byte sets; visible version selection checks each
+row again. Source bytes and earlier versions must remain unchanged. The test
+returns to the original workspace before existing JSONL/manual Context checks.
+
+The private worker admits Parquet only for the one named regular single-link
+CSV with the exact bounded fixture bytes. It delegates to production preparation
+and review code. The original JSONL, manual Context, task, offline, generation,
+OCR, source containment, native job and cleanup controls remain unchanged.
+Focused fixture tests call actual model-free Parquet preparation. Separate
+oracle tests use synthetic marked bytes and inert public-read facades; they do
+not run an app, process restart or actual IPC/network. Module collection keeps
+the same two host cases and skips them without the explicit scenario. Actual
+source-bound host execution, native retirement and parent/final qualification
+remain pending. Do not rerun accepted model accuracy or OCR for this extension.
+
+Source-derived Context tests use `daily-source-context-fixture.json`: one small
+Markdown transit document, one source pack and one RAG database. The private
+worker admits the exact source bytes/settings, bounded current staging, a closed
+RAG archive/manifest and one fixed CPU query. It delegates generation, inspection
+and LanceDB search to production code. A finite 384-dimensional embedding
+callback replaces model loading; these tests do not qualify embedding accuracy.
+The original manual pack limit remains 16 KiB. Only this declared RAG input has
+a separate 512 KiB archive limit, 32 regular entries and 2 MiB expanded bytes.
+Production parsing still validates the actual table and citations. Source bytes,
+manual/JSONL/Parquet contracts, offline bindings and native limits remain intact.
+The worker extension is tested locally; source-pack/RAG app journey wiring and
+actual Windows/browser restart execution remain separate pending work.
+
+The same two app restart cases now call `source-context-host-journey.ts`. A third
+workspace receives the fixed Markdown through Add data. The Data details control
+hands its identifier to RAG preparation. Explicit chunk/Markdown review and save
+create a real source pack and LanceDB package. After the existing full restart,
+public reads compare exact bytes, digests, source lineage and complete catalogs.
+Visible controls run the fixed cited query, return to the source in Data, rebuild
+both artifacts without changing originals, discard a candidate and delete only
+an artifact created by this journey. The existing Desktop Artifact Browser
+download is checked through its download event/stream; no browser-only download
+control is invented. Both cases restore the original workspace for other flows.
+Only the existing read-only Data readiness preset is additionally admitted for
+the exact source. Generation settings and native/offline limits are unchanged.
+Pure oracle tests and module collection are local support only. App execution,
+selectors, restart, native retirement and parent/final checks remain pending.
+Source review identified a fresh-session source-pack rebuild display risk; its
+separate product regression/fix must precede actual journey qualification.
+
+Review checks use exact expectations captured from production generation of this
+fixture: two ordered cited RAG chunks and one complete source-pack topic. They
+check each title/content/citation, progress index/total, navigation boundaries and
+Not reviewed to Approved state, then revisit every approval. Mutations, extra or
+missing items and duplicate approvals cannot satisfy that oracle. Form/source
+selectors are scoped to the active named tab panel, including persistent tabs.
+
+The third serial app attempt reached both browser tests. Ordinary wide and narrow
+accessibility audits passed. Forced colors had no violations and 65 positive
+contrast samples, but two pseudo-content checks remained unresolved. Desktop did
+not run. Keep that failed observation and its independently checked process
+retirement in `docs/operations/provided-data-serial-host-qualification.json`.
+
+The narrow shell uses a native `summary` disclosure. Its test selects that exact
+visible element and operates it by keyboard. Do not assume that Playwright gives
+it a button role, force a hidden sidebar control or change the product role for
+the test. Navigation failures report only a fixed source stage. They never include
+the exception, selector, page text or private payload. A DOM regression checks the
+actual shell declarations on both hosts and reproduces the old role assumption.
+
+In forced colors, the opaque step card supplies the workflow number's backdrop.
+The number keeps its content, system foreground and border, with a transparent
+background. The official audit can classify opaque positioned pseudo-elements as
+covering nearby text. This source-based repair still needs an actual app audit;
+do not ignore incomplete nodes or change the engine, rules or contrast targets.
+
+## Startup diagnostics after a stopped app test
+
+The fourth serial attempt passed packaging and the first Data surface's normal
+and forced-color audits at both1440px and320px. Each audit had zero violations,
+zero incomplete checks and zero retries. The enclosing observer then recorded a
+process-commit limit notification and forcibly stopped its owned Job. It confirmed
+active-zero and closed outer handles/streams. The nested final browser/coordinator
+reports are absent. Desktop did not start; native400 remains unobserved. A missing
+final reporter file does not prove that a browser test never began.
+
+The limit notification alone does not identify the allocating process or prove a
+PyTorch, Chrome, leak or physical-RAM cause. Keep the failed namespace and its
+independently reviewed observations. Do not increase a global cap from that PID.
+
+The fixed Python entry now writes up to four exclusive, fsynced startup facts in
+its validated current cache. They mark entry before packaged main, completion of
+that import, completion of the fixed task imports and entry before the listener.
+Fields contain only a closed role/stage, current PID/parent PID, a validated source
+revision or null, and an explicit diagnostic-only scope. They contain no raw error,
+credential, payload, executable path or model data. They do not prove readiness,
+process ownership, native retirement or disk credit. The ordinary authenticated
+loopback launch checks and model-free task restrictions are unchanged.
+
+For the fixed dataset-profile thin-browser scenario, both accessibility variants
+record the existing owned browser's bounded CDP process-role list before and after
+the audits. Native observations begin only after frame admission. Each snapshot
+also identifies its test observer. Unknown roles become `other`; malformed,
+duplicate or more than32rows become unavailable. Only the fixed SystemInfo query
+is sent; the diagnostic session is detached. No PID is inspected or acted on.
+Unavailable diagnostics do not change the official accessibility result. These
+awaits use the existing test/host/phase deadlines, not an independently timed
+diagnostic guarantee. Source-written and CDP IDs remain correlation only.
+
+The startup-failure and caller-persistence regressions are local source evidence.
+They neither rerun the apps nor reopen completed accuracy/OCR/provider tests.
+Use a separately reviewed fresh execution to collect actual startup observations;
+preserve the existing process, Job, member, output and deadline limits.

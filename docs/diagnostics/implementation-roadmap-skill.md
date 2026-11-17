@@ -12,6 +12,27 @@ or resumed without depending on one AI task's conversation state.
 
 ## Automatic routing
 
+The repository's contributor control plane extends this workflow through
+`docs/diagnostics/ai-development-control-plane.md`. For workflow work requests,
+start or reuse its local JSON review site and provide the verified URL. New
+roadmaps require current candidate-bound helper completion; pre-existing
+roadmap history stays explicitly declarative. The planning engine never executes
+commands from an evidence string.
+
+Pending governed increments close via `increment-qualified` after complete
+implementation, exact passing evidence/reports, fresh target-bound checks covering
+every criterion and separate accepted review. Other active work remains intact;
+overall review cannot substitute for target-specific qualification.
+
+Explicit user changes to a pending technical policy use the governed
+`technical-acceptance-revised` event. It replaces one controlled nonsecurity
+criterion under the same identity/qualification after implementation, archives
+the original definition/plan/approval and policy reference/digest, and invalidates
+old approval and semantic receipt bindings. Actual narrow reapproval may rely on
+the user's already explicit direction. Independent semantic review and fresh
+checks remain mandatory. Neither amendment nor reapproval clears blockers or
+qualifies a measurement; human-only scope events cannot change model targets.
+
 Agents must route to the skill by intent, not only by exact name. Use it when a
 user:
 
@@ -36,7 +57,10 @@ The workflow requires:
 2. two or three options for each high-level choice with one recommendation;
 3. explicit user approval of the selected high-level option;
 4. an ordered increment roadmap with acceptance criteria and rollback;
-5. explicit user approval of the completed roadmap;
+5. publication of the complete unapproved roadmap draft, verification that the
+   live review site exposes its expected nonzero increments/objectives and
+   criterion IDs/counts/details, and sharing its verified link before requesting
+   explicit user approval; a discovery-only 0/0 record is insufficient;
 6. increment-specific research and a written plan before each increment;
 7. coherent work chunks with tests, documentation, feedback, and evidence;
 8. final verification that distinguishes local checks from
@@ -44,6 +68,10 @@ The workflow requires:
 9. a mandatory security impact disposition in discovery and per-increment security
    review acceptance evidence, with proportional threat/control, denial-path,
    rollback, and residual-risk coverage.
+
+Generated roadmap Markdown shows ignored `artifacts/` evidence paths as text.
+The canonical record retains the path, outcome, and limitations; its presence
+does not imply that the local evidence is available in another checkout.
 
 When implementation is explicitly requested and the completed roadmap is approved,
 the default is continuous execution through every ordered increment to an end-to-end
@@ -65,6 +93,14 @@ revised increments without `security-impact-reviewed` or a specific `security-*`
 criterion while retaining compatibility with existing stored roadmap state.
 
 Use **increment**, not phase, in roadmap and status artifacts.
+
+Commit coherent completed, tested and reviewed chunks before continuing, using
+the skill's owned-change checkpoint procedure. Pending parent work, increment or
+roadmap qualification does not defer a safe checkpoint. Inspect actual scoped
+evidence and dependency closure, preserve unrelated index/worktree changes,
+release source claims before Git changes and start later work from a fresh
+baseline. Report the actual commit identity. This grants no parent pass, push,
+history rewrite, main advancement or release authority.
 
 ## Economical increment sizing
 
@@ -94,6 +130,30 @@ renewed roadmap approval before continuing.
 
 ## Durable tracking and temporary reports
 
+Mixed legacy criteria use `legacy-acceptance-scope-revised` to archive human
+acceptance portions while preserving technical IDs/qualification, pending
+evidence, chunks and blockers. It cannot close an increment or amend governed
+state. The governed event keeps its strict policy gate. Independently review
+classification and record actual narrow user reapproval. Product data/publishing
+approval controls remain intact.
+
+If the user takes human acceptance offline, review all open increments and use
+`human-acceptance-transferred` only where that is the sole remaining qualification.
+The event archives original criteria/plan/approval and preserves evidence, then
+requires the actual narrowly authorized `roadmap-approved` event. The JSON review
+site shows offline user ownership separately from active technical criteria.
+
+Technical roadmap criteria should be executable by AI agents, including automated
+UI testing. For started governed roadmaps use `acceptance-scope-revised` instead:
+independently classify pure/mixed human scope, archive originals, retain technical
+requirements and pending evidence, record actual user narrow reapproval, then
+obtain fresh candidate checks/review. The event never closes an increment or
+changes a test result. Original human plan instructions are historical/offline.
+Performance, provider, security, hardware and runtime checks remain technical.
+The attestation is operator supplied; independent review checks semantic scope.
+This metadata handoff is legacy-only and refuses any receipt-governed roadmap;
+current candidate-bound completion requirements cannot be replaced by a transfer.
+
 By default the skill creates:
 
 - `docs/<slug>-implementation-roadmap.md` for approved intent;
@@ -116,6 +176,12 @@ report, and waits for explicit final overall approval. Only then does
 Python engine validates events, confines output paths to the repository, writes
 files atomically, refuses to delete non-generated content, and never executes a
 recorded command.
+
+Final approval retains the canonical `completed` status and records its separate
+`finalApproval` fact, which also governs immutability and report removal. An
+explicitly authorized legacy conversion uses `completion-status-normalized`;
+it preserves creation time, approvals, history, criteria, chunks, evidence and
+the approved fingerprint. It cannot qualify incomplete work or recreate reports.
 
 ## Skill and helper boundary
 

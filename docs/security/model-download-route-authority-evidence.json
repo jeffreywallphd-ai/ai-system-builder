@@ -1,0 +1,36 @@
+{
+  "schema_version": "model-download-route-authority-evidence-v1",
+  "roadmap_id": "security-findings-refresh",
+  "increment_id": "file-and-workspace-authority",
+  "criterion_id": "write-owned-model-completion",
+  "qualification": "local",
+  "outcome": "passed",
+  "source": {
+    "tested_head": "28de04279204529bb45834a5be9d3521a0a3ff80",
+    "checkpoint": "ae7596bd1697e38da35f4fdcc9425d473df9c9b0",
+    "source_digest": "fe4d45e0af7e543913dadbc874fad4f723af3c6ca153dd2de74ba1c179a34ba9",
+    "test_path": "modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts",
+    "test_sha256": "b53cb96dfbb37782199a2c8f54cafef1f16f9a231dcb98c5d47db0da59bb6789"
+  },
+  "verification": {
+    "work_id": "test-model-registration-through-authenticated-routes",
+    "receipt_digest": "8cb6f7ae7f00a528e7d2e36de1cd42eecbf166a18e7f5750140172836f6e58e3",
+    "review_digest": "465da2e005f31ce543f0f4dff9773a58545d0d613190432e9d670891fcea41a9",
+    "review_invocation": "reviewer-model-route-authority-20261106",
+    "checks_passed": ["model-download-ownership", "architecture"],
+    "command": "python dev-tools/helpers/run_focused_checks.py --profile model-download-ownership"
+  },
+  "observations": [
+    "The actual LAN route policy and middleware allow the owner's model reads and lists. Neither operation requests private completion data or writes a model record.",
+    "Read-only completion is denied before the route reads the body. Requests with the wrong organization, workspace, principal or task ID do not reach the worker status or model registry. Authority asserted by the request body does not override the authenticated request context.",
+    "Concurrent and repeated completion by the authorized owner returns the same safe result and records exactly one model in the original workspace and organization. The response omits the private path.",
+    "The same focused profile checks frozen request authority and rejects late replies from retired tasks. A separate test reopens a sample registry and confirms that a fresh controller rejects stale requests without changing saved records."
+  ],
+  "limits": [
+    "The route test uses synthetic identities, runtime status and an in-memory partitioned registry. It does not test live authentication, managed membership, a provider or a real model download.",
+    "The replay tests establish local rejection of stale, retired or unowned work. They do not qualify durable worker recovery or arbitrary backend reissuance of an old ID.",
+    "Windows file effects, the excluded legacy Assets assessment, and broader increment and roadmap qualification remain separate."
+  ],
+  "increment_pass": false,
+  "roadmap_pass": false
+}

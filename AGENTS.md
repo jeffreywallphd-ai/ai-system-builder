@@ -12,6 +12,21 @@ This file is the repository entry point for coding agents. Keep it short; use th
 6. For architecture-sensitive work, consult `docs/adr/decision-readiness.md` before planning implementation.
 7. Inspect the affected code, its nearest README, and its tests before editing.
 
+## AI Development Control Plane
+
+- For a work request using the contributor workflow, read
+  `docs/diagnostics/ai-development-control-plane.md`, run
+  `python dev-tools/helpers/development_control_plane.py review-site start`,
+  and provide the returned, verified review-site link to the user before work.
+- The review site reads versioned JSON and refreshes dynamically. Markdown is
+  generated documentation; the site is read-only and grants no approval.
+- Use the same CLI for scoped outcomes, claims, check plans, executed receipts,
+  separate-invocation review, coding trials, measurements, regression feedback,
+  status and recovery. Established fixes use the
+  lightweight path; substantial work uses the existing approved roadmap skill.
+- Preserve legacy roadmap history as declarative evidence. New governed work
+  needs current candidate-bound verification and review before completion.
+
 ## Repository Agent Skills
 
 - Discover portable repository skills from `skills/*/SKILL.md`. Read the
@@ -35,10 +50,24 @@ This file is the repository entry point for coding agents. Keep it short; use th
 - Keep repository skills portable across supported coding agents. Add or update
   skill tests, routing documentation, and installation guidance in the same
   change as a skill behavior change.
+- Commit coherent completed, tested and reviewed roadmap chunks before continuing;
+  pending parent qualification does not defer a safe checkpoint. Follow the skill's
+  owned-change and source-claim safeguards; a checkpoint grants no release authority.
+- Publish the complete unapproved roadmap draft and verify its live review-site
+  increments and acceptance details before asking for roadmap approval. Share the
+  verified site link; a discovery-only 0/0 record is not a reviewable proposal.
 - Keep roadmap implementation reports concise and temporary under ignored
   `docs/tmp/`. Preserve the full roadmap and JSON state, and remove the
   generated report only after the user explicitly approves the completed
   overall work.
+- When the user takes human acceptance testing offline, use the roadmap skill's
+  explicit legacy handoff event for solely human criteria, or
+  `legacy-acceptance-scope-revised` for mixed legacy descriptions without
+  technical closure. Receipt-governed scope changes still require
+  current candidate-bound qualification. Keep offline human acceptance separate from technical
+  closure; retain security, performance, runtime and other technical gaps.
+  After actual qualification passes, use `increment-qualified` with fresh exact-target
+  checks/review; preserve other active work and final overall qualification.
 
 ## Source Authority
 
@@ -64,6 +93,13 @@ Record unresolved code/documentation conflicts in `docs/docs-mismatch-register.m
 - Never place secrets, credentials, protected prompts, private payloads, exploitable production detail, or personal data in plans, roadmap state, tests, logs, documentation, or status reports.
 
 ## Verification
+
+Technical roadmap acceptance must be executable by AI agents, including automated
+UI tests where relevant. Keep human studies and manual acceptance user-owned
+offline, outside technical closure. Preserve actual performance, model, hardware,
+native-platform and security qualification; unavailable evidence remains pending.
+Use the roadmap skill's governed scope event for approved started-roadmap changes;
+archive original human requirements and never turn the handoff into a test pass.
 
 For implementation-roadmap work, run only focused tests for internal chunks and
 only change-relevant tests after each increment. After every increment is
@@ -108,3 +144,8 @@ For security-relevant work, include focused denial/failure-path evidence and rep
 ## Stop and Escalate
 
 Pause for direction when the request requires a new product or architecture decision, destructive action, credentials, production mutation, materially broader scope, or an unresolved security policy choice. Do not treat an ambiguous requirement as authorization for those actions, and do not trade away isolation, authorization, redaction, integrity, or fail-closed behavior for convenience or compatibility.
+
+The review site separates reviewed local implementation support from parent
+qualification. Maintain `docs/operations/roadmap-supporting-work.json` with exact
+completed work/receipt/review references and scope limits; support never grants
+a parent pass, current-candidate qualification or chunk completion.

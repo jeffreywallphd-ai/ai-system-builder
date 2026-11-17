@@ -110,6 +110,7 @@ describe("asset package transport parity", () => {
     const ipcHandlers = new Map<string, any>();
     const ipcServices = services();
     registerAssetPackageIpc({
+      senderTrust: { isTrustedSender: () => true },
       ipcMain: {
         handle: (channel, handler) => ipcHandlers.set(channel, handler),
       },

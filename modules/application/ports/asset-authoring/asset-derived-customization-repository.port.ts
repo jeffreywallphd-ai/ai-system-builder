@@ -1,3 +1,4 @@
+import type { AssetReference } from "../../../contracts/asset";
 import type {
   AssetCustomizationId,
   AssetDerivedCustomizationDraftRecord,
@@ -11,6 +12,7 @@ export interface AssetDerivedCustomizationListResult {
 }
 
 export interface AssetDerivedCustomizationRepositoryPort {
+  readPublishedAssetReferences?(workspaceId: WorkspaceId): Promise<readonly AssetReference[]>;
   create(
     record: AssetDerivedCustomizationDraftRecord,
   ): Promise<AssetDerivedCustomizationDraftRecord>;

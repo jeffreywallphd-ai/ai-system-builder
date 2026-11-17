@@ -23,6 +23,27 @@ upgrade.
   dependency stages unless a separately reviewed build step requires them.
 - Major runtime or packaging-tool upgrades require compatibility testing; do not
   apply `npm audit fix --force` or an unreviewed bulk remediation.
+- The desktop Forge Vite migration follows ADR-0044: exact tool pins, actual
+  development and packaged-window checks, independent sandbox preloads and
+  self-contained provider clients. Optional native peers retain guarded loading;
+  package qualification must not rely on ancestor node_modules from the checkout.
+- The desktop host is exactly pinned to original-supplier Electron 42.11.18,
+  retaining the qualified patch branch while addressing GHSA-x562-297c-g43g,
+  GHSA-3qxv-5xgr-q7w9 and GHSA-h3v5-h239-pg29 as well as GHSA-fw47-9c62-h3vw.
+  The supplier marks 42.x end-of-support: this patch does not qualify a future
+  supported major or waive that release maintenance gap. Current evidence is
+  in `docs/security/electron-42-patch-qualification.json`. Preserve deny-all runtime
+  permissions and qualify the embedded SQLite maintenance, development startup,
+  packaged PDF and useful-system journeys after changing that pin. Keep install
+  scripts disabled during resolution; acquire its binary only through the reviewed
+  official installer with bundled checksums. Never waive the audit for a prior pin.
+- Desktop development bootstrap can acquire the exact Windows x64 portable
+  Python package in its [artifact manifest](../../dev-tools/scripts/bootstrap/desktop-python-artifact.json).
+  Verify the Python Software Foundation package against its NuGet catalog
+  byte length and SHA-512 before extraction, and check the extracted executable
+  and interpreter DLL digests. Use the existing fixed worker requirements in
+  the checkout-owned environment. Pin review and clean-host qualification are
+  required to admit another platform artifact or version.
 
 When a patched transitive package has intentionally changed its public module
 shape, a build-tool-only compatibility package may preserve the legacy interface
@@ -34,6 +55,30 @@ the compatibility boundary when every dependent tool supports the patched
 upstream interface directly.
 
 ## Advisory policy
+
+The Windows packaging tools pin the original-supplier
+[ASAR 4.3.2 release](https://github.com/electron/asar/releases/tag/v4.3.2) only
+beneath Electron Packager and Universal. Its dependencies bring in the repaired
+glob and minimatch releases. ASAR 3.x consumers, Forge and Electron keep their
+existing versions. The lockfile owns the exact resolved tree. Run both dependency
+audits, build a production desktop package, and exercise it after changing this pin.
+
+The maintained HTTP dependency boundary pins original-supplier `body-parser`
+`2.4.0` and scopes original-supplier Undici `7.30.1` to `@electron/get`.
+Compatible 6.x consumers keep their supported major; Forge and Electron pins
+do not change. This is a security maintenance update to ADR-0044's downloader
+scope. The parser regression covers ordinary JSON, compressed JSON and form
+bodies, malformed and oversized refusal, late decoder cleanup and continued
+service. The downloader regression covers proxy-dispatcher, normal fetch,
+redirect and explicit redirect refusal. These are bounded synthetic loopback
+checks, separate from actual package/host qualification.
+
+The upstream fixes are documented in the
+[body-parser 2.4.0 release](https://github.com/expressjs/body-parser/releases/tag/v2.4.0)
+and [Undici 7.30.1 release](https://github.com/nodejs/undici/releases/tag/v7.30.1).
+Preserve the earlier failed audit. Require current zero-advisory runtime and
+toolchain checks, locked SPDX validation and compatible build/host results;
+the maintenance update supplies no unrelated security or model qualification.
 
 `npm run security:dependencies` evaluates two scopes:
 
@@ -47,17 +92,31 @@ override is permitted only after its affected command paths pass compatibility
 tests. Network or malformed-registry responses fail the check rather than
 producing a false pass.
 
+The optional decoder adds original-supplier LLGuidance `1.9.1` (MIT), with the
+same Python 3.10–3.13 marker as the existing three decoder pins. The reviewed
+Windows ABI3 wheel SHA-256 is
+`8aaa55958adb4871016700e9140543ccbd9d6b5136d0a1756a114af706cc50c1`.
+Its PyPI trusted-publisher provenance identifies supplier commit
+`f0971424ec072d3e4d4196bcc7f31a2f60527df9`; the reviewed wheel declares no
+additional dependencies. This artifact review does not qualify other platform
+wheels or replace the deployment environment scan. Readiness and repair require
+the exact pin. The requirements file enforces `--only-binary=llguidance`; absence
+of a compatible wheel fails installation instead of executing a source build.
+Other packages retain their existing format policy. No remote model code or
+alternate supplier is used.
+
 ## SBOM and workflow integrity
 
 - The dependency security check generates and validates a production SPDX 2.3
   SBOM from the locked tree. Release automation may retain or attest that output;
   local validation does not write it into source control.
 - The same gate validates the direct conditional Python decoder inventory and
-  the baseline model-loading and lazily installed text-training inventories from
-  the worker requirements files, including the exact PEFT version shared by
-  LoRA inference and training, supported Python ranges or markers, Package URLs,
-  and reviewed license identifiers. Dependabot monitors that requirements
-  directory. These direct inventories do not claim to replace a
+  the baseline model-loading, lazily installed text-training, and managed
+  Context LanceDB inventories from the worker requirements files, including the
+  exact PEFT version shared by LoRA inference and training, exact LanceDB and
+  PyArrow pins, supported Python ranges or markers, Package URLs, and reviewed
+  license identifiers. Dependabot monitors that requirements directory. These
+  direct inventories do not claim to replace a
   deployment-generated full Python environment SBOM or image scan.
 - Third-party GitHub Actions are pinned to full commit SHAs.
 - Production and qualification container base images are pinned to full OCI

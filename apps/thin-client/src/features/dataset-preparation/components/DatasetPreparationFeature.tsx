@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { DatasetPreparationOcrSettings, DatasetPreparationTextReadingChecks } from "../../../../../../modules/ui/shared/data-management/DatasetPreparationOcrSettings";
+import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { captureDatasetVersionReplayRequest, projectDatasetVersionReplaySources, validateDatasetVersionReplay, type DatasetVersionReplayContext } from "../../../../../../modules/ui/shared/dataset-version/datasetVersionReplay";
+import { readDatasetVersionReplaySources } from "../../../../../../modules/ui/shared/dataset-version/readDatasetVersionReplaySources";
+import { useDatasetVersionReplayConsumer, type DatasetVersionReplayHandoff, type DatasetVersionReplayRequest } from "../../../../../../modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff";
 
 import type {
   ApiDatasetPreparationCommand,
@@ -9,6 +14,7 @@ import {
   createDefaultDatasetPreparationVisualOutputShape,
   DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH,
   createDatasetPreparationAdvancedConfigForMethod,
+  resolveDatasetPreparationOcrChoice,
   compileDatasetPreparationVisualOutputShape,
   createDatasetPreparationExecutionPlan,
   evaluateDatasetPreparationSourceReadiness,
@@ -17,9 +23,9 @@ import {
   resolveDatasetPreparationSourceCapability,
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationModel,
-  resolveDatasetPreparationConstrainedJson,
   resolveDatasetPreparationGenerationModelEstimatedBytes,
   validateDatasetPreparationSaveName,
+  isDatasetPreparationOffloadAvailable,
   type DatasetPreparationAdvancedReport,
   type DatasetPreparationExecutionPlan,
   type DatasetPreparationMethodId,
@@ -28,6 +34,8 @@ import {
   type DatasetPreparationTaskType,
   type DatasetPreparationVisualOutputShape,
   type DatasetPreparationGenerationCapacitySnapshot,
+  type DatasetPreparationMemoryMode,
+  type LocalModelConfig,
   type DatasetQualityPreset,
   type DatasetQualityReport,
   type DatasetQualityReviewLineId,
@@ -35,20 +43,22 @@ import {
 } from "../../../../../../modules/contracts/runtime";
 import {
   DATASET_PREPARATION_TASK_OPTIONS,
-  TransientNotificationPublisher,
-  DatasetPreparationOutputShapeEditor,
-  WorkflowSequence,
-  WorkflowStep,
   getDatasetInspectionCopy,
   getDatasetPreparationIntentCopy,
   getDatasetPreparationMethodCopy,
   getDatasetPreparationTaskOption,
+  DatasetPreparationOutputShapeEditor,
+  useDatasetPreparationConstrainedJson,
+} from "../../../../../../modules/ui/shared/data-management";
+import { TransientNotificationPublisher } from "../../../../../../modules/ui/shared/notifications/TransientNotificationPublisher";
+import { WorkflowSequence, WorkflowStep } from "../../../../../../modules/ui/shared/components/WorkflowSequence";
+import {
   DatasetReviewModal,
   createDatasetQualityReviewLines,
   createDatasetQualityReviewRowItems,
   type DatasetQualityReviewLine,
   type ReviewDecision,
-} from "../../../../../../modules/ui/shared";
+} from "../../../../../../modules/ui/shared/dataset-review";
 import {
   createApiArtifactBrowserClient,
   type ArtifactBrowserApiClient,
@@ -64,12 +74,13 @@ export interface DatasetPreparationFeatureProps {
   artifactClient?: ArtifactBrowserApiClient;
   preparationClient?: ApiDatasetPreparationClient;
   onPrepared?: (artifactStorageKey: string) => void;
+  replayHandoff?: DatasetVersionReplayHandoff;
 }
 
 type Status =
   | { kind: "idle"; message?: string }
   | { kind: "loading"; message: string }
-  | { kind: "error"; message: string }
+  | { kind: "error"; message: string; memoryNotification?: boolean }
   | { kind: "success"; message: string };
 
 const waitForNextPoll = () =>
@@ -113,7 +124,8 @@ function qualityStatusLabel(status: DatasetQualityReport["status"]): string {
   return "Needs attention";
 }
 
-function supportedSource(item: ThinClientArtifactBrowseItem): boolean {
+type PreparationSource = Pick<ThinClientArtifactBrowseItem, "artifactId" | "storageKey" | "originalName" | "mediaType">;
+function supportedSource(item: PreparationSource): boolean {
   return Boolean(
     resolveDatasetPreparationSourceCapability({
       fileName: item.originalName ?? item.storageKey,
@@ -132,6 +144,9 @@ const splitLabels = (value: string): string[] | undefined => {
 
 interface PersistedStructuredOutputSettings {
   constrainedDecodingPreference?: boolean;
+  memoryMode?: DatasetPreparationMemoryMode;
+  memorySettingsInvalid?: boolean;
+  localModel?: Pick<LocalModelConfig, "modelId" | "device" | "torchDtype">;
   shapes?: Partial<
     Record<DatasetPreparationTaskType, DatasetPreparationVisualOutputShape>
   >;
@@ -143,12 +158,29 @@ const structuredOutputStorageKey = (workspaceId: string) =>
 function readPersistedStructuredOutputSettings(
   workspaceId: string,
 ): PersistedStructuredOutputSettings {
+  let saved: string | null;
   try {
-    const parsed = JSON.parse(
-      window.localStorage.getItem(structuredOutputStorageKey(workspaceId)) ??
-        "{}",
-    ) as Record<string, unknown>;
+    saved = window.localStorage.getItem(structuredOutputStorageKey(workspaceId));
+  } catch {
+    // Storage access is optional. No saved override was restored or downgraded.
+    return {};
+  }
+  try {
+    const value = JSON.parse(saved ?? "{}") as unknown;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return { memorySettingsInvalid: true };
+    }
+    const parsed = value as Record<string, unknown>;
     return {
+      memorySettingsInvalid: parsed.memorySettingsInvalid === true
+        || (parsed.memoryMode !== undefined && parsed.memoryMode !== "standard" && parsed.memoryMode !== "offload-v1")
+        || (parsed.localModel !== undefined && !isValidLocalModelSettings(parsed.localModel)),
+      ...(parsed.memoryMode === "standard" || parsed.memoryMode === "offload-v1"
+        ? { memoryMode: parsed.memoryMode }
+        : {}),
+      ...(parsed.localModel && typeof parsed.localModel === "object" && !Array.isArray(parsed.localModel)
+        ? { localModel: readLocalModelSettings(parsed.localModel as Record<string, unknown>) }
+        : {}),
       ...(typeof parsed.constrainedDecodingPreference === "boolean"
         ? {
             constrainedDecodingPreference: parsed.constrainedDecodingPreference,
@@ -164,8 +196,24 @@ function readPersistedStructuredOutputSettings(
         : {}),
     };
   } catch {
-    return {};
+    return { memorySettingsInvalid: true };
   }
+}
+
+function isValidLocalModelSettings(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const model = value as Record<string, unknown>;
+  return typeof model.modelId === "string" && model.modelId.length <= 193
+    && (model.device === undefined || model.device === "auto" || model.device === "cpu" || model.device === "cuda")
+    && (model.torchDtype === undefined || ["auto", "float32", "float16", "bfloat16"].includes(model.torchDtype as string));
+}
+
+function readLocalModelSettings(value: Record<string, unknown>): PersistedStructuredOutputSettings["localModel"] {
+  return {
+    modelId: typeof value.modelId === "string" && value.modelId.length <= 193 ? value.modelId : "",
+    device: value.device === "cpu" || value.device === "cuda" ? value.device : "auto",
+    torchDtype: value.torchDtype === "float32" || value.torchDtype === "float16" || value.torchDtype === "bfloat16" ? value.torchDtype : "auto",
+  };
 }
 
 function writePersistedStructuredOutputSettings(
@@ -323,6 +371,8 @@ function buildCommand(
     visualShape: DatasetPreparationVisualOutputShape;
     constrainedDecoding: boolean;
     promptTemplate: string;
+    memoryMode?: DatasetPreparationMemoryMode;
+    localModel?: PersistedStructuredOutputSettings["localModel"];
   },
   adaptive: {
     chunkSize: number;
@@ -331,8 +381,16 @@ function buildCommand(
     topicBoundarySensitivity: number;
     maxSourceSpans: number;
     similarityThreshold: number;
+    ocrEnabled?: boolean;
+    ocrLanguage?: string;
+    sourceFormats?: readonly string[];
   },
 ): ApiDatasetPreparationCommand {
+  const ocr = resolveDatasetPreparationOcrChoice({
+    enabled: adaptive.ocrEnabled, language: adaptive.ocrLanguage, method: plan.method,
+    sourceCount: sourceArtifactIds.length, sourceFormats: adaptive.sourceFormats,
+  });
+  if (ocr.ok === false) throw new Error(ocr.message);
   const defaultAdvanced = createDatasetPreparationAdvancedConfigForMethod(
     plan.method,
   );
@@ -342,6 +400,7 @@ function buildCommand(
         content: defaultAdvanced.content
           ? {
               ...defaultAdvanced.content,
+              ...ocr.content,
               maxTokensPerChunk: adaptive.maxTokensPerChunk,
               maxSourceSpans: adaptive.maxSourceSpans,
               ...(plan.method === "topic-aware"
@@ -407,6 +466,12 @@ function buildCommand(
                 inferenceMode: model?.inferenceMode ?? "chat",
                 device: model?.device ?? "auto",
                 torchDtype: model?.torchDtype ?? "auto",
+                ...(structuredOutput.localModel !== undefined
+                  ? structuredOutput.localModel
+                  : {}),
+                ...(structuredOutput.memoryMode === "offload-v1"
+                  ? { memoryMode: "offload-v1" as const, memoryOverflowPolicy: "none" as const }
+                  : {}),
               },
               failurePolicy: "skip" as const,
               structuredOutput,
@@ -436,39 +501,118 @@ function buildCommand(
   };
 }
 
-export function DatasetPreparationFeature({
+export function DatasetPreparationFeature(props: DatasetPreparationFeatureProps) {
+  const [scope, setScope] = useState({ workspaceId: props.workspaceId, artifact: props.artifactClient, preparation: props.preparationClient, key: 0 });
+  if (scope.workspaceId !== props.workspaceId || scope.artifact !== props.artifactClient || scope.preparation !== props.preparationClient) {
+    setScope({ workspaceId: props.workspaceId, artifact: props.artifactClient, preparation: props.preparationClient, key: scope.key + 1 });
+    return null;
+  }
+  return <WorkspaceDatasetPreparationFeature key={scope.key} {...props} />;
+}
+
+class DatasetPresentationError extends Error {}
+
+function WorkspaceDatasetPreparationFeature({
   workspaceId,
   artifactClient,
   preparationClient,
   onPrepared,
+  replayHandoff,
 }: DatasetPreparationFeatureProps) {
+  const preparationMethodCaptionId = useId();
+  const preparationMethodHelpId = useId();
+  const allowedLabelsId = useId();
+  const allowedLabelsHelpId = useId();
   const browser = useMemo(
     () => artifactClient ?? createApiArtifactBrowserClient(),
     [artifactClient],
   );
-  const preparation = useMemo(
+  const sourcePreparation = useMemo(
     () => preparationClient ?? createApiDatasetPreparationClient(),
     [preparationClient],
   );
+  const mounted = useRef(true);
+  const preparation = useMemo(() => {
+    function guard<Input, Value>(call: (input: Input) => Promise<Value>) {
+      return async (input: Input) => {
+        if (!mounted.current) throw new DatasetPresentationError("This dataset preparation session is no longer active.");
+        const value = await call(input);
+        if (!mounted.current) throw new DatasetPresentationError("This dataset preparation session is no longer active.");
+        return value;
+      };
+    }
+    return {
+      start: guard((input: Parameters<ApiDatasetPreparationClient["start"]>[0]) => sourcePreparation.start(input)),
+      read: guard(async (input: Parameters<ApiDatasetPreparationClient["read"]>[0]) => {
+        const value = await sourcePreparation.read(input);
+        if (value.requestId !== input.requestId) throw new DatasetPresentationError("The dataset task response did not match the active task.");
+        return value;
+      }),
+      cancel: guard(async (input: Parameters<ApiDatasetPreparationClient["cancel"]>[0]) => {
+        const value = await sourcePreparation.cancel(input);
+        if (value.requestId !== input.requestId) throw new DatasetPresentationError("The dataset cancellation response did not match the active task.");
+        return value;
+      }),
+      approve: guard(async (input: Parameters<ApiDatasetPreparationClient["approve"]>[0]) => {
+        const value = await sourcePreparation.approve(input);
+        if (value.requestId !== input.requestId || value.status !== "succeeded") throw new DatasetPresentationError("The reviewed dataset save could not be confirmed.");
+        return value;
+      }),
+      readPreparedReviewPage: guard(async (input: Parameters<ApiDatasetPreparationClient["readPreparedReviewPage"]>[0]) => {
+        const value = await sourcePreparation.readPreparedReviewPage(input);
+        if (value.lineId !== input.lineId || value.page !== input.page) throw new DatasetPresentationError("The prepared review page did not match the requested page.");
+        return value;
+      }),
+      ...(sourcePreparation.readGenerationCapacity ? { readGenerationCapacity: guard((input: { workspaceId: string }) => sourcePreparation.readGenerationCapacity!(input)) } : {}),
+      ...(sourcePreparation.readReproduction ? { readReproduction: guard((input: Parameters<NonNullable<ApiDatasetPreparationClient["readReproduction"]>>[0]) => sourcePreparation.readReproduction!(input)) } : {}),
+    };
+  }, [sourcePreparation]);
   const initialStructuredOutputSettings = useMemo(
     () => readPersistedStructuredOutputSettings(workspaceId),
     [workspaceId],
   );
-  const mounted = useRef(true);
   const suppressNextTaskOutputReset = useRef(false);
-  const [artifacts, setArtifacts] = useState<ThinClientArtifactBrowseItem[]>(
+  const suppressNextClassificationOutputReset = useRef(false);
+  const [artifacts, setArtifacts] = useState<PreparationSource[]>(
     [],
   );
+  // Keep all observed rows. Filtering an unsupported duplicate before checking
+  // saved source identity could hide a conflicting catalogue record.
+  const [sourceRows, setSourceRows] = useState<PreparationSource[]>([]);
+  const [sourceLoadState, setSourceLoadState] = useState<{ workspaceId: string; client: typeof browser; status: "loading" | "ready" | "failed" }>({ workspaceId, client: browser, status: "loading" });
+  const [sourceRefresh, setSourceRefresh] = useState(0);
+  const sourceLoadStatus = sourceLoadState.workspaceId === workspaceId && sourceLoadState.client === browser ? sourceLoadState.status : "loading";
   const [selectedArtifactIds, setSelectedArtifactIds] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [activeRequestId, setActiveRequestId] = useState<string>();
+  const [cancelPending, setCancelPending] = useState(false);
+  const activeRequestRef = useRef<string | undefined>(undefined);
+  const pollingSession = useRef(0);
+  const cancellationNotice = useRef<string | undefined>(undefined);
+  const cancelRequest = useRef<object | undefined>(undefined);
   const [result, setResult] = useState<ApiPreparedTrainingDatasetResult>();
-  const [qualityReview, setQualityReview] = useState<{
+  const [qualityReview, setQualityReviewState] = useState<{
     requestId: string;
     report: DatasetQualityReport;
     advancedReport?: DatasetPreparationAdvancedReport;
   }>();
-  const [reviewActionInFlight, setReviewActionInFlight] = useState(false);
+  const qualityReviewRef = useRef<typeof qualityReview>(undefined);
+  const reviewPageSequenceRef = useRef(0);
+  function setQualityReview(value: typeof qualityReview) {
+    qualityReviewRef.current = value;
+    reviewPageSequenceRef.current++;
+    setQualityReviewState(value);
+    setQualityReviewPage(undefined);
+    setQualityReviewPageLoading(false);
+    setQualityReviewPageError(undefined);
+  }
+  const [reviewActionInFlight, setReviewActionState] = useState(false);
+  const reviewActionRef = useRef(false);
+  function setReviewActionInFlight(value: boolean) {
+    reviewActionRef.current = value;
+    setReviewActionState(value);
+  }
+  const startingRef = useRef(false);
   const [qualityReviewModalOpen, setQualityReviewModalOpen] = useState(false);
   const [qualityReviewIndex, setQualityReviewIndex] = useState(0);
   const [qualityReviewDecisions, setQualityReviewDecisions] = useState<
@@ -517,7 +661,10 @@ export function DatasetPreparationFeature({
     page = 0,
     entry: "first" | "last" = "first",
   ) => {
-    if (!qualityReview || line.count === 0) return;
+    const review = qualityReviewRef.current;
+    if (!mounted.current || !review || line.count === 0) return;
+    const pageRequest = ++reviewPageSequenceRef.current;
+    const current = () => mounted.current && qualityReviewRef.current === review && reviewPageSequenceRef.current === pageRequest;
     setQualityReviewLine(line);
     setQualityReviewIndex(0);
     setQualityReviewPageLoading(true);
@@ -526,24 +673,26 @@ export function DatasetPreparationFeature({
     try {
       const next = await preparation.readPreparedReviewPage({
         workspaceId,
-        requestId: qualityReview.requestId,
-        reportFingerprint: qualityReview.report.reportFingerprint,
+        requestId: review.requestId,
+        reportFingerprint: review.report.reportFingerprint,
         lineId: line.id as DatasetQualityReviewLineId,
         page,
       });
+      if (!current()) return;
       setQualityReviewPage(next);
       setQualityReviewIndex(
         entry === "last" ? Math.max(0, next.rows.length - 1) : 0,
       );
     } catch (reason) {
+      if (!current()) return;
       setQualityReviewPage(undefined);
       setQualityReviewPageError(
-        reason instanceof Error
+        reason instanceof DatasetPresentationError
           ? reason.message
           : "Prepared records could not be loaded.",
       );
     } finally {
-      setQualityReviewPageLoading(false);
+      if (current()) setQualityReviewPageLoading(false);
     }
   };
   const [taskType, setTaskType] =
@@ -571,8 +720,17 @@ export function DatasetPreparationFeature({
     );
   const [generationCapacity, setGenerationCapacity] =
     useState<DatasetPreparationGenerationCapacitySnapshot>();
+  const [localInference, setLocalInference] = useState(() => ({
+    workspaceId,
+    memoryMode: initialStructuredOutputSettings.memoryMode ?? "standard",
+    memorySettingsInvalid: initialStructuredOutputSettings.memorySettingsInvalid === true,
+    localModel: initialStructuredOutputSettings.localModel,
+  }));
+  const lowMemoryAvailable = isDatasetPreparationOffloadAvailable(generationCapacity);
   const [preparationMethodId, setPreparationMethodId] =
     useState<DatasetPreparationMethodId>();
+  const [ocrEnabled, setOcrEnabled] = useState(false);
+  const [ocrLanguage, setOcrLanguage] = useState("");
   const [qualityPreset, setQualityPreset] =
     useState<DatasetQualityPreset>("recommended");
   const [requireLicenseMetadata, setRequireLicenseMetadata] = useState(false);
@@ -674,8 +832,10 @@ export function DatasetPreparationFeature({
         effectivePreparationMethodId,
       )
     : undefined;
-  const generationModel =
-    resolveDefaultDatasetPreparationTextGenerationModel(taskType);
+  const generationModel = {
+    ...resolveDefaultDatasetPreparationTextGenerationModel(taskType),
+    ...(localInference.workspaceId === workspaceId ? localInference.localModel : {}),
+  };
   const outputShapeCompilation = useMemo(
     () =>
       compileDatasetPreparationVisualOutputShape(visualOutputShape, {
@@ -686,7 +846,7 @@ export function DatasetPreparationFeature({
       }),
     [labelSet, multiLabel, outputFormat, taskType, visualOutputShape],
   );
-  const constrainedDecodingAvailable = Boolean(
+  const constrainedDecodingReady = Boolean(
     preparationPlan &&
     preparationPlan.generationMode !== "none" &&
     generationModel?.inferenceMode !== "text2text" &&
@@ -701,14 +861,16 @@ export function DatasetPreparationFeature({
             ...generationCapacity,
             schemaSupported:
               generationCapacity.schemaSupported &&
-              constrainedDecodingAvailable,
+              constrainedDecodingReady,
           }
         : undefined,
-    [constrainedDecodingAvailable, generationCapacity],
+    [constrainedDecodingReady, generationCapacity],
   );
-  const constrainedJsonResolution = useMemo(
-    () =>
-      resolveDatasetPreparationConstrainedJson({
+  const { resolution: constrainedJsonResolution, available: constrainedDecodingAvailable } =
+    useDatasetPreparationConstrainedJson(
+      JSON.stringify([workspaceId, taskType, generationModel?.modelId, generationModel?.device,
+        generationModel?.inferenceMode, localInference.memoryMode]),
+      {
         preference: constrainedDecodingPreference,
         selectedDevice: generationModel?.device ?? "auto",
         estimatedModelBytes:
@@ -716,41 +878,44 @@ export function DatasetPreparationFeature({
             generationModel?.modelId,
           ),
         capacity: recommendationCapacity,
-      }),
-    [
-      constrainedDecodingPreference,
-      generationModel?.device,
-      generationModel?.modelId,
-      recommendationCapacity,
-    ],
-  );
-  const constrainedDecodingEnabled =
-    constrainedDecodingAvailable && constrainedJsonResolution.enabled;
+      },
+    );
+  const constrainedDecodingEnabled = constrainedJsonResolution.enabled;
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight = false;
     if (!preparation.readGenerationCapacity) {
       setGenerationCapacity(undefined);
       return () => {
         cancelled = true;
       };
     }
-    void preparation
-      .readGenerationCapacity({ workspaceId })
-      .then((capacity) => {
-        if (!cancelled) setGenerationCapacity(capacity);
-      })
-      .catch(() => {
+    const refresh = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      try {
+        const capacity = await preparation.readGenerationCapacity!({ workspaceId });
+        if (!cancelled) setGenerationCapacity(capacity ? { ...capacity } : undefined);
+      } catch {
         if (!cancelled) setGenerationCapacity(undefined);
-      });
+      } finally {
+        inFlight = false;
+      }
+    };
+    setGenerationCapacity(undefined);
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 5_000);
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
   }, [preparation, workspaceId]);
 
   useEffect(() => {
     const persisted = readPersistedStructuredOutputSettings(workspaceId);
     setConstrainedDecodingPreference(persisted.constrainedDecodingPreference);
+    setLocalInference({ workspaceId, memoryMode: persisted.memoryMode ?? "standard", memorySettingsInvalid: persisted.memorySettingsInvalid === true, localModel: persisted.localModel });
     const saved = persisted.shapes?.[taskType];
     const compiled = saved
       ? compileDatasetPreparationVisualOutputShape(saved, {
@@ -797,6 +962,10 @@ export function DatasetPreparationFeature({
   }, [taskType]);
 
   useEffect(() => {
+    if (suppressNextClassificationOutputReset.current) {
+      suppressNextClassificationOutputReset.current = false;
+      return;
+    }
     if (taskType !== "llm-classification") return;
     setVisualOutputShape((current) => {
       const priorDefault = createDefaultDatasetPreparationVisualOutputShape(
@@ -815,38 +984,195 @@ export function DatasetPreparationFeature({
     const persisted = readPersistedStructuredOutputSettings(workspaceId);
     writePersistedStructuredOutputSettings(workspaceId, {
       constrainedDecodingPreference,
+      ...(localInference.workspaceId === workspaceId
+        ? { memoryMode: localInference.memoryMode, memorySettingsInvalid: localInference.memorySettingsInvalid, localModel: localInference.localModel }
+        : { memoryMode: persisted.memoryMode, memorySettingsInvalid: persisted.memorySettingsInvalid, localModel: persisted.localModel }),
       shapes: {
         ...(persisted.shapes ?? {}),
         [taskType]: visualOutputShape,
       },
     });
-  }, [constrainedDecodingPreference, taskType, visualOutputShape, workspaceId]);
-  useEffect(() => {
+  }, [constrainedDecodingPreference, taskType, visualOutputShape, workspaceId, localInference]);
+  useLayoutEffect(() => {
     mounted.current = true;
-    void browser
-      .browseArtifacts({ workspaceId })
-      .then((items) => {
-        if (mounted.current) {
-          setArtifacts(items.filter(supportedSource));
-        }
-      })
-      .catch(() => {
-        if (mounted.current) {
-          setStatus({
-            kind: "error",
-            message: "Source files could not be loaded. Try again.",
-          });
-        }
-      });
+    cancelRequest.current = undefined;
+    setCancelPending(false);
     return () => {
       mounted.current = false;
+      pollingSession.current += 1;
+      activeRequestRef.current = undefined;
+      cancellationNotice.current = undefined;
+      cancelRequest.current = undefined;
     };
-  }, [browser, workspaceId]);
+  }, [browser, preparation, workspaceId]);
+
+  useEffect(() => {
+    let current = true;
+    setSourceLoadState({ workspaceId, client: browser, status: "loading" });
+    setArtifacts([]);
+    setSourceRows([]);
+    void Promise.resolve().then(() => browser.browseArtifacts({ workspaceId })).then(items => {
+      if (!current) return;
+      if (!Array.isArray(items) || items.some(item => !item ||
+          typeof item.artifactId !== "string" || !item.artifactId ||
+          typeof item.storageKey !== "string" || !item.storageKey ||
+          (item.originalName !== undefined && typeof item.originalName !== "string") ||
+          (item.mediaType !== undefined && typeof item.mediaType !== "string"))) throw new Error();
+      setArtifacts(items.filter(supportedSource));
+      setSourceRows(items);
+      setSelectedArtifactIds(selected => {
+        const retained = selected.filter(id => items.some(item => item.artifactId === id));
+        return retained.length === selected.length ? selected : retained;
+      });
+      setSourceLoadState({ workspaceId, client: browser, status: "ready" });
+    }).catch(() => {
+      if (current) setSourceLoadState({ workspaceId, client: browser, status: "failed" });
+    });
+    return () => { current = false; };
+  }, [browser, workspaceId, sourceRefresh]);
+
+  const replayFrame = useMemo(() => ({}), [workspaceId, browser, preparation, sourceLoadState, sourceRefresh, sourceRows,
+    artifacts, selectedArtifactIds, status, activeRequestId, cancelPending, result, qualityReview, reviewActionInFlight,
+    taskType, textGenerationPrompt, visualOutputShape, constrainedDecodingPreference, localInference, preparationMethodId,
+    ocrEnabled, ocrLanguage, qualityPreset, requireLicenseMetadata, requireConsentMetadata, includeSourceAttribution,
+    labelSet, multiLabel, extractionStrictSchema, diffusionConceptKind, diffusionTriggerToken, diffusionRegularizationClass,
+    detectionBoxFormat, segmentationMaskFormat, chunkSize, chunkOverlap, maxTokensPerChunk, topicBoundarySensitivity,
+    maxSourceSpans, similarityThreshold, trainRatio, validationRatio, testRatio, outputFormat, outputBaseName]);
+  const committedReplayFrame = useRef<object | undefined>(undefined);
+  const pendingReplayFrame = useRef<object | undefined>(undefined);
+  useLayoutEffect(() => {
+    committedReplayFrame.current = replayFrame;
+    return () => { if (committedReplayFrame.current === replayFrame) committedReplayFrame.current = undefined; };
+  });
+  const applySavedVersion = async (request: DatasetVersionReplayRequest, isRequestCurrent: () => boolean): Promise<boolean> => {
+    const current = () => mounted.current && committedReplayFrame.current === replayFrame &&
+      request.workspaceId === workspaceId && isRequestCurrent() && !activeRequestRef.current;
+    if (!current() || pendingReplayFrame.current === replayFrame || status.kind === "loading" || activeRequestId ||
+        qualityReview || reviewActionInFlight || cancelPending) return false;
+    const deny = () => {
+      setStatus({ kind: "error", message: "This saved setup cannot be used here. It was not restored; your current setup is unchanged." });
+      return false;
+    };
+    if (sourceLoadStatus !== "ready") return deny();
+    const captured = captureDatasetVersionReplayRequest(request.reproduction, request.selection);
+    if (!captured || captured.selection.workspaceId !== workspaceId) return deny();
+    const selection = captured.selection;
+    try {
+      const observed = projectDatasetVersionReplaySources(selection.selectedVersion, sourceRows.map(row => ({
+        artifactId: row.artifactId, storageKey: row.storageKey, label: row.originalName ?? row.storageKey,
+        ...(row.mediaType === undefined ? {} : { mediaType: row.mediaType }),
+      })));
+      if (!observed || new Set(observed.map(row => row.artifactId)).size !== observed.length) return deny();
+      pendingReplayFrame.current = replayFrame;
+      const resolved = await readDatasetVersionReplaySources(workspaceId, captured.sources, current,
+        (scope, key) => browser.readArtifactDetail({ storageKey: key }, { workspaceId: scope }));
+      if (!current()) return false;
+      for (const row of observed) {
+        const match = resolved.find(source => source.artifactId === row.artifactId);
+        if (!match || match.storageKey !== row.storageKey || match.label !== row.label || match.mediaType !== row.mediaType) return deny();
+      }
+      const context: DatasetVersionReplayContext = {
+        workspaceId, selectedVersion: selection.selectedVersion, datasetArtifactKey: selection.datasetArtifactKey,
+        requestedVersionId: selection.selectedVersion.versionId, sources: { status: "ready", workspaceId, items: resolved },
+      };
+      const validated = validateDatasetVersionReplay(captured.reproduction, context);
+      if (!validated.ok) return deny();
+      const replay = validated.value, recipe = replay.recipe, task = recipe.task, generation = recipe.generation;
+      // Thin deliberately has fewer editable settings than Desktop. Rebuild its
+      // actual command below and deny the whole request if any meaning differs.
+      if (replay.output.format !== "parquet" && replay.output.format !== "jsonl") return deny();
+      const taskSettings = {
+        taskType: task.taskType,
+        labelSet: "labelSet" in task ? task.labelSet?.join(", ") ?? "" : "",
+        multiLabel: "multiLabel" in task && task.multiLabel === true,
+        extractionStrictSchema: "strictSchema" in task ? task.strictSchema ?? true : true,
+        diffusionConceptKind: "conceptKind" in task ? task.conceptKind ?? "subject" : "subject",
+        diffusionTriggerToken: "triggerToken" in task ? task.triggerToken ?? "" : "",
+        diffusionRegularizationClass: "regularizationClass" in task ? task.regularizationClass ?? "" : "",
+        detectionBoxFormat: "boxFormat" in task ? task.boxFormat ?? "coco" : "coco",
+        segmentationMaskFormat: "maskFormat" in task ? task.maskFormat ?? "png" : "png",
+      };
+      const adaptive = {
+        chunkSize: recipe.chunking?.chunkSize ?? 1000, chunkOverlap: recipe.chunking?.chunkOverlap ?? 200,
+        maxTokensPerChunk: replay.advanced?.content?.maxTokensPerChunk ?? 320,
+        topicBoundarySensitivity: replay.advanced?.content?.semanticBoundaryThreshold ?? 0.22,
+        maxSourceSpans: replay.advanced?.content?.maxSourceSpans ?? 10000,
+        similarityThreshold: replay.advanced?.semantic?.similarityThreshold ?? 0.9,
+        ocrEnabled: replay.advanced?.content?.ocrEnabled === true, ocrLanguage: replay.advanced?.content?.ocrLanguage ?? "",
+        sourceFormats: resolved.map(source => resolveDatasetPreparationSourceCapability({ fileName: source.label, mediaType: source.mediaType })!.format),
+      };
+      const model = generation?.model;
+      const structured = {
+        visualShape: generation?.structuredOutput?.visualShape
+          ? JSON.parse(JSON.stringify(generation.structuredOutput.visualShape)) as DatasetPreparationVisualOutputShape
+          : createDefaultDatasetPreparationVisualOutputShape(task.taskType, { multiLabel: taskSettings.multiLabel }),
+        constrainedDecoding: generation?.structuredOutput?.constrainedDecoding ?? false,
+        promptTemplate: generation?.promptTemplate ?? resolveDefaultDatasetPreparationPromptTemplate(task.taskType) ?? "",
+        memoryMode: model?.memoryMode ?? "standard",
+        localModel: model ? { modelId: model.modelId, device: model.device, torchDtype: model.torchDtype } : undefined,
+      };
+      const split = { trainRatio: replay.split.trainRatio, validationRatio: replay.split.validationRatio ?? 0, testRatio: replay.split.testRatio };
+      const rebuilt = buildCommand([...replay.sourceArtifactIds], JSON.parse(JSON.stringify(replay.preparation)), taskSettings,
+        split, replay.output.format, replay.output.naming?.baseName ?? "", replay.quality, structured, adaptive);
+      const roundTrip = validateDatasetVersionReplay(JSON.parse(JSON.stringify({
+        versionId: replay.versionId, sourceArtifactIds: rebuilt.sourceArtifactIds, lineage: selection.selectedVersion.lineage,
+        recipeSnapshot: { recipe: rebuilt.recipe, preparation: rebuilt.preparation, advanced: rebuilt.advanced,
+          split: rebuilt.split, output: { format: rebuilt.output.format, naming: rebuilt.output.naming },
+          effectiveQualityPolicy: rebuilt.quality?.policy },
+      })), context);
+      if (!roundTrip.ok || JSON.stringify(roundTrip.value) !== JSON.stringify(replay)) return deny();
+      if (!current()) return false;
+      committedReplayFrame.current = undefined;
+      suppressNextTaskOutputReset.current = taskType !== task.taskType;
+      // The classification default adapter also runs after a task/multiLabel
+      // change. Preserve the exact validated saved shape for this one commit.
+      suppressNextClassificationOutputReset.current = task.taskType === "llm-classification" &&
+        (taskType !== task.taskType || multiLabel !== taskSettings.multiLabel);
+      setTaskType(task.taskType); setLabelSet(taskSettings.labelSet); setMultiLabel(taskSettings.multiLabel);
+      setExtractionStrictSchema(taskSettings.extractionStrictSchema); setDiffusionConceptKind(taskSettings.diffusionConceptKind);
+      setDiffusionTriggerToken(taskSettings.diffusionTriggerToken); setDiffusionRegularizationClass(taskSettings.diffusionRegularizationClass);
+      setDetectionBoxFormat(taskSettings.detectionBoxFormat); setSegmentationMaskFormat(taskSettings.segmentationMaskFormat);
+      setPreparationMethodId(replay.preparation.method); setTextGenerationPrompt(structured.promptTemplate);
+      setVisualOutputShape(structured.visualShape); setConstrainedDecodingPreference(structured.constrainedDecoding);
+      setLocalInference({ workspaceId, memoryMode: structured.memoryMode, memorySettingsInvalid: false, localModel: structured.localModel });
+      setOcrEnabled(adaptive.ocrEnabled); setOcrLanguage(adaptive.ocrLanguage);
+      setChunkSize(String(adaptive.chunkSize)); setChunkOverlap(String(adaptive.chunkOverlap));
+      setMaxTokensPerChunk(String(adaptive.maxTokensPerChunk)); setTopicBoundarySensitivity(String(adaptive.topicBoundarySensitivity));
+      setMaxSourceSpans(String(adaptive.maxSourceSpans)); setSimilarityThreshold(String(adaptive.similarityThreshold));
+      setTrainRatio(String(split.trainRatio)); setValidationRatio(String(split.validationRatio)); setTestRatio(String(split.testRatio));
+      setOutputFormat(replay.output.format); setOutputBaseName(replay.output.naming?.baseName ?? "");
+      setQualityPreset(replay.quality.preset); setRequireLicenseMetadata(replay.quality.requireLicenseMetadata);
+      setRequireConsentMetadata(replay.quality.requireConsentMetadata); setIncludeSourceAttribution(replay.quality.includeSourceAttribution);
+      const selected = new Set(replay.sourceArtifactIds);
+      const restored: PreparationSource[] = resolved.map(source => ({ artifactId: source.artifactId,
+        storageKey: source.storageKey, originalName: source.label, mediaType: source.mediaType }));
+      setArtifacts([...artifacts.filter(source => !selected.has(source.artifactId)), ...restored]);
+      setSourceRows([...sourceRows.filter(source => !selected.has(source.artifactId)), ...restored]);
+      setSelectedArtifactIds([...replay.sourceArtifactIds]);
+      setResult(undefined); setQualityReview(undefined); setStatus({ kind: "idle" });
+      return true;
+    } catch { return current() ? deny() : false; }
+  };
+  const cancelReplay = useDatasetVersionReplayConsumer(replayHandoff, sourceLoadStatus, applySavedVersion);
 
   const poll = async (requestId: string) => {
-    while (mounted.current) {
-      const task = await preparation.read({ workspaceId, requestId });
-      if (!mounted.current) return;
+    const session = pollingSession.current;
+    const current = () => mounted.current && pollingSession.current === session && activeRequestRef.current === requestId;
+    while (current()) {
+      let task: Awaited<ReturnType<ApiDatasetPreparationClient["read"]>>;
+      try { task = await preparation.read({ workspaceId, requestId }); }
+      catch {
+        if (!current()) return;
+        setStatus({ kind: "loading", message: "Task status is temporarily unavailable. The accepted preparation is still being observed." });
+        await waitForNextPoll();
+        continue;
+      }
+      if (!current()) return;
+      if (task.status === "unknown") {
+        setStatus({ kind: "loading", message: "The accepted task could not be confirmed. It is still being observed." });
+        await waitForNextPoll();
+        continue;
+      }
       if (task.status === "queued" || task.status === "running") {
         const progress =
           typeof task.progress?.processed === "number" &&
@@ -856,21 +1182,28 @@ export function DatasetPreparationFeature({
         setStatus({
           kind: "loading",
           message:
-            (task.progress?.message ?? "Preparing dataset...") + progress,
+            (cancellationNotice.current ?? task.progress?.message ?? "Preparing dataset...") + progress,
         });
         await waitForNextPoll();
         continue;
       }
+      if (task.status === "review-required" && (
+        !task.result.qualityReport || !task.result.review ||
+        task.result.review.state !== "review-required" ||
+        task.result.review.reportFingerprint !== task.result.qualityReport.reportFingerprint
+      )) {
+        setStatus({ kind: "loading", message: "Check results could not be verified. The accepted preparation is still being observed." });
+        await waitForNextPoll();
+        continue;
+      }
+      activeRequestRef.current = undefined;
+      cancellationNotice.current = undefined;
+      cancelRequest.current = undefined;
+      setCancelPending(false);
       setActiveRequestId(undefined);
       if (task.status === "review-required") {
-        if (!task.result.qualityReport || !task.result.review) {
-          setStatus({
-            kind: "error",
-            message:
-              "Check results could not be verified. Run preparation again.",
-          });
-          return;
-        }
+        // Review evidence was checked before releasing the accepted task owner.
+        if (!task.result.qualityReport) return;
         setQualityReview({
           requestId,
           report: task.result.qualityReport,
@@ -893,9 +1226,12 @@ export function DatasetPreparationFeature({
       }
       setStatus({
         kind: "error",
+        memoryNotification: task.status === "failed" && task.error.code === "generation_insufficient_resources",
         message:
           task.status === "failed"
-            ? task.error.message
+            ? task.error.code === "generation_insufficient_resources"
+              ? getDatasetPreparationMemoryFailureMessage(task.error.memoryShortfall)
+              : task.error.message
             : "Dataset preparation could not be found. Start it again.",
       });
       return;
@@ -903,6 +1239,14 @@ export function DatasetPreparationFeature({
   };
 
   const start = async () => {
+    if (!mounted.current || startingRef.current || activeRequestRef.current || qualityReviewRef.current || reviewActionRef.current) return;
+    committedReplayFrame.current = undefined;
+    cancelReplay();
+    if (sourceLoadStatus !== "ready") {
+      setStatus({ kind: "error", message: "Wait for the current source files to load, or retry the source list." });
+      return;
+    }
+    const session = pollingSession.current;
     const parsed = [trainRatio, validationRatio, testRatio].map(Number);
     const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
     if (saveNameError) {
@@ -931,6 +1275,10 @@ export function DatasetPreparationFeature({
       });
       return;
     }
+    if (preparationPlan.generationMode !== "none" && constrainedDecodingEnabled && !constrainedDecodingAvailable) {
+      setStatus({ kind: "error", message: "Checked JSON output is unavailable. Start a supported runtime or turn off the checked output option before retrying." });
+      return;
+    }
     if (
       parsed.some((value) => !Number.isFinite(value) || value < 0) ||
       Math.abs(parsed[0] + parsed[1] + parsed[2] - 1) > 0.000001
@@ -941,7 +1289,18 @@ export function DatasetPreparationFeature({
       });
       return;
     }
+    const ocr = resolveDatasetPreparationOcrChoice({
+      enabled: ocrEnabled, language: ocrLanguage, method: preparationPlan.method,
+      sourceCount: selectedArtifactIds.length,
+      sourceFormats: selectedSourceCapabilities.map((source) => source.format),
+    });
+    if (ocr.ok === false) {
+      setStatus({ kind: "error", message: ocr.message });
+      return;
+    }
     const adaptiveValues = {
+      ocrEnabled, ocrLanguage,
+      sourceFormats: selectedSourceCapabilities.map((source) => source.format),
       chunkSize: Number(chunkSize),
       chunkOverlap: Number(chunkOverlap),
       maxTokensPerChunk: Number(maxTokensPerChunk),
@@ -984,9 +1343,27 @@ export function DatasetPreparationFeature({
       });
       return;
     }
+    if (preparationPlan.generationMode !== "none" && (localInference.workspaceId !== workspaceId || localInference.memorySettingsInvalid)) {
+      setStatus({ kind: "error", message: "Saved local inference settings are unsupported. Choose a valid memory mode and review the model, device and precision before continuing." });
+      return;
+    }
+    if (preparationPlan.generationMode !== "none" && localInference.localModel !== undefined && !localInference.localModel.modelId.trim()) {
+      setStatus({ kind: "error", message: "Enter a local generation model identifier before continuing." });
+      return;
+    }
+    if (preparationPlan.generationMode !== "none" && localInference.memoryMode === "offload-v1" && !lowMemoryAvailable) {
+      setStatus({ kind: "error", message: "Optional low-memory inference is unavailable in the current worker. Choose Standard or reconnect a supported runtime." });
+      return;
+    }
+    if (preparationPlan.generationMode !== "none" && localInference.memoryMode === "offload-v1"
+      && (generationModel.device !== "cpu" && generationModel.device !== "cuda" || !["float32", "float16", "bfloat16"].includes(generationModel.torchDtype ?? "auto"))) {
+      setStatus({ kind: "error", message: "Optional low-memory inference requires an explicit CPU or CUDA device and precision." });
+      return;
+    }
     setResult(undefined);
     setQualityReview(undefined);
     setStatus({ kind: "loading", message: "Starting dataset preparation..." });
+    startingRef.current = true;
     try {
       const started = await preparation.start({
         workspaceId,
@@ -1021,42 +1398,73 @@ export function DatasetPreparationFeature({
             visualShape: visualOutputShape,
             constrainedDecoding: constrainedDecodingEnabled,
             promptTemplate: textGenerationPrompt,
+            memoryMode: localInference.memoryMode,
+            localModel: localInference.localModel,
           },
           adaptiveValues,
         ),
       });
+      if (!mounted.current || pollingSession.current !== session) return;
+      cancelRequest.current = undefined;
+      setCancelPending(false);
+      activeRequestRef.current = started.requestId;
+      cancellationNotice.current = undefined;
       setActiveRequestId(started.requestId);
       await poll(started.requestId);
     } catch (error) {
-      if (mounted.current) {
+      if (mounted.current && pollingSession.current === session) {
+        activeRequestRef.current = undefined;
         setActiveRequestId(undefined);
+        const failure = error as { code?: unknown; details?: { memoryShortfall?: unknown } } | undefined;
+        const memoryFailure = failure?.code === "generation_insufficient_resources";
         setStatus({
           kind: "error",
+          memoryNotification: memoryFailure,
           message:
-            error instanceof Error
+            memoryFailure
+              ? getDatasetPreparationMemoryFailureMessage(failure?.details?.memoryShortfall)
+              : error instanceof DatasetPresentationError
               ? error.message
               : "Dataset preparation could not be started.",
         });
       }
+    } finally {
+      if (mounted.current && pollingSession.current === session) startingRef.current = false;
     }
   };
 
   const cancel = async () => {
-    if (!activeRequestId) return;
+    if (!activeRequestId || cancelRequest.current) return;
+    const requestId = activeRequestId;
+    const session = pollingSession.current;
+    const current = () => mounted.current && pollingSession.current === session && activeRequestRef.current === requestId;
+    const token = {};
+    cancelRequest.current = token;
+    setCancelPending(true);
+    cancellationNotice.current = "Requesting cancellation; dataset preparation is still being observed...";
+    setStatus({ kind: "loading", message: cancellationNotice.current });
     try {
-      await preparation.cancel({ workspaceId, requestId: activeRequestId });
-      setActiveRequestId(undefined);
-      setStatus({ kind: "idle", message: "Dataset preparation stopped." });
+      const response = await preparation.cancel({ workspaceId, requestId });
+      if (!current()) return;
+      cancellationNotice.current = response?.requestId === requestId && response.cancelled === true && response.status === "cancelled"
+        ? "Cancellation acknowledged; waiting for final task state..."
+        : "Cancellation is not confirmed. Dataset preparation is still being observed.";
+      setStatus({ kind: "loading", message: cancellationNotice.current });
     } catch {
-      setStatus({
-        kind: "error",
-        message: "Dataset preparation could not be stopped. Try again.",
-      });
+      if (!current()) return;
+      cancellationNotice.current = "Cancellation could not be confirmed. Dataset preparation is still being observed.";
+      setStatus({ kind: "loading", message: cancellationNotice.current });
+    } finally {
+      if (cancelRequest.current === token) {
+        cancelRequest.current = undefined;
+        if (mounted.current && pollingSession.current === session) setCancelPending(false);
+      }
     }
   };
 
   const approveReview = async () => {
-    if (!qualityReview || reviewActionInFlight) return;
+    const review = qualityReviewRef.current;
+    if (!mounted.current || !review || reviewActionRef.current) return;
     const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
     if (saveNameError) {
       setStatus({ kind: "error", message: saveNameError });
@@ -1066,8 +1474,8 @@ export function DatasetPreparationFeature({
     try {
       const approved = await preparation.approve({
         workspaceId,
-        requestId: qualityReview.requestId,
-        reportFingerprint: qualityReview.report.reportFingerprint,
+        requestId: review.requestId,
+        reportFingerprint: review.report.reportFingerprint,
         outputBaseName,
       });
       setResult(approved.result);
@@ -1080,7 +1488,7 @@ export function DatasetPreparationFeature({
       setStatus({
         kind: "error",
         message:
-          error instanceof Error
+          error instanceof DatasetPresentationError
             ? error.message
             : "The reviewed dataset could not be saved.",
       });
@@ -1090,13 +1498,18 @@ export function DatasetPreparationFeature({
   };
 
   const discardReview = async () => {
-    if (!qualityReview || reviewActionInFlight) return;
+    const review = qualityReviewRef.current;
+    if (!mounted.current || !review || reviewActionRef.current) return;
     setReviewActionInFlight(true);
     try {
-      await preparation.cancel({
+      const response = await preparation.cancel({
         workspaceId,
-        requestId: qualityReview.requestId,
+        requestId: review.requestId,
       });
+      if (response?.requestId !== review.requestId || response.cancelled !== true || response.status !== "cancelled") {
+        setStatus({ kind: "error", message: "Discard could not be confirmed. The quality review is retained." });
+        return;
+      }
       setQualityReview(undefined);
       setStatus({ kind: "idle" });
     } catch {
@@ -1118,7 +1531,8 @@ export function DatasetPreparationFeature({
   };
 
   return (
-    <section className="ui-panel ui-panel--elevated ui-panel--sectioned">
+    <section className="ui-panel ui-panel--elevated ui-panel--sectioned"
+      onInputCapture={cancelReplay} onChangeCapture={cancelReplay} onClickCapture={cancelReplay}>
       <div className="ui-panel__section-body ui-stack ui-stack--sm">
         <WorkflowSequence ariaLabel="Dataset preparation workflow">
           <WorkflowStep
@@ -1135,6 +1549,8 @@ export function DatasetPreparationFeature({
                   setTaskType(event.target.value as DatasetPreparationTaskType);
                   setSelectedArtifactIds([]);
                   setPreparationMethodId(undefined);
+                  setOcrEnabled(false);
+                  setOcrLanguage("");
                 }}
               >
                 {DATASET_PREPARATION_TASK_OPTIONS.map((option) => (
@@ -1145,7 +1561,13 @@ export function DatasetPreparationFeature({
               </select>
               <small className="ui-text-muted">{taskOption.description}</small>
             </label>
-            {availableArtifacts.length === 0 ? (
+            {sourceLoadStatus === "loading" ? (
+              <p role="status">Loading source files…</p>
+            ) : sourceLoadStatus === "failed" ? (
+              <div><p role="status">Source files could not be loaded. Try again.</p>
+                <button type="button" className="ui-button" disabled={status.kind === "loading"} onClick={() => setSourceRefresh(value => value + 1)}>Retry source files</button>
+              </div>
+            ) : availableArtifacts.length === 0 ? (
               <p className="ui-text-muted">
                 Add a compatible dataset or source file in Artifact Ingestion
                 first.
@@ -1288,16 +1710,17 @@ export function DatasetPreparationFeature({
             ) : null}
             {preparationResolution.methods.length > 1 ? (
               <label className="ui-stack ui-stack--sm">
-                <span>Preparation method</span>
+                <span id={preparationMethodCaptionId}>Preparation method</span>
                 <select
                   className="ui-input"
+                  aria-labelledby={preparationMethodCaptionId}
+                  aria-describedby={preparationMethodHelpId}
                   value={effectivePreparationMethodId}
                   disabled={status.kind === "loading"}
-                  onChange={(event) =>
-                    setPreparationMethodId(
-                      event.target.value as DatasetPreparationMethodId,
-                    )
-                  }
+                  onChange={(event) => {
+                    setPreparationMethodId(event.target.value as DatasetPreparationMethodId);
+                    setOcrEnabled(false);
+                  }}
                 >
                   {preparationResolution.methods.map((option) => (
                     <option key={option.id} value={option.id}>
@@ -1305,7 +1728,7 @@ export function DatasetPreparationFeature({
                     </option>
                   ))}
                 </select>
-                <small className="ui-text-muted">
+                <small id={preparationMethodHelpId} className="ui-text-muted">
                   {effectivePreparationMethodId
                     ? getDatasetPreparationMethodCopy(
                         effectivePreparationMethodId,
@@ -1332,30 +1755,36 @@ export function DatasetPreparationFeature({
                 candidates are checked and require review before saving.
               </p>
             ) : null}
-            {preparationPlan?.method === "structure-aware" ? (
-              <p className="ui-text-muted">
-                Scanned-image text recognition is not included. Use a text-based
-                PDF or add reviewed text first.
-              </p>
+            {preparationPlan?.method === "structure-aware" || ocrEnabled ? (
+              <DatasetPreparationOcrSettings
+                enabled={ocrEnabled} language={ocrLanguage}
+                eligible={preparationPlan?.method === "structure-aware" && selectedArtifactIds.length > 0 &&
+                  selectedSourceCapabilities.length === selectedArtifactIds.length &&
+                  selectedSourceCapabilities.every((source) => source.format === "pdf")}
+                busy={status.kind === "loading"}
+                onEnabledChange={setOcrEnabled} onLanguageChange={setOcrLanguage}
+              />
             ) : null}
             {taskType === "llm-classification" ||
             taskType === "vision-classification" ||
             taskType === "vision-detection" ||
             taskType === "vision-segmentation" ? (
-              <label className="ui-stack ui-stack--sm">
-                <span>Allowed labels</span>
+              <div className="ui-stack ui-stack--sm">
+                <label className="ui-label" htmlFor={allowedLabelsId}>Allowed labels</label>
                 <input
+                  id={allowedLabelsId}
+                  aria-describedby={allowedLabelsHelpId}
                   className="ui-input"
                   value={labelSet}
                   disabled={status.kind === "loading"}
                   placeholder="billing, account help, bug report"
                   onChange={(event) => setLabelSet(event.target.value)}
                 />
-                <small className="ui-text-muted">
+                <small id={allowedLabelsHelpId} className="ui-text-muted">
                   Optional comma-separated labels. When supplied, other labels
                   are set aside for review.
                 </small>
-              </label>
+              </div>
             ) : null}
             {taskType === "llm-classification" ? (
               <label>
@@ -1466,6 +1895,37 @@ export function DatasetPreparationFeature({
               <section className="ui-stack ui-stack--sm">
                 <h3>Generation prompt</h3>
                 <label className="ui-stack ui-stack--sm">
+                  <span>Local generation model</span>
+                  <input className="ui-input" value={generationModel.modelId ?? ""} disabled={status.kind === "loading"}
+                    onChange={(event) => setLocalInference((current) => ({ ...current, localModel: { ...current.localModel, modelId: event.target.value } }))} />
+                </label>
+                <label className="ui-stack ui-stack--sm">
+                  <span>Model device</span>
+                  <select className="ui-input" value={generationModel.device ?? "auto"} disabled={status.kind === "loading"}
+                    onChange={(event) => setLocalInference((current) => ({ ...current, localModel: { modelId: generationModel.modelId ?? "", ...current.localModel, device: event.target.value as "auto" | "cpu" | "cuda" } }))}>
+                    <option value="auto">Auto</option><option value="cpu">CPU</option><option value="cuda">CUDA</option>
+                  </select>
+                </label>
+                <label className="ui-stack ui-stack--sm">
+                  <span>Torch dtype</span>
+                  <select className="ui-input" value={generationModel.torchDtype ?? "auto"} disabled={status.kind === "loading"}
+                    onChange={(event) => setLocalInference((current) => ({ ...current, localModel: { modelId: generationModel.modelId ?? "", ...current.localModel, torchDtype: event.target.value as "auto" | "float16" | "bfloat16" | "float32" } }))}>
+                    <option value="auto">Auto</option><option value="float32">float32</option><option value="bfloat16">bfloat16</option><option value="float16">float16</option>
+                  </select>
+                </label>
+                <label className="ui-stack ui-stack--sm">
+                  <span>Model memory mode</span>
+                  <select className="ui-input" value={localInference.memoryMode} disabled={status.kind === "loading"}
+                    onChange={(event) => setLocalInference((current) => ({ ...current, memoryMode: event.target.value as DatasetPreparationMemoryMode, memorySettingsInvalid: false }))}>
+                    <option value="standard">Standard</option>
+                    <option value="offload-v1" disabled={!lowMemoryAvailable}>Optional low-memory (offload v1)</option>
+                  </select>
+                  <small className="ui-text-muted">Optional mode limits weight placement to 1 GiB RAM and 2 GiB VRAM with up to 12 GiB of private disk staging. These are not process-memory limits. Disk transfers can make generation slower. Select CPU or CUDA and an explicit precision; unsupported models or insufficient resources fail safely. Memory overflow is disabled for this profile.</small>
+                  <small className="ui-text-muted">Initial support covers native Qwen2/Qwen2.5 text models and the standard Qwen2.5 chat template.</small>
+                  {!lowMemoryAvailable ? <small role="status">Optional low-memory inference is unavailable in the current worker.</small> : null}
+                  {localInference.memorySettingsInvalid ? <small role="alert">Saved local inference settings are unsupported. Choose a valid memory mode and review the model, device and precision.</small> : null}
+                </label>
+                <label className="ui-stack ui-stack--sm">
                   <span>System prompt instructions</span>
                   <textarea
                     className="ui-input"
@@ -1500,7 +1960,7 @@ export function DatasetPreparationFeature({
                     type="checkbox"
                     checked={constrainedDecodingEnabled}
                     disabled={
-                      status.kind === "loading" || !constrainedDecodingAvailable
+                      status.kind === "loading" || !outputShapeCompilation.ok || (!constrainedDecodingAvailable && !constrainedDecodingEnabled)
                     }
                     onChange={(event) =>
                       setConstrainedDecodingPreference(event.target.checked)
@@ -1721,23 +2181,7 @@ export function DatasetPreparationFeature({
                     </h4>
                     <dl className="ui-grid ui-grid--two">
                       {qualityReview.advancedReport.content ? (
-                        <>
-                          <dt>Source sections kept</dt>
-                          <dd>
-                            {
-                              qualityReview.advancedReport.content
-                                .sourceSpanCount
-                            }
-                          </dd>
-                          <dt>Reading quality</dt>
-                          <dd>
-                            {Math.round(
-                              qualityReview.advancedReport.content
-                                .meanExtractionQuality * 100,
-                            )}
-                            %
-                          </dd>
-                        </>
+                        <DatasetPreparationTextReadingChecks content={qualityReview.advancedReport.content} />
                       ) : null}
                       {qualityReview.advancedReport.semantic ? (
                         <>
@@ -1913,6 +2357,7 @@ export function DatasetPreparationFeature({
               <button
                 className="ui-button"
                 type="button"
+                disabled={cancelPending}
                 onClick={() => void cancel()}
               >
                 Stop preparation
@@ -1921,15 +2366,15 @@ export function DatasetPreparationFeature({
           </WorkflowStep>
         </WorkflowSequence>
 
-        {status.message && status.kind !== "success" ? (
+        {status.message && status.kind !== "success" && !(status.kind === "error" && status.memoryNotification) ? (
           <p role={status.kind === "error" ? "alert" : "status"}>
             {status.message}
           </p>
         ) : null}
         <TransientNotificationPublisher
-          message={status.kind === "success" ? status.message : undefined}
-          title="Dataset preparation"
-          tone="success"
+          message={status.kind === "success" || status.kind === "error" && status.memoryNotification ? status.message : undefined}
+          title={status.kind === "error" ? "Model needs more memory" : "Dataset preparation"}
+          tone={status.kind === "error" ? "error" : "success"}
           source="Dataset Preparation"
           workspaceId={workspaceId}
         />
@@ -1977,6 +2422,7 @@ export function DatasetPreparationFeature({
           currentIndex={qualityReviewIndex}
           decisions={qualityReviewDecisions}
           busy={reviewActionInFlight || qualityReviewPageLoading}
+          message={qualityReviewPageError}
           approveLabel="Approve"
           rejectLabel="Reject"
           absoluteIndex={

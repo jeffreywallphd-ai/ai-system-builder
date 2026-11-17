@@ -10,6 +10,7 @@ const readmeReminder = "> AI documentation reminder: when behavior in this area 
 const ignoredDirectories = new Set([
   ".git",
   ".local",
+  ".local-codex",
   ".turbo",
   ".vite",
   ".webpack",

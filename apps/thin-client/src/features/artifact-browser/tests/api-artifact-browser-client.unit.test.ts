@@ -4,6 +4,18 @@ import { createApiArtifactBrowserClient } from "../api/apiArtifactBrowserClient"
 import { resolveArtifactFamily } from "../../../../../../modules/application/shared/artifact-family-classifier";
 
 describe("api artifact browser client", () => {
+
+  it.each([undefined, null, {}, { items: undefined }, { items: null }, { items: "private-response-detail" }, { items: {} }])("rejects incomplete successful browse responses %#", async value => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 200, json: async () => ({ ok: true, value }) }));
+    await expect(createApiArtifactBrowserClient().browseArtifacts({ workspaceId: "workspace-a" })).rejects.toThrow("Source file response is incomplete.");
+  });
+
+  it.each([{ items: [] }, { items: [{ artifactId: "source-a", storageKey: "uploads/a.jsonl", mediaType: "application/x-ndjson" }] }])("retains successful browse rows including genuine empty lists %#", async ({ items }) => {
+    const fetchMock = vi.fn().mockResolvedValue({ status: 200, json: async () => ({ ok: true, value: { items } }) });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await createApiArtifactBrowserClient().browseArtifacts({ workspaceId: "workspace-a" })).toEqual(items);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ workspaceId: "workspace-a", source: "thin-client.artifact-browser" });
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
   });

@@ -1,3 +1,28 @@
+import { DESKTOP_RUNTIME_READINESS_READ_LATEST_FOR_COMPOSITION_PLAN_REQUEST_CHANNEL, DESKTOP_RUNTIME_READINESS_READ_DETAIL_REQUEST_CHANNEL } from "../../../../modules/contracts/ipc";
+import { DESKTOP_HEADLESS_CHAT_TASKS_CHANNEL, DESKTOP_HEADLESS_CHAT_TASKS_UNAVAILABLE,
+  readDesktopHeadlessChatTaskRequest, readDesktopHeadlessChatTasks, type DesktopHeadlessChatTasks,
+} from "../../../../modules/contracts/headless";
+import { DESKTOP_HEADLESS_PAIRING_CHANNELS, DESKTOP_SYSTEM_CHANGE_POLL_CHANNEL, readDesktopHeadlessPairingStatus, readDesktopSystemChangePoll, readDesktopSystemChangeWatermark, type DesktopHeadlessClientAccess, type DesktopHeadlessPairingResult, type DesktopHeadlessPairingStatus, type DesktopHeadlessRevokeResult, type DesktopHeadlessStartResult, type DesktopSystemChangeWatermark } from "../../../../modules/contracts/headless";
+import {
+  DESKTOP_UI_CONTROL_CHANNELS, readUiControlAttempt, readUiControlLeaseTarget, readUiControlObservation,
+  readUiControlRevoke, readUiControlTimedGrant, type UiControlAttempt, type UiControlObservation, type UiControlTimedGrant,
+  readUiPresentationPull, readUiPresentationPullResult, readUiPresentationAcknowledgment, readUiPresentationPublication,
+  type UiPresentationPullResult,
+  isDesktopHeadlessClientAccess,
+} from "../../../../modules/contracts/headless";
+import { isWorkspaceId, normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary, type ReadWorkspaceSummaryRequest } from "../../../../modules/contracts/workspace";
+import { readStrictPassiveRecord } from "../../../../modules/contracts/shared";
+import { isDesktopHeadlessClientId, readHeadlessPlanReviewAgentResult } from "../../../../modules/contracts/headless";
+import { DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL, DESKTOP_HEADLESS_PROVIDER_FILE_SELECTION_CHANNEL,
+  readAppHeadlessLocalFileSelectionValue,
+  type AppHeadlessLocalFileSelectionValue, type DesktopLocalFileSelectionInput,
+} from "../../../../modules/contracts/headless";
+import { DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS, DESKTOP_HEADLESS_PLAN_CHAT_CHANNELS,
+  readDesktopPlanApprovalDecision, readDesktopPlanApprovalList,
+  readDesktopPlanApprovalSelection, readDesktopPlanApprovalView, type DesktopPlanApprovalDecision,
+  type DesktopPlanApprovalListEntry, type DesktopPlanApprovalSelection, type DesktopPlanApprovalView,
+} from "../../../../modules/contracts/headless";
+import { createDesktopWorkspaceSummaryRequest, DESKTOP_WORKSPACE_SUMMARY_OPERATION, DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, type DesktopWorkspaceSummaryResponse } from "../../../../modules/contracts/ipc";
 import {
   DESKTOP_ARTIFACT_BROWSE_OPERATION,
   DESKTOP_ARTIFACT_BROWSE_REQUEST_CHANNEL,
@@ -132,6 +157,12 @@ import {
   createDesktopIngestionTaskExecuteRequest,
   type DesktopIngestionTaskExecuteRequest,
   type DesktopIngestionTaskExecuteResponse,
+  DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_OPERATION,
+  DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_REQUEST_CHANNEL,
+  DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_RESPONSE_CHANNEL,
+  createDesktopContextManagementExecuteRequest,
+  type DesktopContextManagementExecuteRequest,
+  type DesktopContextManagementExecuteResponse,
   DESKTOP_DATASET_PREPARE_TRAINING_START_OPERATION,
   DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL,
   DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL,
@@ -424,8 +455,11 @@ import {
   DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_READ_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_COMPLETE_OPERATION,
   DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_COMPLETE_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_COMPLETE_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION,
   DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL,
@@ -448,6 +482,7 @@ import {
   createDesktopModelDownloadRequest,
   createDesktopModelDownloadStartRequest,
   createDesktopModelDownloadReadRequest,
+  createDesktopModelDownloadCompleteRequest,
   createDesktopModelDownloadListRequest,
   createDesktopModelDownloadCancelRequest,
   createDesktopModelRecordUpdateRequest,
@@ -467,6 +502,7 @@ import {
   type DesktopModelDownloadResponse,
   type DesktopModelDownloadStartResponse,
   type DesktopModelDownloadReadResponse,
+  type DesktopModelDownloadCompleteResponse,
   type DesktopModelDownloadListResponse,
   type DesktopModelDownloadCancelResponse,
   type DesktopModelRecordUpdateResponse,
@@ -529,6 +565,8 @@ import {
   DESKTOP_SYSTEM_BUILDER_OPERATIONS,
   DESKTOP_SYSTEM_BUILDER_CHANNELS,
   createDesktopSystemBuilderRequest,
+  createDesktopPublishedFormRequest,
+  DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS,
   type DesktopSystemBuilderRecordResponse,
   type DesktopSystemBuilderListResponse,
   type DesktopSystemBuilderManagementResponse,
@@ -598,6 +636,8 @@ import type {
   ReadSystemBuilderComposerAssetQuery,
   ListSystemBuilderModelOptionsQuery,
   ListSystemBuilderManagementQuery,
+  PublishedSystemFormsInput,
+  PublishedSystemFormSubmitInput,
   PreviewSystemBuilderLayoutChangeCommand,
   PreviewSystemBuilderFoundationUpgradeCommand,
   UpgradeSystemBuilderFoundationCommand,
@@ -693,6 +733,13 @@ export interface DesktopSystemDataEnvelope {
   readonly value?: unknown;
   readonly error?: unknown;
 }
+export interface DesktopSystemPublishedFormEnvelope {
+  readonly operation: string;
+  readonly channel: string;
+  readonly ok?: boolean;
+  readonly value?: unknown;
+  readonly error?: unknown;
+}
 export interface DesktopSystemReviewEnvelope {
   readonly operation: string;
   readonly channel: string;
@@ -730,6 +777,29 @@ type DesktopSystemDeploymentContextInput = {
 
 export interface DesktopPreloadApi {
   memoryDiagnosticsEnabled: boolean;
+  readWindowTakeover: (workspaceId: string | null) => Promise<UiControlObservation>;
+  onWindowTakeoverRetired: (listener: (target: UiControlAttempt) => void) => () => void;
+  acceptWindowTakeover: (target: unknown) => Promise<UiControlTimedGrant | undefined>;
+  readyWindowTakeover: (target: unknown) => Promise<UiControlTimedGrant | undefined>;
+  revokeWindowTakeover: (target: unknown) => Promise<boolean>;
+  pullWindowPresentation: (input: unknown) => Promise<UiPresentationPullResult>;
+  acknowledgeWindowPresentation: (input: unknown) => Promise<boolean>;
+  publishWindowContext: (input: unknown) => Promise<boolean>;
+  readHeadlessPairingStatus: () => Promise<DesktopHeadlessPairingStatus>;
+  selectHeadlessLocalFile: (input: DesktopLocalFileSelectionInput) => Promise<AppHeadlessLocalFileSelectionValue | undefined>;
+  selectHeadlessProviderFile: (input: DesktopLocalFileSelectionInput) => Promise<AppHeadlessLocalFileSelectionValue | undefined>;
+  listHeadlessPlanApprovals: (workspaceId: string) => Promise<readonly DesktopPlanApprovalListEntry[] | undefined>;
+  openHeadlessPlanApproval: (selection: DesktopPlanApprovalSelection) => Promise<DesktopPlanApprovalView | undefined>;
+  decideHeadlessPlanApproval: (decision: DesktopPlanApprovalDecision) => Promise<DesktopPlanApprovalView["state"] | undefined>;
+  dismissHeadlessPlanApproval: (viewId: string) => Promise<boolean>;
+  openHeadlessPlanChat: (selection: DesktopPlanApprovalSelection) => Promise<DesktopPlanApprovalView | undefined>;
+  decideHeadlessPlanChat: (decision: DesktopPlanApprovalDecision) => Promise<DesktopPlanApprovalView["state"] | undefined>;
+  dismissHeadlessPlanChat: (viewId: string) => Promise<boolean>;
+  readRecentHeadlessChatTasks: (workspaceId: string) => Promise<DesktopHeadlessChatTasks>;
+  readSystemBuilderChangeWatermark: (workspaceId: string) => Promise<DesktopSystemChangeWatermark>;
+  startHeadlessConnector: () => Promise<DesktopHeadlessStartResult>;
+  beginHeadlessPairing: (workspaceId: string, access?: DesktopHeadlessClientAccess) => Promise<DesktopHeadlessPairingResult>;
+  revokeHeadlessClient: (clientId: string) => Promise<DesktopHeadlessRevokeResult>;
   getHuggingFaceTokenStatus: (
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopHuggingFaceTokenGetResponse>;
@@ -786,6 +856,13 @@ export interface DesktopPreloadApi {
     input: { workspaceId: string; command: IngestionTaskTransportCommand },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopIngestionTaskExecuteResponse>;
+  executeContextManagement: (
+    input: {
+      workspaceId: string;
+      command: import("../../../../modules/contracts/context-management").ContextManagementTransportCommand;
+    },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopContextManagementExecuteResponse>;
   startPrepareTrainingDataset: (
     input: {
       workspaceId?: string;
@@ -891,6 +968,8 @@ export interface DesktopPreloadApi {
     input: { capabilityId: RuntimeCapabilityId },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopRuntimeCapabilityStatusReadResponse>;
+  readLatestRuntimeReadinessForCompositionPlan: (input: { targetWorkspaceId: string; compositionPlanId: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<unknown>;
+  readRuntimeReadinessDetail: (input: { targetWorkspaceId: string; readinessBindingId: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<unknown>;
   refreshRuntimeReadinessInventory: (
     input: {
       targetWorkspaceId: string;
@@ -1070,6 +1149,7 @@ export interface DesktopPreloadApi {
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopFeatureLifecycleIdleDisposeResponse>;
 
+  readWorkspaceSummary: (input: ReadWorkspaceSummaryRequest, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopWorkspaceSummaryResponse>;
   listWorkspaces: (
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopWorkspaceListResponse>;
@@ -1322,6 +1402,8 @@ export interface DesktopPreloadApi {
     input: { workspaceId: string; includeArchived?: boolean },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuilderListResponse>;
+  listPublishedSystemForms: (input: PublishedSystemFormsInput) => Promise<DesktopSystemPublishedFormEnvelope>;
+  submitPublishedSystemForm: (input: PublishedSystemFormSubmitInput) => Promise<DesktopSystemPublishedFormEnvelope>;
   listSystemBuilderManagement: (
     input: ListSystemBuilderManagementQuery,
     context?: DesktopArtifactUploadBridgeContext,
@@ -1788,11 +1870,11 @@ export interface DesktopPreloadApi {
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopImageGenerationStartResponse>;
   readImageGeneration: (
-    input: { requestId: string },
+    input: { requestId: string; workspaceId?: string },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopImageGenerationReadResponse>;
   cancelImageGeneration: (
-    input: { requestId: string },
+    input: { requestId: string; workspaceId?: string },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopImageGenerationCancelResponse>;
   finalizeImageGenerationIfCompleted: (
@@ -1945,6 +2027,10 @@ export interface DesktopPreloadApi {
     input: Parameters<typeof createDesktopModelDownloadReadRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopModelDownloadReadResponse>;
+  completeModelDownload: (
+    input: Parameters<typeof createDesktopModelDownloadCompleteRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelDownloadCompleteResponse>;
   listModelDownloads: (
     input: Parameters<typeof createDesktopModelDownloadListRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
@@ -2000,6 +2086,7 @@ export interface CreateDesktopPreloadApiDependencies {
   uploadSource?: string;
   artifactSource?: string;
   memoryDiagnosticsEnabled?: boolean;
+  listenForWindowRetirement?: (listener: (target: UiControlAttempt) => void) => () => void;
 }
 
 function assertDesktopEnvelopeResponse<
@@ -2054,16 +2141,152 @@ function withMutationRequestContext<
   };
 }
 
+function planApprovalControls(ipc: IpcRendererInvokePort,
+  channels: typeof DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS | typeof DESKTOP_HEADLESS_PLAN_CHAT_CHANNELS) {
+  return {
+    async open(rawSelection: DesktopPlanApprovalSelection) {
+      const selection = readDesktopPlanApprovalSelection(rawSelection);
+      if (!selection) return;
+      try {
+        const raw = await ipc.invoke(channels.open, selection);
+        const result = readStrictPassiveRecord(raw, ["ok", "view"]);
+        if (result.ok === true) return readDesktopPlanApprovalView(result.view, selection);
+      } catch { return undefined; }
+    },
+    async decide(rawDecision: DesktopPlanApprovalDecision) {
+      const decision = readDesktopPlanApprovalDecision(rawDecision);
+      if (!decision) return;
+      try {
+        const raw = await ipc.invoke(channels.decide, decision);
+        const result = readStrictPassiveRecord(raw, ["ok", "state"]);
+        const parsed = readHeadlessPlanReviewAgentResult({ ok: result.ok, value: result.state }, decision.selection.fingerprint);
+        if (parsed.ok && parsed.value.revision === decision.expectedRevision + 1) return parsed.value;
+      } catch { return undefined; }
+    },
+    async dismiss(viewId: string) {
+      if (!isDesktopHeadlessClientId(viewId)) return false;
+      try { return await ipc.invoke(channels.dismiss, viewId) === true; }
+      catch { return false; }
+    },
+  };
+}
+
 export function createDesktopPreloadApi(
   dependencies: CreateDesktopPreloadApiDependencies,
 ): DesktopPreloadApi {
   const uploadSource = dependencies.uploadSource ?? DEFAULT_UPLOAD_SOURCE;
   const artifactSource = dependencies.artifactSource ?? DEFAULT_ARTIFACT_SOURCE;
   const assetRegistrySource = DEFAULT_ASSET_REGISTRY_SOURCE;
+  const planPopup = planApprovalControls(dependencies.ipcRenderer, DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS);
+  const planChat = planApprovalControls(dependencies.ipcRenderer, DESKTOP_HEADLESS_PLAN_CHAT_CHANNELS);
   let artifactUploadInFlight = false;
 
   return {
     memoryDiagnosticsEnabled: dependencies.memoryDiagnosticsEnabled === true,
+    onWindowTakeoverRetired(listener) {
+      return typeof listener === "function" && dependencies.listenForWindowRetirement
+        ? dependencies.listenForWindowRetirement(listener) : () => {};
+    },
+    async readWindowTakeover(workspaceId) {
+      try {
+        const reply = readUiControlObservation(await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.observe, workspaceId));
+        if (reply && (reply.status !== "ready" || !reply.request || reply.request.target.workspaceId === workspaceId)) return reply;
+      } catch { /* Malformed or disconnected bridge cannot preserve local control. */ }
+      return { status: "unavailable" };
+    },
+    async pullWindowPresentation(value) {
+      const input = readUiPresentationPull(value);
+      if (!input) return { status: "unavailable" };
+      try {
+        return readUiPresentationPullResult(await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.pull, input));
+      } catch { return { status: "unavailable" }; }
+    },
+    async acknowledgeWindowPresentation(value) {
+      const input = readUiPresentationAcknowledgment(value);
+      try { return !!input && await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.acknowledge, input) === true; }
+      catch { return false; }
+    },
+    async publishWindowContext(value) {
+      const input = readUiPresentationPublication(value);
+      try { return !!input && await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.context, input) === true; }
+      catch { return false; }
+    },
+    async acceptWindowTakeover(value) {
+      const target = readUiControlAttempt(value);
+      if (!target) return;
+      try {
+        return readUiControlTimedGrant(await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.accept, target));
+      } catch { return undefined; }
+    },
+    async readyWindowTakeover(value) {
+      const target = readUiControlLeaseTarget(value);
+      if (!target) return;
+      try {
+        return readUiControlTimedGrant(await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.ready, target));
+      } catch { return undefined; }
+    },
+    async revokeWindowTakeover(value) {
+      const target = readUiControlRevoke(value);
+      if (!target) return false;
+      try {
+        return await dependencies.ipcRenderer.invoke(DESKTOP_UI_CONTROL_CHANNELS.revoke, target) === true;
+      } catch { return false; }
+    },
+    async readHeadlessPairingStatus() {
+      return readDesktopHeadlessPairingStatus(await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.status, null));
+    },
+    async selectHeadlessLocalFile(input) {
+      try {
+        const raw = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_LOCAL_FILE_SELECTION_CHANNEL, input);
+        const reply = readStrictPassiveRecord(raw, ["ok", "value"]);
+        if (reply.ok === true) return readAppHeadlessLocalFileSelectionValue(reply.value, input);
+      } catch { return undefined; }
+    },
+    async selectHeadlessProviderFile(input) {
+      try {
+        const raw = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PROVIDER_FILE_SELECTION_CHANNEL, input);
+        const reply = readStrictPassiveRecord(raw, ["ok", "value"]);
+        if (reply.ok === true) return readAppHeadlessLocalFileSelectionValue(reply.value, input);
+      } catch { return undefined; }
+    },
+    async listHeadlessPlanApprovals(workspaceId) {
+      if (!isWorkspaceId(workspaceId)) return;
+      try {
+        const raw = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS.list, workspaceId);
+        const result = readStrictPassiveRecord(raw, ["ok", "entries"]);
+        if (result.ok === true) return readDesktopPlanApprovalList(result.entries, workspaceId);
+      } catch { return undefined; }
+    },
+    openHeadlessPlanApproval: planPopup.open,
+    decideHeadlessPlanApproval: planPopup.decide,
+    dismissHeadlessPlanApproval: planPopup.dismiss,
+    openHeadlessPlanChat: planChat.open,
+    decideHeadlessPlanChat: planChat.decide,
+    dismissHeadlessPlanChat: planChat.dismiss,
+    async readRecentHeadlessChatTasks(workspaceId) {
+      const id = readDesktopHeadlessChatTaskRequest({ workspaceId });
+      if (!id) return DESKTOP_HEADLESS_CHAT_TASKS_UNAVAILABLE;
+      try {
+        return readDesktopHeadlessChatTasks(await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_CHAT_TASKS_CHANNEL, { workspaceId: id }), id);
+      } catch { return DESKTOP_HEADLESS_CHAT_TASKS_UNAVAILABLE; }
+    },
+    async readSystemBuilderChangeWatermark(workspaceId) {
+      if (!readDesktopSystemChangePoll({ workspaceId })) return { status: "unavailable" };
+      return readDesktopSystemChangeWatermark(await dependencies.ipcRenderer.invoke(DESKTOP_SYSTEM_CHANGE_POLL_CHANNEL, { workspaceId }));
+    },
+    async startHeadlessConnector() {
+      const result = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.start, null);
+      return result === "started" || result === "canceled" || result === "denied" ? result : "unavailable";
+    },
+    async beginHeadlessPairing(workspaceId, access = "read") {
+      if (!isDesktopHeadlessClientAccess(access)) return "denied";
+      const result = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.pair, { workspaceId, access });
+      return result === "shown" || result === "canceled" || result === "denied" ? result : "unavailable";
+    },
+    async revokeHeadlessClient(clientId) {
+      const result = await dependencies.ipcRenderer.invoke(DESKTOP_HEADLESS_PAIRING_CHANNELS.revoke, clientId);
+      return result === "revoked" || result === "denied" ? result : "unavailable";
+    },
 
     async getHuggingFaceTokenStatus(context = {}) {
       const request = createDesktopHuggingFaceTokenGetRequest(context);
@@ -2376,6 +2599,35 @@ export function createDesktopPreloadApi(
           channel: DESKTOP_INGESTION_TASK_EXECUTE_RESPONSE_CHANNEL.value,
           message:
             "Received invalid desktop ingestion task IPC response envelope.",
+        },
+      );
+    },
+
+    async executeContextManagement(input, context = {}) {
+      const request: DesktopContextManagementExecuteRequest =
+        createDesktopContextManagementExecuteRequest(
+          {
+            command: input.command,
+            boundary: {
+              host: "desktop",
+              source: "desktop.renderer.context-management",
+              workspaceId: input.workspaceId,
+            },
+          },
+          context,
+        );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopContextManagementExecuteResponse>(
+        response,
+        {
+          operation: DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_OPERATION,
+          channel:
+            DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop Context Management IPC response envelope.",
         },
       );
     },
@@ -2825,6 +3077,12 @@ export function createDesktopPreloadApi(
       );
     },
 
+    async readLatestRuntimeReadinessForCompositionPlan(input, context = {}) {
+      return dependencies.ipcRenderer.invoke(DESKTOP_RUNTIME_READINESS_READ_LATEST_FOR_COMPOSITION_PLAN_REQUEST_CHANNEL.value, { requestId: context.requestId, correlationId: context.correlationId, payload: input });
+    },
+    async readRuntimeReadinessDetail(input, context = {}) {
+      return dependencies.ipcRenderer.invoke(DESKTOP_RUNTIME_READINESS_READ_DETAIL_REQUEST_CHANNEL.value, { requestId: context.requestId, correlationId: context.correlationId, payload: input });
+    },
     async refreshRuntimeReadinessInventory(input, context = {}) {
       return dependencies.ipcRenderer.invoke(
         DESKTOP_RUNTIME_READINESS_REFRESH_INVENTORY_REQUEST_CHANNEL.value,
@@ -3152,6 +3410,12 @@ export function createDesktopPreloadApi(
       );
     },
 
+    async readWorkspaceSummary(input, context = {}) {
+      const request = normalizeReadWorkspaceSummaryRequest(input);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL.value, createDesktopWorkspaceSummaryRequest(request, context));
+      const envelope = assertDesktopEnvelopeResponse<DesktopWorkspaceSummaryResponse>(response, {operation: DESKTOP_WORKSPACE_SUMMARY_OPERATION, channel: DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL.value, message: "Invalid workspace summary response."});
+      return envelope.ok ? {...envelope, value: normalizeWorkspaceSummary(envelope.value, request)} : envelope;
+    },
     async listWorkspaces(context = {}) {
       const response = await dependencies.ipcRenderer.invoke(
         DESKTOP_WORKSPACE_LIST_REQUEST_CHANNEL.value,
@@ -4945,19 +5209,21 @@ export function createDesktopPreloadApi(
     },
     async readModelDownload(input, context = {}) {
       const request = createDesktopModelDownloadReadRequest(input, context);
-      const response = await dependencies.ipcRenderer.invoke(
-        DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value,
-        request,
-      );
-      return assertDesktopEnvelopeResponse<DesktopModelDownloadReadResponse>(
-        response,
-        {
-          operation: DESKTOP_MODEL_DOWNLOAD_READ_OPERATION,
-          channel: DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value,
-          message:
-            "Received invalid desktop model download-read IPC response envelope.",
-        },
-      );
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadReadResponse>(response, {
+        operation: DESKTOP_MODEL_DOWNLOAD_READ_OPERATION,
+        channel: DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value,
+        message: "Received invalid desktop model download-read IPC response envelope.",
+      });
+    },
+    async completeModelDownload(input, context = {}) {
+      const request = createDesktopModelDownloadCompleteRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_COMPLETE_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadCompleteResponse>(response, {
+        operation: DESKTOP_MODEL_DOWNLOAD_COMPLETE_OPERATION,
+        channel: DESKTOP_MODEL_DOWNLOAD_COMPLETE_RESPONSE_CHANNEL.value,
+        message: "Received invalid desktop model download-complete IPC response envelope.",
+      });
     },
     async listModelDownloads(input, context = {}) {
       const request = createDesktopModelDownloadListRequest(input, context);
@@ -5342,6 +5608,12 @@ export function createDesktopPreloadApi(
         context,
       );
     },
+    async listPublishedSystemForms({ workspaceId, releaseId }) {
+      return invokePublishedForm(dependencies, "listPublishedForms", { workspaceId, releaseId });
+    },
+    async submitPublishedSystemForm({ workspaceId, releaseId, formId, submissionId, answers }) {
+      return invokePublishedForm(dependencies, "submitPublishedForm", { workspaceId, releaseId, formId, submissionId, answers });
+    },
     async listSystemBuilderManagement(input, context = {}) {
       return invokeSystemBuilder<DesktopSystemBuilderManagementResponse>(
         dependencies,
@@ -5676,6 +5948,21 @@ async function invokeSystemBuilder<
     operation: DESKTOP_SYSTEM_BUILDER_OPERATIONS[operation],
     channel: channels.response.value,
     message: `Received invalid desktop System Builder ${operation} IPC response envelope.`,
+  });
+}
+
+async function invokePublishedForm(
+  dependencies: CreateDesktopPreloadApiDependencies,
+  operation: keyof typeof DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS,
+  input: PublishedSystemFormsInput | PublishedSystemFormSubmitInput,
+): Promise<DesktopSystemPublishedFormEnvelope> {
+  const request = createDesktopPublishedFormRequest(operation, input);
+  const channels = DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS[operation];
+  const response = await dependencies.ipcRenderer.invoke(channels.request.value, request);
+  return assertDesktopEnvelopeResponse<DesktopSystemPublishedFormEnvelope>(response, {
+    operation: channels.response.operation,
+    channel: channels.response.value,
+    message: "Received an invalid published form response.",
   });
 }
 

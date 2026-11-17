@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
   ASSET_FAMILIES,
@@ -7,7 +7,7 @@ import {
   type AssetFamily,
   type AssetType,
 } from "../../../contracts/asset";
-import type { AuthoredAssetDraftRecord } from "../../../contracts/asset-authoring";
+import { isAssetAuthoringStatus, normalizeAssetDraftId, type AuthoredAssetDraftRecord } from "../../../contracts/asset-authoring";
 import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import {
   ASSET_IMPLEMENTATION_BACKING_RESOURCE_ROLES,
@@ -20,6 +20,7 @@ import type {
   AssetStudioAssetDraftView,
   AssetStudioSemanticDefinitionInput,
 } from "../../../contracts/asset-studio";
+import { normalizeAssetStudioAssetDraftId, normalizeAssetStudioExactDefinitionReference } from "../../../contracts/asset-studio";
 import { ApplicationIcon } from "../components/ApplicationIcon";
 import { EmptyState } from "../components/EmptyState";
 import { WorkflowSequence, WorkflowStep } from "../components/WorkflowSequence";
@@ -205,7 +206,33 @@ interface AssetStudioWorkspaceProps {
   readonly initialDraftId?: string;
 }
 
-export function AssetStudioWorkspace({
+function matchesStudioRecord(
+  value: AssetStudioAssetDraftRecord,
+  expected: { workspaceId: string; draftId?: string; definitionRef?: AssetStudioAssetDraftRecord["definitionRef"]; status?: AssetStudioAssetDraftRecord["status"]; revision?: number },
+) {
+  return Boolean(value && value.workspaceId === expected.workspaceId &&
+    typeof value.draftId === "string" && value.draftId.length > 0 &&
+    (!expected.draftId || value.draftId === expected.draftId) &&
+    value.definitionRef?.kind === "asset-definition-version" &&
+    typeof value.definitionRef.id === "string" && value.definitionRef.id.length > 0 &&
+    typeof value.definitionRef.version === "string" && value.definitionRef.version.length > 0 &&
+    (!expected.definitionRef || (value.definitionRef.id === expected.definitionRef.id && value.definitionRef.version === expected.definitionRef.version)) &&
+    ["draft", "reviewed", "published", "abandoned"].includes(value.status) &&
+    (!expected.status || value.status === expected.status) &&
+    Number.isSafeInteger(value.revision) && value.revision > 0 &&
+    (expected.revision === undefined || value.revision === expected.revision));
+}
+
+export function AssetStudioWorkspace(props: AssetStudioWorkspaceProps) {
+  const [scope, setScope] = useState({ workspaceId: props.workspaceId, client: props.client, draftId: props.initialDraftId, key: 0 });
+  if (scope.workspaceId !== props.workspaceId || scope.client !== props.client || scope.draftId !== props.initialDraftId) {
+    setScope({ workspaceId: props.workspaceId, client: props.client, draftId: props.initialDraftId, key: scope.key + 1 });
+    return null;
+  }
+  return <ScopedAssetStudioWorkspace key={scope.key} {...props} />;
+}
+
+function ScopedAssetStudioWorkspace({
   workspaceId,
   client,
   initialDraftId,
@@ -218,6 +245,29 @@ export function AssetStudioWorkspace({
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const [readFailed, setReadFailed] = useState(false);
+  const [readAttempt, setReadAttempt] = useState(0);
+  const mountedRef = useRef(true);
+  const actionSequence = useRef(0);
+  const actionOwner = useRef<number | undefined>(undefined);
+  const editEpoch = useRef(0);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+  const ownsAction = (owner: number) => mountedRef.current && actionOwner.current === owner;
+  const beginAction = () => {
+    if (!mountedRef.current || busy || actionOwner.current !== undefined) return;
+    const owner = ++actionSequence.current;
+    actionOwner.current = owner;
+    setBusy(true);
+    return owner;
+  };
+  const endAction = (owner: number) => {
+    if (!ownsAction(owner)) return;
+    actionOwner.current = undefined;
+    setBusy(false);
+  };
 
   useEffect(() => {
     let active = true;
@@ -225,6 +275,7 @@ export function AssetStudioWorkspace({
     setNotice(undefined);
     setDirty(false);
     setRecord(undefined);
+    setReadFailed(false);
 
     if (!initialDraftId) {
       setEditor(createAssetStudioEditorState());
@@ -235,37 +286,46 @@ export function AssetStudioWorkspace({
     }
 
     setBusy(true);
-    void client
-      .readAssetDraft({
+    void Promise.resolve().then(() => {
+      if (!active || !mountedRef.current) return;
+      return client.readAssetDraft({
         workspaceId: workspaceId as never,
         draftId: initialDraftId as never,
-      })
-      .then((result) => {
-        if (!active) return;
-        if (result.ok) {
-          setEditor(createAssetStudioEditorState(result.value));
-          setRecord(result.value.record);
-        } else {
-          setError(result.error.message);
-        }
-        setBusy(false);
       });
+    }).then((result) => {
+      if (!active || !mountedRef.current || !result) return;
+      if (result.ok) {
+        if (!matchesStudioRecord(result.value.record, { workspaceId, draftId: initialDraftId })) throw new Error("Invalid Studio draft response.");
+        const nextEditor = createAssetStudioEditorState(result.value);
+        setEditor(nextEditor);
+        setRecord(result.value.record);
+      } else { setError(result.error.message); setReadFailed(true); }
+    }).catch(() => {
+      if (active && mountedRef.current) {
+        setError("The saved asset could not be opened. Retry opening it.");
+        setReadFailed(true);
+      }
+    }).finally(() => {
+      if (active && mountedRef.current) setBusy(false);
+    });
 
     return () => {
       active = false;
     };
-  }, [client, initialDraftId, workspaceId]);
+  }, [client, initialDraftId, readAttempt, workspaceId]);
 
   const change = <K extends keyof AssetStudioEditorState>(
     key: K,
     value: AssetStudioEditorState[K],
   ) => {
+    editEpoch.current++;
     setEditor((current) => ({ ...current, [key]: value }));
     setDirty(true);
     setNotice(undefined);
   };
 
   const changeJson = (field: JsonField, value: string) => {
+    editEpoch.current++;
     setEditor((current) => ({
       ...current,
       json: { ...current.json, [field]: value },
@@ -278,6 +338,7 @@ export function AssetStudioWorkspace({
     index: number,
     patch: Partial<AssetImplementationBackingResourceFile>,
   ) => {
+    editEpoch.current++;
     setEditor((current) => ({
       ...current,
       resources: current.resources.map((resource, resourceIndex) =>
@@ -289,6 +350,7 @@ export function AssetStudioWorkspace({
   };
 
   const addResource = (role: AssetImplementationBackingResourceRole) => {
+    editEpoch.current++;
     const template =
       DEFAULT_RESOURCES.find((resource) => resource.role === role) ??
       ({
@@ -305,6 +367,7 @@ export function AssetStudioWorkspace({
   };
 
   const removeResource = (index: number) => {
+    editEpoch.current++;
     setEditor((current) => ({
       ...current,
       resources: current.resources.filter(
@@ -343,69 +406,56 @@ export function AssetStudioWorkspace({
       return;
     }
 
-    setBusy(true);
-    const result = record
-      ? await client.updateAssetDraft({
-          workspaceId: workspaceId as never,
-          draftId: record.draftId,
-          expectedRevision: record.revision,
-          semanticDefinition,
-          resources: editor.resources,
-        })
-      : await client.createAssetDraft({
-          workspaceId: workspaceId as never,
-          definitionRef: {
-            kind: "asset-definition-version",
-            id: editor.definitionId.trim() as never,
-            version: editor.definitionVersion.trim(),
-          },
-          semanticDefinition,
-          resources: editor.resources,
-        });
-
-    if (result.ok) {
-      setRecord(result.value);
-      setDirty(false);
-      setNotice(
-        record
+    const owner = beginAction();
+    if (owner === undefined) return;
+    const savedEpoch = editEpoch.current;
+    const definitionRef = record?.definitionRef ?? { kind: "asset-definition-version" as const, id: editor.definitionId.trim() as never, version: editor.definitionVersion.trim() };
+    try {
+      const result = record
+        ? await client.updateAssetDraft({ workspaceId: workspaceId as never, draftId: record.draftId, expectedRevision: record.revision, semanticDefinition, resources: editor.resources })
+        : await client.createAssetDraft({ workspaceId: workspaceId as never, definitionRef, semanticDefinition, resources: editor.resources });
+      if (!ownsAction(owner)) return;
+      if (result.ok) {
+        if (!matchesStudioRecord(result.value, { workspaceId, draftId: record?.draftId, definitionRef, status: "draft", revision: record ? record.revision + 1 : 1 })) throw new Error("Invalid Studio save response.");
+        const newerEdits = editEpoch.current !== savedEpoch;
+        setRecord(result.value);
+        setDirty(newerEdits);
+        setNotice(newerEdits ? "Draft saved. Your newer changes remain unsaved." : record
           ? "Draft saved. Any prior review was invalidated when content changed."
-          : "Draft saved without publishing or executing it.",
-      );
-    } else {
-      setError(result.error.message);
-    }
-    setBusy(false);
+          : "Draft saved without publishing or executing it.");
+      } else setError(result.error.message);
+    } catch {
+      if (ownsAction(owner)) setError("The draft could not be saved. Retry the save.");
+    } finally { endAction(owner); }
   };
 
   const transition = async (action: "review" | "publish" | "abandon") => {
-    if (!record) return;
-    setBusy(true);
+    if (!record || (action !== "abandon" && dirty) ||
+        (action === "review" && record.status !== "draft") ||
+        (action === "publish" && record.status !== "reviewed") ||
+        (action === "abandon" && !["draft", "reviewed"].includes(record.status))) return;
+    const owner = beginAction();
+    if (owner === undefined) return;
     setError(undefined);
     setNotice(undefined);
-    const command = {
-      workspaceId: workspaceId as never,
-      draftId: record.draftId,
-      expectedRevision: record.revision,
-    };
-    const result =
-      action === "review"
-        ? await client.reviewAssetDraft(command)
-        : action === "publish"
-          ? await client.publishAssetDraft(command)
-          : await client.abandonAssetDraft(command);
-    if (result.ok) {
-      setRecord(result.value);
-      setNotice(
-        action === "review"
-          ? "Review snapshot created. Publish remains a separate explicit action."
-          : action === "publish"
-            ? "Asset definition published; implementation activation and execution remain separate."
-            : "Draft abandoned without publishing it.",
-      );
-    } else {
-      setError(result.error.message);
-    }
-    setBusy(false);
+    const command = { workspaceId: workspaceId as never, draftId: record.draftId, expectedRevision: record.revision };
+    try {
+      const result = action === "review" ? await client.reviewAssetDraft(command)
+        : action === "publish" ? await client.publishAssetDraft(command) : await client.abandonAssetDraft(command);
+      if (!ownsAction(owner)) return;
+      if (result.ok) {
+        const status = action === "review" ? "reviewed" : action === "publish" ? "published" : "abandoned";
+        if (!matchesStudioRecord(result.value, { workspaceId, draftId: record.draftId, definitionRef: record.definitionRef, status, revision: record.revision + 1 })) throw new Error("Invalid Studio transition response.");
+        setRecord(result.value);
+        setNotice(action === "review" ? "Review snapshot created. Publish remains a separate explicit action."
+          : action === "publish" ? "Asset definition published; implementation activation and execution remain separate."
+          : "Draft abandoned without publishing it.");
+      } else setError(result.error.message);
+    } catch {
+      if (ownsAction(owner)) setError(action === "review" ? "The draft could not be reviewed. Retry the review."
+        : action === "publish" ? "The asset could not be published. Retry the publication."
+        : "The draft could not be abandoned. Retry the action.");
+    } finally { endAction(owner); }
   };
 
   const coreResource = (role: AssetImplementationBackingResourceRole) =>
@@ -439,8 +489,11 @@ export function AssetStudioWorkspace({
         </span>
       </header>
       <div className="ui-panel__section-body ui-stack">
+        {readFailed ? <button type="button" className="ui-button ui-button--outline" disabled={busy}
+          onClick={() => setReadAttempt(value => value + 1)}>Retry opening saved asset</button> : null}
         <TransientNotificationPublisher message={error} title="Asset Studio needs attention" tone="error" source="Asset Studio" workspaceId={workspaceId} />
         <TransientNotificationPublisher message={notice} title="Asset Studio updated" tone="success" source="Asset Studio" workspaceId={workspaceId} />
+        <fieldset disabled={Boolean(initialDraftId) && !record} aria-label="Asset draft editor">
         <WorkflowSequence ariaLabel="Unified Asset Studio sections">
           <WorkflowStep
             title="Identity and classification"
@@ -452,7 +505,7 @@ export function AssetStudioWorkspace({
                 Asset ID
                 <input
                   value={editor.definitionId}
-                  disabled={Boolean(record)}
+                  disabled={Boolean(record) || busy}
                   onChange={(event) =>
                     change("definitionId", event.currentTarget.value)
                   }
@@ -463,7 +516,7 @@ export function AssetStudioWorkspace({
                 Version
                 <input
                   value={editor.definitionVersion}
-                  disabled={Boolean(record)}
+                  disabled={Boolean(record) || busy}
                   onChange={(event) =>
                     change("definitionVersion", event.currentTarget.value)
                   }
@@ -481,6 +534,7 @@ export function AssetStudioWorkspace({
               <label>
                 Asset type
                 <select
+                  aria-label="Asset type"
                   value={editor.assetType}
                   onChange={(event) =>
                     change("assetType", event.currentTarget.value as AssetType)
@@ -496,6 +550,7 @@ export function AssetStudioWorkspace({
               <label>
                 Asset family
                 <select
+                  aria-label="Asset family"
                   value={editor.assetFamily}
                   onChange={(event) =>
                     change(
@@ -515,6 +570,7 @@ export function AssetStudioWorkspace({
             <label>
               Definition
               <textarea
+                aria-label="Definition"
                 value={editor.description}
                 onChange={(event) =>
                   change("description", event.currentTarget.value)
@@ -701,6 +757,7 @@ export function AssetStudioWorkspace({
             </div>
           </WorkflowStep>
         </WorkflowSequence>
+        </fieldset>
       </div>
     </section>
   );
@@ -719,6 +776,7 @@ function JsonEditor({
     <label>
       {label}
       <textarea
+        aria-label={label}
         className="asset-studio__json"
         spellCheck={false}
         value={value}
@@ -836,6 +894,7 @@ function ResourceEditor({
       <label>
         Resource content
         <textarea
+          aria-label="Resource content"
           className="asset-studio__source"
           spellCheck={false}
           value={resource.content}
@@ -926,65 +985,96 @@ interface SavedAssetDraftsProps {
   readonly onOpenDraft: (draftId: string) => void;
 }
 
-export function SavedAssetDrafts({
-  workspaceId,
-  client,
-  legacyClient,
-  onOpenDraft,
-}: SavedAssetDraftsProps) {
-  const [drafts, setDrafts] = useState<readonly AssetStudioAssetDraftSummary[]>(
-    [],
-  );
-  const [legacyDrafts, setLegacyDrafts] = useState<
-    readonly AuthoredAssetDraftRecord[]
-  >([]);
+export function SavedAssetDrafts(props: SavedAssetDraftsProps) {
+  const [scope, setScope] = useState({ workspaceId: props.workspaceId, client: props.client, legacyClient: props.legacyClient, key: 0 });
+  if (scope.workspaceId !== props.workspaceId || scope.client !== props.client || scope.legacyClient !== props.legacyClient) {
+    setScope({ workspaceId: props.workspaceId, client: props.client, legacyClient: props.legacyClient, key: scope.key + 1 });
+    return null;
+  }
+  return <ScopedSavedAssetDrafts key={scope.key} {...props} />;
+}
+
+function ScopedSavedAssetDrafts({ workspaceId, client, legacyClient, onOpenDraft }: SavedAssetDraftsProps) {
+  const [drafts, setDrafts] = useState<readonly AssetStudioAssetDraftSummary[]>([]);
+  const [legacyDrafts, setLegacyDrafts] = useState<readonly AuthoredAssetDraftRecord[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string>();
-
-  const applyListings = (
-    studioResult: Awaited<ReturnType<AssetStudioClient["listAssetDrafts"]>>,
-    legacyResult:
-      Awaited<ReturnType<LegacyAssetDraftClient["listDrafts"]>> | undefined,
-  ) => {
-    if (studioResult.ok) setDrafts(studioResult.value.drafts);
-    else setError(studioResult.error.message);
-    if (legacyResult?.ok) setLegacyDrafts(legacyResult.value.items);
-    else if (legacyResult) setError(legacyResult.error.message);
+  const [listingKnown, setListingKnown] = useState(false);
+  const mountedRef = useRef(true);
+  const sequence = useRef(0);
+  const readOwner = useRef<number | undefined>(undefined);
+  const actionOwner = useRef<number | undefined>(undefined);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; readOwner.current = undefined; actionOwner.current = undefined; };
+  }, []);
+  const ownsRead = (owner: number) => mountedRef.current && readOwner.current === owner;
+  const ownsAction = (owner: number) => mountedRef.current && actionOwner.current === owner;
+  const studioFailure = () => ({ ok: false as const, error: { code: "asset-studio.asset-draft.unavailable" as const, message: "Saved assets are unavailable. Retry the search." } });
+  const legacyFailure = () => ({ ok: false as const, error: { code: "unavailable", message: "Legacy saved assets are unavailable. Retry the search." } });
+  const validLegacyId = (value: unknown) => {
+    try { return typeof value === "string" && normalizeAssetDraftId(value) === value; }
+    catch { return false; }
   };
+  const validStudioIdentity = (row: Pick<AssetStudioAssetDraftRecord, "draftId" | "definitionRef">) => {
+    try {
+      if (!row || typeof row.draftId !== "string" || normalizeAssetStudioAssetDraftId(row.draftId) !== row.draftId ||
+          row.definitionRef?.kind !== "asset-definition-version" || typeof row.definitionRef.id !== "string" || typeof row.definitionRef.version !== "string") return false;
+      const reference = normalizeAssetStudioExactDefinitionReference(row.definitionRef);
+      return reference.id === row.definitionRef.id && reference.version === row.definitionRef.version;
+    } catch { return false; }
+  };
+  const validStudioSummaries = (rows: readonly AssetStudioAssetDraftSummary[]) => Array.isArray(rows) && rows.every(row =>
+    validStudioIdentity(row) && typeof row.displayName === "string" &&
+    ASSET_TYPES.includes(row.assetType) && ["draft", "reviewed"].includes(row.status) &&
+    Number.isSafeInteger(row.revision) && row.revision > 0 && Number.isSafeInteger(row.resourceCount) && row.resourceCount >= 0 &&
+    (row.sourceLegacyDraftId === undefined || validLegacyId(row.sourceLegacyDraftId))) &&
+    new Set(rows.map(row => row.draftId)).size === rows.length;
+  const validLegacyRows = (rows: readonly AuthoredAssetDraftRecord[]) => Array.isArray(rows) && rows.every(row =>
+    row && row.targetWorkspaceId === workspaceId && validLegacyId(row.draftId) && isAssetAuthoringStatus(row.status) &&
+    (row.baseAssetReference?.label === undefined || typeof row.baseAssetReference.label === "string") &&
+    row.draftEditableValues && typeof row.draftEditableValues === "object" && !Array.isArray(row.draftEditableValues)) &&
+    new Set(rows.map(row => row.draftId)).size === rows.length;
 
   const load = async (searchText = text) => {
-    setBusy(true);
-    setError(undefined);
-    const [studioResult, legacyResult] = await Promise.all([
-      client.listAssetDrafts({
-        workspaceId: workspaceId as never,
-        unpublishedOnly: true,
-        text: searchText.trim() || undefined,
-      }),
-      legacyClient?.listDrafts(workspaceId),
-    ]);
-    applyListings(studioResult, legacyResult);
-    setBusy(false);
+    if (!mountedRef.current || readOwner.current !== undefined || actionOwner.current !== undefined) return;
+    const owner = ++sequence.current;
+    readOwner.current = owner;
+    setBusy(true); setError(undefined);
+    try {
+      const [studioResult, legacyResult] = await Promise.all([
+        Promise.resolve().then(() => {
+          if (!ownsRead(owner)) return;
+          return client.listAssetDrafts({ workspaceId: workspaceId as never, unpublishedOnly: true, ...(searchText.trim() ? { text: searchText.trim() } : {}) });
+        }).then(result => {
+          if (!ownsRead(owner)) return;
+          if (!result || (result.ok ? !validStudioSummaries(result.value?.drafts) : typeof result.error?.message !== "string")) throw new Error("Invalid Saved list response.");
+          return result;
+        }).catch(studioFailure),
+        Promise.resolve().then(() => {
+          if (!ownsRead(owner) || !legacyClient) return;
+          return legacyClient.listDrafts(workspaceId);
+        }).then(result => {
+          if (!ownsRead(owner) || !legacyClient) return;
+          if (!result || (result.ok ? !validLegacyRows(result.value?.items) : typeof result.error?.message !== "string")) throw new Error("Invalid legacy list response.");
+          return result;
+        }).catch(legacyFailure),
+      ]);
+      if (!ownsRead(owner)) return;
+      setDrafts(studioResult?.ok ? studioResult.value.drafts : []);
+      setLegacyDrafts(legacyResult?.ok ? legacyResult.value.items : []);
+      setListingKnown(Boolean(studioResult?.ok && (!legacyClient || legacyResult?.ok)));
+      const failures = [studioResult && !studioResult.ok ? studioResult.error.message : undefined, legacyResult && !legacyResult.ok ? legacyResult.error.message : undefined].filter(Boolean);
+      if (failures.length) setError(failures.join(" "));
+    } finally {
+      if (ownsRead(owner)) { readOwner.current = undefined; setBusy(false); }
+    }
   };
 
   useEffect(() => {
-    let active = true;
-    setBusy(true);
-    void Promise.all([
-      client.listAssetDrafts({
-        workspaceId: workspaceId as never,
-        unpublishedOnly: true,
-      }),
-      legacyClient?.listDrafts(workspaceId),
-    ]).then(([studioResult, legacyResult]) => {
-      if (!active) return;
-      applyListings(studioResult, legacyResult);
-      setBusy(false);
-    });
-    return () => {
-      active = false;
-    };
+    void load("");
+    return () => { readOwner.current = undefined; };
   }, [client, legacyClient, workspaceId]);
 
   const convertedLegacyIds = new Set(
@@ -1007,23 +1097,35 @@ export function SavedAssetDrafts({
   });
 
   const openLegacyDraft = async (draft: AuthoredAssetDraftRecord) => {
-    const converted = drafts.find(
-      (candidate) =>
-        String(candidate.sourceLegacyDraftId ?? "") === String(draft.draftId),
-    );
-    if (converted) {
-      onOpenDraft(String(converted.draftId));
-      return;
+    if (!mountedRef.current || busy || readOwner.current !== undefined || actionOwner.current !== undefined) return;
+    if (draft.targetWorkspaceId !== workspaceId) { setError("The saved asset could not be opened. Retry opening it."); return; }
+    const converted = drafts.find(candidate => String(candidate.sourceLegacyDraftId ?? "") === String(draft.draftId));
+    if (converted) { onOpenDraft(String(converted.draftId)); return; }
+    const owner = ++sequence.current;
+    actionOwner.current = owner;
+    setBusy(true); setError(undefined);
+    try {
+      const seed = createStudioSeedFromLegacyDraft(draft);
+      const result = await Promise.resolve().then(() => {
+        if (!ownsAction(owner)) return;
+        return client.createAssetDraft({ workspaceId: workspaceId as never, ...seed });
+      });
+      if (!ownsAction(owner)) return;
+      if (!result) throw new Error("Invalid legacy conversion response.");
+      if (!result.ok) {
+        if (typeof result.error?.message !== "string") throw new Error("Invalid legacy conversion failure.");
+        setError(result.error.message); return;
+      }
+      // The application can return an already converted record. Its canonical
+      // revision, definition and lifecycle state can differ from a new seed.
+      if (!matchesStudioRecord(result.value, { workspaceId }) || !validStudioIdentity(result.value) || result.value.provenance?.kind !== "studio-from-scratch" ||
+          result.value.provenance.sourceLegacyDraftId !== seed.sourceLegacyDraftId) throw new Error("Invalid converted draft identity.");
+      onOpenDraft(String(result.value.draftId));
+    } catch {
+      if (ownsAction(owner)) setError("The saved asset could not be opened. Retry opening it.");
+    } finally {
+      if (ownsAction(owner)) { actionOwner.current = undefined; setBusy(false); }
     }
-    setBusy(true);
-    setError(undefined);
-    const result = await client.createAssetDraft({
-      workspaceId: workspaceId as never,
-      ...createStudioSeedFromLegacyDraft(draft),
-    });
-    if (result.ok) onOpenDraft(String(result.value.draftId));
-    else setError(result.error.message);
-    setBusy(false);
   };
 
   const itemCount = drafts.length + visibleLegacyDrafts.length;
@@ -1062,6 +1164,7 @@ export function SavedAssetDrafts({
             Search saved assets
             <input
               type="search"
+              disabled={busy}
               value={text}
               onChange={(event) => setText(event.currentTarget.value)}
             />
@@ -1083,7 +1186,7 @@ export function SavedAssetDrafts({
                 resourceCount={draft.resourceCount}
                 revision={String(draft.revision)}
                 disabled={busy}
-                onOpen={() => onOpenDraft(String(draft.draftId))}
+                onOpen={() => { if (mountedRef.current && !busy && readOwner.current === undefined && actionOwner.current === undefined) onOpenDraft(String(draft.draftId)); }}
               />
             ))}
             {visibleLegacyDrafts.map((draft) => (
@@ -1114,8 +1217,8 @@ export function SavedAssetDrafts({
           </p>
         ) : (
           <EmptyState
-            title="No saved assets"
-            description="Save an unpublished asset in Studio and it will appear here."
+            title={listingKnown ? "No saved assets" : "Load saved assets"}
+            description={listingKnown ? "Save an unpublished asset in Studio and it will appear here." : "Use Search to reload the list."}
             icon="save"
             compact
           />

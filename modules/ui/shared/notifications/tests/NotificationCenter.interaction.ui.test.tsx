@@ -62,12 +62,15 @@ describe("NotificationCenter", () => {
       ]);
 
       const bell = container.querySelector<HTMLButtonElement>("#application-notification-bell")!;
+      expect(bell.hasAttribute("aria-controls")).toBe(false);
       await act(async () => bell.click());
       expect(bell.getAttribute("aria-expanded")).toBe("true");
+      expect(bell.getAttribute("aria-controls")).toBe("application-notification-panel");
       expect(container.querySelector("#application-notification-panel")?.textContent).toContain("The record was saved.");
 
       await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
       expect(bell.getAttribute("aria-expanded")).toBe("false");
+      expect(bell.hasAttribute("aria-controls")).toBe(false);
       expect(document.activeElement).toBe(bell);
     } finally {
       window.setTimeout = originalSetTimeout;

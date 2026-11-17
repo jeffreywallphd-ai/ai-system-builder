@@ -1,6 +1,8 @@
 import { describe, expect, it, testDouble } from "../../../../testing/node-test";
 import { RuntimeCapabilityUnavailableError } from "../../../../application/services/runtime";
 import { createRuntimeCapabilityStatus } from "../../../../contracts/runtime";
+import { snapshotBoundedImageGenerationRequest, type ImageGenerationRequest } from "../../../../contracts/image-generation";
+import type { ApplicationRequestContext } from "../../../../application/ports";
 import {
   DESKTOP_IMAGE_GENERATION_START_RESPONSE_CHANNEL,
   createDesktopImageGenerationCancelRequest,
@@ -19,6 +21,36 @@ function handlers() {
 }
 
 describe("registerImageGenerationIpc", () => {
+  it("keeps workspace context separate from strict generation options", async () => {
+    const { map, ipcMain } = handlers();
+    const start = testDouble.fn(async (request: ImageGenerationRequest, _context?: ApplicationRequestContext) => {
+      snapshotBoundedImageGenerationRequest(request); return { requestId: "image-result" };
+    });
+    registerImageGenerationIpc({ ipcMain, generateImageUseCase: { startImageGeneration: start, readImageGeneration: testDouble.fn(), cancelImageGeneration: testDouble.fn() } });
+    const result = await map.get("ipc.image-generation.start.request")({}, createDesktopImageGenerationStartRequest({ workspaceId: "workspace-a", prompt: "cat", seed: 0, width: 64 }, { requestId: "request-a", correlationId: "correlation-a" }));
+    expect(result).toMatchObject({ ok: true, requestId: "request-a", correlationId: "correlation-a", value: { requestId: "image-result" } });
+    expect(start.mock.calls[0]?.[0]).toEqual({ prompt: "cat", seed: 0, width: 64 });
+    expect(start.mock.calls[0]?.[1]).toMatchObject({ workspaceId: "workspace-a", requestId: "request-a", correlationId: "correlation-a" });
+  });
+  it("retains strict rejection of unknown generation fields", async () => {
+    const { map, ipcMain } = handlers(); let admitted = 0;
+    registerImageGenerationIpc({ ipcMain, generateImageUseCase: {
+      startImageGeneration: async request => { snapshotBoundedImageGenerationRequest(request); admitted++; return { requestId: "unexpected" }; },
+      readImageGeneration: testDouble.fn(), cancelImageGeneration: testDouble.fn(),
+    } });
+    const payload = Object.assign({ workspaceId: "workspace-a", prompt: "cat" }, { unapprovedExecution: true });
+    const result = await map.get("ipc.image-generation.start.request")({}, createDesktopImageGenerationStartRequest(payload));
+    expect(admitted).toBe(0); expect(result).toMatchObject({ ok: false, error: { code: "internal", message: "Image generation request failed." } });
+  });
+  for (const malformed of ["accessor", "hidden-field"] as const) it(`denies ${malformed} generation data before reading values`, async () => {
+    const { map, ipcMain } = handlers(); let reads = 0; const start = testDouble.fn();
+    registerImageGenerationIpc({ ipcMain, generateImageUseCase: { startImageGeneration: start, readImageGeneration: testDouble.fn(), cancelImageGeneration: testDouble.fn() } });
+    const payload = { workspaceId: "workspace-a", prompt: "cat" };
+    if (malformed === "accessor") Object.defineProperty(payload, "prompt", { enumerable: true, get: () => { reads++; return "cat"; } });
+    else Object.defineProperty(payload, "unapprovedExecution", { value: true, enumerable: false });
+    const result = await map.get("ipc.image-generation.start.request")({}, createDesktopImageGenerationStartRequest(payload));
+    expect(reads).toBe(0); expect(start).not.toHaveBeenCalled(); expect(result).toMatchObject({ ok: false, error: { code: "internal" } });
+  });
   it("maps runtime capability unavailable start failures to sanitized unavailable response", async () => {
     const { map, ipcMain } = handlers();
     const unavailable = new RuntimeCapabilityUnavailableError(createRuntimeCapabilityStatus({

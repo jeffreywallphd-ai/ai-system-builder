@@ -36,10 +36,10 @@ const request = async (url: string, body: unknown, method: 'POST' | 'PATCH' = 'P
 export function createThinClientAssetAuthoringClient(base = '/api') {
   const b = base.replace(/\/+$/, '');
   return {
-    async listAuthoredAssets(workspaceId: string): Promise<Result<{ items: readonly AuthoredAssetRecord[] }>> {
+    async listAuthoredAssets(workspaceId: string, options: { status?: string; limit?: number; cursor?: string } = {}): Promise<Result<{ items: readonly AuthoredAssetRecord[]; nextCursor?: string }>> {
       try {
-        const r = unwrap<{ assets: readonly AuthoredAssetRecord[] }>(await get(`${b}/asset-authoring/workspaces/${encodeURIComponent(workspaceId)}/authored-assets`));
-        return r.ok ? { ok: true, value: { items: r.value.assets ?? [] } } : r;
+        const r = unwrap<{ assets: readonly AuthoredAssetRecord[]; nextCursor?: string }>(await get(`${b}/asset-authoring/workspaces/${encodeURIComponent(workspaceId)}/authored-assets${search(options)}`));
+        return r.ok ? { ok: true, value: { items: r.value.assets ?? [], nextCursor: r.value.nextCursor } } : r;
       } catch { return fail('Unable to load custom assets.'); }
     },
     async listDrafts(workspaceId: string): Promise<Result<{ items: readonly AuthoredAssetDraftRecord[] }>> {
@@ -59,10 +59,10 @@ export function createThinClientAssetAuthoringClient(base = '/api') {
     async publishDraft(workspaceId: string, draftId: string) {
       try { return unwrap(await request(`${b}/asset-authoring/workspaces/${encodeURIComponent(workspaceId)}/drafts/${encodeURIComponent(draftId)}/publish`, {})); } catch { return fail('Unable to publish draft.'); }
     },
-    async listOverrides(workspaceId: string): Promise<Result<{ items: readonly AssetOverrideRecord[] }>> {
+    async listOverrides(workspaceId: string, options: { status?: string; limit?: number; cursor?: string } = {}): Promise<Result<{ items: readonly AssetOverrideRecord[]; nextCursor?: string }>> {
       try {
-        const r = unwrap<{ overrides: readonly AssetOverrideRecord[] }>(await get(`${b}/asset-authoring/workspaces/${encodeURIComponent(workspaceId)}/overrides`));
-        return r.ok ? { ok: true, value: { items: r.value.overrides ?? [] } } : r;
+        const r = unwrap<{ overrides: readonly AssetOverrideRecord[]; nextCursor?: string }>(await get(`${b}/asset-authoring/workspaces/${encodeURIComponent(workspaceId)}/overrides${search(options)}`));
+        return r.ok ? { ok: true, value: { items: r.value.overrides ?? [], nextCursor: r.value.nextCursor } } : r;
       } catch { return fail('Unable to load customizations.'); }
     },
     async disableOverride(workspaceId: string, overrideId: string) {
@@ -88,9 +88,9 @@ export function createThinClientAssetAuthoringClient(base = '/api') {
         return unwrap<AssetDerivedCustomizationTargetDetail>(await get(`${b}/asset-authoring/workspaces/${encodeURIComponent(input.workspaceId)}/customization-targets/${encodeURIComponent(input.implementationReleaseId)}${query}`));
       } catch { return fail('Unable to load asset customization details.'); }
     },
-    async listDerivedCustomizations(input: { workspaceId: string; status?: string; text?: string }): Promise<Result<{ items: readonly AssetDerivedCustomizationDraftRecord[]; nextCursor?: string }>> {
+    async listDerivedCustomizations(input: { workspaceId: string; status?: string; text?: string; limit?: number; cursor?: string }): Promise<Result<{ items: readonly AssetDerivedCustomizationDraftRecord[]; nextCursor?: string }>> {
       try {
-        const r = unwrap<{ customizations: readonly AssetDerivedCustomizationDraftRecord[]; nextCursor?: string }>(await get(`${b}/asset-authoring/workspaces/${encodeURIComponent(input.workspaceId)}/derived-customizations${search({ status: input.status, text: input.text })}`));
+        const r = unwrap<{ customizations: readonly AssetDerivedCustomizationDraftRecord[]; nextCursor?: string }>(await get(`${b}/asset-authoring/workspaces/${encodeURIComponent(input.workspaceId)}/derived-customizations${search({ status: input.status, text: input.text, limit: input.limit, cursor: input.cursor })}`));
         return r.ok ? { ok: true, value: { items: r.value.customizations ?? [], nextCursor: r.value.nextCursor } } : r;
       } catch { return fail('Unable to load asset customizations.'); }
     },
@@ -117,9 +117,9 @@ async function mutateCustomization(base: string, input: CustomizationRevisionInp
   catch { return fail(`Unable to ${operation} asset customization.`); }
 }
 
-function search(values: Record<string, string | undefined>): string {
+function search(values: Record<string, string | number | undefined>): string {
   const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(values)) if (value) query.set(key, value);
+  for (const [key, value] of Object.entries(values)) if (value !== undefined && value !== "") query.set(key, String(value));
   const encoded = query.toString();
   return encoded ? `?${encoded}` : '';
 }

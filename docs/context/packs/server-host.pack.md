@@ -30,6 +30,11 @@
 - Keep HTTP request/response details out of domain/application models.
 - Pass small JSON-serializable host context inward; do not pass framework/session/window objects.
 - Compose provider-backed storage, runtime readiness, security, and feature use cases explicitly in host wiring.
+- Controlled tests may inject the existing artifact fetch/complete Hub client pair
+  through the nonproduction `createServer` constructor. Both production settings
+  refuse it before initialization. No API/env option enables the seam; normal
+  composition is unchanged. Local Functional tests use throwing counters, while
+  separately authorized private-source tests retain their real provider path.
 - Thin-client is a server-backed surface over server capabilities; it must consume API clients rather than server internals.
 
 ## Host-Owned Runtime And Storage Roots
@@ -47,6 +52,11 @@
 - Approved Asset Library mutation wrappers are narrow: register resource-backed view, finalize generated output, import external repository object, and localize external repository object.
 - Workspace-aware server APIs accept explicit workspace context and must not fall back to global records for workspace-scoped resources.
 - Thin-client workspace create/select/switch behavior is server-authoritative; the thin-client must not derive authoritative workspace ids from display names.
+- Opt-in managed System Builder saved-state polling uses the existing OIDC,
+  organization and workspace authorization checks and the bounded PostgreSQL
+  journal. A cursor from a different worker requires a fresh scoped snapshot.
+- The existing managed verifier may expose a typed access token's signed client
+  ID internally. The identifier gives no scopes or browser document authority.
 
 ## Key Constraints
 

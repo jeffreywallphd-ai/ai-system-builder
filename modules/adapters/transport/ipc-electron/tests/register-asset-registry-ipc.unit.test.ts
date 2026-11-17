@@ -132,7 +132,7 @@ describe("registerAssetRegistryIpc", () => {
     const response = await handler({}, request);
 
     expect(readDefinitionDetail).toHaveBeenCalledWith(
-      { kind: "asset-definition", id: "builtin.workflow", version: "1.0.0" },
+      { kind: "asset-definition-version", id: "builtin.workflow", version: "1.0.0" },
       { includeValidation: true, includeAiContext: true, includeConfigurationSchema: false, includePorts: true, includeRequirements: false, includeMetadata: true },
     );
     expect(response).toMatchObject({ ok: true, operation: "asset.definition-read", value: { builtIn: true }, requestId: "r2", correlationId: "c2" });
@@ -149,7 +149,7 @@ describe("registerAssetRegistryIpc", () => {
 
     const response = await handler({}, request);
 
-    expect(readDefinitionDetail).toHaveBeenCalledWith({ kind: "asset-definition", id: "builtin.workflow", version: "2.0.0" }, expect.any(Object));
+    expect(readDefinitionDetail).toHaveBeenCalledWith({ kind: "asset-definition-version", id: "builtin.workflow", version: "2.0.0" }, expect.any(Object));
     expect(response).toMatchObject({ ok: true, operation: "asset.definition-version-read" });
   });
 

@@ -1,5 +1,6 @@
 import path from "node:path";
-import { lstat, readdir, realpath, stat } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { lstat, opendir, realpath, stat } from "node:fs/promises";
 
 import { MAX_LIST_MODEL_FILES } from "../../../contracts/model";
 import type { ModelFileListerPort } from "../../../application/ports/model";
@@ -17,6 +18,21 @@ function isSafeSegment(value: string): boolean {
     && value !== "."
     && value !== ".."
     && !/[\\/\u0000-\u001f\u007f]/.test(value);
+}
+
+async function readDirectoryPrefix(directory: string, limit: number) {
+  const handle = await opendir(directory, { bufferSize: 1 });
+  const entries: Dirent[] = [];
+  try {
+    for (let index = 0; index < limit; index += 1) {
+      const entry = await handle.read();
+      if (entry === null) return { entries, hasMore: false };
+      entries.push(entry);
+    }
+    return { entries, hasMore: (await handle.read()) !== null };
+  } finally {
+    await handle.close();
+  }
 }
 
 export function createLocalModelFileListerAdapter(options: {
@@ -55,11 +71,14 @@ export function createLocalModelFileListerAdapter(options: {
 
       while (pending.length > 0 && !truncated) {
         const current = pending.pop()!;
-        const entries = await readdir(current.directory, { withFileTypes: true });
+        const { entries, hasMore } = await readDirectoryPrefix(
+          current.directory,
+          MAX_ENUMERATED_ENTRIES - entriesVisited,
+        );
         entries.sort((left, right) => left.name.localeCompare(right.name));
         for (const entry of entries) {
           entriesVisited += 1;
-          if (entriesVisited > MAX_ENUMERATED_ENTRIES || files.length >= MAX_LIST_MODEL_FILES) {
+          if (files.length >= MAX_LIST_MODEL_FILES) {
             truncated = true;
             break;
           }
@@ -99,6 +118,7 @@ export function createLocalModelFileListerAdapter(options: {
             files.push({ relativePath, sizeBytes: entryStats.size });
           }
         }
+        truncated ||= hasMore;
       }
 
       return {

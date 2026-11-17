@@ -1,4 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useDatasetVersionReplayConsumer, type DatasetVersionReplayHandoff } from "../../../../../../../modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff";
+import { DatasetPreparationOcrSettings, DatasetPreparationTextReadingChecks } from "../../../../../../../modules/ui/shared/data-management/DatasetPreparationOcrSettings";
+import { useId, useMemo, useState, type ReactNode } from "react";
 
 import {
   createDesktopDatasetPreparationClient,
@@ -41,6 +43,7 @@ import {
 } from "../profiles/datasetPreparationTaskProfiles";
 
 export interface DatasetPreparationFeatureProps {
+  replayHandoff?: DatasetVersionReplayHandoff;
   onPrepared?: (artifactStorageKey: string) => void;
   client?: DesktopDatasetPreparationClient;
   settingsClient?: DesktopApplicationSettingsClient;
@@ -123,7 +126,12 @@ function constrainedJsonRecommendationCopy(
   return "Computer capacity has not been confirmed, so this option starts turned off.";
 }
 
-export function DatasetPreparationFeature({
+export function DatasetPreparationFeature(props: DatasetPreparationFeatureProps) {
+  return <WorkspaceDatasetPreparationFeature key={props.workspaceId ?? "none"} {...props} />;
+}
+
+function WorkspaceDatasetPreparationFeature({
+  replayHandoff,
   onPrepared,
   client,
   settingsClient,
@@ -135,6 +143,8 @@ export function DatasetPreparationFeature({
   const {
     artifacts,
     allArtifactCount,
+    sourceLoadStatus,
+    retrySourceArtifacts,
     filteredArtifacts,
     selectedArtifactStorageFilter,
     selectedArtifactIds,
@@ -154,9 +164,13 @@ export function DatasetPreparationFeature({
     visualOutputShape,
     constrainedJsonResolution,
     constrainedDecodingEnabled,
+    constrainedSchemaValid,
     constrainedDecodingAvailable,
     unsupportedDocumentPolicy,
     normalizationMode,
+    ocrEnabled,
+    ocrLanguage,
+    ocrEligible,
     chunkSize,
     chunkOverlap,
     preserveDocumentBoundaries,
@@ -170,6 +184,8 @@ export function DatasetPreparationFeature({
     modelDevice,
     modelTorchDtype,
     modelMemoryOverflowPolicy,
+    modelMemoryMode,
+    lowMemoryAvailable,
     maxExamplesPerChunk,
     batchSize,
     failurePolicy,
@@ -224,6 +240,8 @@ export function DatasetPreparationFeature({
     setConstrainedDecodingPreference,
     setUnsupportedDocumentPolicy,
     setNormalizationMode,
+    setOcrEnabled,
+    setOcrLanguage,
     setChunkSize,
     setChunkOverlap,
     setPreserveDocumentBoundaries,
@@ -237,6 +255,7 @@ export function DatasetPreparationFeature({
     setModelDevice,
     setModelTorchDtype,
     setModelMemoryOverflowPolicy,
+    setModelMemoryMode,
     setMaxExamplesPerChunk,
     setBatchSize,
     setFailurePolicy,
@@ -268,6 +287,7 @@ export function DatasetPreparationFeature({
     onDownloadGenerationModel,
     onSaveTrainingSettings,
     onLoadTrainingSettings,
+    onReuseDatasetVersion,
   } = useDatasetPreparationFeature({
     client,
     settingsClient,
@@ -276,6 +296,15 @@ export function DatasetPreparationFeature({
     onPrepared,
     workspaceId,
   });
+  const cancelReplayOnEdit = useDatasetVersionReplayConsumer(replayHandoff, sourceLoadStatus,
+    (request, isCurrent) => onReuseDatasetVersion(request.reproduction, request.selection, isCurrent));
+
+  const trainingTaskControlId = useId();
+  const trainingTaskCaptionId = useId();
+  const preparationMethodCaptionId = useId();
+  const preparationMethodHelpId = useId();
+  const allowedLabelsId = useId();
+  const allowedLabelsHelpId = useId();
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
     {},
   );
@@ -460,6 +489,9 @@ export function DatasetPreparationFeature({
       <div className="ui-panel__section-body dataset-preparation ui-stack ui-stack--sm">
         <p>Prepare training datasets from selected artifacts.</p>
         <form
+          onInputCapture={cancelReplayOnEdit}
+          onChangeCapture={cancelReplayOnEdit}
+          onClickCapture={cancelReplayOnEdit}
           className="dataset-preparation__form ui-stack ui-stack--sm"
           onSubmit={(event) => void onSubmit(event)}
         >
@@ -491,6 +523,7 @@ export function DatasetPreparationFeature({
                 </span>
                 <select
                   className="ui-input"
+                  aria-label="Saved training settings"
                   value={selectedSavedTrainingSettingsId}
                   disabled={formLocked || savedTrainingSettings.length === 0}
                   onChange={(event) =>
@@ -542,13 +575,15 @@ export function DatasetPreparationFeature({
                     Choose the kind of training dataset this preparation run
                     should create.
                   </p>
-                  <label className="ui-stack ui-stack--sm">
-                    <span>
-                      <TermWithHint termId="trainingTask">
+                  <div className="ui-stack ui-stack--sm">
+                    <TermWithHint termId="trainingTask">
+                      <label id={trainingTaskCaptionId} htmlFor={trainingTaskControlId}>
                         Training task
-                      </TermWithHint>
-                    </span>
+                      </label>
+                    </TermWithHint>
                     <select
+                      id={trainingTaskControlId}
+                      aria-labelledby={trainingTaskCaptionId}
                       className="ui-input"
                       value={taskType}
                       onChange={(event) =>
@@ -567,7 +602,7 @@ export function DatasetPreparationFeature({
                         ),
                       )}
                     </select>
-                  </label>
+                  </div>
                   <p className="dataset-preparation__section-description ui-text-muted">
                     {selectedTaskProfile.description}
                   </p>
@@ -584,14 +619,16 @@ export function DatasetPreparationFeature({
                         </p>
                         {supportsAllowedLabels ? (
                           <div className="ui-grid ui-grid--two">
-                            <label className="ui-stack ui-stack--sm">
-                              <span>
+                            <div className="ui-stack ui-stack--sm">
+                              <span className="ui-label">
                                 <TermWithHint termId="labelSet">
-                                  Allowed labels
+                                  <label htmlFor={allowedLabelsId}>Allowed labels</label>
                                 </TermWithHint>{" "}
-                                (optional)
+                                <span id={allowedLabelsHelpId}>(optional)</span>
                               </span>
                               <input
+                                id={allowedLabelsId}
+                                aria-describedby={allowedLabelsHelpId}
                                 className="ui-input"
                                 value={labelSet}
                                 onChange={(event) =>
@@ -599,7 +636,7 @@ export function DatasetPreparationFeature({
                                 }
                                 placeholder="support, billing, bug report"
                               />
-                            </label>
+                            </div>
                             {taskType === "llm-classification" ? (
                               <label className="dataset-preparation__checkbox-row">
                                 <input
@@ -781,7 +818,13 @@ export function DatasetPreparationFeature({
                       <option value="generated">Generated artifacts</option>
                     </select>
                   </label>
-                  {allArtifactCount === 0 ? (
+                  {sourceLoadStatus === "loading" ? (
+                    <p role="status">Loading source files…</p>
+                  ) : sourceLoadStatus === "failed" ? (
+                    <div><p role="status">Source files could not be loaded. Try again.</p>
+                      <button type="button" className="ui-button" disabled={status.kind === "loading"} onClick={retrySourceArtifacts}>Retry source files</button>
+                    </div>
+                  ) : allArtifactCount === 0 ? (
                     <p>No artifacts available yet.</p>
                   ) : artifacts.length === 0 ? (
                     <p className="ui-text-muted">
@@ -967,16 +1010,17 @@ export function DatasetPreparationFeature({
                     </div>
                     {preparationResolution.methods.length > 1 ? (
                       <label className="ui-stack ui-stack--sm">
-                        <span>How should the source material be divided?</span>
+                        <span id={preparationMethodCaptionId}>How should the source material be divided?</span>
                         <select
                           className="ui-input"
+                          aria-labelledby={preparationMethodCaptionId}
+                          aria-describedby={preparationMethodHelpId}
                           value={preparationMethodId}
                           disabled={formLocked}
-                          onChange={(event) =>
-                            setPreparationMethodId(
-                              event.target.value as DatasetPreparationMethodId,
-                            )
-                          }
+                          onChange={(event) => {
+                            setPreparationMethodId(event.target.value as DatasetPreparationMethodId);
+                            setOcrEnabled(false);
+                          }}
                         >
                           {preparationResolution.methods.map((method) => (
                             <option key={method.id} value={method.id}>
@@ -984,7 +1028,7 @@ export function DatasetPreparationFeature({
                             </option>
                           ))}
                         </select>
-                        <small className="ui-text-muted">
+                        <small id={preparationMethodHelpId} className="ui-text-muted">
                           {
                             getDatasetPreparationMethodCopy(preparationMethodId)
                               .description
@@ -1057,6 +1101,12 @@ export function DatasetPreparationFeature({
                   modelDownloadStatus.message &&
                   modelDownloadStatus.kind === "success" ? (
                   <p role="status">{modelDownloadStatus.message}</p>
+                ) : null}
+                {preparationMethodId === "structure-aware" || ocrEnabled ? (
+                  <DatasetPreparationOcrSettings
+                    enabled={ocrEnabled} language={ocrLanguage} eligible={ocrEligible}
+                    busy={formLocked} onEnabledChange={setOcrEnabled} onLanguageChange={setOcrLanguage}
+                  />
                 ) : null}
                 <CollapsiblePanel
                   className="dataset-preparation__advanced-settings"
@@ -1291,7 +1341,7 @@ export function DatasetPreparationFeature({
                                   type="checkbox"
                                   checked={constrainedDecodingEnabled}
                                   disabled={
-                                    formLocked || !constrainedDecodingAvailable
+                                    formLocked || !constrainedSchemaValid || (!constrainedDecodingAvailable && !constrainedDecodingEnabled)
                                   }
                                   onChange={(event) =>
                                     setConstrainedDecodingPreference(
@@ -1343,6 +1393,7 @@ export function DatasetPreparationFeature({
                                 </span>
                                 <input
                                   className="ui-input"
+                                  aria-label="Model ID"
                                   value={modelId}
                                   onChange={(event) =>
                                     setModelId(event.target.value)
@@ -1357,6 +1408,7 @@ export function DatasetPreparationFeature({
                                 </span>
                                 <select
                                   className="ui-input"
+                                  aria-label="Inference mode"
                                   value={modelInferenceMode}
                                   onChange={(event) =>
                                     setModelInferenceMode(
@@ -1379,6 +1431,7 @@ export function DatasetPreparationFeature({
                                 </span>
                                 <select
                                   className="ui-input"
+                                  aria-label="Model device"
                                   value={modelDevice}
                                   onChange={(event) =>
                                     setModelDevice(
@@ -1400,6 +1453,7 @@ export function DatasetPreparationFeature({
                                 </span>
                                 <select
                                   className="ui-input"
+                                  aria-label="Torch dtype"
                                   value={modelTorchDtype}
                                   onChange={(event) =>
                                     setModelTorchDtype(
@@ -1416,10 +1470,31 @@ export function DatasetPreparationFeature({
                                 </select>
                               </label>
                               <label className="ui-stack ui-stack--sm">
+                                <span>Model memory mode</span>
+                                <select
+                                  className="ui-input"
+                                  value={modelMemoryMode}
+                                  onChange={(event) => setModelMemoryMode(event.target.value as typeof modelMemoryMode)}
+                                >
+                                  <option value="standard">Standard</option>
+                                  <option value="offload-v1" disabled={!lowMemoryAvailable}>Optional low-memory (offload v1)</option>
+                                </select>
+                                <small className="ui-text-muted">
+                                  Optional mode limits weight placement to 1 GiB RAM and 2 GiB VRAM,
+                                  with up to 12 GiB of private disk staging. These are not process-memory
+                                  limits. Disk transfers can make generation slower. Select CPU or CUDA
+                                  and an explicit precision; unsupported models or insufficient resources
+                                  fail safely. Memory overflow is disabled for this profile.
+                                  Initial support covers native Qwen2/Qwen2.5 text models and the standard Qwen2.5 chat template.
+                                </small>
+                                {!lowMemoryAvailable ? <small role="status">Optional low-memory inference is unavailable in the current worker.</small> : null}
+                              </label>
+                              <label className="ui-stack ui-stack--sm">
                                 <span>When memory is full</span>
                                 <select
                                   className="ui-input"
-                                  value={modelMemoryOverflowPolicy}
+                                  value={modelMemoryMode === "offload-v1" ? "none" : modelMemoryOverflowPolicy}
+                                  disabled={modelMemoryMode === "offload-v1"}
                                   onChange={(event) =>
                                     setModelMemoryOverflowPolicy(
                                       event.target
@@ -1640,6 +1715,7 @@ export function DatasetPreparationFeature({
                             </span>
                             <select
                               className="ui-input"
+                              aria-label="Output format"
                               value={outputFormat}
                               onChange={(event) =>
                                 setOutputFormat(
@@ -1755,23 +1831,7 @@ export function DatasetPreparationFeature({
                         </h5>
                         <dl className="ui-grid ui-grid--two">
                           {qualityReview.advancedReport.content ? (
-                            <>
-                              <dt>Source sections kept</dt>
-                              <dd>
-                                {
-                                  qualityReview.advancedReport.content
-                                    .sourceSpanCount
-                                }
-                              </dd>
-                              <dt>Reading quality</dt>
-                              <dd>
-                                {Math.round(
-                                  qualityReview.advancedReport.content
-                                    .meanExtractionQuality * 100,
-                                )}
-                                %
-                              </dd>
-                            </>
+                            <DatasetPreparationTextReadingChecks content={qualityReview.advancedReport.content} />
                           ) : null}
                           {qualityReview.advancedReport.semantic ? (
                             <>
@@ -1897,6 +1957,7 @@ export function DatasetPreparationFeature({
                         </span>
                         <input
                           className="ui-input"
+                          aria-label="Dataset save name (optional)"
                           value={outputBaseName}
                           maxLength={DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH}
                           disabled={reviewActionInFlight}
@@ -1993,7 +2054,7 @@ export function DatasetPreparationFeature({
           ) : null}
         </form>
 
-        {status.message && !transientStatusMessage ? (
+        {status.message && !transientStatusMessage && !status.memoryNotification ? (
           <p
             className="dataset-preparation__status"
             role={status.kind === "error" ? "alert" : "status"}
@@ -2002,9 +2063,9 @@ export function DatasetPreparationFeature({
           </p>
         ) : null}
         <TransientNotificationPublisher
-          message={transientStatusMessage ? status.message : undefined}
-          title="Dataset preparation updated"
-          tone="success"
+          message={transientStatusMessage || status.memoryNotification === "page" ? status.message : undefined}
+          title={status.memoryNotification ? "Model needs more memory" : "Dataset preparation updated"}
+          tone={status.memoryNotification ? "error" : "success"}
           source="Dataset Preparation"
           workspaceId={workspaceId}
         />
@@ -2048,6 +2109,7 @@ export function DatasetPreparationFeature({
           currentIndex={qualityReviewIndex}
           decisions={qualityReviewDecisions}
           busy={reviewActionInFlight || qualityReviewPageLoading}
+          message={qualityReviewPageError}
           approveLabel="Approve"
           rejectLabel="Reject"
           absoluteIndex={

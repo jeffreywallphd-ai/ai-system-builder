@@ -54,6 +54,8 @@ export interface DatasetPreparationAdvancedContentConfig {
   semanticBoundaryThreshold?: number;
   layoutEnabled?: boolean;
   ocrEnabled?: boolean;
+  /** Required only for explicit scanned-PDF OCR; no inferred language. */
+  ocrLanguage?: string;
 }
 
 export interface DatasetPreparationSemanticCurationConfig {
@@ -84,9 +86,10 @@ export interface DatasetPreparationAdvancedConfig {
 
 export interface DatasetPreparationSourceSpanLineage {
   sourceArtifactId: string;
+  /** Offsets count Unicode code points in normalized text, not UTF-16 units. */
   normalizedStart: number;
   normalizedEnd: number;
-  regionKind: "text" | "heading" | "paragraph" | "table" | "page";
+  regionKind: "text" | "heading" | "paragraph" | "table" | "page" | "line";
   pageNumber?: number;
 }
 
@@ -100,6 +103,15 @@ export interface DatasetPreparationAdvancedReport {
     sourceSpanCount: number;
     lowConfidenceSourceCount: number;
     meanExtractionQuality: number;
+    /** Present only after every requested PDF has actually been recognized. */
+    ocr?: {
+      provider: string;
+      version: string;
+      language: string;
+      documentCount: number;
+      pageCount: number;
+      lineCount: number;
+    };
   };
   semantic?: {
     embeddingAlgorithm: "hashed-token-v1";
@@ -159,9 +171,9 @@ const LOCAL_CAPABILITIES: readonly DatasetPreparationAdvancedCapabilityReadiness
       capabilityId: "ocr-text",
       status: "unavailable",
       provider: "none",
-      version: "unavailable",
-      message: "Text recognition for scanned images is not installed.",
-      action: "Use a text-based PDF or add reviewed text before preparation.",
+      version: "unverified",
+      message: "Text recognition has not been checked for this task.",
+      action: "For scanned PDFs, choose Document-structure sections, enable text recognition and enter an installed Windows language tag.",
     },
     {
       capabilityId: "semantic-embeddings",

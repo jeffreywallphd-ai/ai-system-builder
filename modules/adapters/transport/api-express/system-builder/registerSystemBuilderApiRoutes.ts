@@ -22,6 +22,7 @@ import type {
 } from "../../../../application/use-cases/system-builder";
 import {
   API_SYSTEM_BUILDER_OPERATIONS,
+  API_SYSTEM_BUILDER_PUBLISHED_FORM_OPERATIONS,
   createApiError,
   createApiFailureResponse,
   createApiSuccessResponse,
@@ -32,6 +33,7 @@ import type {
   CreateSystemBuilderSystemCommand,
   RenameSystemBuilderSystemCommand,
   SaveSystemBuilderRevisionCommand,
+  SystemBuilderResult,
   CreateSystemBuilderFromTemplateCommand,
   ListSystemBuilderManagementQuery,
   PreviewSystemBuilderLayoutChangeCommand,
@@ -53,6 +55,7 @@ import {
 } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { requireExpressAuthenticatedPrincipalId } from "../security/expressAuthContext";
+import { parsePublishedFormsList, parsePublishedFormSubmit, presentPublishedFormResult, type PublishedFormsTransport } from "../../system-builder/publishedFormTransport";
 
 interface RequestLike {
   body?: unknown;
@@ -74,6 +77,7 @@ export interface SystemBuilderExpressPort {
 }
 export interface RegisterSystemBuilderApiRoutesDependencies {
   app: SystemBuilderExpressPort;
+  publishedForms?: PublishedFormsTransport;
   create: Pick<CreateSystemBuilderSystemUseCase, "execute">;
   list: Pick<ListSystemBuilderSystemsUseCase, "execute">;
   listManagement: Pick<ListSystemBuilderManagementUseCase, "execute">;
@@ -101,6 +105,13 @@ export interface RegisterSystemBuilderApiRoutesDependencies {
 export function registerSystemBuilderApiRoutes(
   d: RegisterSystemBuilderApiRoutesDependencies,
 ): void {
+  const forms = d.publishedForms;
+  if (forms) {
+    d.app.get("/api/systems/published-forms", (req, res) => publishedFormRequest(req, res, "listPublishedForms",
+      "Could not open forms for this published build.", (expectedActor) => forms.list(parsePublishedFormsList(req.query), expectedActor)));
+    d.app.post("/api/systems/published-forms/submit", (req, res) => publishedFormRequest(req, res, "submitPublishedForm",
+      "Could not submit this published form.", (expectedActor) => forms.submit(parsePublishedFormSubmit(req.body), expectedActor)));
+  }
   d.app.post("/api/systems/create", async (req, res) =>
     command(req, res, "create", d.create, parseCreate),
   );
@@ -472,9 +483,23 @@ function parseFoundationUpgrade(
     actorId,
   } as unknown as UpgradeSystemBuilderFoundationCommand;
 }
+const SYSTEM_BUILDER_API_OPERATIONS = { ...API_SYSTEM_BUILDER_OPERATIONS, ...API_SYSTEM_BUILDER_PUBLISHED_FORM_OPERATIONS };
+
+async function publishedFormRequest<T>(req: RequestLike, res: ResponseLike,
+  operation: keyof typeof API_SYSTEM_BUILDER_PUBLISHED_FORM_OPERATIONS, fallback: string,
+  invoke: (expectedActor: string) => Promise<SystemBuilderResult<T>>): Promise<void> {
+  let expectedActor: string;
+  try { expectedActor = actor(req); } catch {
+    failure(res, operation, "system-form.forbidden", "Sign in to use published forms.");
+    return;
+  }
+  try { result(res, operation, presentPublishedFormResult(await invoke(expectedActor), fallback)); }
+  catch { invalid(res, operation, fallback); }
+}
+
 function result(
   res: ResponseLike,
-  operation: keyof typeof API_SYSTEM_BUILDER_OPERATIONS,
+  operation: keyof typeof SYSTEM_BUILDER_API_OPERATIONS,
   value: any,
 ): void {
   value.ok
@@ -483,38 +508,39 @@ function result(
 }
 function success(
   res: ResponseLike,
-  operation: keyof typeof API_SYSTEM_BUILDER_OPERATIONS,
+  operation: keyof typeof SYSTEM_BUILDER_API_OPERATIONS,
   value: unknown,
 ): void {
   res
     .status(200)
     .json(
-      createApiSuccessResponse(API_SYSTEM_BUILDER_OPERATIONS[operation], value),
+      createApiSuccessResponse(SYSTEM_BUILDER_API_OPERATIONS[operation], value),
     );
 }
 function invalid(
   res: ResponseLike,
-  operation: keyof typeof API_SYSTEM_BUILDER_OPERATIONS,
+  operation: keyof typeof SYSTEM_BUILDER_API_OPERATIONS,
   message: string,
 ): void {
   failure(res, operation, "validation", message);
 }
 function failure(
   res: ResponseLike,
-  operation: keyof typeof API_SYSTEM_BUILDER_OPERATIONS,
+  operation: keyof typeof SYSTEM_BUILDER_API_OPERATIONS,
   code: string,
   message: string,
 ): void {
-  const kind = code.includes("not-found")
+  const formDenied = (operation === "listPublishedForms" || operation === "submitPublishedForm") && code === "system-form.forbidden";
+  const kind = formDenied ? "forbidden" : code.includes("not-found")
     ? "not-found"
     : code.includes("stale") || code.includes("conflict")
       ? "conflict"
       : "validation";
   res
-    .status(kind === "not-found" ? 404 : kind === "conflict" ? 409 : 400)
+    .status(kind === "forbidden" ? 403 : kind === "not-found" ? 404 : kind === "conflict" ? 409 : 400)
     .json(
       createApiFailureResponse(
-        createApiError(API_SYSTEM_BUILDER_OPERATIONS[operation], kind, message),
+        createApiError(SYSTEM_BUILDER_API_OPERATIONS[operation], kind, message),
       ),
     );
 }

@@ -30,27 +30,48 @@ function resolveServerPort(environment: ThinClientDevProxyEnvironment): string {
   return environment.SERVER_PORT?.trim() || environment.PORT?.trim() || DEFAULT_SERVER_PORT;
 }
 
+export function isLoopbackDevelopmentHost(host: string | boolean | undefined): boolean {
+  return host === undefined || host === false ||
+    (typeof host === "string" && ["127.0.0.1", "localhost", "::1", "[::1]"].includes(host));
+}
+
+export function validateThinClientApiProxyTarget(target: unknown, requireHttps: boolean): URL {
+  let parsed: URL;
+  try {
+    if (typeof target !== "string") throw new Error();
+    parsed = new URL(target);
+  } catch {
+    throw new Error("Thin-client API proxy requires a valid HTTP(S) target.");
+  }
+  if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) {
+    throw new Error("Thin-client API proxy requires HTTP(S) without embedded credentials.");
+  }
+  if (requireHttps && parsed.protocol !== "https:") {
+    throw new Error("LAN development requires an HTTPS API proxy target.");
+  }
+  return parsed;
+}
+
 export function resolveThinClientApiProxyTarget(
   environment: ThinClientDevProxyEnvironment = process.env,
 ): string {
   const explicitTarget = environment.AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET?.trim();
-  if (explicitTarget) {
-    return explicitTarget;
-  }
-
   const protocol = isHttpsServerEnvironment(environment) ? "https" : "http";
-  return `${protocol}://${DEFAULT_SERVER_HOST}:${resolveServerPort(environment)}`;
+  const target = explicitTarget || `${protocol}://${DEFAULT_SERVER_HOST}:${resolveServerPort(environment)}`;
+  validateThinClientApiProxyTarget(target, environment.AI_SYSTEM_BUILDER_SECURITY_MODE?.trim() === "lan-https-token");
+  return target;
 }
 
 export function shouldVerifyThinClientApiProxyTls(
   environment: ThinClientDevProxyEnvironment = process.env,
 ): boolean {
-  if (!resolveThinClientApiProxyTarget(environment).startsWith("https://")) {
+  const target = new URL(resolveThinClientApiProxyTarget(environment));
+  if (target.protocol !== "https:") {
     return true;
   }
 
   const certMode = environment.AI_SYSTEM_BUILDER_TLS_CERT_MODE?.trim();
-  return !HTTPS_CERT_MODES_WITH_DEV_TRUST.has(certMode ?? "");
+  return !isLoopbackDevelopmentHost(target.hostname) || !HTTPS_CERT_MODES_WITH_DEV_TRUST.has(certMode ?? "");
 }
 
 export function createThinClientApiProxyConfig(

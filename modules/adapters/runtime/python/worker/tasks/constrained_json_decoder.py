@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import Callable, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from hashlib import sha256
 import importlib
@@ -17,6 +18,7 @@ from typing import Any
 OUTLINES_VERSION = "1.3.2"
 OUTLINES_CORE_VERSION = "0.2.14"
 JSONSCHEMA_VERSION = "4.26.0"
+LLGUIDANCE_VERSION = "1.9.1"
 
 CONSTRAINED_JSON_MAX_SCHEMA_BYTES = 64 * 1024
 CONSTRAINED_JSON_MAX_SCHEMA_DEPTH = 20
@@ -111,8 +113,9 @@ def get_constrained_json_decoder_runtime_status() -> ConstrainedJsonDecoderRunti
         "jsonschema": JSONSCHEMA_VERSION,
         "outlines": OUTLINES_VERSION,
         "outlines-core": OUTLINES_CORE_VERSION,
+        "llguidance": LLGUIDANCE_VERSION,
     }
-    modules = ("jsonschema", "outlines", "outlines_core")
+    modules = ("jsonschema", "outlines", "outlines_core", "llguidance")
     try:
         if any(importlib.util.find_spec(module_name) is None for module_name in modules):
             return ConstrainedJsonDecoderRuntimeStatus(False, "dependency-unavailable")
@@ -332,6 +335,56 @@ def _validate_schema_node(
             )
 
 
+def _same_json(left: Any, right: Any) -> bool:
+    # Python equates True and 1; JSON Schema does not.
+    return json.dumps(left, sort_keys=True, ensure_ascii=False) == json.dumps(right, sort_keys=True, ensure_ascii=False)
+
+
+def _known_property_subset(candidate: dict[str, Any], original: dict[str, Any]) -> bool:
+    if _same_json(candidate, original):
+        return True
+    if set(original) == {"enum"} and set(candidate) == {"const"}:
+        return any(_same_json(candidate["const"], item) for item in original["enum"])
+    if set(original) == {"anyOf"}:
+        return any(_same_json(candidate, item) for item in original["anyOf"])
+    return False
+
+
+def _lower_disjoint_object_choices(schema: dict[str, Any]) -> dict[str, Any] | None:
+    """Only the finite, proven disjoint conditional-object form is lowered.
+
+    The pinned token compiler can ignore sibling oneOf property conditions.
+    Complete branches retain every root constraint. A required discriminator
+    with distinct string constants proves oneOf/anyOf equivalence; each replaced
+    property is an exact known subset, never a guessed schema intersection.
+    """
+    choices = schema.get("oneOf")
+    properties = schema.get("properties")
+    if not isinstance(choices, list) or not isinstance(properties, dict):
+        return None
+    if any(set(choice) != {"properties"} or not isinstance(choice["properties"], dict) for choice in choices):
+        return None
+    if any(name not in properties or not _known_property_subset(rule, properties[name]) for choice in choices for name, rule in choice["properties"].items()):
+        return None
+    disjoint = False
+    for name in schema.get("required", []):
+        rules = [choice["properties"].get(name) for choice in choices]
+        if all(isinstance(rule, dict) and set(rule) == {"const"} and isinstance(rule["const"], str) for rule in rules):
+            values = [rule["const"] for rule in rules]
+            if len(set(values)) == len(values):
+                disjoint = True
+                break
+    if not disjoint:
+        return None
+    branches = []
+    for choice in choices:
+        branch = deepcopy(schema)
+        del branch["oneOf"]
+        branch["properties"].update(deepcopy(choice["properties"]))
+        branches.append(branch)
+    return {"anyOf": branches}
+
+
 def compile_constrained_json_schema(value: Any) -> ConstrainedJsonSchemaPlan:
     if (
         not isinstance(value, dict)
@@ -372,6 +425,30 @@ def compile_constrained_json_schema(value: Any) -> ConstrainedJsonSchemaPlan:
     counters = _SchemaCounters()
     _validate_schema_node(value, depth=0, counters=counters)
     normalized_schema = json.loads(constraint_schema)
+    lowered = _lower_disjoint_object_choices(normalized_schema)
+    if lowered is not None:
+        lowered_counters = _SchemaCounters()
+        try:
+            _validate_schema_node(lowered, depth=0, counters=lowered_counters)
+            lowered_text = json.dumps(lowered, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+            combined_bytes = byte_count + len(lowered_text.encode("utf-8"))
+            combined_nodes = counters.nodes + lowered_counters.nodes
+            combined_properties = counters.properties + lowered_counters.properties
+            combined_enums = counters.enum_values + lowered_counters.enum_values
+            if (
+                combined_bytes <= CONSTRAINED_JSON_MAX_SCHEMA_BYTES
+                and combined_nodes <= CONSTRAINED_JSON_MAX_SCHEMA_NODES
+                and combined_properties <= CONSTRAINED_JSON_MAX_TOTAL_PROPERTIES
+                and combined_enums <= CONSTRAINED_JSON_MAX_TOTAL_ENUM_VALUES
+            ):
+                constraint_schema = lowered_text
+                byte_count = combined_bytes
+                counters = _SchemaCounters(combined_nodes, combined_properties, combined_enums)
+        except ConstrainedJsonDecoderError as error:
+            if error.code != "decoder-schema-limit":
+                raise
+        # Unsupported or over-budget lowering keeps the original constraints
+        # and its authoritative final validator; acceptance is never broadened.
     return ConstrainedJsonSchemaPlan(
         schema=normalized_schema,
         canonical_schema=canonical_schema,
@@ -471,25 +548,6 @@ def _to_integer_token(value: Any) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
-def _configure_windows_eager_outlines_torch_kernel() -> None:
-    """Avoid Outlines' optional Torch compiler path on Windows.
-
-    The pinned outlines-core kernel is decorated with ``torch.compile``. On a
-    normal end-user Windows installation, Torch may spend substantial memory
-    probing for an MSVC compiler before falling back to eager execution. The
-    original eager callable is retained by Torch, so use it directly on
-    Windows without changing the token mask or schema enforcement behavior.
-    """
-
-    if sys.platform != "win32":
-        return
-    torch_kernels = importlib.import_module("outlines_core.kernels.torch")
-    compiled_kernel = getattr(torch_kernels, "_apply_token_bitmask_inplace_kernel", None)
-    eager_kernel = getattr(compiled_kernel, "_torchdynamo_orig_callable", None)
-    if callable(eager_kernel):
-        setattr(torch_kernels, "_apply_token_bitmask_inplace_kernel", eager_kernel)
-
-
 class ConstrainedJsonDecoder:
     def __init__(
         self,
@@ -509,6 +567,7 @@ class ConstrainedJsonDecoder:
             logits_processor_list_factory or self._build_logits_processor_list
         )
         self._outlines_model: Any | None = None
+        self._token_mask_compiler: Any | None = None
 
     @property
     def cache_stats(self) -> ConstrainedJsonProcessorCacheStats:
@@ -526,18 +585,22 @@ class ConstrainedJsonDecoder:
             )
         try:
             from jsonschema import Draft202012Validator
-            from outlines.backends import get_json_schema_logits_processor
+            from outlines_core.json_schema import build_regex_from_schema
+            from .constrained_json_logits_processor import BoundedLazyTokenMaskCompiler
             from outlines.models.transformers import Transformers
 
-            _configure_windows_eager_outlines_torch_kernel()
             Draft202012Validator.check_schema(plan.schema)
             validator = Draft202012Validator(plan.schema)
             if self._outlines_model is None:
                 self._outlines_model = Transformers(self._model, self._tokenizer)
-            processor = get_json_schema_logits_processor(
-                "outlines_core",
-                self._outlines_model,
-                plan.constraint_schema,
+            if self._token_mask_compiler is None:
+                self._token_mask_compiler = BoundedLazyTokenMaskCompiler(
+                    self._outlines_model, ConstrainedJsonDecoderError,
+                )
+            # Preserve Core serialization, whitespace and token projection. Only
+            # the eager all-state Index is replaced by bounded lazy masks.
+            processor = self._token_mask_compiler.compile_regex(
+                build_regex_from_schema(plan.constraint_schema),
             )
             return _CompiledConstraint(processor=processor, validate=validator.validate)
         except ConstrainedJsonDecoderError:

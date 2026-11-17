@@ -3,6 +3,6 @@ import { createComfyUiImageGenerationRuntimeAdapter } from "../../../adapters/ru
 
 export function createServerImageGenerationRuntimeTaskRegistry(
   options: Parameters<typeof createComfyUiImageGenerationRuntimeAdapter>[0],
-): RuntimeTaskRegistryPort {
+): ReturnType<typeof createComfyUiImageGenerationRuntimeAdapter> {
   return createComfyUiImageGenerationRuntimeAdapter(options);
 }

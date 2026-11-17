@@ -248,3 +248,22 @@ describe("local workspace user-library link repository adapter", () => {
     );
   });
 });
+
+
+it("atomically rejects colliding library creations across adapter instances", async () => {
+  const rootDir = await tempRoot();
+  const first = createLocalUserLibraryAssetRepositoryAdapter({ rootDir, now: fixedNow });
+  const second = createLocalUserLibraryAssetRepositoryAdapter({ rootDir, now: fixedNow });
+  const original = userLibraryAssetRecord();
+  const collision = userLibraryAssetRecord({ displayName: "Conflicting replacement", sourceWorkspaceId: workspaceB });
+  const outcomes = await Promise.allSettled([
+    first.saveUserLibraryAssetRecord(original), second.saveUserLibraryAssetRecord(collision),
+  ]);
+  assert.equal(outcomes.filter((x) => x.status === "fulfilled").length, 1);
+  assert.equal(outcomes.filter((x) => x.status === "rejected").length, 1);
+  const saved = await first.readUserLibraryAssetRecordById(original.userLibraryAssetId, original.version);
+  const winner = outcomes[0].status === "fulfilled" ? original : collision;
+  assert.equal(saved?.displayName, winner.displayName);
+  await assert.rejects(second.saveUserLibraryAssetRecord({ ...winner, displayName: "Overwrite" }));
+  assert.equal((await first.readUserLibraryAssetRecordById(original.userLibraryAssetId))?.displayName, winner.displayName);
+});

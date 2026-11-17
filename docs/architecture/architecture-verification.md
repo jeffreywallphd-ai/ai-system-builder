@@ -38,4 +38,14 @@ This map connects high-value architectural claims to current automated evidence.
 
 ## Updating the Map
 
+Contributor control-plane evidence is owned by
+`dev-tools/scripts/testing/control-plane-guard.unit.test.mjs`, its focused Python
+delivery/roadmap/evaluation/HTTP tests and the roadmap engine tests. These qualify
+candidate freshness, executed grading, exact regression history and JSON review
+behavior. Hostile-code containment, authenticated review identity and live-model
+performance require separate qualification. Asset/system source-anchor checks
+accept LF and CRLF while preserving exact invariant values.
+
 When a test is added, renamed, or removed, update the corresponding row in the same change. Promote `representative` or `gap` only when a check directly owns the full stated invariant; do not promote coverage based only on a passing general test suite.
+
+The package upload fitness rule pins the shared contract default to32MiB and requires the inspector to import that exact contract and consume its binding. Focused mutation tests reject a changed or missing declaration and a different inspector default. Direct inspector configuration remains separate; no upload or admission budget is relaxed.

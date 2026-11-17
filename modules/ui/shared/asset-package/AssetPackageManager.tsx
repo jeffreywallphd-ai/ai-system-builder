@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type {
   AssetPackageInspectionSummary,
@@ -87,102 +87,211 @@ export function downloadAssetPackageStarter(
   }
 }
 
-export function AssetPackageManager({
-  workspaceId,
-  client,
-}: AssetPackageManagerProps) {
+function matchesPackageInspection(value: AssetPackageInspectionSummary, workspaceId: string) {
+  const strings = (items: readonly string[]) => Array.isArray(items) && items.every(item => typeof item === "string");
+  const optionalText = (item: unknown) => item === undefined || typeof item === "string";
+  return Boolean(value && value.workspaceId === workspaceId &&
+    typeof value.inspectionId === "string" && value.inspectionId.length > 0 &&
+    typeof value.packageDigest === "string" && value.packageDigest.length > 0 &&
+    typeof value.eligibleForAdmission === "boolean" &&
+    [value.packageId, value.version, value.displayName, value.publisher, value.formatVersion].every(optionalText) &&
+    (!value.eligibleForAdmission || (value.packageId && value.version)) &&
+    [value.definitionCount, value.implementationCount, value.entryCount, value.expandedSizeBytes].every(item => Number.isSafeInteger(item) && item >= 0) &&
+    strings(value.requestedCapabilities) && strings(value.supportedDeploymentProfiles) && strings(value.conflicts) &&
+    [value.signatureStatus, value.provenanceStatus, value.sbomStatus].every(item => ["verified", "unverified", "missing", "failed"].includes(item)) &&
+    Array.isArray(value.issues) && value.issues.every(issue => issue && ["info", "warning", "error"].includes(issue.severity) &&
+      typeof issue.code === "string" && typeof issue.message === "string" && optionalText(issue.path)));
+}
+
+function matchesPackageRecord(
+  value: AssetPackageRecord,
+  expected: { workspaceId: string; recordId?: string; packageId?: string; version?: string; packageDigest?: string; status?: AssetPackageRecord["status"] },
+) {
+  return Boolean(value && value.workspaceId === expected.workspaceId &&
+    typeof value.recordId === "string" && value.recordId.length > 0 &&
+    typeof value.packageId === "string" && value.packageId.length > 0 &&
+    typeof value.version === "string" && value.version.length > 0 &&
+    typeof value.packageDigest === "string" && value.packageDigest.length > 0 &&
+    typeof value.displayName === "string" &&
+    (value.trustLevel === undefined || typeof value.trustLevel === "string") &&
+    (value.previousActiveRecordId === undefined || typeof value.previousActiveRecordId === "string") &&
+    ["quarantined", "inspected", "rejected", "installed", "active", "disabled"].includes(value.status) &&
+    Number.isSafeInteger(value.revision) && value.revision > 0 &&
+    (!expected.recordId || value.recordId === expected.recordId) &&
+    (!expected.packageId || value.packageId === expected.packageId) &&
+    (!expected.version || value.version === expected.version) &&
+    (!expected.packageDigest || value.packageDigest === expected.packageDigest) &&
+    (!expected.status || value.status === expected.status));
+}
+
+export function AssetPackageManager(props: AssetPackageManagerProps) {
+  const [scope, setScope] = useState({ workspaceId: props.workspaceId, client: props.client, key: 0 });
+  if (scope.workspaceId !== props.workspaceId || scope.client !== props.client) {
+    setScope({ workspaceId: props.workspaceId, client: props.client, key: scope.key + 1 });
+    return null;
+  }
+  return <ScopedAssetPackageManager key={scope.key} {...props} />;
+}
+
+function ScopedAssetPackageManager({ workspaceId, client }: AssetPackageManagerProps) {
   const [inspection, setInspection] = useState<AssetPackageInspectionSummary>();
   const [packages, setPackages] = useState<readonly AssetPackageRecord[]>([]);
-  const [approvedCapabilities, setApprovedCapabilities] = useState<
-    readonly string[]
-  >([]);
+  const [approvedCapabilities, setApprovedCapabilities] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [listFailed, setListFailed] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const mounted = useRef(true);
+  const actionSequence = useRef(0);
+  const actionOwner = useRef<number | undefined>(undefined);
+  const listSequence = useRef(0);
+  const listOwner = useRef<number | undefined>(undefined);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const ownsAction = (owner: number) => mounted.current && actionOwner.current === owner;
+  const beginAction = () => {
+    if (!mounted.current || busy || actionOwner.current !== undefined) return;
+    const owner = ++actionSequence.current;
+    actionOwner.current = owner;
+    setBusy(true);
+    return owner;
+  };
+  const endAction = (owner: number) => {
+    if (!ownsAction(owner)) return;
+    actionOwner.current = undefined;
+    setBusy(false);
+  };
+  const ownsList = (owner: number) => mounted.current && listOwner.current === owner;
+  const invalidateList = () => {
+    const pending = listOwner.current !== undefined;
+    listOwner.current = undefined;
+    listSequence.current++;
+    setLoading(false);
+    setListFailed(pending);
+  };
+  const matchesList = (value: readonly AssetPackageRecord[]) => Array.isArray(value) &&
+    value.every(record => matchesPackageRecord(record, { workspaceId })) &&
+    new Set(value.map(record => record.recordId)).size === value.length;
+
+  async function loadPackages() {
+    if (!mounted.current || actionOwner.current !== undefined || listOwner.current !== undefined) return;
+    const owner = ++listSequence.current;
+    listOwner.current = owner;
+    setLoading(true);
+    setListFailed(false);
+    setError(undefined);
+    try {
+      const result = await client.list(workspaceId);
+      if (!ownsList(owner)) return;
+      if (!result.ok) { setError(result.error.message); setListFailed(true); }
+      else {
+        if (!matchesList(result.value)) throw new Error("Invalid package list response.");
+        setPackages(result.value);
+      }
+    } catch {
+      if (ownsList(owner)) { setError("Installed packages could not be loaded. Retry loading them."); setListFailed(true); }
+    } finally {
+      if (ownsList(owner)) { listOwner.current = undefined; setLoading(false); }
+    }
+  }
 
   useEffect(() => {
-    let active = true;
-    setInspection(undefined);
-    setApprovedCapabilities([]);
-    setError(undefined);
-    setNotice(undefined);
-    setLoading(true);
-    void client.list(workspaceId).then((result) => {
-      if (!active) return;
-      if (result.ok) setPackages(result.value);
-      else setError(result.error.message);
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
+    void loadPackages();
+    return () => { listOwner.current = undefined; };
   }, [client, workspaceId]);
 
   async function inspect(file: File | undefined) {
     if (!file) return;
-    setBusy(true);
+    const owner = beginAction();
+    if (owner === undefined) return;
     setError(undefined);
     setNotice(undefined);
     setInspection(undefined);
     setApprovedCapabilities([]);
     try {
-      const result = await client.inspect({
-        workspaceId,
-        bytes: new Uint8Array(await file.arrayBuffer()),
-      });
+      const buffer = await file.arrayBuffer();
+      if (!ownsAction(owner)) return;
+      const result = await client.inspect({ workspaceId, bytes: new Uint8Array(buffer) });
+      if (!ownsAction(owner)) return;
       if (!result.ok) setError(result.error.message);
-      else setInspection(result.value);
+      else {
+        const value = result.value;
+        if (!matchesPackageInspection(value, workspaceId)) throw new Error("Invalid package inspection response.");
+        setInspection(value);
+      }
     } catch {
-      setError("The package could not be read or inspected.");
-    } finally {
-      setBusy(false);
-    }
+      if (ownsAction(owner)) setError("The package could not be read or inspected. Choose it again to retry.");
+    } finally { endAction(owner); }
   }
 
   async function admit() {
-    if (!inspection) return;
-    setBusy(true);
-    setError(undefined);
-    const result = await client.admit({
-      workspaceId,
-      inspectionId: inspection.inspectionId,
-      packageDigest: inspection.packageDigest,
-      approvalScope: "workspace",
-      approvedCapabilities,
-    });
-    if (!result.ok) setError(result.error.message);
-    else {
-      setPackages((current) => replaceRecord(current, result.value));
-      setNotice(
-        `${result.value.displayName} was installed for this workspace.`,
-      );
-      setInspection(undefined);
-      setApprovedCapabilities([]);
-    }
-    setBusy(false);
-  }
-
-  async function mutate(
-    record: AssetPackageRecord,
-    operation: "activate" | "disable" | "rollback",
-  ) {
-    setBusy(true);
+    if (!inspection?.eligibleForAdmission || !inspection.requestedCapabilities.every(capability => approvedCapabilities.includes(capability))) return;
+    const owner = beginAction();
+    if (owner === undefined) return;
+    invalidateList();
     setError(undefined);
     setNotice(undefined);
-    const result = await client[operation]({
-      workspaceId,
-      recordId: record.recordId,
-    });
-    if (!result.ok) setError(result.error.message);
-    else {
+    try {
+      const result = await client.admit({ workspaceId, inspectionId: inspection.inspectionId, packageDigest: inspection.packageDigest,
+        approvalScope: "workspace", approvedCapabilities: [...approvedCapabilities] });
+      if (!ownsAction(owner)) return;
+      if (!result.ok) setError(result.error.message);
+      else {
+        if (!matchesPackageRecord(result.value, { workspaceId, packageId: inspection.packageId, version: inspection.version, packageDigest: inspection.packageDigest }) ||
+          !["installed", "active", "disabled"].includes(result.value.status)) throw new Error("Invalid package installation response.");
+        setPackages(current => replaceRecord(current, result.value));
+        setNotice(`${result.value.displayName} is installed for this workspace.`);
+        setInspection(undefined);
+        setApprovedCapabilities([]);
+        await refreshAfterAction(owner, result.value);
+      }
+    } catch {
+      if (ownsAction(owner)) setError("The package could not be installed. Refresh installed packages before trying again.");
+    } finally { endAction(owner); }
+  }
+
+  async function refreshAfterAction(owner: number, acknowledged: AssetPackageRecord) {
+    try {
       const refreshed = await client.list(workspaceId);
-      setPackages(
-        refreshed.ok ? refreshed.value : replaceRecord(packages, result.value),
-      );
-      setNotice(`${result.value.displayName} is now ${result.value.status}.`);
+      if (!ownsAction(owner)) return;
+      if (!refreshed.ok || !matchesList(refreshed.value)) throw new Error("Package refresh unavailable.");
+      const target = refreshed.value.find(record => record.recordId === acknowledged.recordId);
+      if (!target || !matchesPackageRecord(target, { workspaceId, recordId: acknowledged.recordId, packageId: acknowledged.packageId,
+        version: acknowledged.version, packageDigest: acknowledged.packageDigest }) || target.revision < acknowledged.revision ||
+        (target.revision === acknowledged.revision && target.status !== acknowledged.status)) throw new Error("Package refresh is inconsistent.");
+      setPackages(refreshed.value);
+      setListFailed(false);
+      if (target.revision > acknowledged.revision) setNotice(`${target.displayName} is now ${target.status}.`);
+    } catch {
+      if (ownsAction(owner)) { setListFailed(true); setError("The package was updated, but installed packages could not be refreshed. Retry loading them."); }
     }
-    setBusy(false);
+  }
+
+  async function mutate(record: AssetPackageRecord, operation: "activate" | "disable" | "rollback") {
+    const expectedId = operation === "rollback" ? record.previousActiveRecordId : record.recordId;
+    if (!expectedId || !matchesPackageRecord(record, { workspaceId }) ||
+      (operation === "activate" && !["installed", "disabled"].includes(record.status))) return;
+    const owner = beginAction();
+    if (owner === undefined) return;
+    const target = operation === "rollback" ? packages.find(value => value.recordId === expectedId) : record;
+    invalidateList();
+    setError(undefined);
+    setNotice(undefined);
+    try {
+      const result = await client[operation]({ workspaceId, recordId: record.recordId });
+      if (!ownsAction(owner)) return;
+      if (!result.ok) { setError(result.error.message); return; }
+      if (!matchesPackageRecord(result.value, { workspaceId, recordId: expectedId, packageId: record.packageId,
+        version: target?.version, packageDigest: target?.packageDigest, status: operation === "disable" ? "disabled" : "active" })) throw new Error("Invalid package lifecycle response.");
+      setPackages(current => replaceRecord(current, result.value));
+      setNotice(`${result.value.displayName} is now ${result.value.status}.`);
+      await refreshAfterAction(owner, result.value);
+    } catch {
+      if (ownsAction(owner)) setError("The package action could not be completed. Refresh installed packages before trying again.");
+    } finally { endAction(owner); }
   }
 
   const allCapabilitiesApproved =
@@ -194,6 +303,7 @@ export function AssetPackageManager({
     <section
       className="ui-panel ui-panel--sectioned asset-package-manager"
       aria-labelledby="asset-packages-title"
+      aria-busy={busy || loading}
     >
       <header className="ui-panel__section-header">
         <div className="ui-panel-heading ui-panel-heading--violet">
@@ -264,7 +374,7 @@ export function AssetPackageManager({
           >
             <label className="asset-package-manager__file ui-button ui-button--outline">
               <ApplicationIcon name="upload" />
-              <span>{busy ? "Inspecting…" : "Choose package"}</span>
+              <span>{busy ? "Working…" : "Choose package"}</span>
               <input
                 type="file"
                 accept=".aisb-package,application/vnd.ai-system-builder.package.v1+json"
@@ -339,7 +449,7 @@ export function AssetPackageManager({
                     No inspection issues were found.
                   </p>
                 )}
-                <fieldset className="ui-workflow__subpanel">
+                <fieldset className="ui-workflow__subpanel" disabled={busy}>
                   <legend>Requested capabilities</legend>
                   {inspection.requestedCapabilities.length ? (
                     inspection.requestedCapabilities.map((capability) => (
@@ -396,8 +506,14 @@ export function AssetPackageManager({
           aria-labelledby="installed-packages-title"
         >
           <h3 id="installed-packages-title">Installed packages</h3>
+          <button type="button" className="ui-button ui-button--outline" disabled={busy || loading}
+            onClick={() => void loadPackages()}>
+            {listFailed ? "Retry loading installed packages" : "Refresh installed packages"}
+          </button>
           {loading ? (
             <p role="status">Loading installed packages…</p>
+          ) : listFailed && packages.length === 0 ? (
+            <p className="ui-text-muted">Refresh installed packages to view this list.</p>
           ) : packages.length === 0 ? (
             <EmptyState
               title="No packages installed"
@@ -423,7 +539,7 @@ export function AssetPackageManager({
                     {record.status !== "active" ? (
                       <button
                         type="button"
-                        disabled={busy}
+                        disabled={busy || !["installed", "disabled"].includes(record.status)}
                         onClick={() => void mutate(record, "activate")}
                       >
                         <ApplicationIcon name="play" />

@@ -14,6 +14,7 @@ export function PythonRuntimeFooter({ enabled, client }: PythonRuntimeFooterProp
 function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) {
   const {
     statusLabel,
+    startupDiagnostics,
     healthLabel,
     capabilitiesLabel,
     systemResources,
@@ -25,15 +26,20 @@ function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) 
     onRestart,
     onRefresh,
     onClearLogs,
+    onCopyDiagnostics,
     logsExpanded,
     setLogsExpanded,
   } = usePythonRuntimeFooter({
     enabled,
     client,
   });
+  const unsupportedPython = statusLabel === "failed"
+    && startupDiagnostics?.outcome === "failed"
+    && startupDiagnostics.phase === "context"
+    && startupDiagnostics.reason === "unsupported-python";
 
   return (
-    <footer className="ui-python-runtime-footer ui-panel ui-stack ui-stack--sm" aria-label="Python runtime controls">
+    <footer className="ui-python-runtime-footer ui-panel ui-stack ui-stack--sm" aria-label="Python runtime controls" aria-busy={loading}>
       <div className="ui-python-runtime-footer__header">
         <h3 className="ui-panel__title">Python Runtime</h3>
         <div className="ui-python-runtime-footer__actions">
@@ -41,11 +47,19 @@ function PythonRuntimeFooterBody({ enabled, client }: PythonRuntimeFooterProps) 
           <button className="ui-button" type="button" onClick={() => void onStop()} disabled={loading}>Stop</button>
           <button className="ui-button" type="button" onClick={() => void onRestart()} disabled={loading}>Restart</button>
           <button className="ui-button" type="button" onClick={() => void onRefresh()} disabled={loading}>Refresh</button>
+          <button className="ui-button" type="button" onClick={() => void onCopyDiagnostics()} disabled={loading}>Copy diagnostics</button>
         </div>
       </div>
+      {loading ? <p role="status">Waiting for the runtime response...</p> : null}
       <p>
         Status: <strong>{statusLabel}</strong> | Health: <strong>{healthLabel}</strong> | Capabilities: {capabilitiesLabel}
       </p>
+      {unsupportedPython ? (
+        <p role="status">
+          This Python version cannot run the model download worker. Install Python 3.14, then reopen AI System Builder and retry the download.
+          {" "}If you set a custom Python command, update it before reopening.
+        </p>
+      ) : null}
       <section className="ui-python-runtime-footer__resources" aria-label="System resource tracker">
         <h4 className="ui-python-runtime-footer__resources-title">System resources</h4>
         <ul className="ui-python-runtime-footer__resource-list">

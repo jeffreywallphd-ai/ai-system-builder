@@ -7,6 +7,7 @@ const python =
   process.env.PYTHON ?? (process.platform === "win32" ? "python" : "python3");
 const controlledAiTests = [
   "modules.adapters.runtime.python.worker.tests.test_constrained_json_outlines_integration",
+  "modules.adapters.runtime.python.worker.tests.test_context_generation_ai_e2e",
 ];
 const result = spawnSync(python, ["-m", "unittest", ...controlledAiTests], {
   cwd: process.cwd(),

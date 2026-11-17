@@ -1,6 +1,10 @@
+import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
+import { useDatasetPreparationConstrainedJson } from "../../../../../../../modules/ui/shared/data-management/useDatasetPreparationConstrainedJson";
+import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -9,6 +13,7 @@ import {
 
 import type { ModelDefaultInferenceMode } from "../../../../../../../modules/contracts/settings";
 import type { DatasetVersionReproduction } from "../../../../../../../modules/contracts/dataset";
+import { captureDatasetVersionReplayRequest, projectDatasetVersionReplaySources, validateDatasetVersionReplay, type DatasetVersionReplayContext } from "../../../../../../../modules/ui/shared/dataset-version/datasetVersionReplay";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
 import type {
   DatasetPreparationTaskType,
@@ -19,6 +24,7 @@ import type {
   DatasetPreparationConstrainedJsonResolution,
   DatasetPreparationGenerationCapacitySnapshot,
   DatasetPreparationMemoryOverflowPolicy,
+  DatasetPreparationMemoryMode,
   DatasetPreparationMethodId,
   DatasetPreparationTextInputMode,
   DatasetQualityPreset,
@@ -39,10 +45,12 @@ import {
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationParameterDefaults,
   resolveDefaultDatasetPreparationTextGenerationModel,
-  resolveDatasetPreparationConstrainedJson,
   resolveDatasetPreparationGenerationModelCapacity,
   resolveDatasetPreparationGenerationModelEstimatedBytes,
   validateDatasetPreparationSaveName,
+  isDatasetPreparationOffloadAvailable,
+  normalizeDatasetPreparationMemoryMode,
+  resolveDatasetPreparationOcrChoice,
 } from "../../../../../../../modules/contracts/runtime";
 import {
   createDesktopApplicationSettingsClient,
@@ -76,6 +84,7 @@ import {
 interface DatasetPreparationStatus {
   kind: "idle" | "loading" | "success" | "error";
   message?: string;
+  memoryNotification?: "page" | "task";
 }
 
 interface DatasetPreparationResultSummary {
@@ -113,6 +122,8 @@ interface DatasetPreparationPageState {
   constrainedDecodingPreference?: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
+  ocrEnabled: boolean;
+  ocrLanguage: string;
   chunkSize: string;
   chunkOverlap: string;
   preserveDocumentBoundaries: boolean;
@@ -126,6 +137,7 @@ interface DatasetPreparationPageState {
   modelDevice: "" | "auto" | "cpu" | "cuda";
   modelTorchDtype: "" | "auto" | "float16" | "bfloat16" | "float32";
   modelMemoryOverflowPolicy: DatasetPreparationMemoryOverflowPolicy;
+  modelMemoryMode: DatasetPreparationMemoryMode;
   maxExamplesPerChunk: string;
   batchSize: string;
   failurePolicy: "" | "fail" | "skip";
@@ -183,6 +195,8 @@ export interface SavedDatasetPreparationTrainingSettings {
 }
 
 export interface UseDatasetPreparationFeatureResult {
+  sourceLoadStatus: "loading" | "ready" | "failed";
+  retrySourceArtifacts: () => void;
   artifacts: DatasetPreparationSourceArtifact[];
   allArtifactCount: number;
   filteredArtifacts: DatasetPreparationSourceArtifact[];
@@ -209,8 +223,13 @@ export interface UseDatasetPreparationFeatureResult {
   constrainedJsonResolution: DatasetPreparationConstrainedJsonResolution;
   constrainedDecodingEnabled: boolean;
   constrainedDecodingAvailable: boolean;
+  constrainedSchemaValid: boolean;
+  lowMemoryAvailable: boolean;
+  ocrEligible: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
+  ocrEnabled: boolean;
+  ocrLanguage: string;
   chunkSize: string;
   chunkOverlap: string;
   preserveDocumentBoundaries: boolean;
@@ -224,6 +243,7 @@ export interface UseDatasetPreparationFeatureResult {
   modelDevice: "" | "auto" | "cpu" | "cuda";
   modelTorchDtype: "" | "auto" | "float16" | "bfloat16" | "float32";
   modelMemoryOverflowPolicy: DatasetPreparationMemoryOverflowPolicy;
+  modelMemoryMode: DatasetPreparationMemoryMode;
   maxExamplesPerChunk: string;
   batchSize: string;
   failurePolicy: "" | "fail" | "skip";
@@ -287,6 +307,8 @@ export interface UseDatasetPreparationFeatureResult {
   setConstrainedDecodingPreference: (value: boolean) => void;
   setUnsupportedDocumentPolicy: (value: "" | "fail" | "skip") => void;
   setNormalizationMode: (value: "" | "best-effort" | "strict") => void;
+  setOcrEnabled: (value: boolean) => void;
+  setOcrLanguage: (value: string) => void;
   setChunkSize: (value: string) => void;
   setChunkOverlap: (value: string) => void;
   setPreserveDocumentBoundaries: (value: boolean) => void;
@@ -301,6 +323,7 @@ export interface UseDatasetPreparationFeatureResult {
   setModelTorchDtype: (
     value: "" | "auto" | "float16" | "bfloat16" | "float32",
   ) => void;
+  setModelMemoryMode: (value: DatasetPreparationMemoryMode) => void;
   setModelMemoryOverflowPolicy: (
     value: DatasetPreparationMemoryOverflowPolicy,
   ) => void;
@@ -335,7 +358,7 @@ export interface UseDatasetPreparationFeatureResult {
   onDownloadGenerationModel: () => Promise<void>;
   onSaveTrainingSettings: () => void;
   onLoadTrainingSettings: () => void;
-  onReuseDatasetVersion: (reproduction: DatasetVersionReproduction) => void;
+  onReuseDatasetVersion: (reproduction: DatasetVersionReproduction, context?: Pick<DatasetVersionReplayContext, "workspaceId" | "selectedVersion" | "datasetArtifactKey">, isRequestCurrent?: () => boolean) => Promise<boolean>;
 }
 
 export interface UseDatasetPreparationFeatureOptions {
@@ -399,6 +422,8 @@ const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
   constrainedDecodingPreference: undefined,
   unsupportedDocumentPolicy: "",
   normalizationMode: "",
+  ocrEnabled: false,
+  ocrLanguage: "",
   chunkSize: "1000",
   chunkOverlap: "200",
   preserveDocumentBoundaries: true,
@@ -412,6 +437,7 @@ const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
   modelDevice: defaultTaskGenerationModel?.device ?? "auto",
   modelTorchDtype: defaultTaskGenerationModel?.torchDtype ?? "",
   modelMemoryOverflowPolicy: "limited",
+  modelMemoryMode: "standard",
   maxExamplesPerChunk: defaultTaskGenerationParameters.maxExamplesPerChunk,
   batchSize: defaultTaskGenerationParameters.batchSize,
   failurePolicy: defaultTaskGenerationParameters.failurePolicy,
@@ -443,14 +469,10 @@ const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
   activeTaskStartedAt: undefined,
 };
 
-let cachedDatasetPreparationPageState: DatasetPreparationPageState = {
-  ...defaultDatasetPreparationPageState,
-};
-let cachedDatasetPreparationModelSelectionExplicit = false;
-
+const workspaceDrafts = new Map<string, { state: DatasetPreparationPageState; modelSelectionExplicit: boolean }>();
 export function resetDatasetPreparationPageStateForTests(): void {
-  cachedDatasetPreparationPageState = { ...defaultDatasetPreparationPageState };
-  cachedDatasetPreparationModelSelectionExplicit = false;
+  workspaceDrafts.clear();
+  try { for (const key of Object.keys(window.sessionStorage)) if (key.startsWith("ai-system-builder.preparation-task.v1:")) window.sessionStorage.removeItem(key); } catch { /* Restricted test storage. */ }
   try {
     if (typeof window !== "undefined") {
       window.localStorage?.removeItem(
@@ -573,6 +595,8 @@ function createDefaultTrainingSettingsSnapshot(
     constrainedDecodingPreference: undefined,
     unsupportedDocumentPolicy: "",
     normalizationMode: "",
+    ocrEnabled: false,
+    ocrLanguage: "",
     chunkSize: defaultDatasetPreparationPageState.chunkSize,
     chunkOverlap: defaultDatasetPreparationPageState.chunkOverlap,
     preserveDocumentBoundaries:
@@ -587,6 +611,7 @@ function createDefaultTrainingSettingsSnapshot(
     modelDevice: taskModelDefault?.device ?? "auto",
     modelTorchDtype: taskModelDefault?.torchDtype ?? "",
     modelMemoryOverflowPolicy: "limited",
+    modelMemoryMode: "standard",
     maxExamplesPerChunk: generationParameters.maxExamplesPerChunk,
     batchSize: generationParameters.batchSize,
     failurePolicy: generationParameters.failurePolicy,
@@ -703,9 +728,25 @@ function isTransientPollReadFailure(
 export function useDatasetPreparationFeature(
   options: UseDatasetPreparationFeatureOptions = {},
 ): UseDatasetPreparationFeatureResult {
+  const observer = useTaskObservationManager();
   const pollingRecoveryGraceWindowMs = 30_000;
   const onPrepared = options.onPrepared;
   const workspaceId = options.workspaceId;
+  const taskStorageKey = `ai-system-builder.preparation-task.v1:${workspaceId ?? "none"}`;
+  const hadCachedDraft = workspaceDrafts.has(workspaceId ?? "none");
+  let cachedWorkspace = workspaceDrafts.get(workspaceId ?? "none");
+  if (!cachedWorkspace) {
+    const state = structuredClone(defaultDatasetPreparationPageState);
+    try {
+      const requestId = sessionStorage.getItem(taskStorageKey);
+      if (requestId && requestId.length <= 512) { state.activeTaskRequestId = requestId; state.activeTaskType = "dataset-preparation"; state.status = { kind: "loading", message: "Restoring dataset progress..." }; }
+    } catch { /* Opaque recovery IDs are optional in restricted sessions. */ }
+    cachedWorkspace = { state, modelSelectionExplicit: false };
+    workspaceDrafts.set(workspaceId ?? "none", cachedWorkspace);
+    if (workspaceDrafts.size > 64) workspaceDrafts.delete(workspaceDrafts.keys().next().value!);
+  }
+  const cachedDatasetPreparationPageState = cachedWorkspace.state;
+
   const datasetClient = useDatasetPreparationClient(options.client);
   const modelClient = useMemo<DesktopModelsClient | undefined>(() => {
     if (options.modelsClient) {
@@ -737,9 +778,26 @@ export function useDatasetPreparationFeature(
       return undefined;
     }
   }, [options.runtimeStatusClient]);
+  const runtimeStatusFlight = useRef<{ client: typeof runtimeStatusClient; pending: boolean } | undefined>(undefined);
   const [artifacts, setArtifacts] = useState<
     DatasetPreparationSourceArtifact[]
   >([]);
+  const [artifactsLoaded, setArtifactsLoaded] = useState(false);
+  const [sourceLoadState, setSourceLoadState] = useState<{ workspaceId: string | undefined; status: "loading" | "ready" | "failed" }>({ workspaceId, status: "loading" });
+  const sourceRequestId = useRef(0);
+  const sourceScope = useRef<{ workspaceId: string | undefined; client: typeof datasetClient } | undefined>(undefined);
+  const previousSourceWorkspace = useRef(workspaceId);
+  useLayoutEffect(() => {
+    const scope = { workspaceId, client: datasetClient };
+    sourceScope.current = scope;
+    ++sourceRequestId.current;
+    setArtifactsLoaded(false);
+    setArtifacts([]);
+    setSourceLoadState({ workspaceId, status: "loading" });
+    if (previousSourceWorkspace.current !== workspaceId) setSelectedArtifactIds([]);
+    previousSourceWorkspace.current = workspaceId;
+    return () => { if (sourceScope.current === scope) { sourceScope.current = undefined; ++sourceRequestId.current; } };
+  }, [datasetClient, workspaceId]);
   const [selectedArtifactStorageFilter, setSelectedArtifactStorageFilter] =
     useState<DatasetPreparationArtifactStorageFilter>(
       cachedDatasetPreparationPageState.selectedArtifactStorageFilter,
@@ -804,6 +862,8 @@ export function useDatasetPreparationFeature(
   const [normalizationMode, setNormalizationMode] = useState<
     "" | "best-effort" | "strict"
   >(cachedDatasetPreparationPageState.normalizationMode);
+  const [ocrEnabled, setOcrEnabled] = useState(cachedDatasetPreparationPageState.ocrEnabled ?? false);
+  const [ocrLanguage, setOcrLanguage] = useState(cachedDatasetPreparationPageState.ocrLanguage ?? "");
   const [chunkSize, setChunkSize] = useState(
     cachedDatasetPreparationPageState.chunkSize,
   );
@@ -829,7 +889,7 @@ export function useDatasetPreparationFeature(
     cachedDatasetPreparationPageState.similarityThreshold,
   );
   const modelSelectionExplicitRef = useRef(
-    cachedDatasetPreparationModelSelectionExplicit,
+    cachedWorkspace.modelSelectionExplicit,
   );
   const [modelId, setModelIdState] = useState(
     cachedDatasetPreparationPageState.modelId,
@@ -844,13 +904,17 @@ export function useDatasetPreparationFeature(
   const [modelTorchDtype, setModelTorchDtypeState] = useState<
     "" | "auto" | "float16" | "bfloat16" | "float32"
   >(cachedDatasetPreparationPageState.modelTorchDtype);
+  const [modelMemoryMode, setModelMemoryMode] =
+    useState<DatasetPreparationMemoryMode>(
+      cachedDatasetPreparationPageState.modelMemoryMode ?? "standard",
+    );
   const [modelMemoryOverflowPolicy, setModelMemoryOverflowPolicy] =
     useState<DatasetPreparationMemoryOverflowPolicy>(
       cachedDatasetPreparationPageState.modelMemoryOverflowPolicy ?? "limited",
     );
   const markModelSelectionExplicit = useCallback(() => {
     modelSelectionExplicitRef.current = true;
-    cachedDatasetPreparationModelSelectionExplicit = true;
+    cachedWorkspace.modelSelectionExplicit = true;
   }, []);
   const setModelId = useCallback(
     (value: string) => {
@@ -969,6 +1033,12 @@ export function useDatasetPreparationFeature(
   const [runtimeActiveTaskCount, setRuntimeActiveTaskCount] = useState(0);
   const [stopTrainingInFlight, setStopTrainingInFlight] = useState(false);
   const [reviewActionInFlight, setReviewActionInFlight] = useState(false);
+  const reviewActionOwnerRef = useRef<object | undefined>(undefined);
+  useLayoutEffect(() => {
+    reviewActionOwnerRef.current = undefined;
+    setReviewActionInFlight(false);
+    return () => { reviewActionOwnerRef.current = undefined; };
+  }, [datasetClient, workspaceId]);
   const [unloadModelInFlight, setUnloadModelInFlight] = useState(false);
   const [generationModelRecords, setGenerationModelRecords] = useState<
     DesktopModelInventoryRecord[]
@@ -984,23 +1054,27 @@ export function useDatasetPreparationFeature(
   >(() => readSavedTrainingSettingsFromStorage());
   const [selectedSavedTrainingSettingsId, setSelectedSavedTrainingSettingsId] =
     useState("");
-  const stopTrainingRequestedRef = useRef(false);
+  const cancellationMessageRef = useRef<string | undefined>(undefined);
+  const cancelRequestRef = useRef<object | undefined>(undefined);
   const activePollingRequestIdRef = useRef<string | undefined>(undefined);
   const pollingSessionIdRef = useRef(0);
   const isMountedRef = useRef(false);
-  const suppressNextTaskDefaultResetRef = useRef(false);
+  const suppressNextTaskDefaultResetRef = useRef(hadCachedDraft);
 
   useEffect(() => {
     isMountedRef.current = true;
+    cancelRequestRef.current = undefined;
+    cancellationMessageRef.current = undefined;
+    setStopTrainingInFlight(false);
     return () => {
       isMountedRef.current = false;
       activePollingRequestIdRef.current = undefined;
       pollingSessionIdRef.current += 1;
     };
-  }, []);
+  }, [workspaceId]);
 
   useEffect(() => {
-    cachedDatasetPreparationPageState = {
+    Object.assign(cachedDatasetPreparationPageState, {
       selectedArtifactStorageFilter,
       selectedArtifactIds,
       advancedPreset,
@@ -1020,6 +1094,8 @@ export function useDatasetPreparationFeature(
       constrainedDecodingPreference,
       unsupportedDocumentPolicy,
       normalizationMode,
+      ocrEnabled,
+      ocrLanguage,
       chunkSize,
       chunkOverlap,
       preserveDocumentBoundaries,
@@ -1033,6 +1109,7 @@ export function useDatasetPreparationFeature(
       modelDevice,
       modelTorchDtype,
       modelMemoryOverflowPolicy,
+      modelMemoryMode,
       maxExamplesPerChunk,
       batchSize,
       failurePolicy,
@@ -1061,7 +1138,7 @@ export function useDatasetPreparationFeature(
       activeTaskRequestId,
       activeTaskType: activeTaskRequestId ? "dataset-preparation" : undefined,
       activeTaskStartedAt,
-    };
+    });
   }, [
     selectedArtifactStorageFilter,
     selectedArtifactIds,
@@ -1082,6 +1159,8 @@ export function useDatasetPreparationFeature(
     constrainedDecodingPreference,
     unsupportedDocumentPolicy,
     normalizationMode,
+    ocrEnabled,
+    ocrLanguage,
     chunkSize,
     chunkOverlap,
     preserveDocumentBoundaries,
@@ -1095,6 +1174,7 @@ export function useDatasetPreparationFeature(
     modelDevice,
     modelTorchDtype,
     modelMemoryOverflowPolicy,
+    modelMemoryMode,
     maxExamplesPerChunk,
     batchSize,
     failurePolicy,
@@ -1146,11 +1226,12 @@ export function useDatasetPreparationFeature(
       }),
     );
     modelSelectionExplicitRef.current = false;
-    cachedDatasetPreparationModelSelectionExplicit = false;
+    cachedWorkspace.modelSelectionExplicit = false;
     setModelIdState(taskModelDefault?.modelId ?? "");
     setModelInferenceModeState(taskModelDefault?.inferenceMode ?? "auto");
     setModelDeviceState(taskModelDefault?.device ?? "auto");
     setModelTorchDtypeState(taskModelDefault?.torchDtype ?? "");
+    setModelMemoryMode("standard");
     setMaxExamplesPerChunk(generationParameters.maxExamplesPerChunk);
     setBatchSize(generationParameters.batchSize);
     setFailurePolicy(generationParameters.failurePolicy);
@@ -1158,6 +1239,8 @@ export function useDatasetPreparationFeature(
     setGenerationTopP(generationParameters.generationTopP);
     setGenerationMaxNewTokens(generationParameters.generationMaxNewTokens);
     setPreparationMethodId(undefined);
+    setOcrEnabled(false);
+    setOcrLanguage("");
   }, [taskType]);
 
   useEffect(() => {
@@ -1186,7 +1269,19 @@ export function useDatasetPreparationFeature(
     });
   }, []);
 
+  const retireTaskRecovery = useCallback((requestId: string) => {
+    if (!workspaceId) return;
+    try {
+      if (sessionStorage.getItem(taskStorageKey) === requestId) {
+        sessionStorage.removeItem(taskStorageKey);
+      }
+    } catch { /* A successful task remains successful if session storage is unavailable. */ }
+  }, [taskStorageKey, workspaceId]);
+
   const clearActiveTask = useCallback(() => {
+    cancellationMessageRef.current = undefined;
+    cancelRequestRef.current = undefined;
+    setStopTrainingInFlight(false);
     setActiveTaskRequestId(undefined);
     setActiveTaskStartedAt(undefined);
     activePollingRequestIdRef.current = undefined;
@@ -1199,36 +1294,60 @@ export function useDatasetPreparationFeature(
     const startedAt = new Date().toISOString();
     setActiveTaskRequestId(requestId);
     setActiveTaskStartedAt(startedAt);
+    try { sessionStorage.setItem(taskStorageKey, requestId); } catch { /* Accepted work remains observable in this session. */ }
     cachedDatasetPreparationPageState.activeTaskRequestId = requestId;
     cachedDatasetPreparationPageState.activeTaskType = "dataset-preparation";
     cachedDatasetPreparationPageState.activeTaskStartedAt = startedAt;
   }, []);
 
   const refreshArtifacts = useCallback(async () => {
-    const sourceArtifacts =
-      await datasetClient.browseSourceArtifacts(workspaceId);
-    setArtifacts(sourceArtifacts);
-    setSelectedArtifactIds((current) => {
-      const validArtifactIds = new Set(
-        sourceArtifacts.map((artifact) => artifact.artifactId),
-      );
-      return current.filter((artifactId) => validArtifactIds.has(artifactId));
-    });
+    const scope = sourceScope.current;
+    if (!scope || scope.workspaceId !== workspaceId || scope.client !== datasetClient) return;
+    const requestId = ++sourceRequestId.current;
+    const current = () => isMountedRef.current && sourceScope.current === scope && sourceRequestId.current === requestId;
+    setArtifactsLoaded(false);
+    setSourceLoadState({ workspaceId, status: "loading" });
+    try {
+      const sourceArtifacts = await datasetClient.browseSourceArtifacts(workspaceId);
+      if (!current()) return;
+      if (!Array.isArray(sourceArtifacts) || sourceArtifacts.some(item => !item ||
+          typeof item.artifactId !== "string" || !item.artifactId ||
+          typeof item.storageKey !== "string" || !item.storageKey || typeof item.label !== "string")) throw new Error();
+      setArtifacts(sourceArtifacts);
+      setArtifactsLoaded(true);
+      setSourceLoadState({ workspaceId, status: "ready" });
+      setSelectedArtifactIds(selected => {
+        const validIds = new Set(sourceArtifacts.map(artifact => artifact.artifactId));
+        const next = selected.filter(id => validIds.has(id));
+        return next.length === selected.length ? selected : next;
+      });
+    } catch {
+      if (current()) {
+        setArtifactsLoaded(false);
+        setSourceLoadState({ workspaceId, status: "failed" });
+      }
+    }
   }, [datasetClient, workspaceId]);
 
   const refreshRuntimeModelStatus = useCallback(async () => {
     if (!runtimeStatusClient) {
+      setGenerationCapacity(undefined);
       return;
     }
-
+    if (runtimeStatusFlight.current?.client === runtimeStatusClient && runtimeStatusFlight.current.pending) return;
+    const flight = { client: runtimeStatusClient, pending: true };
+    runtimeStatusFlight.current = flight;
     try {
       const snapshot = await runtimeStatusClient.readStatus();
+      if (runtimeStatusFlight.current !== flight || !isMountedRef.current) return;
       setLoadedModelCount(snapshot.loadedModels.length);
       setRuntimeActiveTaskCount(snapshot.activeTaskCount);
-      setGenerationCapacity(snapshot.generationCapacity);
+      setGenerationCapacity(snapshot.generationCapacity ? { ...snapshot.generationCapacity } : undefined);
     } catch {
       // Runtime status is best-effort for model lifecycle controls.
-      setGenerationCapacity(undefined);
+      if (runtimeStatusFlight.current === flight && isMountedRef.current) setGenerationCapacity(undefined);
+    } finally {
+      flight.pending = false;
     }
   }, [runtimeStatusClient]);
 
@@ -1272,8 +1391,7 @@ export function useDatasetPreparationFeature(
       return (
         isMountedRef.current &&
         activePollingRequestIdRef.current === requestId &&
-        pollingSessionIdRef.current === sessionId &&
-        !stopTrainingRequestedRef.current
+        pollingSessionIdRef.current === sessionId
       );
     },
     [],
@@ -1288,10 +1406,10 @@ export function useDatasetPreparationFeature(
       while (isPollingStillActive(requestId, pollingSessionId)) {
         try {
           const pollResponse =
-            await datasetClient.readPrepareTrainingDatasetTask(
-              requestId,
-              workspaceId,
-            );
+            await observer.readOnce({ workspaceId: workspaceId!, family: "dataset-preparation", requestId }, async () => {
+              const value = await datasetClient.readPrepareTrainingDatasetTask(requestId, workspaceId);
+              return { value, activity: value.ok && (value.status === "pending" || value.status === "running") ? "active" : "terminal" };
+            });
           if (!isPollingStillActive(requestId, pollingSessionId)) return;
           if (pollResponse.ok === false) {
             if (!pollRecoveryStartedAtMs) pollRecoveryStartedAtMs = Date.now();
@@ -1325,6 +1443,7 @@ export function useDatasetPreparationFeature(
             clearActiveTask();
             setStatus({
               kind: "error",
+              memoryNotification: pollResponse.error.code === "generation_insufficient_resources" ? "task" : undefined,
               message: appendErrorDetailsMessage(
                 pollResponse.error.message,
                 pollResponse.error.details,
@@ -1344,7 +1463,7 @@ export function useDatasetPreparationFeature(
                 : "";
             setStatus({
               kind: "loading",
-              message: `${pollResponse.progress?.message ?? "Preparing training dataset..."}${suffix}`,
+              message: `${cancellationMessageRef.current ?? pollResponse.progress?.message ?? "Preparing training dataset..."}${suffix}`,
             });
             await new Promise<void>((resolve) =>
               window.setTimeout(resolve, 750),
@@ -1387,6 +1506,7 @@ export function useDatasetPreparationFeature(
             return;
           }
           if (pollResponse.status === "succeeded") {
+            retireTaskRecovery(requestId);
             clearActiveTask();
             setStatus({
               kind: "success",
@@ -1464,19 +1584,18 @@ export function useDatasetPreparationFeature(
       ) {
         return;
       }
-      if (stopTrainingRequestedRef.current) {
-        clearActiveTask();
-        setStatus({ kind: "idle", message: "Training stopped." });
-      }
+
     },
     [
       clearActiveTask,
       datasetClient,
+      observer,
       isPollingStillActive,
       onPrepared,
       pollingRecoveryGraceWindowMs,
       refreshArtifacts,
       refreshRuntimeModelStatus,
+      retireTaskRecovery,
     ],
   );
 
@@ -1486,11 +1605,7 @@ export function useDatasetPreparationFeature(
   }, [activeTaskRequestId, pollDatasetPreparationTask, status.kind]);
 
   useEffect(() => {
-    void refreshArtifacts().catch((error) => {
-      const message =
-        error instanceof Error ? error.message : "Failed to load artifacts.";
-      setStatus({ kind: "error", message });
-    });
+    void refreshArtifacts();
   }, [refreshArtifacts]);
 
   useEffect(() => {
@@ -1562,15 +1677,17 @@ export function useDatasetPreparationFeature(
   ]);
 
   useEffect(() => {
+    if (!artifactsLoaded) return;
     setSelectedArtifactIds((current) => {
       const relevantArtifactIds = new Set(
         taskRelevantArtifacts.map((artifact) => artifact.artifactId),
       );
-      return current.filter((artifactId) =>
+      const next = current.filter((artifactId) =>
         relevantArtifactIds.has(artifactId),
       );
+      return next.length === current.length ? current : next;
     });
-  }, [taskRelevantArtifacts]);
+  }, [artifactsLoaded, taskRelevantArtifacts]);
 
   const selectedSourceCapabilities = useMemo(
     () =>
@@ -1633,7 +1750,8 @@ export function useDatasetPreparationFeature(
       }),
     [labelSet, multiLabel, outputFormat, taskType, visualOutputShape],
   );
-  const constrainedDecodingAvailable =
+  const lowMemoryAvailable = isDatasetPreparationOffloadAvailable(generationCapacity);
+  const constrainedDecodingReady =
     preparationPlan?.generationMode !== undefined &&
     preparationPlan.generationMode !== "none" &&
     modelInferenceMode !== "text2text" &&
@@ -1644,12 +1762,14 @@ export function useDatasetPreparationFeature(
     ? {
         ...generationCapacity,
         schemaSupported:
-          generationCapacity.schemaSupported && constrainedDecodingAvailable,
+          generationCapacity.schemaSupported && constrainedDecodingReady,
       }
     : undefined;
-  const constrainedJsonResolution = useMemo(
-    () =>
-      resolveDatasetPreparationConstrainedJson({
+  const { resolution: constrainedJsonResolution, available: constrainedDecodingAvailable } =
+    useDatasetPreparationConstrainedJson(
+      JSON.stringify([workspaceId, taskType, modelId, modelDevice, modelInferenceMode,
+        modelMemoryMode, modelMemoryOverflowPolicy]),
+      {
         preference: constrainedDecodingPreference,
         selectedDevice:
           modelDevice ||
@@ -1664,22 +1784,14 @@ export function useDatasetPreparationFeature(
           ),
         capacity: recommendationCapacity,
         memoryOverflowPolicy: modelMemoryOverflowPolicy,
-      }),
-    [
-      constrainedDecodingPreference,
-      modelDevice,
-      modelId,
-      modelMemoryOverflowPolicy,
-      recommendationCapacity,
-      taskType,
-    ],
-  );
-  const constrainedDecodingEnabled =
-    constrainedDecodingAvailable && constrainedJsonResolution.enabled;
+      },
+    );
+  const constrainedDecodingEnabled = constrainedJsonResolution.enabled;
 
   useEffect(() => {
     if (
       modelSelectionExplicitRef.current ||
+      modelMemoryMode === "offload-v1" ||
       !generationCapacity ||
       textInputMode !== "generate"
     ) {
@@ -1740,7 +1852,7 @@ export function useDatasetPreparationFeature(
     );
     setModelDeviceState(compatiblePreset.model.device ?? "auto");
     setModelTorchDtypeState(compatiblePreset.model.torchDtype ?? "");
-  }, [generationCapacity, modelId, modelMemoryOverflowPolicy, textInputMode]);
+  }, [generationCapacity, modelId, modelMemoryOverflowPolicy, modelMemoryMode, textInputMode]);
 
   const currentTrainingSettingsSnapshot =
     useMemo<DatasetPreparationTrainingSettingsSnapshot>(
@@ -1762,6 +1874,8 @@ export function useDatasetPreparationFeature(
         constrainedDecodingPreference,
         unsupportedDocumentPolicy,
         normalizationMode,
+        ocrEnabled,
+        ocrLanguage,
         chunkSize,
         chunkOverlap,
         preserveDocumentBoundaries,
@@ -1775,6 +1889,7 @@ export function useDatasetPreparationFeature(
         modelDevice,
         modelTorchDtype,
         modelMemoryOverflowPolicy,
+        modelMemoryMode,
         maxExamplesPerChunk,
         batchSize,
         failurePolicy,
@@ -1816,6 +1931,8 @@ export function useDatasetPreparationFeature(
         constrainedDecodingPreference,
         unsupportedDocumentPolicy,
         normalizationMode,
+        ocrEnabled,
+        ocrLanguage,
         chunkSize,
         chunkOverlap,
         preserveDocumentBoundaries,
@@ -1829,6 +1946,7 @@ export function useDatasetPreparationFeature(
         modelDevice,
         modelTorchDtype,
         modelMemoryOverflowPolicy,
+        modelMemoryMode,
         maxExamplesPerChunk,
         batchSize,
         failurePolicy,
@@ -1865,6 +1983,12 @@ export function useDatasetPreparationFeature(
 
   const applyTrainingSettingsSnapshot = useCallback(
     (settings: DatasetPreparationTrainingSettingsSnapshot) => {
+      if ((settings.ocrEnabled !== undefined && typeof settings.ocrEnabled !== "boolean") ||
+          (settings.ocrLanguage !== undefined &&
+            (typeof settings.ocrLanguage !== "string" || settings.ocrLanguage.length > 35))) {
+        setStatus({ kind: "error", message: "This saved setup has invalid text recognition settings. It was not restored; your current setup is unchanged." });
+        return false;
+      }
       suppressNextTaskDefaultResetRef.current = settings.taskType !== taskType;
       setTaskType(settings.taskType);
       setAdvancedPreset(settings.advancedPreset);
@@ -1883,6 +2007,8 @@ export function useDatasetPreparationFeature(
       setConstrainedDecodingPreference(settings.constrainedDecodingPreference);
       setUnsupportedDocumentPolicy(settings.unsupportedDocumentPolicy);
       setNormalizationMode(settings.normalizationMode);
+      setOcrEnabled(settings.ocrEnabled ?? false);
+      setOcrLanguage(settings.ocrLanguage ?? "");
       setChunkSize(settings.chunkSize);
       setChunkOverlap(settings.chunkOverlap);
       setPreserveDocumentBoundaries(settings.preserveDocumentBoundaries);
@@ -1895,6 +2021,7 @@ export function useDatasetPreparationFeature(
       setModelInferenceMode(settings.modelInferenceMode);
       setModelDevice(settings.modelDevice);
       setModelTorchDtype(settings.modelTorchDtype);
+      setModelMemoryMode(settings.modelMemoryMode ?? "standard");
       setModelMemoryOverflowPolicy(
         settings.modelMemoryOverflowPolicy ?? "limited",
       );
@@ -1920,6 +2047,7 @@ export function useDatasetPreparationFeature(
       setRequireLicenseMetadata(settings.requireLicenseMetadata);
       setRequireConsentMetadata(settings.requireConsentMetadata);
       setIncludeSourceAttribution(settings.includeSourceAttribution ?? false);
+      return true;
     },
     [taskType],
   );
@@ -1952,157 +2080,173 @@ export function useDatasetPreparationFeature(
     if (!selected) {
       return;
     }
-    applyTrainingSettingsSnapshot(selected.settings);
-    setStatus({ kind: "idle" });
+    if (applyTrainingSettingsSnapshot(selected.settings)) setStatus({ kind: "idle" });
   }, [
     applyTrainingSettingsSnapshot,
     savedTrainingSettings,
     selectedSavedTrainingSettingsId,
   ]);
 
+  // A callback can be kept by an async caller. Only the last committed frame
+  // may replace the form; source retry, edits, client/scope changes and unmount
+  // retire every older callback before any setter runs.
+  const replaySourceEpoch = sourceRequestId.current;
+  const replaySourceScope = sourceScope.current;
+  const replayFrame = useMemo(() => ({}), [
+    workspaceId, datasetClient, artifacts, sourceLoadState, replaySourceEpoch, replaySourceScope,
+    currentTrainingSettingsSnapshot, selectedArtifactIds, selectedArtifactStorageFilter,
+    status, activeTaskRequestId, qualityReview, reviewActionInFlight,
+  ]);
+  const committedReplayFrame = useRef<object | undefined>(undefined);
+  const pendingReplayFrame = useRef<object | undefined>(undefined);
+  useLayoutEffect(() => {
+    committedReplayFrame.current = replayFrame;
+    return () => { if (committedReplayFrame.current === replayFrame) committedReplayFrame.current = undefined; };
+  });
+
   const onReuseDatasetVersion = useCallback(
-    (reproduction: DatasetVersionReproduction) => {
-      const snapshot = reproduction.recipeSnapshot as any;
-      const recipe = snapshot.recipe ?? {};
-      const task = recipe.task ?? {};
-      const normalization = recipe.normalization ?? {};
-      const chunking = recipe.chunking ?? {};
-      const generation = recipe.generation ?? {};
-      const structuredOutput = generation.structuredOutput ?? {};
-      const model = generation.model ?? {};
-      const generationParams = generation.generationParams ?? {};
-      const split = snapshot.split ?? {};
-      const output = snapshot.output ?? {};
-      const policy = snapshot.effectiveQualityPolicy ?? {};
-      const advanced = snapshot.advanced ?? {};
-      const reusedTaskType = isDatasetPreparationTaskType(task.taskType)
-        ? task.taskType
-        : taskType;
-      const reusedOutputFormat = ["jsonl", "json", "csv", "parquet"].includes(
-        output.format,
-      )
-        ? output.format
-        : outputFormat;
-      const reusedVisualShapeCompilation =
-        structuredOutput.visualShape &&
-        typeof structuredOutput.visualShape === "object"
-          ? compileDatasetPreparationVisualOutputShape(
-              structuredOutput.visualShape,
-              {
-                taskType: reusedTaskType,
-                outputFormat: reusedOutputFormat,
-                multiLabel:
-                  typeof task.multiLabel === "boolean"
-                    ? task.multiLabel
-                    : multiLabel,
-                allowedLabels: Array.isArray(task.labelSet)
-                  ? (() => {
-                      const labels = task.labelSet.filter(
-                        (label: unknown): label is string =>
-                          typeof label === "string" && label.trim().length > 0,
-                      );
-                      return labels.length > 0 ? labels : undefined;
-                    })()
-                  : undefined,
-              },
-            )
-          : undefined;
-      setSelectedArtifactIds([...reproduction.sourceArtifactIds]);
-      if (
-        [
-          "standard",
-          "better-document-understanding",
-          "generate-examples",
-        ].includes(advanced.preset)
-      ) {
-        setAdvancedPreset(advanced.preset);
-      } else {
-        setAdvancedPreset("standard");
-      }
-      suppressNextTaskDefaultResetRef.current = reusedTaskType !== taskType;
-      if (isDatasetPreparationTaskType(task.taskType))
-        setTaskType(task.taskType);
-      if (Array.isArray(task.labelSet)) setLabelSet(task.labelSet.join(", "));
-      if (typeof task.multiLabel === "boolean") setMultiLabel(task.multiLabel);
-      if (typeof task.strictSchema === "boolean")
-        setExtractionStrictSchema(task.strictSchema);
-      if (["subject", "style", "concept"].includes(task.conceptKind))
-        setDiffusionConceptKind(task.conceptKind);
-      if (typeof task.triggerToken === "string")
-        setDiffusionTriggerToken(task.triggerToken);
-      if (typeof task.regularizationClass === "string")
-        setDiffusionRegularizationClass(task.regularizationClass);
-      if (["coco", "xyxy", "xywh"].includes(task.boxFormat))
-        setDetectionBoxFormat(task.boxFormat);
-      if (["png", "coco-rle", "polygon"].includes(task.maskFormat))
-        setSegmentationMaskFormat(task.maskFormat);
-      if (["provided", "generate"].includes(task.textInputMode))
-        setTextInputMode(task.textInputMode);
-      if (typeof generation.promptTemplate === "string")
-        setTextGenerationPrompt(generation.promptTemplate);
-      if (reusedVisualShapeCompilation?.ok)
-        setVisualOutputShape(reusedVisualShapeCompilation.value.shape);
-      if (typeof structuredOutput.constrainedDecoding === "boolean")
-        setConstrainedDecodingPreference(structuredOutput.constrainedDecoding);
-      if (["fail", "skip"].includes(normalization.unsupportedDocumentPolicy))
-        setUnsupportedDocumentPolicy(normalization.unsupportedDocumentPolicy);
-      if (["best-effort", "strict"].includes(normalization.normalizationMode))
-        setNormalizationMode(normalization.normalizationMode);
-      if (typeof chunking.chunkSize === "number")
-        setChunkSize(String(chunking.chunkSize));
-      if (typeof chunking.chunkOverlap === "number")
-        setChunkOverlap(String(chunking.chunkOverlap));
-      if (typeof chunking.preserveDocumentBoundaries === "boolean")
-        setPreserveDocumentBoundaries(chunking.preserveDocumentBoundaries);
-      if (typeof chunking.maxChunkCount === "number")
-        setMaxChunkCount(String(chunking.maxChunkCount));
-      if (typeof model.modelId === "string") setModelId(model.modelId);
-      if (["auto", "text2text", "causal", "chat"].includes(model.inferenceMode))
-        setModelInferenceMode(model.inferenceMode);
-      if (["auto", "cpu", "cuda"].includes(model.device))
-        setModelDevice(model.device);
-      if (["auto", "float16", "bfloat16", "float32"].includes(model.torchDtype))
-        setModelTorchDtype(model.torchDtype);
-      if (typeof generation.maxExamplesPerChunk === "number")
-        setMaxExamplesPerChunk(String(generation.maxExamplesPerChunk));
-      if (typeof generation.batchSize === "number")
-        setBatchSize(String(generation.batchSize));
-      if (["fail", "skip"].includes(generation.failurePolicy))
-        setFailurePolicy(generation.failurePolicy);
-      if (typeof generationParams.temperature === "number")
-        setGenerationTemperature(String(generationParams.temperature));
-      if (typeof generationParams.topP === "number")
-        setGenerationTopP(String(generationParams.topP));
-      if (typeof generationParams.maxNewTokens === "number")
-        setGenerationMaxNewTokens(String(generationParams.maxNewTokens));
-      if (typeof split.trainRatio === "number")
-        setTrainRatio(String(split.trainRatio));
-      if (typeof split.validationRatio === "number")
-        setValidationRatio(String(split.validationRatio));
-      if (typeof split.testRatio === "number")
-        setTestRatio(String(split.testRatio));
-      if (typeof split.seed === "number") setSeed(String(split.seed));
-      if (typeof split.shuffle === "boolean") setShuffle(split.shuffle);
-      if (["jsonl", "json", "csv", "parquet"].includes(output.format))
-        setOutputFormat(output.format);
-      if (typeof output.naming?.baseName === "string")
-        setOutputBaseName(output.naming.baseName);
-      if (["recommended", "strict", "minimal"].includes(policy.preset))
-        setQualityPreset(policy.preset);
-      if (typeof policy.requireLicenseMetadata === "boolean")
-        setRequireLicenseMetadata(policy.requireLicenseMetadata);
-      if (typeof policy.requireConsentMetadata === "boolean")
-        setRequireConsentMetadata(policy.requireConsentMetadata);
-      if (typeof policy.includeSourceAttribution === "boolean")
-        setIncludeSourceAttribution(policy.includeSourceAttribution);
+    async (reproduction: DatasetVersionReproduction, selection?: Pick<DatasetVersionReplayContext, "workspaceId" | "selectedVersion" | "datasetArtifactKey">, isRequestCurrent: () => boolean = () => true): Promise<boolean> => {
+      const current = () => committedReplayFrame.current === replayFrame &&
+        sourceScope.current === replaySourceScope && sourceRequestId.current === replaySourceEpoch &&
+        replaySourceScope?.workspaceId === workspaceId && replaySourceScope?.client === datasetClient &&
+        isRequestCurrent() && !activePollingRequestIdRef.current;
+      // Retired callbacks must not change even the current task's message.
+      if (!current()) return false;
+      if (status.kind === "loading" || activePollingRequestIdRef.current || activeTaskRequestId || qualityReview || reviewActionInFlight) return false;
+      if (pendingReplayFrame.current === replayFrame) return false;
+      const deny = () => { setStatus({ kind: "error", message: "This saved setup cannot be used here. It was not restored; your current setup is unchanged." }); return false; };
+      if (!selection || !workspaceId ||
+          sourceLoadState.workspaceId !== workspaceId || sourceLoadState.status !== "ready") return deny();
+      let context: DatasetVersionReplayContext;
+      let resolvedSources: typeof artifacts;
+      const captured = captureDatasetVersionReplayRequest(reproduction, selection);
+      if (!captured || captured.selection.workspaceId !== workspaceId || !datasetClient.readReplaySourceArtifacts) return deny();
+      const exactSelection = captured.selection;
+      reproduction = captured.reproduction;
+      try {
+        const observed = projectDatasetVersionReplaySources(exactSelection.selectedVersion, artifacts);
+        if (!observed || new Set(observed.map(source => source.artifactId)).size !== observed.length) return deny();
+        pendingReplayFrame.current = replayFrame;
+        // Browse is capped at250. Exact workspace-authorized metadata reads
+        // resolve every saved canonical source without widening that catalogue.
+        const fetched = await datasetClient.readReplaySourceArtifacts(workspaceId, captured.sources, current);
+        if (!current()) return false;
+        const matching = projectDatasetVersionReplaySources(exactSelection.selectedVersion, fetched);
+        if (!Array.isArray(fetched) || !matching || fetched.length !== captured.sources.length || matching.length !== captured.sources.length || matching.some((row, index) => row.artifactId !== captured.sources[index].artifactId || row.storageKey !== captured.sources[index].storageKey)) return deny();
+        resolvedSources = [...matching];
+        for (const source of observed) {
+          const matches = resolvedSources.filter(row => row.artifactId === source.artifactId);
+          if (matches.length !== 1 || matches[0].storageKey !== source.storageKey || matches[0].label !== source.label || matches[0].mediaType !== source.mediaType) return deny();
+        }
+        context = {
+          workspaceId, selectedVersion: exactSelection.selectedVersion, datasetArtifactKey: exactSelection.datasetArtifactKey,
+          requestedVersionId: exactSelection.selectedVersion.versionId,
+          sources: { status: "ready", workspaceId, items: resolvedSources },
+        };
+      } catch { return current() ? deny() : false; }
+      const result = validateDatasetVersionReplay(reproduction, context);
+      if (!result.ok) return deny();
+      const replay = result.value, recipe = replay.recipe, task = recipe.task;
+      const generation = recipe.generation, model = generation?.model;
+      const defaults = createDefaultTrainingSettingsSnapshot(task.taskType);
+      const settings: DatasetPreparationTrainingSettingsSnapshot = {
+        ...defaults,
+        taskType: task.taskType,
+        preparationMethodId: replay.preparation.method,
+        advancedPreset: replay.advanced?.preset ?? "standard",
+        labelSet: "labelSet" in task ? task.labelSet?.join(", ") ?? "" : "",
+        multiLabel: "multiLabel" in task && task.multiLabel === true,
+        extractionStrictSchema: "strictSchema" in task ? task.strictSchema ?? true : true,
+        diffusionConceptKind: "conceptKind" in task ? task.conceptKind ?? "subject" : "subject",
+        diffusionTriggerToken: "triggerToken" in task ? task.triggerToken ?? "" : "",
+        diffusionRegularizationClass: "regularizationClass" in task ? task.regularizationClass ?? "" : "",
+        detectionBoxFormat: "boxFormat" in task ? task.boxFormat ?? "coco" : "coco",
+        segmentationMaskFormat: "maskFormat" in task ? task.maskFormat ?? "png" : "png",
+        textInputMode: task.textInputMode ?? "provided",
+        textGenerationPrompt: generation?.promptTemplate ?? defaults.textGenerationPrompt,
+        visualOutputShape: generation?.structuredOutput?.visualShape
+          ? JSON.parse(JSON.stringify(generation.structuredOutput.visualShape)) as DatasetPreparationVisualOutputShape
+          : createDefaultDatasetPreparationVisualOutputShape(task.taskType, { multiLabel: "multiLabel" in task && task.multiLabel === true }),
+        constrainedDecodingPreference: generation?.structuredOutput?.constrainedDecoding ?? false,
+        normalizationMode: recipe.normalization?.normalizationMode ?? "",
+        unsupportedDocumentPolicy: recipe.normalization?.unsupportedDocumentPolicy ?? "",
+        ocrEnabled: replay.advanced?.content?.ocrEnabled === true,
+        ocrLanguage: replay.advanced?.content?.ocrLanguage ?? "",
+        chunkSize: stringifyDefaultNumber(recipe.chunking?.chunkSize) || defaults.chunkSize,
+        chunkOverlap: stringifyDefaultNumber(recipe.chunking?.chunkOverlap) || defaults.chunkOverlap,
+        preserveDocumentBoundaries: recipe.chunking?.preserveDocumentBoundaries ?? true,
+        maxChunkCount: stringifyDefaultNumber(recipe.chunking?.maxChunkCount),
+        maxTokensPerChunk: stringifyDefaultNumber(replay.advanced?.content?.maxTokensPerChunk) || defaults.maxTokensPerChunk,
+        maxSourceSpans: stringifyDefaultNumber(replay.advanced?.content?.maxSourceSpans) || defaults.maxSourceSpans,
+        topicBoundarySensitivity: stringifyDefaultNumber(replay.advanced?.content?.semanticBoundaryThreshold) || defaults.topicBoundarySensitivity,
+        similarityThreshold: stringifyDefaultNumber(replay.advanced?.semantic?.similarityThreshold) || defaults.similarityThreshold,
+        modelId: model?.modelId ?? defaults.modelId,
+        modelInferenceMode: model?.inferenceMode ?? defaults.modelInferenceMode,
+        modelDevice: model?.device ?? defaults.modelDevice,
+        modelTorchDtype: model?.torchDtype ?? defaults.modelTorchDtype,
+        modelMemoryMode: model?.memoryMode ?? "standard",
+        modelMemoryOverflowPolicy: model?.memoryOverflowPolicy ?? "none",
+        maxExamplesPerChunk: stringifyDefaultNumber(replay.advanced?.synthetic?.candidatesPerChunk),
+        batchSize: stringifyDefaultNumber(generation?.batchSize),
+        failurePolicy: generation?.failurePolicy ?? "",
+        generationTemperature: stringifyDefaultNumber(generation?.generationParams?.temperature),
+        generationTopP: stringifyDefaultNumber(generation?.generationParams?.topP),
+        generationMaxNewTokens: stringifyDefaultNumber(generation?.generationParams?.maxNewTokens),
+        trainRatio: String(replay.split.trainRatio), validationRatio: String(replay.split.validationRatio ?? 0), testRatio: String(replay.split.testRatio),
+        seed: stringifyDefaultNumber(replay.split.seed), shuffle: replay.split.shuffle ?? false,
+        outputFormat: replay.output.format, outputBaseName: replay.output.naming?.baseName ?? "",
+        localDestinationEnabled: true, huggingFaceDestinationEnabled: false,
+        huggingFaceRepository: "", huggingFaceRevision: "", huggingFacePathPrefix: "",
+        qualityPreset: replay.quality.preset, requireLicenseMetadata: replay.quality.requireLicenseMetadata,
+        requireConsentMetadata: replay.quality.requireConsentMetadata, includeSourceAttribution: replay.quality.includeSourceAttribution,
+      };
+      const selectedArtifactIds = [...replay.sourceArtifactIds];
+      const preparation = JSON.parse(JSON.stringify(replay.preparation)) as DatasetPreparationExecutionPlan;
+      const parsed = validateAndParseDatasetPreparationInputs({ ...settings, selectedArtifactIds, preparation });
+      if (!parsed.ok) return deny();
+      try {
+        const sourceFormats = selectedArtifactIds.map(id => {
+          const source = resolvedSources.find(item => item.artifactId === id)!;
+          return resolveDatasetPreparationSourceCapability({ fileName: source.label || source.storageKey, mediaType: source.mediaType })!.format;
+        });
+        const rebuilt = buildDatasetPreparationRequest({
+          ...settings, selectedArtifactIds, preparation, sourceFormats,
+          constrainedDecoding: settings.constrainedDecodingPreference,
+          parsed: parsed.parsed,
+          resolvedDefault: { provider: "transformers", modelId: settings.modelId, inferenceMode: settings.modelInferenceMode,
+            device: settings.modelDevice || "auto", torchDtype: settings.modelTorchDtype || "auto", source: "builtin" },
+        });
+        // The persisted producer is JSON: optional undefined properties are
+        // omitted by serialization, rather than accepted as untrusted values.
+        const roundTrip = validateDatasetVersionReplay(JSON.parse(JSON.stringify({
+          versionId: replay.versionId, sourceArtifactIds: selectedArtifactIds, lineage: exactSelection.selectedVersion.lineage,
+          recipeSnapshot: { recipe: rebuilt.recipe, preparation: rebuilt.preparation, advanced: rebuilt.advanced,
+            split: rebuilt.split, output: { format: rebuilt.output.format, naming: rebuilt.output.naming }, effectiveQualityPolicy: replay.quality },
+        })), context);
+        if (!roundTrip.ok || JSON.stringify(roundTrip.value) !== JSON.stringify(replay)) return deny();
+      } catch { return deny(); }
+      if (!current()) return false;
+      // Retire synchronously: another call from this frame cannot apply twice.
+      committedReplayFrame.current = undefined;
+      if (!applyTrainingSettingsSnapshot(settings)) return false;
+      const selectedIds = new Set(selectedArtifactIds);
+      setArtifacts([...artifacts.filter(source => !selectedIds.has(source.artifactId)), ...resolvedSources]);
+      setSelectedArtifactStorageFilter("all");
+      setSelectedArtifactIds(selectedArtifactIds);
       setStatus({ kind: "idle" });
+      return true;
     },
-    [multiLabel, outputFormat, taskType],
+    [replayFrame, replaySourceEpoch, replaySourceScope, datasetClient, workspaceId, artifacts, sourceLoadState, status, activeTaskRequestId, qualityReview, reviewActionInFlight, applyTrainingSettingsSnapshot],
   );
 
   const onSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      committedReplayFrame.current = undefined;
+      if (sourceLoadState.workspaceId !== workspaceId || sourceLoadState.status !== "ready") {
+        setStatus({ kind: "error", message: "Wait for the current source files to load, or retry the source list." });
+        return;
+      }
 
       if (!preparationPlan) {
         setStatus({
@@ -2113,6 +2257,17 @@ export function useDatasetPreparationFeature(
         });
         return;
       }
+      const ocr = resolveDatasetPreparationOcrChoice({
+        enabled: ocrEnabled,
+        language: ocrLanguage,
+        method: preparationPlan.method,
+        sourceCount: selectedArtifactIds.length,
+        sourceFormats: selectedSourceCapabilities.map((source) => source.format),
+      });
+      if (ocr.ok === false) {
+        setStatus({ kind: "error", message: ocr.message });
+        return;
+      }
       if (!outputShapeCompilation.ok) {
         setStatus({
           kind: "error",
@@ -2120,6 +2275,10 @@ export function useDatasetPreparationFeature(
             outputShapeCompilation.diagnostics[0]?.message ??
             "Review the generated output fields before continuing.",
         });
+        return;
+      }
+      if (preparationPlan.generationMode !== "none" && constrainedDecodingEnabled && !constrainedDecodingAvailable) {
+        setStatus({ kind: "error", message: "Checked JSON output is unavailable. Start a supported runtime or turn off the checked output option before retrying." });
         return;
       }
 
@@ -2156,7 +2315,7 @@ export function useDatasetPreparationFeature(
         return;
       }
 
-      stopTrainingRequestedRef.current = false;
+      cancellationMessageRef.current = undefined;
       setStatus({
         kind: "loading",
         message: "Preparing training dataset request...",
@@ -2179,7 +2338,9 @@ export function useDatasetPreparationFeature(
         torchDtype:
           taskModelDefault?.torchDtype ?? fallbackModelDefault.torchDtype,
       };
-      const request = buildDatasetPreparationRequest({
+      let request: ReturnType<typeof buildDatasetPreparationRequest>;
+      try {
+        request = buildDatasetPreparationRequest({
         selectedArtifactIds,
         preparation: preparationPlan,
         advancedPreset,
@@ -2198,12 +2359,15 @@ export function useDatasetPreparationFeature(
         constrainedDecoding: constrainedDecodingEnabled,
         unsupportedDocumentPolicy,
         normalizationMode,
+        ocrEnabled,
+        ocrLanguage,
         preserveDocumentBoundaries,
         modelId,
         modelInferenceMode,
         modelDevice,
         modelTorchDtype,
         modelMemoryOverflowPolicy,
+        modelMemoryMode,
         failurePolicy,
         shuffle,
         outputFormat,
@@ -2214,11 +2378,29 @@ export function useDatasetPreparationFeature(
         huggingFaceRevision: "",
         huggingFacePathPrefix: "",
         defaultHuggingFaceNamespace,
+        sourceFormats: selectedSourceCapabilities.map((source) => source.format),
         parsed: validationResult.parsed,
-        resolvedDefault,
-      });
+          resolvedDefault,
+        });
+      } catch {
+        setStatus({ kind: "error", message: "Saved local inference settings are unsupported. Choose a valid memory mode and review the model, device and precision before continuing." });
+        return;
+      }
       const generationModelId = request.recipe.generation?.model.modelId;
-      if (generationModelId && generationCapacity) {
+      if (generationModelId && modelMemoryMode === "offload-v1" && !lowMemoryAvailable) {
+        setStatus({
+          kind: "error",
+          message: "Optional low-memory inference is unavailable in the current worker. Choose Standard or reconnect a supported runtime.",
+        });
+        return;
+      }
+      if (generationModelId && modelMemoryMode === "offload-v1"
+        && (request.recipe.generation?.model.device !== "cpu" && request.recipe.generation?.model.device !== "cuda"
+          || !["float32", "float16", "bfloat16"].includes(request.recipe.generation?.model.torchDtype ?? "auto"))) {
+        setStatus({ kind: "error", message: "Optional low-memory inference requires an explicit CPU or CUDA device and precision." });
+        return;
+      }
+      if (generationModelId && generationCapacity && modelMemoryMode === "standard") {
         const modelCapacity = resolveDatasetPreparationGenerationModelCapacity({
           selectedDevice: request.recipe.generation?.model.device ?? "auto",
           estimatedModelBytes:
@@ -2231,8 +2413,14 @@ export function useDatasetPreparationFeature(
         if (modelCapacity.reason === "capacity-insufficient") {
           setStatus({
             kind: "error",
-            message:
-              "The selected model cannot fit in the memory currently available. Close memory-heavy applications or select a smaller built-in model, then retry.",
+            memoryNotification: "page",
+            message: getDatasetPreparationMemoryFailureMessage(
+              modelDevice === "cpu" && generationCapacity?.availableSystemMemoryBytes !== undefined
+                ? { resource: "ram", requiredBytes: modelCapacity.requiredMemoryBytes,
+                    availableBytes: modelCapacity.availableMemoryBytes,
+                    allowedOverflowBytes: modelCapacity.allowedMemoryOverflowBytes }
+                : undefined,
+            ),
           });
           return;
         }
@@ -2298,10 +2486,10 @@ export function useDatasetPreparationFeature(
       if ("error" in started) {
         setStatus({
           kind: "error",
-          message: appendErrorDetailsMessage(
-            started.error.message,
-            started.error.details,
-          ),
+          memoryNotification: started.error.code === "generation_insufficient_resources" ? "page" : undefined,
+          message: started.error.code === "generation_insufficient_resources"
+            ? getDatasetPreparationMemoryFailureMessage(started.error.details?.memoryShortfall)
+            : appendErrorDetailsMessage(started.error.message, started.error.details),
         });
         return;
       }
@@ -2317,6 +2505,7 @@ export function useDatasetPreparationFeature(
       selectedArtifactIds,
       preparationPlan,
       preparationResolution,
+      selectedSourceCapabilities,
       advancedPreset,
       taskType,
       labelSet,
@@ -2332,8 +2521,11 @@ export function useDatasetPreparationFeature(
       visualOutputShape,
       outputShapeCompilation,
       constrainedDecodingEnabled,
+      constrainedDecodingAvailable,
       unsupportedDocumentPolicy,
       normalizationMode,
+      ocrEnabled,
+      ocrLanguage,
       chunkSize,
       chunkOverlap,
       preserveDocumentBoundaries,
@@ -2347,6 +2539,8 @@ export function useDatasetPreparationFeature(
       modelDevice,
       modelTorchDtype,
       modelMemoryOverflowPolicy,
+      modelMemoryMode,
+      lowMemoryAvailable,
       maxExamplesPerChunk,
       batchSize,
       failurePolicy,
@@ -2373,57 +2567,45 @@ export function useDatasetPreparationFeature(
       datasetClient,
       generationCapacity,
       workspaceId,
+      sourceLoadState,
       pollDatasetPreparationTask,
       setActiveDatasetPreparationTask,
     ],
   );
 
   const onStopTraining = useCallback(async () => {
-    if (!activeTaskRequestId || status.kind !== "loading") {
-      return;
-    }
-
-    stopTrainingRequestedRef.current = true;
+    if (!activeTaskRequestId || status.kind !== "loading" || cancelRequestRef.current) return;
+    const requestId = activeTaskRequestId;
+    const session = pollingSessionIdRef.current;
+    const current = () => isMountedRef.current && pollingSessionIdRef.current === session && activePollingRequestIdRef.current === requestId;
+    const token = {};
+    cancelRequestRef.current = token;
     setStopTrainingInFlight(true);
-    setStatus({ kind: "loading", message: "Stopping dataset preparation..." });
+    cancellationMessageRef.current = "Requesting cancellation; dataset preparation is still being observed...";
+    setStatus({ kind: "loading", message: cancellationMessageRef.current });
     try {
-      const response = await datasetClient.cancelPrepareTrainingDatasetTask(
-        activeTaskRequestId,
-        workspaceId,
-      );
-      if (response.ok === false) {
-        setStatus({
-          kind: "error",
-          message: appendErrorDetailsMessage(
-            response.error.message,
-            response.error.details,
-          ),
-        });
-      } else {
-        clearActiveTask();
-        setStatus({ kind: "idle", message: "Training stopped." });
-      }
-    } catch (error) {
-      setStatus({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Failed to stop training.",
-      });
+      const response = await datasetClient.cancelPrepareTrainingDatasetTask(requestId, workspaceId);
+      if (!current()) return;
+      cancellationMessageRef.current = response.ok && response.value?.requestId === requestId && response.value.cancelled && response.value.status === "cancelled"
+        ? "Cancellation acknowledged; waiting for final task state..."
+        : "Cancellation is not confirmed. Dataset preparation is still being observed.";
+      setStatus({ kind: "loading", message: cancellationMessageRef.current });
+      observer.invalidate({ workspaceId: workspaceId!, family: "dataset-preparation" });
+    } catch {
+      if (!current()) return;
+      cancellationMessageRef.current = "Cancellation could not be confirmed. Dataset preparation is still being observed.";
+      setStatus({ kind: "loading", message: cancellationMessageRef.current });
     } finally {
-      setStopTrainingInFlight(false);
-      void refreshRuntimeModelStatus();
+      if (cancelRequestRef.current === token) {
+        cancelRequestRef.current = undefined;
+        if (isMountedRef.current && pollingSessionIdRef.current === session) setStopTrainingInFlight(false);
+      }
     }
-  }, [
-    activeTaskRequestId,
-    clearActiveTask,
-    datasetClient,
-    refreshRuntimeModelStatus,
-    status.kind,
-    workspaceId,
-  ]);
+  }, [activeTaskRequestId, datasetClient, observer, status.kind, workspaceId]);
 
   const onApproveReview = useCallback(async () => {
-    if (!qualityReview || !workspaceId || reviewActionInFlight) {
+    const scope = sourceScope.current;
+    if (!qualityReview || !workspaceId || !scope || scope.workspaceId !== workspaceId || scope.client !== datasetClient || reviewActionOwnerRef.current) {
       return;
     }
     const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
@@ -2431,6 +2613,9 @@ export function useDatasetPreparationFeature(
       setStatus({ kind: "error", message: saveNameError });
       return;
     }
+    const owner = {};
+    reviewActionOwnerRef.current = owner;
+    const current = () => reviewActionOwnerRef.current === owner && sourceScope.current === scope;
     setReviewActionInFlight(true);
     try {
       const response = await datasetClient.approvePreparedTrainingDataset(
@@ -2439,6 +2624,7 @@ export function useDatasetPreparationFeature(
         workspaceId,
         outputBaseName,
       );
+      if (!current()) return;
       if (!response.ok) {
         setStatus({
           kind: "error",
@@ -2449,6 +2635,7 @@ export function useDatasetPreparationFeature(
         });
         return;
       }
+      retireTaskRecovery(qualityReview.requestId);
       const value = response.value;
       setResultSummary({
         datasetKey:
@@ -2464,10 +2651,13 @@ export function useDatasetPreparationFeature(
       setQualityReview(undefined);
       setStatus({ kind: "success", message: "Training dataset is ready." });
       await refreshArtifacts();
+      if (!current()) return;
       await refreshRuntimeModelStatus();
+      if (!current()) return;
       const artifactStorageKey = value.outputs.local?.dataset?.storage.key;
       if (artifactStorageKey) onPrepared?.(artifactStorageKey);
     } catch (error) {
+      if (!current()) return;
       setStatus({
         kind: "error",
         message:
@@ -2476,7 +2666,10 @@ export function useDatasetPreparationFeature(
             : "Failed to approve the dataset.",
       });
     } finally {
-      setReviewActionInFlight(false);
+      if (reviewActionOwnerRef.current === owner) {
+        reviewActionOwnerRef.current = undefined;
+        if (sourceScope.current === scope) setReviewActionInFlight(false);
+      }
     }
   }, [
     datasetClient,
@@ -2485,20 +2678,25 @@ export function useDatasetPreparationFeature(
     qualityReview,
     refreshArtifacts,
     refreshRuntimeModelStatus,
-    reviewActionInFlight,
+    retireTaskRecovery,
     workspaceId,
   ]);
 
   const onDiscardReview = useCallback(async () => {
-    if (!qualityReview || !workspaceId || reviewActionInFlight) {
+    const scope = sourceScope.current;
+    if (!qualityReview || !workspaceId || !scope || scope.workspaceId !== workspaceId || scope.client !== datasetClient || reviewActionOwnerRef.current) {
       return;
     }
+    const owner = {};
+    reviewActionOwnerRef.current = owner;
+    const current = () => reviewActionOwnerRef.current === owner && sourceScope.current === scope;
     setReviewActionInFlight(true);
     try {
       const response = await datasetClient.cancelPrepareTrainingDatasetTask(
         qualityReview.requestId,
         workspaceId,
       );
+      if (!current()) return;
       if (!response.ok) {
         setStatus({
           kind: "error",
@@ -2509,10 +2707,16 @@ export function useDatasetPreparationFeature(
         });
         return;
       }
+      if (!response.ok || response.value?.requestId !== qualityReview.requestId || !response.value.cancelled || response.value.status !== "cancelled") {
+        setStatus({ kind: "error", message: "Discard could not be confirmed. The quality review is retained." });
+        return;
+      }
+      retireTaskRecovery(qualityReview.requestId);
       setQualityReview(undefined);
       setStatus({ kind: "idle" });
       await refreshRuntimeModelStatus();
     } catch (error) {
+      if (!current()) return;
       setStatus({
         kind: "error",
         message:
@@ -2521,13 +2725,16 @@ export function useDatasetPreparationFeature(
             : "Failed to discard the prepared dataset.",
       });
     } finally {
-      setReviewActionInFlight(false);
+      if (reviewActionOwnerRef.current === owner) {
+        reviewActionOwnerRef.current = undefined;
+        if (sourceScope.current === scope) setReviewActionInFlight(false);
+      }
     }
   }, [
     datasetClient,
     qualityReview,
     refreshRuntimeModelStatus,
-    reviewActionInFlight,
+    retireTaskRecovery,
     workspaceId,
   ]);
 
@@ -2555,7 +2762,7 @@ export function useDatasetPreparationFeature(
   }, [refreshRuntimeModelStatus, runtimeStatusClient, status.kind]);
 
   const canUnloadModel =
-    loadedModelCount > 0 &&
+    (loadedModelCount > 0 || lowMemoryAvailable) &&
     runtimeActiveTaskCount === 0 &&
     status.kind !== "loading";
   const selectedGenerationModelAvailable = useMemo(
@@ -2630,6 +2837,8 @@ export function useDatasetPreparationFeature(
   ]);
 
   return {
+    sourceLoadStatus: sourceLoadState.workspaceId === workspaceId ? sourceLoadState.status : "loading",
+    retrySourceArtifacts: () => { void refreshArtifacts(); },
     artifacts: taskRelevantArtifacts,
     allArtifactCount: artifacts.length,
     filteredArtifacts,
@@ -2656,8 +2865,15 @@ export function useDatasetPreparationFeature(
     constrainedJsonResolution,
     constrainedDecodingEnabled,
     constrainedDecodingAvailable,
+    constrainedSchemaValid: outputShapeCompilation.ok,
+    lowMemoryAvailable,
+    ocrEligible: preparationMethodId === "structure-aware" && selectedArtifactIds.length > 0 &&
+      selectedSourceCapabilities.length === selectedArtifactIds.length &&
+      selectedSourceCapabilities.every((source) => source.format === "pdf"),
     unsupportedDocumentPolicy,
     normalizationMode,
+    ocrEnabled,
+    ocrLanguage,
     chunkSize,
     chunkOverlap,
     preserveDocumentBoundaries,
@@ -2671,6 +2887,7 @@ export function useDatasetPreparationFeature(
     modelDevice,
     modelTorchDtype,
     modelMemoryOverflowPolicy,
+    modelMemoryMode,
     maxExamplesPerChunk,
     batchSize,
     failurePolicy,
@@ -2728,6 +2945,8 @@ export function useDatasetPreparationFeature(
     setConstrainedDecodingPreference,
     setUnsupportedDocumentPolicy,
     setNormalizationMode,
+    setOcrEnabled,
+    setOcrLanguage,
     setChunkSize,
     setChunkOverlap,
     setPreserveDocumentBoundaries,
@@ -2741,6 +2960,7 @@ export function useDatasetPreparationFeature(
     setModelDevice,
     setModelTorchDtype,
     setModelMemoryOverflowPolicy,
+    setModelMemoryMode,
     setMaxExamplesPerChunk,
     setBatchSize,
     setFailurePolicy,

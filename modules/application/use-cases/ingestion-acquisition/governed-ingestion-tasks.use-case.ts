@@ -1,7 +1,10 @@
 import type {
   IngestionAcquisitionRepositoryPort,
   IngestionCheckpointStoragePort,
+  IngestionFilePublicationAdmission,
+  IngestionFilePublicationPort,
 } from "../../ports/ingestion";
+import { assertPublicationTask, normalizeIngestionFilePublication } from "../../shared/ingestion-file-publication";
 import type {
   ArtifactStoragePort,
   ArtifactStreamStoragePort,
@@ -10,6 +13,7 @@ import type { WorkspaceRepository } from "../../ports/workspace";
 import type { WorkspaceOperationAuthorizationPort } from "../../ports/security";
 import type { OrganizationRequestContextProviderPort } from "../../ports/organization";
 import type { ApplicationRequestContext } from "../../ports";
+import { projectHeadlessLocalFileImport, type HeadlessLocalFileImportPreview } from "../../../contracts/headless";
 import {
   INGESTION_TASK_MAXIMUM_CHUNK_BYTES,
   INGESTION_TASK_CHECKPOINT_RETENTION_MS,
@@ -18,6 +22,8 @@ import {
   normalizeIngestionTaskFileId,
   normalizeIngestionTaskId,
   normalizeIngestionTaskRecord,
+  normalizeIngestionSourceSnapshot,
+  type IngestionSourceSnapshot,
   type IngestionTaskFileRecord,
   type IngestionTaskKind,
   type IngestionTaskProviderSource,
@@ -32,7 +38,6 @@ import {
   createSuccessResult,
   type ContractResult,
 } from "../../../contracts/shared";
-import { createDeleteArtifactRequest } from "../../../contracts/storage";
 import { resolveArtifactWorkspaceContext } from "../artifact-workspace-context";
 import type { RegisterArtifactFromRepoUseCase } from "../register-artifact-from-repo.use-case";
 import type { GovernedWebsiteIngestionUseCases } from "./governed-website-ingestion.use-case";
@@ -67,15 +72,27 @@ export interface AppendIngestionChunkCommand {
   readonly sha256: string;
 }
 
+type FinalizeIngestionFileCommand = { readonly taskId: string; readonly fileId: string; readonly sha256?: string };
+
+interface ApprovedLocalFileImport {
+  readonly preview: HeadlessLocalFileImportPreview;
+  readonly stillAllowed: () => Promise<boolean>;
+  readonly isCurrent: () => boolean;
+  readonly issuePublication?: IngestionFilePublicationAdmission["issue"];
+}
+
+type ApprovedLocalFileImportResult =
+  | { readonly ok: true; readonly value: Pick<HeadlessLocalFileImportPreview, "taskId" | "fileId" | "taskRevision"> }
+  | { readonly ok: false; readonly code: "headless.forbidden" | "headless.stale" | "headless.operation-unconfirmed" };
+
 export interface GovernedIngestionTaskUseCasesDependencies {
   readonly repository: IngestionAcquisitionRepositoryPort;
   readonly checkpoints: IngestionCheckpointStoragePort;
   readonly streamStorage: ArtifactStreamStoragePort;
   readonly artifactCleanup: Pick<ArtifactStoragePort, "deleteArtifact">;
-  readonly registerArtifactFromRepo?: Pick<
-    RegisterArtifactFromRepoUseCase,
-    "execute"
-  >;
+  readonly filePublication?: IngestionFilePublicationPort;
+  readonly registerArtifactFromRepo?: Pick<RegisterArtifactFromRepoUseCase, "execute"> &
+    Partial<Pick<RegisterArtifactFromRepoUseCase, "prepare">>;
   readonly website?: Pick<
     GovernedWebsiteIngestionUseCases,
     "createTask" | "runTask" | "refreshSource"
@@ -377,6 +394,19 @@ export class GovernedIngestionTaskUseCases {
         "Hugging Face ingestion is not available in this environment.",
         context,
       );
+    const repository = this.dependencies.repository;
+    const saveProviderArtifact = repository.saveTaskWithProviderArtifact?.bind(repository);
+    const prepareProviderArtifact = saveProviderArtifact && registerArtifact.prepare?.bind(registerArtifact);
+    const recheckProviderAuthority = async (expected: IngestionTaskRecord) => {
+      const active = await this.authorize(context, "ingestion.hugging-face.run", "artifact:write");
+      if (!active.ok) return active;
+      const contexts = this.dependencies.organizationContextProvider;
+      const latest = contexts?.getCurrentOrganizationContext();
+      if (active.value.workspaceId !== expected.workspaceId || context.organizationId !== expected.organizationId ||
+          (contexts && (!latest || latest.organizationId !== expected.organizationId || latest.principalId !== context.principalId)))
+        return failure("forbidden", "The workspace access for this provider import changed.", context);
+      return active;
+    };
     try {
       let task = await this.requireTask(
         scope.value.workspaceId,
@@ -410,6 +440,8 @@ export class GovernedIngestionTaskUseCases {
         );
       }
 
+      const licenseIdsByRevision = new Map<string, readonly string[] | undefined>();
+      const licenseBudget = prepareProviderArtifact ? AbortSignal.timeout(5_000) : undefined;
       for (const candidate of task.files) {
         task = await this.requireTask(scope.value.workspaceId, task.taskId);
         if (task.status === "cancelled")
@@ -431,13 +463,26 @@ export class GovernedIngestionTaskUseCases {
             task.revision,
           );
         }
-        const result = await registerArtifact.execute(
-          {
-            target: source,
-            mediaType: file.mediaType,
-          },
-          context,
-        );
+        const command = { target: source, mediaType: file.mediaType };
+        const licenseKey = `${source.repository}@${source.revision}`;
+        const licenseSignal = !licenseBudget?.aborted && !licenseIdsByRevision.has(licenseKey)
+          ? licenseBudget : undefined;
+        const expected = task;
+        const result = prepareProviderArtifact
+          ? await prepareProviderArtifact(command, context, licenseSignal && {
+            signal: licenseSignal,
+            stillAllowed: async () => {
+              const current = await repository.readTask(expected.workspaceId, expected.taskId);
+              return matchesTaskScope(current, expected) &&
+                current.revision === expected.revision && current.status === "transferring" &&
+                (await recheckProviderAuthority(expected)).ok;
+            },
+          })
+          : await registerArtifact.execute(command, context);
+        if (prepareProviderArtifact) {
+          const active = await recheckProviderAuthority(expected);
+          if (!active.ok) return active;
+        }
         if (!result.ok) {
           const completedAt = this.now();
           const retryable =
@@ -469,6 +514,10 @@ export class GovernedIngestionTaskUseCases {
             context,
           );
         }
+        const prepared = "artifact" in result.value ? result.value : undefined;
+        if (prepared && licenseSignal) licenseIdsByRevision.set(licenseKey, prepared.providerLicenseIds);
+        const providerLicenseIds = licenseIdsByRevision.get(licenseKey);
+        const storedArtifactId = "registration" in result.value ? result.value.registration.artifactId : result.value.artifactId;
         const capturedAt = this.now();
         const sourceId = `source.${task.taskId}.${file.fileId}`;
         const snapshotId = `snapshot.${task.taskId}.${file.fileId}`;
@@ -489,18 +538,20 @@ export class GovernedIngestionTaskUseCases {
           },
           sizeBytes: 0,
           mediaType: file.mediaType,
-          rawArtifactKey: result.value.artifactId,
+          rawArtifactKey: storedArtifactId,
           capturedAt,
           providerRevision: source.revision,
+          ...(providerLicenseIds === undefined ? {} : { providerLicenseIds }),
         } as const;
         const finalizedFiles = replaceFile(task, file.fileId, {
           ...file,
           status: "finalized",
           output: {
-            key: result.value.artifactId,
+            key: storedArtifactId,
             mediaType: file.mediaType,
             sizeBytes: 0,
             providerRevision: source.revision,
+            ...(providerLicenseIds === undefined ? {} : { providerLicenseIds }),
             sourceId,
             sourceSnapshotId: snapshotId,
           },
@@ -519,24 +570,17 @@ export class GovernedIngestionTaskUseCases {
             : "Provider file imported. Continuing with the remaining files.",
         });
         try {
-          task = (
-            await this.dependencies.repository.saveTaskWithSourceSnapshot(
-              nextTask,
-              task.revision,
-              snapshot,
-            )
-          ).task;
-        } catch (error) {
-          await this.deleteArtifact(result.value.artifactId, context).catch(
-            () => undefined,
-          );
-          const latest = await this.dependencies.repository.readTask(
-            task.workspaceId,
-            task.taskId,
-          );
-          if (latest?.status === "cancelled")
-            return createSuccessResult(latest, context);
-          throw error;
+          if (prepared) {
+            if (!saveProviderArtifact) throw new Error("Owned provider publication is unavailable.");
+            task = (await saveProviderArtifact(nextTask, task.revision, snapshot, prepared.artifact)).task;
+          } else {
+            task = (await repository.saveTaskWithSourceSnapshot(nextTask, task.revision, snapshot)).task;
+          }
+        } catch {
+          const current = await this.readFinalizationState(nextTask, requireFile(nextTask, file.fileId), snapshot);
+          if (current.task.status === "cancelled") return createSuccessResult(current.task, context);
+          if (!current.committed) throw new Error("The imported source has an uncertain commit. Its data was retained for recovery.");
+          task = current.task;
         }
       }
       return createSuccessResult(task, context);
@@ -577,6 +621,7 @@ export class GovernedIngestionTaskUseCases {
       const file = requireFile(task, fileId);
       if (file.status === "finalized")
         return createSuccessResult(task, context);
+      if (!fileAcceptsChunks(file)) throw new Error("This ingestion file is not accepting chunks.");
       if (
         command.chunkIndex < file.nextChunkIndex &&
         file.lastChunk?.index === command.chunkIndex &&
@@ -590,50 +635,50 @@ export class GovernedIngestionTaskUseCases {
         throw new Error(
           "The ingestion chunk is out of order. Resume from the accepted progress shown.",
         );
-      const checkpoint = await this.dependencies.checkpoints.appendChunk(
-        {
-          workspaceId: scope.value.workspaceId,
-          checkpointId: file.checkpointId,
-          chunkIndex: command.chunkIndex,
-          expectedOffset: command.expectedOffset,
-          bytes: command.bytes,
-          sha256: digest,
-        },
-        context,
-      );
-      if (
-        checkpoint.chunkCount !== command.chunkIndex + 1 ||
-        checkpoint.sizeBytes > file.totalBytes
-      )
-        throw new Error(
-          "Checkpoint progress does not match the ingestion task.",
-        );
-      const updated = updateTask(task, {
-        status: "transferring",
-        files: replaceFile(task, fileId, {
-          ...file,
-          status: "transferring",
-          acceptedBytes: checkpoint.sizeBytes,
-          nextChunkIndex: checkpoint.chunkCount,
-          lastChunk: {
-            index: command.chunkIndex,
-            sizeBytes: command.bytes.byteLength,
-            digest,
+      if (command.bytes.byteLength > file.totalBytes - file.acceptedBytes)
+        throw new Error("The ingestion chunk exceeds the remaining file size.");
+      let saved: IngestionTaskRecord;
+      try {
+        const checkpoint = await this.dependencies.checkpoints.appendChunk(
+          {
+            workspaceId: scope.value.workspaceId,
+            checkpointId: file.checkpointId,
+            chunkIndex: command.chunkIndex,
+            expectedOffset: command.expectedOffset,
+            bytes: command.bytes,
+            sha256: digest,
           },
-        }),
-        updatedAt: this.now(),
-        progressMessage: `Transferred ${checkpoint.sizeBytes} of ${file.totalBytes} bytes.`,
-      });
-      return createSuccessResult(
-        await this.saveIdempotently(
-          updated,
-          task.revision,
-          fileId,
-          checkpoint.chunkCount,
-          digest,
-        ),
-        context,
-      );
+          context,
+        );
+        if (checkpoint.chunkCount !== command.chunkIndex + 1 || checkpoint.sizeBytes > file.totalBytes) {
+          throw new Error("Checkpoint progress does not match the ingestion task.");
+        }
+        const updated = updateTask(task, {
+          status: "transferring",
+          files: replaceFile(task, fileId, {
+            ...file,
+            status: "transferring",
+            acceptedBytes: checkpoint.sizeBytes,
+            nextChunkIndex: checkpoint.chunkCount,
+            lastChunk: {
+              index: command.chunkIndex,
+              sizeBytes: command.bytes.byteLength,
+              digest,
+            },
+          }),
+          updatedAt: this.now(),
+          progressMessage: `Transferred ${checkpoint.sizeBytes} of ${file.totalBytes} bytes.`,
+        });
+        saved = await this.saveIdempotently(updated, task.revision, file);
+      } catch (error) {
+        // The checkpoint can exist even when the storage or progress reply fails.
+        await this.recoverLateCancelledCheckpoint(task, file, context);
+        throw error;
+      }
+      if (saved.status === "cancelled") {
+        saved = await this.recoverLateCancelledCheckpoint(task, file, context) ?? saved;
+      }
+      return createSuccessResult(saved, context);
     } catch (error) {
       return failure(
         error instanceof MissingTaskError ? "not-found" : "validation",
@@ -643,9 +688,66 @@ export class GovernedIngestionTaskUseCases {
     }
   }
 
-  public async finalizeFile(
-    command: { taskId: string; fileId: string; sha256?: string },
+  public finalizeFile(
+    command: FinalizeIngestionFileCommand,
     context: ApplicationRequestContext = {},
+  ): Promise<IngestionTaskResult> {
+    return this.finalizeSelectedFile(command, context);
+  }
+
+  /** Use only after the host has admitted the exact app-selected effect from an approved plan. */
+  public async finalizeApprovedLocalFile(
+    approval: ApprovedLocalFileImport,
+    suppliedContext: ApplicationRequestContext,
+  ): Promise<ApprovedLocalFileImportResult> {
+    const context = { ...suppliedContext };
+    const preview = { ...approval.preview };
+    const forbidden = { ok: false, code: "headless.forbidden" } as const;
+    const unconfirmed = { ok: false, code: "headless.operation-unconfirmed" } as const;
+    if (!context.organizationId || !context.principalId || context.workspaceId !== preview.workspaceId ||
+        preview.effect !== "save-local-source" || preview.externalProviderCalls !== 0) return forbidden;
+
+    const isCurrent = () => {
+      try {
+        if (approval.isCurrent() !== true) return false;
+        const provider = this.dependencies.organizationContextProvider;
+        if (!provider) return true;
+        const current = provider.getCurrentOrganizationContext();
+        return current?.organizationId === context.organizationId && current?.principalId === context.principalId;
+      } catch {
+        return false;
+      }
+    };
+    const stillAllowed = async () => {
+      try { return isCurrent() && await approval.stillAllowed() === true && isCurrent(); }
+      catch { return false; }
+    };
+    if (!await stillAllowed() || !isCurrent()) return forbidden;
+    try {
+      const result = await this.finalizeSelectedFile({ taskId: preview.taskId, fileId: preview.fileId }, context,
+        { preview, stillAllowed, isCurrent, issuePublication: approval.issuePublication });
+      if (!await stillAllowed() || !isCurrent()) return forbidden;
+      if (!result.ok) {
+        if (result.error.code === "forbidden" || result.error.code === "not-found") return forbidden;
+        if (result.error.code === "conflict") return { ok: false, code: "headless.stale" };
+        return unconfirmed;
+      }
+      const saved = result.value;
+      const file = saved.files.find(candidate => candidate.fileId === preview.fileId);
+      if (saved.taskId !== preview.taskId || saved.workspaceId !== preview.workspaceId ||
+          saved.organizationId !== context.organizationId || saved.kind !== "file-batch" ||
+          saved.revision <= preview.taskRevision || saved.status === "cancelled" ||
+          file?.status !== "finalized" || !file.output) return unconfirmed;
+      return { ok: true, value: { taskId: saved.taskId, fileId: file.fileId, taskRevision: saved.revision } };
+    } catch {
+      return await stillAllowed() && isCurrent() ? unconfirmed : forbidden;
+    }
+  }
+
+  private async finalizeSelectedFile(
+    command: FinalizeIngestionFileCommand,
+    context: ApplicationRequestContext,
+    approval?: ApprovedLocalFileImport,
   ): Promise<IngestionTaskResult> {
     const scope = await this.authorize(
       context,
@@ -660,9 +762,27 @@ export class GovernedIngestionTaskUseCases {
       : undefined;
     try {
       let task = await this.requireTask(scope.value.workspaceId, taskId);
+      if (approval) {
+        if (task.organizationId !== context.organizationId || !await approval.stillAllowed() || !approval.isCurrent())
+          return failure("forbidden", "The selected file is unavailable.", context);
+        const projected = projectHeadlessLocalFileImport(task, approval.preview, Date.parse(this.now()));
+        if (!projected.ok && projected.code === "headless.forbidden")
+          return failure("forbidden", "The selected file is unavailable.", context);
+        if (!projected.ok || projected.value.mediaType !== approval.preview.mediaType ||
+            projected.value.fileBytes !== approval.preview.fileBytes ||
+            projected.value.checkpointExpiresAt !== approval.preview.checkpointExpiresAt)
+          return failure("conflict", "The selected upload changed or expired.", context);
+      }
       let file = requireFile(task, fileId);
-      if (file.status === "finalized")
-        return await this.finishCheckpointCleanup(task, file, context);
+      if (task.kind !== "file-batch") throw new Error("Only uploaded files use file finalization.");
+      if (!this.dependencies.filePublication) throw new Error("Verified file publication is unavailable.");
+      if (file.status === "finalized") {
+        if (expectedDigest && file.output?.digest !== expectedDigest) throw new Error("The finalized file digest does not match this request.");
+        await this.dependencies.filePublication.verifyFilePublication({ taskId, fileId, expectedSha256: expectedDigest }, context);
+        const current = await this.readFinalizationState(task, file);
+        if (!current.committed) throw new Error("The finalized source could not be verified. Its data was retained for recovery.");
+        return await this.finishCheckpointCleanup(current.task, requireFile(current.task, fileId), context);
+      }
       if (
         task.status !== "queued" &&
         task.status !== "transferring" &&
@@ -672,66 +792,53 @@ export class GovernedIngestionTaskUseCases {
       if (file.acceptedBytes !== file.totalBytes)
         throw new Error("Transfer all file bytes before finalizing.");
       if (task.status !== "finalizing") {
-        task = await this.dependencies.repository.saveTask(
-          updateTask(task, {
-            status: "finalizing",
-            files: task.files,
-            updatedAt: this.now(),
-            progressMessage: "Checking and saving the transferred file.",
-          }),
-          task.revision,
-        );
+        const finalizing = updateTask(task, {
+          status: "finalizing",
+          files: task.files,
+          updatedAt: this.now(),
+          progressMessage: "Checking and saving the transferred file.",
+        });
+        task = await this.dependencies.repository.saveTask(finalizing, task.revision);
+        if (approval) {
+          if (!await approval.stillAllowed() || !approval.isCurrent())
+            return failure("forbidden", "The selected file is unavailable.", context);
+          const now = Date.parse(this.now());
+          const claimedFile = task.files.find(candidate => candidate.fileId === fileId);
+          if (!Number.isSafeInteger(now) || now >= approval.preview.checkpointExpiresAt ||
+              !matchesTaskScope(task, finalizing) || task.status !== finalizing.status ||
+              task.revision !== finalizing.revision || task.checkpointExpiresAt !== finalizing.checkpointExpiresAt ||
+              claimedFile?.status !== file.status || !chunkProgressMatches(claimedFile, file))
+            return failure("conflict", "The selected upload changed or expired.", context);
+        }
         file = requireFile(task, fileId);
       }
-      const key = `workspaces/${task.workspaceId}/artifacts/files/ingestion/${task.taskId}/${file.fileId}-${file.fileName}`;
-      const stored = await this.dependencies.streamStorage.storeArtifactStream(
-        {
-          content: this.dependencies.checkpoints.readChunks(
-            {
-              workspaceId: task.workspaceId,
-              checkpointId: file.checkpointId,
-              expectedChunkCount: file.nextChunkIndex,
-              expectedSizeBytes: file.acceptedBytes,
-            },
-            context,
-          ),
-          descriptor: {
-            key,
-            mediaType: file.mediaType,
-            metadata: {
-              originalFileName: file.fileName,
-              ingestionTaskId: task.taskId,
-            },
-          },
-          maximumBytes: file.totalBytes,
-          expectedSizeBytes: file.totalBytes,
-          ...(expectedDigest ? { expectedSha256: expectedDigest } : {}),
-          overwrite: true,
+      const admission = approval ? {
+        stillAllowed: approval.stillAllowed,
+        ...(approval.issuePublication ? { issue: approval.issuePublication } : {}),
+        isCurrent: () => {
+          const observedAt = Date.parse(this.now());
+          return approval.isCurrent() && Number.isSafeInteger(observedAt) && observedAt < approval.preview.checkpointExpiresAt;
         },
-        context,
+      } : undefined;
+      const published = await this.dependencies.filePublication.publishFile(
+        { taskId, fileId, expectedSha256: expectedDigest }, context, admission,
       );
-      if (!stored.ok)
+      if (published.kind === "content-rejected") {
+        if (admission && (!await admission.stillAllowed() || !admission.isCurrent()))
+          return failure("forbidden", "The selected file is unavailable.", context);
         return await this.markFailed(
           task,
           file,
-          "finalization-failed",
-          "The transferred file could not be saved. You can resume and retry.",
+          "content-verification-failed",
+          "The transferred file could not be verified. Check its checksum, then resume and retry.",
           context,
         );
-      const outputDigest =
-        stored.value.checksum?.algorithm === "sha256"
-          ? normalizeIngestionSha256Digest(
-              `sha256:${stored.value.checksum.value}`,
-            )
-          : expectedDigest;
-      if (!outputDigest)
-        return await this.markFailed(
-          task,
-          file,
-          "digest-unavailable",
-          "The transferred file could not be verified. You can resume and retry.",
-          context,
-        );
+      }
+      const publication = normalizeIngestionFilePublication(published.publication);
+      assertPublicationTask(publication, task);
+      if (!["origin-complete", "committed"].includes(publication.state) || !publication.digest
+        || (expectedDigest && publication.digest !== expectedDigest)) throw new Error("The saved source could not be verified. Its data was retained for recovery.");
+      const outputDigest = publication.digest;
       const sourceId = `source.${task.taskId}.${file.fileId}`;
       const snapshotId = `snapshot.${task.taskId}.${file.fileId}`;
       const snapshot = {
@@ -746,10 +853,10 @@ export class GovernedIngestionTaskUseCases {
           originalName: file.fileName,
         },
         contentDigest: outputDigest,
-        sizeBytes: stored.value.sizeBytes ?? file.totalBytes,
+        sizeBytes: publication.totalBytes,
         mediaType: file.mediaType,
-        rawArtifactKey: stored.value.key,
-        capturedAt: this.now(),
+        rawArtifactKey: publication.key,
+        capturedAt: publication.capturedAt,
       } as const;
       const nextTask = updateTask(task, {
         status: "finalizing",
@@ -757,9 +864,9 @@ export class GovernedIngestionTaskUseCases {
           ...file,
           status: "finalized",
           output: {
-            key: stored.value.key,
+            key: publication.key,
             mediaType: file.mediaType,
-            sizeBytes: stored.value.sizeBytes ?? file.totalBytes,
+            sizeBytes: publication.totalBytes,
             digest: outputDigest,
             sourceId,
             sourceSnapshotId: snapshotId,
@@ -776,18 +883,13 @@ export class GovernedIngestionTaskUseCases {
             snapshot,
           )
         ).task;
-      } catch (error) {
-        await this.deleteArtifact(stored.value.key, context).catch(
-          () => undefined,
-        );
-        const latest = await this.dependencies.repository.readTask(
-          task.workspaceId,
-          task.taskId,
-        );
-        if (latest?.status === "cancelled")
-          return createSuccessResult(latest, context);
-        throw error;
+      } catch {
+        const current = await this.readFinalizationState(nextTask, requireFile(nextTask, fileId), snapshot);
+        if (current.task.status === "cancelled") return createSuccessResult(current.task, context);
+        if (!current.committed) throw new Error("The saved source has an uncertain commit. Its data was retained for recovery.");
+        task = current.task;
       }
+      await this.dependencies.filePublication.verifyFilePublication({ taskId, fileId, expectedSha256: expectedDigest }, context);
       return await this.finishCheckpointCleanup(
         task,
         requireFile(task, fileId),
@@ -910,32 +1012,7 @@ export class GovernedIngestionTaskUseCases {
           task.revision,
         );
       }
-      let cleanupFailed = false;
-      for (const file of task.kind === "file-batch"
-        ? task.files.filter((candidate) => candidate.status !== "finalized")
-        : []) {
-        await this.dependencies.checkpoints
-          .deleteCheckpoint(
-            { workspaceId: task.workspaceId, checkpointId: file.checkpointId },
-            context,
-          )
-          .catch(() => {
-            cleanupFailed = true;
-          });
-      }
-      if (!cleanupFailed && task.cleanupPending)
-        task = await this.dependencies.repository.saveTask(
-          updateTask(task, {
-            status: "cancelled",
-            files: task.files,
-            updatedAt: this.now(),
-            completedAt: task.completedAt,
-            cleanupPending: false,
-            progressMessage: "Cancelled.",
-          }),
-          task.revision,
-        );
-      return createSuccessResult(task, context);
+      return createSuccessResult(await this.finishCancelledCheckpoints(task, context), context);
     } catch (error) {
       return failure(
         error instanceof MissingTaskError ? "not-found" : "validation",
@@ -999,11 +1076,67 @@ export class GovernedIngestionTaskUseCases {
     return INGESTION_TASK_RECOMMENDED_CHUNK_BYTES;
   }
 
+  private async recoverLateCancelledCheckpoint(
+    task: IngestionTaskRecord,
+    file: IngestionTaskFileRecord,
+    context: ApplicationRequestContext,
+  ): Promise<IngestionTaskRecord | undefined> {
+    if (task.kind !== "file-batch") return undefined;
+    const readCancelled = async () => {
+      const current = await this.dependencies.repository.readTask(task.workspaceId, task.taskId);
+      if (!matchesTaskScope(current, task) || current.status !== "cancelled") return undefined;
+      const target = current.files.find(candidate => candidate.fileId === file.fileId);
+      return target?.status === "cancelled" && target.output === undefined
+        && immutableIngestionFile(target) === immutableIngestionFile(file) ? current : undefined;
+    };
+    let current = await readCancelled().catch(() => undefined);
+    if (!current) return undefined;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const checkpoint = await this.dependencies.checkpoints.inspectCheckpoint({
+        workspaceId: current.workspaceId, checkpointId: file.checkpointId,
+      }, context).catch(() => undefined);
+      if (checkpoint?.chunkCount === 0 && checkpoint.sizeBytes === 0) return current;
+      const expectedRevision = current.revision;
+      await this.dependencies.repository.markCancelledCheckpointCleanupPending({
+        workspaceId: current.workspaceId, taskId: current.taskId, fileId: file.fileId, checkpointId: file.checkpointId,
+        expectedRevision, updatedAt: this.now(),
+      }).catch(() => undefined);
+      current = await readCancelled().catch(() => undefined);
+      if (!current) break;
+      if (current.cleanupPending && current.revision > expectedRevision) {
+        return this.finishCancelledCheckpoints(current, context);
+      }
+    }
+    throw new Error("Late upload cleanup could not be recorded.");
+  }
+
+  private async finishCancelledCheckpoints(
+    task: IngestionTaskRecord,
+    context: ApplicationRequestContext,
+  ): Promise<IngestionTaskRecord> {
+    let cleanupFailed = false;
+    for (const file of task.kind === "file-batch"
+      ? task.files.filter(candidate => candidate.status !== "finalized")
+      : []) {
+      await this.dependencies.checkpoints.deleteCheckpoint(
+        { workspaceId: task.workspaceId, checkpointId: file.checkpointId },
+        context,
+      ).catch(() => { cleanupFailed = true; });
+    }
+    if (cleanupFailed || !task.cleanupPending) return task;
+    return this.dependencies.repository.saveTask(updateTask(task, {
+      status: "cancelled", files: task.files, updatedAt: this.now(), completedAt: task.completedAt,
+      cleanupPending: false, progressMessage: "Cancelled.",
+    }), task.revision);
+  }
+
   private async finishCheckpointCleanup(
     task: IngestionTaskRecord,
     file: IngestionTaskFileRecord,
     context: ApplicationRequestContext,
   ): Promise<IngestionTaskResult> {
+    // A persisted terminal result is never rewritten by a cleanup retry.
+    if (task.status === "succeeded" || task.status === "cancelled" || task.status === "failed") return createSuccessResult(task, context);
     try {
       await this.dependencies.checkpoints.deleteCheckpoint(
         { workspaceId: task.workspaceId, checkpointId: file.checkpointId },
@@ -1028,10 +1161,53 @@ export class GovernedIngestionTaskUseCases {
         ? "All files are ready."
         : "File saved. Continue with the remaining files.",
     });
-    return createSuccessResult(
-      await this.dependencies.repository.saveTask(cleaned, task.revision),
-      context,
-    );
+    try {
+      return createSuccessResult(await this.dependencies.repository.saveTask(cleaned, task.revision), context);
+    } catch {
+      const current = await this.readFinalizationState(cleaned, requireFile(cleaned, file.fileId));
+      if (current.committed && JSON.stringify(current.task) === JSON.stringify(cleaned)) return createSuccessResult(current.task, context);
+      if (current.task.status === "cancelled" || current.task.status === "failed") return createSuccessResult(current.task, context);
+      throw new Error("Source cleanup has an uncertain commit. Its data was retained for recovery.");
+    }
+  }
+
+  private async readFinalizationState(
+    expectedTask: IngestionTaskRecord,
+    expectedFile: IngestionTaskFileRecord,
+    expectedSnapshot?: IngestionSourceSnapshot,
+  ): Promise<{ readonly task: IngestionTaskRecord; readonly committed: boolean }> {
+    try {
+      const stored = await this.dependencies.repository.readTask(expectedTask.workspaceId, expectedTask.taskId);
+      if (!stored) throw new Error();
+      const task = normalizeIngestionTaskRecord(stored);
+      if (task.workspaceId !== expectedTask.workspaceId || task.organizationId !== expectedTask.organizationId || task.taskId !== expectedTask.taskId
+        || task.kind !== expectedTask.kind || task.createdAt !== expectedTask.createdAt || task.checkpointExpiresAt !== expectedTask.checkpointExpiresAt
+        || task.revision < expectedTask.revision || task.files.length !== expectedTask.files.length
+        || !expectedTask.files.every(before => task.files.some(after => immutableIngestionFile(after) === immutableIngestionFile(before)))) throw new Error();
+      const file = requireFile(task, expectedFile.fileId);
+      if (JSON.stringify(file) !== JSON.stringify(expectedFile) || file.status !== "finalized" || !file.output) return { task, committed: false };
+      const output = file.output;
+      if (output.sourceId !== `source.${task.taskId}.${file.fileId}` || output.sourceSnapshotId !== `snapshot.${task.taskId}.${file.fileId}`) return { task, committed: false };
+      const value = await this.dependencies.repository.readSourceSnapshot(task.workspaceId, output.sourceSnapshotId as never);
+      if (!value) return { task, committed: false };
+      const snapshot = normalizeIngestionSourceSnapshot(value);
+      const expectedLocator = task.kind === "file-batch"
+        ? { kind: "file", displayName: file.fileName, originalName: file.fileName }
+        : task.kind === "hugging-face" && file.providerSource
+          ? { kind: "hugging-face", displayName: file.fileName, repository: file.providerSource.repository, path: file.providerSource.path, revision: file.providerSource.revision }
+          : undefined;
+      const committed = snapshot.workspaceId === task.workspaceId && snapshot.organizationId === task.organizationId
+        && snapshot.sourceId === output.sourceId && snapshot.snapshotId === output.sourceSnapshotId
+        && snapshot.rawArtifactKey === output.key && snapshot.sizeBytes === output.sizeBytes && snapshot.mediaType === output.mediaType
+        && snapshot.contentDigest === output.digest && snapshot.providerRevision === output.providerRevision
+        && !snapshot.derivedArtifactKeys?.length && !output.derivedArtifactKeys?.length
+        && expectedLocator !== undefined && JSON.stringify(snapshot.locator) === JSON.stringify(expectedLocator)
+        && (!expectedSnapshot || JSON.stringify(snapshot) === JSON.stringify(normalizeIngestionSourceSnapshot(expectedSnapshot)));
+      return { task, committed };
+    } catch {
+      // Uncertain readback never authorizes compensating deletion or adoption.
+      throw new Error("The source commit could not be verified. Its data was retained for recovery.");
+    }
   }
 
   private async markFailed(
@@ -1072,47 +1248,48 @@ export class GovernedIngestionTaskUseCases {
     return task;
   }
 
-  private async deleteArtifact(
-    key: string,
-    context: ApplicationRequestContext,
-  ): Promise<void> {
-    const result = await this.dependencies.artifactCleanup.deleteArtifact(
-      createDeleteArtifactRequest(key),
-      context,
-    );
-    if (!result.ok)
-      throw new Error(
-        "The uncommitted ingestion artifact could not be cleaned up.",
-      );
-  }
-
   private async saveIdempotently(
     task: IngestionTaskRecord,
     expectedRevision: number,
-    fileId: ReturnType<typeof normalizeIngestionTaskFileId>,
-    nextChunkIndex: number,
-    digest: string,
+    beforeFile: IngestionTaskFileRecord,
   ): Promise<IngestionTaskRecord> {
+    const fileId = beforeFile.fileId;
+    const acceptedFile = requireFile(task, fileId);
+    const readCurrent = async () => {
+      const current = await this.dependencies.repository.readTask(task.workspaceId, task.taskId);
+      return matchesTaskScope(current, task) ? current : undefined;
+    };
     try {
       return await this.dependencies.repository.saveTask(
         task,
         expectedRevision,
       );
     } catch (error) {
-      const current = await this.dependencies.repository.readTask(
-        task.workspaceId,
-        task.taskId,
-      );
-      const file = current?.files.find(
-        (candidate) => candidate.fileId === fileId,
-      );
-      if (
-        current &&
-        file?.nextChunkIndex === nextChunkIndex &&
-        file.lastChunk?.digest === digest
-      )
-        return current;
-      throw error;
+      const current = await readCurrent();
+      const file = current?.files.find(candidate => candidate.fileId === fileId);
+      if (current && chunkProgressMatches(file, acceptedFile)) return current;
+      if (!current || current.kind !== "file-batch" || current.revision <= expectedRevision
+          || (current.status !== "queued" && current.status !== "transferring")
+          || !fileAcceptsChunks(file)
+          || file?.status !== beforeFile.status || file?.output !== undefined || beforeFile.output !== undefined
+          || !chunkProgressMatches(file, beforeFile)) throw error;
+
+      // A different file advanced the task revision. The checkpoint is already written.
+      const rebased = updateTask(current, {
+        status: "transferring",
+        files: replaceFile(current, fileId, acceptedFile),
+        updatedAt: this.now(),
+        progressMessage: task.progress.message ?? "Chunk saved.",
+      });
+      try {
+        return await this.dependencies.repository.saveTask(rebased, current.revision);
+      } catch (retryError) {
+        const latest = await readCurrent();
+        if (latest && chunkProgressMatches(latest.files.find(candidate => candidate.fileId === fileId), acceptedFile)) {
+          return latest;
+        }
+        throw retryError;
+      }
     }
   }
 
@@ -1186,6 +1363,23 @@ function safeMessage(error: unknown, fallback: string): string {
     ? message
     : fallback;
 }
+function immutableIngestionFile(file: IngestionTaskFileRecord): string {
+  return JSON.stringify({ fileId: file.fileId, checkpointId: file.checkpointId, fileName: file.fileName, mediaType: file.mediaType, totalBytes: file.totalBytes, providerSource: file.providerSource, websiteSource: file.websiteSource });
+}
+function fileAcceptsChunks(file: IngestionTaskFileRecord | undefined): boolean {
+  return file?.status === "pending" || file?.status === "transferring";
+}
+function matchesTaskScope(observed: IngestionTaskRecord | undefined, expected: IngestionTaskRecord): observed is IngestionTaskRecord {
+  return observed?.workspaceId === expected.workspaceId && observed.taskId === expected.taskId
+    && observed.organizationId === expected.organizationId && observed.kind === expected.kind;
+}
+function chunkProgressMatches(observed: IngestionTaskFileRecord | undefined, expected: IngestionTaskFileRecord): boolean {
+  return observed !== undefined && immutableIngestionFile(observed) === immutableIngestionFile(expected)
+    && observed.acceptedBytes === expected.acceptedBytes && observed.nextChunkIndex === expected.nextChunkIndex
+    && observed.lastChunk?.index === expected.lastChunk?.index
+    && observed.lastChunk?.sizeBytes === expected.lastChunk?.sizeBytes
+    && observed.lastChunk?.digest === expected.lastChunk?.digest;
+}
 function providerBaseName(value: string): string {
   const parts = String(value).trim().replaceAll("\\", "/").split("/");
   return parts[parts.length - 1] ?? "";
@@ -1205,7 +1399,7 @@ function taskExecution(
     : result;
 }
 function failure(
-  code: "validation" | "not-found" | "unavailable" | "internal" | "forbidden",
+  code: "validation" | "not-found" | "unavailable" | "internal" | "forbidden" | "conflict",
   message: string,
   context: ApplicationRequestContext,
 ): IngestionTaskResult<any> {

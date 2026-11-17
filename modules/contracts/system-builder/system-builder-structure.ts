@@ -3,6 +3,7 @@ import {
   normalizeAssetId,
   type AssetPlacement,
   type AssetReference,
+  type AssetSlotDefinition,
 } from "../asset";
 
 export const SYSTEM_BUILDER_STRUCTURE_SCHEMA_VERSION =
@@ -15,6 +16,39 @@ export const SYSTEM_BUILDER_PROFILES = [
 ] as const;
 
 export type SystemBuilderProfile = (typeof SYSTEM_BUILDER_PROFILES)[number];
+
+const FOUNDATION_CONTENT_PAGE_IDS = new Set([
+  "builtin.layout.page.single",
+  "builtin.layout.page.header-content",
+  "builtin.layout.page.main-aside",
+  "builtin.layout.page.aside-main",
+  "builtin.layout.page.three-panel",
+]);
+
+/** System Builder allows empty visual regions on the exact Foundation v3 pages. */
+export function minimumSystemBuilderSlotItems(
+  profile: SystemBuilderProfile | undefined,
+  parent: AssetReference,
+  slot: Pick<AssetSlotDefinition, "slotId" | "cardinality">,
+): number {
+  if (
+    profile === "interactive" &&
+    parent.kind === "asset-definition-version" &&
+    parent.version === "3.0.0"
+  ) {
+    const definitionId = String(parent.id);
+    if (FOUNDATION_CONTENT_PAGE_IDS.has(definitionId) && slot.slotId === "content") {
+      return 0;
+    }
+    if (
+      definitionId === "builtin.layout.page.equal-split" &&
+      (slot.slotId === "start-panel" || slot.slotId === "end-panel")
+    ) {
+      return 0;
+    }
+  }
+  return slot.cardinality.minItems;
+}
 
 export interface SystemBuilderStructure {
   readonly schemaVersion: typeof SYSTEM_BUILDER_STRUCTURE_SCHEMA_VERSION;

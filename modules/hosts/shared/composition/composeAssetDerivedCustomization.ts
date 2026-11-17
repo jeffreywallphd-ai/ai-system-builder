@@ -1,3 +1,7 @@
+import { captureDerivedCreate, captureDerivedUpdate, captureDerivedTransition, captureDerivedList, captureDerivedTargetList, captureDerivedTargetRead } from "../../../application/services/asset/capture-derived-customization-requests";
+import type { AssetDefinitionPublicationPort } from "../../../application/ports/asset-publication";
+import { requireWorkspaceAssetAccess } from "../../../application/services/asset/workspace-asset-access.service";
+import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
 import { createHash, randomUUID } from "node:crypto";
 
 import { createStructuredAssetDerivedCustomizationRepository } from "../../../adapters/persistence/asset-authoring";
@@ -19,6 +23,8 @@ import {
 import type { AssetImplementationKernelComposition } from "./composeAssetImplementationKernel";
 
 export function composeAssetDerivedCustomization(options: {
+  readonly workspaceAccess: WorkspaceAssetAccessPort;
+  readonly publication: AssetDefinitionPublicationPort;
   readonly documents: StructuredDocumentStore;
   readonly definitions: AssetDefinitionRepositoryPort;
   readonly implementations: AssetImplementationKernelComposition;
@@ -31,6 +37,7 @@ export function composeAssetDerivedCustomization(options: {
     options.documents,
   );
   const targets = new AssetDerivedCustomizationTargetCatalogService({
+    workspaceAccess: options.workspaceAccess,
     definitions: options.definitions,
     implementations: options.implementations.repository,
     backingResources: options.implementations.backingResources,
@@ -38,6 +45,8 @@ export function composeAssetDerivedCustomization(options: {
     ...(options.authoredAssets ? { authoredAssets: options.authoredAssets } : {}),
   });
   const workflow = new AssetDerivedCustomizationWorkflowUseCase({
+        publication: options.publication,
+    workspaceAccess: options.workspaceAccess,
     customizations: repository,
     targets,
     definitions: options.definitions,
@@ -51,38 +60,55 @@ export function composeAssetDerivedCustomization(options: {
   const ready = options.ensureReady ?? (async () => undefined);
   const service: AssetDerivedCustomizationApplicationPort = {
     async listTargets(query) {
+      query = captureDerivedTargetList(query);
+      await requireWorkspaceAssetAccess(options.workspaceAccess, query.workspaceId, "asset-authoring.customization.listTargets", "asset:read");
       await ready();
       return targets.list(query);
     },
     async readTarget(query) {
+      query = captureDerivedTargetRead(query);
+      await requireWorkspaceAssetAccess(options.workspaceAccess, query.workspaceId, "asset-authoring.customization.readTarget", "asset:read");
       await ready();
       return targets.read(query);
     },
     async create(command) {
+      command = captureDerivedCreate(command);
+      await requireWorkspaceAssetAccess(options.workspaceAccess, command.workspaceId, "asset-authoring.customization.create", "asset:write");
       await ready();
       return workflow.create(command);
     },
     async update(command) {
+      command = captureDerivedUpdate(command);
+      await requireWorkspaceAssetAccess(options.workspaceAccess, command.workspaceId, "asset-authoring.customization.update", "asset:write");
       await ready();
       return workflow.update(command);
     },
     async review(command) {
+      command = captureDerivedTransition(command);
+      await requireWorkspaceAssetAccess(options.workspaceAccess, command.workspaceId, "asset-authoring.customization.review", "asset:write");
       await ready();
       return workflow.review(command);
     },
     async publish(command) {
+      command = captureDerivedTransition(command);
+      await requireWorkspaceAssetAccess(options.workspaceAccess, command.workspaceId, "asset-authoring.customization.publish", "asset:write");
       await ready();
       return workflow.publish(command);
     },
     async abandon(command) {
+      command = captureDerivedTransition(command);
+      await requireWorkspaceAssetAccess(options.workspaceAccess, command.workspaceId, "asset-authoring.customization.abandon", "asset:write");
       await ready();
       return workflow.abandon(command);
     },
     async read(workspaceId, customizationId) {
+      await requireWorkspaceAssetAccess(options.workspaceAccess, workspaceId, "asset-authoring.customization.read", "asset:read");
       await ready();
       return workflow.read(workspaceId, customizationId);
     },
     async list(query) {
+      query = captureDerivedList(query);
+      await requireWorkspaceAssetAccess(options.workspaceAccess, query.workspaceId, "asset-authoring.customization.list", "asset:read");
       await ready();
       return workflow.list(query);
     },

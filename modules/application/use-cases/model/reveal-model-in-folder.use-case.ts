@@ -58,11 +58,11 @@ export class RevealModelInFolderUseCase {
     }
 
     try {
-      await this.dependencies.modelLocationRevealer.revealPath(record.localPath);
+      await this.dependencies.modelLocationRevealer.revealModelLocation({ workspaceId: normalizedRequest.workspaceId!, modelRecordId: normalizedRequest.modelRecordId });
     } catch (error) {
       throw new RevealModelInFolderError(
         "unavailable",
-        "The model folder could not be opened.",
+        "The model folder could not be opened. File actions are pending host qualification; use your file manager.",
         error,
       );
     }

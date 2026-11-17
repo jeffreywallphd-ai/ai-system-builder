@@ -1,15 +1,16 @@
+import { constants, type BigIntStats } from "node:fs";
 import {
-  cp,
   lstat,
   mkdir,
-  readdir,
+  mkdtemp,
+  open,
+  opendir,
   realpath,
   rename,
   rm,
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import path, { join } from "node:path";
-import { randomUUID } from "node:crypto";
 
 import type {
   GeneratedModelStoragePort,
@@ -150,24 +151,81 @@ async function ensureContainedDirectory(
   return { root, directory: current };
 }
 
-async function assertSafeSourceTree(
+const MAXIMUM_SOURCE_DEPTH = 64;
+const COPY_BUFFER_BYTES = 256 * 1024;
+
+function isSameFileSnapshot(expected: BigIntStats, actual: BigIntStats): boolean {
+  return actual.isFile() && expected.ino !== 0n
+    && actual.dev === expected.dev && actual.ino === expected.ino
+    && actual.size === expected.size && actual.nlink === expected.nlink
+    && actual.mtimeNs === expected.mtimeNs && actual.ctimeNs === expected.ctimeNs;
+}
+
+async function stageGeneratedModelFile(
+  source: string,
+  canonicalSource: string,
+  inspected: BigIntStats,
+  target: string,
+): Promise<void> {
+  const changedSource = "Generated model source changed while being staged.";
+  const noFollow = constants.O_NOFOLLOW ?? 0;
+  const input = await open(source, constants.O_RDONLY | noFollow | (constants.O_NONBLOCK ?? 0));
+  try {
+    if (!isSameFileSnapshot(inspected, await input.stat({ bigint: true }))) {
+      throw new TypeError(changedSource);
+    }
+    const output = await open(target, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow, 0o600);
+    try {
+      // The walk already checked the size against the total byte limit.
+      let remaining = Number(inspected.size);
+      const buffer = Buffer.allocUnsafe(Math.min(remaining, COPY_BUFFER_BYTES));
+      while (remaining > 0) {
+        const { bytesRead } = await input.read(buffer, 0, Math.min(remaining, buffer.length), null);
+        if (bytesRead === 0) throw new TypeError(changedSource);
+        let offset = 0;
+        while (offset < bytesRead) {
+          const { bytesWritten } = await output.write(buffer, offset, bytesRead - offset, null);
+          if (bytesWritten === 0) throw new Error("Generated model staging write made no progress.");
+          offset += bytesWritten;
+        }
+        remaining -= bytesRead;
+      }
+    } finally {
+      await output.close();
+    }
+    if (await realpath(source) !== canonicalSource
+      || !isSameFileSnapshot(inspected, await lstat(source, { bigint: true }))
+      || !isSameFileSnapshot(inspected, await input.stat({ bigint: true }))) {
+      throw new TypeError(changedSource);
+    }
+  } finally {
+    await input.close();
+  }
+}
+
+async function walkGeneratedModelTree(
   sourceDirectory: string,
   maximumFiles: number,
   maximumBytes: number,
+  destination?: string,
 ): Promise<void> {
+  const requestedRootStats = await lstat(sourceDirectory);
+  if (requestedRootStats.isSymbolicLink() || !requestedRootStats.isDirectory()) {
+    throw new TypeError("Generated model source must be a real directory.");
+  }
   const sourceRoot = await realpath(sourceDirectory);
   const rootStats = await lstat(sourceRoot);
   if (rootStats.isSymbolicLink() || !rootStats.isDirectory()) {
     throw new TypeError("Generated model source must be a real directory.");
   }
   let fileCount = 0;
-  let totalBytes = 0;
-  const pending = [sourceRoot];
-  while (pending.length > 0) {
-    const directory = pending.pop()!;
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
+  let directoryCount = 0;
+  let totalBytes = 0n;
+  const byteLimit = BigInt(Math.floor(maximumBytes));
+  async function visit(directory: string, depth: number, destinationDirectory?: string): Promise<void> {
+    for await (const entry of await opendir(directory)) {
       const absoluteEntry = path.join(directory, entry.name);
-      const entryStats = await lstat(absoluteEntry);
+      const entryStats = await lstat(absoluteEntry, { bigint: true });
       if (entryStats.isSymbolicLink()) {
         throw new TypeError("Generated model source cannot contain links.");
       }
@@ -177,13 +235,22 @@ async function assertSafeSourceTree(
           "Generated model source escapes its approved directory.",
         );
       }
+      const target = destinationDirectory === undefined ? undefined : path.join(destinationDirectory, entry.name);
       if (entryStats.isDirectory()) {
-        pending.push(canonicalEntry);
+        directoryCount += 1;
+        if (directoryCount > maximumFiles || depth === MAXIMUM_SOURCE_DEPTH) {
+          throw new TypeError("Generated model source exceeds storage limits.");
+        }
+        if (target !== undefined) await mkdir(target, { mode: 0o700 });
+        await visit(canonicalEntry, depth + 1, target);
       } else if (entryStats.isFile()) {
         fileCount += 1;
         totalBytes += entryStats.size;
-        if (fileCount > maximumFiles || totalBytes > maximumBytes) {
+        if (fileCount > maximumFiles || totalBytes > byteLimit) {
           throw new TypeError("Generated model source exceeds storage limits.");
+        }
+        if (target !== undefined) {
+          await stageGeneratedModelFile(absoluteEntry, canonicalEntry, entryStats, target);
         }
       } else {
         throw new TypeError(
@@ -192,6 +259,17 @@ async function assertSafeSourceTree(
       }
     }
   }
+  await visit(sourceRoot, 0, destination);
+}
+
+async function assertTargetAbsent(targetDirectory: string): Promise<void> {
+  try {
+    await lstat(targetDirectory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  throw new TypeError("Generated model target already exists; retained content cannot be replaced.");
 }
 
 export function createLocalGeneratedModelStorageAdapter(
@@ -200,6 +278,10 @@ export function createLocalGeneratedModelStorageAdapter(
   const cacheRoot = path.resolve(
     resolveLocalGeneratedModelStorageRoot(options),
   );
+  if ((options.maximumSourceBytes !== undefined && !Number.isFinite(options.maximumSourceBytes))
+    || (options.maximumSourceFiles !== undefined && !Number.isFinite(options.maximumSourceFiles))) {
+    throw new TypeError("Generated model storage limits must be finite.");
+  }
   const maximumSourceBytes = Math.min(
     Math.max(options.maximumSourceBytes ?? 20 * 1024 * 1024 * 1024, 1),
     100 * 1024 * 1024 * 1024,
@@ -224,7 +306,7 @@ export function createLocalGeneratedModelStorageAdapter(
           "Generated model target escaped the host-owned cache root.",
         );
       }
-      await assertSafeSourceTree(
+      await walkGeneratedModelTree(
         request.sourceDirectory,
         maximumSourceFiles,
         maximumSourceBytes,
@@ -238,26 +320,31 @@ export function createLocalGeneratedModelStorageAdapter(
         snapshotsRoot,
         sanitizeSnapshotSegment(request.runId),
       );
-      const temporaryDirectory = path.join(
-        snapshotsRoot,
-        `.stage-${randomUUID()}`,
-      );
+      await assertTargetAbsent(targetDirectory);
+      // Exclusive creation owns this staging leaf, not an existing cache entry.
+      const temporaryDirectory = await mkdtemp(path.join(snapshotsRoot, ".stage-"));
+      const stagedIdentity = await lstat(temporaryDirectory, { bigint: true });
       try {
-        await cp(request.sourceDirectory, temporaryDirectory, {
-          recursive: true,
-          errorOnExist: true,
-          force: false,
-        });
-        const existing = await lstat(targetDirectory).catch(() => undefined);
-        if (existing?.isSymbolicLink()) {
-          throw new TypeError("Generated model target cannot replace a link.");
+        await walkGeneratedModelTree(request.sourceDirectory, maximumSourceFiles, maximumSourceBytes, temporaryDirectory);
+        const beforePublish = await lstat(temporaryDirectory, { bigint: true });
+        if (!beforePublish.isDirectory() || beforePublish.isSymbolicLink()
+          || stagedIdentity.ino === 0n || beforePublish.dev !== stagedIdentity.dev || beforePublish.ino !== stagedIdentity.ino
+          || await realpath(temporaryDirectory) !== temporaryDirectory) {
+          throw new TypeError("Generated model staging identity is unavailable.");
         }
-        await rm(targetDirectory, { recursive: true, force: true });
+        await walkGeneratedModelTree(temporaryDirectory, maximumSourceFiles, maximumSourceBytes);
+        await assertTargetAbsent(targetDirectory);
         await rename(temporaryDirectory, targetDirectory);
       } catch (error) {
-        await rm(temporaryDirectory, { recursive: true, force: true }).catch(
-          () => undefined,
-        );
+        // Cooperative identity check only; native parent/race protection is a
+        // separate capability. Unknown/substituted staging must be retained.
+        const current = await lstat(temporaryDirectory, { bigint: true }).catch(() => undefined);
+        const canonicalStage = await realpath(temporaryDirectory).catch(() => undefined);
+        if (current?.isDirectory() && !current.isSymbolicLink()
+          && canonicalStage === temporaryDirectory && isInside(snapshotsRoot, canonicalStage)
+          && stagedIdentity.ino !== 0n && current.dev === stagedIdentity.dev && current.ino === stagedIdentity.ino) {
+          await rm(temporaryDirectory, { recursive: true, force: false }).catch(() => undefined);
+        }
         throw error;
       }
 

@@ -358,7 +358,7 @@ export class FinalizeGeneratedOutputAsAssetUseCase {
       displayName: safeText(input.command.displayName) ?? safeText(input.finalizedImage.displayName) ?? safeText(input.sourceView.displayName) ?? input.definition.displayName,
       lifecycleStatus: "validated",
       reviewStatus: "reviewed",
-      resourceRefs: resourceRefsFor(input.finalizedImage),
+      resourceRefs: resourceRefsFor(input.finalizedImage, input.finalizedSourceIdentity),
       stateSummary: {
         status: "finalized",
         summary: "Finalized generated image asset instance.",
@@ -532,17 +532,19 @@ function partialFailureResult(
   }) as AssetMutationResult;
 }
 
-function resourceRefsFor(finalizedImage: FinalizedGeneratedImageDescriptor): readonly AssetReference[] {
+function resourceRefsFor(finalizedImage: FinalizedGeneratedImageDescriptor, identity: AssetSourceIdentity): readonly AssetReference[] {
+  const artifact = identity.backingRefs?.flatMap((backing) => backing.ref && "kind" in backing.ref && backing.ref.kind === "artifact" ? [backing.ref] : [])[0];
+  if (!artifact) throw new Error("Finalized image artifact identity is unavailable.");
   return [
     {
       kind: "resource-backed-asset",
-      id: normalizeAssetId(`image-asset.${finalizedImage.imageAssetId}`),
+      id: normalizeAssetId(`image-asset.${identity.sourceId}`),
       label: safeText(finalizedImage.displayName),
       metadata: sanitizeAssetMetadata({ imageAssetId: finalizedImage.imageAssetId }),
     },
     {
       kind: "artifact",
-      id: normalizeAssetId(`artifact.${finalizedImage.backingArtifactId}`),
+      id: artifact.id,
       metadata: sanitizeAssetMetadata({ artifactId: finalizedImage.backingArtifactId }),
     },
   ];

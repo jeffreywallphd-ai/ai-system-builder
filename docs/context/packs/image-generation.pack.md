@@ -84,3 +84,41 @@ Use this pack for tasks involving image generation contracts, runtime lifecycle 
 - Image-generation routes should require image-generation scopes through centralized route policy.
 - Generated image artifacts should be authorized via artifact storage/media routes.
 - ComfyUI temp paths must not be exposed as security-relevant client state.
+
+## Presentation ownership
+
+- Both host hooks use committed workspace/client sessions, synchronous mutation
+  admission and exact accepted-task reads. Retired replies cannot replace recovery
+  identity. Unknown progress keeps the task observable.
+- Finalization needs complete bounded registered assets and preserves same-request
+  retry. Late cancellation cannot revoke confirmed output. Form validation follows
+  existing request bounds; unexpected errors use safe Notifications copy.
+- Focused fixtures do not qualify physical generation or native cleanup. See
+  `docs/architecture/runtime-model.md` for the owning boundary and limitations.
+
+## Desktop navigation draft recovery
+
+The Desktop form uses bounded renderer memory keyed by workspace and the exact
+image, model and artifact client owners. It retains only known form fields,
+with eight workspace entries and a 128 KiB serialized limit per draft. Detached
+reads and owner-labelled updates prevent a retired view from writing into the
+next scope. No private prompt is added to browser or disk storage. Full reload
+recovers only the existing opaque task ID, not unsent form text or cached task
+success. Read `docs/architecture/runtime-model.md` before changing these limits
+or retention. Focused remount and isolation tests do not qualify actual image
+generation or native cleanup.
+
+
+## Image host qualification definitions
+
+- Dedicated image Desktop/Thin configs collect create/register and task-recovery
+  cases in the existing operational host specs. Run one host at a time.
+- `image-host-global-setup.mjs` requires explicit opt-in and verifies fixed local
+  managed inputs before build/start. No model or dependency acquisition occurs.
+- `image-host-inputs.mjs` bounds regular-file/header/hash snapshots; these are not
+  supplier, native-file or launch capabilities. Input records contain no results.
+- Actual cases decode/hash the PNG and reopen the exact unique saved artifact.
+- Server stdin shutdown uses the canonical task/persistence fence; Desktop
+  main-only evidence leaves ComfyUI/model workers and native job proof pending.
+- Helper tests and collection are source support. Actual hosts/full testing stay
+  deferred; accepted model accuracy is not rerun. See `dev-tools/README.md`.

@@ -60,6 +60,8 @@ export type ConversationTurnInvocationRequest = Readonly<{
   executionRunId?: string;
   executionAttemptId?: string;
   operationId?: string;
+  /** In-process only. The concrete adapter must recheck after asynchronous preparation. */
+  dispatchFence?: Readonly<{ check: () => Promise<boolean>; isCurrent: () => boolean }>;
 }>;
 
 export type ConversationTurnInvocationFailureCode =

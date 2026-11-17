@@ -4,8 +4,11 @@
 
 ## Toolchain
 
-- Host runtime: Electron
-- Build/dev system: Electron Forge (webpack plugin)
+- Host runtime: exact original-supplier Electron 42.11.18 (Node 24), including
+  the reviewed permission-origin and frame-geometry security fixes. See
+  `docs/security/electron-42-patch-qualification.json` for actual qualification
+  and the supplier's end-of-support limitation.
+- Build/dev system: Electron Forge (exact Vite plugin), per ADR-0044
 - Entry point orchestration: `apps/desktop/src/main` + `modules/hosts/desktop`
 
 ## Commands
@@ -18,6 +21,39 @@ From the repository root:
 - `npm run test:visual-composer -- --project packaged-desktop` after packaging,
   to run the isolated real preload/IPC System Composer workflow on Windows
 
+Run `npm run dev:desktop` from the checkout with Node 24 and npm available.
+The command verifies the locked npm dependencies and the approved Electron
+binary, installs missing components, and checks Python and its worker packages
+before starting Forge. It reuses a verified installation. If setup needs to
+install worker packages, it uses a virtual environment under the checkout.
+Windows x64 can provision a pinned portable Python when no supported
+interpreter is available. On other platforms, install Python 3.10–3.14 with
+`venv` and `pip` before launch. An explicit `PYTHON_RUNTIME_COMMAND` must point
+to a usable interpreter. See the [setup guide](../../dev-tools/scripts/bootstrap/README.md).
+
+Forge emits `.vite/build/main.cjs`, independent `main_window_preload.cjs` and
+`system_runtime_preload.cjs`, and separate relative-asset renderer directories.
+Both preload bundles run without Node integration; the published runtime keeps
+its minimal bridge and sandbox. Dev servers bind only to loopback ports3005/3006
+and serve declared source/dependency roots. The runtime keeps its CSP and uses
+ordinary reload instead of React Refresh's inline development preamble.
+Each renderer keeps its own dependency optimizer cache under
+`node_modules/.vite/desktop/<renderer-name>`. Sharing Vite's default repository
+cache can invalidate React modules in the other dev server and leave a blank
+window with an `Outdated Optimize Dep` response. Restart `npm run dev:desktop`
+after updating this configuration; no settings or credential reset is needed.
+`tsconfig.desktop.json` defines the shared desktop type-checking boundary.
+The official Hub clients use bundler-visible lazy imports so packaged provider
+features require no checkout-local dependencies. The optional PostgreSQL native
+peer remains guarded; the ordinary JS client does not require native installation.
+
+Dependency resolution keeps lifecycle scripts disabled. Electron 42 no longer has
+the old installation postinstall hook: CI and explicit local setup run
+`node node_modules/electron/install.js` after the locked install to acquire the
+official binary with bundled checksums. `npm rebuild electron` alone does not
+establish that the runtime is installed. Device permissions in published-system
+windows remain denied; a runtime update does not expand renderer authority.
+
 ## Packaged Python worker
 
 Forge copies the managed Python worker into the desktop application's resources
@@ -26,6 +62,17 @@ honors an explicit `PYTHON_RUNTIME_WORKER_DIR` override, and otherwise uses the
 repository path during development. The resource includes the reviewed worker
 source and requirements file; dependency setup still probes exact versions and
 fails startup on an unexpected or mismatched dependency state.
+Packaged Desktop checks its installed runtime before opening the app shell. If
+Python or worker packages are missing, use a compatible Python environment and
+install the requirements from the packaged `resources/worker` directory before
+closing and reopening the app. From that directory, run
+`python -m pip install -r requirements.txt` using the interpreter Desktop will use.
+The packaged resource also includes `requirements-context.txt`. Normal managed
+Python setup installs and re-verifies the exact LanceDB dependency. Explicit RAG
+create/inspect/query starts repeat the idempotent check so a missing install is
+repaired without user commands, and the existing Context activity notification
+shows fixed installation progress. Passive runtime and Context reads do not
+install packages.
 
 ## Local structured persistence
 
@@ -100,6 +147,7 @@ Design constraints:
 - uploads selected files as independent artifact-upload requests so one rejected file does not stop the rest of the batch
 - reports a per-file result list, keeps successful stored keys visible, and lets users cancel queued files before or during a batch
 - renders browse/detail/content preview and Hugging Face publish success/error feedback
+- reads Artifact Browser download bytes with the current workspace; switching workspaces updates that context, and existing storage checks still reject missing or foreign workspace access
 - supports published-backing re-check and last-verified display from durable binding metadata
 - supports imported-source re-check and separate source verification status display
 - supports imported-source inspection and explicit localize/download action when local bytes are missing
@@ -152,6 +200,20 @@ Renderer constraints for this slice:
 
 ## Renderer Shell And Workspace UI
 
+Choose **File > Turn Off Window Takeover for This Session** to end automation
+control in every desktop window. The desktop refuses new window-control
+requests until the app restarts. Authorized editing and chat tasks can continue.
+On the next launch, each window still asks for consent before accepting control.
+
+- Shared mini dashboards replace decorative page-header artwork. Home shows the
+  larger workspace summary for published systems, active datasets, trained models,
+  and active custom assets. Systems, Data, Assets, Models, Image Generation,
+  and Settings show their task-specific summaries from existing
+  workspace-scoped read clients; unavailable summaries fail softly without
+  exposing transport details.
+- The dedicated Reusable Library renderer route is not part of primary
+  navigation. Cross-workspace reuse contracts and host operations remain
+  available to asset workflows without a standalone page.
 - A dedicated published-system window is lifecycle-bound to its exact release.
   Explicit **Stop** closes the window without a duplicate lifecycle mutation;
   closing that window directly closes its conversation session and invokes
@@ -163,6 +225,10 @@ Renderer constraints for this slice:
   five seconds and then fade, while model-download, dataset-preparation, and
   model-training activities remain in bounded workspace-scoped history and
   update from authoritative runtime task progress.
+- The Context page keeps the shared sanitized Python runtime monitor visible
+  beneath RAG Databases, Context Packs, and Context Browser so runtime health,
+  bounded activity, and explicit recovery controls remain available wherever
+  Context work is performed.
 - Terminal save, create, update, delete/archive, upload/import/localize/publish,
   build/run, settings, image, model, and similar action outcomes publish to this
   center instead of rendering duplicative page-level banners. Field validation,
@@ -170,7 +236,8 @@ Renderer constraints for this slice:
   security blockers, retry context, and active task controls remain inline.
 - Desktop primary navigation is exposed through a plain hamburger menu in the right side of the header, directly before the themed settings gear.
 - The header centers a compact **Current Workspace** selector with an explicit **Change** action between the brand area and the right-side menu/settings actions.
-- The Home page keeps the fuller workspace card in a compact responsive equal-width two-column layout, with change-workspace controls on the left and create-workspace controls on the right.
+- The Home page keeps the fuller workspace card with its responsive four-metric
+  dashboard to the right of the heading and workspace controls.
 - Workspace-required pages should rely on the header for current workspace display and should not repeat current workspace labels in each feature panel.
 - Data Management tab content uses the shared sectioned panel header style for Data Artifact Ingester, Artifact Browser, and Dataset Preparation; panel headers stay title-only, body content uses grouped sections and card/list controls, and actions such as Artifact Browser refresh belong in the body.
 - Artifact Browser and Dataset Preparation source lists classify uploaded/generated artifacts by storage path segments and `sourceKind`, so workspace-prefixed keys such as `workspaces/.../artifacts/files/uploads/...` still appear in the uploaded group.
@@ -182,8 +249,92 @@ Renderer constraints for this slice:
 - Public repositories may work without a token depending on repository visibility/provider policy.
 - Missing/invalid token and access-denied responses are surfaced with explicit auth guidance in UI messaging.
 
+## Optional Windows text reader build
+
+Forge's `generateAssets` hook runs the fixed OCR build before development start
+and packaging on x64 Windows. It uses the existing trusted
+`PYTHON_RUNTIME_COMMAND` interpreter setting, or `python`, with isolated standard
+library imports. The build uses the installed .NET compiler and Windows SDK
+26100; it downloads nothing. Other platforms and missing tools leave this
+optional reader unavailable while Standard features can still start.
+
+The hook compiles only the repository helper source. It checks source and binary
+hashes before publishing the fixed worker resource. The existing worker
+`extraResource` carries this directory into desktop packages. A valid resource
+can be reused. A terminated build releases its process-owned file lock; a later
+build uses a new temporary directory and does not delete earlier evidence.
+The compiler is a trusted development tool, not a sandboxed content processor.
+End-user runtime code does not compile, search for or download a helper.
+
+The build does not enable OCR by itself. Dataset normalization, readiness and
+actual desktop/browser journeys must qualify before the app advertises it.
+
 ## Hugging Face token configuration UI
 
 - Desktop Artifact Browser now includes a **Hugging Face token** section with masked configured-state display.
 - Use **Save token** / **Clear token** in renderer; desktop host persists the token and reuses it for register/localize/publish/verify flows.
 - Public Hugging Face repos may work without token; private/gated repos may require token configuration.
+
+## Artifact Browser action ownership
+
+Desktop data lists and previews use fresh leases committed and retired during
+layout. Workspace/client changes clear prior selection and deletion intent.
+Type/storage filter changes retire old list replies. Superseded detail replies
+cannot request more content or replace the current preview. Popup requests also
+check their exact scope and request identity before opening or updating.
+
+Registered and unregistered deletion share one synchronous pending owner. Exact
+typed confirmation remains until deletion succeeds, so failure can be retried.
+An accepted host deletion continues after navigation; its old reply cannot
+clear or refresh another workspace. Application authorization, catalog-last
+local deletion and remote-provider policy remain authoritative.
+
+Focused component journeys use the real client, preload, registered handlers,
+application code and new JSON/filesystem records. Sender trust, unavailable
+provider/settings operations and timing are finite fixtures. These tests do
+not qualify installed Electron windows, production sender/access security,
+SQLite restart, live providers, image/PDF decoding or native recovery.
+
+Deletion captures the selected target, committed lease and selection sequence
+before dispatch. Completion clears only that exact selection; choosing another
+artifact or choosing the same artifact again creates a new selection. A newer
+preview is a retained snapshot, not proof that deleted bytes still exist. Clearing
+the current selection also closes its detail popup.
+
+After a current-workspace deletion succeeds, refresh uses the latest committed
+list callback. Changing type or storage filters while deletion is pending cannot
+leave the removed item in the displayed list. The callback is updated in layout,
+never during an uncommitted render; the existing workspace/client lease check
+still prevents refreshing another view.
+
+### Model reference save admission
+
+Desktop Models admits one reference save synchronously before busy rendering and
+disables Save until that attempt settles. Failure releases the action for an
+explicit retry. A save accepted before workspace/client replacement or unmount
+retains its original backend input, but cannot refresh or notify the retired view.
+
+Five variations extend the existing real client/preload/registered-handler/JSON
+registry UI fixture. Provider results, in-process invoke and a held or failing
+pre-delegate save remain explicit fixtures. Tests verify exact persisted reference
+fields, safe correction and retirement without actual provider/model execution.
+Cleanup drains accepted fixture requests, verifies the new root identity/link/
+type/size bounds and restores the React test flag. Existing native-file refusal
+and typed record-delete checks remain intact. These checks supply no physical
+Electron/sender-authority, SQLite, native process or final/parent qualification.
+Accepted model accuracy and OCR stay closed.
+
+### Joined image generation tests
+
+`desktop-image-ipc-storage.ui.test.tsx` mounts the Desktop Image feature with its
+default client, actual preload API, registered IPC and application finalizer.
+Fresh synthetic PNG files, catalog, bindings and JSON image registry are real.
+The tests check exact settings, pixels/digest, reopened ownership, retry without
+duplicate persistence, refused cancellation and foreign task denial. Preview
+requests now carry the active workspace, as their media reader requires.
+
+Invoke events, task generation, workspace access and passive inventory/settings/
+media facilities are finite fixtures. The tests drain requests, restore bridge/
+React/session/URL state and check owned file identities/links/counts/bytes before
+cleanup. No model, physical Electron/sender boundary, native effect or final
+roadmap qualification follows; accepted model accuracy/OCR stay closed.

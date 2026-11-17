@@ -1,3 +1,4 @@
+import { normalizeDatasetPreparationMemoryShortfall } from "../../../../contracts/runtime";
 import type { Request } from "express";
 
 import type {
@@ -161,6 +162,9 @@ const mapTaskStatus = (
       status: "failed",
       error: {
         code: statusRecord.error?.code,
+        ...(statusRecord.error?.code === "generation_insufficient_resources" ? {
+          memoryShortfall: normalizeDatasetPreparationMemoryShortfall(statusRecord.error.details?.memoryShortfall),
+        } : {}),
         message:
           statusRecord.error?.message ?? "Dataset preparation task failed.",
       },

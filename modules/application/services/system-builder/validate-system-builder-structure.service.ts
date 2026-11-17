@@ -10,10 +10,19 @@ import {
   MAX_ASSET_PLACEMENT_DEPTH,
   normalizeAssetPlacements,
 } from "../../../contracts/asset";
-import type { SystemBuilderRevision } from "../../../contracts/system-builder";
+import type {
+  SystemBuilderProfile,
+  SystemBuilderRevision,
+} from "../../../contracts/system-builder";
 import {
   classifySystemBuilderStructure,
+  isCurrentSystemForm,
+  isCurrentSystemFormElement,
+  isSystemFormDefinition,
+  minimumSystemBuilderSlotItems,
   normalizeSystemBuilderStructure,
+  systemFormPlacementAllowed,
+  SYSTEM_FORM_PLACEMENT_MESSAGE,
 } from "../../../contracts/system-builder";
 import {
   SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS,
@@ -71,6 +80,7 @@ export function validateSystemBuilderStructure(
     issues,
   );
   validateSlotsAndCompatibility(
+    structure.profile,
     placements,
     instancesById,
     definitionsById,
@@ -79,6 +89,7 @@ export function validateSystemBuilderStructure(
   validatePlacementGraph(placements, instancesById, issues);
 
   if (structure.profile === "interactive") {
+    validateFormElementOwnership(revision, placements, instancesById, issues);
     validateInteractiveRoot(
       revision,
       structure.layoutPresetRef,
@@ -87,6 +98,42 @@ export function validateSystemBuilderStructure(
       definitionsById,
       issues,
     );
+  }
+}
+
+function validateFormElementOwnership(
+  revision: StructureRevision,
+  placements: readonly AssetPlacement[],
+  instancesById: ReadonlyMap<string, AssetInstance>,
+  issues: AssetValidationIssue[],
+): void {
+  const roots = new Set(revision.composition.rootInstanceRefs.map((ref) => String(ref.id)));
+  const byChild = new Map(placements.map((edge) => [String(edge.childInstanceRef.id), edge]));
+  for (const item of instancesById.values()) {
+    const form = isCurrentSystemForm(item.definitionRef);
+    const element = isCurrentSystemFormElement(item.definitionRef);
+    if (revision.structure?.layoutPresetRef?.version === SYSTEM_FOUNDATION_CURRENT_PACK_VERSION &&
+        !form && !element && isSystemFormDefinition(item.definitionRef)) {
+      addIssue(issues, "Use a current Foundation Form asset or form element.", ["instances", String(item.instanceId)]);
+      continue;
+    }
+    if (!form && !element) continue;
+    let cursor = String(item.instanceId);
+    let formAncestors = 0;
+    for (let depth = 0; depth < MAX_ASSET_PLACEMENT_DEPTH; depth += 1) {
+      const edge = byChild.get(cursor);
+      if (!edge) break;
+      cursor = String(edge.parentInstanceRef.id);
+      const parent = instancesById.get(cursor);
+      if (!parent) break;
+      if (isCurrentSystemForm(parent.definitionRef)) formAncestors += 1;
+    }
+    const path = ["instances", String(item.instanceId)];
+    if (form && formAncestors > 0) {
+      addIssue(issues, "A Form asset cannot be placed inside another form.", path);
+    } else if (element && (formAncestors !== 1 || !roots.has(cursor))) {
+      addIssue(issues, SYSTEM_FORM_PLACEMENT_MESSAGE, path);
+    }
   }
 }
 
@@ -239,6 +286,7 @@ function validatePlacementCoverage(
 }
 
 function validateSlotsAndCompatibility(
+  profile: SystemBuilderProfile,
   placements: readonly AssetPlacement[],
   instancesById: ReadonlyMap<string, AssetInstance>,
   definitionsById: ReadonlyMap<string, AssetDefinition>,
@@ -261,7 +309,8 @@ function validateSlotsAndCompatibility(
     for (const slot of slots.values()) {
       const group =
         grouped.get(`${parent.instanceId}:${String(slot.slotId)}`) ?? [];
-      validateSlotCardinality(parent, slot, group.length, issues);
+      const minimum = minimumSystemBuilderSlotItems(profile, parent.definitionRef, slot);
+      validateSlotCardinality(parent, slot, minimum, group.length, issues);
       validateContiguousOrder(parent, slot, group, issues);
     }
     for (const placement of placements.filter(
@@ -298,13 +347,14 @@ function validateSlotsAndCompatibility(
 function validateSlotCardinality(
   parent: AssetInstance,
   slot: AssetSlotDefinition,
+  minimum: number,
   count: number,
   issues: AssetValidationIssue[],
 ): void {
-  if (count < slot.cardinality.minItems || count > slot.cardinality.maxItems) {
+  if (count < minimum || count > slot.cardinality.maxItems) {
     addIssue(
       issues,
-      `Slot "${slot.slotId}" requires ${slot.cardinality.minItems} to ${slot.cardinality.maxItems} children; found ${count}.`,
+      `Slot "${slot.slotId}" requires ${minimum} to ${slot.cardinality.maxItems} children; found ${count}.`,
       ["instances", String(parent.instanceId), "slots", String(slot.slotId)],
     );
   }
@@ -380,6 +430,10 @@ export function systemBuilderSlotAcceptsDefinition(
   child: AssetDefinition,
   parent?: AssetDefinition,
 ): boolean {
+  const reference = (definition: AssetDefinition) => ({
+    kind: "asset-definition-version" as const, id: definition.definitionId, version: definition.version,
+  });
+  if (!systemFormPlacementAllowed(reference(child), parent && reference(parent), String(slot.slotId))) return false;
   return (
     slot.acceptedAssetTypes?.includes(child.assetType) === true ||
     slot.acceptedAssetFamilies?.includes(child.assetFamily) === true ||

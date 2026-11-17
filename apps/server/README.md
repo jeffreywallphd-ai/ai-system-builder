@@ -31,7 +31,20 @@ Production requires `DEPLOYMENT_SHAPE=campus-server`, `corporate-server`, or
 `cloud`; each selects PostgreSQL and requires `DATABASE_URL`. Startup validates
 configuration and schema, imports only allowlisted legacy JSON before API
 registration, and never falls back to JSON after a managed shape is selected.
-Production also requires `AI_SYSTEM_BUILDER_SECURITY_MODE=lan-https-token`.
+Production also requires `AI_SYSTEM_BUILDER_SECURITY_MODE=oidc-bearer`.
+
+Set `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_ORIGIN` to the exact HTTPS
+origin that serves the thin client and its same-origin API paths to enable
+browser consent. Enable the managed agent registrations and saved-state feed
+first. Leave the setting unset where browser consent is unavailable. A path,
+trailing slash, plain HTTP origin or unverified client configuration prevents
+startup with this setting. Use browsers that send `Sec-Fetch-Site`.
+The separate agent window route accepts requests only from the verified
+agent registration. Consent and revoke belong to the browser document.
+Set `AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_PRESENTATION=1` on a
+consent-enabled host to enable saved-resource delivery, fresh context and
+lease renewal. Leave it unset for consent-only operation. Presentation
+still requires the user's approval in the exact browser tab.
 
 Use `GET /health/live` for process liveness and `GET /health/ready` for sanitized
 PostgreSQL plus artifact-storage readiness. SIGINT/SIGTERM stop the listener and
@@ -70,6 +83,38 @@ drain the database pool idempotently. Deployment templates live under
 
 ## Local runtime state
 
+Controlled artifact tests may supply `controlledHuggingFaceArtifactTransport`
+to `createServer`. It forwards the existing artifact adapter's fetch and complete
+Hub client ports. Either production environment rejects the option before
+initialization. Incomplete bundles, accessors and proxies are refused without
+reading their fields. The constructor captures the validated functions once.
+Omission preserves ordinary provider composition. No API or production
+environment setting enables this constructor option.
+
+The Functional local artifact fixture uses throwing Hub/metadata-fetch transports
+with bounded, argument-free counters. Brokered retrieval is a separate path and
+is outside this guarantee. Its private-source fixture retains the existing separately
+authorized provider path. These test ports do not replace permission checks or
+provide an OS network sandbox. See [Functional host setup](../../docs/diagnostics/functional-host-setup.md)
+for observation scope and the required real-route controls.
+
+Controlled tests may supply the typed `pythonRuntimeEnvironmentPreparer`
+composition callback. Both server entry points reject it in production before
+initialization. It is never read from an API or environment flag; omitting it
+preserves the normal managed Python dependency checks and propagates failures.
+The preparation-failure integration regression uses a fresh real in-memory
+structured store per case through the existing test seam, while still running
+Foundation installation, HTTP routing and the owned supervisor. It asserts the
+specific sanitized preparation-failure event as well as the public denial.
+Separate file-backed server and whole-host cases qualify filesystem behavior;
+this narrow regression does not establish filesystem bootstrap reliability.
+Each entry point captures the option once. Every defined production override
+and every nonfunction nonproduction value are rejected, including falsy values.
+The qualification harness validates the exact fixed worker command, arguments,
+cwd, loopback endpoint and isolated cache. The host still owns worker launch,
+private rotating authentication, capability checks and termination. This seam
+does not qualify real Python dependencies, models or hardware.
+
 - `SERVER_STORAGE_ROOT` overrides server artifact storage.
 - `SERVER_RUNTIME_ROOT` overrides server-owned runtime state for ComfyUI, Python worker caches, and managed runtime dependencies.
 - Without overrides, server runtime state lives under `apps/server/.local/server-runtime`, which keeps dev runtime installs out of the source tree and separate from artifact storage.
@@ -80,6 +125,13 @@ drain the database pool idempotently. Deployment templates live under
 - Server composition generates and rotates the worker bearer credential for
   every spawn. Operators must not set, persist, or expose
   `PYTHON_RUNTIME_AUTH_TOKEN`; it is child-only launch state.
+- The packaged Python worker owns the exact Context dependency declaration in
+  `requirements-context.txt`. Normal managed-runtime setup installs it, and an
+  explicit RAG create or query request performs the same asynchronous,
+  one-flight check before starting work.
+- Context dependency installation runs outside the server event loop and
+  reports fixed, sanitized task progress such as local vector-database
+  installation. Passive task and runtime status reads never install packages.
 
 ## Security modes and HTTPS startup
 
@@ -147,7 +199,6 @@ npm run dev:server
 
 If you generate certs inside this repo, keep them out of git (for example under an ignored `certs/` directory).
 
-
 ### Dev HTTPS in `disabled-dev` (restart required)
 
 Default `npm run dev:server` starts in `disabled-dev` with HTTP and no auth.
@@ -178,7 +229,6 @@ npm run dev:server
 
 Detailed checklist: `docs/security/manual-smoke-test.md`.
 
-
 ### `SERVER_TOKEN_HASH_SECRET`
 
 - Used to derive stable token hashes for credential lookup; this value is sensitive.
@@ -207,8 +257,49 @@ $bytes = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Fi
 - It does **not** switch a running listener between HTTP and HTTPS.
 - Do not use this toggle as production security.
 
-
 - Never commit generated private keys or token hash secrets; do not print secret values in logs.
 
-
 No automatic trust-store installation is performed. Trust installation is manual; browser/mobile trust limitations apply. Do not commit private keys or SERVER_TOKEN_HASH_SECRET.
+
+The opt-in disabled-development security toggle uses the existing nonpublic
+`security:admin` policy. Initial explicit `disabled-dev` bootstrap remains
+unauthenticated; once `lan-token-enforced` is enabled, missing/invalid tokens
+and nonadmin scopes cannot change the mode. Listener/TLS posture remains
+startup-owned, and LAN/OIDC startup does not enable this development toggle.
+## Managed headless system authoring
+
+The managed server holds the System Builder and saved-state feed used by
+the browser and the headless agent. To enable the agent routes on a configured
+OIDC/PostgreSQL deployment, enable `AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE=1`
+and specify the issuer's separate client IDs with
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID` and
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID`. With both client
+bindings unset, the agent routes are unavailable.
+
+Agent requests use the already configured issuer, an exact organization
+selection and an explicitly chosen workspace. Discovery provides a host
+identifier and available read operations without enumerating workspaces.
+The existing application membership and workspace policies control reads,
+edits and receipt replay. Enabling the route does not enable document takeover.
+
+To let a managed headless client send a plan for a person to review, set
+`AI_SYSTEM_BUILDER_MANAGED_HEADLESS_PLAN_REVIEW_CLIENT_ID` to a third client
+ID from the same issuer. It must differ from the agent and browser client
+  IDs. The plan client can read workspace information, submit or check a
+  proposal, and run the next approved change. Direct authoring, approval
+  decisions, and window control require separate authority.
+Configure the issuer to identify this client in each token it issues for
+the registration. The server accepts only a typed access token with an exact
+signed client ID for plan review. It also uses a signed client ID or
+authorized party to refuse ordinary app routes to this client.
+Staging checks the saved revisions and records the exact steps. If the
+client sends the same proposal again, it keeps the original expiration time.
+  Execution reads the exact plan and approval revision from PostgreSQL. It
+  returns a saved reference once and recovers the same reference on an exact
+  retry while approval stays current.
+
+With the exact managed browser origin configured, the browser approval
+endpoint can list, open, approve, deny, cancel or withdraw the signed-in
+user's requests. The endpoint requires the current browser registration
+and the proof for that document. Approval applies to the exact request and
+revision the user opened. It supports the whole plan and one change at a time.

@@ -1,0 +1,16 @@
+{
+  "schema_version": "fixed-saved-row-review-v1",
+  "source_name": "synthetic-provided-row-review.csv",
+  "dataset_name": "saved-row-review-qualification",
+  "edit_suffix": " Please confirm.",
+  "rows": [
+    { "text": "Please send the invoice for the completed garden fence installation.", "label": "invoice" },
+    { "text": "The monthly office cleaning invoice needs the new purchase order reference.", "label": "invoice" },
+    { "text": "Send a receipt for the replacement window payment made yesterday.", "label": "receipt" },
+    { "text": "Please attach the receipt for the annual library membership renewal.", "label": "receipt" },
+    { "text": "The warehouse needs an order for twelve replacement safety helmets.", "label": "order" },
+    { "text": "Create an order for the school laboratory measuring equipment.", "label": "order" },
+    { "text": "The quarterly maintenance report describes the lift inspection results.", "label": "report" },
+    { "text": "Please prepare the report on community swimming pool water checks.", "label": "report" }
+  ]
+}

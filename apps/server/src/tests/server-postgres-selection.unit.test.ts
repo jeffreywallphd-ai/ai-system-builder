@@ -41,6 +41,7 @@ test("operational health routes expose sanitized PostgreSQL readiness", async ()
   const created = await createServer({
     env: {
       DEPLOYMENT_SHAPE: "campus-server",
+      AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE: "1",
       SERVER_STORAGE_ROOT: path.join(root, "storage"),
       SERVER_RUNTIME_ROOT: path.join(root, "runtime"),
     },
@@ -65,11 +66,29 @@ test("operational health routes expose sanitized PostgreSQL readiness", async ()
     const body = JSON.stringify(await ready.json());
     assert.match(body, /not-ready/);
     assert.doesNotMatch(body, /top-secret|db\.example/);
+
+    const disabledSavedState = await fetch(`http://127.0.0.1:${address.port}/api/headless/system-builder/snapshot`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: '{"workspaceId":"fixture-workspace"}',
+    });
+    assert.equal(disabledSavedState.status, 404);
+    assert.deepEqual(await disabledSavedState.json(), { ok: false, code: "headless.unavailable" });
+    const disabledAgent = await fetch(`http://127.0.0.1:${address.port}/api/headless/agent/read`, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: "{}",
+    });
+    assert.equal(disabledAgent.status, 404);
+    assert.deepEqual(await disabledAgent.json(), {ok: false, code: "headless.unavailable"});
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     await created.closePersistence();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("managed agent configuration refuses to start without its verified issuer", async () => {
+  await assert.rejects(() => createServer({
+    env: {AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID: "fixture-agent",
+      AI_SYSTEM_BUILDER_MANAGED_HEADLESS_BROWSER_CLIENT_ID: "fixture-browser"},
+  }), /requires two distinct OIDC client registrations/);
 });
 
 test("readiness reports schema, pool pressure, latency, and artifact capacity", async () => {

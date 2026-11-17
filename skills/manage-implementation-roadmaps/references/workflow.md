@@ -1,5 +1,22 @@
 # Implementation roadmap workflow
 
+When publishing user descriptions, compare the complete technical meaning first,
+then bind the reviewed copy to current source hashes and qualification types.
+Cover inspectable historical criteria as history; preserve their results and
+superseding owners. Plain purpose, bullet requirements, agent action and completion
+proof must not create new scope or authority. Failed copy admission needs an agent
+description update, not a human blocker. Use the technical CLI/canonical JSON for
+implementation. Check display bounds, redaction, stale/duplicate/foreign refusal,
+inert HTML and unchanged outcomes with automated tests before completion.
+
+User-directed agent-only acceptance uses `acceptance-scope-revised` for governed
+state and the separate `legacy-acceptance-scope-revised` event for mixed legacy
+criteria. Both archive exact human scope without technical closure. Preserve
+automated UI/accessibility, model, hardware, provider, performance and security
+checks, and all product human-approval controls. Independently review the semantic
+classification and record actual narrow user reapproval. A legacy human-only
+transfer may close only when every retained technical criterion already passes.
+
 ## Invariants
 
 - Repository instructions and implemented behavior remain authoritative.
@@ -19,6 +36,22 @@
   limited to security-named work.
 - The state engine records workflow facts but never runs implementation or test
   commands.
+- Approved not-started work is pending (`ready`); active work is in progress
+  (`executing`). Use `blocked` only for a specific action a human must take.
+  Record the role, action, location and completion condition. A future start order,
+  missing implementation or unrun check is not a human blocker.
+- New increments refuse unresolved human actions and unclassified legacy records.
+  Explicitly reclassified agent work remains open and permits approved execution.
+  It still prevents technical completion. Use `resumed` only after actual completion;
+  use `blocker-reclassified` for responsibility changes. Preserve approval, order,
+  dependencies, criteria, chunks and evidence. Neither event creates a test pass.
+
+Write separate source-bound user descriptions with short sentences, familiar words
+and one clear action, following ASD-STE100 principles. Name the actor. Give the
+location and completion proof. For agent work say "No action needed" and display
+In progress or Technical check pending. Keep technical detail and original history
+internally; do not expose a technical accordion in the user view. These principles
+do not certify full ASD-STE100 conformance.
 
 ## Artifact model
 
@@ -134,10 +167,27 @@ increment.
 
 ### 4. Obtain roadmap approval
 
-Present the full roadmap with its recommendation and important assumptions. Wait for
-explicit approval before recording the approval event or editing implementation
-code. Approval is fingerprinted; changed decisions or increment definitions require
-new approval.
+Publish the complete unapproved proposal through `roadmap-defined`, or the
+applicable `roadmap-revised` event, and render/validate the canonical state and
+roadmap before requesting roadmap approval. An ignored draft or discovery-only
+0/0 record is insufficient. Preserve the existing high-level option decisions.
+
+When the repository provides the control-plane review site, start or safely reuse
+its server and inspect the actual live JSON projection for this roadmap identity.
+Compare the expected nonzero increment and criterion counts/IDs, objectives,
+dependencies, work packages, deliverables, acceptance descriptions/qualification,
+verification, rollback and exclusions with the canonical draft. Make these
+proposal details reviewable on the site, with the canonical full-roadmap reference
+available. Implementation chunk plans follow approval and increment research;
+their absence does not make a complete proposal empty. Repair missing,
+stale, incomplete, truncated or malformed projection before asking. Share the
+verified review-site link and full-roadmap reference first, then present the
+recommendation and assumptions and request approval.
+
+Publication remains unapproved and read-only; neither a server link nor a
+populated draft grants implementation authority. Wait for explicit approval
+before recording the approval event or editing implementation code. Approval is
+fingerprinted; changed decisions or increment definitions require new approval.
 
 ### 5. Reconcile plan continuity after approval
 
@@ -168,6 +218,32 @@ approval reply is short. Never proceed with no active plan when the larger reque
 still has pending work.
 
 ## Per-increment execution loop
+
+When integrated contributor helpers are present, create a bounded work record
+for the active approved increment, copying every acceptance ID into its work
+contract. Execute the planned fixed checks, obtain a real separate-invocation
+review through an authorized host/operator, and complete that work record before
+closing a new governed increment. `evidencePolicy: control-plane-v1` makes the
+engine check this evidence. Existing roadmaps without that field retain their
+legacy qualification; use a successor roadmap to adopt the current policy.
+
+The JSON-backed review site follows state changes automatically. Keep its
+verified link available and use the same guide/CLI for lightweight fixes.
+
+For this repository adapter, select `completionSuite: all` at initialization
+for AI-related work, otherwise `standardande2e`. After all implementation chunks are recorded,
+create the guide's `overall` work item with acceptance `overall-validation` and
+the matching `completion-all` or `completion-standardande2e` check. Verify,
+obtain separate review and complete it before `roadmap-completed`. Aggregate
+checks are refused earlier, and source edits invalidate final qualification.
+The final active increment may be verifying when every predecessor is implemented
+and every nonempty planned chunk set matches its completed set. Approval must be
+current and no human action or unclassified legacy record may prevent execution.
+Open agent work permits checks but still prevents completion. Release its source claim before starting the
+serial overall claim, then recover it to record evidence. External qualification
+remains pending; final closure still requires every controlled criterion to pass.
+Publication uses exclusive unpredictable temporary files; parent-directory native
+identity and ACL race qualification remains separate.
 
 ### 1. Reconcile
 
@@ -238,6 +314,37 @@ surfaces. Do not run the complete standard suite, complete end-to-end suite, AI
 suite, or aggregate matrix while roadmap increments remain; add or run a focused
 regression instead.
 
+#### Commit reviewed chunks
+
+Commit a coherent completed, tested and independently reviewed chunk before
+continuing to the next chunk on the authorized branch. Pending parent work,
+increment or roadmap qualification does not defer an otherwise safe checkpoint.
+A separate scoped local component receipt/review can establish that boundary;
+parent work need not be complete. A recorded chunk or status alone proves neither
+successful execution nor review.
+
+1. Inspect the actual diff, unrelated staged/unstaged changes, and the chunk's
+   dependency closure. Include its behavior, focused tests and documentation.
+   Use exact paths or reviewed selected hunks for mixed files; never stage the
+   whole dirty worktree. If a dependency is unfinished or unreviewed, isolate and
+   qualify a coherent patch or retain that specific chunk as uncommitted.
+2. Run the chunk's focused checks and obtain its required independent scoped
+   review. Keep the actual receipt/review references and pending parent criteria.
+   Do not rerun model accuracy or aggregate suites merely to create a commit.
+3. Finish the candidate's check/review recording and release every live source
+   claim in the checkout before staging or committing. A commit changes HEAD and
+   source identity. Never mutate Git during another writer's candidate review.
+4. Stage only the owned changes, inspect the staged diff and paths, then create
+   the local checkpoint commit. Preserve unrelated staged/unstaged work; isolate
+   the index when needed. Include no ignored reports, raw evidence or secrets.
+5. Report the real commit identity, covered chunks, verification and remaining
+   qualification. Begin subsequent work from a fresh source baseline; retain old
+   receipts as historical evidence rather than treating them as current.
+
+A checkpoint supplies no parent pass and grants no push, history rewrite, main
+advancement or release authority. Those actions retain their separate user and
+repository gates. The roadmap state engine records facts; it does not execute Git.
+
 ### 5. Verify and complete
 
 Only after every planned chunk is implemented and its focused tests pass, run the
@@ -250,8 +357,12 @@ qualification.
 Record evidence separately for each acceptance criterion. The latest evidence is
 authoritative. A controlled-environment criterion may remain pending only when the
 increment explicitly permits it; the increment then becomes
-`implemented-pending-qualification`, not complete. Later passing evidence promotes
-it to complete.
+`implemented-pending-qualification`, not complete. Legacy passing evidence can
+promote it. Governed targets require fresh exact-target checks and independent
+review after all implementation is complete, then `increment-qualified` with exact
+work/receipt/review references. Record passing evidence and immutable reports
+before starting that work. Plan/evidence/report changes invalidate qualification.
+Other active increments remain intact; overall-only evidence cannot qualify a target.
 
 Security evidence states the disposition and uses sanitized summaries. A
 `not-security-relevant` criterion records review evidence and rationale. A
@@ -278,14 +389,56 @@ credentials or external coordination, an unresolved security policy choice, a
 genuine blocker or controlled-environment gap, or an explicit user-requested
 checkpoint. This continuation rule does not infer initial implementation approval,
 expand scope, or remove final overall approval.
+A technical gap without a specific human action stays pending. Continue other
+feasible approved work. Prepare actual decision options before requesting human
+intervention; do not ask for existing authority or infer a pass from reclassification.
 
 After recording `roadmap-completed`, present the concise temporary report and wait
 for explicit user approval of the overall completed work. Record
 `final-approval-recorded` only after that response. That transition removes the
 generated report from `docs/tmp/` while retaining the durable roadmap and JSON
 state. New scope after final approval requires a successor roadmap.
+The canonical completion status stays `completed` after final approval. The separate
+`finalApproval` fact governs immutability and report removal. Explicit legacy
+conversion uses `completion-status-normalized`; preserve every original approval,
+evidence record and history entry, and never infer a new qualification pass.
 
 ## Feedback loop
+
+For the accepted contextual Form clarification in Asset Experience, use the
+fixed `contextual-form-scope-aligned` event in `events.md`. Independently review
+the exact archived scope and retained obligations, then verify the two revised
+local checks. Keep unrelated qualification and all earlier outcomes.
+
+The exact Asset Experience legacy assessment has its own one-time
+`asset-legacy-assessment-excluded` event. Preserve its Security owner, its
+unperformed evidence and the existing release qualification profile; independently
+review the scope revision and reapprove it before fresh Asset security evidence.
+
+Explicit technical policy changes use `technical-acceptance-revised`, not the
+human-only scope events. It replaces one pending governed controlled nonsecurity
+criterion under the same identity/qualification after all chunks are implemented.
+Archive the exact old/new definitions, original plan/approval, actual policy
+identity/digest and superseded/retained requirements. Independently review the user
+authority and semantic limits, record the actual narrow reapproval and obtain fresh
+checks/review. Preserve evidence, blockers, resource/native/runtime requirements
+and completion policy; no test pass follows from changing an expectation.
+
+Technical acceptance uses agent-executable tests, including automated UI journeys.
+User-owned human acceptance stays offline. For approved started governed work,
+`acceptance-scope-revised` archives pure human criteria or human portions of mixed
+criteria without changing technical status/evidence. Explicitly mark human portions
+of original plans historical/superseded; retain all technical checks and obtain
+fresh candidate receipts/review after actual user narrow reapproval. See the event
+reference for strict admission and independent classification review.
+
+Explicit offline human acceptance uses `human-acceptance-transferred` followed by
+the actual human-authorized narrow `roadmap-approved` event. Only completed
+implementation with solely human acceptance outstanding qualifies. Preserve the
+archived criteria, evidence and approval, keep mixed technical qualification open,
+and never record the handoff as a passed test. See `events.md` for admission rules.
+This metadata event is legacy-only; receipt-governed roadmaps retain their separate
+current-candidate completion requirements and cannot use it.
 
 Classify each feedback item:
 
@@ -294,7 +447,7 @@ Classify each feedback item:
 | clarification | Apply within the increment if approved intent is unchanged.           |
 | defect        | Fix in the current or targeted increment and add regression evidence. |
 | verification  | Update checks or evidence without rewriting product scope.            |
-| environment   | Record a blocker or controlled-environment qualification.             |
+| environment   | Keep agent checks pending; record a blocker only for a human action.   |
 | decision      | Stop and obtain a new high-level option approval.                     |
 | scope         | Stop, revise or replace the roadmap, and obtain roadmap approval.     |
 
@@ -308,7 +461,12 @@ approval.
 
 ## Block and resume loop
 
-Record the exact blocker and required external action. When it clears:
+Record a blocker only for a required human action. State the responsible role,
+action, location and completion condition. Missing agent work remains pending.
+For an old mixed record use `blocker-reclassified`: archive its exact prior record,
+authority and reason, keep it open and retain all technical requirements. Do not
+use `resumed` to pretend unfinished work is resolved. When the actual action or
+technical work is done:
 
 1. Inspect worktree and generated artifact drift.
 2. State what changed while work was stopped.
@@ -336,3 +494,7 @@ checks now pass.
 If a write is interrupted, inspect state and Markdown diffs before choosing the
 canonical version. Do not overwrite hand-authored content unless the generated
 notice proves the file belongs to this workflow.
+
+The engine retries the same atomic replacement briefly when Windows reports a
+file sharing error. A persistent denial leaves the previous file and the
+publication recovery record available.

@@ -1,4 +1,5 @@
 import type { ImageGenerationRequest } from "../../../../contracts/image-generation";
+import { readStrictPassiveRecord } from "../../../../contracts/shared";
 import { createApiError, createApiFailureResponse, createApiSuccessResponse } from "../../../../contracts/api";
 import type { GenerateImageUseCase } from "../../../../application/use-cases/image-generation/generate-image.use-case";
 import type { ImageGenerationFinalizationOrchestratorService } from "../../../../application/services/image/image-generation-finalization-orchestrator.service";
@@ -36,9 +37,11 @@ const isObjectRecord = (value: unknown): value is Record<string, unknown> => typ
 
 function mapStartBody(body: unknown): ImageGenerationRequest {
   if (!isObjectRecord(body)) throw new Error("Request body must be an object.");
-  const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+  const fields = readStrictPassiveRecord(body, Object.keys(body));
+  const { workspaceId: _workspaceId, ...generation } = fields;
+  const prompt = typeof generation.prompt === "string" ? generation.prompt.trim() : "";
   if (!prompt) throw new Error("prompt is required.");
-  return { ...body, prompt } as ImageGenerationRequest;
+  return { ...generation, prompt } as ImageGenerationRequest;
 }
 
 function mapRequestIdBody(body: unknown): string {
@@ -84,7 +87,7 @@ function summarizeRequestBody(body: unknown): Record<string, unknown> {
     requestId: typeof record.requestId === "string" ? record.requestId : undefined,
     workspaceId: typeof record.workspaceId === "string" ? record.workspaceId : undefined,
     hasPrompt: typeof record.prompt === "string" && record.prompt.trim().length > 0,
-    model: typeof record.model === "string" ? record.model : undefined,
+    hasModel: typeof record.model === "string" && record.model.trim().length > 0,
     width: typeof record.width === "number" ? record.width : undefined,
     height: typeof record.height === "number" ? record.height : undefined,
     numImages: typeof record.numImages === "number" ? record.numImages : undefined,
@@ -118,19 +121,23 @@ function logFailed(dependencies: RegisterImageGenerationApiRoutesDependencies, o
 export function registerImageGenerationApiRoutes(dependencies: RegisterImageGenerationApiRoutesDependencies): void {
   dependencies.app.post("/api/image-generation/start", async (request, response) => {
     const startedAt = Date.now();
-    const context = contextFrom(request);
-    logReceived(dependencies, API_IMAGE_GENERATION_START_OPERATION, request, startedAt);
+    let safeRequest: ExpressRequestLike = { headers: request.headers };
+    let context = contextFrom(safeRequest);
     try {
-      const value = await dependencies.generateImageUseCase.startImageGeneration(mapStartBody(request.body), context);
+      if (!isObjectRecord(request.body)) throw new Error("Request body must be an object.");
+      safeRequest = { headers: request.headers, body: readStrictPassiveRecord(request.body, Object.keys(request.body)) };
+      context = contextFrom(safeRequest);
+      logReceived(dependencies, API_IMAGE_GENERATION_START_OPERATION, safeRequest, startedAt);
+      const value = await dependencies.generateImageUseCase.startImageGeneration(mapStartBody(safeRequest.body), context);
       const apiResponse = createApiSuccessResponse(API_IMAGE_GENERATION_START_OPERATION, value, context);
-      logSucceeded(dependencies, API_IMAGE_GENERATION_START_OPERATION, request, value, startedAt);
+      logSucceeded(dependencies, API_IMAGE_GENERATION_START_OPERATION, safeRequest, value, startedAt);
       response.status(statusCode(apiResponse)).json(apiResponse);
     } catch (error) {
       const unavailable = isRuntimeCapabilityUnavailableError(error);
       const code = unavailable ? "unavailable" : mapFailureCode(error);
       const message = safeFailureMessage(code, error);
       const details = unavailable ? error.details : undefined;
-      logFailed(dependencies, API_IMAGE_GENERATION_START_OPERATION, request, code, message, details, startedAt);
+      logFailed(dependencies, API_IMAGE_GENERATION_START_OPERATION, safeRequest, code, message, details, startedAt);
       const apiResponse = failure(API_IMAGE_GENERATION_START_OPERATION, code, message, context, details);
       response.status(statusCode(apiResponse)).json(apiResponse);
     }

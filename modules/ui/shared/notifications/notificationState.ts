@@ -58,6 +58,7 @@ export interface NotificationCenterState {
   readonly toastPhases: Readonly<Record<string, NotificationToastPhase>>;
   readonly activeWorkspaceId?: string;
   readonly panelOpen: boolean;
+  readonly panelDismissedFromOutside: boolean;
 }
 
 export type NotificationCenterAction =
@@ -69,12 +70,14 @@ export type NotificationCenterAction =
   | { readonly type: "clear-visible" }
   | { readonly type: "mark-visible-read" }
   | { readonly type: "set-workspace"; readonly workspaceId?: string }
-  | { readonly type: "set-panel-open"; readonly open: boolean };
+  | { readonly type: "set-panel-open"; readonly open: boolean }
+  | { readonly type: "dismiss-panel-from-outside" };
 
 export const INITIAL_NOTIFICATION_CENTER_STATE: NotificationCenterState = {
   records: [],
   toastPhases: {},
   panelOpen: false,
+  panelDismissedFromOutside: false,
 };
 
 const TERMINAL_ACTIVITY_STATUSES = new Set<NotificationActivityStatus>(["succeeded", "failed", "cancelled"]);
@@ -119,9 +122,13 @@ export function notificationCenterReducer(state: NotificationCenterState, action
     case "set-workspace":
       return state.activeWorkspaceId === action.workspaceId && !state.panelOpen
         ? state
-        : { ...state, activeWorkspaceId: action.workspaceId, panelOpen: false };
+        : { ...state, activeWorkspaceId: action.workspaceId, panelOpen: false, panelDismissedFromOutside: false };
     case "set-panel-open":
-      return { ...state, panelOpen: action.open };
+      return { ...state, panelOpen: action.open, panelDismissedFromOutside: false };
+    case "dismiss-panel-from-outside":
+      return state.panelOpen
+        ? { ...state, panelOpen: false, panelDismissedFromOutside: true }
+        : state;
   }
 }
 

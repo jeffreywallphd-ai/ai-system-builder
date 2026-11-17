@@ -35,6 +35,13 @@ test("documentation link guard validates paths and Markdown anchors", async () =
   assert.ok(failures.some((failure) => failure.includes("missing Markdown anchor")));
 });
 
+test("documentation link discovery excludes ignored contributor state and fixtures", async () => {
+  const root = await createFixtureRoot();
+  await writeFixture(root, "docs/current.md", "# Current\n");
+  await writeFixture(root, ".local-codex/t/fixture.md", "[private temporary reference](absent.md)\n");
+  assert.deepEqual(findMarkdownLinkFailures(root), []);
+});
+
 test("documentation metadata guard reports absent architecture metadata", async () => {
   const root = await createFixtureRoot();
   await writeFixture(root, "docs/architecture/example.md", "# Example\n\n- Status: current\n");

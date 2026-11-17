@@ -1,5 +1,11 @@
 import { execFile as nodeExecFile } from "node:child_process";
-import { mkdir as nodeMkdir, readFile as nodeReadFile, readdir as nodeReaddir, stat as nodeStat, writeFile as nodeWriteFile } from "node:fs/promises";
+import {
+  mkdir as nodeMkdir,
+  readFile as nodeReadFile,
+  readdir as nodeReaddir,
+  stat as nodeStat,
+  writeFile as nodeWriteFile,
+} from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -13,7 +19,10 @@ import type {
 import type { RuntimeInstallerPort } from "../../../../application/ports/runtime-installer/runtime-installer.port";
 import type { LoggingPort } from "../../../../application/ports/logging";
 
-type ExecFileLike = (file: string, args?: readonly string[]) => Promise<{ stdout: string; stderr: string }>;
+type ExecFileLike = (
+  file: string,
+  args?: readonly string[],
+) => Promise<{ stdout: string; stderr: string }>;
 
 interface RuntimeInstallMetadata {
   managedBy: "ai-system-builder";
@@ -29,34 +38,86 @@ interface RuntimeInstallMetadata {
 
 function parseRuntimeInstallMetadata(value: unknown): RuntimeInstallMetadata {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw { code: "metadata-read-failed", message: "Metadata must be an object", details: { reason: "invalid-metadata-object" } };
+    throw {
+      code: "metadata-read-failed",
+      message: "Metadata must be an object",
+      details: { reason: "invalid-metadata-object" },
+    };
   }
 
   const metadata = value as Record<string, unknown>;
 
   if (metadata.managedBy !== "ai-system-builder") {
-    throw { code: "metadata-read-failed", message: "Metadata managedBy is invalid", details: { reason: "invalid-managed-by" } };
+    throw {
+      code: "metadata-read-failed",
+      message: "Metadata managedBy is invalid",
+      details: { reason: "invalid-managed-by" },
+    };
   }
-  if (typeof metadata.targetId !== "string" || metadata.targetId.trim().length === 0) {
-    throw { code: "metadata-read-failed", message: "Metadata targetId is invalid", details: { reason: "invalid-target-id" } };
+  if (
+    typeof metadata.targetId !== "string" ||
+    metadata.targetId.trim().length === 0
+  ) {
+    throw {
+      code: "metadata-read-failed",
+      message: "Metadata targetId is invalid",
+      details: { reason: "invalid-target-id" },
+    };
   }
-  if (typeof metadata.installRoot !== "string" || metadata.installRoot.trim().length === 0) {
-    throw { code: "metadata-read-failed", message: "Metadata installRoot is invalid", details: { reason: "invalid-install-root" } };
+  if (
+    typeof metadata.installRoot !== "string" ||
+    metadata.installRoot.trim().length === 0
+  ) {
+    throw {
+      code: "metadata-read-failed",
+      message: "Metadata installRoot is invalid",
+      details: { reason: "invalid-install-root" },
+    };
   }
-  if (!metadata.source || typeof metadata.source !== "object" || Array.isArray(metadata.source)) {
-    throw { code: "metadata-read-failed", message: "Metadata source is invalid", details: { reason: "invalid-source" } };
+  if (
+    !metadata.source ||
+    typeof metadata.source !== "object" ||
+    Array.isArray(metadata.source)
+  ) {
+    throw {
+      code: "metadata-read-failed",
+      message: "Metadata source is invalid",
+      details: { reason: "invalid-source" },
+    };
   }
 
   const source = metadata.source as Record<string, unknown>;
-  if (source.type !== "git" || typeof source.repositoryUrl !== "string" || source.repositoryUrl.trim().length === 0) {
-    throw { code: "metadata-read-failed", message: "Metadata git source is invalid", details: { reason: "invalid-git-source" } };
+  if (
+    source.type !== "git" ||
+    typeof source.repositoryUrl !== "string" ||
+    source.repositoryUrl.trim().length === 0
+  ) {
+    throw {
+      code: "metadata-read-failed",
+      message: "Metadata git source is invalid",
+      details: { reason: "invalid-git-source" },
+    };
   }
 
-  if (typeof metadata.installedAt !== "string" || typeof metadata.lastCheckedAt !== "string") {
-    throw { code: "metadata-read-failed", message: "Metadata timestamps are invalid", details: { reason: "invalid-timestamps" } };
+  if (
+    typeof metadata.installedAt !== "string" ||
+    typeof metadata.lastCheckedAt !== "string"
+  ) {
+    throw {
+      code: "metadata-read-failed",
+      message: "Metadata timestamps are invalid",
+      details: { reason: "invalid-timestamps" },
+    };
   }
-  if (metadata.commitSha !== undefined && typeof metadata.commitSha !== "string") {
-    throw { code: "metadata-read-failed", message: "Metadata commitSha is invalid", details: { reason: "invalid-commit-sha" } };
+  if (
+    metadata.commitSha !== undefined &&
+    typeof metadata.commitSha !== "string"
+  ) {
+    throw {
+      code: "metadata-read-failed",
+      message: "Metadata commitSha is invalid",
+      details: { reason: "invalid-commit-sha" },
+    };
   }
 
   return {
@@ -91,15 +152,23 @@ export function createGitRuntimeInstallerAdapter(
   options: CreateGitRuntimeInstallerAdapterOptions = {},
 ): RuntimeInstallerPort {
   const gitCommand = options.gitCommand ?? "git";
-  const execFile = options.execFile ?? ((file: string, args: readonly string[] = []) => defaultExecFile(file, [...args]));
+  const execFile =
+    options.execFile ??
+    ((file: string, args: readonly string[] = []) =>
+      defaultExecFile(file, [...args]));
   const readFile = options.readFile ?? nodeReadFile;
   const writeFile = options.writeFile ?? nodeWriteFile;
   const mkdir = options.mkdir ?? nodeMkdir;
   const stat = options.stat ?? nodeStat;
   const readdir = options.readdir ?? nodeReaddir;
   const now = options.now ?? (() => new Date().toISOString());
-  const metadataFileName = options.metadataFileName ?? ".ai-system-builder-runtime-install.json";
-  const log = (level: "debug" | "info" | "error", message: string, details?: Record<string, unknown>) => {
+  const metadataFileName =
+    options.metadataFileName ?? ".ai-system-builder-runtime-install.json";
+  const log = (
+    level: "debug" | "info" | "error",
+    message: string,
+    details?: Record<string, unknown>,
+  ) => {
     void options.logging?.log({
       level,
       message,
@@ -113,16 +182,22 @@ export function createGitRuntimeInstallerAdapter(
   };
   const elapsed = (startedAt: number) => Date.now() - startedAt;
 
-  const getMetadataPath = (installRoot: string) => path.join(installRoot, metadataFileName);
+  const getMetadataPath = (installRoot: string) =>
+    path.join(installRoot, metadataFileName);
 
-  const makeError = (code: string, message: string, details?: Record<string, unknown>) => ({ code, message, details });
+  const makeError = (
+    code: string,
+    message: string,
+    details?: Record<string, unknown>,
+  ) => ({ code, message, details });
 
   async function pathExists(targetPath: string): Promise<boolean> {
     try {
       await stat(targetPath);
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return false;
+      throw makeError("install-authority-unavailable", "Runtime filesystem authority could not be established");
     }
   }
 
@@ -131,7 +206,9 @@ export function createGitRuntimeInstallerAdapter(
     return entries.length === 0;
   }
 
-  async function readMetadata(installRoot: string): Promise<RuntimeInstallMetadata | undefined> {
+  async function readMetadata(
+    installRoot: string,
+  ): Promise<RuntimeInstallMetadata | undefined> {
     const metadataPath = getMetadataPath(installRoot);
     if (!(await pathExists(metadataPath))) {
       return undefined;
@@ -144,29 +221,51 @@ export function createGitRuntimeInstallerAdapter(
       if (error && typeof error === "object" && "code" in error) {
         throw error;
       }
-      throw makeError("metadata-read-failed", `Failed to read metadata from ${metadataPath}`);
+      throw makeError(
+        "metadata-read-failed",
+        `Failed to read metadata from ${metadataPath}`,
+      );
     }
   }
 
-  async function writeMetadata(metadata: RuntimeInstallMetadata): Promise<void> {
+  async function writeMetadata(
+    metadata: RuntimeInstallMetadata,
+  ): Promise<void> {
     const metadataPath = getMetadataPath(metadata.installRoot);
     try {
       await writeFile(metadataPath, JSON.stringify(metadata, null, 2), "utf-8");
     } catch {
-      throw makeError("metadata-write-failed", `Failed to write metadata to ${metadataPath}`);
+      throw makeError(
+        "metadata-write-failed",
+        `Failed to write metadata to ${metadataPath}`,
+      );
     }
   }
 
-  const isManaged = (metadata: RuntimeInstallMetadata | undefined, targetId: string) =>
-    metadata?.managedBy === "ai-system-builder" && metadata.targetId === targetId;
+  const isManaged = (
+    metadata: RuntimeInstallMetadata | undefined,
+    request: RuntimeInstallStatusRequest,
+  ) =>
+    metadata?.managedBy === "ai-system-builder" &&
+    metadata.targetId === request.targetId &&
+    path.resolve(metadata.installRoot) === path.resolve(request.installRoot!) &&
+    (!request.source ||
+      (request.source.type === "git" &&
+        metadata.source.repositoryUrl === request.source.repositoryUrl));
 
-  async function getInstallStatus(request: RuntimeInstallStatusRequest): Promise<RuntimeInstallStatusResult> {
+  async function getInstallStatus(
+    request: RuntimeInstallStatusRequest,
+  ): Promise<RuntimeInstallStatusResult> {
     const statusStartedAt = Date.now();
     if (!request.installRoot) {
-      log("error", "Runtime git install status check failed because installRoot is missing.", {
-        targetId: request.targetId,
-        durationMs: elapsed(statusStartedAt),
-      });
+      log(
+        "error",
+        "Runtime git install status check failed because installRoot is missing.",
+        {
+          targetId: request.targetId,
+          durationMs: elapsed(statusStartedAt),
+        },
+      );
       return {
         targetId: request.targetId,
         status: "unknown",
@@ -175,7 +274,15 @@ export function createGitRuntimeInstallerAdapter(
       };
     }
 
-    const installRootExists = await pathExists(request.installRoot);
+    let installRootExists: boolean;
+    let installRootEmpty = false;
+    try {
+      installRootExists = await pathExists(request.installRoot);
+      if (installRootExists) installRootEmpty = await isDirectoryEmpty(request.installRoot);
+    } catch {
+      return { targetId: request.targetId, status: "unknown", installRoot: request.installRoot, source: request.source,
+        error: makeError("install-authority-unavailable", "Runtime filesystem authority could not be established") };
+    }
     if (!installRootExists) {
       log("debug", "Runtime git install root does not exist.", {
         targetId: request.targetId,
@@ -183,17 +290,27 @@ export function createGitRuntimeInstallerAdapter(
         status: "not-installed",
         durationMs: elapsed(statusStartedAt),
       });
-      return { targetId: request.targetId, status: "not-installed", installRoot: request.installRoot, source: request.source };
+      return {
+        targetId: request.targetId,
+        status: "not-installed",
+        installRoot: request.installRoot,
+        source: request.source,
+      };
     }
 
-    if (await isDirectoryEmpty(request.installRoot)) {
+    if (installRootEmpty) {
       log("debug", "Runtime git install root is empty.", {
         targetId: request.targetId,
         installRoot: request.installRoot,
         status: "not-installed",
         durationMs: elapsed(statusStartedAt),
       });
-      return { targetId: request.targetId, status: "not-installed", installRoot: request.installRoot, source: request.source };
+      return {
+        targetId: request.targetId,
+        status: "not-installed",
+        installRoot: request.installRoot,
+        source: request.source,
+      };
     }
 
     let metadata: RuntimeInstallMetadata | undefined;
@@ -216,7 +333,7 @@ export function createGitRuntimeInstallerAdapter(
       };
     }
 
-    if (isManaged(metadata, request.targetId)) {
+    if (isManaged(metadata, request)) {
       log("debug", "Runtime git install status is managed and installed.", {
         targetId: request.targetId,
         installRoot: request.installRoot,
@@ -247,7 +364,10 @@ export function createGitRuntimeInstallerAdapter(
       status: "failed",
       installRoot: request.installRoot,
       source: request.source,
-      error: makeError("unmanaged-install-root", "Install root is non-empty and unmanaged"),
+      error: makeError(
+        "unmanaged-install-root",
+        "Install root is non-empty and unmanaged",
+      ),
     };
   }
 
@@ -256,79 +376,72 @@ export function createGitRuntimeInstallerAdapter(
       log("debug", "Running git installer command.", { gitCommand, args });
       return await execFile(gitCommand, args);
     } catch (error) {
-      log("error", "Git installer command failed.", { gitCommand, args, error });
-      throw makeError(code, `Git command failed: ${args.join(" ")}`, { cause: error });
-    }
-  }
-
-  async function adoptUnmanagedGitInstall(request: RuntimeInstallRequest): Promise<RuntimeInstallResult | undefined> {
-    if (!request.installRoot || request.source.type !== "git") {
-      return undefined;
-    }
-
-    try {
-      const remoteResult = await runGit(["-C", request.installRoot, "config", "--get", "remote.origin.url"], "git-remote-read-failed");
-      const remoteOriginUrl = remoteResult.stdout.trim();
-      if (!remoteOriginUrl || remoteOriginUrl !== request.source.repositoryUrl) {
-        return undefined;
-      }
-
-      const commitResult = await runGit(["-C", request.installRoot, "rev-parse", "HEAD"], "git-rev-parse-failed");
-      const commitSha = commitResult.stdout.trim();
-      const installedAt = now();
-      const metadata: RuntimeInstallMetadata = {
-        managedBy: "ai-system-builder",
-        targetId: request.targetId,
-        installRoot: request.installRoot,
-        source: request.source,
-        requestedRef: request.source.ref,
-        resolvedRef: request.source.ref,
-        commitSha,
-        installedAt,
-        lastCheckedAt: installedAt,
-      };
-      await writeMetadata(metadata);
-      log("info", "Adopted unmanaged runtime git install using matching origin remote.", {
-        targetId: request.targetId,
-        installRoot: request.installRoot,
-        commitSha,
-      });
-      return {
-        targetId: request.targetId,
-        status: "installed",
-        installRoot: request.installRoot,
-        source: request.source,
-        requestedRef: request.source.ref,
-        resolvedRef: request.source.ref,
-        commitSha,
-        installedAt,
-        lastCheckedAt: installedAt,
-      };
-    } catch (error) {
-      log("debug", "Unmanaged runtime git install adoption skipped.", {
-        targetId: request.targetId,
-        installRoot: request.installRoot,
+      log("error", "Git installer command failed.", {
+        gitCommand,
+        args,
         error,
       });
-      return undefined;
+      throw makeError(code, `Git command failed: ${args.join(" ")}`, {
+        cause: error,
+      });
     }
   }
 
-  async function ensureInstalled(request: RuntimeInstallRequest): Promise<RuntimeInstallResult> {
+  async function ensureInstalled(
+    request: RuntimeInstallRequest,
+  ): Promise<RuntimeInstallResult> {
     const operationStartedAt = Date.now();
-    log("info", "Ensuring runtime install from git source.", { targetId: request.targetId, installRoot: request.installRoot });
+    log("info", "Ensuring runtime install from git source.", {
+      targetId: request.targetId,
+      installRoot: request.installRoot,
+    });
     if (!request.installRoot) {
-      return { targetId: request.targetId, status: "failed", installRoot: "", source: request.source, error: makeError("missing-install-root", "installRoot is required") };
+      return {
+        targetId: request.targetId,
+        status: "failed",
+        installRoot: "",
+        source: request.source,
+        error: makeError("missing-install-root", "installRoot is required"),
+      };
     }
     if (request.source.type !== "git") {
-      return { targetId: request.targetId, status: "failed", installRoot: request.installRoot, source: request.source, error: makeError("unsupported-install-source", "Only git sources are supported") };
+      return {
+        targetId: request.targetId,
+        status: "failed",
+        installRoot: request.installRoot,
+        source: request.source,
+        error: makeError(
+          "unsupported-install-source",
+          "Only git sources are supported",
+        ),
+      };
     }
     if (!request.source.repositoryUrl) {
-      return { targetId: request.targetId, status: "failed", installRoot: request.installRoot, source: request.source, error: makeError("missing-repository-url", "repositoryUrl is required") };
+      return {
+        targetId: request.targetId,
+        status: "failed",
+        installRoot: request.installRoot,
+        source: request.source,
+        error: makeError("missing-repository-url", "repositoryUrl is required"),
+      };
+    }
+
+    // Repair intent cannot grant permission to change installed executable code.
+    if (request.forceRepair === true && request.allowUpdate !== true) {
+      return {
+        targetId: request.targetId,
+        status: "failed",
+        installRoot: request.installRoot,
+        source: request.source,
+        error: makeError(
+          "update-not-authorized",
+          "Runtime repair requires explicit host update approval",
+        ),
+      };
     }
 
     const status = await getInstallStatus(request);
-    const shouldUpdateManagedInstall = request.allowUpdate === true || request.forceRepair === true;
+    const shouldUpdateManagedInstall = request.allowUpdate === true;
 
     if (status.status === "installed" && !shouldUpdateManagedInstall) {
       return {
@@ -345,12 +458,6 @@ export function createGitRuntimeInstallerAdapter(
     }
 
     if (status.status === "failed" || status.status === "unknown") {
-      if (status.error?.code === "unmanaged-install-root" && request.forceRepair !== true) {
-        const adoptionResult = await adoptUnmanagedGitInstall(request);
-        if (adoptionResult) {
-          return adoptionResult;
-        }
-      }
       const forceRepairMessage =
         request.forceRepair === true
           ? "forceRepair is not implemented for unmanaged install roots because destructive repair is forbidden"
@@ -360,7 +467,11 @@ export function createGitRuntimeInstallerAdapter(
         status: "failed",
         installRoot: request.installRoot,
         source: request.source,
-        error: request.forceRepair === true ? makeError("unmanaged-install-root", forceRepairMessage) : (status.error ?? makeError("unmanaged-install-root", forceRepairMessage)),
+        error:
+          request.forceRepair === true
+            ? makeError("unmanaged-install-root", forceRepairMessage)
+            : (status.error ??
+              makeError("unmanaged-install-root", forceRepairMessage)),
       };
     }
 
@@ -375,14 +486,20 @@ export function createGitRuntimeInstallerAdapter(
           installRoot: request.installRoot,
           requestedRef,
         });
-        await runGit(["clone", request.source.repositoryUrl, request.installRoot], "git-clone-failed");
+        await runGit(
+          ["clone", request.source.repositoryUrl, request.installRoot],
+          "git-clone-failed",
+        );
         if (requestedRef) {
           log("info", "Checking out requested runtime git ref.", {
             targetId: request.targetId,
             installRoot: request.installRoot,
             requestedRef,
           });
-          await runGit(["-C", request.installRoot, "checkout", requestedRef], "git-checkout-failed");
+          await runGit(
+            ["-C", request.installRoot, "checkout", requestedRef],
+            "git-checkout-failed",
+          );
         }
       } else if (status.status === "installed" && shouldUpdateManagedInstall) {
         log("info", "Updating managed runtime git install.", {
@@ -391,20 +508,29 @@ export function createGitRuntimeInstallerAdapter(
           requestedRef,
           forceRepair: request.forceRepair === true,
         });
-        await runGit(["-C", request.installRoot, "fetch", "--all", "--tags"], "git-fetch-failed");
+        await runGit(
+          ["-C", request.installRoot, "fetch", "--all", "--tags"],
+          "git-fetch-failed",
+        );
         if (requestedRef) {
           log("info", "Checking out requested runtime git ref.", {
             targetId: request.targetId,
             installRoot: request.installRoot,
             requestedRef,
           });
-          await runGit(["-C", request.installRoot, "checkout", requestedRef], "git-checkout-failed");
+          await runGit(
+            ["-C", request.installRoot, "checkout", requestedRef],
+            "git-checkout-failed",
+          );
         } else {
           log("info", "Pulling runtime git install with fast-forward only.", {
             targetId: request.targetId,
             installRoot: request.installRoot,
           });
-          await runGit(["-C", request.installRoot, "pull", "--ff-only"], "git-pull-failed");
+          await runGit(
+            ["-C", request.installRoot, "pull", "--ff-only"],
+            "git-pull-failed",
+          );
         }
       }
 
@@ -412,19 +538,22 @@ export function createGitRuntimeInstallerAdapter(
         targetId: request.targetId,
         installRoot: request.installRoot,
       });
-      const revParse = await runGit(["-C", request.installRoot, "rev-parse", "HEAD"], "git-rev-parse-failed");
+      const revParse = await runGit(
+        ["-C", request.installRoot, "rev-parse", "HEAD"],
+        "git-rev-parse-failed",
+      );
       const commitSha = revParse.stdout.trim();
       const metadata: RuntimeInstallMetadata = {
-      managedBy: "ai-system-builder",
-      targetId: request.targetId,
-      installRoot: request.installRoot,
-      source: request.source,
-      requestedRef,
-      resolvedRef: requestedRef,
-      commitSha,
-      installedAt,
-      lastCheckedAt: installedAt,
-    };
+        managedBy: "ai-system-builder",
+        targetId: request.targetId,
+        installRoot: request.installRoot,
+        source: request.source,
+        requestedRef,
+        resolvedRef: requestedRef,
+        commitSha,
+        installedAt,
+        lastCheckedAt: installedAt,
+      };
       await writeMetadata(metadata);
       log("info", "Runtime git install succeeded.", {
         targetId: request.targetId,
@@ -461,9 +590,26 @@ export function createGitRuntimeInstallerAdapter(
     }
   }
 
-  async function repairInstall(request: RuntimeInstallRequest): Promise<RuntimeInstallResult> {
+  async function repairInstall(
+    request: RuntimeInstallRequest,
+  ): Promise<RuntimeInstallResult> {
+    if (request.allowUpdate !== true) {
+      return {
+        targetId: request.targetId,
+        status: "failed",
+        installRoot: request.installRoot,
+        source: request.source,
+        error: makeError(
+          "update-not-authorized",
+          "Runtime repair requires explicit host update approval",
+        ),
+      };
+    }
     const operationStartedAt = Date.now();
-    log("info", "Repairing runtime git install.", { targetId: request.targetId, installRoot: request.installRoot });
+    log("info", "Repairing runtime git install.", {
+      targetId: request.targetId,
+      installRoot: request.installRoot,
+    });
     const status = await getInstallStatus(request);
     log("info", "Runtime git repair preflight status read.", {
       targetId: request.targetId,
@@ -473,22 +619,31 @@ export function createGitRuntimeInstallerAdapter(
       error: status.error,
     });
     if (status.status !== "installed") {
-      log("error", "Runtime git repair cannot continue because install is not managed and installed.", {
-        targetId: request.targetId,
-        installRoot: request.installRoot,
-        status: status.status,
-        durationMs: elapsed(operationStartedAt),
-        error: status.error,
-      });
+      log(
+        "error",
+        "Runtime git repair cannot continue because install is not managed and installed.",
+        {
+          targetId: request.targetId,
+          installRoot: request.installRoot,
+          status: status.status,
+          durationMs: elapsed(operationStartedAt),
+          error: status.error,
+        },
+      );
       return {
         targetId: request.targetId,
         status: "failed",
         installRoot: request.installRoot,
         source: request.source,
-        error: status.error ?? makeError("unmanaged-install-root", "Install cannot be repaired because it is unmanaged"),
+        error:
+          status.error ??
+          makeError(
+            "unmanaged-install-root",
+            "Install cannot be repaired because it is unmanaged",
+          ),
       };
     }
-    return ensureInstalled({ ...request, allowUpdate: true, forceRepair: true });
+    return ensureInstalled(request);
   }
 
   return { getInstallStatus, ensureInstalled, repairInstall };

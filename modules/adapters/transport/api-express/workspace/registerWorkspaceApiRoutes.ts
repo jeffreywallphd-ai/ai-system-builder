@@ -1,3 +1,6 @@
+import type { ReadWorkspaceSummaryUseCase } from "../../../../application/use-cases/workspace";
+import { normalizeReadWorkspaceSummaryRequest } from "../../../../contracts/workspace";
+import { API_WORKSPACE_SUMMARY_OPERATION, createApiWorkspaceSummarySuccessResponse } from "../../../../contracts/api";
 import type { WorkspaceRepository, WorkspaceSelectionRepository } from "../../../../application/ports/workspace";
 import type { CreateWorkspaceUseCase } from "../../../../application/use-cases/workspace";
 import type { Request } from "express";
@@ -40,9 +43,21 @@ export interface RegisterWorkspaceApiRoutesDependencies {
   readonly workspaceRepository: WorkspaceRepository;
   readonly workspaceSelectionRepository: WorkspaceSelectionRepository;
   readonly createWorkspaceUseCase: CreateWorkspaceUseCase;
+  readonly readWorkspaceSummary?: Pick<ReadWorkspaceSummaryUseCase, "execute">;
 }
 
 export function registerWorkspaceApiRoutes(dependencies: RegisterWorkspaceApiRoutesDependencies): void {
+  dependencies.app.get("/api/workspaces/summary", async (request, response) => {
+    const context = contextFrom(request);
+    let input;
+    try { input = normalizeReadWorkspaceSummaryRequest(request.query); }
+    catch { response.status(400).json(createApiWorkspaceFailureResponse(API_WORKSPACE_SUMMARY_OPERATION, "validation", "Invalid summary request.", context)); return; }
+    try {
+      if (!dependencies.readWorkspaceSummary) throw new Error("Unavailable.");
+      response.status(200).json(createApiWorkspaceSummarySuccessResponse(await dependencies.readWorkspaceSummary.execute(input), context));
+    } catch { response.status(503).json(createApiWorkspaceFailureResponse(API_WORKSPACE_SUMMARY_OPERATION, "unavailable", "Workspace summary is unavailable.", context)); }
+  });
+
   dependencies.app.get("/api/workspaces", async (request, response) => {
     const context = contextFrom(request);
     try {

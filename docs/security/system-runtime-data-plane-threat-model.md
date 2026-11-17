@@ -66,3 +66,36 @@ network access, monitor database/role growth, set retention and RPO/RTO, verify
 backups, and repeat live denial/recovery qualification against the target
 managed environment. Managed recovery remains unavailable until its adapter and
 platform evidence are configured; the application fails closed meanwhile.
+
+## Conversation renderer recovery support
+
+The existing dedicated renderer can explicitly retry its connection read after a safe error. This does not retry a user turn, approve/start a system or supply an alternate release/workspace/runtime identity. Committed API sessions retire read/turn results at layout; synchronous owners serialize reads and user submissions and refuse queued draft edits before disabled rendering. API/UUID failures use fixed text, preserve the draft and release only owned controls. The existing preload continues to validate commands and response envelopes and sanitize actual IPC failures. Transcript, title and status remain inert React text.
+
+Finite native-event, real-preload, failure/denial, input-bound, StrictMode/Suspense and layout timing tests support only that local renderer recovery. Already-dispatched calls are not cancelled by retirement. Host main-frame/session authorization, physical runtime windows/processes, durable transcript restart and native/model qualification remain separately required.
+
+### Meaningful-system qualification observations
+
+The local UI test driver compares only bounded synthetic DOM observations from
+its isolated workspace: exact system/instance/definition/version, hierarchy and
+configured test fields. Strict inert records, count/byte bounds, one rooted
+acyclic tree and unique positions prevent malformed observations from supplying
+a false match. All three captured scenarios must have distinct system IDs in
+one workspace. The browser creates them within one self-contained journey.
+Existing protocol redaction and action/output bounds remain intact. These
+comparisons add no application authority and prove no physical host, model,
+process restart, native-resource or security qualification by themselves.
+
+### Owned desktop authoring restart checks
+
+The two synthetic authoring tests reuse the existing owned quit/native-exit and
+worker-exit proof before starting a replacement app. Each session retains its own
+worker records beneath the same isolated application data root; no old record is
+deleted or accepted for a new process. A failed journey or shutdown prevents the
+replacement. Distinct process/page checks supplement the unchanged native proof.
+The asset verifier admits one replacement-page observation attempt, reuses the
+original base/publication/workspace expectations and reads public metadata on
+the current page. Failed or pending verification cannot be replayed. Three saved
+systems reuse their captured exact synthetic observations after restart. These
+checks add no production authority and change no security, model or resource
+guard. Finite tests, types and collection are local implementation evidence;
+actual native/host/server restart and parent qualification remain separate.

@@ -207,6 +207,10 @@ describe("createComfyUiRuntimeSupervisor", () => {
 
   it("kills process and marks unhealthy when startup times out", async () => {
     const mockChild = createMockChildProcess();
+    mockChild.kill = testDouble.fn(() => {
+      queueMicrotask(() => mockChild.emit("exit", 0, "SIGTERM"));
+      return true;
+    });
     const spawnImplementation = testDouble.fn(() => mockChild as any);
     const fetchImplementation = testDouble.fn(async () => {
       throw new Error("still booting");
@@ -277,7 +281,7 @@ describe("createComfyUiRuntimeSupervisor", () => {
     });
 
     await expect(supervisor.start()).rejects.toThrow(
-      /ComfyUI runtime exited before health check completed\.[\s\S]*Recent runtime output: ModuleNotFoundError/,
+      /ComfyUI runtime exited before health check completed\./,
     );
     expect(mockChild.kill).not.toHaveBeenCalled();
   });

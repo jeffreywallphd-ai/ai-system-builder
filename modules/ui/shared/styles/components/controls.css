@@ -32,7 +32,7 @@
 
 :where(.ui-button, button:not([class])):hover:enabled {
   border-color: #8bb7ff;
-  background: var(--color-bg-accent-hover);
+  background: color-mix(in srgb, var(--color-bg-accent) 90%, #000);
 }
 
 :where(.ui-button, button:not([class])):focus-visible,

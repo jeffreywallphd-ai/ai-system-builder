@@ -320,6 +320,17 @@
   box-shadow: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .asset-library-detail-dialog,
+  .asset-library-detail-dialog *,
+  .asset-library-detail-dialog *::before,
+  .asset-library-detail-dialog *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 .asset-definition-card {
   inline-size: 100%;
   block-size: 100%;
@@ -425,6 +436,9 @@
 .asset-customizer__readonly-source {
   max-block-size: 24rem;
   overflow: auto;
+  padding: var(--space-sm);
+  background: var(--color-bg-panel);
+  color: var(--color-text-primary);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -453,12 +467,15 @@
 .asset-definition-card__header,
 .asset-library-detail__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-sm);
 }
 
 .asset-definition-card__title {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   font-size: var(--font-size-lg);
   font-weight: 700;
 }
@@ -473,6 +490,7 @@
 }
 
 .asset-library-badge {
+  flex: 0 0 auto;
   min-block-size: 1.5rem;
   display: inline-flex;
   align-items: center;
@@ -670,9 +688,16 @@
 }
 
 .asset-package-manager__file {
+  background: var(--color-bg-elevated);
+  line-height: var(--line-height-base);
   position: relative;
   inline-size: fit-content;
   overflow: hidden;
+}
+
+.asset-package-manager__file:focus-within {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .asset-package-manager__starter {
@@ -1025,6 +1050,10 @@
   .ui-modal-dialog.system-composition-preview-dialog {
     inline-size: 100%;
   }
+
+  .system-composition-preview__summary > p:first-child {
+    font-size: var(--font-size-sm);
+  }
 }
 
 .system-builder__toolbar,
@@ -1163,7 +1192,7 @@
   display: grid;
   gap: 0.25rem;
 }
-.system-builder__footer span {
+.system-builder__footer > div:not(.ui-inline-actions) > span {
   color: var(--color-text-muted);
   font-size: 0.8125rem;
 }

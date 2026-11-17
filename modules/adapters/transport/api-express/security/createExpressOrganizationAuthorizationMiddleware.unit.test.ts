@@ -122,6 +122,28 @@ test("managed organization middleware denies missing context and sanitizes polic
   assert.doesNotMatch(JSON.stringify(deniedResponse.body), /private reason/);
 });
 
+test("only canonical browser polling POSTs select bounded audit with the same policy scopes", async () => {
+  const calls: Array<{sink:string; scopes:unknown}> = [];
+  const middleware = createExpressOrganizationAuthorizationMiddleware({
+    authorizer: {async execute(input: {requiredScopes: unknown}) {calls.push({sink:"standard",scopes:input.requiredScopes});}} as never,
+    passiveBrowserObserveAuthorizer: {async execute(input: {requiredScopes: unknown}) {calls.push({sink:"passive",scopes:input.requiredScopes});}} as never,
+  });
+  for (const [path, originalUrl] of [["/api/headless/browser/observe","/api/headless/browser/observe"],
+    ["/api/headless/browser/observe","/api/headless/browser/observe?extra=1"],
+    ["/api/headless/browser/consent","/api/headless/browser/consent"],
+    ["/api/headless/browser/delivery","/api/headless/browser/delivery"],
+    ["/api/headless/browser/context","/api/headless/browser/context"],
+    ["/api/headless/browser/delivery/acknowledge","/api/headless/browser/delivery/acknowledge"],
+    ["/api/headless/browser/context/publish","/api/headless/browser/context/publish"]]) {
+    const request = {method:"POST",path,originalUrl} as never;
+    setExpressAuthContext(request,{authenticated:true,authMethod:"oidc-bearer",principal:{principalId:"fixture",kind:"user",roles:[],scopes:[]}});
+    setExpressOrganizationContext(request,{organizationId:createOrganizationId("fixture-org"),principalId:"fixture"});
+    await middleware(request,response() as never,() => {});
+  }
+  assert.deepEqual(calls.map(call=>call.sink),["passive","standard","standard","passive","passive","standard","standard"]);
+  assert.ok(calls.every(call=>JSON.stringify(call.scopes) === '["workspace:read","asset:read"]'));
+});
+
 function response() {
   return {
     statusCode: 200,

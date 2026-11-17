@@ -343,6 +343,17 @@ export function normalizeUpdateModelRecordRequest(request: UpdateModelRecordRequ
   };
 }
 
+/** Public metadata editing never changes host paths, ownership or lifecycle. */
+export function normalizeEditableModelRecordRequest(request: UpdateModelRecordRequest): UpdateModelRecordRequest {
+  const normalized = normalizeUpdateModelRecordRequest(request);
+  const allowed = new Set(["displayName", "inferenceMode", "taskTags", "artifactForm", "metadata"]);
+  if (!normalized.patch || typeof normalized.patch !== "object" || Array.isArray(normalized.patch) ||
+      Object.keys(normalized.patch).some((key) => !allowed.has(key))) {
+    throw new TypeError("Model record patch contains fields that cannot be edited.");
+  }
+  return normalized;
+}
+
 export function normalizeDeleteModelRecordRequest(request: DeleteModelRecordRequest): DeleteModelRecordRequest {
   return {
     workspaceId: normalizeWorkspaceId(request.workspaceId),

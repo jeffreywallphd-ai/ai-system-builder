@@ -1,0 +1,661 @@
+{
+  "schema_version": "remaining-model-evidence-assessment-v1",
+  "bundle_id": "1283a33f1a7a4d3ca7bf0864d13b3557",
+  "source": "source.56ad3ebade6374fbb7942c008f19aa49b0ef7fdd634417b5ce9358919063e572",
+  "plan_sha256": "370d15288f80c95e5a3b4fa4a17ba94292f0b431e07b414948e65a873d885e2c",
+  "summary_sha256": "e58abaf16d0d03daef817cada95be41761143699cb4c37963056676140b71dff",
+  "index_sha256": "73a7afbfac0c4dd96e7ad39ec505ddec7302417835164d20981d2661394e5ebb",
+  "restart_of": {
+    "run_id": "90939910fb244412985caebe5e82683f",
+    "plan_sha256": "300d6845908a65c6e2734039d2a46ce13cbbf095366c7d67f87e7aace782f039"
+  },
+  "review_scope": "Verified remaining-only Standard generation measurements; qualification subchecks, not whole-roadmap closure.",
+  "original_assessment": "docs/operations/model-blocker-evidence-assessment.json",
+  "original_assessment_preserved": true,
+  "independent_raw_review_sha256": "a2800f978a9478f244662e8bdb14490305428ff05da6d81294c72eb6f6cd2c0e",
+  "admission": {
+    "source_and_restart_lineage_verified": true,
+    "exact_remaining_candidate_selection_verified": true,
+    "indexed_files_verified": 27,
+    "owning_case_oracles_and_summary_replayed": true,
+    "new_inference_during_review": false,
+    "historical_accepted_candidates_not_repeated": 7,
+    "historical_baselines_not_repeated": true,
+    "cross_source_results_spliced": false
+  },
+  "observations": {
+    "workers": 17,
+    "measured": 14,
+    "native_exit_zero": 17,
+    "cleanup_observed": 17,
+    "case_rows": 672,
+    "attempts": 822,
+    "invalid_attempts": 300,
+    "repairs": 150,
+    "correct": 346,
+    "accepted": 498,
+    "resource_budget_met": 14,
+    "absolute_22_passed": 2,
+    "absolute_22_failed": 12,
+    "denied-memory": 3
+  },
+  "population_limit": "672 case rows repeat the same 24 exposed regression cases across phases/cohorts. They are not 672 independent examples or unseen validation.",
+  "cohort_groups": [
+    {
+      "profile": "qwen15-bfloat16",
+      "device": "cpu",
+      "mode": "constrained",
+      "status_counts": {
+        "denied-memory": 3
+      },
+      "first_correct": [],
+      "warm_correct": [],
+      "primary_seconds_range": null,
+      "peak_rss_bytes_range": null,
+      "all_measured_resource_budget_met": null,
+      "constrained_invalid_output_attempts": 0,
+      "phase_accepted_counts": []
+    },
+    {
+      "profile": "qwen15-bfloat16",
+      "device": "cpu",
+      "mode": "unchecked",
+      "status_counts": {
+        "measured": 2
+      },
+      "first_correct": [
+        22,
+        22
+      ],
+      "warm_correct": [
+        22,
+        22
+      ],
+      "primary_seconds_range": [
+        1320.6683041000506,
+        1323.4361096000066
+      ],
+      "peak_rss_bytes_range": [
+        3772071936,
+        3777417216
+      ],
+      "all_measured_resource_budget_met": true,
+      "constrained_invalid_output_attempts": null,
+      "phase_accepted_counts": [
+        [
+          24,
+          24
+        ],
+        [
+          24,
+          24
+        ]
+      ]
+    },
+    {
+      "profile": "qwen05-float32",
+      "device": "cpu",
+      "mode": "constrained",
+      "status_counts": {
+        "measured": 3
+      },
+      "first_correct": [
+        10,
+        10,
+        10
+      ],
+      "warm_correct": [
+        10,
+        10,
+        10
+      ],
+      "primary_seconds_range": [
+        152.71188620000612,
+        153.72319499996956
+      ],
+      "peak_rss_bytes_range": [
+        3555635200,
+        3558166528
+      ],
+      "all_measured_resource_budget_met": true,
+      "constrained_invalid_output_attempts": 0,
+      "phase_accepted_counts": [
+        [
+          22,
+          22
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          22,
+          22
+        ]
+      ]
+    },
+    {
+      "profile": "qwen05-float32",
+      "device": "cpu",
+      "mode": "unchecked",
+      "status_counts": {
+        "measured": 3
+      },
+      "first_correct": [
+        12,
+        12,
+        12
+      ],
+      "warm_correct": [
+        12,
+        12,
+        12
+      ],
+      "primary_seconds_range": [
+        243.14636969997082,
+        244.61978129995987
+      ],
+      "peak_rss_bytes_range": [
+        3551821824,
+        3561775104
+      ],
+      "all_measured_resource_budget_met": true,
+      "constrained_invalid_output_attempts": null,
+      "phase_accepted_counts": [
+        [
+          12,
+          12
+        ],
+        [
+          12,
+          12
+        ],
+        [
+          12,
+          12
+        ]
+      ]
+    },
+    {
+      "profile": "qwen05-float32",
+      "device": "cuda",
+      "mode": "constrained",
+      "status_counts": {
+        "measured": 3
+      },
+      "first_correct": [
+        12,
+        12,
+        12
+      ],
+      "warm_correct": [
+        12,
+        12,
+        12
+      ],
+      "primary_seconds_range": [
+        36.3913545999676,
+        37.04904269997496
+      ],
+      "peak_rss_bytes_range": [
+        3786350592,
+        3798618112
+      ],
+      "all_measured_resource_budget_met": true,
+      "constrained_invalid_output_attempts": 0,
+      "phase_accepted_counts": [
+        [
+          22,
+          22
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          22,
+          22
+        ]
+      ]
+    },
+    {
+      "profile": "qwen05-float32",
+      "device": "cuda",
+      "mode": "unchecked",
+      "status_counts": {
+        "measured": 3
+      },
+      "first_correct": [
+        9,
+        9,
+        9
+      ],
+      "warm_correct": [
+        9,
+        9,
+        9
+      ],
+      "primary_seconds_range": [
+        56.26817089994438,
+        58.63001309998799
+      ],
+      "peak_rss_bytes_range": [
+        3781394432,
+        3802406912
+      ],
+      "all_measured_resource_budget_met": true,
+      "constrained_invalid_output_attempts": null,
+      "phase_accepted_counts": [
+        [
+          11,
+          11
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          11,
+          11
+        ]
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "profile": "qwen15-bfloat16",
+      "run_id": "60f3f42bb91d4c3eb86fa0bda7883f2e",
+      "report_sha256": "e81c4e0cab1aabf34305fa871ebc241e3eab12bbbf71b3071421c0a8c1fa3cc4",
+      "evidence_index_sha256": "5c7bd1cfc83199e5d23156fdbe8da553da10f8ea5c6f771621785e817da14a29",
+      "cohorts": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "variant": "candidate",
+          "replicate": 2,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "32951412f6269cb598a9a759cceeed2b12e0d05bd4f7533d438ff67a96b45b1a",
+          "first_correct": 22,
+          "warm_correct": 22,
+          "primary_delivery_seconds": 1323.4361096000066,
+          "peak_rss_bytes": 3777417216,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": true,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "variant": "candidate",
+          "replicate": 3,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "807c435b3760c8091fb40af066aec35c485d537b5bc083208ecc27159acb57b4",
+          "first_correct": 22,
+          "warm_correct": 22,
+          "primary_delivery_seconds": 1320.6683041000506,
+          "peak_rss_bytes": 3772071936,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": true,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "variant": "candidate",
+          "replicate": 1,
+          "status": "denied-memory",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "d964178e21bd7831af80b333c1916384960dc5068426cd09b0802e3f72470cbc",
+          "memory_denial": {
+            "device": "cpu",
+            "observed": true,
+            "maximum_shortfall_bytes": 217485312
+          }
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "variant": "candidate",
+          "replicate": 2,
+          "status": "denied-memory",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "e2e1b5890a8b7276dd1351f44d2d9268145ed1fd5e5b9e26b7eeed2f9162640e",
+          "memory_denial": {
+            "device": "cpu",
+            "observed": true,
+            "maximum_shortfall_bytes": 223494144
+          }
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "variant": "candidate",
+          "replicate": 3,
+          "status": "denied-memory",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "bb8ff5c8a2c3357196ddff799698bf1db95de9a81d69487f4214cb20680988f8",
+          "memory_denial": {
+            "device": "cpu",
+            "observed": true,
+            "maximum_shortfall_bytes": 254193664
+          }
+        }
+      ]
+    },
+    {
+      "profile": "qwen05-float32",
+      "run_id": "de231b2e772a4e648516215ab517a4f2",
+      "report_sha256": "5a5311b39c471b9246f02530bc9ccfa13a53074aceda64c4968126a909eccb49",
+      "evidence_index_sha256": "a2f0277c05381d7506c74a13e8527a4b34c99a5492952675c866d8ceeba2ca8e",
+      "cohorts": [
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "variant": "candidate",
+          "replicate": 1,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "9a51757fcc689a2a158ab780942f9a81d6e5adbfe27fa9e36dbf7a6ed09c8f2c",
+          "first_correct": 12,
+          "warm_correct": 12,
+          "primary_delivery_seconds": 244.61978129995987,
+          "peak_rss_bytes": 3551821824,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "variant": "candidate",
+          "replicate": 2,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "0ea9b1ac82e815ed576358ff6e4ddd9f0ab29f491278765885c129703c7cddcc",
+          "first_correct": 12,
+          "warm_correct": 12,
+          "primary_delivery_seconds": 243.83935620007105,
+          "peak_rss_bytes": 3561775104,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "variant": "candidate",
+          "replicate": 3,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "efd2d8b4e6eb921356cf744d980d5ce5ba16d70a26783ec5c4c30036386eb80c",
+          "first_correct": 12,
+          "warm_correct": 12,
+          "primary_delivery_seconds": 243.14636969997082,
+          "peak_rss_bytes": 3560378368,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "variant": "candidate",
+          "replicate": 1,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "152130f389a4764052baea51755fe64f54d42582d56063f4fca3a45bb320eb2d",
+          "first_correct": 10,
+          "warm_correct": 10,
+          "primary_delivery_seconds": 153.0596465000417,
+          "peak_rss_bytes": 3558166528,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "variant": "candidate",
+          "replicate": 2,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "d795903a48eb900e805b6b06c5160baa3ec1f155fbb9314de55271a558e4c760",
+          "first_correct": 10,
+          "warm_correct": 10,
+          "primary_delivery_seconds": 152.71188620000612,
+          "peak_rss_bytes": 3557257216,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "variant": "candidate",
+          "replicate": 3,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "94fb3c8eeabd56d8ba6d76137efcb4e979258e1e4beb7aa1c2d6e807888ca301",
+          "first_correct": 10,
+          "warm_correct": 10,
+          "primary_delivery_seconds": 153.72319499996956,
+          "peak_rss_bytes": 3555635200,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "variant": "candidate",
+          "replicate": 1,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "e732fcb0e7695d796554a607e94e83362d3c0b6e34834709fddf87c81983dc39",
+          "first_correct": 9,
+          "warm_correct": 9,
+          "primary_delivery_seconds": 57.63168820005376,
+          "peak_rss_bytes": 3796418560,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "variant": "candidate",
+          "replicate": 2,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "4391d14bdedc3069977cd27a988d141f3f2b4a1974b343449540ac9eaccbfd69",
+          "first_correct": 9,
+          "warm_correct": 9,
+          "primary_delivery_seconds": 58.63001309998799,
+          "peak_rss_bytes": 3781394432,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "variant": "candidate",
+          "replicate": 3,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "9aef94a808e0e45d76232cbacc0ae45ba391950fb0bf02186c0c6a6adfa43f69",
+          "first_correct": 9,
+          "warm_correct": 9,
+          "primary_delivery_seconds": 56.26817089994438,
+          "peak_rss_bytes": 3802406912,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "variant": "candidate",
+          "replicate": 1,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "449d74dc37da9cfe3e723fb0beb8c17d94daf69f7bef8c800328f6e5471d54a2",
+          "first_correct": 12,
+          "warm_correct": 12,
+          "primary_delivery_seconds": 36.78265619999729,
+          "peak_rss_bytes": 3787288576,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "variant": "candidate",
+          "replicate": 2,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "e5fab32a3a28cda88c3d1c27b754d9d5f143ae1ad99fd386c60d164ad7d42e90",
+          "first_correct": 12,
+          "warm_correct": 12,
+          "primary_delivery_seconds": 36.3913545999676,
+          "peak_rss_bytes": 3798618112,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "variant": "candidate",
+          "replicate": 3,
+          "status": "measured",
+          "native_exit_code": 0,
+          "cleanup_passed": true,
+          "measurement_sha256": "b4293ac2651f36561303daf7f2b72b5cd14787a29c669f3672233294a89e92d4",
+          "first_correct": 12,
+          "warm_correct": 12,
+          "primary_delivery_seconds": 37.04904269997496,
+          "peak_rss_bytes": 3786350592,
+          "automatic_label_fixture_floor_met": false,
+          "user_accepted_absolute_floor_met": false,
+          "invalid_accepted_count": 0,
+          "host_budget_met": true
+        }
+      ]
+    }
+  ],
+  "qualified_subchecks": [
+    {
+      "id": "additional-larger-cpu-absolute-quality",
+      "status": "passed",
+      "scope": "1.5B BF16 CPU unchecked repetitions 2 and 3 each score 22/24 in both first and warm phases, meeting the user-accepted absolute floor. Each stays within the 1800-second batch and 4 GiB sampled RSS budgets with native exit zero and observed cleanup. The earlier accepted repetition remains a separate historical reference."
+    },
+    {
+      "id": "small-constrained-cpu-structural-resource",
+      "status": "passed",
+      "scope": "All three 0.5B Float32 constrained CPU repetitions complete within budget, with 22 structurally accepted outputs per 24-case phase, zero invalid output attempts/accepted outputs and observed cleanup. Semantic accuracy is 10/24 and remains a separate Functionality failure; the optional structural JSON criterion has no universal 22/24 semantic gate."
+    },
+    {
+      "id": "measured-resource-and-lifecycle",
+      "status": "passed",
+      "scope": "All 14 completed cohorts meet their declared host budgets; all 17 attempted workers have observed native exit zero and empty model caches/retained in-process leases after cleanup. This says nothing about prior interrupted cleanup, retained offload staging or native file-effect authority."
+    }
+  ],
+  "owner_criteria": [
+    {
+      "owner": "functionality-optimization",
+      "increment": "qualified-user-and-model-outcomes",
+      "criterion": "model-quality-resource-outcomes",
+      "full_criterion_closable": false,
+      "validated_portion": "Two current1.5B CPUuncheckedrep2/3 meetuser22/24bothphases,declared1800sbatchbudget,4GiBRSSsafety andnative/cleanup. All12smallercohortsnowcompletewithinresourcebudgets.",
+      "remaining": "All12smaller semanticoutputs below22;three1.5B constrainedCPUdenied. Nohistoricalbaseline rerun/currentpairedcomparison,adaptive/wholehostorfinalaggregate. Earlier7acceptedcohortsremainhistoricalschedulingreferences;rates/countsnotspliced."
+    },
+    {
+      "owner": "optional-constrained-json-generation",
+      "increment": "production-hardening-and-qualification",
+      "criterion": "representative-resource-and-usability-qualification",
+      "full_criterion_closable": false,
+      "validated_portion": "New0.5B constrainedCPU3replicates andconstrainedGPU3replicates completewithfinitebudgetedresource/latency,validcheckedoutput,0invalidaccepted/0invalidoutputattempts,andnative0/cleanup. This is directadapterstructural/resourceevidence.",
+      "remaining": "Canonicalcriterionrequiresadaptive state,explicitoverride andsuccessfulagent-executedvisualbuilderUI. Currentandpreviousownerevidence18/25/29/30remainpending;supportlinksarelocaldiagnostic/direct-modelsupportanddonotprovidethesemissinghostjourneys.",
+      "non_gate": "Do not impose22/24labelaccuracyasnewuniversalstructuralJSONgatehere. ItssemanticfailureisretainedfortheFunctionalitytask-qualitycriterion."
+    },
+    {
+      "owner": "optional-low-memory-inference",
+      "criterion": "optional-bounded-offload/measured-low-memory-model-outcomes",
+      "full_criterion_closable": false,
+      "remaining": "ThisisStandardonly,nofreshlease/stage/nativeprotection/pairedlowmemorydelivery;existingunknownstagingandnativeproofgapsremainunmodified."
+    }
+  ],
+  "chunk_mapping": {
+    "functionality-optimization/qualified-user-and-model-outcomes": {
+      "already_completed_implementation_chunks": [
+        "qualification-owner-reconciliation",
+        "qualification-assessment",
+        "qualification-task-procedures",
+        "release-evidence-and-gap-repairs"
+      ],
+      "new_chunk_completion": false,
+      "scope": "Newruntimeevidencefeedsqualification-task-procedures/model-quality-costcomparison;itdoesnotcompletependingfullcontrolledacceptanceorfreshall-suite."
+    },
+    "optional-constrained-json-generation/production-hardening-and-qualification": {
+      "already_completed_implementation_chunks": [
+        "packaged-runtime",
+        "resource-usability-and-performance",
+        "architecture-security-and-guidance",
+        "completion-gates"
+      ],
+      "new_chunk_completion": false,
+      "scope": "AddactualCPU/GPUstructuralresourceevidencetoresource-usability-and-performance;pendingadaptive/override/UIcriterionstillrequiresactualqualification."
+    }
+  },
+  "canonical_criterion_closures": [],
+  "new_chunk_completions": [],
+  "remaining": [
+    "Three 1.5B constrained CPU trials remain memory-denied: required 3758096384 bytes; observed available RAM 3503902720 to 3540611072 bytes. No output/timing qualification exists for those trials.",
+    "All twelve 0.5B cohorts remain below the 22/24 semantic floor: CPU unchecked 12, CPU constrained 10, CUDA unchecked 9 and CUDA constrained 12 correct per phase. Resource or JSON validity passes do not certify task correctness.",
+    "The frozen original 23/24 protocol and paired no-lost-correct/relative-throughput results remain historical and unchanged. This candidate-only collection supplies no new baseline comparison or fresh population validation.",
+    "Actual packaged-host adaptive state, explicit override and successful visual-builder UI journeys remain pending for the optional JSON owner. Direct-model structural/resource evidence closes only that portion.",
+    "Native/offload protection and process ownership, restricted legacy security review, provider/OCR/advanced quality and final exact-candidate aggregate gates retain their separate genuine gaps."
+  ],
+  "followup_boundary": "Do not pass this partial 5+12 bundle directly to the existing --remaining-from route: its frozen selector expects full archived profiles. Any successor selector must first be reviewed, retain prior accepted results as separate references and exclude the two newly accepted CPU repetitions from re-execution.",
+  "security_review": {
+    "disposition": "security-relevant",
+    "boundary": "Admission and publication of untrusted operator evidence.",
+    "controls": "Exact source/plan/restart/index verification and owning raw-case replay; independent numeric review; finite numeric/status/digest evidence only. Original frozen assessment and failed/denied history retained.",
+    "exclusions": "No raw model text, prompts, exception messages, credentials or personal absolute paths; no model execution, downloads, retained staging inspection/mutation, native effects or restricted review.",
+    "residual_risk": "Same-user operator evidence is not cryptographically authenticated. Sampled resource bounds and observed cleanup are scoped to these attempts and do not qualify other native/offload authority."
+  },
+  "qualification_authority": "Scoped assessment requires executed registered checks and separate accepted technical review. No automatic parent criterion, chunk, increment or roadmap pass."
+}

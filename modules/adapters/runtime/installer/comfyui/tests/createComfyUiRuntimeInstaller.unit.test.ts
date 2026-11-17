@@ -1,33 +1,186 @@
 import path from "node:path";
 
-import { describe, expect, it, testDouble } from "../../../../../testing/node-test";
+import {
+  describe,
+  expect,
+  it,
+  testDouble,
+} from "../../../../../testing/node-test";
 
 import {
   buildComfyUiManagedPythonEnvironmentRoot,
   buildComfyUiManagedPythonExecutablePath,
 } from "../../../comfyui/comfyUiPythonEnvironment";
-import { buildComfyUiInstallRequest, createComfyUiRuntimeInstaller } from "../createComfyUiRuntimeInstaller";
+import {
+  buildComfyUiInstallRequest,
+  createComfyUiRuntimeInstaller,
+} from "../createComfyUiRuntimeInstaller";
 
 const baseRequest = {
   targetId: "custom-target",
   installRoot: "/runtime/comfy",
-  source: { type: "git" as const, repositoryUrl: "https://example.com/ignored.git", ref: "v1.0.0" },
+  source: {
+    type: "git" as const,
+    repositoryUrl: "https://example.com/ignored.git",
+    ref: "v1.0.0",
+  },
 };
 const requirementsPath = path.join(baseRequest.installRoot, "requirements.txt");
 const entrypointPath = path.join(baseRequest.installRoot, "main.py");
-const managedPythonPath = buildComfyUiManagedPythonExecutablePath({ installRoot: baseRequest.installRoot });
-const managedPythonEnvironmentRoot = buildComfyUiManagedPythonEnvironmentRoot(baseRequest.installRoot);
+const managedPythonPath = buildComfyUiManagedPythonExecutablePath({
+  installRoot: baseRequest.installRoot,
+});
+const managedPythonEnvironmentRoot = buildComfyUiManagedPythonEnvironmentRoot(
+  baseRequest.installRoot,
+);
 
 describe("createComfyUiRuntimeInstaller", () => {
+  it("denies unapproved repair before every Git, Python and filesystem path", async () => {
+    for (const allowUpdate of [false, undefined]) {
+      for (const hasRepair of [false, true]) {
+        for (const status of ["not-installed", "installed"] as const) {
+          for (const repairReason of [
+            "torchaudio",
+            "torchvision",
+            "directml",
+            "unknown",
+          ]) {
+            const gitInstaller = {
+              ensureInstalled: testDouble.fn(async (request) => ({
+                ...request,
+                status: "installed" as const,
+              })),
+              getInstallStatus: testDouble.fn(async (request) => ({
+                ...request,
+                status,
+              })),
+              ...(hasRepair
+                ? {
+                    repairInstall: testDouble.fn(async (request) => ({
+                      ...request,
+                      status: "installed" as const,
+                    })),
+                  }
+                : {}),
+            };
+            const execFile = testDouble.fn(async () => ({
+              stdout: "",
+              stderr: "",
+            }));
+            const stat = testDouble.fn(async () => ({}));
+            const installer = createComfyUiRuntimeInstaller({
+              gitInstaller,
+              execFile,
+              stat: stat as never,
+            });
+            const result = await installer.repairInstall?.({
+              ...baseRequest,
+              allowUpdate,
+              forceRepair: true,
+              metadata: { repairReason },
+            });
+            expect(result?.status).toBe("failed");
+            expect(result?.error?.code).toBe("update-not-authorized");
+            for (const effect of [
+              ...Object.values(gitInstaller),
+              execFile,
+              stat,
+            ])
+              expect(effect).not.toHaveBeenCalled();
+          }
+        }
+      }
+    }
+  });
+
+  it("denies uncertain or mismatched install authority before any targeted or fallback repair effect", async () => {
+    for (const hasRepair of [false, true]) {
+      for (const status of [
+        "failed",
+        "unknown",
+        "installing",
+        "installed-wrong-root",
+        "installed-wrong-target",
+          "installed-wrong-source",
+          "installed-missing-source",
+        "absent",
+      ]) {
+        for (const repairReason of [
+          "torchaudio",
+          "torchvision",
+          "directml",
+          "unknown",
+        ]) {
+          const gitInstaller = {
+            getInstallStatus: testDouble.fn(async (request) =>
+              status === "absent"
+                ? undefined
+                : {
+                    ...request,
+                    status: status.startsWith("installed-")
+                      ? "installed"
+                      : status,
+                    ...(status === "installed-wrong-source" ? { source: { type: "git", repositoryUrl: "https://example.com/other.git" } } : {}),
+                      ...(status === "installed-missing-source" ? { source: undefined } : {}),
+                      ...(status === "installed-wrong-root"
+                      ? { installRoot: "/other/root" }
+                      : {}),
+                    ...(status === "installed-wrong-target"
+                      ? { targetId: "other" }
+                      : {}),
+                  },
+            ),
+            ensureInstalled: testDouble.fn(),
+            ...(hasRepair ? { repairInstall: testDouble.fn() } : {}),
+          };
+          const execFile = testDouble.fn();
+          const stat = testDouble.fn();
+          const readFile = testDouble.fn();
+          const writeFile = testDouble.fn();
+          const installer = createComfyUiRuntimeInstaller({
+            gitInstaller: gitInstaller as never,
+            execFile,
+            stat: stat as never,
+            readFile: readFile as never,
+            writeFile: writeFile as never,
+          });
+          const result = await installer.repairInstall?.({
+            ...baseRequest,
+            allowUpdate: true,
+            forceRepair: true,
+            metadata: { repairReason },
+          });
+          expect(result?.status).toBe("failed");
+          expect(result?.error?.code).toBe("install-authority-unavailable");
+          expect(gitInstaller.getInstallStatus).toHaveBeenCalledOnce();
+          for (const effect of [
+            gitInstaller.ensureInstalled,
+            ...(hasRepair ? [gitInstaller.repairInstall] : []),
+            execFile,
+            stat,
+            readFile,
+            writeFile,
+          ])
+            expect(effect).not.toHaveBeenCalled();
+        }
+      }
+    }
+  });
+
   it("builds default install request correctly", () => {
     const request = buildComfyUiInstallRequest({ installRoot: "/tmp/comfy" });
     expect(request.targetId).toBe("comfyui");
-    expect(request.source.repositoryUrl).toBe("https://github.com/Comfy-Org/ComfyUI");
+    expect(request.source.repositoryUrl).toBe(
+      "https://github.com/Comfy-Org/ComfyUI",
+    );
     expect(request.installRoot).toBe("/tmp/comfy");
   });
 
   it("preserves git ref override", () => {
-    const request = buildComfyUiInstallRequest({ installRoot: "/tmp/comfy", source: baseRequest.source });
+    const request = buildComfyUiInstallRequest({
+      installRoot: "/tmp/comfy",
+      source: baseRequest.source,
+    });
     expect(request.source.ref).toBe("v1.0.0");
   });
 
@@ -41,19 +194,31 @@ describe("createComfyUiRuntimeInstaller", () => {
 
   it("delegates to git installer", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+      })),
       getInstallStatus: testDouble.fn(),
       repairInstall: testDouble.fn(),
     };
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, skipPythonSetup: true, skipPythonValidation: true, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      skipPythonSetup: true,
+      skipPythonValidation: true,
+      stat: stat as never,
+    });
     await installer.ensureInstalled(baseRequest);
     expect(gitInstaller.ensureInstalled).toHaveBeenCalled();
   });
 
   it("emits shared structured runtime install log events", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const log = testDouble.fn();
@@ -84,85 +249,170 @@ describe("createComfyUiRuntimeInstaller", () => {
 
   it("skipPythonSetup does not run pip install but still validates", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const execFile = testDouble.fn(async (_file: string, args: string[]) => {
-      if (args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") {
+      if (
+        args[0] === "-c" &&
+        args[1] === "import torch; print(torch.__version__.split('+')[0])"
+      ) {
         return { stdout: "2.3.1\n", stderr: "" };
       }
       return { stdout: "", stderr: "" };
     });
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, skipPythonSetup: true, execFile, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      skipPythonSetup: true,
+      execFile,
+      stat: stat as never,
+    });
     await installer.ensureInstalled(baseRequest);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [entrypointPath, "--help"]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      entrypointPath,
+      "--help",
+    ]);
     expect(execFile).toHaveBeenCalledTimes(2);
   });
 
   it("skipPythonValidation avoids running python help command", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const execFile = testDouble.fn(async () => ({ stdout: "", stderr: "" }));
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, skipPythonSetup: false, skipPythonValidation: true, execFile, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      skipPythonSetup: false,
+      skipPythonValidation: true,
+      execFile,
+      stat: stat as never,
+    });
     await installer.ensureInstalled(baseRequest);
     expect(execFile).toHaveBeenCalledTimes(5);
-    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, [entrypointPath, "--help"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "-r", requirementsPath]);
+    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, [
+      entrypointPath,
+      "--help",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "-r",
+      requirementsPath,
+    ]);
   });
 
   it("skip setup and validation makes no execFile calls", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const execFile = testDouble.fn(async () => ({ stdout: "", stderr: "" }));
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, skipPythonSetup: true, skipPythonValidation: true, execFile, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      skipPythonSetup: true,
+      skipPythonValidation: true,
+      execFile,
+      stat: stat as never,
+    });
     await installer.ensureInstalled(baseRequest);
     expect(execFile).not.toHaveBeenCalled();
   });
 
   it("installs python dependencies when requirements.txt exists", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const execFile = testDouble.fn(async () => ({ stdout: "", stderr: "" }));
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+    });
     await installer.ensureInstalled(baseRequest);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "-r", requirementsPath]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import torch; print(torch.__version__)"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import torchaudio; print(torchaudio.__version__)"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import torchvision; print(torchvision.__version__)"]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "-r",
+      requirementsPath,
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import torch; print(torch.__version__)",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import torchaudio; print(torchaudio.__version__)",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import torchvision; print(torchvision.__version__)",
+    ]);
   });
-
 
   it("returns a dependency mismatch failure when post-install import checks fail", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     let importAttempts = 0;
     const execFile = testDouble.fn(async (file: string, args: string[]) => {
-      if (file === managedPythonPath && args[0] === "-c" && args[1] === "import torchaudio; print(torchaudio.__version__)") {
+      if (
+        file === managedPythonPath &&
+        args[0] === "-c" &&
+        args[1] === "import torchaudio; print(torchaudio.__version__)"
+      ) {
         importAttempts += 1;
         if (importAttempts === 1) {
           throw new Error("import failed");
         }
       }
-      if (file === managedPythonPath && args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") {
+      if (
+        file === managedPythonPath &&
+        args[0] === "-c" &&
+        args[1] === "import torch; print(torch.__version__.split('+')[0])"
+      ) {
         return { stdout: "2.3.1\n", stderr: "" };
       }
       return { stdout: "", stderr: "" };
     });
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+    });
 
     const result = await installer.ensureInstalled(baseRequest);
 
@@ -171,12 +421,20 @@ describe("createComfyUiRuntimeInstaller", () => {
   });
   it("reports dependency mismatch instead of running ad hoc non-DirectML companion repair", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     let importAttempts = 0;
     const execFile = testDouble.fn(async (file: string, args: string[]) => {
-      if (file === managedPythonPath && args[0] === "-c" && args[1] === "import torchaudio; print(torchaudio.__version__)") {
+      if (
+        file === managedPythonPath &&
+        args[0] === "-c" &&
+        args[1] === "import torchaudio; print(torchaudio.__version__)"
+      ) {
         importAttempts += 1;
         if (importAttempts === 1) {
           throw new Error("import failed");
@@ -185,22 +443,36 @@ describe("createComfyUiRuntimeInstaller", () => {
       return { stdout: "", stderr: "" };
     });
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+    });
 
     const result = await installer.ensureInstalled(baseRequest);
 
     expect(result.status).toBe("failed");
     expect(result.error?.code).toBe("torch-import-check-failed");
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import torchaudio; print(torchaudio.__version__)"]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import torchaudio; print(torchaudio.__version__)",
+    ]);
   });
 
   it("creates a managed Python environment before installing ComfyUI dependencies when one is missing", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const execFile = testDouble.fn(async (_file: string, args: string[]) => {
-      if (args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") {
+      if (
+        args[0] === "-c" &&
+        args[1] === "import torch; print(torch.__version__.split('+')[0])"
+      ) {
         return { stdout: "2.3.1\n", stderr: "" };
       }
       return { stdout: "", stderr: "" };
@@ -211,17 +483,35 @@ describe("createComfyUiRuntimeInstaller", () => {
       }
       return {};
     });
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+    });
 
     await installer.ensureInstalled(baseRequest);
 
-    expect(execFile).toHaveBeenCalledWith("python", ["-m", "venv", managedPythonEnvironmentRoot]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "-r", requirementsPath]);
+    expect(execFile).toHaveBeenCalledWith("python", [
+      "-m",
+      "venv",
+      managedPythonEnvironmentRoot,
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "-r",
+      requirementsPath,
+    ]);
   });
 
   it("fails finalization when managed Python environment is missing and no command runner can create it", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const stat = testDouble.fn(async (targetPath: string) => {
@@ -230,12 +520,17 @@ describe("createComfyUiRuntimeInstaller", () => {
       }
       return {};
     });
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      stat: stat as never,
+    });
 
     const result = await installer.ensureInstalled(baseRequest);
 
     expect(result.status).toBe("failed");
-    expect(result.error?.code).toBe("python-environment-command-runner-missing");
+    expect(result.error?.code).toBe(
+      "python-environment-command-runner-missing",
+    );
     expect(result.error?.details).toMatchObject({
       environmentRoot: managedPythonEnvironmentRoot,
       pythonExecutable: managedPythonPath,
@@ -244,44 +539,95 @@ describe("createComfyUiRuntimeInstaller", () => {
 
   it("installs torch-directml when DirectML runtime mode is selected", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const execFile = testDouble.fn(async (_file: string, args: string[]) => {
-      if (args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") {
+      if (
+        args[0] === "-c" &&
+        args[1] === "import torch; print(torch.__version__.split('+')[0])"
+      ) {
         return { stdout: "2.3.1\n", stderr: "" };
       }
       return { stdout: "", stderr: "" };
     });
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never, runtimeDeviceMode: "directml" });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+      runtimeDeviceMode: "directml",
+    });
 
     await installer.ensureInstalled(baseRequest);
 
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "-r", requirementsPath]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "--force-reinstall", "--no-cache-dir", "torch-directml"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import torch; print(torch.__version__.split('+')[0])"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "--force-reinstall", "--no-cache-dir", "torchaudio==2.3.1", "torchvision==0.18.1"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [entrypointPath, "--help"]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "-r",
+      requirementsPath,
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "--force-reinstall",
+      "--no-cache-dir",
+      "torch-directml",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import torch; print(torch.__version__.split('+')[0])",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "--force-reinstall",
+      "--no-cache-dir",
+      "torchaudio==2.3.1",
+      "torchvision==0.18.1",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      entrypointPath,
+      "--help",
+    ]);
   });
 
   it("skips dependency and validation commands on later starts when finalization metadata still matches", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [], commitSha: "abc123" })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+        commitSha: "abc123",
+      })),
       getInstallStatus: testDouble.fn(),
     };
     let finalizationMetadata = "";
     const execFile = testDouble.fn(async () => ({ stdout: "", stderr: "" }));
     const stat = testDouble.fn(async (targetPath: string) => {
-      if (String(targetPath).endsWith(".ai-system-builder-comfyui-finalization.json") && !finalizationMetadata) {
+      if (
+        String(targetPath).endsWith(
+          ".ai-system-builder-comfyui-finalization.json",
+        ) &&
+        !finalizationMetadata
+      ) {
         throw new Error("missing metadata");
       }
       return {};
     });
     const readFile = testDouble.fn(async () => finalizationMetadata);
-    const writeFile = testDouble.fn(async (_targetPath: string, content: string) => {
-      finalizationMetadata = content;
-    });
+    const writeFile = testDouble.fn(
+      async (_targetPath: string, content: string) => {
+        finalizationMetadata = content;
+      },
+    );
     const log = testDouble.fn();
     const installer = createComfyUiRuntimeInstaller({
       gitInstaller,
@@ -294,39 +640,96 @@ describe("createComfyUiRuntimeInstaller", () => {
     });
 
     await installer.ensureInstalled(baseRequest);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "-r", requirementsPath]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "--force-reinstall", "--no-cache-dir", "torch-directml"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [entrypointPath, "--help"]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "-r",
+      requirementsPath,
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "--force-reinstall",
+      "--no-cache-dir",
+      "torch-directml",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      entrypointPath,
+      "--help",
+    ]);
 
     execFile.mockClear();
     await installer.ensureInstalled(baseRequest);
 
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import torch; print(torch.__version__)"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import torchaudio; print(torchaudio.__version__)"]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import torchvision; print(torchvision.__version__)"]);
-    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "-r", requirementsPath]);
-    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, [entrypointPath, "--help"]);
-    const messages = log.mock.calls.map((call) => (call[0] as { message: string }).message);
-    expect(messages).toContain("ComfyUI install finalization already completed; skipping dependency and validation commands.");
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import torch; print(torch.__version__)",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import torchaudio; print(torchaudio.__version__)",
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import torchvision; print(torchvision.__version__)",
+    ]);
+    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "-r",
+      requirementsPath,
+    ]);
+    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, [
+      entrypointPath,
+      "--help",
+    ]);
+    const messages = log.mock.calls.map(
+      (call) => (call[0] as { message: string }).message,
+    );
+    expect(messages).toContain(
+      "ComfyUI install finalization already completed; skipping dependency and validation commands.",
+    );
   });
 
   it("does not install torch-directml for automatic CUDA-capable ComfyUI startup", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const execFile = testDouble.fn(async () => ({ stdout: "", stderr: "" }));
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never, runtimeDeviceMode: "auto" });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+      runtimeDeviceMode: "auto",
+    });
 
     await installer.ensureInstalled(baseRequest);
 
-    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "torch-directml"]);
+    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "torch-directml",
+    ]);
   });
 
   it("stale metadata schema does not skip import checks and rewrites metadata", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [], commitSha: "abc123" })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+        commitSha: "abc123",
+      })),
       getInstallStatus: testDouble.fn(),
     };
     let finalizationMetadata = JSON.stringify({
@@ -345,59 +748,115 @@ describe("createComfyUiRuntimeInstaller", () => {
     const execFile = testDouble.fn(async () => ({ stdout: "", stderr: "" }));
     const stat = testDouble.fn(async () => ({}));
     const readFile = testDouble.fn(async () => finalizationMetadata);
-    const writeFile = testDouble.fn(async (_targetPath: string, content: string) => { finalizationMetadata = content; });
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never, readFile: readFile as never, writeFile: writeFile as never, runtimeDeviceMode: "directml" });
+    const writeFile = testDouble.fn(
+      async (_targetPath: string, content: string) => {
+        finalizationMetadata = content;
+      },
+    );
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+      readFile: readFile as never,
+      writeFile: writeFile as never,
+      runtimeDeviceMode: "directml",
+    });
     await installer.ensureInstalled(baseRequest);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-c", "import torchaudio; print(torchaudio.__version__)"]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-c",
+      "import torchaudio; print(torchaudio.__version__)",
+    ]);
     expect(JSON.parse(finalizationMetadata).schemaVersion).toBe(4);
   });
 
   it("recreates a managed Python environment when it was created with unsupported Python", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const rm = testDouble.fn(async () => {});
     const stat = testDouble.fn(async () => ({}));
-    const execFile = testDouble.fn(async (file: string, args: readonly string[] = []) => {
-      if (args[0] === "-c" && String(args[1]).includes("sys.version_info")) {
-        return { stdout: file === managedPythonPath ? "3.14.3\n" : "3.12.13\n", stderr: "" };
-      }
-      return { stdout: "", stderr: "" };
+    const execFile = testDouble.fn(
+      async (file: string, args: readonly string[] = []) => {
+        if (args[0] === "-c" && String(args[1]).includes("sys.version_info")) {
+          return {
+            stdout: file === managedPythonPath ? "3.14.3\n" : "3.12.13\n",
+            stderr: "",
+          };
+        }
+        return { stdout: "", stderr: "" };
+      },
+    );
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+      rm: rm as never,
     });
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never, rm: rm as never });
 
     await installer.ensureInstalled(baseRequest);
 
-    expect(rm).toHaveBeenCalledWith(managedPythonEnvironmentRoot, { recursive: true, force: true });
-    expect(execFile).toHaveBeenCalledWith("python", ["-m", "venv", managedPythonEnvironmentRoot]);
+    expect(rm).toHaveBeenCalledWith(managedPythonEnvironmentRoot, {
+      recursive: true,
+      force: true,
+    });
+    expect(execFile).toHaveBeenCalledWith("python", [
+      "-m",
+      "venv",
+      managedPythonEnvironmentRoot,
+    ]);
   });
 
   it("fails before dependency installation when the base Python version is unsupported", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const stat = testDouble.fn(async (targetPath: string) => {
       if (targetPath === managedPythonPath) throw new Error("missing");
       return {};
     });
-    const execFile = testDouble.fn(async (_file: string, args: readonly string[] = []) => {
-      if (args[0] === "-c" && String(args[1]).includes("sys.version_info")) return { stdout: "3.14.3\n", stderr: "" };
-      return { stdout: "", stderr: "" };
+    const execFile = testDouble.fn(
+      async (_file: string, args: readonly string[] = []) => {
+        if (args[0] === "-c" && String(args[1]).includes("sys.version_info"))
+          return { stdout: "3.14.3\n", stderr: "" };
+        return { stdout: "", stderr: "" };
+      },
+    );
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
     });
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never });
 
     const result = await installer.ensureInstalled(baseRequest);
 
     expect(result.status).toBe("failed");
     expect(result.error?.code).toBe("unsupported-python-version");
-    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "-r", requirementsPath]);
+    expect(execFile).not.toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "-r",
+      requirementsPath,
+    ]);
   });
 
   it("installs torch and torchvision from the configured CUDA wheel index", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const execFile = testDouble.fn(async () => ({ stdout: "", stderr: "" }));
@@ -427,76 +886,199 @@ describe("createComfyUiRuntimeInstaller", () => {
 
   it("directml installs torch-directml before companion reconciliation by default", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
       getInstallStatus: testDouble.fn(),
     };
     const execFile = testDouble.fn(async (_file: string, args: string[]) => {
-      if (args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") {
-        return { stdout: "2.4.1\n", stderr: "" };
-      }
-      return { stdout: "", stderr: "" };
-    });
-    const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never, runtimeDeviceMode: "directml" });
-    await installer.ensureInstalled(baseRequest);
-    const calls = execFile.mock.calls.map((call) => call[1]?.join(" "));
-    const torchIndex = calls.findIndex((c) => c?.includes("torch==2.3.1"));
-    const directmlIndex = calls.findIndex((c) => c?.includes("torch-directml"));
-    const companionIndex = calls.findIndex((c) => c?.includes("torchaudio==2.4.1") && c.includes("torchvision==0.19.1"));
-    expect(torchIndex).toBe(-1);
-    expect(directmlIndex).toBeGreaterThan(-1);
-    expect(companionIndex).toBeGreaterThan(directmlIndex);
-  });
-
-  it("uses probed torch 2.3.1 companion mapping", async () => {
-    const gitInstaller = { ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })), getInstallStatus: testDouble.fn() };
-    const execFile = testDouble.fn(async (_file: string, args: string[]) => {
-      if (args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") return { stdout: "2.3.1\n", stderr: "" };
-      return { stdout: "", stderr: "" };
-    });
-    const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never, runtimeDeviceMode: "directml" });
-    await installer.ensureInstalled(baseRequest);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "--force-reinstall", "--no-cache-dir", "torchaudio==2.3.1", "torchvision==0.18.1"]);
-  });
-
-  it("uses directml companion overrides when configured", async () => {
-    const gitInstaller = { ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })), getInstallStatus: testDouble.fn() };
-    const execFile = testDouble.fn(async (_file: string, args: string[]) => {
-      if (args[0] === "-c" && String(args[1]).includes("sys.version_info")) {
-        return { stdout: "3.12.1\n", stderr: "" };
-      }
-      if (args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") {
+      if (
+        args[0] === "-c" &&
+        args[1] === "import torch; print(torch.__version__.split('+')[0])"
+      ) {
         return { stdout: "2.4.1\n", stderr: "" };
       }
       return { stdout: "", stderr: "" };
     });
     const stat = testDouble.fn(async () => ({}));
     const installer = createComfyUiRuntimeInstaller({
-      gitInstaller, execFile, stat: stat as never, runtimeDeviceMode: "directml", directMlTorchAudioVersion: "9.9.9", directMlTorchVisionVersion: "8.8.8",
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+      runtimeDeviceMode: "directml",
     });
     await installer.ensureInstalled(baseRequest);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "--force-reinstall", "--no-cache-dir", "torchaudio==9.9.9", "torchvision==8.8.8"]);
+    const calls = execFile.mock.calls.map((call) => call[1]?.join(" "));
+    const torchIndex = calls.findIndex((c) => c?.includes("torch==2.3.1"));
+    const directmlIndex = calls.findIndex((c) => c?.includes("torch-directml"));
+    const companionIndex = calls.findIndex(
+      (c) =>
+        c?.includes("torchaudio==2.4.1") && c.includes("torchvision==0.19.1"),
+    );
+    expect(torchIndex).toBe(-1);
+    expect(directmlIndex).toBeGreaterThan(-1);
+    expect(companionIndex).toBeGreaterThan(directmlIndex);
+  });
+
+  it("uses probed torch 2.3.1 companion mapping", async () => {
+    const gitInstaller = {
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
+      getInstallStatus: testDouble.fn(),
+    };
+    const execFile = testDouble.fn(async (_file: string, args: string[]) => {
+      if (
+        args[0] === "-c" &&
+        args[1] === "import torch; print(torch.__version__.split('+')[0])"
+      )
+        return { stdout: "2.3.1\n", stderr: "" };
+      return { stdout: "", stderr: "" };
+    });
+    const stat = testDouble.fn(async () => ({}));
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+      runtimeDeviceMode: "directml",
+    });
+    await installer.ensureInstalled(baseRequest);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "--force-reinstall",
+      "--no-cache-dir",
+      "torchaudio==2.3.1",
+      "torchvision==0.18.1",
+    ]);
+  });
+
+  it("uses directml companion overrides when configured", async () => {
+    const gitInstaller = {
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
+      getInstallStatus: testDouble.fn(),
+    };
+    const execFile = testDouble.fn(async (_file: string, args: string[]) => {
+      if (args[0] === "-c" && String(args[1]).includes("sys.version_info")) {
+        return { stdout: "3.12.1\n", stderr: "" };
+      }
+      if (
+        args[0] === "-c" &&
+        args[1] === "import torch; print(torch.__version__.split('+')[0])"
+      ) {
+        return { stdout: "2.4.1\n", stderr: "" };
+      }
+      return { stdout: "", stderr: "" };
+    });
+    const stat = testDouble.fn(async () => ({}));
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+      runtimeDeviceMode: "directml",
+      directMlTorchAudioVersion: "9.9.9",
+      directMlTorchVisionVersion: "8.8.8",
+    });
+    await installer.ensureInstalled(baseRequest);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "--force-reinstall",
+      "--no-cache-dir",
+      "torchaudio==9.9.9",
+      "torchvision==8.8.8",
+    ]);
   });
 
   it("repair runs post-install validation/dependency setup", async () => {
     const gitInstaller = {
       ensureInstalled: testDouble.fn(),
-      getInstallStatus: testDouble.fn(async (request) => ({ ...request, status: "installed" as const })),
-      repairInstall: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      getInstallStatus: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+      })),
+      repairInstall: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
     };
     const execFile = testDouble.fn(async () => ({ stdout: "", stderr: "" }));
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never });
-    await installer.repairInstall?.(baseRequest);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "-r", requirementsPath]);
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [entrypointPath, "--help"]);
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+    });
+    await installer.repairInstall?.({ ...baseRequest, allowUpdate: true });
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "-r",
+      requirementsPath,
+    ]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      entrypointPath,
+      "--help",
+    ]);
+  });
+
+  it("approved repair fallback retains source, metadata and forceRepair false", async () => {
+    const gitInstaller = {
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+      })),
+      getInstallStatus: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+      })),
+    };
+    const stat = testDouble.fn(async () => ({}));
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      stat: stat as never,
+      skipPythonSetup: true,
+      skipPythonValidation: true,
+    });
+    const request = {
+      ...baseRequest,
+      allowUpdate: true,
+      forceRepair: false,
+      metadata: { repairReason: "unknown" },
+    };
+    expect((await installer.repairInstall?.(request))?.status).toBe(
+      "installed",
+    );
+    const delegated = gitInstaller.ensureInstalled.mock.calls[0]?.[0];
+    expect(delegated?.allowUpdate).toBe(true);
+    expect(delegated?.forceRepair).toBe(false);
+    expect(delegated?.source.ref).toBe(baseRequest.source.ref);
+    expect(delegated?.metadata).toEqual(request.metadata);
   });
 
   it("repair performs initial install when ComfyUI is not installed", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
-      getInstallStatus: testDouble.fn(async (request) => ({ ...request, status: "not-installed" as const })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
+      getInstallStatus: testDouble.fn(async (request) => ({
+        ...request,
+        status: "not-installed" as const,
+      })),
       repairInstall: testDouble.fn(),
     };
     const stat = testDouble.fn(async () => ({}));
@@ -507,7 +1089,10 @@ describe("createComfyUiRuntimeInstaller", () => {
       stat: stat as never,
     });
 
-    const result = await installer.repairInstall?.(baseRequest);
+    const result = await installer.repairInstall?.({
+      ...baseRequest,
+      allowUpdate: true,
+    });
 
     expect(result?.status).toBe("installed");
     expect(gitInstaller.getInstallStatus).toHaveBeenCalled();
@@ -522,29 +1107,71 @@ describe("createComfyUiRuntimeInstaller", () => {
   it("repair failure maps dependency errors", async () => {
     const gitInstaller = {
       ensureInstalled: testDouble.fn(),
-      getInstallStatus: testDouble.fn(async (request) => ({ ...request, status: "installed" as const })),
-      repairInstall: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      getInstallStatus: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+      })),
+      repairInstall: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
     };
-    const execFile = testDouble.fn(async (_file: string, args: readonly string[] = []) => {
-      if (args.includes("pip")) throw { stdout: "o", stderr: "e" };
-      return { stdout: "", stderr: "" };
-    });
+    const execFile = testDouble.fn(
+      async (_file: string, args: readonly string[] = []) => {
+        if (args.includes("pip")) throw { stdout: "o", stderr: "e" };
+        return { stdout: "", stderr: "" };
+      },
+    );
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never });
-    const result = await installer.repairInstall?.(baseRequest);
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+    });
+    const result = await installer.repairInstall?.({
+      ...baseRequest,
+      allowUpdate: true,
+    });
     expect(result?.status).toBe("failed");
     expect(result?.error?.code).toBe("python-dependency-install-failed");
   });
 
   it("directml torchaudio import failure includes reconciled version details", async () => {
-    const gitInstaller = { ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })), getInstallStatus: testDouble.fn() };
-    const execFile = testDouble.fn(async (_file: string, args: readonly string[] = []) => {
-      if (args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") return { stdout: "2.4.1\n", stderr: "" };
-      if (args[0] === "-c" && args[1] === "import torchaudio; print(torchaudio.__version__)") throw { message: "torchaudio fail", stderr: "WinError 127", stdout: "" };
-      return { stdout: "", stderr: "" };
-    });
+    const gitInstaller = {
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
+      getInstallStatus: testDouble.fn(),
+    };
+    const execFile = testDouble.fn(
+      async (_file: string, args: readonly string[] = []) => {
+        if (
+          args[0] === "-c" &&
+          args[1] === "import torch; print(torch.__version__.split('+')[0])"
+        )
+          return { stdout: "2.4.1\n", stderr: "" };
+        if (
+          args[0] === "-c" &&
+          args[1] === "import torchaudio; print(torchaudio.__version__)"
+        )
+          throw {
+            message: "torchaudio fail",
+            stderr: "WinError 127",
+            stdout: "",
+          };
+        return { stdout: "", stderr: "" };
+      },
+    );
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never, runtimeDeviceMode: "directml" });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+      runtimeDeviceMode: "directml",
+    });
     const result = await installer.ensureInstalled(baseRequest);
     expect(result.status).toBe("failed");
     expect(result.error?.code).toBe("torchaudio-import-check-failed");
@@ -555,13 +1182,30 @@ describe("createComfyUiRuntimeInstaller", () => {
   });
 
   it("torchvision import failure maps to torchvision-import-check-failed", async () => {
-    const gitInstaller = { ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })), getInstallStatus: testDouble.fn() };
-    const execFile = testDouble.fn(async (_file: string, args: readonly string[] = []) => {
-      if (args[0] === "-c" && args[1] === "import torchvision; print(torchvision.__version__)") throw { message: "torchvision broken", stderr: "import torchvision" };
-      return { stdout: "", stderr: "" };
-    });
+    const gitInstaller = {
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
+      getInstallStatus: testDouble.fn(),
+    };
+    const execFile = testDouble.fn(
+      async (_file: string, args: readonly string[] = []) => {
+        if (
+          args[0] === "-c" &&
+          args[1] === "import torchvision; print(torchvision.__version__)"
+        )
+          throw { message: "torchvision broken", stderr: "import torchvision" };
+        return { stdout: "", stderr: "" };
+      },
+    );
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+    });
     const result = await installer.ensureInstalled(baseRequest);
     expect(result.status).toBe("failed");
     expect(result.error?.code).toBe("torchvision-import-check-failed");
@@ -569,8 +1213,15 @@ describe("createComfyUiRuntimeInstaller", () => {
 
   it("repair emits status and final outcome logs for diagnosis", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
-      getInstallStatus: testDouble.fn(async (request) => ({ ...request, status: "not-installed" as const })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
+      getInstallStatus: testDouble.fn(async (request) => ({
+        ...request,
+        status: "not-installed" as const,
+      })),
       repairInstall: testDouble.fn(),
     };
     const log = testDouble.fn();
@@ -583,46 +1234,111 @@ describe("createComfyUiRuntimeInstaller", () => {
       logging: { log },
     });
 
-    await installer.repairInstall?.(baseRequest);
+    await installer.repairInstall?.({ ...baseRequest, allowUpdate: true });
 
-    const messages = log.mock.calls.map((call) => (call[0] as { message: string }).message);
+    const messages = log.mock.calls.map(
+      (call) => (call[0] as { message: string }).message,
+    );
     expect(messages).toContain("Read ComfyUI install status before repair.");
-    expect(messages).toContain("ComfyUI install is missing; repair will perform initial install.");
+    expect(messages).toContain(
+      "ComfyUI install is missing; repair will perform initial install.",
+    );
     expect(messages).toContain("ComfyUI repair install finished.");
   });
 
   it("uses targeted torchaudio repair before full repair", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
-      getInstallStatus: testDouble.fn(async (request) => ({ ...request, status: "installed" as const })),
-      repairInstall: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
+      getInstallStatus: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+      })),
+      repairInstall: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
     };
-    const execFile = testDouble.fn(async (_file: string, args: readonly string[] = []) => {
-      if (args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") return { stdout: "2.3.1\n", stderr: "" };
-      return { stdout: "", stderr: "" };
-    });
+    const execFile = testDouble.fn(
+      async (_file: string, args: readonly string[] = []) => {
+        if (
+          args[0] === "-c" &&
+          args[1] === "import torch; print(torch.__version__.split('+')[0])"
+        )
+          return { stdout: "2.3.1\n", stderr: "" };
+        return { stdout: "", stderr: "" };
+      },
+    );
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never });
-    const result = await installer.repairInstall?.({ ...baseRequest, metadata: { repairReason: "torchaudio" } });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+    });
+    const result = await installer.repairInstall?.({
+      ...baseRequest,
+      allowUpdate: true,
+      metadata: { repairReason: "torchaudio" },
+    });
     expect(result?.status).toBe("installed");
-    expect(execFile).toHaveBeenCalledWith(managedPythonPath, ["-m", "pip", "install", "--force-reinstall", "--no-cache-dir", "torchaudio==2.3.1", "torchvision==0.18.1"]);
+    expect(execFile).toHaveBeenCalledWith(managedPythonPath, [
+      "-m",
+      "pip",
+      "install",
+      "--force-reinstall",
+      "--no-cache-dir",
+      "torchaudio==2.3.1",
+      "torchvision==0.18.1",
+    ]);
     expect(gitInstaller.repairInstall).not.toHaveBeenCalled();
   });
 
   it("falls back to full repair when targeted repair fails", async () => {
     const gitInstaller = {
-      ensureInstalled: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
-      getInstallStatus: testDouble.fn(async (request) => ({ ...request, status: "installed" as const })),
-      repairInstall: testDouble.fn(async (request) => ({ ...request, status: "installed" as const, warnings: [] })),
+      ensureInstalled: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
+      getInstallStatus: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+      })),
+      repairInstall: testDouble.fn(async (request) => ({
+        ...request,
+        status: "installed" as const,
+        warnings: [],
+      })),
     };
-    const execFile = testDouble.fn(async (_file: string, args: readonly string[] = []) => {
-      if (args[0] === "-c" && args[1] === "import torch; print(torch.__version__.split('+')[0])") return { stdout: "2.3.1\n", stderr: "" };
-      if (args[0] === "-c" && String(args[1]).includes("import torch")) throw { message: "import torch broken", stderr: "oops" };
-      return { stdout: "", stderr: "" };
-    });
+    const execFile = testDouble.fn(
+      async (_file: string, args: readonly string[] = []) => {
+        if (
+          args[0] === "-c" &&
+          args[1] === "import torch; print(torch.__version__.split('+')[0])"
+        )
+          return { stdout: "2.3.1\n", stderr: "" };
+        if (args[0] === "-c" && String(args[1]).includes("import torch"))
+          throw { message: "import torch broken", stderr: "oops" };
+        return { stdout: "", stderr: "" };
+      },
+    );
     const stat = testDouble.fn(async () => ({}));
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, execFile, stat: stat as never, skipPythonSetup: true, skipPythonValidation: true });
-    const result = await installer.repairInstall?.({ ...baseRequest, metadata: { repairReason: "torchvision" } });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      execFile,
+      stat: stat as never,
+      skipPythonSetup: true,
+      skipPythonValidation: true,
+    });
+    const result = await installer.repairInstall?.({
+      ...baseRequest,
+      allowUpdate: true,
+      metadata: { repairReason: "torchvision" },
+    });
     expect(result?.status).toBe("installed");
     expect(gitInstaller.repairInstall).toHaveBeenCalledTimes(1);
   });
@@ -632,8 +1348,15 @@ describe("createComfyUiRuntimeInstaller", () => {
       ensureInstalled: testDouble.fn(),
       getInstallStatus: testDouble.fn(),
     };
-    const installer = createComfyUiRuntimeInstaller({ gitInstaller, skipPythonSetup: true, skipPythonValidation: true });
-    const result = await installer.ensureInstalled({ ...baseRequest, installRoot: "" });
+    const installer = createComfyUiRuntimeInstaller({
+      gitInstaller,
+      skipPythonSetup: true,
+      skipPythonValidation: true,
+    });
+    const result = await installer.ensureInstalled({
+      ...baseRequest,
+      installRoot: "",
+    });
     expect(result.status).toBe("failed");
     expect(result.error?.code).toBe("missing-install-root");
     expect(gitInstaller.ensureInstalled).not.toHaveBeenCalled();

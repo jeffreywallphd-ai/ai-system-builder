@@ -33,7 +33,11 @@ export function composeDesktopArtifactRemoteFeature(options: ComposeDesktopArtif
   const artifactRepoStorage = createArtifactRepoStorageAdapter({ providers: [{ provider: "huggingface", adapter: huggingFaceArtifactRepoStorage }] });
   const foundation = options.artifacts;
   const browseHuggingFaceDatasetParquetFilesUseCase = new BrowseHuggingFaceDatasetParquetFilesUseCase({ repoBrowser: huggingFaceArtifactRepoStorage, logging: options.loggingPort, now: options.now });
-  const registerArtifactFromRepoUseCase = new RegisterArtifactFromRepoUseCase({ artifactRepoStorage, artifactBindingStorage: foundation.artifactBindings, artifactCatalogAppend: foundation.artifactCatalog, logging: options.loggingPort, now: options.now, artifactIdFactory: new SystemArtifactIdFactory() });
+  const registerArtifactFromRepoUseCase = new RegisterArtifactFromRepoUseCase({
+    artifactRepoStorage, readDatasetRevisionLicense: huggingFaceArtifactRepoStorage.readDatasetRevisionLicense,
+    artifactBindingStorage: foundation.artifactBindings, artifactCatalogAppend: foundation.artifactCatalog,
+    logging: options.loggingPort, now: options.now, artifactIdFactory: new SystemArtifactIdFactory(),
+  });
   return {
     dispose() { disposed = true; },
     get disposed() { return disposed; },

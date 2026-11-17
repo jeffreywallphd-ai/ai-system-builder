@@ -4,8 +4,8 @@ import path from "node:path";
 
 import type { LoggingPort } from "../../../../application/ports/logging";
 import type { ApplicationRequestContext } from "../../../../application/ports";
-import type { ArtifactCatalogAppendPort } from "../../../../application/ports/artifact-catalog";
-import type { ArtifactObjectStoragePort, ArtifactStreamStoragePort, StoreArtifactStreamRequest } from "../../../../application/ports/storage";
+import type { ArtifactCatalogAppendPort, ArtifactCatalogCreatePort, ArtifactCatalogReadPort } from "../../../../application/ports/artifact-catalog";
+import type { ArtifactObjectStoragePort, ArtifactStreamStoragePort, StoreArtifactStreamRequest, ArtifactStorageBindingPort, ArtifactStorageBindingCreatePort } from "../../../../application/ports/storage";
 import { resolveArtifactFamily } from "../../../../application/shared/artifact-family-classifier";
 import type { ContractErrorCode } from "../../../../contracts/shared";
 import { createContractError } from "../../../../contracts/shared";
@@ -59,7 +59,9 @@ export interface CreateFilesystemArtifactStorageAdapterOptions {
   now?: () => string;
   randomSuffix?: () => string;
   statPath?: typeof stat;
-  artifactCatalogAppend?: ArtifactCatalogAppendPort;
+  artifactCatalogAppend?: ArtifactCatalogAppendPort & Partial<Pick<ArtifactCatalogReadPort, "readArtifactCatalogRecord"> & ArtifactCatalogCreatePort>;
+  /** Bind newly generated upload keys at their owned write origin, never at read time. */
+  artifactBindingWrite?: ArtifactStorageBindingCreatePort & Pick<ArtifactStorageBindingPort, "readArtifactStorageBindings">;
   organizationContextProvider?: OrganizationRequestContextProviderPort;
 }
 
@@ -218,6 +220,39 @@ export function createFilesystemArtifactObjectStorageAdapter(
     options.randomSuffix ?? (() => randomUUID().replaceAll("-", ""));
   const statPath = options.statPath ?? stat;
 
+  function validateFreshUploadContext(explicitKey: unknown, context: ApplicationRequestContext) {
+    if (explicitKey || !options.artifactBindingWrite) return;
+    if (!isWorkspaceId(context.workspaceId) || !options.artifactCatalogAppend?.readArtifactCatalogRecord
+        || !options.artifactCatalogAppend.createArtifactCatalogRecordIfAbsent
+        || !options.artifactBindingWrite.createArtifactStorageBindingIfAbsent) {
+      throw new StorageAdapterValidationError("Fresh upload binding requires a workspace and catalog.");
+    }
+  }
+
+  async function verifyFreshUploadIdentity(explicitKey: unknown, key: string, context: ApplicationRequestContext) {
+    if (explicitKey || !options.artifactBindingWrite) return;
+    validateFreshUploadContext(explicitKey, context);
+    const binding = await options.artifactBindingWrite.readArtifactStorageBindings({ workspaceId: createWorkspaceId(context.workspaceId!), artifactId: key }, context);
+    if (!binding.ok || binding.value.bindings.length !== 0) throw new StorageAdapterVerificationError("Fresh upload identity is unavailable.");
+    const catalog = await options.artifactCatalogAppend!.readArtifactCatalogRecord!({ workspaceId: createWorkspaceId(context.workspaceId!), storageKey: key }, context);
+    if (catalog.ok || catalog.error.code !== "not-found") throw new StorageAdapterVerificationError("Fresh upload identity is unavailable.");
+  }
+
+  async function bindFreshUpload(explicitKey: unknown, key: string, context: ApplicationRequestContext) {
+    if (explicitKey || !options.artifactBindingWrite) return;
+    validateFreshUploadContext(explicitKey, context);
+    // The no-overwrite writer just created this generated workspace key. No
+    // guessed key, imported source or pre-existing explicit-key write is adopted.
+    if (!key.startsWith(`workspaces/${context.workspaceId}/artifacts/files/uploads/`)) throw new StorageAdapterValidationError("Fresh upload key is outside its workspace.");
+    await verifyFreshUploadIdentity(explicitKey, key, context);
+    const result = await options.artifactBindingWrite.createArtifactStorageBindingIfAbsent({ binding: {
+      workspaceId: createWorkspaceId(context.workspaceId!), artifactId: key,
+      backing: { kind: "artifact-object", provider: "local-filesystem", locator: key },
+      role: "primary", createdAt: now(),
+    } }, context);
+    if (!result.ok) throw new StorageAdapterVerificationError("Fresh upload binding could not be persisted.");
+  }
+
   async function logBoundaryEvent(event: {
     level: "debug" | "info" | "warn" | "error";
     name: string;
@@ -283,6 +318,8 @@ export function createFilesystemArtifactObjectStorageAdapter(
       request: StoreArtifactRequest<TContent>,
       context: ApplicationRequestContext = {},
     ): Promise<StoreArtifactResult> {
+      request = { ...request, descriptor: { ...request.descriptor } };
+      context = { ...context };
       const startedAt = Date.now();
       const requestContext = resolveRequestContext(request, context);
       let attemptedKey: string | undefined;
@@ -297,11 +334,12 @@ export function createFilesystemArtifactObjectStorageAdapter(
         correlationId: requestContext.correlationId,
         data: {
           keyProvided: typeof request.descriptor.key === "string",
-          overwrite: request.overwrite === true,
+          overwrite: !request.descriptor.key && options.artifactBindingWrite ? false : request.overwrite === true,
         },
       });
 
       try {
+        validateFreshUploadContext(request.descriptor.key, context);
         const originalFileName =
           typeof (
             request.descriptor.metadata as
@@ -320,6 +358,7 @@ export function createFilesystemArtifactObjectStorageAdapter(
         const extension =
           extensionFromOriginalFileName(originalFileName) ??
           path.extname(key).replace(/^\./, "");
+        await verifyFreshUploadIdentity(request.descriptor.key, key, context);
         attemptedKey = key;
         const bytes = toBytes(request.content);
         const checksum = createContentChecksum(bytes);
@@ -331,7 +370,7 @@ export function createFilesystemArtifactObjectStorageAdapter(
           rootDirectory,
           key: scopedKey,
           content: bytes,
-          overwrite: request.overwrite === true,
+          overwrite: !request.descriptor.key && options.artifactBindingWrite ? false : request.overwrite === true,
         });
         const absolutePath = writeResult.absolutePath;
         attemptedAbsolutePath = absolutePath;
@@ -349,14 +388,18 @@ export function createFilesystemArtifactObjectStorageAdapter(
           );
         }
 
+        await bindFreshUpload(request.descriptor.key, key, context);
         if (options.artifactCatalogAppend) {
           if (!isWorkspaceId(context.workspaceId)) {
             throw new StorageAdapterValidationError(
               "Workspace id is required for artifact catalog writes.",
             );
           }
+          const publishCatalog = !request.descriptor.key && options.artifactBindingWrite
+            ? options.artifactCatalogAppend.createArtifactCatalogRecordIfAbsent!.bind(options.artifactCatalogAppend)
+            : options.artifactCatalogAppend.appendArtifactCatalogRecord.bind(options.artifactCatalogAppend);
           const appendResult =
-            await options.artifactCatalogAppend.appendArtifactCatalogRecord(
+            await publishCatalog(
               {
                 record: {
                   workspaceId: context.workspaceId,
@@ -461,10 +504,14 @@ export function createFilesystemArtifactObjectStorageAdapter(
       request: StoreArtifactStreamRequest,
       context: ApplicationRequestContext = {},
     ): Promise<StoreArtifactResult> {
+      request = { ...request, descriptor: { ...request.descriptor } };
+      context = { ...context };
       const requestContext = resolveRequestContext(request, context);
       let scopedKey: string | undefined;
       let published = false;
+      let bindingPublicationAttempted = false;
       try {
+        validateFreshUploadContext(request.descriptor.key, context);
         if (!Number.isSafeInteger(request.maximumBytes) || request.maximumBytes < 0 || !Number.isSafeInteger(request.expectedSizeBytes) || request.expectedSizeBytes < 0 || request.expectedSizeBytes > request.maximumBytes) {
           throw new StorageAdapterValidationError("Streamed artifact bounds are invalid.");
         }
@@ -476,6 +523,7 @@ export function createFilesystemArtifactObjectStorageAdapter(
         const key = request.descriptor.key
           ? normalizeStorageArtifactKey(request.descriptor.key)
           : createGeneratedKey({ mediaType: request.descriptor.mediaType, originalFileName, workspaceId: context.workspaceId });
+        await verifyFreshUploadIdentity(request.descriptor.key, key, context);
         scopedKey = resolveOrganizationStorageKey(key, options.organizationContextProvider);
         const hash = createHash(STORAGE_CHECKSUM_ALGORITHM);
         const content = async function* () {
@@ -485,7 +533,7 @@ export function createFilesystemArtifactObjectStorageAdapter(
             yield chunk;
           }
         };
-        const writeResult = await writeContainedFileStream({ rootDirectory, key: scopedKey, content: content(), maximumBytes: request.maximumBytes, overwrite: request.overwrite === true });
+        const writeResult = await writeContainedFileStream({ rootDirectory, key: scopedKey, content: content(), maximumBytes: request.maximumBytes, overwrite: !request.descriptor.key && options.artifactBindingWrite ? false : request.overwrite === true });
         published = true;
         const checksum: StorageObjectChecksum = { algorithm: STORAGE_CHECKSUM_ALGORITHM, value: hash.digest("hex") };
         if (writeResult.sizeBytes !== request.expectedSizeBytes || (expectedDigest && expectedDigest !== `sha256:${checksum.value}`)) {
@@ -494,15 +542,21 @@ export function createFilesystemArtifactObjectStorageAdapter(
         const writtenStats = await statPath(writeResult.absolutePath);
         if (!writtenStats.isFile() || writtenStats.size !== writeResult.sizeBytes) throw new StorageAdapterVerificationError("Streamed artifact post-write verification failed.");
         const extension = extensionFromOriginalFileName(originalFileName) ?? path.extname(key).replace(/^\./, "");
+        bindingPublicationAttempted = !request.descriptor.key && Boolean(options.artifactBindingWrite);
+        await bindFreshUpload(request.descriptor.key, key, context);
         if (options.artifactCatalogAppend) {
           if (!isWorkspaceId(context.workspaceId)) throw new StorageAdapterValidationError("Workspace id is required for artifact catalog writes.");
-          const appendResult = await options.artifactCatalogAppend.appendArtifactCatalogRecord({ record: { workspaceId: context.workspaceId, storageKey: key, artifactFamily: resolveArtifactFamily({ mediaType: request.descriptor.mediaType, extension, fileName: originalFileName }), mediaType: request.descriptor.mediaType, sizeBytes: writeResult.sizeBytes, sourceKind: "upload", originalName: originalFileName, createdAt: now(), checksum } }, requestContext);
+          const publishCatalog = !request.descriptor.key && options.artifactBindingWrite
+            ? options.artifactCatalogAppend.createArtifactCatalogRecordIfAbsent!.bind(options.artifactCatalogAppend)
+            : options.artifactCatalogAppend.appendArtifactCatalogRecord.bind(options.artifactCatalogAppend);
+          const appendResult = await publishCatalog({ record: { workspaceId: context.workspaceId, storageKey: key, artifactFamily: resolveArtifactFamily({ mediaType: request.descriptor.mediaType, extension, fileName: originalFileName }), mediaType: request.descriptor.mediaType, sizeBytes: writeResult.sizeBytes, sourceKind: "upload", originalName: originalFileName, createdAt: now(), checksum } }, { ...requestContext, workspaceId: context.workspaceId });
           if (!appendResult.ok) throw new StorageAdapterVerificationError(appendResult.error.message);
         }
         await logBoundaryEvent({ level: "info", name: "storage.filesystem.stream-store.succeeded", message: "Stored a streamed artifact in filesystem storage.", operation: "storage.artifact.stream-store", requestId: requestContext.requestId, correlationId: requestContext.correlationId, outcome: "success", data: { key, sizeBytes: writeResult.sizeBytes, checksumAlgorithm: checksum.algorithm } });
         return createStoreArtifactSuccessResult({ key, mediaType: request.descriptor.mediaType, sizeBytes: writeResult.sizeBytes, checksum, metadata: request.descriptor.metadata }, requestContext);
       } catch (error) {
-        if (published && scopedKey) await deleteContainedFile({ rootDirectory, key: scopedKey }).catch(() => undefined);
+        // Failed acknowledgement may still mean a durable binding was written.
+        if (published && scopedKey && !bindingPublicationAttempted) await deleteContainedFile({ rootDirectory, key: scopedKey }).catch(() => undefined);
         const code = toErrorCode(error);
         await logBoundaryEvent({ level: "error", name: "storage.filesystem.stream-store.failed", message: "Failed to store a streamed artifact.", operation: "storage.artifact.stream-store", requestId: requestContext.requestId, correlationId: requestContext.correlationId, outcome: "failure", error: { errorType: "storage", errorCode: code, errorMessage: "Failed to store streamed artifact bytes.", details: { filesystemCode: toFilesystemCode(error) ?? "unknown" } } });
         return createStoreArtifactFailureResult(createContractError(code, "Failed to store streamed artifact bytes.", { ...requestContext, details: { operation: "storeArtifactStream", filesystemCode: toFilesystemCode(error) } }), requestContext);

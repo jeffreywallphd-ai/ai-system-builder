@@ -77,6 +77,30 @@ A passing end-state test is necessary but not sufficient when the trajectory vio
 
 ## Canonical Assets
 
+### Executable contributor tasks
+
+`dev-tools/agent-evals/coding-tasks.json` defines versioned small coding tasks;
+the control-plane CLI prepares their files and executes fixed artifact graders.
+These tests qualify real behavior and harness failure handling. They do not
+alone establish maintainability, host permission compliance, live-model quality
+or production user success. Use repeated authorized live trials with reviewed
+trajectories for those claims. Keep the trusted graders outside trial workspaces.
+
+Run manifests label deterministic conformance, replay, operator-hosted live and
+unavailable evidence separately. Comparisons require unchanged task, policy,
+environment, instructions, context, permissions and harness. Count all attempted
+delivery, preserve unknown usage, deduplicate accepted work identities and keep
+safety/correctness failure visible independently of efficiency. Outcome feedback
+closes only with failure-to-pass regression evidence and reviewed correction.
+
+The integrated contributor control plane is documented in
+`docs/architecture/ai-development-control-plane.md` and
+`docs/diagnostics/ai-development-control-plane.md`. Its live review projection
+is versioned JSON. Local execution, review, ownership and qualification records
+are separate from routing-harness integrity and model-in-loop performance.
+Never turn an operator attestation, replay or fixture pass into a claim of
+authenticated reviewer independence or live-model capability.
+
 - `docs/context/pack-catalog.json`
 - `dev-tools/agent-evals/scenarios.json`
 - `dev-tools/scripts/agent-support/check-agent-support.mjs`

@@ -44,6 +44,7 @@ export const DESKTOP_MODEL_REFERENCE_SAVE_OPERATION = createTransportOperation("
 export const DESKTOP_MODEL_DOWNLOAD_OPERATION = createTransportOperation("model", "download");
 export const DESKTOP_MODEL_DOWNLOAD_START_OPERATION = createTransportOperation("model", "download-start");
 export const DESKTOP_MODEL_DOWNLOAD_READ_OPERATION = createTransportOperation("model", "download-read");
+export const DESKTOP_MODEL_DOWNLOAD_COMPLETE_OPERATION = createTransportOperation("model", "download-complete");
 export const DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION = createTransportOperation("model", "download-list");
 export const DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION = createTransportOperation("model", "download-cancel");
 export const DESKTOP_MODEL_RECORD_UPDATE_OPERATION = createTransportOperation("model", "record-update");
@@ -70,7 +71,9 @@ export const DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_
 export const DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_START_OPERATION, "request");
 export const DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_START_OPERATION, "response");
 export const DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, "request");
+export const DESKTOP_MODEL_DOWNLOAD_COMPLETE_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_COMPLETE_OPERATION, "request");
 export const DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, "response");
+export const DESKTOP_MODEL_DOWNLOAD_COMPLETE_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_COMPLETE_OPERATION, "response");
 export const DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, "request");
 export const DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, "response");
 export const DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION, "request");
@@ -164,7 +167,9 @@ export type DesktopModelDownloadResponse = IpcResponse<
 export type DesktopModelDownloadStartRequest = IpcRequest<DownloadModelRequest, typeof DESKTOP_MODEL_DOWNLOAD_START_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value>;
 export type DesktopModelDownloadStartResponse = IpcResponse<StartModelDownloadTaskResult, Record<string, unknown>, typeof DESKTOP_MODEL_DOWNLOAD_START_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL.value>;
 export type DesktopModelDownloadReadRequest = IpcRequest<ReadModelDownloadTaskRequest, typeof DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value>;
+export type DesktopModelDownloadCompleteRequest = IpcRequest<ReadModelDownloadTaskRequest, typeof DESKTOP_MODEL_DOWNLOAD_COMPLETE_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_COMPLETE_REQUEST_CHANNEL.value>;
 export type DesktopModelDownloadReadResponse = IpcResponse<ReadModelDownloadTaskResult, Record<string, unknown>, typeof DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value>;
+export type DesktopModelDownloadCompleteResponse = IpcResponse<ReadModelDownloadTaskResult, Record<string, unknown>, typeof DESKTOP_MODEL_DOWNLOAD_COMPLETE_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_COMPLETE_RESPONSE_CHANNEL.value>;
 export type DesktopModelDownloadListRequest = IpcRequest<ListModelDownloadTasksRequest, typeof DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value>;
 export type DesktopModelDownloadListResponse = IpcResponse<ListModelDownloadTasksResult, Record<string, unknown>, typeof DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL.value>;
 export type DesktopModelDownloadCancelRequest = IpcRequest<CancelModelDownloadTaskRequest, typeof DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value>;
@@ -312,7 +317,9 @@ export function createDesktopModelDownloadSuccessResponse(result: DownloadModelR
 export function createDesktopModelDownloadStartRequest(payload: DownloadModelRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadStartRequest { return createIpcRequest(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL, payload, options); }
 export function createDesktopModelDownloadStartSuccessResponse(result: StartModelDownloadTaskResult, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadStartResponse { return createIpcSuccessResponse(DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL, result, options) as DesktopModelDownloadStartResponse; }
 export function createDesktopModelDownloadReadRequest(payload: ReadModelDownloadTaskRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadReadRequest { return createIpcRequest(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL, payload, options); }
+export function createDesktopModelDownloadCompleteRequest(payload: ReadModelDownloadTaskRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadCompleteRequest { return createIpcRequest(DESKTOP_MODEL_DOWNLOAD_COMPLETE_REQUEST_CHANNEL, payload, options); }
 export function createDesktopModelDownloadReadSuccessResponse(result: ReadModelDownloadTaskResult, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadReadResponse { return createIpcSuccessResponse(DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL, result, options) as DesktopModelDownloadReadResponse; }
+export function createDesktopModelDownloadCompleteSuccessResponse(result: ReadModelDownloadTaskResult, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadCompleteResponse { return createIpcSuccessResponse(DESKTOP_MODEL_DOWNLOAD_COMPLETE_RESPONSE_CHANNEL, result, options) as DesktopModelDownloadCompleteResponse; }
 export function createDesktopModelDownloadListRequest(payload: ListModelDownloadTasksRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadListRequest { return createIpcRequest(DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL, payload, options); }
 export function createDesktopModelDownloadListSuccessResponse(result: ListModelDownloadTasksResult, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadListResponse { return createIpcSuccessResponse(DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL, result, options) as DesktopModelDownloadListResponse; }
 export function createDesktopModelDownloadCancelRequest(payload: CancelModelDownloadTaskRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadCancelRequest { return createIpcRequest(DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL, payload, options); }

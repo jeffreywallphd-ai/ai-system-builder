@@ -25,6 +25,7 @@
 - Keep business policy and use-case orchestration in application/domain, not main/preload/IPC glue.
 - IPC contracts specialize shared transport envelopes and use operation-derived channels.
 - Desktop host composes adapters, runtime/readiness providers, credential stores, storage roots, and lifecycle behavior, then delegates inward.
+- Desktop main verifies the required local Python installation before creating the shell, persistence, or application IPC. Startup failure shows fixed guidance on a loading-only window. See the Desktop setup guide for checkout-owned development provisioning.
 - Host context passed inward should be small, JSON-serializable, and free of Electron/request/session/window objects.
 - Desktop renderer should keep using preload/IPC even when a feature later delegates to a remote server.
 
@@ -54,6 +55,16 @@
 - Renderer code must not synthesize authoritative workspace ids, derive ids from display names, create hidden/default workspaces, auto-seed startup workspaces, expose pack installer UI, or treat active selection as authorization.
 
 ## Key Constraints
+
+- Headless access follows ADR-0047. Reuse the running host's lazy providers and
+  keep explicit interactive window authority separate from delegated requests.
+  The versioned request decoder is not a listener, identity check, or readiness
+  signal. Load the security pack and headless threat model before wiring it.
+- The optional connector is dormant until native confirmation from the owned
+  app window. Keep read, edit, and approved conversation registration distinct.
+  Never expose pairing codes to preload or renderer. The existing desktop
+  runtime owns admitted conversation tasks; drain the connector and retire
+  those tasks before closing persistence.
 
 - Do not turn IPC handlers into a miscellaneous service layer.
 - Keep desktop transport translation thin, contract-driven, and sanitized.
@@ -91,3 +102,8 @@
 - Add `ipc-electron` for IPC/preload work.
 - Add `desktop-implementation` for renderer work.
 - Add `logging` and `testing` for diagnostics and regression-sensitive changes.
+
+- Image, dataset and Context host controllers are lazy retained: terminal tasks
+  can still own reviews and finalization receipts. Generic cleanup never derives
+  host-wide authority from workspace-required public task listing. Disposable
+  provider reuse waits for cleanup; uncertain cleanup retains the same owner.

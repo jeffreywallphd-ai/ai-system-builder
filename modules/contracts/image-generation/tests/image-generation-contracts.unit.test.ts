@@ -5,8 +5,24 @@ import type {
   ImageGenerationRequest,
   ImageGenerationResult,
 } from "..";
+import { assertImageGenerationRequestBounds } from '..';
 
 describe("image generation contracts", () => {
+  it('shares existing resource caps and rejects malformed values without coercion or getter evaluation',()=>{
+    assertImageGenerationRequestBounds({prompt:'x'.repeat(10_000),negativePrompt:'x'.repeat(10_000),width:4096,height:4096,steps:200,numImages:8,cfg:50,denoise:0,seed:0});
+    for(const field of ['width','height','steps','numImages','cfg','denoise','seed'])
+      for(const value of [NaN,Infinity,'1',true])expect(()=>assertImageGenerationRequestBounds({prompt:'Valid',[field]:value} as any)).toThrow();
+    for(const value of [null,[],{prompt:'Valid',negativePrompt:1},{prompt:'Valid',model:1},{prompt:'Valid',faceId:{enabled:true,references:null}},{prompt:'Valid',engineHints:[]}])
+      expect(()=>assertImageGenerationRequestBounds(value as any)).toThrow();
+    let serializations=0;
+    for(const field of ['sampler','scheduler'])
+      for(const value of [{toJSON(){serializations++;return 'changed';}},[],{},1])
+        expect(()=>assertImageGenerationRequestBounds({prompt:'Valid',[field]:value} as any)).toThrow();
+    expect(serializations).toBe(0);
+    let calls=0;const request:any={prompt:'Valid'};
+    Object.defineProperty(request,'width',{enumerable:true,get(){calls++;return 1024;}});
+    expect(()=>assertImageGenerationRequestBounds(request)).toThrow();expect(calls).toBe(0);
+  });
   it("defines an engine-agnostic request shape", () => {
     const request: ImageGenerationRequest = {
       prompt: "cinematic portrait",

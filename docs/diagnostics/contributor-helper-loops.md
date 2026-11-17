@@ -2,6 +2,11 @@
 
 # Contributor helper loops
 
+For governed AI-assisted work, use the integrated
+`docs/diagnostics/ai-development-control-plane.md` entry. Its bounded CLI owns
+outcomes, claims, executed verification, review, recovery and the JSON review
+site. The helpers below remain useful lower-level operations.
+
 The portable helpers in `dev-tools/helpers/` group recurring repository work
 into bounded processes. They are intended to reduce repeated approval prompts
 without weakening the approval boundary or creating a general command runner.
@@ -11,6 +16,58 @@ Portable agent workflows live under `skills/`; see
 `implementation-roadmap-skill.md`. Keep the roadmap state/report engine with
 that skill, while generic snapshots, checks, and patch transport remain in
 `dev-tools/helpers/`.
+
+## Python test collection
+
+The focused helper keeps class-based `unittest` discovery and uses pytest for
+files with top-level test functions. This includes fixture-based files that do
+not import pytest themselves. The constrained-JSON and Context AI tests require
+the explicit AI suite. The model-training task matrix requires its separate
+`dev-tools/scripts/testing/run-model-training-e2e.mjs` entry point and authorized
+model assets. All three files are excluded from generic focused checks and
+non-AI profiles. These exclusions are not test passes. An empty collection or
+failed test remains a failed check.
+
+Install the developer test tools explicitly in the Python environment selected
+for verification. Use `dev-tools/helpers/requirements-tests.txt`: pytest and its
+complete conditional dependency set are pinned to reviewed original PyPI
+universal wheels with SHA-256 hashes. The lock requires wheels and hashes; pip
+must refuse a missing wheel or hash mismatch. These are contributor tools, not
+worker or application runtime dependencies. The helper never installs packages.
+
+For example, create an ignored virtual environment with
+`python -m venv .local-codex/verification-python`, then use that environment's
+Python to run `-m pip install -r dev-tools/helpers/requirements-tests.txt`.
+Use the same Python for the control-plane CLI. Dependency downloads still need
+the existing authorization and network controls; setup grants no extra authority.
+
+Pytest execution uses one fixed file path after `--`, a neutral tracked config,
+no conftest discovery, no cache provider and no automatic third-party plugins.
+The helper removes inherited `PYTEST_*` controls and sets plugin autoload off.
+It checks every applicable locked tool version before execution. Missing or
+different versions fail with setup guidance. AST inspection selects the runner
+without executing the test during planning. Syntax errors remain failures.
+The helper refuses optimized Python and removes `PYTHONOPTIMIZE` from every
+test child so plain assertions cannot be erased.
+Ordinary test code still runs with the contributor's authority. This isolation
+does not sandbox tests or qualify model accuracy, native offload or a roadmap.
+
+Profile planning validates its fixed test paths and builds commands from one
+full source snapshot for that call. Separate profile or direct planning calls
+still take fresh snapshots; there is no persistent source cache or caller-supplied
+source map. Command selection and controlled-AI exclusions are unchanged.
+
+For the exact review-site profile, the helper sets the child PYTHON value to its
+own selected interpreter. The fixed Node guard therefore runs the controller
+tests with the same installed test tools, even if PYTHON is missing or names
+another interpreter. Other profiles keep their existing environment behavior.
+The caller environment and the existing test and catalog time limits stay intact.
+
+The non-browser suite stages most Node tests as JavaScript. Its fixed
+source-fixture list runs separately from the original paths so those tests can
+read the real HTML, stylesheet, and host files beside their modules. Discovery,
+suite selection, Vitest ownership and process isolation are the same in both
+groups. The single suite report counts both groups and retains failures from either.
 
 ## Local configuration
 
@@ -32,6 +89,13 @@ The configuration has three independent sections:
 
 Command-line arguments override configuration. Review `--help` for all
 options.
+
+When selected, `--install-electron` runs the fixed official
+`node node_modules/electron/install.js` command before focused tests. Dependency
+resolution remains script-free. Electron 42 removes the old postinstall hook, so
+`npm rebuild electron` cannot provision a missing binary; do not rely on an
+implicit download during the first test import. The explicit installer retains
+the pinned package's bundled checksum verification and existing approval boundary.
 
 ## Safe usage
 
@@ -56,6 +120,16 @@ Do not persistently approve a mutable local wrapper as though it were an
 immutable executable.
 
 ## Maintenance and extension
+
+Configured verification paths cross the fixed-tool argument boundary. Planning
+rejects option-like paths after normalization, absolute/drive-relative paths and
+unsupported Node test targets before any tool executes. Node and Prettier receive
+an explicit `--` option terminator before positional paths; containment remains
+mandatory. Negative fixtures are inert and exercise planning only. Repository
+test code still executes with the contributor's existing authority.
+Prettier runs through the fixed installed Node CLI rather than a Windows command
+script, so filename metacharacters remain literal arguments. Missing local
+Prettier fails normally; the helper never fetches an implicit package.
 
 When the same secure action causes repeated approvals or duplicated orchestration,
 first determine whether it fits an existing bounded loop. Improve that loop when

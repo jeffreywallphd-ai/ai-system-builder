@@ -18,6 +18,7 @@ import type {
 import {
   normalizeSystemBuilderRevisionId,
   normalizeSystemBuilderSystemId,
+  SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY,
   systemBuilderFailure,
   systemBuilderSuccess,
 } from "../../../contracts/system-builder";
@@ -62,6 +63,18 @@ export class CreateSystemBuilderSystemUseCase {
         "System descriptions must be 1,000 characters or fewer.",
         "description",
       );
+    if (command.starter !== undefined && command.starter !== "form")
+      return systemBuilderFailure(
+        "system-builder.starter-unsupported", "Select a supported system starter.", "starter",
+      );
+    const profile = command.profile ?? "interactive";
+    if (command.starter === "form" && (profile !== "interactive" ||
+        (command.compositionType !== undefined && command.compositionType !== "system") ||
+        (command.layoutPresetRef && command.layoutPresetRef.id !== "builtin.layout.application.minimal")))
+      return systemBuilderFailure(
+        "system-builder.form-starter-layout-unsupported",
+        "A form system must start with the Minimal application layout.", "starter",
+      );
     let systemId;
     try {
       systemId = normalizeSystemBuilderSystemId(
@@ -82,7 +95,6 @@ export class CreateSystemBuilderSystemUseCase {
       command.compositionType ?? "system",
       description,
     );
-    const profile = command.profile ?? "interactive";
     let seed;
     try {
       seed = createCanonicalSystemBuilderStructure({
@@ -93,6 +105,7 @@ export class CreateSystemBuilderSystemUseCase {
         timestamp,
         profile,
         layoutPresetRef: command.layoutPresetRef,
+        starter: command.starter,
       });
     } catch {
       return systemBuilderFailure(
@@ -106,6 +119,9 @@ export class CreateSystemBuilderSystemUseCase {
       rootInstanceRefs: seed.rootInstanceRefs,
       instanceRefs: seed.instanceRefs,
       placementRefs: seed.placementRefs,
+      ...(seed.defaultFormInstanceId ? {
+        metadata: { [SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY]: seed.defaultFormInstanceId },
+      } : {}),
     };
     const revisionId = normalizeSystemBuilderRevisionId(`${systemId}.r1`);
     const candidate = {
@@ -123,6 +139,12 @@ export class CreateSystemBuilderSystemUseCase {
       createdBy: safeActor(command.actorId),
     } satisfies SystemBuilderRevision;
     const validation = await this.dependencies.validator.execute(candidate);
+    if (command.starter === "form" && (!seed.defaultFormInstanceId || validation.status === "invalid")) {
+      return systemBuilderFailure(
+        "system-builder.form-starter-unavailable",
+        "The first form could not be saved. Try creating the form system again.", "starter",
+      );
+    }
     const revision: SystemBuilderRevision = {
       ...candidate,
       validationIssues: validation.issues,
@@ -407,6 +429,24 @@ export class SaveSystemBuilderRevisionUseCase {
   public async execute(
     command: SaveSystemBuilderRevisionCommand,
   ): Promise<SystemBuilderResult<SystemBuilderRevision>> {
+    return this.save(command);
+  }
+
+  /** Internal headless callers must validate and reauthorize the exact candidate before commit. */
+  public async executeStrict(
+    command: SaveSystemBuilderRevisionCommand,
+    options: {
+      readonly baseRevisionId: SystemBuilderRevision["revisionId"];
+      readonly authorizeCommit: () => Promise<boolean>;
+    },
+  ): Promise<SystemBuilderResult<SystemBuilderRevision>> {
+    return this.save(command, options);
+  }
+
+  private async save(
+    command: SaveSystemBuilderRevisionCommand,
+    strict?: Parameters<SaveSystemBuilderRevisionUseCase["executeStrict"]>[1],
+  ): Promise<SystemBuilderResult<SystemBuilderRevision>> {
     const current = await this.dependencies.repository.readRecord(
       command.workspaceId,
       command.systemId,
@@ -421,7 +461,8 @@ export class SaveSystemBuilderRevisionUseCase {
         "system-builder.archived",
         "Restore the system before editing it.",
       );
-    if (current.revision !== command.expectedRecordRevision)
+    if (current.revision !== command.expectedRecordRevision ||
+        (strict && current.currentRevisionId !== strict.baseRevisionId))
       return staleFailure();
     if (
       String(command.composition.compositionId) !==
@@ -448,12 +489,19 @@ export class SaveSystemBuilderRevisionUseCase {
     const reconciledInteractions =
       reconcileSystemBuilderConversationInteractions({
         systemId: String(command.systemId),
-        composition: clone(command.composition),
+        composition: preserveDefaultFormPreference(clone(command.composition), current.composition),
         instances: command.instances,
         bindings: clone(command.bindings),
         actorId: safeActor(command.actorId),
         timestamp,
       });
+    if (strict && (reconciledInteractions.addedBinding ||
+        preserveDefaultFormPreference(command.composition, current.composition) !== command.composition)) {
+      return systemBuilderFailure(
+        "system-builder.invalid-headless-revision",
+        "The exact preview would require an implicit composition change.",
+      );
+    }
     const candidate = {
       revisionId,
       systemId: command.systemId,
@@ -469,6 +517,14 @@ export class SaveSystemBuilderRevisionUseCase {
       createdBy: safeActor(command.actorId),
     } satisfies SystemBuilderRevision;
     const validation = await this.dependencies.validator.execute(candidate);
+    if (strict && validation.status !== "valid" && validation.status !== "valid-with-warnings") return systemBuilderFailure(
+      "system-builder.invalid-headless-revision",
+      "The batch would create an invalid revision.",
+    );
+    if (strict && !await strict.authorizeCommit()) return systemBuilderFailure(
+      "system-builder.forbidden",
+      "Workspace access is unavailable.",
+    );
     const revision: SystemBuilderRevision = {
       ...candidate,
       validationIssues: validation.issues,
@@ -710,6 +766,17 @@ function createEmptyComposition(
       createdBy: safeActor(actorId),
     },
   };
+}
+
+export function preserveDefaultFormPreference(
+  incoming: SystemBuilderComposition,
+  saved: SystemBuilderComposition,
+): SystemBuilderComposition {
+  const key = SYSTEM_BUILDER_DEFAULT_FORM_METADATA_KEY;
+  const { [key]: requested, ...metadata } = incoming.metadata ?? {};
+  const current = saved.metadata?.[key];
+  if (current === requested) return incoming;
+  return { ...incoming, metadata: { ...metadata, ...(typeof current === "string" ? { [key]: current } : {}) } };
 }
 
 async function changeArchiveState(

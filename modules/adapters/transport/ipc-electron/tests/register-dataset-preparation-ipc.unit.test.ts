@@ -409,4 +409,17 @@ describe("registerDatasetPreparationIpc", () => {
       DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL.value,
     ]);
   });
+  it("projects bounded numeric memory facts into failed task results", async () => {
+    const memory = { resource: "vram", requiredBytes: 4 * 1024 ** 3, availableBytes: 3 * 1024 ** 3, allowedOverflowBytes: 0 };
+    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({
+      startPrepareTrainingDataset: testDouble.fn(),
+      readPrepareTrainingDataset: testDouble.fn().mockResolvedValue({ ok: true, value: {
+        requestId: "memory-task", status: "failed", error: { code: "generation_insufficient_resources", message: "Runtime task failed.", details: { memoryShortfall: { ...memory, path: "private-fixture" }, raw: "private-fixture" } },
+      } }),
+    });
+    const response = await handler({}, createDesktopPrepareTrainingDatasetTaskReadRequest({ requestId: "memory-task", boundary: { host: "desktop", source: "test" } }));
+    expect((response as any).value.error.memoryShortfall).toEqual(memory);
+    expect(JSON.stringify(response)).not.toContain("private-fixture");
+  });
+
 });

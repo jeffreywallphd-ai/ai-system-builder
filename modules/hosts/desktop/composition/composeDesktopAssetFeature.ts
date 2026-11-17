@@ -1,4 +1,7 @@
+import { createStructuredAssetDefinitionPublication } from "../../../adapters/persistence/asset-publication";
+import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
 import { randomUUID } from "node:crypto";
+import { createSystemFoundationInitializationError } from "../../../application/services/asset-packs";
 import { join } from "node:path";
 import {
   FinalizeGeneratedOutputAsAssetUseCase,
@@ -6,7 +9,7 @@ import {
   LocalizeExternalRepositoryObjectAsAssetUseCase,
   RegisterResourceBackedViewAsAssetInstanceUseCase,
 } from "../../../application/use-cases";
-import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
+import { createLocalImageAssetRegistryAdapter, createStructuredImageResourceIdentityAdapter } from "../../../adapters/persistence/image";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createLocalAuthoredAssetRepositoryAdapter } from "../../../adapters/persistence/asset-authoring";
 import { createStructuredAssetPackageRepository } from "../../../adapters/persistence/asset-package";
@@ -23,6 +26,7 @@ import { composeAssetStudioWorkflow } from "../../shared/composition/composeAsse
 import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 
 export interface ComposeDesktopAssetFeatureOptions {
+  readonly workspaceAccess: WorkspaceAssetAccessPort;
   storageRootDirectory: string;
   now: () => string;
   readSharedModelStorageDirectory?: () => Promise<string | undefined>;
@@ -63,6 +67,7 @@ export async function composeDesktopAssetFeature(
     now: options.now,
     documents: options.documents,
     resourceBackedViewProvider: composeResourceBackedViewProviders({
+      imageResourceIdentity: options.documents ? createStructuredImageResourceIdentityAdapter(options.documents) : undefined,
       artifactBrowserMetadataRead: options.artifacts.artifactBrowserRead,
       imageAssetDescriptorRead: imageAssetRegistry,
       modelRegistry,
@@ -75,7 +80,7 @@ export async function composeDesktopAssetFeature(
       allowSystemDefinitionRefresh: true,
     });
   if (foundationInstalls.some((result) => result.status === "failed")) {
-    throw new Error("System foundation assets are unavailable.");
+    throw createSystemFoundationInitializationError(foundationInstalls);
   }
   const implementationArtifacts = createAssetImplementationArtifactAdapter(
     options.artifacts.storage,
@@ -97,6 +102,7 @@ export async function composeDesktopAssetFeature(
   const assetPackages =
     options.documents && assetImplementation
       ? composeAssetPackageLifecycle({
+          workspaceAccess: options.workspaceAccess,
           documents: options.documents,
           definitions:
             internalAssetRegistry.assetKernel.repositories.definitionRepository,
@@ -108,9 +114,14 @@ export async function composeDesktopAssetFeature(
           now: options.now,
         })
       : undefined;
+  const assetPublication = options.documents ? createStructuredAssetDefinitionPublication({
+    artifacts: implementationArtifacts, documents: options.documents, ownerDocuments: options.documents, definitionScope: "organization",
+  }) : undefined;
   const assetStudio =
     options.documents && assetImplementation
       ? composeAssetStudioWorkflow({
+          publication: assetPublication!,
+          workspaceAccess: options.workspaceAccess,
           documents: options.documents,
           implementations: assetImplementation,
           artifacts: implementationArtifacts,
@@ -122,6 +133,8 @@ export async function composeDesktopAssetFeature(
   const derivedCustomizations =
     options.documents && assetImplementation
       ? composeAssetDerivedCustomization({
+          publication: assetPublication!,
+          workspaceAccess: options.workspaceAccess,
           documents: options.documents,
           definitions:
             internalAssetRegistry.assetKernel.repositories.definitionRepository,

@@ -10,6 +10,7 @@ import type {
 } from "../../services/asset/asset-registry-read-facade.types";
 
 export interface AssetRegistryDefinitionReadPort {
+  readDefinitionDetails?(refs: readonly AssetReference[], options?: AssetRegistryReadOptions): Promise<readonly (AssetDefinitionDetail | undefined)[]>;
   listDefinitionCards(query?: AssetRegistryListQuery): Promise<AssetRegistryListResult<AssetDefinitionCard>>;
   readDefinitionDetail(ref: AssetReference, options?: AssetRegistryReadOptions): Promise<AssetDefinitionDetail | undefined>;
   listResourceBackedViewCards?(query?: AssetRegistryListQuery): Promise<AssetRegistryListResult<AssetRegistryResourceBackedViewCard>>;

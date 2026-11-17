@@ -152,7 +152,12 @@ export function ManageModelsTab(props: { state: ModelsState }) {
             closeLabel="Close delete confirmation"
             onClose={() => s.setPendingDeleteModelRecordId(undefined)}
           >
-            <p>Type <strong>Delete</strong> to remove this record and its local model files from the shared desktop cache.</p>
+            <p>Type <strong>Delete</strong> to remove this model record.</p>
+            <label className="ui-cluster">
+              <input type="checkbox" checked={s.deleteModelLocalFiles} onChange={(event) => s.setDeleteModelLocalFiles(event.target.checked)} />
+              Also delete files saved by this application
+            </label>
+            <small>File actions are pending host qualification. Leave this unchecked to remove only the record; manage files using your file manager.</small>
             <label className="ui-stack ui-stack--sm">
               <span><TermWithHint termId="deleteConfirmation">Confirmation</TermWithHint></span>
               <input

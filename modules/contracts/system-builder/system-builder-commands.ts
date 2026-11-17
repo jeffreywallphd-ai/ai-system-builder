@@ -16,6 +16,7 @@ export interface CreateSystemBuilderSystemCommand extends SystemCommandContext {
   readonly compositionType?: SystemBuilderComposition["compositionType"];
   readonly profile?: SystemBuilderProfile;
   readonly layoutPresetRef?: AssetReference;
+  readonly starter?: "form";
 }
 
 export interface ReadSystemBuilderSystemQuery {

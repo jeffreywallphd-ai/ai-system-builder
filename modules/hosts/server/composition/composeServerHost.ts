@@ -1,3 +1,15 @@
+import { createWorkspaceAssetAuthoringReaders } from "../../../application/services/asset/workspace-asset-authoring-readers";
+import { requireManagedComfyUiInstall, resolveComfyUiAutoInstall } from "../../shared/resolveComfyUiAutoInstall";
+import { createStructuredAssetDefinitionPublication } from "../../../adapters/persistence/asset-publication";
+import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
+import { createSystemFoundationInitializationError } from "../../../application/services/asset-packs";
+import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
+import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
+import { WorkspaceAssetAccessService } from "../../../application/services/asset/workspace-asset-access.service";
+import { composeWorkspaceSummary } from "../../shared/composition/composeWorkspaceSummary";
+import { CountDatasetReviewTargetsUseCase } from "../../../application/use-cases/dataset-review";
+import { createStructuredAssetDerivedCustomizationRepository } from "../../../adapters/persistence/asset-authoring/createStructuredAssetDerivedCustomizationRepository";
+import { createStructuredAssetStudioAssetDraftRepository } from "../../../adapters/persistence/asset-studio/createStructuredAssetStudioAssetDraftRepository";
 import type { ArtifactRepoStoragePort } from "../../../application/ports/storage";
 import { execFile as nodeExecFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -18,15 +30,22 @@ import {
   createPythonRuntimeAdapterFoundation,
   createPythonRuntimeTaskRegistryAdapter,
   createPythonParquetDatasetReviewAdapter,
-  ensurePythonRuntimeWorkerDependencies,
+  createPythonContextArtifactRuntimeAdapter,
+  ensurePythonRuntimeContextDependencies,
+  preparePythonRuntimeEnvironment,
   resolvePythonRuntimeLoopbackEndpoint,
 } from "../../../adapters/runtime/python";
-import { PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON } from "../../../contracts/runtime";
+import {
+  PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+  normalizePythonRuntimeAcceleratorMemoryBytes,
+  supportsDatasetPreparationOffload,
+  TaskType,
+} from "../../../contracts/runtime";
 import { createGitRuntimeInstallerAdapter } from "../../../adapters/runtime/installer/git/createGitRuntimeInstallerAdapter";
 import { createLocalApplicationSettingsAdapter } from "../../../adapters/persistence/settings";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createHuggingFaceModelBrowseDetailsAdapter } from "../../../adapters/model/huggingface";
-import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
+import { createLocalImageAssetRegistryAdapter, createStructuredImageResourceIdentityAdapter } from "../../../adapters/persistence/image";
 import {
   createLocalModelCheckpointResolverAdapter,
   createLocalModelFileListerAdapter,
@@ -51,6 +70,7 @@ import { LinkUserLibraryAssetToWorkspaceUseCase } from "../../../application/use
 import type { LoggingPort } from "../../../application/ports/logging";
 import type { SystemRuntimeDatabaseLifecyclePort } from "../../../application/ports/system-deployment";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
+import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import {
   AuthorizeApplicationSettingMutationService,
   AuthorizeProviderRepositoryCreationService,
@@ -60,11 +80,13 @@ import {
 import { createDefaultDatasetQualityPolicyProvider } from "../../../application/services/dataset-preparation";
 import { DatasetVersionFinalizationService } from "../../../application/services/dataset-version";
 import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
-import { createStructuredIngestionAcquisitionRepository } from "../../../adapters/persistence/ingestion";
+import { createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
+import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
 import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
 import {
   GovernedIngestionTaskUseCases,
+  IngestionFilePublicationService,
   GovernedWebsiteIngestionUseCases,
 } from "../../../application/use-cases/ingestion-acquisition";
 import type { ApplicationRequestContext } from "../../../application/ports";
@@ -133,6 +155,9 @@ import {
   RejectDatasetReviewRowUseCase,
   EditDatasetReviewRowUseCase,
   PrepareTrainingDatasetFromArtifactsUseCase,
+  ContextBrowserUseCases,
+  ContextGenerationUseCase,
+  ContextManagementCommandUseCase,
   PublishDatasetVersionUseCase,
   ReadDatasetVersionReproductionUseCase,
 } from "../../../application/use-cases";
@@ -146,6 +171,7 @@ import {
   createFilesystemArtifactBrowserReadAdapter,
   createFilesystemArtifactContentRetrievalAdapter,
   createFilesystemArtifactObjectStorageAdapter,
+  createFilesystemIngestionFileByteStorageAdapter,
   createFilesystemGeneratedImagePersistenceAdapter,
   createLocalArtifactCatalogPersistenceAdapter,
   createLocalArtifactStorageBindingAdapter,
@@ -159,7 +185,7 @@ import {
   deleteContainedFile,
   writeContainedFile,
 } from "../../../adapters/filesystem-security";
-import type { ProviderCredentialStatus } from "../../../contracts/security";
+import type { ProviderCredentialStatus, SecurityScope } from "../../../contracts/security";
 import { composeServerProviderCredentials } from "./composeServerProviderCredentials";
 import { createRuntimePreparedModelCheckpointResolver } from "../../shared/createRuntimePreparedModelCheckpointResolver";
 import {
@@ -224,8 +250,19 @@ import { composeAssetPackageLifecycle } from "../../shared/composition/composeAs
 import { composeAssetStudioWorkflow } from "../../shared/composition/composeAssetStudioWorkflow";
 import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
+import { composeManagedSavedState } from "./composeManagedSavedState";
+import { composeManagedAgentReads } from "./composeManagedAgentReads";
+import { composeManagedBrowserConsent } from "./composeManagedBrowserConsent";
+import { composeManagedBrowserPresentationResources } from "./composeManagedBrowserPresentationResources";
+import { composeManagedHeadlessAuthoring } from "./composeManagedHeadlessAuthoring";
+import { composeManagedHeadlessPlanReview } from "./composeManagedHeadlessPlanReview";
+import { composeManagedHeadlessPlanApprovals } from "./composeManagedHeadlessPlanApprovals";
+import type { HeadlessHostIncarnationId } from "../../../contracts/headless";
+import type { TenantPlacementConfig } from "../../../contracts/config";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
-import { composeSystemData } from "../../shared/composition/composeSystemData";
+import { composeSystemData, createManagedSystemDataPrincipal } from "../../shared/composition/composeSystemData";
+import { composePublishedSystemForms } from "../../shared/composition/composePublishedSystemForms";
+import { createStructuredOrganizationRepositories } from "../../../adapters/persistence/organization";
 import { composeSystemReview } from "../../shared/composition/composeSystemReview";
 import {
   composeSystemDeployment,
@@ -348,6 +385,12 @@ export interface ComposeServerHostOptions {
   };
   organizationContextProvider?: OrganizationRequestContextProviderPort;
   organizationAuthorizer?: Pick<AuthorizeOperationService, "execute">;
+  managedSavedState?: {
+    readonly listActiveSystems: Parameters<typeof composeManagedSavedState>[0]["listActiveSystems"];
+    readonly authorize: Pick<AuthorizeOperationService, "execute">;
+  };
+  managedHeadlessAgent?: { readonly placement: TenantPlacementConfig; readonly browserObservationAuthorizer?: AuthorizeOperationService;
+    readonly planReviewClientId?: string };
   env?: NodeJS.ProcessEnv;
   logging?: ComposeServerHostLoggingOptions;
   logSink?: StructuredLogSink;
@@ -358,7 +401,13 @@ export interface ComposeServerHostOptions {
     localSettingsFilePath?: string;
   };
   runtimeDatabases?: ServerSystemRuntimeDatabaseAdapter;
+  /** Trusted nonproduction composition only; production always prepares the managed Python dependencies. */
+  pythonRuntimeEnvironmentPreparer?: ServerPythonRuntimeEnvironmentPreparer;
 }
+
+export type ServerPythonRuntimeEnvironmentPreparer = NonNullable<
+  Parameters<typeof createPythonRuntimeAdapterFoundation>[0]["supervisor"]["prepareRuntimeEnvironment"]
+>;
 
 export type ServerSystemRuntimeDatabaseAdapter =
   SystemRuntimeDatabaseLifecyclePort &
@@ -603,7 +652,16 @@ export interface ServerHostComposition {
   clearHuggingFaceToken: () => Promise<ProviderCredentialStatus>;
   registerApi: (options: RegisterServerApiOptions) => void;
   waitForAssetFoundation: () => Promise<void>;
+  getManagedSavedState: () => ReturnType<typeof composeManagedSavedState> | undefined;
+  getManagedBrowserConsent: () => (ReturnType<typeof composeManagedBrowserConsent> & {readonly hostIncarnationId: HeadlessHostIncarnationId}) | undefined;
+  getManagedHeadlessAgent: () => {
+    readonly hostIncarnationId: HeadlessHostIncarnationId;
+    readonly read: ReturnType<typeof composeManagedAgentReads>;
+    readonly author: ReturnType<typeof composeManagedHeadlessAuthoring>["execute"];
+    readonly planReview?: ReturnType<typeof composeManagedHeadlessPlanReview>;
+  } | undefined;
   closeRuntimeDatabases: () => Promise<void>;
+  shutdownBackgroundTasks: () => Promise<void>;
   getInternalAssetRegistry: () => InternalAssetRegistryComposition | undefined;
 }
 
@@ -615,6 +673,16 @@ export {
 export function composeServerHost(
   options: ComposeServerHostOptions = {},
 ): ServerHostComposition {
+  const comfyUiAutoInstall = resolveComfyUiAutoInstall(options.env ?? process.env);
+  const pythonRuntimeEnvironmentPreparer = options.pythonRuntimeEnvironmentPreparer;
+  if (pythonRuntimeEnvironmentPreparer !== undefined) {
+    if ((options.env ?? process.env).NODE_ENV === "production" || process.env.NODE_ENV === "production") {
+      throw new Error("The controlled runtime preparation seam is unavailable in production.");
+    }
+    if (typeof pythonRuntimeEnvironmentPreparer !== "function") {
+      throw new TypeError("Controlled runtime preparation must be a function.");
+    }
+  }
   const loggingConfig = createLoggingConfig({
     verbosity: options.logging?.verbosity,
     fallbackVerbosity: options.logging?.fallbackVerbosity,
@@ -691,8 +759,13 @@ export function composeServerHost(
 
   let internalAssetRegistry: InternalAssetRegistryComposition | undefined;
   let assetFoundationReady: Promise<void> = Promise.resolve();
+  let managedSavedState: ReturnType<typeof composeManagedSavedState> | undefined;
+  let managedBrowserConsent: ReturnType<ServerHostComposition["getManagedBrowserConsent"]>;
+  let managedHeadlessAgent: ReturnType<ServerHostComposition["getManagedHeadlessAgent"]>;
+  const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
   let systemRuntimeDatabases = options.runtimeDatabases;
 
+  let shutdownBackgroundTasks: (() => Promise<void>) | undefined;
   return {
     loggingPort,
     loggingConfig,
@@ -712,14 +785,25 @@ export function composeServerHost(
     waitForAssetFoundation() {
       return assetFoundationReady;
     },
+    getManagedSavedState: () => managedSavedState,
+    getManagedBrowserConsent: () => managedBrowserConsent,
+    getManagedHeadlessAgent: () => managedHeadlessAgent,
     async closeRuntimeDatabases() {
+      managedBrowserConsent?.close();
+      await shutdownBackgroundTasks?.();
       await systemRuntimeDatabases?.closeAll();
     },
+    async shutdownBackgroundTasks() { managedBrowserConsent?.close(); await shutdownBackgroundTasks?.(); },
     registerApi(registerOptions) {
       const env = options.env ?? process.env;
       const organizationDocuments =
         options.persistence?.organizationDocuments ??
         options.persistence?.documents;
+      const managed = options.managedSavedState;
+      const contexts = options.organizationContextProvider;
+      const managedDocuments = managed && contexts && options.persistence?.organizationDocuments &&
+        options.persistence.documents.runInOwnedTransaction && options.persistence.documents.organizationId === undefined
+        ? options.persistence.documents : undefined;
       const defaultRuntimeRootDirectory = joinHostPath(
         dirname(registerOptions.storageRootDirectory),
         "server-runtime",
@@ -941,6 +1025,7 @@ export function composeServerHost(
         logging: loggingPort,
         now: options.now,
         artifactCatalogAppend: artifactCatalog,
+        ...(organizationDocuments ? { artifactBindingWrite: artifactBindings } : {}),
         organizationContextProvider: options.organizationContextProvider,
       });
       const artifactBrowserRead = createFilesystemArtifactBrowserReadAdapter({
@@ -972,6 +1057,7 @@ export function composeServerHost(
               authorizer: options.organizationAuthorizer,
             })
           : undefined;
+      const assetWorkspaceAccess = new WorkspaceAssetAccessService({ workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization });
       const storeArtifactUploadUseCase = new StoreArtifactUploadUseCase({
         storage,
         logging: loggingPort,
@@ -1050,22 +1136,35 @@ export function composeServerHost(
         });
       const registerArtifactFromRepo = new RegisterArtifactFromRepoUseCase({
         artifactRepoStorage,
+        readDatasetRevisionLicense: huggingFaceArtifactRepoStorage.readDatasetRevisionLicense,
         artifactBindingStorage: artifactBindings,
         artifactCatalogAppend: artifactCatalog,
         logging: loggingPort,
         now: options.now,
         artifactIdFactory: new SystemArtifactIdFactory(),
       });
-      const ingestionTasks = organizationDocuments
+      const ingestionTasks = organizationDocuments && options.organizationContextProvider
         ? (() => {
-            const repository = createStructuredIngestionAcquisitionRepository(
-              organizationDocuments,
-            );
+            const repository = composeIngestionAcquisitionRepository(registerOptions.storageRootDirectory, organizationDocuments);
+            const checkpoints = createFilesystemIngestionCheckpointStorage({
+              rootDirectory: registerOptions.storageRootDirectory,
+              organizationContextProvider: options.organizationContextProvider,
+            });
+            const filePublication = new IngestionFilePublicationService({
+              repository, checkpoints,
+              publications: createStructuredIngestionFilePublicationRepository(organizationDocuments),
+              bytes: createFilesystemIngestionFileByteStorageAdapter({
+                rootDirectory: registerOptions.storageRootDirectory,
+                organizationContextProvider: options.organizationContextProvider,
+              }),
+              bindings: artifactBindings, catalog: artifactCatalog, now: options.now,
+            });
             const website = new GovernedWebsiteIngestionUseCases({
               repository,
               capture: new GovernedWebsiteCaptureAdapter({ now: options.now }),
               streamStorage: storage,
               artifactCleanup: storage,
+              artifactCatalogCleanup: artifactCatalog,
               workspaceRepository:
                 workspaceFoundation.workspaceRepositories.workspaceRepository,
               workspaceAuthorization,
@@ -1073,11 +1172,8 @@ export function composeServerHost(
             });
             return new GovernedIngestionTaskUseCases({
               repository,
-              checkpoints: createFilesystemIngestionCheckpointStorage({
-                rootDirectory: registerOptions.storageRootDirectory,
-                organizationContextProvider:
-                  options.organizationContextProvider,
-              }),
+              checkpoints,
+              filePublication,
               streamStorage: storage,
               artifactCleanup: storage,
               registerArtifactFromRepo,
@@ -1197,6 +1293,12 @@ export function composeServerHost(
           mode: ComfyUiRuntimeDeviceMode,
           fallbackReason?: string,
         ) => {
+          let configuredInstaller: Awaited<ReturnType<typeof createComfyUiInstallerForMode>> | undefined;
+          const installSourceRef = env.COMFYUI_INSTALL_REF;
+          if (!comfyUiAutoInstall) {
+            configuredInstaller = await createComfyUiInstallerForMode(mode);
+            await requireManagedComfyUiInstall(configuredInstaller, comfyUiInstallRoot, installSourceRef);
+          }
           const modeChanged =
             activeRuntimeDeviceMode !== undefined &&
             activeRuntimeDeviceMode !== mode;
@@ -1208,13 +1310,13 @@ export function composeServerHost(
             comfyUiSupervisor = createComfyUiRuntimeSupervisor({
               workingDirectory: comfyUiInstallRoot,
               pythonExecutable: launchPythonResolution.launchPythonExecutable,
-              installer: await createComfyUiInstallerForMode(mode),
+              installer: configuredInstaller ?? await createComfyUiInstallerForMode(mode),
               installRoot: comfyUiInstallRoot,
               host: comfyUiHost,
               port: comfyUiPort,
               runtimeDeviceMode: mode,
-              autoInstall: true,
-              installSourceRef: env.COMFYUI_INSTALL_REF,
+              autoInstall: comfyUiAutoInstall,
+              installSourceRef,
               logging: loggingPort,
             });
             activeRuntimeDeviceMode = mode;
@@ -1240,6 +1342,7 @@ export function composeServerHost(
               fallbackReason,
             },
           });
+          taskReconciler.assertAccepting();
           await comfyUiSupervisor.start();
         };
         try {
@@ -1489,6 +1592,7 @@ export function composeServerHost(
         documents: organizationDocuments,
         definitionDocuments: options.persistence?.documents,
         resourceBackedViewProvider: composeResourceBackedViewProviders({
+          imageResourceIdentity: organizationDocuments ? createStructuredImageResourceIdentityAdapter(organizationDocuments) : undefined,
           artifactBrowserMetadataRead: artifactBrowserRead,
           imageAssetDescriptorRead: imageAssetRegistry,
           modelRegistry,
@@ -1501,7 +1605,7 @@ export function composeServerHost(
         })
         .then((results) => {
           if (results.some((result) => result.status === "failed")) {
-            throw new Error("System foundation assets are unavailable.");
+            throw createSystemFoundationInitializationError(results);
           }
         });
       assetFoundationReady = foundationReady;
@@ -1526,6 +1630,7 @@ export function composeServerHost(
       const assetPackages =
         organizationDocuments && assetImplementation
           ? composeAssetPackageLifecycle({
+              workspaceAccess: assetWorkspaceAccess,
               documents: organizationDocuments,
               definitions:
                 internalAssetRegistry.assetKernel.repositories
@@ -1538,9 +1643,14 @@ export function composeServerHost(
               now: options.now ?? (() => new Date().toISOString()),
             })
           : undefined;
+      const assetPublication = options.persistence && organizationDocuments ? createStructuredAssetDefinitionPublication({
+        artifacts: createAssetImplementationArtifactAdapter(storage), documents: options.persistence.documents, ownerDocuments: organizationDocuments, definitionScope: "platform",
+      }) : undefined;
       const assetStudio =
         organizationDocuments && assetImplementation
           ? composeAssetStudioWorkflow({
+              publication: assetPublication!,
+              workspaceAccess: assetWorkspaceAccess,
               documents: organizationDocuments,
               implementations: assetImplementation,
               artifacts: createAssetImplementationArtifactAdapter(storage),
@@ -1563,8 +1673,69 @@ export function composeServerHost(
             modelRegistry,
             generateSystemId: () => `system.${randomUUID()}`,
             now: options.now,
+            journalChanges: managedDocuments !== undefined,
           })
         : undefined;
+      if (managed && managedDocuments && systemBuilder && contexts) {
+        managedSavedState = composeManagedSavedState({ documents: managedDocuments, listActiveSystems: managed.listActiveSystems, hostIncarnationId,
+          workspaces: workspaceFoundation.workspaceRepositories.workspaceRepository, contexts,
+          authorization: new AuthorizeWorkspaceOperationService({ organizationContext: contexts, authorizer: managed.authorize }) });
+      }
+      if (options.managedHeadlessAgent && managedDocuments && systemBuilder && contexts && workspaceAuthorization) {
+        const workspaces = workspaceFoundation.workspaceRepositories.workspaceRepository;
+        const scoped = {hostIncarnationId, workspaces, contexts, authorization: workspaceAuthorization};
+        const authoring = composeManagedHeadlessAuthoring({...scoped, platform: managedDocuments,
+          rootDirectory: registerOptions.storageRootDirectory, placement: options.managedHeadlessAgent.placement, systems: systemBuilder});
+        const localFileSave = options.managedHeadlessAgent.browserObservationAuthorizer &&
+          "finalizeApprovedLocalFile" in ingestionTasks && typeof ingestionTasks.finalizeApprovedLocalFile === "function"
+          ? ingestionTasks.finalizeApprovedLocalFile.bind(ingestionTasks) : undefined;
+        managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
+          read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases}),
+          ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: composeManagedHeadlessPlanReview({
+            ...scoped, platform: managedDocuments, rootDirectory: registerOptions.storageRootDirectory,
+            placement: options.managedHeadlessAgent.placement, systems: systemBuilder,
+            enableFilePreview: Boolean(ingestionTasks && options.managedHeadlessAgent.browserObservationAuthorizer),
+            finalizeApprovedLocalFile: localFileSave,
+          }) } : {}),
+        };
+        if (options.managedHeadlessAgent.browserObservationAuthorizer) {
+          const observation = new AuthorizeWorkspaceOperationService({organizationContext: contexts,
+            authorizer: options.managedHeadlessAgent.browserObservationAuthorizer});
+          const readScopes = ["workspace:read", "asset:read"] as const;
+          const authorize = (policy: WorkspaceOperationAuthorizationPort, requiredScopes: readonly SecurityScope[] = readScopes): Parameters<typeof composeManagedBrowserConsent>[0]["authorize"] => async (principal, workspaceId) => {
+            const current = () => {
+              const active = contexts.getCurrentOrganizationContext();
+              return active?.organizationId === principal.organizationId && active.principalId === principal.principalId;
+            };
+            if (!current()) return false;
+            const workspace = await workspaces.readWorkspace(workspaceId);
+            if (!current() || workspace?.workspaceId !== workspaceId || workspace.organizationId !== principal.organizationId || workspace.status !== "active") return false;
+            await policy.authorizeWorkspaceOperation({workspace, operation: "headless.window.observe", requiredScopes});
+            return current();
+          };
+          const runs = createLocalExecutionRunRepositoryAdapters({rootDir:registerOptions.storageRootDirectory,
+            now:options.now, documents:organizationDocuments});
+          const presentation = composeManagedBrowserPresentationResources({systems:systemBuilder.repository,
+            artifacts:artifactCatalog, runs:runs.executionRunRepository});
+          const planReviewClientId = options.managedHeadlessAgent.planReviewClientId;
+          const planApprovals = planReviewClientId ? composeManagedHeadlessPlanApprovals({hostIncarnationId,
+            planClientId:planReviewClientId, platform:managedDocuments, rootDirectory:registerOptions.storageRootDirectory,
+            contexts, placement:options.managedHeadlessAgent.placement, localIngestion: ingestionTasks,
+            allowLocalFileSave: Boolean(localFileSave && managedDocuments.publishWithStableReads)}) : undefined;
+          const browserConsent = composeManagedBrowserConsent({hostIncarnationId, planApprovals,
+            authorize: authorize(workspaceAuthorization),
+            authorizeObservation: authorize(observation),
+            async resolvePresentation(principal, workspaceId, intent, {passive}) {
+              const scopes = intent.action === "show-run" ? [...readScopes, "runtime:read"] as const :
+                intent.action === "show-artifact" ? [...readScopes, "artifact:read"] as const : readScopes;
+              const mayRead = authorize(passive ? observation : workspaceAuthorization, scopes);
+              if (!await mayRead(principal, workspaceId)) return;
+              const value = await presentation(workspaceId, intent);
+              if (value && await mayRead(principal, workspaceId)) return value;
+            }});
+          managedBrowserConsent = { ...browserConsent, hostIncarnationId };
+        }
+      }
       const systemBuildArtifacts = createSystemBuildArtifactAdapter(storage);
       const systemDeploymentProfile = resolveServerSystemDeploymentProfile(env);
       const systemBuild =
@@ -1573,10 +1744,8 @@ export function composeServerHost(
               documents: organizationDocuments,
               systemBuilder,
               resolver: {
-                async resolve(request) {
-                  await ensureAssetImplementationReady();
-                  return assetImplementation.useCases.resolve.execute(request);
-                },
+                ensureReady: ensureAssetImplementationReady,
+                resolve: (request) => assetImplementation.useCases.resolve.execute(request),
               },
               artifacts: systemBuildArtifacts,
               hasher: createSha256SystemBuildHasher(),
@@ -1609,6 +1778,21 @@ export function composeServerHost(
               now: options.now,
             })
           : undefined;
+      const formDocuments = options.persistence?.documents;
+      const formOrganizations = options.organizationContextProvider;
+      const formMemberships = formDocuments && formOrganizations
+        ? createStructuredOrganizationRepositories(formDocuments).memberships : undefined;
+      const systemDataPrincipal = formOrganizations
+        ? createManagedSystemDataPrincipal(formOrganizations, formMemberships) : undefined;
+      const publishedForms = systemBuilder && systemBuild && systemData && assetImplementation && workspaceAuthorization && formMemberships && formOrganizations
+        ? composePublishedSystemForms({
+            systems: systemBuilder.repository, builds: systemBuild.repository, artifacts: systemBuildArtifacts,
+            hasher: createSha256SystemBuildHasher(), systemData, workspaceAccess: assetWorkspaceAccess,
+            organizations: formOrganizations, memberships: formMemberships,
+            revocations: { async listRevokedImplementationReleaseIds(_workspaceId, releaseIds) {
+              return (await assetImplementation.repository.listRevocations(releaseIds)).map((entry) => entry.releaseId);
+            } },
+          }) : undefined;
       const systemReview =
         organizationDocuments && systemBuild
           ? composeSystemReview({
@@ -1797,6 +1981,7 @@ export function composeServerHost(
         HF_HUB_DISABLE_SYMLINKS_WARNING:
           env.HF_HUB_DISABLE_SYMLINKS_WARNING ?? "1",
       };
+      const taskReconciler = createOwnedTaskReconciler();
       const pythonRuntimeFoundation = createPythonRuntimeAdapterFoundation({
         client: { baseUrl: pythonRuntimeBaseUrl },
         supervisor: {
@@ -1804,13 +1989,13 @@ export function composeServerHost(
           args: pythonRuntimeArgs,
           cwd: pythonRuntimeWorkerDirectory,
           env: pythonRuntimeEnvironment,
-          prepareRuntimeEnvironment(context) {
-            ensurePythonRuntimeWorkerDependencies({
+          prepareRuntimeEnvironment: pythonRuntimeEnvironmentPreparer ?? (async (context) => {
+            await preparePythonRuntimeEnvironment({
               command: context.command,
               cwd: context.cwd,
               env: context.env,
             });
-          },
+          }),
           onEvent(event) {
             const source = event.data?.source;
             const detail = event.detail?.trim();
@@ -1838,17 +2023,44 @@ export function composeServerHost(
           },
         },
       });
+      const startOwnedPython = pythonRuntimeFoundation.supervisor.start.bind(pythonRuntimeFoundation.supervisor);
+      pythonRuntimeFoundation.supervisor.start = async () => { taskReconciler.assertAccepting(); await startOwnedPython(); };
       const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
         pythonRuntimeFoundation.runtimePort,
         {
-          ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start(),
+          async ensureRuntimeReady(request, control) {
+            if (
+              request.taskType === TaskType.CONTEXT_GENERATION ||
+              request.taskType === TaskType.CONTEXT_RETRIEVAL
+            ) {
+              await ensurePythonRuntimeContextDependencies({
+                command: pythonRuntimeCommand,
+                cwd: pythonRuntimeWorkerDirectory,
+                env: pythonRuntimeEnvironment,
+                onProgress: (progress) =>
+                  control.reportProgress({ message: progress.message }),
+              });
+            }
+            await pythonRuntimeFoundation.supervisor.start();
+          },
         },
       );
-      const runtimeTaskRegistry = createRuntimeTaskRegistryRouter({
+      const imageTaskAuthority = new ImageGenerationTaskAuthorityService({ workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization, organizationContextProvider: options.organizationContextProvider });
+      const routedRuntimeTaskRegistry = createRuntimeTaskRegistryRouter({
         image: imageRuntimeTaskRegistry,
         python: pythonRuntimeTaskRegistry,
       });
+      const runtimeTaskRegistry = { ...routedRuntimeTaskRegistry, startTask: (request: Parameters<typeof routedRuntimeTaskRegistry.startTask>[0]) => { taskReconciler.assertAccepting(); return routedRuntimeTaskRegistry.startTask(request); } };
+      shutdownBackgroundTasks = async () => {
+        taskReconciler.stopAccepting();
+        imageRuntimeTaskRegistry.closeAdmission();
+        await shutdownOwnedTasks({ reconciler: taskReconciler,
+          stopPython: () => pythonRuntimeFoundation.supervisor.stop(),
+          stopImage: async () => { await comfyUiSupervisor?.stop(); await imageRuntimeTaskRegistry.settleAfterRuntimeStop(); },
+        });
+      };
       const modelDownloadTasksUseCase = new ModelDownloadTasksUseCase({
+        taskReconciler,
         runtimeTaskRegistry,
         modelDownloadCompletion: pythonRuntimeTaskRegistry,
         modelRegistry,
@@ -2048,6 +2260,9 @@ export function composeServerHost(
         : undefined;
       const prepareTrainingDatasetUseCase =
         new PrepareTrainingDatasetFromArtifactsUseCase({
+          sourceIntegrityHasher: datasetVersionHasher,
+          readWorkerCapabilities: () => pythonRuntimeFoundation.runtimePort.getCapabilities(),
+          taskReconciler,
           runtimeTaskRegistry,
           storageBindings: artifactBindings,
           storage,
@@ -2070,6 +2285,40 @@ export function composeServerHost(
             : {}),
           now: options.now,
         });
+      const contextGenerationUseCase = new ContextGenerationUseCase({
+        taskReconciler,
+        runtimeTaskRegistry,
+        storageBindings: artifactBindings,
+        storage,
+        artifactCatalog,
+        taskPowerLifecycle: {
+          async startTask() {},
+          async completeTask() {},
+        },
+        workspaceRepository:
+          workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
+        now: options.now,
+      });
+      const contextBrowserUseCases = new ContextBrowserUseCases({
+        catalog: artifactCatalog,
+        storageBindings: artifactBindings,
+        storage,
+        runtime: createPythonContextArtifactRuntimeAdapter(runtimeTaskRegistry),
+        generation: contextGenerationUseCase,
+        deleteArtifact: deleteRegisteredArtifact,
+        workspaceRepository:
+          workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
+      });
+      const contextManagement = new ContextManagementCommandUseCase({
+        generation: contextGenerationUseCase,
+        browser: contextBrowserUseCases,
+        runtimeTaskRegistry,
+        workspaceRepository:
+          workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
+      });
       const localModelCheckpointResolver =
         createLocalModelCheckpointResolverAdapter({
           modelRegistry,
@@ -2080,6 +2329,8 @@ export function composeServerHost(
           ),
         });
       const generateImageUseCase = new GenerateImageUseCase({
+        taskAuthority: imageTaskAuthority,
+        taskReconciler,
         runtimeTaskRegistry,
         modelCheckpointResolver: createRuntimePreparedModelCheckpointResolver({
           runtime: comfyUiSupervisorPort,
@@ -2116,9 +2367,11 @@ export function composeServerHost(
 
       const imageGenerationFinalizationOrchestrator =
         new ImageGenerationFinalizationOrchestratorService({
+          taskAuthority: imageTaskAuthority,
           runtimeTaskRegistry,
           organizationContextProvider: options.organizationContextProvider,
           finalizeImageGenerationService: new FinalizeImageGenerationService({
+            organizationContextProvider: options.organizationContextProvider,
             imageAssetRegistry,
             generatedImagePersistence:
               createFilesystemGeneratedImagePersistenceAdapter({
@@ -2140,6 +2393,9 @@ export function composeServerHost(
         now: options.now,
         documents: organizationDocuments,
       };
+      const assetCompositionWorkspaceAccess = new WorkspaceAssetAccessService({
+        workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization,
+      });
       const assetCompositionPlanRepository =
         createLocalAssetCompositionPlanRepositoryAdapter(
           structuredRepositoryOptions,
@@ -2283,8 +2539,11 @@ export function composeServerHost(
         restartServer: options.restartServer,
         runtimeReadiness,
         prepareTrainingDatasetUseCase,
+        contextManagement,
         readDatasetPreparationGenerationCapacity: async () => {
           let decoderAvailable = false;
+          let offloadAvailable = false;
+          let totalAcceleratorMemoryBytes: number | undefined;
           if (pythonRuntimeFoundation.supervisor.getStatus() === "ready") {
             try {
               const capabilities =
@@ -2292,6 +2551,8 @@ export function composeServerHost(
               decoderAvailable = capabilities.capabilities.includes(
                 PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
               );
+              offloadAvailable = supportsDatasetPreparationOffload(capabilities.capabilities);
+              totalAcceleratorMemoryBytes = normalizePythonRuntimeAcceleratorMemoryBytes(capabilities.totalAcceleratorMemoryBytes);
             } catch {
               decoderAvailable = false;
             }
@@ -2300,14 +2561,25 @@ export function composeServerHost(
             schemaVersion: "1" as const,
             capturedAt: options.now?.() ?? new Date().toISOString(),
             decoderAvailable,
+            offloadAvailable,
             schemaSupported: true,
             logicalProcessorCount: cpus().length,
             totalSystemMemoryBytes: totalmem(),
+            availableSystemMemoryBytes: freemem(),
+            ...(totalAcceleratorMemoryBytes !== undefined ? { totalAcceleratorMemoryBytes } : {}),
           };
         },
         datasetVersionUseCases,
         assetRegistryRead: internalAssetRegistry.workspaceReadFacade,
         workspaceServices: {
+          readWorkspaceSummary: workspaceAuthorization && organizationDocuments ? composeWorkspaceSummary({
+            workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository,
+            authorization: workspaceAuthorization,
+            systems: systemBuilder?.repository, builds: systemBuild?.repository, models: modelRegistry,
+            artifacts: artifactCatalog,
+            countDatasets: datasetVersionRepository ? workspaceId => new CountDatasetReviewTargetsUseCase({repository: datasetVersionRepository, artifacts: storage, workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization}).execute({workspaceId}) : undefined,
+            assetSources: [createLocalAuthoredAssetRepositoryAdapter(structuredRepositoryOptions), createLocalAssetOverrideRepositoryAdapter(structuredRepositoryOptions), createStructuredAssetDerivedCustomizationRepository(organizationDocuments), createStructuredAssetStudioAssetDraftRepository(organizationDocuments)],
+          }) : undefined,
           workspaceRepository:
             workspaceFoundation.workspaceRepositories.workspaceRepository,
           workspaceSelectionRepository:
@@ -2370,6 +2642,8 @@ export function composeServerHost(
           const derivedCustomizations =
             organizationDocuments && assetImplementation
               ? composeAssetDerivedCustomization({
+              publication: assetPublication!,
+              workspaceAccess: assetWorkspaceAccess,
                   documents: organizationDocuments,
                   definitions:
                     internalAssetRegistry!.assetKernel.repositories
@@ -2383,12 +2657,12 @@ export function composeServerHost(
                 })
               : undefined;
           return {
-            ...assetAuthoringRepositories,
+            ...createWorkspaceAssetAuthoringReaders({workspaceAccess: assetCompositionWorkspaceAccess, ...assetAuthoringRepositories}),
             ...(derivedCustomizations
               ? { derivedCustomizations: derivedCustomizations.service }
               : {}),
             createWorkspaceAuthoredAssetUseCase:
-              new CreateWorkspaceAuthoredAssetUseCase({
+              new CreateWorkspaceAuthoredAssetUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
                 authoredAssetRepository:
                   assetAuthoringRepositories.authoredAssetRepository,
                 assetRevisionRepository:
@@ -2397,18 +2671,18 @@ export function composeServerHost(
                 generateAuthoredAssetId: () => randomUUID(),
                 generateAssetRevisionId: () => randomUUID(),
               }),
-            createAssetDraftUseCase: new CreateAssetDraftUseCase({
+            createAssetDraftUseCase: new CreateAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetDraftRepository:
                 assetAuthoringRepositories.assetDraftRepository,
               now: options.now,
               generateAssetDraftId: () => randomUUID(),
             }),
-            updateAssetDraftUseCase: new UpdateAssetDraftUseCase({
+            updateAssetDraftUseCase: new UpdateAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetDraftRepository:
                 assetAuthoringRepositories.assetDraftRepository,
               now: options.now,
             }),
-            publishAssetDraftUseCase: new PublishAssetDraftUseCase({
+            publishAssetDraftUseCase: new PublishAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               authoredAssetRepository:
                 assetAuthoringRepositories.authoredAssetRepository,
               assetDraftRepository:
@@ -2419,19 +2693,19 @@ export function composeServerHost(
               generateAuthoredAssetId: () => randomUUID(),
               generateAssetRevisionId: () => randomUUID(),
             }),
-            createAssetOverrideUseCase: new CreateAssetOverrideUseCase({
+            createAssetOverrideUseCase: new CreateAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetOverrideRepository:
                 assetAuthoringRepositories.assetOverrideRepository,
               targetReader: unavailableTargetReader,
               now: options.now,
               generateAssetOverrideId: () => randomUUID(),
             }),
-            updateAssetOverrideUseCase: new UpdateAssetOverrideUseCase({
+            updateAssetOverrideUseCase: new UpdateAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetOverrideRepository:
                 assetAuthoringRepositories.assetOverrideRepository,
               now: options.now,
             }),
-            disableAssetOverrideUseCase: new DisableAssetOverrideUseCase({
+            disableAssetOverrideUseCase: new DisableAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               assetOverrideRepository:
                 assetAuthoringRepositories.assetOverrideRepository,
               now: options.now,
@@ -2445,50 +2719,50 @@ export function composeServerHost(
               structuredRepositoryOptions,
             );
           return {
-            createPlan: new CreateAssetCompositionPlanUseCase({
+            createPlan: new CreateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               generatePlanId: () => `plan.${randomUUID()}`,
               now: options.now,
             }),
-            updatePlan: new UpdateAssetCompositionPlanUseCase({
+            updatePlan: new UpdateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               now: options.now,
             }),
-            readPlan: new ReadAssetCompositionPlanUseCase({
+            readPlan: new ReadAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
             }),
-            listPlans: new ListAssetCompositionPlansUseCase({
+            listPlans: new ListAssetCompositionPlansUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
             }),
-            archivePlan: new ArchiveAssetCompositionPlanUseCase({
+            archivePlan: new ArchiveAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               now: options.now,
             }),
-            addProjection: new AddProjectionToCompositionPlanUseCase({
+            addProjection: new AddProjectionToCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               projectionRepository: effectiveProjectionRepository,
               generateNodeId: () => `node.${randomUUID()}`,
               now: options.now,
             }),
-            removeProjection: new RemoveProjectionFromCompositionPlanUseCase({
+            removeProjection: new RemoveProjectionFromCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               now: options.now,
             }),
-            connectNodes: new ConnectCompositionNodesUseCase({
+            connectNodes: new ConnectCompositionNodesUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               generateRelationshipId: () => `rel.${randomUUID()}`,
               now: options.now,
             }),
-            disconnectNodes: new DisconnectCompositionNodesUseCase({
+            disconnectNodes: new DisconnectCompositionNodesUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               now: options.now,
             }),
-            validatePlan: new ValidateAssetCompositionPlanUseCase({
+            validatePlan: new ValidateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               projectionRepository: effectiveProjectionRepository,
               now: options.now,
             }),
-            readModel: new WorkspaceAssetCompositionReadModelService({
+            readModel: new WorkspaceAssetCompositionReadModelService({ workspaceAccess: assetCompositionWorkspaceAccess,
               compositionPlanRepository: assetCompositionPlanRepository,
             }),
           };
@@ -2550,10 +2824,11 @@ export function composeServerHost(
             }
           : {}),
         ...(systemBuilder
-          ? { systemBuilderServices: systemBuilder.useCases }
+          ? { systemBuilderServices: { ...systemBuilder.useCases, ...(publishedForms ? { publishedForms } : {}) } }
           : {}),
         ...(systemData
-          ? { systemDataServices: { runtime: systemData.runtime } }
+          ? { systemDataServices: { runtime: systemData.runtime,
+              ...(systemDataPrincipal ? { readManagedPrincipal: systemDataPrincipal } : {}) } }
           : {}),
         ...(systemReview
           ? { systemReviewServices: { runtime: systemReview.runtime } }

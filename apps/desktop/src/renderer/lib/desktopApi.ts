@@ -1,3 +1,4 @@
+import type { ReadWorkspaceSummaryRequest } from "../../../../../modules/contracts/workspace";
 import type {
   ArtifactBrowseItem as ArtifactBrowseContractItem,
   ArtifactDetailReadModel as ArtifactDetailContractModel,
@@ -7,6 +8,10 @@ import type {
   IngestionTaskTransportValue,
   StagedArtifactDescriptor,
 } from "../../../../../modules/contracts/ingestion";
+import type {
+  ContextManagementTransportCommand,
+  ContextManagementTransportValue,
+} from "../../../../../modules/contracts/context-management";
 import type { DatasetPublicationVisibility } from "../../../../../modules/contracts/dataset";
 import type {
   DatasetPreparationAdvancedReport,
@@ -49,6 +54,9 @@ import type {
   CancelModelDownloadTaskResult,
   ListModelsRequest,
   ModelTrainingRequest,
+  ModelTrainingStatusRequest,
+  ModelTrainingCancelRequest,
+  ModelTrainingReviewRequest,
   ModelTrainingResult,
   SaveModelReferenceRequest,
   UpdateModelRecordRequest,
@@ -95,6 +103,8 @@ import type {
   ReadSystemBuilderComposerAssetQuery,
   ListSystemBuilderModelOptionsQuery,
   ListSystemBuilderManagementQuery,
+  PublishedSystemFormsInput,
+  PublishedSystemFormSubmitInput,
   PreviewSystemBuilderLayoutChangeCommand,
   PreviewSystemBuilderFoundationUpgradeCommand,
   UpgradeSystemBuilderFoundationCommand,
@@ -354,10 +364,12 @@ export interface DesktopPythonRuntimeLoadedModel {
   inferenceMode: "text2text" | "causal" | "chat" | "text-to-image";
   device?: "cpu" | "cuda" | "auto";
   torchDtype?: "auto" | "float16" | "bfloat16" | "float32";
+  memoryMode?: "standard" | "offload-v1";
   localPath?: string;
 }
 
 export interface DesktopPythonRuntimeStatusSnapshot {
+  startupDiagnostics?: import("../../../../../modules/contracts/runtime").PythonRuntimeStartupDiagnostics;
   supervisorStatus: "stopped" | "starting" | "ready" | "failed";
   healthy: boolean;
   runtimeStatus: string;
@@ -580,6 +592,30 @@ export interface DesktopPythonRuntimeApi {
 }
 
 interface DesktopApiBridge {
+  readRecentHeadlessChatTasks?: (workspaceId: string) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-chat-tasks").DesktopHeadlessChatTasks>;
+  readHeadlessPairingStatus?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingStatus>;
+  selectHeadlessLocalFile?: (input: import("../../../../../modules/contracts/headless").DesktopLocalFileSelectionInput) =>
+    Promise<import("../../../../../modules/contracts/headless").AppHeadlessLocalFileSelectionValue | undefined>;
+  selectHeadlessProviderFile?: DesktopApiBridge["selectHeadlessLocalFile"];
+  listHeadlessPlanApprovals?: (workspaceId: string) => Promise<readonly import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalListEntry[] | undefined>;
+  openHeadlessPlanApproval?: (selection: import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalSelection) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalView | undefined>;
+  decideHeadlessPlanApproval?: (decision: import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalDecision) => Promise<import("../../../../../modules/contracts/headless/desktop-headless-plan-approval").DesktopPlanApprovalView["state"] | undefined>;
+  dismissHeadlessPlanApproval?: (viewId: string) => Promise<boolean>;
+  openHeadlessPlanChat?: DesktopApiBridge["openHeadlessPlanApproval"];
+  decideHeadlessPlanChat?: DesktopApiBridge["decideHeadlessPlanApproval"];
+  dismissHeadlessPlanChat?: DesktopApiBridge["dismissHeadlessPlanApproval"];
+  readWindowTakeover?: (workspaceId: string | null) => Promise<import("../../../../../modules/contracts/headless").UiControlObservation>;
+  onWindowTakeoverRetired?: (listener: (target: import("../../../../../modules/contracts/headless").UiControlAttempt) => void) => () => void;
+  acceptWindowTakeover?: (target: unknown) => Promise<import("../../../../../modules/contracts/headless").UiControlTimedGrant | undefined>;
+  readyWindowTakeover?: (target: unknown) => Promise<import("../../../../../modules/contracts/headless").UiControlTimedGrant | undefined>;
+  revokeWindowTakeover?: (target: unknown) => Promise<boolean>;
+  pullWindowPresentation?: (input: unknown) => Promise<import("../../../../../modules/contracts/headless").UiPresentationPullResult>;
+  acknowledgeWindowPresentation?: (input: unknown) => Promise<boolean>;
+  publishWindowContext?: (input: unknown) => Promise<boolean>;
+  readSystemBuilderChangeWatermark?: (workspaceId: string) => Promise<import("../../../../../modules/contracts/headless").DesktopSystemChangeWatermark>;
+  startHeadlessConnector?: () => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessStartResult>;
+  beginHeadlessPairing?: (workspaceId: string, access?: import("../../../../../modules/contracts/headless").DesktopHeadlessClientAccess) => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessPairingResult>;
+  revokeHeadlessClient?: (clientId: string) => Promise<import("../../../../../modules/contracts/headless").DesktopHeadlessRevokeResult>;
   memoryDiagnosticsEnabled?: boolean;
   getHuggingFaceTokenStatus: () => Promise<unknown>;
   setHuggingFaceToken: (input: { token: string }) => Promise<unknown>;
@@ -625,6 +661,16 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<
     | { ok: true; value: IngestionTaskTransportValue }
+    | { ok: false; error: { message: string } }
+  >;
+  executeContextManagement?: (
+    input: {
+      workspaceId: string;
+      command: ContextManagementTransportCommand;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<
+    | { ok: true; value: ContextManagementTransportValue }
     | { ok: false; error: { message: string } }
   >;
   startPrepareTrainingDataset?: (
@@ -730,6 +776,7 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
 
+  readWorkspaceSummary?: (input: ReadWorkspaceSummaryRequest) => Promise<unknown>;
   listWorkspaces?: (context?: DesktopBridgeRequestContext) => Promise<unknown>;
   createWorkspace?: (
     input: { command: CreateWorkspaceCommand; selectAfterCreate?: boolean },
@@ -769,6 +816,8 @@ interface DesktopApiBridge {
     input: { workspaceId: string; includeArchived?: boolean },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  listPublishedSystemForms?: (input: PublishedSystemFormsInput) => Promise<unknown>;
+  submitPublishedSystemForm?: (input: PublishedSystemFormSubmitInput) => Promise<unknown>;
   listSystemBuilderManagement?: (
     input: ListSystemBuilderManagementQuery,
     context?: DesktopBridgeRequestContext,
@@ -1319,6 +1368,10 @@ interface DesktopApiBridge {
     input: DesktopReadModelDownloadRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  completeModelDownload?: (
+    input: DesktopReadModelDownloadRequest,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   listModelDownloads?: (
     input: DesktopListModelDownloadsRequest,
     context?: DesktopBridgeRequestContext,
@@ -1344,19 +1397,19 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readModelTrainingStatus?: (
-    input: { runId: string },
+    input: ModelTrainingStatusRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   cancelModelTraining?: (
-    input: { runId: string; workspaceId: string },
+    input: ModelTrainingCancelRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   saveModelTraining?: (
-    input: { runId: string; workspaceId: string },
+    input: ModelTrainingReviewRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   discardModelTraining?: (
-    input: { runId: string; workspaceId: string },
+    input: ModelTrainingReviewRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   validateModel?: (

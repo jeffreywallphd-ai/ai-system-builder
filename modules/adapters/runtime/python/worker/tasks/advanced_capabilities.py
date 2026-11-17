@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..models import DatasetPreparationAdvancedConfig
+from ..ocr.protocol import OcrContractError, OcrDocument
 from .document_normalization import NormalizedDocument
 from .markdown_chunking import MarkdownChunk
 
@@ -37,8 +38,8 @@ def resolve_advanced_capability_readiness(
             "status": "unavailable",
             "provider": "none",
             "version": "unavailable",
-            "message": "Text recognition for scanned images is not installed.",
-            "action": "Use a text-based source or add reviewed text before preparation.",
+            "message": "Text recognition has not been checked for this task.",
+            "action": "Use explicit scanned-PDF settings to check the local reader and language at task start.",
         },
         {
             "capabilityId": "semantic-embeddings",
@@ -94,4 +95,26 @@ def build_advanced_content_report(
             "lowConfidenceSourceCount": sum(1 for quality in qualities if quality < 0.6),
             "meanExtractionQuality": round(sum(qualities) / max(1, len(qualities)), 4),
         }
+        if config.content.ocrEnabled:
+            recognized = [document.ocr_document for document in documents]
+            if (not recognized or any(type(value) is not OcrDocument for value in recognized) or
+                    len({(value.provider, value.version, value.language) for value in recognized}) != 1 or
+                    any(value.language != config.content.ocrLanguage for value in recognized)):
+                raise OcrContractError("Scanned-PDF recognition results could not be verified.")
+            for value in recognized:
+                OcrDocument.__post_init__(value)
+            first = recognized[0]
+            report["content"]["algorithmVersion"] = "bounded-ocr-lines-v1"
+            report["content"]["ocr"] = {
+                "provider": first.provider, "version": first.version, "language": first.language,
+                "documentCount": len(recognized),
+                "pageCount": sum(value.source_page_count for value in recognized),
+                "lineCount": sum(len(page.lines) for value in recognized for page in value.pages),
+            }
+            report["capabilities"] = [
+                {"capabilityId": "ocr-text", "status": "ready", "provider": first.provider,
+                 "version": first.version, "message": "All requested PDF pages were read in the selected language."}
+                if value["capabilityId"] == "ocr-text" else value
+                for value in report["capabilities"]
+            ]
     return report

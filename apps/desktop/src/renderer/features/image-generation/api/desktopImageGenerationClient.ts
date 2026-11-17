@@ -104,7 +104,7 @@ export function createDesktopImageGenerationClient() {
 
   return {
     async startImageGeneration(
-      input: ImageGenerationRequest,
+      input: ImageGenerationRequest & { workspaceId?: string },
       context?: { requestId?: string; correlationId?: string },
     ): Promise<ImageGenerationStartResult> {
       if (!api.startImageGeneration) {
@@ -146,7 +146,7 @@ export function createDesktopImageGenerationClient() {
     },
 
     async readImageGeneration(
-      input: { requestId: string },
+      input: { requestId: string; workspaceId?: string },
       context?: { requestId?: string; correlationId?: string },
     ): Promise<ImageGenerationReadResult> {
       if (!api.readImageGeneration) {
@@ -178,7 +178,7 @@ export function createDesktopImageGenerationClient() {
     },
 
     async cancelImageGeneration(
-      input: { requestId: string },
+      input: { requestId: string; workspaceId?: string },
       context?: { requestId?: string; correlationId?: string },
     ): Promise<ImageGenerationCancelResult> {
       if (!api.cancelImageGeneration) {

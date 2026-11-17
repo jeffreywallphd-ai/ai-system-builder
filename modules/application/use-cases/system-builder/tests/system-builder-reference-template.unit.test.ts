@@ -12,6 +12,7 @@ import {
   ValidateSystemBuilderRevisionService,
 } from "../../../services/system-builder";
 import { CreateSystemBuilderFromTemplateUseCase } from "../system-builder-use-cases";
+import { compileSystemForm } from "../../../services/system-builder/system-form-rules.service";
 
 const workspaceId = createWorkspaceId("workspace-reference");
 const definitions = SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.map(
@@ -96,6 +97,14 @@ describe("secured data-entry system template", () => {
     expect(revisions[0].instances.length).toBeGreaterThan(30);
     expect(revisions[0].validationIssues).toEqual([]);
     expectCurrentReferenceRevision(revisions[0]);
+    expect(revisions[0].placements?.find((edge) => edge.childInstanceRef.id === "secured-system.due-date-input"))
+      .toMatchObject({ parentInstanceRef: { id: "secured-system.request-fields" }, slotId: "fields" });
+    expect(revisions[0].placements?.find((edge) => edge.childInstanceRef.id === "secured-system.request-fields"))
+      .toMatchObject({ parentInstanceRef: { id: "secured-system.form" }, slotId: "fields" });
+    const preview = compileSystemForm(revisions[0]!, "secured-system.form");
+    expect(preview.ok).toBe(true);
+    if (preview.ok) expect(preview.value.steps[0]?.fields.find((field) => field.label === "Status")?.options.map(({value}) => value))
+      .toEqual(["draft", "submitted", "approved"]);
   });
 });
 
@@ -114,6 +123,7 @@ describe("controlled chatbot system template", () => {
       value.instances.map((item) => [String(item.definitionRef.id), item]),
     );
     expect(byDefinition.has("conversation.basic-assistant-system")).toBe(true);
+    expect(byDefinition.has("builtin.form.submit-action")).toBe(false);
     expect(byDefinition.has("builtin.ai.instruction-template")).toBe(true);
     expect(byDefinition.has("builtin.ai.generation-settings")).toBe(true);
     expect(byDefinition.has("builtin.ai.controlled-inference-action")).toBe(
@@ -227,6 +237,8 @@ describe("secured data-review system template", () => {
       value.instances.map((item) => [String(item.definitionRef.id), item]),
     );
     expect(byDefinition.has("builtin.shell.resource-browser")).toBe(true);
+    expect(value.bindings.filter((edge) => ["secured-review.name-filter", "secured-review.media-filter"].includes(String(edge.sourceRef.id)))
+      .map((edge) => edge.targetRef.id)).toEqual(["secured-review.browser", "secured-review.browser"]);
     expect(byDefinition.has("builtin.shell.detail-page")).toBe(true);
     expect(byDefinition.has("builtin.preview.text")).toBe(true);
     expect(byDefinition.has("builtin.preview.table")).toBe(true);
@@ -310,6 +322,14 @@ describe("secured data-review system template", () => {
       result.value.systemId,
     );
     expectCurrentReferenceRevision(revisions[0]);
+    expect(revisions[0].placements?.find((edge) => edge.childInstanceRef.id === "review-system.filter-form"))
+      .toMatchObject({ parentInstanceRef: { id: "review-system.browser" }, slotId: "filters" });
+    expect(revisions[0].placements?.filter((edge) => edge.parentInstanceRef.id === "review-system.filter-fields")
+      .map((edge) => edge.childInstanceRef.id)).toEqual(["review-system.name-filter", "review-system.media-filter"]);
+    const preview = compileSystemForm(revisions[0]!, "review-system.filter-form");
+    expect(preview.ok).toBe(true);
+    if (preview.ok) expect(preview.value.steps[0]?.fields.find((field) => field.label === "Media type")?.options.map(({value}) => value))
+      .toEqual(["all", "text", "image", "pdf"]);
   });
 });
 

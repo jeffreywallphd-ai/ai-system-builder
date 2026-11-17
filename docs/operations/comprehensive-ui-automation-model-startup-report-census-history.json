@@ -1,0 +1,431 @@
+{
+ "schema_version": "historical-ui-census-update-v1",
+ "scope": "historical-source-update-only-no-execution",
+ "roadmap_id": "comprehensive-ui-automation",
+ "prior_commit": "59545794f97ec030f2ef3484c7d07dda501bdd97",
+ "prior_census_path": "docs/operations/comprehensive-ui-automation-current-census.json",
+ "prior_census_git_sha256": "c62993b77b8f60ef7eba197dfd06a274710bf09195e388cf9c536a7c2821b16e",
+ "prior_census_working_sha256": "c62993b77b8f60ef7eba197dfd06a274710bf09195e388cf9c536a7c2821b16e",
+ "prior_source_baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+ "source_baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+ "old_archive": {
+  "path": "docs/operations/comprehensive-ui-automation-census-source-history.json",
+  "sha256": "658a1ec6e35cb74385177abf1a751c306b34b6414456d178b7d7189cad74bf23",
+  "bytes": 13560
+ },
+ "prior_history": {
+  "path": "docs/operations/comprehensive-ui-automation-startup-diagnostics-census-history.json",
+  "sha256": "1c4cca47842a8f1480f2e70d9e9de35e86536529b9789ba652dbb435031f9268",
+  "bytes": 9623
+ },
+ "reason": "Refresh only four exact UI test definitions for app-bound startup diagnostics and the retained control-plane routing check. Keep all180 authentic608 Git pins, scenarios, inventories and earlier histories. These source facts grant no app execution, native, full-system or parent qualification.",
+ "preserved_fields_sha256": "845bf0d2019604d92eb52a8642bacd53e143ae953da64c9ac039873ba3c22dc1",
+ "qualification_effect": {
+  "executed_tests": 0,
+  "actual_host_pass": false,
+  "parent_qualification_granted": false,
+  "full_testing_status": "deferred-by-user"
+ },
+ "sources": [
+  {
+   "path": "apps/desktop/src/renderer/features/models/tests/desktop-model-download-preload.ui.test.tsx",
+   "prior_row": {
+    "path": "apps/desktop/src/renderer/features/models/tests/desktop-model-download-preload.ui.test.tsx",
+    "facts": {
+     "sha256": "a109963772541a400749dbbaa06307888a1440c75b5efed8237a0fdfe4b8806c",
+     "bytes": 18172,
+     "cases": [
+      {
+       "name": "admits one immediate download and keeps real progress through navigation, workspace return and durable registration",
+       "line": 123
+      },
+      {
+       "name": "keeps a failed task out of inventory and safely completes a separately requested retry",
+       "line": 159
+      },
+      {
+       "name": "refuses foreign completion before runtime reads and reports confirmed cancellation without registering",
+       "line": 170
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "unmount",
+       "line": 43
+      },
+      {
+       "name": "inspect",
+       "line": 54
+      },
+      {
+       "name": "compose",
+       "line": 68
+      },
+      {
+       "name": "Surface",
+       "line": 103
+      },
+      {
+       "name": "mount",
+       "line": 108
+      },
+      {
+       "name": "button",
+       "line": 112
+      },
+      {
+       "name": "settled",
+       "line": 113
+      },
+      {
+       "name": "search",
+       "line": 114
+      },
+      {
+       "name": "poll",
+       "line": 115
+      },
+      {
+       "name": "rows",
+       "line": 117
+      }
+     ],
+     "assertionCount": 60,
+     "assertionDigest": "1845d522befbf02ec637163eed34ad462c5acbe6175895d22169d553afe531b9",
+     "assertionExamples": [
+      {
+       "line": 51,
+       "kind": "expect",
+       "sha256": "5441000ade7a56e8c10f41c8c77645607877513d1a007f821266b8bf6efe14bf"
+      },
+      {
+       "line": 51,
+       "kind": "expect",
+       "sha256": "a01a5166acfe09402da06a7d7810c4a50e8c3f5be305f1e2cf530c192542ca56"
+      },
+      {
+       "line": 51,
+       "kind": "expect",
+       "sha256": "12e1394a72177eb0a761472e2efc17fe0fff76299e658809513e6026c3167797"
+      },
+      {
+       "line": 52,
+       "kind": "expect",
+       "sha256": "cccab234f75ab3f43d44b3f6aec196c9511fdc90308b7e6150acdfdb5dc13ccf"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "a109963772541a400749dbbaa06307888a1440c75b5efed8237a0fdfe4b8806c"
+   },
+   "prior_row_sha256": "805f8adb209843548fb49274b72675ea316e18ade9b43fa09a3949c831a98745",
+   "current_row_sha256": "765e8c4e80a9cee79481a1a93fe23bbdcfbd8b4aaac9203c91b7115f225fedbc"
+  },
+  {
+   "path": "apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts",
+   "prior_row": {
+    "path": "apps/desktop/src/renderer/features/python-runtime/tests/desktop-python-runtime-client.unit.test.ts",
+    "facts": {
+     "sha256": "0461d04977a6958768c694ea1bda292c1808d5cd3654f94180674eee881fe88b",
+     "bytes": 4822,
+     "cases": [
+      {
+       "name": "preserves the canonical %s status without a control action",
+       "line": 16
+      },
+      {
+       "name": "refuses a malformed envelope or container %#",
+       "line": 21
+      },
+      {
+       "name": "keeps fixed failure text for a denied host response",
+       "line": 25
+      },
+      {
+       "name": "copies known consumed rows and preserves existing model fields",
+       "line": 30
+      },
+      {
+       "name": "keeps resource percentages finite and does not coerce text to a measurement",
+       "line": 41
+      },
+      {
+       "name": "passes only existing explicit actions to the same bridge",
+       "line": 47
+      },
+      {
+       "name": "reports unavailable IPC without a fallback control or false status",
+       "line": 54
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "bridge",
+       "line": 9
+      }
+     ],
+     "assertionCount": 15,
+     "assertionDigest": "328571723bf34cca89367270d6ff200444a3b7b1ca090f3c67b7f2ce8cff4f9b",
+     "assertionExamples": [
+      {
+       "line": 18,
+       "kind": "expect",
+       "sha256": "c68730f61b9aa9d070c86e3facee291f3d744258a4f8768d0eb1ed90b08a73da"
+      },
+      {
+       "line": 19,
+       "kind": "expect",
+       "sha256": "31c3966cd5d0546af4e8fc9dda1f9fdba97d89c11acea76d24290af410fa23d9"
+      },
+      {
+       "line": 23,
+       "kind": "expect",
+       "sha256": "bb43a79ff577f5874db48e5764f4e8f98647d65e2e9a0b550321e67927d98c65"
+      },
+      {
+       "line": 27,
+       "kind": "expect",
+       "sha256": "f914329db32a16d3936ceebfde5fa58cc07730fc17dbf9a23986308f1e6cd059"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "0461d04977a6958768c694ea1bda292c1808d5cd3654f94180674eee881fe88b"
+   },
+   "prior_row_sha256": "a3c3375e3befb1fe6c545b374e6768a88d17509734e7fdf25452b1c3a0574b8b",
+   "current_row_sha256": "c0a83128d73b58d6af3b73da2c88d7304858d0db129a5ff52c0f96f8a14e1677"
+  },
+  {
+   "path": "apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx",
+   "prior_row": {
+    "path": "apps/desktop/src/renderer/features/python-runtime/tests/python-runtime-controls.recovery.ui.test.tsx",
+    "facts": {
+     "sha256": "1d36083da854d78f668e320d1b7871778e8e309ec80005370a0fbaf5ee96c355",
+     "bytes": 15852,
+     "cases": [
+      {
+       "name": "keeps an old ready read from overwriting a later Stop result",
+       "line": 35
+      },
+      {
+       "name": "admits only one synchronous explicit control and never polls over it",
+       "line": 48
+      },
+      {
+       "name": "retires old reads and control results after a committed client replacement",
+       "line": 62
+      },
+      {
+       "name": "does no read or control while disabled, including captured retired callbacks",
+       "line": 76
+      },
+      {
+       "name": "keeps the StrictMode current read and does not control on setup or cleanup",
+       "line": 87
+      },
+      {
+       "name": "adopts changed earlier log entries even when length and last entry are equal",
+       "line": 95
+      },
+      {
+       "name": "prepares malformed consumed status inside the read boundary and recovers explicitly",
+       "line": 103
+      },
+      {
+       "name": "renders the real control actions and fixed failure copy without starting a runtime implicitly",
+       "line": 109
+      },
+      {
+       "name": "announces an explicit pending control and releases its disabled buttons after the reply",
+       "line": 123
+      },
+      {
+       "name": "recovers a failed status read through the rendered Refresh without sending a control",
+       "line": 136
+      },
+      {
+       "name": "does not retire the visible client when a replacement render suspends",
+       "line": 145
+      },
+      {
+       "name": "refuses captured callbacks after the controls unmount",
+       "line": 158
+      },
+      {
+       "name": "blocks same-turn controls while an explicit Refresh owns a pending read",
+       "line": 165
+      },
+      {
+       "name": "joins a background resource read for foreground Refresh and includes its logs",
+       "line": 176
+      },
+      {
+       "name": "retains an invalidated physical read until %s, then issues one fresh foreground read",
+       "line": 188
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "snapshot",
+       "line": 12
+      },
+      {
+       "name": "deferred",
+       "line": 15
+      },
+      {
+       "name": "mockControl",
+       "line": 21
+      },
+      {
+       "name": "Probe",
+       "line": 23
+      },
+      {
+       "name": "render",
+       "line": 28
+      }
+     ],
+     "assertionCount": 66,
+     "assertionDigest": "ca4c3243224b66a9aeba20fa78e3437a8b6a8c290fc93928d34d606e80e90fa1",
+     "assertionExamples": [
+      {
+       "line": 41,
+       "kind": "expect",
+       "sha256": "8593268ac7541311bef49eaad6f3281ac91fd90a9f119689e723040c3bbc4e7f"
+      },
+      {
+       "line": 43,
+       "kind": "expect",
+       "sha256": "7e6bc419e4293187ab5103e6b011e6d325308b10b4694c793ba0c75ec62bf35b"
+      },
+      {
+       "line": 45,
+       "kind": "expect",
+       "sha256": "7e6bc419e4293187ab5103e6b011e6d325308b10b4694c793ba0c75ec62bf35b"
+      },
+      {
+       "line": 46,
+       "kind": "expect",
+       "sha256": "87d991b8f13b39fcf864828806e6f9441eac4e8628fcd6f961a2f34b4f80cfe5"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "1d36083da854d78f668e320d1b7871778e8e309ec80005370a0fbaf5ee96c355"
+   },
+   "prior_row_sha256": "3d699bde73712b99ad91550e6e1a7f1cbf7172de71a5d97061fc82f255103c0c",
+   "current_row_sha256": "86ed20a87f97157aa22af7447d41d2e630d5e16172e922c67ac56f06e39d11f3"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/tests/native-data-context-admission.unit.test.ts",
+    "facts": {
+     "sha256": "8fd3d3fb1ed30e2a381b8b966e213825eb68fca5438934cd87874f262069e7ab",
+     "bytes": 15864,
+     "cases": [
+      {
+       "name": "rejects unknown mode %# before metadata, Page or file effects",
+       "line": 34
+      },
+      {
+       "name": "rejects unsupported native host/project %# before Page or files",
+       "line": 42
+      },
+      {
+       "name": "preserves both standard names and gives each native cohort a separate exclusive-create destination",
+       "line": 56
+      },
+      {
+       "name": "rejects unsupported or path-like result host %#",
+       "line": 62
+      },
+      {
+       "name": "rejects unsupported result mode %#",
+       "line": 65
+      },
+      {
+       "name": "does not coerce a result host object",
+       "line": 68
+      },
+      {
+       "name": "prepares every owned standard Page in $file while retaining the actual mode",
+       "line": 132
+      },
+      {
+       "name": "detects %s first-window wiring",
+       "line": 135
+      },
+      {
+       "name": "detects missing reopened/runtime setup %#",
+       "line": 143
+      },
+      {
+       "name": "uses exact feature coverage while unknown or incomplete impact retains the generic guard",
+       "line": 149
+      }
+     ],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "caught",
+       "line": 31
+      },
+      {
+       "name": "descendants",
+       "line": 95
+      },
+      {
+       "name": "visit",
+       "line": 96
+      },
+      {
+       "name": "parse",
+       "line": 98
+      },
+      {
+       "name": "requireSetup",
+       "line": 104
+      },
+      {
+       "name": "validate",
+       "line": 110
+      }
+     ],
+     "assertionCount": 32,
+     "assertionDigest": "a20db922ead1352b48f41d581c97676c097fe16e8fe834186d1758faf87a65da",
+     "assertionExamples": [
+      {
+       "line": 39,
+       "kind": "expect",
+       "sha256": "bc2482c2fce392e8f61a7b1644f77e219819084471a8e76c86b72da2375544df"
+      },
+      {
+       "line": 39,
+       "kind": "expect",
+       "sha256": "6e1ee29483088dbc41931d6742fda66a6bfad50ce90f262cc6a3c2d2b0a86196"
+      },
+      {
+       "line": 40,
+       "kind": "expect",
+       "sha256": "1691ebb634cbf351cda5d79b5acb5f250235a5f49efbfa35d66ba1ccd8db0b46"
+      },
+      {
+       "line": 40,
+       "kind": "expect",
+       "sha256": "48e3b61d78644d16150e5ea9becda62a5dbc9709a8d319b18594e8a8b7ada2ac"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "8fd3d3fb1ed30e2a381b8b966e213825eb68fca5438934cd87874f262069e7ab"
+   },
+   "prior_row_sha256": "81c75694504c1aaea4a859009b3d598da88d3a05f3d7e946dcbb25ded468a5a1",
+   "current_row_sha256": "c594b110acf30ad1b867cae7cbce442bcd6b87a7fc564eb56b17792da3957e0b"
+  }
+ ]
+}

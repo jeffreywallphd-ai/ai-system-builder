@@ -1,15 +1,19 @@
 import type { ArtifactCatalogAppendPort } from "../ports/artifact-catalog";
 import type { ApplicationRequestContext } from "../ports";
+import type { VerifiedIngestionProviderArtifact } from "../ports/ingestion";
 import type { LoggingPort } from "../ports/logging";
 import type {
   ArtifactRepoStoragePort,
   ArtifactStorageBindingPort,
+  HuggingFaceRepoBrowserPort,
 } from "../ports/storage";
 import { resolveArtifactFamily } from "../shared/artifact-family-classifier";
-import { createContractError } from "../../contracts/shared";
+import { createContractError, type ContractResult } from "../../contracts/shared";
 import {
   createHasArtifactInRepoRequest,
   encodeArtifactRepoBackingLocator,
+  isHuggingFaceDatasetCommit,
+  readHuggingFaceDatasetLicenseIds,
 } from "../../contracts/storage";
 import {
   Artifact,
@@ -52,6 +56,7 @@ export interface RegisterArtifactFromRepoSuccessValue {
 
 export interface RegisterArtifactFromRepoUseCaseDependencies {
   artifactRepoStorage: ArtifactRepoStoragePort;
+  readDatasetRevisionLicense?: HuggingFaceRepoBrowserPort["readDatasetRevisionLicense"];
   artifactBindingStorage: ArtifactStorageBindingPort;
   artifactCatalogAppend: ArtifactCatalogAppendPort;
   logging: LoggingPort;
@@ -62,6 +67,7 @@ export interface RegisterArtifactFromRepoUseCaseDependencies {
 
 export class RegisterArtifactFromRepoUseCase {
   private readonly artifactRepoStorage: ArtifactRepoStoragePort;
+  private readonly readDatasetRevisionLicense?: HuggingFaceRepoBrowserPort["readDatasetRevisionLicense"];
   private readonly artifactBindingStorage: ArtifactStorageBindingPort;
   private readonly artifactCatalogAppend: ArtifactCatalogAppendPort;
   private readonly logging: LoggingPort;
@@ -72,6 +78,7 @@ export class RegisterArtifactFromRepoUseCase {
     dependencies: RegisterArtifactFromRepoUseCaseDependencies,
   ) {
     this.artifactRepoStorage = dependencies.artifactRepoStorage;
+    this.readDatasetRevisionLicense = dependencies.readDatasetRevisionLicense;
     this.artifactBindingStorage = dependencies.artifactBindingStorage;
     this.artifactCatalogAppend = dependencies.artifactCatalogAppend;
     this.logging = dependencies.logging;
@@ -83,10 +90,19 @@ export class RegisterArtifactFromRepoUseCase {
       (() => artifactIdFactory.createArtifactId());
   }
 
-  public async execute(
+  /** Verify the repository file and construct its rows without writing local storage. */
+  public async prepare(
     command: RegisterArtifactFromRepoCommand,
     context: ApplicationRequestContext = {},
-  ) {
+    licenseAdmission?: {
+      readonly signal: AbortSignal;
+      readonly stillAllowed: () => Promise<boolean>;
+    },
+  ): Promise<ContractResult<{
+    readonly artifact: VerifiedIngestionProviderArtifact;
+    readonly registration: RegisterArtifactFromRepoSuccessValue;
+    readonly providerLicenseIds?: readonly string[];
+  }>> {
     const startedAt = Date.now();
     const provider = command.target.provider?.trim();
     const repository = command.target.repository?.trim();
@@ -242,51 +258,38 @@ export class RegisterArtifactFromRepoUseCase {
       return notFoundResult;
     }
 
+    let providerLicenseIds: readonly string[] | undefined;
+    const readLicense = this.readDatasetRevisionLicense;
+    if (readLicense && licenseAdmission && !licenseAdmission.signal.aborted &&
+        provider === "huggingface" && isHuggingFaceDatasetCommit(revision)) {
+      const { signal, stillAllowed } = licenseAdmission;
+      let removeAbortListener: (() => void) | undefined;
+      const deadline = new Promise<undefined>((resolve) => {
+        const onAbort = () => resolve(undefined);
+        signal.addEventListener("abort", onAbort, { once: true });
+        removeAbortListener = () => signal.removeEventListener("abort", onAbort);
+      });
+      try {
+        const observation = async () => {
+          if (!(await stillAllowed()) || signal.aborted) return undefined;
+          return readLicense({ repository, revision }, signal, stillAllowed);
+        };
+        const license = await Promise.race([observation(), deadline]);
+        if (!signal.aborted && license?.repository === repository && license.revision === revision &&
+            Array.isArray(license.licenseIds)) {
+          providerLicenseIds = readHuggingFaceDatasetLicenseIds(license.licenseIds);
+        }
+      } catch {
+        // Unavailable optional metadata leaves the license unknown.
+      } finally {
+        removeAbortListener?.();
+      }
+    }
+
     // Internal artifact identity is system-owned; repo coordinates remain backing metadata.
     const artifactId = this.createArtifactId();
     const verifiedAt = this.now();
     const locator = encodeArtifactRepoBackingLocator({ repository, path });
-
-    const appendResult =
-      await this.artifactCatalogAppend.appendArtifactCatalogRecord(
-        {
-          record: {
-            workspaceId,
-            storageKey: artifactId.toString(),
-            artifactFamily: resolvedArtifactFamily,
-            mediaType: command.mediaType?.trim() || undefined,
-            sourceKind: "upload",
-            originalName: path,
-            createdAt: verifiedAt,
-          },
-        },
-        context,
-      );
-    if (!appendResult.ok) {
-      await this.logging.log({
-        timestamp: this.now(),
-        level: "error",
-        verbosity: "normal",
-        event: "application.huggingface.file-registration.failed",
-        message:
-          "Hugging Face file registration failed while appending artifact catalog record.",
-        component: "application.use-cases",
-        operation: "artifact.register.from-repo",
-        useCase: "RegisterArtifactFromRepoUseCase",
-        requestId: context.requestId,
-        correlationId: context.correlationId,
-        outcome: "failure",
-        durationMs: Date.now() - startedAt,
-        data: { provider, repository, path, revision },
-        error: {
-          errorType: "persistence",
-          errorCode: appendResult.error.code,
-          errorMessage: appendResult.error.message,
-          details: appendResult.error.details,
-        },
-      });
-      return appendResult;
-    }
 
     const artifact = Artifact.create({
       id: artifactId,
@@ -348,17 +351,61 @@ export class RegisterArtifactFromRepoUseCase {
     const importedSourceBinding = importedSource.toStorageBinding(
       artifact.id.toString(),
     );
-    const bindingResult =
-      await this.artifactBindingStorage.upsertArtifactStorageBinding(
-        {
-          binding: {
-            ...importedSourceBinding,
-            workspaceId,
-          },
-        },
-        context,
-      );
+    const registration: RegisterArtifactFromRepoSuccessValue = {
+      artifactId: artifact.id.toString(),
+      backing: {
+        role: "imported-source",
+        target: { provider, repository, path, revision, locator },
+        verification: { exists: true, verifiedAt },
+      },
+    };
+    return { ok: true, value: { registration,
+      ...(providerLicenseIds === undefined ? {} : { providerLicenseIds }), artifact: {
+      catalog: {
+        workspaceId, storageKey: artifactId.toString(), artifactFamily: resolvedArtifactFamily,
+        mediaType: command.mediaType?.trim() || undefined, sourceKind: "upload", originalName: path, createdAt: verifiedAt,
+      },
+      binding: { ...importedSourceBinding, workspaceId },
+    }} };
+  }
 
+  public async execute(
+    command: RegisterArtifactFromRepoCommand,
+    context: ApplicationRequestContext = {},
+  ): Promise<ContractResult<RegisterArtifactFromRepoSuccessValue>> {
+    const startedAt = Date.now();
+    const prepared = await this.prepare(command, context);
+    if (!prepared.ok) return prepared;
+    const { artifact, registration } = prepared.value;
+    const { provider, repository, path, revision } = registration.backing.target;
+    const appendResult = await this.artifactCatalogAppend.appendArtifactCatalogRecord({ record: artifact.catalog }, context);
+    if (!appendResult.ok) {
+      await this.logging.log({
+        timestamp: this.now(),
+        level: "error",
+        verbosity: "normal",
+        event: "application.huggingface.file-registration.failed",
+        message:
+          "Hugging Face file registration failed while appending artifact catalog record.",
+        component: "application.use-cases",
+        operation: "artifact.register.from-repo",
+        useCase: "RegisterArtifactFromRepoUseCase",
+        requestId: context.requestId,
+        correlationId: context.correlationId,
+        outcome: "failure",
+        durationMs: Date.now() - startedAt,
+        data: { provider, repository, path, revision },
+        error: {
+          errorType: "persistence",
+          errorCode: appendResult.error.code,
+          errorMessage: appendResult.error.message,
+          details: appendResult.error.details,
+        },
+      });
+      return appendResult;
+    }
+
+    const bindingResult = await this.artifactBindingStorage.upsertArtifactStorageBinding({ binding: artifact.binding }, context);
     if (!bindingResult.ok) {
       await this.logging.log({
         timestamp: this.now(),
@@ -385,26 +432,6 @@ export class RegisterArtifactFromRepoUseCase {
       return bindingResult;
     }
 
-    const result = {
-      ok: true as const,
-      value: {
-        artifactId: artifact.id.toString(),
-        backing: {
-          role: "imported-source",
-          target: {
-            provider,
-            repository,
-            path,
-            revision,
-            locator,
-          },
-          verification: {
-            exists: true,
-            verifiedAt,
-          },
-        },
-      } satisfies RegisterArtifactFromRepoSuccessValue,
-    };
     await this.logging.log({
       timestamp: this.now(),
       level: "info",
@@ -419,13 +446,13 @@ export class RegisterArtifactFromRepoUseCase {
       outcome: "success",
       durationMs: Date.now() - startedAt,
       data: {
-        artifactId: result.value.artifactId,
+        artifactId: registration.artifactId,
         provider,
         repository,
         path,
         revision,
       },
     });
-    return result;
+    return { ok: true, value: registration };
   }
 }

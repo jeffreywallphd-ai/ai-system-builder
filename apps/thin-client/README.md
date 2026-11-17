@@ -4,6 +4,25 @@
 
 `apps/thin-client` is the server-backed thin-client host UI surface.
 
+The Systems page uses the existing saved connection to observe committed updates
+when its managed server provides saved-state streaming. Scoped replay recovers
+after a disconnect. Updates refresh saved system lists and preserve the user's
+current view and draft save base. If another client archives an open system,
+the Composer keeps that view open and disables saving and building. Updates
+pause while the tab is hidden, and delayed replies from a previous connection
+cannot change the saved view.
+
+When the server enables browser takeover, the shared confirmation dialog
+lets you accept or decline a request. Revoke returns the tab to your control
+without waiting for the server. The tab can neither keep nor reuse its
+document proof after a page exit, workspace change or sign-in change.
+While an accepted takeover is active, browser navigation, workspace switching
+and conflicting Systems controls are unavailable. Revoke restores them locally.
+On hosts with presentation enabled, an accepted chat session can show saved
+system, component, validation, run or artifact information in the shared
+resource panel. The tab keeps the user's route and draft. Local revoke hides
+the panel and stops further delivery or context publication from that session.
+
 Current scope:
 
 - minimal React bootstrap (`src/main.tsx`, `src/App.tsx`)
@@ -19,9 +38,16 @@ Current scope:
   beside the feature that the user must inspect or act on
 - short secured model-download API calls at `/api/model/download/start`,
   `/read`, `/list`, and `/cancel`; the browser never receives host-local paths
-- Home page workspace card with a compact responsive equal-width two-column layout: change-workspace controls on the left and create-workspace controls on the right
+- Home page workspace card with a responsive four-metric dashboard to the right
+  of the heading and workspace controls
+- shared mini dashboards instead of decorative page-header artwork on Systems,
+  Data, Assets, Models, Image Generation, and Settings; all workspace metrics
+  use existing scoped API clients and fail softly when a summary is unavailable
+- no dedicated Reusable Library route or Home card; underlying cross-workspace
+  reuse APIs remain available to asset workflows
 - feature-local artifact upload workflow under `src/features/artifact-upload/`, including multi-file selection, independent per-file results, and cancelation for selected or queued uploads
 - feature-local artifact browser workflow under `src/features/artifact-browser/`
+- Artifact source reads reject incomplete successful API responses instead of showing a false empty list. Dataset Preparation shows a safe error and direct source retry; a genuine empty list still shows the add-data guidance.
 - fetch-based HTTP artifact-upload client that calls the server API route (`/api/artifact/upload`)
 - fetch-based HTTP website ingestion client that calls server API routes (`/api/artifact/ingest-website-page`, `/api/artifact/ingest-website-pages-batch`)
 - artifact publish verification/re-check flow that calls `POST /api/artifact/publish/verify`
@@ -32,9 +58,19 @@ Current scope:
 - artifact browser list/detail now surfaces minimal artifact-first backing-state cues (`Remote only`, `Localized`, `Published`) and local object availability/localization state
 - artifact-browser published-backing re-check state orchestration uses a shared cross-host hook from `modules/ui/shared`
 - settings page server restart control that calls `POST /api/server/restart`
-- token-first style baseline under `src/styles/`
+- Styles load the shared baseline first, then thin-client feature rules, then the
+  shared forced-colors overrides.
+- Security restart examples preserve whitespace and wrap long commands inside the panel, including at narrow widths.
+- Image Generation fields use labels tied to their controls. The help buttons beside those labels remain separate controls.
 - Data Management tab content uses the shared sectioned panel header style for Data Artifact Ingester and Artifact Browser; panel headers stay title-only, with actions such as Artifact Browser refresh placed in the body.
 - Dataset Preparation colocates its optional meaningful save name with final approval; one approval saves the complete curated ready set and opens the exact saved dataset in Artifact Browser, without a post-save Saved versions section. Dataset Review persists rejections and approved edits as immutable minor versions.
+- Saved versions offer **Use this setup again**. The page waits for current source
+  metadata and applies all represented settings together. A success notice follows
+  the form update; preparation still requires an explicit start. Unsupported saved
+  settings leave the current form unchanged. File lookups use the existing scoped
+  detail API, at most 100 keys, sequentially within a 15-second caller deadline.
+  Navigation, later edits, source retry, workspace/client changes and task start
+  retire old restores. Local-only outputs and current runtime/provider guards remain.
 
 ## Hugging Face auth behavior
 
@@ -53,7 +89,10 @@ case path rather than desktop preload wiring.
 - Default API base URL in thin-client code is `/api`.
 - In local development, Vite proxies `/api` to the server on `127.0.0.1:3010`, which allows running
   thin-client and server on separate ports while keeping feature clients same-origin by default.
-- Thin-client Vite dev server defaults to HTTP at `http://localhost:5173`.
+- Thin-client Vite dev server and preview default to loopback at `http://127.0.0.1:5173` (preview uses its own port).
+- Nonloopback access requires `AI_SYSTEM_BUILDER_SECURITY_MODE=lan-https-token`, which also requires
+  frontend HTTPS. Explicitly disabling frontend HTTPS fails before certificate access. The final resolved
+  server and preview configuration is checked, including CLI `--host` overrides.
 - Optional thin-client Vite HTTPS can be enabled with:
   - `AI_SYSTEM_BUILDER_THIN_CLIENT_HTTPS_ENABLED=true`
   - explicit cert/key files via `AI_SYSTEM_BUILDER_THIN_CLIENT_TLS_CERT_PATH` and
@@ -61,12 +100,16 @@ case path rather than desktop preload wiring.
   - generated/reused dev cert material via `AI_SYSTEM_BUILDER_TLS_CERT_MODE=auto-self-signed`
     or `auto-local-ca`.
 - When explicit thin-client cert/key paths are set, files must be present and readable or Vite startup fails with an actionable error.
-- Thin-client HTTPS env vars control only the Vite UI listener (port 5173), not server API listener mode (port 3010).
+- Thin-client HTTPS env vars control the Vite UI listener (port 5173), not server API listener mode (port 3010).
+  LAN mode requires both the UI and its effective API proxy target to use HTTPS.
 - When `AI_SYSTEM_BUILDER_HTTPS_ENABLED=true` or `AI_SYSTEM_BUILDER_SECURITY_MODE=lan-https-token` is
   set for the thin-client dev server process, the Vite proxy targets `https://127.0.0.1:3010`.
 - For dev-generated TLS (`AI_SYSTEM_BUILDER_TLS_CERT_MODE=auto-self-signed` or `auto-local-ca`), the
-  Vite proxy disables proxy-side certificate verification so Node can reach the HTTPS dev server.
+  Vite proxy allows development trust only for exact loopback HTTPS targets. Remote HTTPS always verifies
+  certificates, including when the development certificate mode is set.
 - To force a specific dev proxy origin, set `AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET`.
+  HTTP targets in LAN mode, unsupported schemes and embedded credentials fail startup.
+- Production builds do not resolve development listener certificates or proxy targets.
 - To use a different server origin directly, set `VITE_API_BASE_URL` (for example
   `http://127.0.0.1:3100/api`).
 
@@ -175,3 +218,87 @@ Notes:
 - `auto-local-ca` requires manual CA trust installation.
 - Switching thin-client Vite between HTTP/HTTPS requires restarting `npm run dev:thin-client`.
 - Never commit or log private keys; this TLS mode is for development only, not public-internet hardening.
+
+Development security mode changes use `secureFetch` and the existing paired
+device token. Enforced-mode changes require `security:admin`; a denial is not
+retried through public fetch. Public status reads retain their existing policy.
+
+## Browser model action ownership
+
+Model browsing and inventory reset when the workspace or API client changes. Old
+replies cannot refresh the previous workspace, replace the current file dialog or
+publish a completion. Reference saves, downloads and record deletion share one
+synchronous pending-action owner. Downloads remain host-owned after acceptance;
+leaving Models does not cancel them. Notifications retain task progress.
+
+Model file reads require an explicit current dialog action and matching record
+identity. Closing or selecting another model invalidates pending file reads.
+Deletion retains confirmation and always requests record-only deletion. Unexpected
+exceptions use fixed notification and diagnostic copy. Focused tests use synthetic
+clients; they do not qualify provider downloads, model accuracy or physical files.
+
+## Artifact Browser request ownership
+
+Artifact lists and previews belong to the current workspace and API client.
+New reads retire earlier replies. A workspace or client change clears prior
+selection and typed deletion intent. Single and bulk deletion share one
+synchronous admission guard. A partial bulk failure waits for all dispatched
+requests, refreshes the list and retains only failed items for explicit retry.
+Leaving the workspace does not cancel an accepted host deletion. Old replies
+cannot refresh or notify the new workspace. Application authorization, local
+cleanup order and provider deletion policy remain unchanged.
+
+The focused HTTP UI fixture uses actual routes, use cases, local JSON catalog
+and filesystem bytes. Synthetic access and scheduling faults are test inputs.
+It does not qualify a physical browser, SQLite, provider access or native races.
+
+## Security status recovery
+
+The Security page distinguishes a pending read, an unavailable result and a known
+listener. Use **Refresh status** after a failed read. A denied or malformed reply
+shows fixed guidance. It does not reveal exception text or provider details.
+Authentication and authorization stay on the server; the page adds no pairing,
+login or administration controls. Existing pairing and development-mode helpers
+remain available behind their current client boundary.
+
+The committed view owns status and action replies. It rejects retired replies
+and checks the locally observed credential before automatic invalid-token removal.
+The private browser token store provides a comparison handle without returning
+its captured value. Unreadable storage cannot supply an empty-store ownership
+proof. Pairing requires readable storage and immediate write readback; failed
+readback never rolls back or deletes another writer's data. A successful action
+also needs a matching current status before it reports success. Retiring a view
+does not cancel or undo a request already accepted by the server.
+
+These checks operate in the current JavaScript view. Separate localStorage
+operations are not an atomic comparison or replacement across browser tabs.
+Immediate readback proves only the locally observed write. Browser/process
+durability and cross-tab coordination remain separate qualification and design
+concerns; this feature does not claim either property.
+
+The security client keeps public and authenticated requests distinct. Canonical
+server security operations retain their HTTP status and safe code. Public errors
+use fixed copy, and consumed status fields are checked and copied before display.
+Unknown payload fields are excluded. Certificate download links use the existing
+relative local-CA endpoint. This preserves the existing localStorage convenience
+policy; it does not provide hostile-browser credential protection.
+
+Use the six-file `security-status-ui` contributor profile for local feature
+regressions. The tests use synthetic storage and responses. Actual TLS, server
+identity, managed authorization and final host qualification remain separate.
+
+## Review automation plans
+
+For a managed host that enables plan review, open **Settings** and select
+**Review plan requests**. Choose a request for the current workspace. The
+dialog shows the requesting client, each proposed change and the expiry
+time. You can approve all changes or approve them one at a time. You can
+also deny, cancel, or withdraw a request. Use Escape to close the dialog.
+Your decisions apply to the request and saved revisions shown in the
+dialog.
+
+Select **Open plan approval chat** in Settings to review the same requests
+as a conversation. Use the controls to send a decision. The app displays
+your choice and whether it recorded the decision. A decision made here
+also applies in the popup. Refresh the request if another view has already
+changed it.

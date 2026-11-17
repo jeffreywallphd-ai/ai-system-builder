@@ -1,9 +1,10 @@
+import { datasetVersionReplayFixture } from "./datasetVersionReplayFixture";
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DatasetPreparationFeature as DatasetPreparationFeatureComponent } from "../components/DatasetPreparationFeature";
-import { resetDatasetPreparationPageStateForTests } from "../hooks/useDatasetPreparationFeature";
+import { resetDatasetPreparationPageStateForTests, useDatasetPreparationFeature } from "../hooks/useDatasetPreparationFeature";
 import {
   NotificationProvider,
   NotificationViewport,
@@ -83,6 +84,291 @@ describe("DatasetPreparationFeature", () => {
     container = undefined;
     resetDatasetPreparationPageStateForTests();
     delete window.desktopApi;
+  });
+
+  async function mountRecoveredTask(requestId: string, overrides: Record<string, unknown> = {}) {
+    const key = "ai-system-builder.preparation-task.v1:workspace-a";
+    sessionStorage.setItem(key, requestId);
+    const onPrepared = vi.fn();
+    const client = {
+      browseSourceArtifacts: async () => [],
+      readPrepareTrainingDatasetTask: vi.fn(async () => ({
+        ok: true, status: "review-required",
+        value: { qualityReport: { reportFingerprint: `sha256:${"b".repeat(64)}` }, review: {} },
+      })),
+      approvePreparedTrainingDataset: vi.fn(async () => ({ ok: true, value: successfulDatasetResult() })),
+      cancelPrepareTrainingDatasetTask: vi.fn(async (id: string) => ({ ok: true, value: { requestId: id, cancelled: true, status: "cancelled" } })),
+      ...overrides,
+    } as any;
+    let feature!: ReturnType<typeof useDatasetPreparationFeature>;
+    function RecoveryProbe({ workspaceId }: { workspaceId: string }) {
+      feature = useDatasetPreparationFeature({ workspaceId, client, settingsClient, onPrepared });
+      return null;
+    }
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    async function renderWorkspace(workspaceId: string) {
+      await act(async () => { root!.render(<RecoveryProbe key={workspaceId} workspaceId={workspaceId} />); await flushAsyncWork(20); });
+    }
+    await renderWorkspace("workspace-a");
+    return { key, client, onPrepared, renderWorkspace, get state() { return feature; } };
+  }
+
+  it("retires the resolved review recovery marker after successful approval", async () => {
+    const key = "ai-system-builder.preparation-task.v1:workspace-a";
+    const requestId = "review-recovery-approved";
+    sessionStorage.setItem(key, requestId);
+    const onPrepared = vi.fn();
+    const client = {
+      browseSourceArtifacts: async () => [],
+      readPrepareTrainingDatasetTask: async () => ({
+        ok: true, status: "review-required",
+        value: { qualityReport: { reportFingerprint: `sha256:${"a".repeat(64)}` }, review: {} },
+      }),
+      approvePreparedTrainingDataset: vi.fn(async () => ({ ok: true, value: successfulDatasetResult() })),
+    } as any;
+    let feature!: ReturnType<typeof useDatasetPreparationFeature>;
+    function RecoveryProbe() {
+      feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client, settingsClient, onPrepared });
+      return null;
+    }
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => { root!.render(<RecoveryProbe />); await flushAsyncWork(20); });
+    expect(feature.qualityReview?.requestId).toBe(requestId);
+    expect(sessionStorage.getItem(key)).toBe(requestId);
+    await act(async () => { await feature.onApproveReview(); await flushAsyncWork(20); });
+    expect(client.approvePreparedTrainingDataset).toHaveBeenCalledWith(requestId, `sha256:${"a".repeat(64)}`, "workspace-a", "");
+    expect(onPrepared).toHaveBeenCalledOnce();
+    expect(sessionStorage.getItem(key)).toBeNull();
+  });
+
+  it("retires a directly succeeded task without clearing another workspace's recovery", async () => {
+    const otherKey = "ai-system-builder.preparation-task.v1:workspace-b";
+    sessionStorage.setItem(otherKey, "other-workspace-request");
+    const recovery = await mountRecoveredTask("direct-recovery-success", {
+      readPrepareTrainingDatasetTask: async () => ({ ok: true, status: "succeeded", value: successfulDatasetResult() }),
+    });
+    expect(recovery.state.status.kind).toBe("success");
+    expect(recovery.onPrepared).toHaveBeenCalledOnce();
+    expect(sessionStorage.getItem(recovery.key)).toBeNull();
+    expect(sessionStorage.getItem(otherKey)).toBe("other-workspace-request");
+  });
+
+  it.each(["review", "running", "reconnecting"] as const)("retains %s task recovery when the page unmounts", async mode => {
+    vi.useFakeTimers();
+    try {
+      const requestId = `retain-recovery-${mode}`;
+      const overrides = mode === "review" ? {} : {
+        readPrepareTrainingDatasetTask: async () => mode === "running"
+          ? { ok: true, status: "running", progress: { message: "Preparing test data." } }
+          : { ok: false, error: { message: "fetch failed" } },
+      };
+      const recovery = await mountRecoveredTask(requestId, overrides);
+      expect(sessionStorage.getItem(recovery.key)).toBe(requestId);
+      if (mode === "review") expect(recovery.state.qualityReview?.requestId).toBe(requestId);
+      else expect(recovery.state.status.kind).toBe("loading");
+      await act(async () => root!.unmount()); root = undefined;
+      expect(sessionStorage.getItem(recovery.key)).toBe(requestId);
+      expect(recovery.onPrepared).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("retires recovery only after a confirmed matching discard", async () => {
+    const recovery = await mountRecoveredTask("confirmed-review-discard");
+    await act(async () => { await recovery.state.onDiscardReview(); await flushAsyncWork(); });
+    expect(recovery.client.cancelPrepareTrainingDatasetTask).toHaveBeenCalledWith("confirmed-review-discard", "workspace-a");
+    expect(sessionStorage.getItem(recovery.key)).toBeNull();
+    expect(recovery.state.qualityReview).toBeUndefined();
+    expect(recovery.onPrepared).not.toHaveBeenCalled();
+  });
+
+  it.each(["approval-denied", "approval-threw", "discard-denied", "discard-running", "discard-wrong-request", "discard-wrong-status"] as const)("retains review recovery after %s", async mode => {
+    const requestId = `failed-review-${mode}`;
+    const recovery = await mountRecoveredTask(requestId, {
+      approvePreparedTrainingDataset: async () => {
+        if (mode === "approval-threw") throw new Error("Test approval is unavailable.");
+        return { ok: false, error: { message: "Test approval was denied." } };
+      },
+      cancelPrepareTrainingDatasetTask: async () => mode === "discard-denied"
+        ? { ok: false, error: { message: "Test discard was denied." } }
+        : { ok: true, value: { requestId: mode === "discard-wrong-request" ? "another-request" : requestId,
+          cancelled: mode !== "discard-running", status: mode === "discard-wrong-status" ? "unknown" : mode === "discard-running" ? "running" : "cancelled" } },
+    });
+    await act(async () => {
+      if (mode.startsWith("approval")) await recovery.state.onApproveReview();
+      else await recovery.state.onDiscardReview();
+      await flushAsyncWork();
+    });
+    expect(sessionStorage.getItem(recovery.key)).toBe(requestId);
+    expect(recovery.state.qualityReview?.requestId).toBe(requestId);
+    expect(recovery.onPrepared).not.toHaveBeenCalled();
+  });
+
+  it("keeps newer recovery and captures the original workspace for a delayed approval", async () => {
+    let resolveApproval!: (value: any) => void;
+    const approval = new Promise(resolve => { resolveApproval = resolve; });
+    const recovery = await mountRecoveredTask("old-workspace-review", { approvePreparedTrainingDataset: () => approval });
+    let action!: Promise<void>;
+    await act(async () => { action = recovery.state.onApproveReview(); await flushAsyncWork(); });
+    sessionStorage.setItem(recovery.key, "newer-workspace-a-request");
+    const otherKey = "ai-system-builder.preparation-task.v1:workspace-b";
+    sessionStorage.setItem(otherKey, "workspace-b-review");
+    await recovery.renderWorkspace("workspace-b");
+    await act(async () => { resolveApproval({ ok: true, value: successfulDatasetResult() }); await action; await flushAsyncWork(); });
+    expect(sessionStorage.getItem(recovery.key)).toBe("newer-workspace-a-request");
+    expect(sessionStorage.getItem(otherKey)).toBe("workspace-b-review");
+    expect(recovery.state.qualityReview?.requestId).toBe("workspace-b-review");
+  });
+
+  it.each(["getItem", "removeItem"] as const)("preserves a successful approval when recovery storage %s fails", async method => {
+    const recovery = await mountRecoveredTask(`restricted-review-${method}`);
+    const original = Storage.prototype[method];
+    const denied = vi.spyOn(Storage.prototype, method).mockImplementation(function (this: Storage, key: string) {
+      if (this === sessionStorage && key === recovery.key) throw new Error("Test storage is unavailable.");
+      return original.call(this, key) as any;
+    });
+    try {
+      await act(async () => { await recovery.state.onApproveReview(); await flushAsyncWork(); });
+      expect(recovery.state.status.kind).toBe("success");
+      expect(recovery.onPrepared).toHaveBeenCalledOnce();
+    } finally { denied.mockRestore(); }
+  });
+
+  it.each(["memory", "decoder"] as const)("preserves checked output intent across live %s changes", async change => {
+    vi.useFakeTimers();
+    try {
+      let availableRam = 8 * 1024 ** 3;
+      let decoderAvailable = true;
+      const submit = vi.fn(async (..._args: any[]) => ({ requestId: "checked-desktop" }));
+      const client = { browseSourceArtifacts: async () => [{ artifactId: "checked-source", label: "guide.md", storageKey: "uploads/guide.md", mediaType: "text/markdown" }],
+        startPrepareTrainingDataset: submit, readPrepareTrainingDatasetTask: async () => ({ ok: true, status: "cancelled" }) } as any;
+      const runtime = { readStatus: async () => ({ loadedModels: [], activeTaskCount: 0,
+        generationCapacity: { schemaVersion: "1", capturedAt: new Date().toISOString(), decoderAvailable, schemaSupported: true,
+          logicalProcessorCount: 16, totalSystemMemoryBytes: 16 * 1024 ** 3, availableSystemMemoryBytes: availableRam } }) } as any;
+      const settings = { ...settingsClient, resolveModelDefault: async () => ({ resolved: { source: "global", provider: "transformers",
+        modelId: "Qwen/Qwen2.5-1.5B-Instruct", device: "cpu", inferenceMode: "chat" } }) } as any;
+      let feature!: ReturnType<typeof useDatasetPreparationFeature>;
+      function Probe() {
+        feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client, settingsClient: settings, runtimeStatusClient: runtime });
+        return <output>{String(feature.constrainedDecodingEnabled)}</output>;
+      }
+      container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+      await act(async () => { root!.render(<Probe />); await flushAsyncWork(24); });
+      await act(async () => { feature.onToggleArtifact("checked-source"); feature.setModelId("Qwen/Qwen2.5-1.5B-Instruct");
+        feature.setModelDevice("cpu"); feature.setModelInferenceMode("chat"); feature.setModelMemoryOverflowPolicy("none"); await flushAsyncWork(24); });
+      expect(feature.constrainedDecodingEnabled).toBe(true);
+      if (change === "memory") availableRam = 2 * 1024 ** 3;
+      else {
+        await act(async () => { feature.setConstrainedDecodingPreference(true); });
+        decoderAvailable = false;
+      }
+      await act(async () => { await vi.advanceTimersByTimeAsync(5_000); await flushAsyncWork(); });
+      expect(feature.constrainedDecodingEnabled).toBe(true);
+      expect(feature.constrainedDecodingAvailable).toBe(change === "memory");
+      await act(async () => { await feature.onSubmit({ preventDefault() {} } as any); });
+      expect(submit.mock.calls.length).toBe(0); // Never print a generation request on failure.
+      if (change === "decoder") {
+        decoderAvailable = true;
+        await act(async () => { await vi.advanceTimersByTimeAsync(5_000); await flushAsyncWork(); });
+        await act(async () => { await feature.onSubmit({ preventDefault() {} } as any); });
+        expect(submit.mock.calls.length).toBe(1);
+        expect(submit.mock.calls[0]?.[0]?.recipe.generation.structuredOutput.constrainedDecoding).toBe(true);
+      }
+    } finally { vi.useRealTimers(); }
+  });
+
+  it.each(["standard", "offload-v1"] as const)("rejects an unsupported reused profile without partially replacing %s setup", async (initialMode) => {
+    const dispatch = vi.fn();
+    const fixture = datasetVersionReplayFixture("llm-instruction", "pdf");
+    fixture.recipe.generation.model.modelId = "fixture/replacement";
+    const client = { browseSourceArtifacts: async () => [fixture.source], readReplaySourceArtifacts: async () => [fixture.source], startPrepareTrainingDataset: dispatch } as any;
+    let feature!: ReturnType<typeof useDatasetPreparationFeature>;
+    let memoryMode: unknown = "offload-v99";
+    function ReuseProbe() {
+      feature = useDatasetPreparationFeature({ workspaceId: "workspace-a", client, settingsClient });
+      return <button onClick={() => {
+        if (memoryMode === undefined) delete fixture.recipe.generation.model.memoryMode;
+        else fixture.recipe.generation.model.memoryMode = memoryMode;
+        feature.onReuseDatasetVersion(fixture.reproduction, fixture.selection);
+      }}>Reuse saved setup</button>;
+    }
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    await act(async () => { root!.render(<ReuseProbe />); await flushAsyncWork(); });
+    await act(async () => { feature.setModelMemoryMode(initialMode); await flushAsyncWork(); });
+    const original = { modelId: feature.modelId, mode: feature.modelMemoryMode, sources: [...feature.selectedArtifactIds] };
+    await act(async () => { container!.querySelector("button")!.click(); await flushAsyncWork(); });
+    expect(feature.status.kind).toBe("error");
+    expect(feature.status.message).toContain("It was not restored; your current setup is unchanged");
+    expect({ modelId: feature.modelId, mode: feature.modelMemoryMode, sources: feature.selectedArtifactIds }).toEqual(original);
+    expect(dispatch).not.toHaveBeenCalled();
+    // Valid explicit reuse remains available, and legacy omission restores Standard.
+    for (const validMode of ["offload-v1", undefined]) {
+      memoryMode = validMode;
+      await act(async () => { container!.querySelector("button")!.click(); await flushAsyncWork(); });
+      expect(feature.status.kind).toBe("idle");
+      expect(feature.modelId).toBe("fixture/replacement");
+      expect(feature.modelMemoryMode).toBe(validMode ?? "standard");
+      expect(feature.selectedArtifactIds).toEqual([fixture.source.artifactId]);
+      expect(dispatch).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each(["running", "unknown", "error", "delayed"])("keeps observing when cancellation is %s", async (mode) => {
+    vi.useFakeTimers();
+    try {
+      let terminal = false;
+      let starts = 0;
+      let finishCancel: ((value: unknown) => void) | undefined;
+      const read = vi.fn(async () => ({ ok: true, status: terminal ? "cancelled" : "running" }));
+      const cancel = vi.fn(async () => {
+        if (mode === "error") throw new Error("private runtime failure");
+        if (mode === "delayed") return new Promise((resolve) => { finishCancel = resolve; });
+        return { ok: true, value: { requestId: "cancel-task", cancelled: false, status: mode } };
+      });
+      container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+      await act(async () => {
+        root?.render(<DatasetPreparationFeature settingsClient={settingsClient} client={{
+          browseSourceArtifacts: async () => [{ artifactId: "a", label: "a.jsonl", storageKey: "uploads/a.jsonl", mediaType: "application/x-ndjson" }],
+          startPrepareTrainingDataset: async () => ({ requestId: ++starts === 1 ? "cancel-task" : "cancel-task-2" }),
+          readPrepareTrainingDatasetTask: read, cancelPrepareTrainingDatasetTask: cancel,
+        } as any} />);
+        await flushAsyncWork();
+      });
+      await act(async () => { (container!.querySelector('input[type="checkbox"]') as HTMLInputElement).click(); });
+      await act(async () => {
+        container!.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await flushAsyncWork();
+      });
+      const stop = () => Array.from(container!.querySelectorAll("button")).find((b) => b.textContent === "Stop training" || b.textContent === "Stopping training...") as HTMLButtonElement;
+      expect(stop()).toBeTruthy();
+      await act(async () => { stop().click(); await flushAsyncWork(); });
+      expect(cancel).toHaveBeenCalledWith("cancel-task", "workspace-a");
+      expect(container!.textContent).not.toContain("Training stopped.");
+      expect(container!.textContent).not.toContain("private runtime failure");
+      const before = read.mock.calls.length;
+      await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      expect(read.mock.calls.length).toBeGreaterThan(before);
+      expect(stop()).toBeTruthy();
+      terminal = true;
+      await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      expect(container!.textContent).toContain("Training stopped.");
+      if (mode === "delayed") {
+        const oldCancel = finishCancel;
+        terminal = false;
+        await act(async () => {
+          container!.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+          await flushAsyncWork();
+        });
+        expect(stop().disabled).toBe(false);
+        await act(async () => { stop().click(); await flushAsyncWork(); });
+        expect(cancel).toHaveBeenLastCalledWith("cancel-task-2", "workspace-a");
+        await act(async () => { oldCancel?.({ ok: true, value: { requestId: "cancel-task", cancelled: false, status: "running" } }); await flushAsyncWork(); });
+        expect(stop().disabled).toBe(true);
+        terminal = true;
+        await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      }
+      await act(async () => { finishCancel?.({ ok: true, value: { requestId: "cancel-task-2", cancelled: false, status: "running" } }); await flushAsyncWork(); });
+      expect(container!.textContent).toContain("Training stopped.");
+    } finally { vi.useRealTimers(); }
   });
 
   it("constructs request, shows loading, and renders success output summary", async () => {
@@ -474,6 +760,16 @@ describe("DatasetPreparationFeature", () => {
       taskSettingsToggle?.click();
     });
     expect(container.textContent).toContain("Allowed labels");
+    const input = container.querySelector<HTMLInputElement>('input[placeholder="support, billing, bug report"]')!;
+    expect(input.labels).toHaveLength(1);
+    const label = input.labels![0];
+    expect(label.textContent?.trim()).toBe("Allowed labels");
+    expect(label.control).toBe(input);
+    const description = document.getElementById(input.getAttribute("aria-describedby") ?? "");
+    expect(description?.textContent).toBe("(optional)");
+    const help = input.parentElement?.querySelector<HTMLButtonElement>("button.ui-glossary-hint__button");
+    expect(help?.type).toBe("button");
+    expect(help?.closest("label")).toBeNull();
   });
 
   it("opens the notification card when a model download is started", async () => {
@@ -1203,7 +1499,7 @@ describe("DatasetPreparationFeature", () => {
       .mockResolvedValue({ requestId: "stop-task" });
     const cancelPrepareTrainingDatasetTask = vi.fn(async () => {
       cancelled = true;
-      return { ok: true as const };
+      return { ok: true as const, value: { requestId: "stop-task", cancelled: true, status: "cancelled" as const } };
     });
     const runtimeStatusClient = {
       readStatus: vi.fn().mockResolvedValue({
@@ -3056,4 +3352,16 @@ describe("DatasetPreparationFeature", () => {
       vi.useRealTimers();
     }
   });
+  it("scopes cached source selection to each workspace and restores it on return", async () => {
+    const client: any = { browseSourceArtifacts: async () => [{ artifactId: "same-id", label: "Source.md", storageKey: "uploads/source.md" }], startPrepareTrainingDataset: vi.fn(), readPrepareTrainingDatasetTask: vi.fn() };
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    const render = async (workspaceId: string) => { await act(async () => { root!.render(<DatasetPreparationFeatureComponent workspaceId={workspaceId} settingsClient={settingsClient} client={client} />); await flushAsyncWork(); }); };
+    await render("workspace-a");
+    const checkbox = () => container!.querySelector<HTMLInputElement>(".dataset-preparation__artifact-group input[type='checkbox']")!;
+    await act(async () => checkbox().click()); expect(checkbox().checked).toBe(true);
+    await render("workspace-b"); expect(checkbox().checked).toBe(false);
+    await render("workspace-a"); expect(checkbox().checked).toBe(true);
+    expect(client.startPrepareTrainingDataset).not.toHaveBeenCalled();
+  });
+
 });

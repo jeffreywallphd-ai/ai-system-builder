@@ -1,0 +1,74 @@
+{
+  "schema_version": "desktop-training-native-budget-qualification-v1",
+  "scope": "observed-inert-windows-training-budget-only",
+  "source_work": {
+    "work_id": "add-closed-native-desktop-training-intents",
+    "commit": "d387c41fdd486d5b6401bd15736859d87dde3635",
+    "source_digest": "7f171d7ca03b2df056b4769a7cbdf3d025434052b9cc71c3cc27ef8b18ffc6e1",
+    "receipt_digest": "e525d73148051f68a58c739486d81dbe6b82530d9100a410246db63c83184357",
+    "review_digest": "8ee7ba5131fb87cb2397d9bba806460e1cb1e4a8c558284677887820431b6d27"
+  },
+  "native_observation": {
+    "status": "passed",
+    "fixed_case": "training-budget",
+    "platform": "windows-x64",
+    "parent_invocations": 1,
+    "native_jobs": 1,
+    "limits": {
+      "flags": 8968,
+      "process_bytes": 2147483648,
+      "job_bytes": 4294967296,
+      "active_limit": 32
+    },
+    "deadline_seconds": 8,
+    "root_exit_code": 0,
+    "total_created_processes": 1,
+    "remaining_active_processes": 0,
+    "peak_commit_bytes": {
+      "process_commit_bytes": 16707584,
+      "job_commit_bytes": 16707584
+    },
+    "assigned_at_creation": true,
+    "resumed_after_membership": true,
+    "explicit_inherited_handles": 3,
+    "job_handle_inherited": false,
+    "stdout_bytes": 29,
+    "stderr_bytes": 0,
+    "exact_expected_output": true,
+    "cleanup_confirmed": true,
+    "all_owned_handles_close_acknowledged": true,
+    "forced_owned_job_termination": false,
+    "observed_limit_messages": 0,
+    "missing_notifications_prove_no_limit_hit": false,
+    "exact_active_marker_retired_after_separate_audit": true
+  },
+  "evidence_digests": {
+    "effect_plan_sha256": "d96a25cd2987a65ac9d59adc12a410647ae66efe1a47efe1b51a2df831432f93",
+    "effect_review_reference_sha256": "5004372ff485a7ae7dd1f7b1665659ffd11c8a98bf9cfd054c19f5c6035063ed",
+    "actual_observation_sha256": "7cc29049e4e0934b9e0048c1cfef0e931331b8d8dbb6202b9bddd8f6d86679b5",
+    "actual_result_sha256": "4ef0dbd8a277fd21fde0edc64d08875dafebf5ad8ebbb16715b9363a3b6d438c",
+    "independent_result_reference_sha256": "e0a0bc322f74fc81c8bb4e224ebecd25f371d3c79d582724b12318540f2a46fc",
+    "exact_marker_retirement_sha256": "bde9c7c5e06b79307a55cf2322d146087dd1df1bca85993c069ee7f61394d9de"
+  },
+  "remaining_feature_work": [
+    "Create the new tiny test inputs.",
+    "Check the installed training dependencies without installation.",
+    "Build the isolated Desktop package without downloads.",
+    "Run the real Desktop train, private review, Save and reopen journey."
+  ],
+  "scope_limits": [
+    "The test ran one inert child. It did not load a model or start the application.",
+    "The 2 GiB process and 4 GiB total limits are ceilings. They are not reserved memory or a measured model requirement.",
+    "The observed peak covers this small child only. It does not establish that training or the application fits.",
+    "This case checked the direct owner. It did not run the separate guardian-crash cases or repeat the default native test matrix.",
+    "This result does not qualify file protection, retained-file restart, optional offloading or a parent roadmap criterion.",
+    "Earlier failures and unknown historical data remain unchanged. This result grants no retry, deletion or disk credit.",
+    "Completed model accuracy and OCR checks stay closed. Full-system testing remains deferred until feature implementation is complete."
+  ],
+  "accuracy_executed": false,
+  "ocr_executed": false,
+  "model_or_application_executed": false,
+  "remaining_native_effect_allowance": 0,
+  "history_preserved": true,
+  "parent_pass": false
+}

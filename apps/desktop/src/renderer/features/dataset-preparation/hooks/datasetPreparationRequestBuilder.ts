@@ -9,10 +9,13 @@ import {
   createDatasetPreparationAdvancedConfigForMethod,
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationModel,
+  normalizeDatasetPreparationMemoryMode,
+  resolveDatasetPreparationOcrChoice,
   type DatasetPreparationTaskRecipe,
   type DatasetPreparationAdvancedPreset,
   type DatasetPreparationExecutionPlan,
   type DatasetPreparationMemoryOverflowPolicy,
+  type DatasetPreparationMemoryMode,
   type DatasetPreparationTaskType,
   type DatasetPreparationTextInputMode,
   type DatasetPreparationVisualOutputShape,
@@ -54,12 +57,16 @@ export interface BuildDatasetPreparationRequestInput {
   constrainedDecoding?: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
+  ocrEnabled?: boolean;
+  ocrLanguage?: string;
+  sourceFormats?: readonly string[];
   preserveDocumentBoundaries: boolean;
   modelId: string;
   modelInferenceMode: ModelDefaultInferenceMode;
   modelDevice: "" | "auto" | "cpu" | "cuda";
   modelTorchDtype: "" | "auto" | "float16" | "bfloat16" | "float32";
   modelMemoryOverflowPolicy?: DatasetPreparationMemoryOverflowPolicy;
+  modelMemoryMode?: DatasetPreparationMemoryMode;
   failurePolicy: "" | "fail" | "skip";
   shuffle: boolean;
   outputFormat: "jsonl" | "json" | "csv" | "parquet";
@@ -232,6 +239,15 @@ function resolveHuggingFaceRepository(
 export function buildDatasetPreparationRequest(
   input: BuildDatasetPreparationRequestInput,
 ) {
+  const memoryMode = normalizeDatasetPreparationMemoryMode(input.modelMemoryMode);
+  const ocr = resolveDatasetPreparationOcrChoice({
+    enabled: input.ocrEnabled,
+    language: input.ocrLanguage,
+    method: input.preparation?.method,
+    sourceCount: input.selectedArtifactIds.length,
+    sourceFormats: input.sourceFormats,
+  });
+  if (ocr.ok === false) throw new Error(ocr.message);
   const defaultAdvanced = input.preparation
     ? createDatasetPreparationAdvancedConfigForMethod(input.preparation.method)
     : createDatasetPreparationAdvancedConfig(
@@ -244,6 +260,7 @@ export function buildDatasetPreparationRequest(
           ? {
               content: {
                 ...defaultAdvanced.content,
+                ...ocr.content,
                 ...(input.parsed.maxTokensPerChunk
                   ? { maxTokensPerChunk: input.parsed.maxTokensPerChunk }
                   : {}),
@@ -356,8 +373,13 @@ export function buildDatasetPreparationRequest(
                 inferenceMode: effectiveInferenceMode,
                 device: effectiveDevice || undefined,
                 torchDtype: effectiveTorchDtype || undefined,
+                ...(memoryMode === "offload-v1"
+                  ? { memoryMode: "offload-v1" as const }
+                  : {}),
                 memoryOverflowPolicy:
-                  input.modelMemoryOverflowPolicy ?? "limited",
+                  memoryMode === "offload-v1"
+                    ? "none"
+                    : input.modelMemoryOverflowPolicy ?? "limited",
               },
               ...(!input.preparation && input.parsed.maxExamplesPerChunk
                 ? {

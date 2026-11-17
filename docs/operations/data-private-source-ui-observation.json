@@ -1,0 +1,477 @@
+{
+  "schema_version": "data-private-source-ui-observation-v1",
+  "status": "passed-feature-trial-reviewed-parent-pending",
+  "user_summary": {
+    "title": "Private file import test passed",
+    "description": "The app imported the private test file and kept it after reloads and workspace changes. All eleven automated steps passed. The run cleaned up its temporary credentials and processes. Other roadmap checks remain open.",
+    "action_owner": "agent",
+    "user_action": "No action needed."
+  },
+  "roadmap_scope": {
+    "primary": "data-management-quality-and-usability",
+    "increment": "governed-scalable-ingestion",
+    "supporting": "comprehensive-ui-automation:operational-ui-and-coverage-qualification",
+    "full_system_testing": "deferred-until-open-feature-work-is-implemented",
+    "private_provider_website_check": "remains-explicitly-deferred",
+    "accepted_model_accuracy_and_ocr": "closed-not-rerun"
+  },
+  "source": {
+    "original_commit": "d2bfc695f5a006d8a194c57c40e584743b296920",
+    "original_source_digest": "7dee0cddeef205bc90dce74a69bb04dedf7351c3f1aa837eae88ac695f6a0ba1",
+    "source_file_count": 3932,
+    "product_source_identity": "source.b7fbf908323f7577697a4737270b480df768a9680c61fd1968a4b44ea81aeb26",
+    "current_product_preserved": true,
+    "installed_runtime_unchanged": true
+  },
+  "attempt": {
+    "run_id": "private-source-safe-a89189918e5d487e8e85b5e30203e9b1",
+    "host": "thin-chrome",
+    "purpose": "provider-source",
+    "root_exit_code": 1,
+    "result_records": [
+      {
+        "id": "thin-source",
+        "status": "failed",
+        "duration_ms": 0
+      }
+    ],
+    "framework_error_count": 1,
+    "journey_report_present": false,
+    "test_body_entry": "not-observed",
+    "ui_phases_qualified": 0,
+    "failure_cause": "unconfirmed",
+    "automatic_retry_allowed": false,
+    "original_one_use_authorization_consumed": true
+  },
+  "observed_support": {
+    "functional_setup_returned": true,
+    "canonical_awaited_teardown_returned": true,
+    "source_after_teardown_verified": true,
+    "raw_shutdown_ack_recorded": false,
+    "original_created_job_only": true,
+    "known_original_retirement": true,
+    "all_owned_handles_and_stdio_closed": true,
+    "job_accounting": {
+      "total": 38,
+      "active": 0,
+      "terminated": 0
+    },
+    "peak_active_observed": 16,
+    "peak_commit": {
+      "process_commit_bytes": 545468416,
+      "job_commit_bytes": 1721163776
+    },
+    "limits": {
+      "flags": 8968,
+      "process_bytes": 1073741824,
+      "job_bytes": 3221225472,
+      "active_limit": 32
+    },
+    "observed_limit_message_count": 0,
+    "observed_limit_notification_count": 0,
+    "absence_of_limit_hits_claimed": false,
+    "forced_owned_job_termination": false,
+    "explicit_input_created": true,
+    "explicit_input_copy_completed": true,
+    "explicit_input_retired": true,
+    "explicit_input_present_after": false,
+    "seeded_credential_file_absent_after_owned_exit": true,
+    "seeded_retirement_authority": "existing-canonical-fixture-only-no-separate-delete",
+    "credential_content_or_hash_recorded": false
+  },
+  "test_quality_finding": {
+    "status": "pending-agent-source-work",
+    "finding": "The synthetic privacy probe checks a failed result and zero protected recording writes, but does not prove that its deliberate test body failure occurred. Add a body-entry observation and a fixed expected-sentinel match.",
+    "actual_failure_attribution": false,
+    "preserved_evidence": "The real failed trial remains failed. The synthetic gap does not prove its cause.",
+    "required_followup": [
+      "Add a synthetic body-entry and expected-error identity check without raw error persistence.",
+      "Diagnose where the run stopped before its workflow report, using synthetic inputs.",
+      "Fix the identified cause and run its focused regression checks.",
+      "Prepare a new source-bound reviewed UI attempt after preserving this failure and its one-use marker."
+    ]
+  },
+  "evidence": {
+    "work_id": "observe-private-source-ui-with-recording-free-tests",
+    "area": ".local-codex/private-provider-source-ui-safe-20261110",
+    "actual_observation_sha256": "08f2aa47536c9017c59f4ee301b5525d683001820a2e24f2f976cee0ce4ddbff",
+    "original_native_result_sha256": "2e9b293eb0494f28fa42da3a822a52fde9d78d20f6b997ab094612ecfc6eb5a3",
+    "independent_outcome_review_sha256": "833aa2abaf3befcd6ef8e24f32ff3563f083e44610cd6fded021540afa6922f0",
+    "independent_execution_review_sha256": "2305f0644e08e9bbee295cb0b3a13a607a929fc82809d3e645ef6cce8b7622a2",
+    "bound_operator_sha256": "99369828752a15121d807848d45a5ca21686a3ec3f7f5a6723d933752eeb129d",
+    "runtime_witness_sha256": "f49f9cb1abb82bcc6e07fccb769c26c44d39a7c57621d82600faee21151bc70a",
+    "privacy_source_checkpoint": "d2bfc695f5a006d8a194c57c40e584743b296920",
+    "privacy_source_receipt": "5507939fd786f4719618858f9255c5db843b00caba64d4cb8b50302b7815f5eb",
+    "privacy_source_review": "11e7111ddd15ff3debf6c7e13206d632dde59e5f40776f82ef5314f54366e4ce"
+  },
+  "qualification_limits": {
+    "real_private_ui_pass": false,
+    "test_body_entry_proved": false,
+    "model_or_worker_outcomes_qualified": false,
+    "native_retained_tree_or_offload_qualified": false,
+    "managed_or_workspace_authorization_qualified": false,
+    "parent_roadmap_or_increment_qualified": false,
+    "restricted_security_review_performed": false,
+    "other_desktop_scale_crash_runtime_and_final_qualification": "pending-as-previously-recorded"
+  },
+  "publication": {
+    "work_id": "publish-reviewed-private-source-ui-failure",
+    "scope": "Reviewed failed-observation publication only. The UI check remains pending.",
+    "original_unqualified_work_id": "observe-private-source-ui-with-recording-free-tests",
+    "original_changes_requested_review": "4131cba2be452a9a1426b1417febeee8eade1d757cb8b3aab9152ba9065816db",
+    "original_report_preimage_sha256": "f8af3420a508e7ec806b712e1d95831b4f0b87ae2911465fc4497aedb79a00d3",
+    "original_report_created_under_prior_agent_claim": true,
+    "original_ui_criterion_remains_unqualified": true,
+    "new_ui_or_parent_qualification": false
+  },
+  "inertWorkerDiagnosis": {
+    "schema_version": "private-source-inert-worker-diagnosis-v1",
+    "source_digest": "110aa5054f73a97b917530c1a18bceb44c02de8c620a907dd70d9292ab2267bf",
+    "head": "e3844a51ce16c9c3679a3070da2f6f1bc5d7f8ca",
+    "observation_sha256": "40dca5cf318e0b131f113f97436f14b104d351180a983855c006e26d25465442",
+    "test_quality_commit": "e3844a51ce16c9c3679a3070da2f6f1bc5d7f8ca",
+    "test_quality_receipt": "c4bf8baec1e6825b97de0c3ad67325a142a8519986da0985795229e9a9f22d37",
+    "test_quality_review": "a9b0fe98419b7380aa2878eb065ca92e59cc3f60a1184d07658f406755386b9b",
+    "trials": [
+      {
+        "actual_host_definitions_loaded": true,
+        "actual_setup_loader_used": false,
+        "synthetic_body_entered": true,
+        "runner_exit_code": 0,
+        "passed": true
+      },
+      {
+        "actual_host_definitions_loaded": true,
+        "actual_setup_loader_used": true,
+        "synthetic_body_entered": true,
+        "runner_exit_code": 0,
+        "passed": true
+      }
+    ],
+    "meaning": "The actual thin host test definitions reached a synthetic worker with and without the setup loader. These probes did not reproduce an import failure. They did not start a browser or app. The earlier private-file test still needs diagnosis.",
+    "private_input_used": false,
+    "browser_or_app_started": false,
+    "original_failure_cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "new_synthetic_roots_removed_after_exit": true
+  },
+  "nativeBrowserDiagnosis": {
+    "schema_version": "private-source-native-browser-diagnosis-v1",
+    "source_digest": "c5786bf42c4bc2bead0f083da5d5f14b69be9b0e12b7d37e5a0f589b621ff7e2",
+    "head": "7263c2927e43c99c98e6d2470b61dd922a9b768b",
+    "observation_sha256": "903fd732ee0fc552322306ecea5aee9fc5ed3a23154359237cce3ff60dfe82ee",
+    "native_result_sha256": "cae35da80a5c413dfeb4850e2da0e990d161da5a074087b2f84c576357924875",
+    "outcome_review_sha256": "81ed15e57ba9e41beeb66b48e5133bb52925f193267cb8c6c80af0e39fc81869",
+    "selected_cases": [
+      {
+        "purpose": "worker",
+        "status": "passed",
+        "duration_ms": 1
+      },
+      {
+        "purpose": "browser",
+        "status": "passed",
+        "duration_ms": 184
+      }
+    ],
+    "real_host_definitions_loaded": true,
+    "recording_free_page_fixture_returned": true,
+    "static_local_content_visible": true,
+    "empty_node_options_retained_in_worker": true,
+    "owned_processes_total": 11,
+    "owned_processes_active_after": 0,
+    "forced_termination": false,
+    "all_owned_handles_and_streams_closed": true,
+    "peak_active_observed": 11,
+    "peak_process_commit_bytes": 199974912,
+    "peak_job_commit_bytes": 603144192,
+    "process_limit_bytes": 1073741824,
+    "job_limit_bytes": 3221225472,
+    "absence_of_all_limit_hits_claimed": false,
+    "source_and_runtime_stable_after": true,
+    "scratch_bytes_removed": 1751224,
+    "meaning": "Both diagnostic tests passed. The worker loaded the real host tests. Chrome displayed local test content under the fixed process limits. This check did not start the app or import a private file. The original private-file test still needs diagnosis.",
+    "credential_used": false,
+    "app_or_provider_started": false,
+    "original_private_failure_cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false
+  },
+  "currentPrivateAttempt": {
+    "schema_version": "private-source-current-failed-attempt-v1",
+    "work_id": "qualify-current-private-source-ui-with-safe-stage-facts",
+    "source_digest": "9d5de24072ccb2837bc4ea9cb1759cdd406ec69aee78b72cbf347a570c0e4c42",
+    "head": "62506087769f45712a721298b2cca4fdff854efa",
+    "observation_sha256": "d5020dbc13aa2e101cc6db3e61800421d012b059311ce15727ec27a1c3ba4b39",
+    "outcome_review_sha256": "4ef00d7162489b93b48456055982280989d2fea4cda3d3c03e5c5b70408f6953",
+    "changes_requested_review": "98e4c88dfaec240a348a0245a4eb0c61140d1852fd01da7f957b7bef5dd535ef",
+    "runner_summary": {
+      "schema_version": "fixed-private-provider-run-v1",
+      "mode": "test",
+      "host": "thin-chrome",
+      "expected_cases": [
+        "thin-source"
+      ],
+      "results": [
+        {
+          "id": "thin-source",
+          "status": "failed",
+          "duration_ms": 0
+        }
+      ],
+      "framework_errors": 1,
+      "suite_status": "failed",
+      "executed": 1,
+      "skipped": 0,
+      "local_case_outcomes_satisfied": false,
+      "raw_failure_text_recorded": false,
+      "raw_output_forwarded": false,
+      "qualification_granted": false
+    },
+    "parent_and_worker_admission_checks_passed": true,
+    "app_setup_shutdown_and_source_checks_returned": true,
+    "page_readiness_report_present": false,
+    "body_entry_confirmed": false,
+    "journey_report_present": false,
+    "qualified_journey_phases": 0,
+    "required_journey_phases": 11,
+    "owned_processes_total": 38,
+    "owned_processes_active_after": 0,
+    "owned_handles_and_streams_closed": true,
+    "explicit_and_seeded_credential_inputs_absent_after": true,
+    "source_and_runtime_stable_after": true,
+    "raw_private_log_read_for_diagnosis": false,
+    "cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "meaning": "The app started and stopped. The worker settings passed their checks. The test did not record page readiness or any qualified import steps. Its cause is still unknown. No action is needed from the user."
+  },
+  "copiedFixtureControl": {
+    "schema_version": "credential-free-copied-private-fixture-control-v1",
+    "work_id": "diagnose-copied-private-case-fixtures-without-credentials",
+    "source_digest": "9d5de24072ccb2837bc4ea9cb1759cdd406ec69aee78b72cbf347a570c0e4c42",
+    "head": "62506087769f45712a721298b2cca4fdff854efa",
+    "observation_sha256": "5f8ca7846a9b28bdae25c33eaadcad052cc26b1a8d2ce1ad7d80ca29b4c4558f",
+    "outcome_review_sha256": "f38fdf6767458607c789408736caf155cc023d7676ce07cab1a97fa13ad91574",
+    "inactive_existing_case": "skipped-at-known-in-body-gate-after-page-hook",
+    "separate_static_page_control": "passed",
+    "copied_fixture_and_desktop_chrome_options_used": true,
+    "inert_copied_definitions_loaded": true,
+    "executing_private_capsule_opened": false,
+    "provider_network_calls": 0,
+    "credential_or_app_server_used": false,
+    "owned_processes_total": 16,
+    "owned_processes_active_after": 0,
+    "owned_handles_and_streams_closed": true,
+    "source_copy_and_current_source_and_runtime_stable_after": true,
+    "scratch_bytes_removed": 1753556,
+    "failure_reproduced": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "meaning": "The copied test reached its early skip. The browser control passed with the same copied fixture. This check did not start the app or use private inputs. The agent must check the worker with the app startup environment next. The real import check stays open."
+  },
+  "startupWorkerDiagnosis": {
+    "schema_version": "safe-startup-worker-diagnosis-v1",
+    "work_id": "diagnose-public-startup-bindings-in-real-worker",
+    "source_digest": "5f704b988cc0bde37a661258ccd5ab8b9aa4a493c89cca0e5f39356f57156b7c",
+    "head": "0f8eb3616381efb981519fd80bd598dbc2e5c0d3",
+    "public_worker": {
+      "observation_sha256": "65fea2bf5db1036f7de211b0f830be608b78000b834cb51268b6f4f3bccbd103",
+      "outcome_review_sha256": "5d9396b9bd0c05ee9104ce81a0c910f4e33d0e2bcccb7170216b32ccf5e633aa",
+      "actual_body_and_all_13_exact_bindings_passed": true,
+      "page_or_app_or_credential_used": false,
+      "owned_processes_total": 5
+    },
+    "local_startup": {
+      "observation_sha256": "f298eb9c142a53d0ef526dc57b712602f36b5fccff19868c235e2a9b9b58d58c",
+      "outcome_review_sha256": "54147845477579afc4b51e28b87d3fea8a2e7f015db68fa72b3307d775f5ef5e",
+      "native_command_passed": false,
+      "safe_stage_facts": {
+        "loader.json": {
+          "actual_definitions_loaded": true,
+          "executing_private_capsule_opened": false,
+          "network_calls": 0
+        },
+        "setup-returned.json": {
+          "canonical_setup_returned": true,
+          "private_input": false
+        },
+        "teardown-returned.json": {
+          "canonical_teardown_returned": true,
+          "source_stable": true,
+          "private_input": false
+        }
+      },
+      "saved_or_provider_credential_used": false,
+      "canonical_generated_local_pairing_only": true,
+      "local_pairing_file_absent_after": true,
+      "owned_processes_total": 47
+    },
+    "owned_processes_active_after": 0,
+    "owned_handles_and_streams_closed": true,
+    "source_and_runtime_stable_after": true,
+    "historical_scratch_bytes_removed": 15102569,
+    "original_private_failure_cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "next_agent_action": "The agent will prepare the normal Windows app-data folders in a new isolated test profile and test browser startup again. Both page tests failed before they could run. The app started and stopped, and its temporary local login was removed. The folder difference is a likely cause that still needs a successful test. The real private-file import test stays open.",
+    "user_action": "No action needed. The agent will continue the remaining startup checks."
+  },
+  "correctedWindowsStartup": {
+    "schema_version": "corrected-isolated-windows-startup-v1",
+    "work_id": "qualify-local-browser-startup-with-isolated-appdata",
+    "source_digest": "5c3f18fe30757501166795eaa39df830ac5a149e7fe40f11b5155393b24332b8",
+    "head": "705aaa5bc86460a2ade0102af7fdfd57e11b7336",
+    "product_source_identity": "source.2a1dbeadd8b58dfdfb1bf181de42240ac9baa90a1ff8c49192edaff8ba824c95",
+    "observation_sha256": "d2d9221b851ef12bd0d39dfa2f70f44df5857581ae0c0326c9c3b9d19e1dd97e",
+    "outcome_review_sha256": "7f6d9643c26fbae9900ce444d5825c66aa8533348a815cf307a2b6e7b78a844a",
+    "guard_checkpoint": "705aaa5bc86460a2ade0102af7fdfd57e11b7336",
+    "canonical_physical_appdata_roots_used": true,
+    "app_setup_and_awaited_shutdown_passed": true,
+    "existing_inactive_case": "skipped-after-page-and-original-fixed-writer",
+    "separate_static_page_case": "passed",
+    "failed_or_unexecuted_private_step_credited": false,
+    "saved_or_provider_credential_used": false,
+    "generated_local_pairing_file_absent_after": true,
+    "owned_processes_total": 42,
+    "owned_processes_active_after": 0,
+    "owned_handles_and_streams_closed": true,
+    "source_copy_current_source_and_runtime_stable_after": true,
+    "historical_scratch_bytes_removed": 10082175,
+    "prior_failed_runs_preserved": true,
+    "original_private_failure_cause_confirmed": false,
+    "actual_private_ui_or_parent_qualification": false,
+    "meaning": "The app and browser start with the corrected Windows test profile. The page fixtures and evidence writer work. The real private-file import test is next. No action is needed from the user."
+  },
+  "workspaceConfirmationDiagnosis": {
+    "schema_version": "private-source-workspace-confirmation-diagnosis-v1",
+    "status": "failed-ten-phase-attempt-reviewed-corrected-journey-pending",
+    "source_commit": "f62aa7176eccfb065eab27ea56edf6bbb1bc0dbc",
+    "source_digest": "6ab409a38358b92c8d5a9bdb812f08aba3f8d896cb04e1de113082ec51119ab7",
+    "actual_observation_sha256": "9a930fc7315329da84a922192e040fa7d5991047a846ce5214996d1d5a6d5d00",
+    "native_result_sha256": "a6da70b6f561cf004a79555dfd8beff4ee9b5ce9cc94358cfbdda4ced5fc7211",
+    "independent_outcome_review_sha256": "55e2115f34ea5fb63a5f947a594843716d53a5cc8d9f961ce6d51ca454e2100e",
+    "canonical_changes_requested_review": "456666281de625368896b1e26c3e1b6bcc531d210ebf3ce1ea2db6214a0553b5",
+    "actual_case_status": "failed",
+    "actual_case_duration_ms": 15072,
+    "completed_phases": [
+      "fresh-provider-workspace",
+      "exact-provider-file-selected",
+      "reference-task-completed",
+      "remote-reference-confirmed",
+      "reload-keeps-reference",
+      "explicit-localization-completed",
+      "localized-bytes-confirmed",
+      "reload-keeps-localized-reference",
+      "second-workspace-empty",
+      "cross-workspace-reference-denied"
+    ],
+    "required_phase_count": 11,
+    "remaining_composite_phase": "original-reference-retained",
+    "fixed_failure_types": [
+      "Error"
+    ],
+    "fixed_failure_stage": "provider-test-failed",
+    "static_test_defect": "Three test journeys select a pending workspace but omit the Change action that commits it. The application deliberately requires confirmation.",
+    "remediation": "Use the real header Change control and wait for the active-workspace UI state. Preserve subsequent exact inventory, artifact and provider retention assertions.",
+    "causal_limit": "Source inspection proves the test omission. The fixed private report does not identify which subcall in the last composite phase failed, prove artifact loss or establish a corrected pass.",
+    "retirement": {
+      "active_owned_processes": 0,
+      "all_owned_handles_closed": true,
+      "streams_complete": true,
+      "explicit_input_absent": true,
+      "seeded_credential_absent": true,
+      "generated_pairing_absent": true,
+      "raw_private_logs_read": false,
+      "credential_content_or_hash_recorded": false,
+      "source_and_runtime_unchanged": true
+    },
+    "automatic_retry_allowed": false,
+    "prior_attempt_consumed": true,
+    "actual_corrected_ui_pass": false,
+    "parent_qualification_granted": false,
+    "scope_limits": [
+      "Actual corrected eleven-phase host journey remains pending.",
+      "Private-provider website check remains deferred.",
+      "Accepted model accuracy and OCR remain closed.",
+      "Managed authorization, native staging, offload, crash and final cross-roadmap qualification remain separate."
+    ],
+    "prior_user_summary": {
+      "title": "Private file import test needs diagnosis",
+      "description": "The test app started and shut down. The run produced a failed test result but no workflow step report. Its two temporary credential files are gone. The agent must diagnose the failure before this UI check can pass.",
+      "action_owner": "agent",
+      "user_action": "No action needed."
+    }
+  },
+  "confirmedWorkspaceReturnTrial": {
+    "schema_version": "private-source-ui-confirmed-workspace-return-v1",
+    "status": "passed-feature-trial-reviewed-parent-pending",
+    "source_fix_commit": "c116cf6b71da75df6b15442a341eaa98bda25f9d",
+    "source_digest": "7d710b49b4b7a2eaebc85bd970ff7ab61fb08536e20273ea8a02c13d45a8de8f",
+    "product_source_identity": "source.9999d2bf9efa74648118b05df9111c3687d68ad7b65af638ed53daacd9a23b25",
+    "source_files": 3934,
+    "code_fix_work_id": "qualify-workspace-journeys-with-complete-focused-owners",
+    "code_fix_receipt": "61ebae7774f88441b55e7e9e41b8acea284136cf3f2626752dd2a9a19e96ba0c",
+    "code_fix_review": "c011ce863a8cd444f315518fa95757aa027269c4499be2174706904981151aec",
+    "ui_work_id": "qualify-private-source-ui-with-confirmed-workspace-return",
+    "host": "thin-chrome",
+    "purpose": "provider-source",
+    "actual_case_status": "passed",
+    "actual_case_duration_ms": 9876,
+    "completed_phases": [
+      "fresh-provider-workspace",
+      "exact-provider-file-selected",
+      "reference-task-completed",
+      "remote-reference-confirmed",
+      "reload-keeps-reference",
+      "explicit-localization-completed",
+      "localized-bytes-confirmed",
+      "reload-keeps-localized-reference",
+      "second-workspace-empty",
+      "cross-workspace-reference-denied",
+      "original-reference-retained"
+    ],
+    "required_phase_count": 11,
+    "framework_errors": 0,
+    "actual_observation_sha256": "c386b7415ad67d4a0427e04a6afeb8653ad5c7e6fbd43d9666f1f39966c510e4",
+    "native_result_sha256": "60ef7033914a2b35d0fa29d97a680720c7e44d9eef5ac5895cad1ce8cd84ece9",
+    "independent_outcome_review_sha256": "9098b1c3129db971fc0bf3ef9a26ad6e5e0ccaf3ced7d8242f69e0327ace6a30",
+    "execution_plan_sha256": "8eca9e5e82930481f44e034dd9a031ea6003653e065cebcffb1613439b0bbcd1",
+    "execution_review_sha256": "a3a4d10c23e863ef21769560ea3bc3c6135e66bdcb1beb47bc4f8732a4fff950",
+    "actual_bound_operator_sha256": "169cebccea2fa15beafae77633015d46cc0fa94faa88ce1d0acb8076edd473c1",
+    "actual_binding_review_sha256": "db8b1318d813257515d6b1cc3670aa68d6b9ccfc2776c2cbbafa90c7d34b6066",
+    "retirement": {
+      "root_exit_code": 0,
+      "lifetime_owned_processes": 47,
+      "active_owned_processes": 0,
+      "terminated_owned_processes": 0,
+      "all_owned_handles_closed": true,
+      "streams_complete": true,
+      "forced_native_job_termination": false,
+      "explicit_input_absent": true,
+      "seeded_credential_absent": true,
+      "generated_pairing_absent": true,
+      "source_and_installed_runtime_unchanged": true,
+      "raw_private_logs_read": false,
+      "credential_content_or_hash_recorded": false
+    },
+    "prior_user_summary": {
+      "title": "Finish the workspace return check",
+      "description": "The latest private-file test passed ten of eleven steps. File selection, reference creation, localization, reloads and workspace isolation passed. The final return check failed. The agent found and corrected a missing Change action in the tests. A new real run must confirm that the original reference is retained. The failed run and safe shutdown remain recorded.",
+      "action_owner": "agent",
+      "user_action": "No action needed."
+    },
+    "prior_top_level_status": "failed-feature-trial-reviewed-no-ui-qualification",
+    "interpretation": "The actual corrected current-source journey completed all eleven steps, including original-reference retention after the real workspace Change action. The earlier ten-step failure and its generic composite diagnostic remain historical. Source inspection and this corrected passing run support the test repair; they do not prove artifact loss or the cause of every earlier startup failure.",
+    "scope_limits": {
+      "actual_private_source_thin_ui_pass": true,
+      "cold_load_benchmark": false,
+      "model_accuracy_or_ocr_rerun": false,
+      "private_provider_website_check": "deferred-by-user",
+      "managed_authorization_qualified": false,
+      "full_worker_shutdown_qualified": false,
+      "native_ownership_qualified": false,
+      "offload_or_restart_qualified": false,
+      "parent_qualification_granted": false,
+      "full_system_testing": "deferred-until-open-feature-work-is-implemented"
+    },
+    "earlier_failed_attempts_and_pending_statement_retained_as_history": true,
+    "governed_ui_work_completion_is_tracked_separately": true
+  }
+}

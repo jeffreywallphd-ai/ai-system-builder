@@ -19,6 +19,20 @@ export type InstallSystemFoundationPackInput = Omit<
   readonly version?: AssetPackVersion;
 };
 
+/** Safe internal attribution; never attach repository errors, records or paths. */
+export function createSystemFoundationInitializationError(results: readonly InstallSystemAssetPackResult[]): Error {
+  const allowedCodes = new Set(["definition-read-failed", "definition-save-failed", "definition-save-rejected", "definition-conflict-not-overwritten"]);
+  return Object.assign(new Error("System foundation assets are unavailable."), {
+    name: "SystemFoundationInitializationError",
+    stage: "foundation-installation",
+    failures: results.filter(r => r.status === "failed").slice(0, 3).map(r => ({
+      version: SYSTEM_FOUNDATION_PACK_VERSIONS.includes(r.packVersion) ? r.packVersion : "unknown",
+      failedEntries: Number.isInteger(r.failedEntryCount) ? Math.max(0, Math.min(1000, r.failedEntryCount)) : 0,
+      codes: [...new Set(r.diagnostics.slice(0, 1000).filter(d => d.severity === "error").map(d => allowedCodes.has(d.code) ? d.code : "validation-or-unknown"))].slice(0, 5),
+    })),
+  });
+}
+
 export class InstallSystemFoundationPackService {
   private readonly installer: InstallSystemAssetPackService;
 

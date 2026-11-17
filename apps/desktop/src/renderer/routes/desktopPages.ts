@@ -1,4 +1,12 @@
-export type DesktopPageKey = "home" | "artifacts" | "assets" | "user-library" | "models" | "image-generation" | "settings" | "systems";
+export type DesktopPageKey =
+  | "home"
+  | "artifacts"
+  | "context"
+  | "assets"
+  | "models"
+  | "image-generation"
+  | "settings"
+  | "systems";
 
 export interface DesktopPageDefinition {
   key: DesktopPageKey;
@@ -13,13 +21,13 @@ export const desktopPageDefinitions: readonly DesktopPageDefinition[] = [
     requiresWorkspace: true,
   },
   {
-    key: "assets",
-    label: "Assets",
+    key: "context",
+    label: "Context",
     requiresWorkspace: true,
   },
   {
-    key: "user-library",
-    label: "Reusable Library",
+    key: "assets",
+    label: "Assets",
     requiresWorkspace: true,
   },
   {
@@ -44,5 +52,7 @@ export const desktopPageDefinitions: readonly DesktopPageDefinition[] = [
 ];
 
 export function desktopPageRequiresWorkspace(pageKey: DesktopPageKey): boolean {
-  return desktopPageDefinitions.some((page) => page.key === pageKey && page.requiresWorkspace === true);
+  return desktopPageDefinitions.some(
+    (page) => page.key === pageKey && page.requiresWorkspace === true,
+  );
 }

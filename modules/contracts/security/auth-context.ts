@@ -9,6 +9,8 @@ export interface AuthContext {
   authMethod: AuthMethod;
   issuedAt?: string;
   expiresAt?: string;
+  /** Present only for issuer-verified typed access tokens. It adds no scopes. */
+  oidcAccessTokenClientId?: string;
 }
 
 export const ANONYMOUS_AUTH_CONTEXT: AuthContext = {

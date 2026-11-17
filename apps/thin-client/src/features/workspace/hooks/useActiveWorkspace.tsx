@@ -9,9 +9,11 @@ import {
 } from "react";
 
 import {
+  isWorkspaceId,
   type ActiveWorkspaceSelection,
   type WorkspaceRecord,
 } from "../../../../../../modules/contracts/workspace";
+import {isOrganizationId, type OrganizationId} from "../../../../../../modules/contracts/organization";
 import { parseApiEnvelope } from "../../../security/apiErrorEnvelope";
 import { secureFetch } from "../../../security/secureFetch";
 
@@ -19,6 +21,7 @@ export type WorkspaceUiStatus = "active" | "archived" | "deleting";
 
 export interface WorkspaceUiRecord {
   readonly id: string;
+  readonly organizationId?: OrganizationId;
   readonly displayName: string;
   readonly status: WorkspaceUiStatus;
   readonly includeSystemFoundationAssets?: boolean;
@@ -79,6 +82,7 @@ export function ActiveWorkspaceProvider({
   >();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,9 +92,11 @@ export function ActiveWorkspaceProvider({
         workspaceClient.readActiveWorkspaceSelection(),
       ]);
       setWorkspaces([...records]);
+      setLoadFailed(false);
       setActiveWorkspaceId(selection.workspaceId);
       setError(undefined);
     } catch {
+      setLoadFailed(true);
       setError("Workspace could not be loaded.");
     } finally {
       setLoading(false);
@@ -173,11 +179,11 @@ export function ActiveWorkspaceProvider({
 
   const status = useMemo<ActiveWorkspaceReadinessStatus>(() => {
     if (loading) return "loading";
-    if (error) return "error";
+    if (loadFailed) return "error";
     if (activeWorkspace) return "ready";
     if (activeWorkspaceId) return "unavailable";
     return "missing";
-  }, [activeWorkspace, activeWorkspaceId, error, loading]);
+  }, [activeWorkspace, activeWorkspaceId, loadFailed, loading]);
 
   const value = useMemo<ActiveWorkspaceContextValue>(
     () => ({
@@ -230,6 +236,7 @@ export function useActiveWorkspace(): ActiveWorkspaceContextValue {
 export function mapWorkspaceRecord(record: WorkspaceRecord): WorkspaceUiRecord {
   return {
     id: record.workspaceId,
+    ...(isOrganizationId(record.organizationId) ? {organizationId: record.organizationId} : {}),
     displayName: record.displayName,
     status: record.status,
     includeSystemFoundationAssets:
@@ -266,10 +273,10 @@ function createApiWorkspaceClient(): WorkspaceClient {
 
     async readActiveWorkspaceSelection() {
       const envelope = await get("/api/workspaces/active-selection");
-      return isOkEnvelope(envelope) &&
-        isActiveWorkspaceSelection(envelope.value)
-        ? envelope.value
-        : {};
+      if (!isOkEnvelope(envelope) || !isActiveWorkspaceSelection(envelope.value)) {
+        throw new Error("Workspace selection is unavailable.");
+      }
+      return envelope.value;
     },
 
     async saveActiveWorkspaceSelection(workspaceId) {
@@ -346,9 +353,11 @@ function isWorkspaceCreateValue(
 function isActiveWorkspaceSelection(
   value: unknown,
 ): value is ActiveWorkspaceSelection {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
   const workspaceId = (value as { readonly workspaceId?: unknown }).workspaceId;
-  return workspaceId === undefined || typeof workspaceId === "string";
+  const selectedAt = (value as { readonly selectedAt?: unknown }).selectedAt;
+  return (workspaceId === undefined || isWorkspaceId(workspaceId)) &&
+    (selectedAt === undefined || typeof selectedAt === "string");
 }
 
 function errorMessage(value: unknown, fallback: string): string {

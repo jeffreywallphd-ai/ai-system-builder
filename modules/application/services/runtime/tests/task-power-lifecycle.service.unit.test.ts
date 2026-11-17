@@ -65,14 +65,15 @@ describe("TaskPowerLifecycleService", () => {
     await expect(service.startTask("r1", TaskType.MODEL_TRAINING)).resolves.toBeUndefined();
   });
 
-  it("stop failure does not throw", async () => {
+  it("stop failure remains owned and can retry without throwing", async () => {
     const power = createPowerSuspensionMock();
     power.stopBlocker = testDouble.fn(async () => { throw new Error("boom"); });
     const service = new TaskPowerLifecycleService(power);
     await service.startTask("r1", TaskType.MODEL_TRAINING);
     await expect(service.completeTask("r1", "unknown")).resolves.toBeUndefined();
     await expect(service.completeTask("r1", "unknown")).resolves.toBeUndefined();
-    expect(power.stopBlocker).toHaveBeenCalledTimes(1);
+    expect(power.stopBlocker).toHaveBeenCalledTimes(2);
+    expect(service.pendingCleanupCount).toBe(1);
   });
 
   it("starting same request id completes old blocker before starting replacement", async () => {
@@ -83,4 +84,17 @@ describe("TaskPowerLifecycleService", () => {
     expect(power.stopBlocker).toHaveBeenCalledTimes(1);
     expect(power.startBlocker).toHaveBeenCalledTimes(2);
   });
+});
+
+it("retries an OS cleanup failure without a renderer and releases exactly once after success", async () => {
+  const power = createPowerSuspensionMock(); let callback: (() => void) | undefined;
+  const service = new TaskPowerLifecycleService(power, { setTimeout: ((fn: () => void) => { callback = fn; return { unref() {} }; }) as never, clearTimeout: (() => {}) as never });
+  power.stopBlocker = testDouble.fn().mockRejectedValueOnce(new Error("temporarily unavailable")).mockResolvedValue(undefined);
+  await service.startTask("retry-task", TaskType.MODEL_TRAINING);
+  await service.completeTask("retry-task", "succeeded");
+  expect(service.pendingCleanupCount).toBe(1);
+  callback!(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+  expect(service.pendingCleanupCount).toBe(0);
+  await service.completeTask("retry-task", "succeeded");
+  expect(power.stopBlocker).toHaveBeenCalledTimes(2);
 });

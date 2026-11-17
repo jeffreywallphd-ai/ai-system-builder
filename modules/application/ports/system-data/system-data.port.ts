@@ -15,14 +15,20 @@ export interface SystemDataResolvedDefinition {
 }
 
 export interface SystemDataReleaseDefinitionPort {
-  resolve(workspaceId: WorkspaceId, releaseId: SystemReleaseId, entityType: string): Promise<SystemDataResolvedDefinition | undefined>;
+  resolve(workspaceId: WorkspaceId, releaseId: SystemReleaseId, entityType: string,
+    options?: { readonly formInstanceId: string }): Promise<SystemDataResolvedDefinition | undefined>;
 }
 
+/** Host-only creation proof. Record updates must retain it; public record views omit it. */
+export type PersistedSystemDataRecord = SystemDataRecord & {
+  readonly creationSource?: "published-form-v1";
+};
+
 export interface SystemDataRepositoryPort {
-  createRecordWithAudit(record: SystemDataRecord, audit: SystemDataAuditEntry): Promise<SystemDataRecord>;
-  updateRecordWithAudit(record: SystemDataRecord, audit: SystemDataAuditEntry, expectedRevision: number): Promise<SystemDataRecord>;
-  readRecord(workspaceId: WorkspaceId, releaseId: SystemReleaseId, entityType: string, recordId: string): Promise<SystemDataRecord | undefined>;
-  listRecords(workspaceId: WorkspaceId, releaseId: SystemReleaseId, entityType: string): Promise<readonly SystemDataRecord[]>;
+  createRecordWithAudit(record: PersistedSystemDataRecord, audit: SystemDataAuditEntry): Promise<PersistedSystemDataRecord>;
+  updateRecordWithAudit(record: PersistedSystemDataRecord, audit: SystemDataAuditEntry, expectedRevision: number): Promise<PersistedSystemDataRecord>;
+  readRecord(workspaceId: WorkspaceId, releaseId: SystemReleaseId, entityType: string, recordId: string): Promise<PersistedSystemDataRecord | undefined>;
+  listRecords(workspaceId: WorkspaceId, releaseId: SystemReleaseId, entityType: string): Promise<readonly PersistedSystemDataRecord[]>;
   appendAudit(entry: SystemDataAuditEntry): Promise<void>;
   listAudit(workspaceId: WorkspaceId, releaseId: SystemReleaseId, entityType: string, limit: number): Promise<readonly SystemDataAuditEntry[]>;
 }

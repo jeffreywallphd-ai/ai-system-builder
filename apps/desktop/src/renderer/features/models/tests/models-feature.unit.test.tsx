@@ -114,8 +114,8 @@ function createClientDouble() {
       .mockResolvedValue({ runId: "run-1", status: "cancelled" }),
     saveModelTraining: vi
       .fn()
-      .mockResolvedValue({
-        runId: "run-1",
+      .mockImplementation(async ({ runId }: { runId: string }) => ({
+        runId,
         status: "succeeded",
         outputModel: {
           modelRecordId: "generated-1",
@@ -126,10 +126,10 @@ function createClientDouble() {
           provider: "unknown",
           createdAt: "2026-04-27T00:05:00.000Z",
         },
-      }),
+      })),
     discardModelTraining: vi
       .fn()
-      .mockResolvedValue({ runId: "run-1", status: "cancelled" }),
+      .mockImplementation(async ({ runId }: { runId: string }) => ({ runId, status: "cancelled" })),
     validateModel: vi
       .fn()
       .mockResolvedValue({
@@ -187,6 +187,7 @@ describe("ModelsFeature", () => {
   let mountedContainer: HTMLDivElement | undefined;
 
   beforeEach(() => {
+    sessionStorage.clear();
     window.desktopApi = {
       readPythonRuntimeStatus: vi
         .fn()
@@ -462,7 +463,7 @@ describe("ModelsFeature", () => {
     });
     client.readModelTrainingStatus = vi.fn().mockResolvedValue({
       runId: "run-1",
-      status: "cancelled",
+      status: "running",
     });
     client.listModels = vi.fn().mockResolvedValue([
       {
@@ -895,7 +896,7 @@ describe("ModelsFeature", () => {
     });
     expect(document.body.querySelector("[role='dialog']")?.textContent).toContain("Delete model record");
     const deleteDialog = document.body.querySelector("[role='dialog']") as HTMLElement;
-    const confirmationInput = deleteDialog.querySelector("input") as HTMLInputElement;
+    const confirmationInput = deleteDialog.querySelector("input:not([type=checkbox])") as HTMLInputElement;
     await act(async () => {
       Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
@@ -915,7 +916,7 @@ describe("ModelsFeature", () => {
       workspaceId: "workspace-a",
       modelRecordId: "saved-1",
       deleteBackingArtifacts: false,
-      deleteLocalFiles: true,
+      deleteLocalFiles: false,
     });
   });
 

@@ -222,7 +222,7 @@ runtime readiness binding depends on validated asset composition planning compos
 - required/provided capabilities;
 - plan blockers/diagnostics;
 - planning summary/provenance summary;
-- validated timestamp when available.
+- validated timestamp; missing or changed version evidence prevents progression.
 
 runtime readiness binding must not:
 
@@ -236,6 +236,15 @@ runtime readiness binding must not:
 - install runtimes/download models/create credentials/write secrets.
 
 If a composition plan is missing/invalid/blocked/conflicted/stale/unsupported/archived/not validated, runtime readiness binding emits readiness blockers rather than bypassing planning constraints.
+
+Validation re-reads the scoped authoritative plan and checks its identity, exact
+`valid` status, absence of blockers/archive state and the version timestamp that
+the binding was derived from. Missing composition authority fails before save.
+Fresh precondition blockers survive provider validation; previously persisted
+derived failures are recomputed instead of accumulated. Known provider
+availability failures may recover when current evidence is safe. Invalid,
+blocked or unselected bindings require corrected selection rather than automatic
+promotion. Changed plan versions require an explicit refreshed readiness binding.
 
 ## Relationship to effective asset projections effective projections
 
@@ -300,3 +309,24 @@ execution plan preparation may prepare execution-oriented plans/payloads (materi
 ## Transport and UI status
 
 Transport exposure is implemented as thin API/IPC/preload/client surfaces with explicit workspace context and safe failure envelopes. Runtime/provider/workflow/model execution remains out of scope for readiness surfaces. Visible setup/readiness UI must represent unavailable operations truthfully and must not imply runtime execution.
+
+Readiness and composition diagnostic/blocker boundaries admit only their declared
+plain-record fields and reconstruct the public shape. Unknown fields and
+accessors deny without evaluation. Metadata uses a pure shared contracts helper:
+at most8 nesting levels,1024 visited values,64 keys per object,2048 characters
+per string,80 characters per key and64KiB aggregate encoded key/string bytes.
+Composition permits nested arrays of at most128 items; readiness retains its
+no-array metadata schema. Cycles, sparse arrays, nonJSON/prototype objects,
+non-finite numbers, dangerous structural keys and compound credential/raw-data
+keys deny. Safe false/zero/null and nested summaries retain their meanings.
+Actual filesystem/URL/credential/payload representations cannot enter these
+passive diagnostic details. Composition keeps generic outward redaction for
+unsafe message strings; readiness rejects them. Errors do not echo rejected
+content. Existing family restrictions remain in force. These metadata controls
+are not applied indiscriminately to typed DTO identities or declared graph
+summary fields, and do not establish native/runtime/release qualification.
+
+Diagnostic code, severity and identity inputs must be primitive strings before
+any schema string method runs; nested trim/toString getters cannot execute.
+Windows root-relative and drive-relative forms are rejected in metadata and
+redacted from composition messages alongside Unix, UNC and drive-absolute paths.

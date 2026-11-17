@@ -40,7 +40,7 @@ function createDependencies(overrides: Record<string, unknown> = {}): any {
     storageBindings: {
       readArtifactStorageBindings: testDouble.fn(async () => ({
         ok: true,
-        value: { bindings: [] },
+        value: { bindings: [{ workspaceId: "workspace-a", artifactId: "source-a", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "source-a" } }] },
       })),
       upsertArtifactStorageBinding: testDouble.fn(),
       deleteArtifactStorageBindings: testDouble.fn(),
@@ -209,16 +209,19 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
           deleteArtifact: testDouble.fn(),
         },
         artifactCatalog: {
-          readArtifactCatalogRecord: testDouble.fn(async () => ({
+          readArtifactCatalogRecord: testDouble.fn(async (query: any) => {
+            expect(query).toEqual({ workspaceId: "workspace-a", storageKey: "source-a" });
+            return {
             ok: true,
             value: {
               record: {
+                workspaceId: "workspace-a",
                 storageKey: "source-a",
                 originalName: "source.pdf",
                 mediaType: "application/pdf",
               },
             },
-          })),
+          }; }),
         },
         datasetQualityPolicyProvider: managedQualityPolicyProvider,
       }),
@@ -758,14 +761,15 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
     expect(transientFailure.ok).toBe(false);
     await expect(access(runtimeWorkingDirectory)).resolves.toBeUndefined();
 
-    const approved = await useCase.approvePreparedTrainingDataset(
+    const [approved, duplicateApproval] = await Promise.all([useCase.approvePreparedTrainingDataset(
       {
         requestId: "quality-review-task",
         reportFingerprint: fingerprint,
         outputBaseName: "support-tickets-2026",
       },
       { workspaceId: "workspace-a" },
-    );
+    ), useCase.approvePreparedTrainingDataset({ requestId: "quality-review-task", reportFingerprint: fingerprint, outputBaseName: "support-tickets-2026" }, { workspaceId: "workspace-a" })]);
+    expect(duplicateApproval).toEqual(approved);
     expect(approved.ok).toBe(true);
     if (approved.ok) {
       expect(approved.value.result.outputs.local?.dataset).toBeDefined();
@@ -807,7 +811,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
     );
     expect(replay.ok).toBe(false);
     if (!replay.ok) {
-      expect(replay.error.code).toBe("not-found");
+      expect(replay.error.code).toBe("conflict");
     }
   });
 });

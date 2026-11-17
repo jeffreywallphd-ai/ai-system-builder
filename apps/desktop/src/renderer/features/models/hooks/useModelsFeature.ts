@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 import type { ModelArtifactForm, ModelLifecycleStatus, ModelSource, ModelTaskTag } from "../../../../../../../modules/contracts/model";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
@@ -14,6 +15,24 @@ interface ViewState {
   status: "idle" | "loading" | "success" | "error";
   message?: string;
 }
+
+interface ModelDeleteConfirmation {
+  readonly target?: string;
+  readonly text: string;
+}
+
+interface ModelViewScope {
+  lease?: object;
+  browse?: object;
+  details?: object;
+  inventory?: object;
+  saving?: object;
+  downloading?: object;
+  deleting?: object;
+  confirmation?: ModelDeleteConfirmation;
+  refresh?: () => Promise<boolean>;
+}
+const ownsView = (scope: ModelViewScope, lease: object) => scope.lease === lease;
 
 function normalizeOptionalNumber(value: string): number | undefined {
   const parsed = Number.parseInt(value, 10);
@@ -49,7 +68,9 @@ function normalizeOptionalSelect<TOption extends string>(value: string, options:
 }
 
 export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: string) {
+  const observer = useTaskObservationManager();
   const modelClient = useModelsClient(client);
+  const scope = useMemo<ModelViewScope>(() => ({}), [modelClient, workspaceId]);
   const [browseQuery, setBrowseQuery] = useState("");
   const [browseTaskTag, setBrowseTaskTag] = useState("");
   const [browseOtherTaskTag, setBrowseOtherTaskTag] = useState("");
@@ -72,16 +93,50 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   const [manageArtifactForm, setManageArtifactForm] = useState("");
   const [manageSearch, setManageSearch] = useState("");
   const [selectedManagedModel, setSelectedManagedModel] = useState<DesktopManagedModelInventoryRecord>();
-  const [pendingDeleteModelRecordId, setPendingDeleteModelRecordId] = useState<string>();
-  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
+  const [pendingDeleteModelRecordId, setPendingDeleteModelRecordIdState] = useState<string>();
+  const [deleteConfirmationInput, setDeleteConfirmationInputState] = useState("");
+  const [deleteModelLocalFiles, setDeleteModelLocalFiles] = useState(false);
   const [publishRepository, setPublishRepository] = useState("");
   const [folderOpenState, setFolderOpenState] = useState<ViewState>({ status: "idle" });
+
+  const setPendingDeleteModelRecordId = useCallback((target: string | undefined) => {
+    if (!scope.lease) return;
+    scope.confirmation = Object.freeze({ target, text: "" });
+    setPendingDeleteModelRecordIdState(target);
+    setDeleteConfirmationInputState("");
+  }, [scope]);
+
+  const setDeleteConfirmationInput = useCallback((text: string) => {
+    if (!scope.lease) return;
+    scope.confirmation = Object.freeze({ target: scope.confirmation?.target, text });
+    setDeleteConfirmationInputState(text);
+  }, [scope]);
+
+  useLayoutEffect(() => {
+    const lease = {}; scope.lease = lease;
+    scope.confirmation = Object.freeze({ text: "" });
+    setModels([]); setSelectedManagedModel(undefined); setPendingDeleteModelRecordIdState(undefined);
+    setDeleteConfirmationInputState(""); setDeleteModelLocalFiles(false); setPublishRepository("");
+    setSelectedBrowseModel(undefined); setSelectedBrowseModelDetails(undefined); setBrowseItems([]);
+    setBrowsePageIndex(0); setBrowsePageCursors([undefined]); setBrowseNextCursor(undefined);
+    setBrowseState({ status: "idle" }); setDetailsState({ status: "idle" }); setSaveState({ status: "idle" });
+    setDownloadState({ status: "idle" }); setManageState({ status: "idle" }); setFolderOpenState({ status: "idle" });
+    return () => {
+      if (scope.lease === lease) {
+        scope.lease = undefined; scope.browse = undefined; scope.details = undefined;
+        scope.inventory = undefined; scope.saving = undefined; scope.downloading = undefined; scope.deleting = undefined; scope.refresh = undefined;
+        scope.confirmation = undefined;
+      }
+    };
+  }, [scope]);
 
   const executeModelSearch = useCallback(async (
     cursor: string | undefined,
     targetPageIndex: number,
     targetPageCursors: Array<string | undefined>,
   ) => {
+    const lease = scope.lease; if (!lease) return;
+    const ticket = {}; scope.browse = ticket;
     if (browseTaskTag === "other" && browseOtherTaskTag.trim().length === 0) {
       setBrowseState({ status: "error", message: "Enter a task tag for Other, then retry." });
       return;
@@ -97,6 +152,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
         limit: normalizeOptionalNumber(browseLimit),
         cursor,
       });
+      if (!ownsView(scope, lease) || scope.browse !== ticket) return;
       setBrowseItems(result.models);
       setBrowsePageIndex(targetPageIndex);
       setBrowsePageCursors(targetPageCursors);
@@ -109,10 +165,11 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
         : { status: "success", message: "No model results found." });
       recordSectionLoadMilestone("renderer.section.load.resolved", { pageKey: "models", sectionKey: "models.remote-browse", trigger: "search" });
     } catch (error) {
-      setBrowseState({ status: "error", message: error instanceof Error ? error.message : "Failed to browse models." });
+      if (!ownsView(scope, lease) || scope.browse !== ticket) return;
+      setBrowseState({ status: "error", message: "Failed to browse models. Try again." });
       recordSectionLoadMilestone("renderer.section.load.failed", { pageKey: "models", sectionKey: "models.remote-browse", trigger: "search" });
     }
-  }, [browseLimit, browseOtherTaskTag, browseQuery, browseTaskTag, modelClient]);
+  }, [browseLimit, browseOtherTaskTag, browseQuery, browseTaskTag, modelClient, scope]);
 
   const searchModels = useCallback(async () => {
     await executeModelSearch(undefined, 0, [undefined]);
@@ -142,6 +199,8 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   }, [browsePageCursors, browsePageIndex, executeModelSearch]);
 
   const loadPopularModels = useCallback(async () => {
+    const lease = scope.lease; if (!lease) return;
+    const ticket = {}; scope.browse = ticket;
     setBrowseState({ status: "loading", message: "Loading popular models..." });
     try {
       const result = await modelClient.browseModels({
@@ -150,6 +209,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
         sort: "downloads",
         direction: "desc",
       });
+      if (!ownsView(scope, lease) || scope.browse !== ticket) return;
       setBrowseItems(result.models);
       setSelectedBrowseModel(undefined);
       setSelectedBrowseModelDetails(undefined);
@@ -158,29 +218,36 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
         ? { status: "success" }
         : { status: "success", message: "No popular models available right now." });
     } catch (error) {
-      setBrowseState({ status: "error", message: error instanceof Error ? error.message : "Failed to load popular models." });
+      if (!ownsView(scope, lease) || scope.browse !== ticket) return;
+      setBrowseState({ status: "error", message: "Failed to load popular models. Try again." });
     }
-  }, [browseLimit, modelClient]);
+  }, [browseLimit, modelClient, scope]);
 
   const selectBrowseModel = useCallback(async (model: DesktopModelBrowseItem) => {
+    const lease = scope.lease; if (!lease) return;
+    const ticket = {}; scope.details = ticket;
     setSelectedBrowseModel(model);
     setSelectedBrowseModelDetails(undefined);
     setDetailsState({ status: "loading", message: "Loading model details..." });
     try {
       const details = await modelClient.getModelDetails({ provider: "huggingface", modelId: model.modelId });
+      if (!ownsView(scope, lease) || scope.details !== ticket) return;
       setSelectedBrowseModelDetails(details);
       setDetailsState({ status: "success" });
     } catch (error) {
+      if (!ownsView(scope, lease) || scope.details !== ticket) return;
       setSelectedBrowseModelDetails(undefined);
-      setDetailsState({ status: "error", message: error instanceof Error ? error.message : "Failed to load model details." });
+      setDetailsState({ status: "error", message: "Failed to load model details. Try again." });
     }
-  }, [modelClient]);
+  }, [modelClient, scope]);
 
   const saveModelReference = useCallback(async (model?: DesktopModelBrowseItem) => {
+    const lease = scope.lease; if (!lease || scope.saving) return;
     const modelToSave = model ?? selectedBrowseModel;
     if (!modelToSave) {
       return;
     }
+    const ticket = {}; scope.saving = ticket;
     setSaveState({ status: "loading", message: "Saving model reference..." });
     try {
       if (!workspaceId) { setSaveState({ status: "error", message: "Select a workspace before saving model references." }); return; }
@@ -199,14 +266,21 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
           license: modelToSave.license,
         },
       });
+      if (!ownsView(scope, lease)) return;
       setSaveState({ status: "success", message: "Model reference saved." });
-      await refreshModels();
+      await scope.refresh?.();
     } catch (error) {
-      setSaveState({ status: "error", message: error instanceof Error ? error.message : "Failed to save model reference." });
+      if (!ownsView(scope, lease)) return;
+      setSaveState({ status: "error", message: "Failed to save model reference. Try again." });
+    } finally {
+      if (scope.saving === ticket) scope.saving = undefined;
     }
-  }, [modelClient, selectedBrowseModel, workspaceId]);
+  }, [modelClient, selectedBrowseModel, workspaceId, scope]);
 
   const refreshModels = useCallback(async () => {
+    const lease = scope.lease; if (!lease) return false;
+    const ticket = {}; scope.inventory = ticket;
+    if (workspaceId) observer.invalidate({ workspaceId, family: "model-download" });
     recordSectionLoadMilestone("renderer.section.load.start", { pageKey: "models", sectionKey: "models.local-list", trigger: "initial" });
     setManageState({ status: "loading", message: "Loading model inventory..." });
     try {
@@ -217,17 +291,26 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
         artifactForm: normalizeOptionalSelect<ModelArtifactForm>(manageArtifactForm, ["full-model", "adapter", "merged-model", "quantized-model", "checkpoint"]),
         search: manageSearch || undefined,
       }) : [];
+      if (!ownsView(scope, lease) || scope.inventory !== ticket) return false;
       setModels(listed);
       setSelectedManagedModel((current) => listed.find((item) => item.modelRecordId === current?.modelRecordId));
       setManageState(listed.length > 0
         ? { status: "success" }
         : { status: "success", message: "No model records found." });
       recordSectionLoadMilestone("renderer.section.load.resolved", { pageKey: "models", sectionKey: "models.local-list", trigger: "initial" });
+      return true;
     } catch (error) {
-      setManageState({ status: "error", message: error instanceof Error ? error.message : "Failed to list model records." });
+      if (!ownsView(scope, lease) || scope.inventory !== ticket) return false;
+      setManageState({ status: "error", message: "Failed to list model records. Try refreshing the inventory." });
       recordSectionLoadMilestone("renderer.section.load.failed", { pageKey: "models", sectionKey: "models.local-list", trigger: "initial" });
+      return false;
     }
-  }, [manageArtifactForm, manageLifecycleStatus, manageSearch, manageSource, modelClient, workspaceId]);
+  }, [manageArtifactForm, manageLifecycleStatus, manageSearch, manageSource, modelClient, observer, workspaceId, scope]);
+
+  useLayoutEffect(() => {
+    scope.refresh = refreshModels;
+    return () => { if (scope.refresh === refreshModels) scope.refresh = undefined; };
+  }, [scope, refreshModels]);
 
   useEffect(() => {
     void refreshModels();
@@ -241,10 +324,12 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   }, []);
 
   const downloadModel = useCallback(async (model?: DesktopModelBrowseItem) => {
+    const lease = scope.lease; if (!lease || scope.downloading) return;
     const modelToDownload = model ?? selectedBrowseModel;
     if (!modelToDownload) {
       return;
     }
+    const ticket = {}; scope.downloading = ticket;
     setDownloadState({ status: "loading", message: "Downloading model..." });
     try {
       if (!workspaceId) { setDownloadState({ status: "error", message: "Select a workspace before downloading models." }); return; }
@@ -265,33 +350,60 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
       };
       if (modelClient.startModelDownload) {
         await modelClient.startModelDownload(downloadRequest);
+        if (!ownsView(scope, lease)) return;
+        observer.invalidate({ workspaceId, family: "model-download" });
         setDownloadState({ status: "success" });
       } else {
         await modelClient.downloadModel(downloadRequest);
+        if (!ownsView(scope, lease)) return;
         setDownloadState({ status: "success", message: "Model downloaded." });
-        await refreshModels();
+        await scope.refresh?.();
       }
     } catch (error) {
-      setDownloadState({ status: "error", message: error instanceof Error ? error.message : "Failed to download model." });
+      if (!ownsView(scope, lease)) return;
+      setDownloadState({ status: "error", message: "The model download request could not be confirmed. Open Settings > Software status > Python Runtime and select Copy diagnostics." });
+    } finally {
+      if (scope.downloading === ticket) scope.downloading = undefined;
     }
-  }, [modelClient, refreshModels, selectedBrowseModel, workspaceId]);
+  }, [modelClient, observer, selectedBrowseModel, workspaceId, scope]);
 
   const confirmDeleteModelRecord = useCallback(async () => {
-    if (!pendingDeleteModelRecordId || deleteConfirmationInput !== "Delete") {
+    const lease = scope.lease; if (!lease || scope.deleting) return;
+    const confirmation = scope.confirmation;
+    if (!pendingDeleteModelRecordId || deleteConfirmationInput !== "Delete"
+        || confirmation?.target !== pendingDeleteModelRecordId || confirmation.text !== "Delete") {
       return;
     }
     if (!workspaceId) { setManageState({ status: "error", message: "Select a workspace before deleting model records." }); return; }
+    const ticket = {}; scope.deleting = ticket;
     try {
-      await modelClient.deleteModelRecord({ workspaceId, modelRecordId: pendingDeleteModelRecordId, deleteBackingArtifacts: false, deleteLocalFiles: true });
-      setPendingDeleteModelRecordId(undefined);
-      setDeleteConfirmationInput("");
-      await refreshModels();
+      const result = await modelClient.deleteModelRecord({ workspaceId, modelRecordId: pendingDeleteModelRecordId, deleteBackingArtifacts: false, deleteLocalFiles: deleteModelLocalFiles });
+      if (!ownsView(scope, lease) || scope.deleting !== ticket) return;
+      if (!result || result.deletedModelRecordId !== pendingDeleteModelRecordId || result.deletedRegistryRecord !== true
+          || result.deletedLocalFiles !== deleteModelLocalFiles
+          || !Array.isArray(result.deletedBackingArtifactIds) || result.deletedBackingArtifactIds.length !== 0) throw new Error("Unconfirmed model deletion.");
+      if (scope.confirmation !== confirmation) {
+        await scope.refresh?.();
+        return;
+      }
+      const settledConfirmation = Object.freeze({ text: "" });
+      scope.confirmation = settledConfirmation;
+      setPendingDeleteModelRecordIdState(undefined);
+      setDeleteConfirmationInputState("");
+      const refreshed = await scope.refresh?.();
+      if (ownsView(scope, lease) && scope.confirmation === settledConfirmation && refreshed === true) {
+        setManageState({ status: "success", message: "Model record deleted." });
+      }
     } catch (error) {
-      setManageState({ status: "error", message: error instanceof Error ? error.message : "Failed to delete the model record." });
+      if (!ownsView(scope, lease) || scope.deleting !== ticket || scope.confirmation !== confirmation) return;
+      setManageState({ status: "error", message: "Model deletion was not confirmed. Refresh the inventory before retrying." });
+    } finally {
+      if (scope.deleting === ticket) scope.deleting = undefined;
     }
-  }, [deleteConfirmationInput, modelClient, pendingDeleteModelRecordId, refreshModels, workspaceId]);
+  }, [deleteConfirmationInput, deleteModelLocalFiles, modelClient, pendingDeleteModelRecordId, workspaceId, scope]);
 
   const revealManagedModelInFolder = useCallback(async () => {
+    const lease = scope.lease; if (!lease) return;
     if (!selectedManagedModel) {
       return;
     }
@@ -305,14 +417,16 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
         workspaceId,
         modelRecordId: selectedManagedModel.modelRecordId,
       });
+      if (!ownsView(scope, lease)) return;
       setFolderOpenState({ status: "success" });
     } catch (error) {
+      if (!ownsView(scope, lease)) return;
       setFolderOpenState({
         status: "error",
-        message: error instanceof Error ? error.message : "Failed to open the model folder.",
+        message: "Model files could not be opened. Refresh the inventory and try again.",
       });
     }
-  }, [modelClient, selectedManagedModel, workspaceId]);
+  }, [modelClient, selectedManagedModel, workspaceId, scope]);
 
   const lifecycleCounts = useMemo(() => ({
     saved: models.filter((item) => item.lifecycleStatus === "saved-reference").length,
@@ -322,6 +436,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   }), [models]);
 
   const validateManagedModel = useCallback(async () => {
+    const lease = scope.lease; if (!lease) return;
     if (!selectedManagedModel) {
       return;
     }
@@ -329,14 +444,18 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     try {
       if (!workspaceId) { setManageState({ status: "error", message: "Select a workspace before validating models." }); return; }
       const result = await modelClient.validateModel({ workspaceId, modelRecordId: selectedManagedModel.modelRecordId });
-      await refreshModels();
+      if (!ownsView(scope, lease)) return;
+      const refreshed = await scope.refresh?.();
+      if (!ownsView(scope, lease) || refreshed !== true) return;
       setManageState({ status: result.status === "invalid" ? "error" : "success", message: `Validation ${result.status}.` });
     } catch (error) {
-      setManageState({ status: "error", message: error instanceof Error ? error.message : "Validation failed." });
+      if (!ownsView(scope, lease)) return;
+      setManageState({ status: "error", message: "Model validation could not be confirmed. Try again." });
     }
-  }, [modelClient, refreshModels, selectedManagedModel, workspaceId]);
+  }, [modelClient, selectedManagedModel, workspaceId, scope]);
 
   const publishManagedModel = useCallback(async () => {
+    const lease = scope.lease; if (!lease) return;
     if (!selectedManagedModel || publishRepository.trim().length === 0) {
       return;
     }
@@ -344,12 +463,15 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     try {
       if (!workspaceId) { setManageState({ status: "error", message: "Select a workspace before publishing models." }); return; }
       const result = await modelClient.publishModel({ workspaceId, modelRecordId: selectedManagedModel.modelRecordId, repository: publishRepository.trim() });
-      await refreshModels();
+      if (!ownsView(scope, lease)) return;
+      const refreshed = await scope.refresh?.();
+      if (!ownsView(scope, lease) || refreshed !== true) return;
       setManageState({ status: result.published ? "success" : "error", message: result.published ? "Model published." : "Publish failed." });
     } catch (error) {
-      setManageState({ status: "error", message: error instanceof Error ? error.message : "Publish failed." });
+      if (!ownsView(scope, lease)) return;
+      setManageState({ status: "error", message: "Model publication could not be confirmed. Check its status before retrying." });
     }
-  }, [modelClient, publishRepository, refreshModels, selectedManagedModel, workspaceId]);
+  }, [modelClient, publishRepository, selectedManagedModel, workspaceId, scope]);
 
   return {
     workspaceId,
@@ -391,6 +513,8 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     refreshModels,
     pendingDeleteModelRecordId,
     setPendingDeleteModelRecordId,
+    deleteModelLocalFiles,
+    setDeleteModelLocalFiles,
     deleteConfirmationInput,
     setDeleteConfirmationInput,
     confirmDeleteModelRecord,

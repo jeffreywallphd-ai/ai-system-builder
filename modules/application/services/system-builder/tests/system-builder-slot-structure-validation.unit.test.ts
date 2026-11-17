@@ -4,7 +4,7 @@ import type {
   AssetDefinition,
   AssetReference,
 } from "../../../../contracts/asset";
-import { normalizeAssetId } from "../../../../contracts/asset";
+import { normalizeAssetId, normalizeAssetSlotId } from "../../../../contracts/asset";
 import type {
   SystemBuilderComposition,
   SystemBuilderRevision,
@@ -12,6 +12,8 @@ import type {
 import {
   normalizeSystemBuilderRevisionId,
   normalizeSystemBuilderSystemId,
+  minimumSystemBuilderSlotItems,
+  SYSTEM_FORM_PLACEMENT_MESSAGE,
 } from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import {
@@ -31,7 +33,7 @@ const systemId = normalizeSystemBuilderSystemId("system-slot-test");
 const compositionId = "system-slot-test.composition";
 
 describe("canonical System Builder slot structure", () => {
-  it("creates and validates a complete default interactive root, shell, page, and content structure", async () => {
+  it("creates and validates a root, shell and empty page without seeding a content asset", async () => {
     const revision = createRevision();
     const result = await validator().execute(revision);
 
@@ -42,9 +44,13 @@ describe("canonical System Builder slot structure", () => {
       "builtin.layout.application.minimal",
     );
     expect(revision.composition.rootInstanceRefs.length).toBe(1);
-    expect(revision.instances.length).toBe(4);
-    expect(revision.placements?.length).toBe(3);
-    expect(revision.composition.placementRefs?.length).toBe(3);
+    expect(revision.instances.map((item) => String(item.definitionRef.id))).toEqual([
+      "builtin.system.system",
+      "builtin.layout.application.minimal",
+      "builtin.layout.page.single",
+    ]);
+    expect(revision.placements?.length).toBe(2);
+    expect(revision.composition.placementRefs?.length).toBe(2);
     const shellPlacement = revision.placements?.find(
       (placement) => String(placement.slotId) === "application-shell",
     );
@@ -55,6 +61,16 @@ describe("canonical System Builder slot structure", () => {
           String(shellPlacement?.childInstanceRef.id),
       )?.definitionRef.id,
     ).toBe("builtin.layout.application.minimal");
+  });
+
+  it("keeps historical and custom slot minima while allowing the exact interactive Foundation page to be empty", () => {
+    const page = exactSystemFoundationDefinitionReference("builtin.layout.page.single");
+    const content = definition("builtin.layout.page.single").slots![0]!;
+    expect(content.cardinality.minItems).toBe(1);
+    expect(minimumSystemBuilderSlotItems("interactive", page, content)).toBe(0);
+    expect(minimumSystemBuilderSlotItems("workflow", page, content)).toBe(1);
+    expect(minimumSystemBuilderSlotItems("interactive", { ...page, version: "2.0.0" }, content)).toBe(1);
+    expect(minimumSystemBuilderSlotItems("interactive", { ...page, id: normalizeAssetId("workspace.custom-page") }, content)).toBe(1);
   });
 
   it("creates a valid required structure for every approved application layout", async () => {
@@ -117,7 +133,9 @@ describe("canonical System Builder slot structure", () => {
 
     expect(systemBuilderSlotAcceptsDefinition(content, table)).toBe(true);
     expect(systemBuilderSlotAcceptsDefinition(content, form)).toBe(true);
-    expect(systemBuilderSlotAcceptsDefinition(actions, action)).toBe(true);
+    expect(systemBuilderSlotAcceptsDefinition(actions, action, card)).toBe(false);
+    const formActions = form.slots!.find((slot) => slot.slotId === "actions")!;
+    expect(systemBuilderSlotAcceptsDefinition(formActions, action, form)).toBe(true);
     expect(systemBuilderSlotAcceptsDefinition(content, entity)).toBe(false);
     expect(
       systemBuilderSlotAcceptsDefinition(pageContent, assistant, page),
@@ -128,6 +146,50 @@ describe("canonical System Builder slot structure", () => {
     expect(systemBuilderSlotAcceptsDefinition(content, assistant, card)).toBe(
       false,
     );
+  });
+
+  it("rejects standalone form elements and a field group outside a form", async () => {
+    const revision = createRevision();
+    const page = revision.instances.find((item) => item.definitionRef.id === "builtin.layout.page.single")!;
+    const group = instanceReference("instance.group");
+    const field = instanceReference("instance.field");
+    const orphan = instanceReference("instance.orphan");
+    const instances = [
+      ...revision.instances,
+      ...([
+        [group, "builtin.form.field-group"],
+        [field, "builtin.form.text-field"],
+        [orphan, "builtin.form.checkbox-field"],
+      ] as const).map(([ref, id]) => ({
+        ...page, instanceId: ref.id,
+        definitionRef: exactReference(definition(id)),
+      })),
+    ];
+    const groupPlacement = {
+      schemaVersion: "asset-placement.v1" as const, placementId: "placement.group",
+      parentInstanceRef: instanceReference(String(page.instanceId)), childInstanceRef: group,
+      slotId: normalizeAssetSlotId("content"), order: 0,
+    };
+    const fieldPlacement = {
+      ...groupPlacement, placementId: "placement.field", parentInstanceRef: group,
+      childInstanceRef: field, slotId: normalizeAssetSlotId("fields"),
+    };
+    const result = await validator().execute({
+      ...revision,
+      instances,
+      placements: [...revision.placements!, groupPlacement, fieldPlacement],
+      composition: {
+        ...revision.composition,
+        instanceRefs: [...revision.composition.instanceRefs, group, field, orphan],
+        placementRefs: [...revision.composition.placementRefs!,
+          { kind: "asset-placement", id: normalizeAssetId(groupPlacement.placementId) },
+          { kind: "asset-placement", id: normalizeAssetId(fieldPlacement.placementId) }],
+      },
+    });
+    expect(result.status).toBe("invalid");
+    expect(result.issues.filter((issue) => issue.message === SYSTEM_FORM_PLACEMENT_MESSAGE).map((issue) => issue.path)).toEqual([
+      ["instances", "instance.group"], ["instances", "instance.field"], ["instances", "instance.orphan"],
+    ]);
   });
 
   it("accepts an explicitly derived protected root", async () => {
@@ -223,7 +285,7 @@ describe("canonical System Builder slot structure", () => {
         mutate((revision) => ({
           ...revision,
           placements: revision.placements?.map((placement, index) =>
-            index === 2 ? { ...placement, order: 1 } : placement,
+            index === 1 ? { ...placement, order: 1 } : placement,
           ),
         })),
         /contiguous from zero/i,
@@ -269,12 +331,12 @@ describe("canonical System Builder slot structure", () => {
 
   it("rejects placement cycles with bounded safe diagnostics", async () => {
     const revision = mutate((candidate) => {
-      const content = candidate.instances[3]!;
+      const page = candidate.instances[2]!;
       const placements = candidate.placements?.map((placement, index) =>
         index === 0
           ? {
               ...placement,
-              parentInstanceRef: instanceReference(content.instanceId),
+              parentInstanceRef: instanceReference(page.instanceId),
             }
           : placement,
       );

@@ -18,7 +18,7 @@ function HookHarness(props: HookHarnessProps) {
   const state = useArtifactDeleteFlow({
     client: props.client,
     refreshArtifacts: props.refreshArtifacts,
-    clearSelectedArtifact: props.clearSelectedArtifact,
+    captureSelectionClear: () => props.clearSelectedArtifact,
     setViewState: props.setViewState,
   });
   props.onState(state);

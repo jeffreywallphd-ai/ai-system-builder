@@ -1,3 +1,5 @@
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import { normalizeAssetOverrideRecord, normalizeUpdateAssetOverrideCommand, type AssetAuthoringFailure, type UpdateAssetOverrideCommand, type UpdateAssetOverrideResult } from "../../../contracts/asset-authoring";
 import type { AssetOverrideRepositoryPort } from "../../ports/asset-authoring";
 import { detectExpectedBaseRevisionConflict } from "./asset-authoring-conflict.service";
@@ -5,11 +7,12 @@ import { detectExpectedBaseRevisionConflict } from "./asset-authoring-conflict.s
 const nowIso = () => new Date().toISOString();
 const fail = (code: AssetAuthoringFailure["code"], message: string): UpdateAssetOverrideResult => ({ kind: "failure", failure: { code, message } });
 
-export interface UpdateAssetOverrideUseCaseDependencies { assetOverrideRepository: AssetOverrideRepositoryPort; now?: () => string; }
+export interface UpdateAssetOverrideUseCaseDependencies { workspaceAccess: WorkspaceAssetAccessPort; assetOverrideRepository: AssetOverrideRepositoryPort; now?: () => string; }
 export class UpdateAssetOverrideUseCase {
   constructor(private readonly d: UpdateAssetOverrideUseCaseDependencies) {}
   async execute(command: UpdateAssetOverrideCommand): Promise<UpdateAssetOverrideResult> { try {
     const c = normalizeUpdateAssetOverrideCommand(command);
+    await requireWorkspaceAssetAccess(this.d.workspaceAccess, c.targetWorkspaceId, "asset-authoring.update-asset-override", "asset:write");
     const found = await this.d.assetOverrideRepository.readAssetOverrideRecord(c.targetWorkspaceId, c.overrideId);
     if (!found) return fail("not-found", "Asset override was not found.");
     if (found.targetWorkspaceId !== c.targetWorkspaceId) return fail("conflict", "Override workspace mismatch.");

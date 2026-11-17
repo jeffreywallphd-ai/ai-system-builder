@@ -1,3 +1,4 @@
+import { registerSecurityRoutes } from "./registerSecurityRoutes";
 import assert from "node:assert/strict";
 import { describe, expect, it } from "../../../../testing/node-test";
 import {
@@ -610,4 +611,34 @@ describe("security middleware", () => {
     await middleware(other, rejectedResponse, () => {});
     expect(rejectedResponse.statusCode).toBe(403);
   });
+});
+
+
+it("protects enforced development-mode mutations through actual middleware and route composition",async()=>{
+ for(const scenario of [
+  {name:"missing",initial:"lan-token-enforced",token:undefined,scopes:[],status:401},
+  {name:"invalid",initial:"lan-token-enforced",token:"invalid-synthetic",scopes:[],status:401},
+  {name:"nonadmin",initial:"lan-token-enforced",token:"valid-synthetic",scopes:["model:read"],status:403},
+  {name:"admin",initial:"lan-token-enforced",token:"valid-synthetic",scopes:["security:admin"],status:200},
+  {name:"bootstrap",initial:"disabled-dev",token:undefined,scopes:[],status:200},
+ ] as const) {
+  const store=createInMemoryDevSecurityEnforcementStore(scenario.initial);let setCalls=0;let verifyCalls=0;let bodyReads=0;
+  const routes=new Map<string,any>();const app={get:(path:string,handler:any)=>routes.set('GET '+path,handler),post:(path:string,handler:any)=>routes.set('POST '+path,handler)};
+  registerSecurityRoutes(app as never,{getStatus:async()=>({}),completePairing:async()=>({}),revokeToken:async()=>({}),getDevMode:()=>store.getMode(),setDevMode:mode=>{setCalls++;store.setMode(mode);}});
+  const middleware=createExpressSecurityMiddleware({mode:"disabled-dev",httpsRequired:false,authRequired:false,devSecurityEnforcement:store,verifyToken:async()=>{
+   verifyCalls++;if(scenario.name==='invalid')throw createSecurityApplicationError("security.invalid-token","Invalid token.");
+   return {authenticated:true,authMethod:"bearer-token",principal:{principalId:"synthetic-principal",kind:"device",roles:[],scopes:[...scenario.scopes]}} as never;
+  }});
+  const nextMode=scenario.initial==='disabled-dev'?'lan-token-enforced':'disabled-dev';
+  const request:any={method:"POST",path:"/api/security/dev-mode",protocol:"http",headers:scenario.token?{authorization:'Bearer '+scenario.token}:{}};
+  Object.defineProperty(request,'body',{get:()=>{bodyReads++;if(scenario.status!==200)throw new Error("Body must remain unread on denied request");return {mode:nextMode};}});
+  const response:any={statusCode:200,body:undefined,status(code:number){this.statusCode=code;return this;},json(body:unknown){this.body=body;return this;}};
+  await middleware(request,response,()=>routes.get('POST /api/security/dev-mode')(request,response));
+  expect(response.statusCode).toBe(scenario.status);
+  expect(setCalls).toBe(scenario.status===200?1:0);
+  expect(bodyReads>0).toBe(scenario.status===200);
+  expect(verifyCalls).toBe(scenario.token?1:0);
+  expect(store.getMode()).toBe(scenario.status===200?nextMode:scenario.initial);
+ }
+ expect(API_ROUTE_POLICIES.get("POST /api/security/dev-mode")).toMatchObject({public:false,scopes:["security:admin"]});
 });

@@ -1,23 +1,62 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArtifactBrowserFeature } from "../features/artifact-browser";
 import { ArtifactIngestionFeature } from "../features/artifact-upload";
 import { DatasetPreparationFeature } from "../features/dataset-preparation";
 import { TabbedPanel } from "../components/ui/TabbedPanel";
 import { DatasetReviewWorkspace } from "../../../../modules/ui/shared/dataset-review";
+import { PageDashboardHeader } from "../../../../modules/ui/shared";
 import { createApiDatasetPreparationClient } from "../features/dataset-preparation";
+import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
+import { createContextManagementPageClient } from "../features/context-management/api/contextManagementPageClient";
+
+import type { DatasetVersionPanelService } from "../../../../modules/ui/shared/dataset-version";
+import { useDatasetVersionReplayHandoff } from "../../../../modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff";
+import type { GuidedHeadlessFileClient } from "../../../../modules/ui/shared/data-management/GuidedIngestionTaskPanel";
 
 export interface WorkspaceScopedPageProps {
   workspaceId: string;
   workspaceName: string;
+  initialSelectedStorageKey?: string;
+  onInitialSelectionHandled?: () => void;
+  onConvertToRag?: (artifactId: string) => void;
+  headlessFileClient?: GuidedHeadlessFileClient;
 }
-export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
+export function ArtifactsPage({
+  workspaceId,
+  initialSelectedStorageKey,
+  onInitialSelectionHandled,
+  onConvertToRag,
+  headlessFileClient,
+}: WorkspaceScopedPageProps) {
   const [activeTabId, setActiveTabId] = useState("ingestion");
+  const replayHandoff = useDatasetVersionReplayHandoff(workspaceId, activeTabId === "dataset-preparation", () => setActiveTabId("dataset-preparation"));
   const [preparedArtifactStorageKey, setPreparedArtifactStorageKey] =
     useState<string>();
   const onDatasetPrepared = (artifactStorageKey: string) => {
     setPreparedArtifactStorageKey(artifactStorageKey);
     setActiveTabId("browser");
   };
+  const datasetVersionService = useMemo<DatasetVersionPanelService>(() => {
+    const client = createApiDatasetPreparationClient();
+    return {
+      list: async (workspaceId, datasetId) => {
+        if (!client.listVersions) throw new Error("Version history is unavailable.");
+        return (await client.listVersions({ workspaceId, datasetId })).versions;
+      },
+      compare: async (workspaceId, fromVersionId, toVersionId) => {
+        if (!client.compareVersions) throw new Error("Version comparison is unavailable.");
+        return (await client.compareVersions({ workspaceId, fromVersionId, toVersionId })).comparison;
+      },
+      reproduce: async (workspaceId, versionId) => {
+        if (!client.readReproduction) throw new Error("Saved setup is unavailable.");
+        return (await client.readReproduction({ workspaceId, versionId })).reproduction;
+      },
+      publish: async input => {
+        if (!client.publishVersion) throw new Error("Version publication is unavailable.");
+        return (await client.publishVersion(input)).publication;
+      },
+    };
+  }, []);
   const datasetReviewService = useMemo(() => {
     const client = createApiDatasetPreparationClient();
     return {
@@ -56,14 +95,46 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
     return async (input: { workspaceId: string; artifactKey: string }) => {
       if (!client.readReviewPage)
         throw new Error("Parquet preview is unavailable.");
-      return (
-        await client.readReviewPage({ ...input, page: 0, pageSize: 10 })
-      ).page;
+      return (await client.readReviewPage({ ...input, page: 0, pageSize: 10 }))
+        .page;
     };
   }, []);
+  const contextClient = useMemo(() => createContextManagementPageClient(), []);
+  const readContextConversionReadiness = useMemo(
+    () => async (artifactId: string) => {
+      const result = await contextClient.execute({
+        workspaceId,
+        command: {
+          action: "source-inspect",
+          artifactId,
+          chunking: {
+            strategy: "structure-aware",
+            chunkCharacters: 1200,
+            overlapCharacters: 120,
+            maximumChunks: 10000,
+          },
+        },
+      });
+      if (result.action !== "source-inspect") {
+        throw new Error("Context readiness response was invalid.");
+      }
+      return result.readiness;
+    },
+    [contextClient, workspaceId],
+  );
+
+  useEffect(() => {
+    if (initialSelectedStorageKey) setActiveTabId("browser");
+  }, [initialSelectedStorageKey]);
   return (
     <section className="ui-stack ui-stack--sm">
-      <h1>Data Management</h1>
+      <PageDashboardHeader
+        title="Data Management"
+        description="Add source data, prepare and review training datasets, and manage workspace artifacts."
+        dashboard={
+          <ThinClientPageDashboard kind="artifacts" workspaceId={workspaceId} />
+        }
+      />
       <TabbedPanel
         tabListAriaLabel="Artifact workspace panels"
         activeTabId={activeTabId}
@@ -77,6 +148,7 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
               <ArtifactIngestionFeature
                 key={`ingest-${workspaceId}`}
                 workspaceId={workspaceId}
+                headlessFileClient={headlessFileClient}
               />
             ),
           },
@@ -87,11 +159,21 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
               <ArtifactBrowserFeature
                 key={`browser-${workspaceId}`}
                 workspaceId={workspaceId}
+                datasetVersionService={datasetVersionService}
+                onReuseDatasetVersion={replayHandoff.enqueue}
                 readParquetPreview={parquetPreviewReader}
-                initialSelectedStorageKey={preparedArtifactStorageKey}
-                onInitialSelectionHandled={() =>
-                  setPreparedArtifactStorageKey(undefined)
+                initialSelectedStorageKey={
+                  preparedArtifactStorageKey ?? initialSelectedStorageKey
                 }
+                onInitialSelectionHandled={() => {
+                  if (preparedArtifactStorageKey) {
+                    setPreparedArtifactStorageKey(undefined);
+                  } else {
+                    onInitialSelectionHandled?.();
+                  }
+                }}
+                readContextConversionReadiness={readContextConversionReadiness}
+                onConvertToRag={onConvertToRag}
               />
             ),
           },
@@ -103,6 +185,7 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
                 key={`dataset-${workspaceId}`}
                 workspaceId={workspaceId}
                 onPrepared={onDatasetPrepared}
+                replayHandoff={replayHandoff}
               />
             ),
           },

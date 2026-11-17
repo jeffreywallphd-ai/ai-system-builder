@@ -5,3 +5,4 @@ export * from "./runtime-task-registry.port";
 
 export * from "./runtime-readiness.port";
 export * from "./dataset-quality-policy.port";
+export * from "./dataset-preparation-source-hasher.port";

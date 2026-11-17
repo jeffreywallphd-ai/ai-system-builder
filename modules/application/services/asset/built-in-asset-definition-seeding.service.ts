@@ -1,8 +1,10 @@
+import { isDeepStrictEqual } from "node:util";
 import type { AssetDefinition, AssetMetadata, AssetReference, AssetValidationIssue } from "../../../contracts/asset";
 import { isAssetId, isAssetVersion } from "../../../contracts/asset";
 import type { AssetDefinitionRepositoryPort } from "../../ports/asset";
 import { validateAssetDefinition, type AssetValidationResult } from "./validate-asset-definition.service";
 import { createBuiltInAssetDefinitionFingerprint } from "./built-ins/built-in-asset-definition-fingerprint";
+import { captureAssetPackFingerprintInput } from "../asset-packs/asset-pack-fingerprint-input";
 
 export interface BuiltInAssetDefinitionSeed {
   readonly seedId: string;
@@ -125,14 +127,24 @@ export class BuiltInAssetDefinitionSeedingService {
 
     let existing: AssetDefinition | undefined;
     try {
-      existing = await this.dependencies.definitionRepository.getDefinition(reference);
+      const stored = await this.dependencies.definitionRepository.getDefinition(reference);
+      if (stored !== undefined) {
+        const captured = captureAssetPackFingerprintInput(stored);
+        if (!captured || typeof captured !== "object" || Array.isArray(captured)) throw new Error(SAFE_FAILURE_MESSAGE);
+        existing = captured as unknown as AssetDefinition;
+      }
     } catch {
       return failedDiagnostic(seed, "read");
     }
 
     if (existing) {
       const existingMarker = getBuiltInSeedMetadata(existing.metadata);
-      if (existingMarker?.seedId === seed.seedId && existingMarker.fingerprint === fingerprint) {
+      const expected = existingMarker ? withBuiltInSeedMetadata(seed.definition, {
+        seedId: seed.seedId, seedVersion: existingMarker.seedVersion, fingerprint,
+        managedBy: "asset-kernel", lastSeededAt: existingMarker.lastSeededAt,
+      }) : undefined;
+      if (existingMarker?.seedId === seed.seedId && existingMarker.fingerprint === fingerprint
+        && expected && isDeepStrictEqual(existing, captureAssetPackFingerprintInput(expected))) {
         if (existingMarker.seedVersion === seed.seedVersion) {
           return {
             seedId: seed.seedId,

@@ -30,6 +30,7 @@ export interface CreateCanonicalSystemBuilderStructureInput {
   readonly timestamp: string;
   readonly profile: SystemBuilderProfile;
   readonly layoutPresetRef?: AssetReference;
+  readonly starter?: "form";
 }
 
 export interface CanonicalSystemBuilderStructureSeed {
@@ -39,12 +40,12 @@ export interface CanonicalSystemBuilderStructureSeed {
   readonly rootInstanceRefs: readonly AssetReference[];
   readonly instanceRefs: readonly AssetReference[];
   readonly placementRefs: readonly AssetReference[];
+  readonly defaultFormInstanceId?: string;
 }
 
 const DEFAULT_APPLICATION_LAYOUT_ID =
   "builtin.layout.application.minimal" as const;
 const DEFAULT_PAGE_LAYOUT_ID = "builtin.layout.page.single" as const;
-const EMPTY_STATE_ID = "builtin.state.empty-state" as const;
 
 export function createCanonicalSystemBuilderStructure(
   input: CreateCanonicalSystemBuilderStructureInput,
@@ -94,6 +95,7 @@ export function createCanonicalSystemBuilderStructure(
     DEFAULT_PAGE_LAYOUT_ID,
   );
   let pageIndex = 0;
+  let defaultFormInstanceId: string | undefined;
   for (const slot of layoutPreset.slots) {
     if (
       slot.cardinality.minItems === 0 ||
@@ -117,7 +119,18 @@ export function createCanonicalSystemBuilderStructure(
         pageIndex === 1 ? "Main page" : `Page ${pageIndex}`,
       );
       addPlacement(placements, input.systemId, shell, slot.slotId, page, order);
-      addRequiredPageContent(instances, placements, input, page, pageIndex);
+      if (input.starter === "form" && pageIndex === 1) {
+        const section = addInstance(instances, input, "form-content",
+          exactSystemFoundationDefinitionReference("builtin.ui.section"), "Form content");
+        const form = addInstance(instances, input, "first-form",
+          exactSystemFoundationDefinitionReference("builtin.form.form"), input.name, { title: input.name });
+        const firstPage = addInstance(instances, input, "form-page-1",
+          exactSystemFoundationDefinitionReference("builtin.form.field-group"), "Page 1", { title: "Page 1" });
+        addPlacement(placements, input.systemId, page, "content", section, 0);
+        addPlacement(placements, input.systemId, section, "content", form, 0);
+        addPlacement(placements, input.systemId, form, "fields", firstPage, 0);
+        defaultFormInstanceId = String(form.instanceId);
+      }
     }
   }
 
@@ -133,42 +146,8 @@ export function createCanonicalSystemBuilderStructure(
     rootInstanceRefs,
     instanceRefs: instances.map(instanceReference),
     placementRefs: placements.map(placementReference),
+    ...(defaultFormInstanceId ? { defaultFormInstanceId } : {}),
   };
-}
-
-function addRequiredPageContent(
-  instances: AssetInstance[],
-  placements: AssetPlacement[],
-  input: CreateCanonicalSystemBuilderStructureInput,
-  page: AssetInstance,
-  pageIndex: number,
-): void {
-  const pagePreset = readSystemFoundationLayoutPreset(
-    DEFAULT_PAGE_LAYOUT_ID,
-    SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
-  );
-  if (!pagePreset) throw safeError("The default page layout is unavailable.");
-  let contentIndex = 0;
-  for (const slot of pagePreset.slots) {
-    for (let order = 0; order < slot.cardinality.minItems; order += 1) {
-      contentIndex += 1;
-      const content = addInstance(
-        instances,
-        input,
-        `page-${pageIndex}-content-${contentIndex}`,
-        exactSystemFoundationDefinitionReference(EMPTY_STATE_ID),
-        "Empty content",
-      );
-      addPlacement(
-        placements,
-        input.systemId,
-        page,
-        slot.slotId,
-        content,
-        order,
-      );
-    }
-  }
 }
 
 function applicationLayoutReference(
@@ -199,6 +178,7 @@ function addInstance(
   suffix: string,
   definitionRef: AssetReference,
   displayName: string,
+  configuration?: AssetInstance["selectedConfiguration"],
 ): AssetInstance {
   const definition = exactDefinition(definitionRef);
   const instance: AssetInstance = {
@@ -206,8 +186,8 @@ function addInstance(
     definitionRef,
     displayName,
     lifecycleStatus: "draft",
-    ...(definition.defaultConfiguration
-      ? { selectedConfiguration: clone(definition.defaultConfiguration) }
+    ...(definition.defaultConfiguration || configuration
+      ? { selectedConfiguration: clone({ ...definition.defaultConfiguration, ...configuration }) }
       : {}),
     parentCompositionRef: {
       kind: "asset-composition",

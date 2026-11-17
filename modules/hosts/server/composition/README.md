@@ -1,8 +1,59 @@
 # Server host composition
 
+## Restrict automatic ComfyUI setup
+
+Set `COMFYUI_AUTO_INSTALL=0` in the server host environment to disable automatic
+ComfyUI installation and dependency repair during image runtime startup. The
+host snapshots this policy before composition effects. An unset value or `1`
+preserves the existing automatic setup behavior. Other values stop composition
+with a fixed configuration error. Restart the host after changing the setting.
+
+Before every start with automatic setup disabled, the host reads managed install
+metadata for the exact root, target and official Git source. Missing, unconfirmed
+or mismatched metadata stops startup with a fixed error. No installation or repair
+is attempted by this read-only check.
+
+Explicit installer operations and Python runtime setup remain separate. This
+setting does not prove file integrity or import readiness, block the launched runtime's
+own network activity, or authorize model downloads. Qualification profiles must
+still verify prerequisites and own the process and its runtime files.
+
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 `composeServerHost` wires server-host lifecycle dependencies while keeping transport setup thin.
+
+The managed headless authoring service composes the shared System Builder
+against the authenticated request organization. It checks the current
+workspace and membership again inside the transaction that owns a save
+and its durable retry receipt. It rechecks access before returning a
+successful result. The service accepts only an already verified agent
+registration. A transport route is a separate composition step.
+
+The managed plan client uses its own verified registration. The server loads
+the next approved change from the saved plan and commits it with its durable
+receipt. It checks that permission and approval still apply before sending
+the successful result. This uses exact row locks in PostgreSQL.
+
+Each managed browser tab registers a short-lived proof. A different bearer
+for the same user and registered browser client cannot reuse that proof.
+Workspace policy governs registration. The existing takeover authority
+still requires separate user consent for presentation.
+
+The managed browser consent composition reuses the window authority for
+request, consent, readiness and revoke. An application policy read and a
+live browser document are required. A separate fence prevents a closed
+request from creating a prompt or granting consent after a held policy read.
+
+Browser presentation reuses the bounded delivery queue after the caller
+proves its exact lease. The queue tracks a saved-resource command and its
+separate receipt. A browser can provide current context only in response to
+a short-lived, single-use challenge for the same lease.
+
+Managed browser presentation resolves saved system revisions, components,
+validation, run status and artifact catalog metadata through the existing
+workspace repositories. A live matching lease gates delivery, receipts and
+fresh context. Runs and artifacts require their existing read scopes. These
+operations do not change saved resources or stop independent tasks.
 
 Current composition includes:
 
@@ -24,8 +75,27 @@ Route composition now includes:
   use case, runtime task registry, artifact storage/repository ports, and server
   runtime-readiness guard; the host also composes the default quality-policy
   provider so a requested review cannot fall back to an absent authority.
+- Context Management read/write routes backed by the same generation, browser,
+  retrieval, delete, task-registry, artifact, and authorization composition as
+  desktop. SQLite/ZIP parsing and vector ranking remain in the managed Python
+  runtime rather than the API process or thin client.
 
 Current artifact-repo provider registration is Hugging Face only.
+
+## Managed saved-state replay
+
+`AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE=1` enables the bounded System Builder
+snapshot and replay routes on PostgreSQL hosts with OIDC and organization
+authorization. Existing editing paths in that composition write journal events in
+the same transaction as the saved system. Each read uses current workspace policy
+and the verified bearer lifetime. Omit the setting and restart to retire the routes
+while preserving saved records and their journal. This slice supports scoped
+polling and a header-authenticated server event stream. The window controls have
+separate qualification.
+
+The current OIDC verifier can expose the signed client ID of a typed access
+token internally. This does not change ordinary authentication or activate
+agent and interactive access.
 
 ## Hugging Face token configuration
 
@@ -67,3 +137,8 @@ Current artifact-repo provider registration is Hugging Face only.
   files are cleaned after terminal or failed execution.
 - The default server workflow avoids custom InstantID/InsightFace nodes so the feature remains usable with the managed ComfyUI install.
 - When no explicit latent reference is provided, the first FaceID reference is used as the image-to-image latent source for facial retention.
+
+Website ingestion receives the organization-scoped canonical artifact catalog
+for compensation. The application removes exact new capture catalog entries
+only after corresponding byte cleanup succeeds; existing authorization, object
+storage and native recovery controls remain authoritative.

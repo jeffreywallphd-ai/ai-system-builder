@@ -7,6 +7,8 @@ import type {
 import type { WorkspaceId } from "../../../contracts/workspace";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import type { AssetRegistryDefinitionReadPort } from "../../ports/asset";
+import type { AssetStudioAssetDraftRepositoryPort } from "../../ports/asset-studio";
+import { isAssetId, isAssetVersion } from "../../../contracts/asset";
 import type {
   UserLibraryAssetRepositoryPort,
   WorkspaceToWorkspaceImportRepositoryPort,
@@ -84,6 +86,7 @@ export interface WorkspaceAssetRegistryReadFacadeDependencies {
   readonly assetDraftRepository?: AssetDraftRepositoryPort;
   readonly assetOverrideRepository?: AssetOverrideRepositoryPort;
   readonly customizationTargetReader?: AssetCustomizationTargetReaderPort;
+  readonly workspacePublishedAssetSources?: readonly Pick<AssetStudioAssetDraftRepositoryPort, "readPublishedAssetReferences">[];
 }
 
 interface ActiveSystemPackKey {
@@ -131,62 +134,42 @@ export class WorkspaceAssetRegistryReadFacade implements AssetRegistryDefinition
         activations.diagnostic.message,
       );
 
-    const globalResult =
-      await this.dependencies.assetRegistryRead.listDefinitionCards(query);
+    const limit = query.limit ?? 100;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 250) throw new WorkspaceAssetRegistryReadFacadeError("workspace-invalid", "Invalid bounded asset query.");
+    const binding = JSON.stringify({...query, cursor: undefined, limit: undefined});
+    if (query.cursor && query.cursor.length > 8192) throw new WorkspaceAssetRegistryReadFacadeError("workspace-invalid", "Invalid asset continuation.");
+    const cursor = query.cursor ? JSON.parse(decodeURIComponent(query.cursor)) : {v: 1, b: binding, m: 0, g: null, d: false};
     const activeSystemPacks = activations.activeSystemPacks;
-    const manifestCards = systemFoundationCards(
-      activeSystemPacks,
-      query,
-    ).filter(
-      (card) =>
-        !globalResult.items.some(
-          (item) => definitionKey(item) === definitionKey(card),
-        ),
-    );
-    const candidateItems = [...globalResult.items, ...manifestCards];
-    const resolvedItems = await Promise.all(
-      candidateItems.map(
-        async (card) =>
-          ({
-            ...card,
-            effectiveSourceSummary: await this.sourceResolver.resolve(
-              context.workspaceId,
-              card,
-            ),
-            assetAuthoringEffectiveSourceSummary:
-              await this.authoringReadModel.readEffectiveSourceSummary(
-                context.workspaceId,
-                card.definitionRef,
-              ),
-          }) as AssetDefinitionCard,
-      ),
-    );
-    const items = resolvedItems.filter(
-      (card) =>
-        isInWorkspaceEffectiveView(card, activeSystemPacks) ||
-        isUserLibraryOrWorkspaceReuseSource(
-          card.effectiveSourceSummary?.effectiveSourceKind,
-        ) ||
-        isWorkspaceAuthoringSource(
-          card.assetAuthoringEffectiveSourceSummary?.effectiveSourceKind,
-        ),
-    );
-    items.sort(compareDefinitionCards);
-
-    return {
-      items,
-      ...(globalResult.nextCursor
-        ? { nextCursor: globalResult.nextCursor }
-        : {}),
-      ...(mergeDiagnostics(globalResult.diagnostics, activations.diagnostics)
-        .length
-        ? {
-            diagnostics: mergeDiagnostics(
-              globalResult.diagnostics,
-              activations.diagnostics,
-            ),
-          }
-        : {}),
+    const manifests = [...systemFoundationCards(activeSystemPacks, query)].sort(compareDefinitionCards);
+    if (!cursor || cursor.v !== 1 || cursor.b !== binding || !Number.isSafeInteger(cursor.m) || cursor.m < 0 || cursor.m > manifests.length || typeof cursor.d !== "boolean" || (cursor.g !== null && (typeof cursor.g !== "string" || cursor.g.length > 8192))) throw new WorkspaceAssetRegistryReadFacadeError("workspace-invalid", "Invalid asset continuation.");
+    const manifestKeys = new Set(manifests.map(definitionKey));
+    const publishedKeys = await this.readWorkspacePublicationKeys(context.workspaceId);
+    const items: AssetDefinitionCard[] = [];
+    const diagnostics = [...activations.diagnostics];
+    const project = async (cards: readonly AssetDefinitionCard[]): Promise<readonly AssetDefinitionCard[]> => {
+      const summaries = await this.authoringReadModel.readEffectiveSourceSummaries(context.workspaceId, cards.map(card => card.definitionRef));
+      return Promise.all(cards.map(async (card, index) => ({...card, effectiveSourceSummary: await this.sourceResolver.resolve(context.workspaceId, card), assetAuthoringEffectiveSourceSummary: summaries[index]})));
+    };
+    const initial = manifests.slice(cursor.m, cursor.m + limit);
+    items.push(...await project(initial)); cursor.m += initial.length;
+    const seen = new Set<string>();
+    for (let scan = 0; items.length < limit && !cursor.d && scan < 100; scan++) {
+      const key = cursor.g ?? "";
+      if (seen.has(key)) throw new WorkspaceAssetRegistryReadFacadeError("workspace-invalid", "Invalid asset continuation.");
+      seen.add(key);
+      const remaining = limit - items.length;
+      const result = await this.dependencies.assetRegistryRead.listDefinitionCards({...query, cursor: cursor.g ?? undefined, limit: remaining});
+      if (result.items.length > remaining) throw new WorkspaceAssetRegistryReadFacadeError("workspace-invalid", "Unbounded asset page.");
+      const resolved = await project(result.items.filter(card => !manifestKeys.has(definitionKey(card))));
+      items.push(...resolved.filter(card => isInWorkspaceEffectiveView(card, activeSystemPacks) || isUserLibraryOrWorkspaceReuseSource(card.effectiveSourceSummary?.effectiveSourceKind) || isWorkspaceAuthoringSource(card.assetAuthoringEffectiveSourceSummary?.effectiveSourceKind)
+        || card.lifecycleStatus === "published" && card.definitionRef.id === card.definitionId && card.definitionRef.version === card.version && publishedKeys.has(publicationKey(card.definitionRef))));
+      diagnostics.push(...(result.diagnostics ?? []));
+      cursor.g = result.nextCursor ?? null; cursor.d = !result.nextCursor;
+      if (!cursor.d && seen.has(cursor.g)) throw new WorkspaceAssetRegistryReadFacadeError("workspace-invalid", "Invalid asset continuation.");
+    }
+    return { items,
+      ...((cursor.m < manifests.length || !cursor.d) ? {nextCursor: encodeURIComponent(JSON.stringify(cursor))} : {}),
+      ...(diagnostics.length ? {diagnostics: mergeDiagnostics(diagnostics, [])} : {}),
     };
   }
 
@@ -194,6 +177,11 @@ export class WorkspaceAssetRegistryReadFacade implements AssetRegistryDefinition
     ref: AssetReference,
     options: AssetRegistryReadOptions = {},
   ): Promise<AssetDefinitionDetail | undefined> {
+    return (await this.readDefinitionDetails([ref], options))[0];
+  }
+
+  public async readDefinitionDetails(refs: readonly AssetReference[], options: AssetRegistryReadOptions = {}): Promise<readonly (AssetDefinitionDetail | undefined)[]> {
+    if (!Array.isArray(refs) || refs.length > 250) throw new WorkspaceAssetRegistryReadFacadeError("workspace-invalid", "Invalid bounded asset read.");
     const context = await this.resolveWorkspaceContext(options.workspaceId);
     if (!context.ok)
       throw new WorkspaceAssetRegistryReadFacadeError(
@@ -208,15 +196,37 @@ export class WorkspaceAssetRegistryReadFacade implements AssetRegistryDefinition
         activations.diagnostic.message,
       );
 
-    const detail =
-      (await this.dependencies.assetRegistryRead.readDefinitionDetail(ref, {
-        ...options,
-        includeMetadata: true,
-      })) ?? systemFoundationDetail(ref);
+    const publishedKeys = await this.readWorkspacePublicationKeys(context.workspaceId);
+    const global = this.dependencies.assetRegistryRead;
+    const details = global.readDefinitionDetails
+      ? await global.readDefinitionDetails(refs, {...options, includeMetadata: true})
+      : await Promise.all(refs.map(ref => global.readDefinitionDetail(ref, {...options, includeMetadata: true})));
+    const sourceSummaries = await this.authoringReadModel.readEffectiveSourceSummaries(context.workspaceId, refs);
+    return Promise.all(refs.map(async (ref, index) => {
+      const detail = details[index] ?? systemFoundationDetail(ref);
     if (!detail) return undefined;
 
+    const effectiveSourceSummary = await this.sourceResolver.resolve(
+      context.workspaceId,
+      {
+        definitionRef: ref,
+        sourcePackId: readStringMetadata(detail.definition.metadata, "sourcePackId"),
+        sourcePackVersion: readStringMetadata(detail.definition.metadata, "sourcePackVersion"),
+        sourceKind: readStringMetadata(detail.definition.metadata, "sourceKind"),
+        sourceLayer: readStringMetadata(detail.definition.metadata, "sourceLayer"),
+        trustStatus: readStringMetadata(detail.definition.metadata, "trustStatus"),
+        systemDefault: readBooleanMetadata(detail.definition.metadata, "systemDefault"),
+      },
+    );
+
     if (
-      !isDetailInWorkspaceEffectiveView(detail, activations.activeSystemPacks)
+      !isDetailInWorkspaceEffectiveView(detail, activations.activeSystemPacks) &&
+      !isUserLibraryOrWorkspaceReuseSource(effectiveSourceSummary?.effectiveSourceKind) &&
+      !isWorkspaceAuthoringSource(sourceSummaries[index]?.effectiveSourceKind) &&
+      !(detail.definition.lifecycleStatus === "published" && ref.id === detail.definition.definitionId
+        && (ref.kind === "asset-definition" || ref.kind === "asset-definition-version")
+        && (ref.version === undefined || ref.version === detail.definition.version)
+        && publishedKeys.has(publicationKey({kind: "asset-definition-version", id: detail.definition.definitionId, version: detail.definition.version})))
     ) {
       throw new WorkspaceAssetRegistryReadFacadeError(
         "workspace-asset-not-in-effective-view",
@@ -226,42 +236,32 @@ export class WorkspaceAssetRegistryReadFacade implements AssetRegistryDefinition
 
     return {
       ...detail,
-      effectiveSourceSummary: await this.sourceResolver.resolve(
-        context.workspaceId,
-        {
-          definitionRef: ref,
-          sourcePackId: readStringMetadata(
-            detail.definition.metadata,
-            "sourcePackId",
-          ),
-          sourcePackVersion: readStringMetadata(
-            detail.definition.metadata,
-            "sourcePackVersion",
-          ),
-          sourceKind: readStringMetadata(
-            detail.definition.metadata,
-            "sourceKind",
-          ),
-          sourceLayer: readStringMetadata(
-            detail.definition.metadata,
-            "sourceLayer",
-          ),
-          trustStatus: readStringMetadata(
-            detail.definition.metadata,
-            "trustStatus",
-          ),
-          systemDefault: readBooleanMetadata(
-            detail.definition.metadata,
-            "systemDefault",
-          ),
-        },
-      ),
-      assetAuthoringEffectiveSourceSummary:
-        await this.authoringReadModel.readEffectiveSourceSummary(
-          context.workspaceId,
-          ref,
-        ),
+      effectiveSourceSummary,
+      assetAuthoringEffectiveSourceSummary: sourceSummaries[index],
     };
+    }));
+  }
+
+  private async readWorkspacePublicationKeys(workspaceId: WorkspaceId): Promise<ReadonlySet<string>> {
+    try {
+      const sources = this.dependencies.workspacePublishedAssetSources ?? [];
+      if (sources.length > 2) throw new Error();
+      const keys = new Set<string>();
+      for (const source of sources) {
+        if (!source.readPublishedAssetReferences) throw new Error();
+        const references = await source.readPublishedAssetReferences(workspaceId);
+        if (!Array.isArray(references) || references.length > 25_000) throw new Error();
+        for (const reference of references) {
+          if (reference?.kind !== "asset-definition-version" || typeof reference.id !== "string" || reference.id.length > 4096
+            || reference.id !== reference.id.trim() || !isAssetId(reference.id) || typeof reference.version !== "string"
+            || reference.version.length > 4096 || reference.version !== reference.version.trim() || !isAssetVersion(reference.version)) throw new Error();
+          keys.add(publicationKey(reference));
+        }
+      }
+      return keys;
+    } catch {
+      throw new WorkspaceAssetRegistryReadFacadeError("workspace-effective-asset-view-unavailable", "Workspace publication visibility is unavailable.");
+    }
   }
 
   public async listResourceBackedViewCards(
@@ -620,6 +620,10 @@ function matchesSearchText(
 
 function definitionKey(card: AssetDefinitionCard): string {
   return `${card.definitionId}@${card.version}`;
+}
+
+function publicationKey(reference: Pick<AssetReference, "kind" | "version"> & {readonly id: string}): string {
+  return JSON.stringify([reference.kind, reference.id, reference.version]);
 }
 
 function queryAllowsModelResourceViews(query: AssetRegistryListQuery): boolean {

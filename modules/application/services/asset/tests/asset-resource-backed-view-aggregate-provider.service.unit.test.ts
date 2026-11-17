@@ -1,3 +1,4 @@
+import { createTestImageResourceIdentity } from "./fixtures/image-resource-identities.fixture";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
@@ -313,6 +314,7 @@ describe("AssetResourceBackedViewAggregateProvider", () => {
       modelRegistry,
     });
     const imageProvider = new AssetImageResourceBackedViewProvider({
+      imageResourceIdentity: createTestImageResourceIdentity(),
       generatedImageOutputDescriptorSource: new FakeGeneratedOutputDescriptorSource("generated-output-1"),
     });
     const externalSource = new FakeExternalRepositoryObjectDescriptorSource();
@@ -351,6 +353,7 @@ describe("AssetResourceBackedViewAggregateProvider", () => {
       modelRegistry: new FakeModelRegistry([modelRecord()]),
     });
     const imageProvider = new AssetImageResourceBackedViewProvider({
+      imageResourceIdentity: createTestImageResourceIdentity(),
       generatedImageOutputDescriptorSource: new FakeGeneratedOutputDescriptorSource("generated-output-1"),
     });
 
@@ -379,11 +382,13 @@ describe("AssetResourceBackedViewAggregateProvider", () => {
 
   it("keeps generated-output views distinct from image asset views when ids could otherwise collide", async () => {
     const imageProvider = new AssetImageResourceBackedViewProvider({
+      imageResourceIdentity: createTestImageResourceIdentity(),
       imageAssetDescriptorRead: {
         async listImageAssetDescriptors() {
           return {
             items: [
               {
+                workspaceId: "workspace-a" as never,
                 assetId: "shared",
                 artifactId: "artifact-shared",
                 source: "generated" as const,

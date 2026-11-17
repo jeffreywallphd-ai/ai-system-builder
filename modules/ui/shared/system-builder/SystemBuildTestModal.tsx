@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   SystemBuildPreparation,
   SystemBuildRecord,
@@ -9,6 +9,7 @@ import type {
 } from "../../../contracts/system-builder";
 import { ApplicationIcon } from "../components/ApplicationIcon";
 import { ModalDialog } from "../components/ModalDialog";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import type { SystemBuildClient } from "./SystemBuildReleaseWorkflow";
 
 export interface SystemBuildTestModalProps {
@@ -20,7 +21,19 @@ export interface SystemBuildTestModalProps {
   readonly onClose: () => void;
 }
 
-export function SystemBuildTestModal({
+export function SystemBuildTestModal(props: SystemBuildTestModalProps) {
+  const target = { open: props.open, workspaceId: props.workspaceId,
+    systemId: String(props.system?.systemId ?? ""), revisionId: String(props.revision?.revisionId ?? ""), client: props.buildClient };
+  const [scope, setScope] = useState({ ...target, key: 0 });
+  if (scope.open !== target.open || scope.workspaceId !== target.workspaceId ||
+    scope.systemId !== target.systemId || scope.revisionId !== target.revisionId || scope.client !== target.client) {
+    setScope({ ...target, key: scope.key + 1 });
+    return null;
+  }
+  return <SystemBuildTestSession key={scope.key} {...props} />;
+}
+
+function SystemBuildTestSession({
   open,
   workspaceId,
   system,
@@ -34,31 +47,49 @@ export function SystemBuildTestModal({
   const [building, setBuilding] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string>();
+  const [notification, setNotification] = useState<string>();
+  const mounted = useRef(false);
+  const preparationOwner = useRef<object | undefined>(undefined);
+  const actionOwner = useRef<object | undefined>(undefined);
   const buildActionRef = useRef<HTMLButtonElement>(null);
+  const systemId = String(system?.systemId ?? "");
+  const revisionId = String(revision?.revisionId ?? "");
 
-  useEffect(() => {
-    if (!open || !system || !revision) return undefined;
-    let active = true;
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      preparationOwner.current = undefined;
+      actionOwner.current = undefined;
+    };
+  }, []);
+
+  async function checkSavedRevision() {
+    if (!mounted.current || !open || !systemId || !revisionId || preparationOwner.current || actionOwner.current) return;
+    const owner = {};
+    preparationOwner.current = owner;
+    const current = () => mounted.current && preparationOwner.current === owner;
     setLoading(true);
     setPreparation(undefined);
     setBuild(undefined);
     setError(undefined);
-    void buildClient
-      .prepare({
-        workspaceId,
-        systemId: String(system.systemId),
-        systemRevisionId: String(revision.revisionId),
-      })
-      .then((result) => {
-        if (!active) return;
-        if (result.ok) setPreparation(result.value);
-        else setError(result.error.message);
-      })
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
-  }, [buildClient, open, revision, system, workspaceId]);
+    setNotification(undefined);
+    try {
+      const result = await Promise.resolve().then(() => current()
+        ? buildClient.prepare({ workspaceId, systemId, systemRevisionId: revisionId }) : undefined);
+      if (!current() || !result) return;
+      if (!result.ok) setError(result.error.message);
+      else if (String(result.value.systemId) !== systemId || String(result.value.systemRevisionId) !== revisionId) {
+        setNotification("The build checks did not match this saved version. Select Retry checks.");
+      } else setPreparation(result.value);
+    } catch {
+      if (current()) setNotification("Could not check this saved version. Select Retry checks to try again.");
+    } finally {
+      if (current()) { preparationOwner.current = undefined; setLoading(false); }
+    }
+  }
+
+  useEffect(() => { void checkSavedRevision(); }, [buildClient, open, revisionId, systemId, workspaceId]);
 
   useEffect(() => {
     if (open && preparation?.status === "ready" && !loading) {
@@ -67,30 +98,52 @@ export function SystemBuildTestModal({
   }, [loading, open, preparation?.status]);
 
   async function startBuild() {
-    if (!system || !revision || preparation?.status !== "ready") return;
+    if (!mounted.current || !open || !system || !revision || preparation?.status !== "ready" || preparationOwner.current || actionOwner.current || build) return;
+    const owner = {};
+    actionOwner.current = owner;
+    const current = () => mounted.current && actionOwner.current === owner;
     setBuilding(true);
     setError(undefined);
-    const result = await buildClient.request({
-      workspaceId,
-      buildId: createBuildId(),
-      systemId: String(system.systemId),
-      systemRevisionId: String(revision.revisionId),
-    });
-    if (result.ok) setBuild(result.value);
-    else setError(result.error.message);
-    setBuilding(false);
+    setNotification(undefined);
+    try {
+      const requestedBuildId = createBuildId();
+      const result = await buildClient.request({ workspaceId, buildId: requestedBuildId, systemId, systemRevisionId: revisionId });
+      if (!current()) return;
+      if (!result.ok) setError(result.error.message);
+      else if (String(result.value.buildId) !== requestedBuildId || String(result.value.systemId) !== systemId || String(result.value.systemRevisionId) !== revisionId || String(result.value.targetWorkspaceId) !== workspaceId) {
+        setNotification("The build result did not match this saved version. Close this view and check the saved version again.");
+      } else setBuild(result.value);
+    } catch {
+      if (current()) setNotification("Could not build this saved version. Try Build & test again.");
+    } finally {
+      if (current()) { actionOwner.current = undefined; setBuilding(false); }
+    }
   }
 
   async function cancelBuild() {
-    if (!build || !["queued", "running"].includes(build.status)) return;
+    if (!mounted.current || !open || actionOwner.current || preparationOwner.current || !build || !["queued", "running"].includes(build.status)) return;
+    const owner = {};
+    actionOwner.current = owner;
+    const current = () => mounted.current && actionOwner.current === owner;
     setCancelling(true);
-    const result = await buildClient.cancel({
-      workspaceId,
-      buildId: String(build.buildId),
-    });
-    if (result.ok) setBuild(result.value);
-    else setError(result.error.message);
-    setCancelling(false);
+    setError(undefined);
+    setNotification(undefined);
+    try {
+      const result = await buildClient.cancel({ workspaceId, buildId: String(build.buildId) });
+      if (!current()) return;
+      if (!result.ok) setError(result.error.message);
+      else if (String(result.value.buildId) !== String(build.buildId) || String(result.value.targetWorkspaceId) !== workspaceId || String(result.value.systemId) !== systemId || String(result.value.systemRevisionId) !== revisionId) {
+        setNotification("The cancellation result did not match this build. Close this view and check the saved version again.");
+      } else setBuild(result.value);
+    } catch {
+      if (current()) setNotification("Could not cancel this build. Try Cancel build again.");
+    } finally {
+      if (current()) { actionOwner.current = undefined; setCancelling(false); }
+    }
+  }
+
+  function close() {
+    if (mounted.current && !preparationOwner.current && !actionOwner.current) onClose();
   }
 
   const busy = loading || building || cancelling;
@@ -100,11 +153,12 @@ export function SystemBuildTestModal({
     <ModalDialog
       open={open}
       title={title}
-      onClose={onClose}
+      onClose={close}
       closeDisabled={busy}
       descriptionId={descriptionId}
       dialogClassName="system-build-test-modal"
     >
+      <TransientNotificationPublisher message={notification} title="Build needs attention" tone="error" source="System Build" workspaceId={workspaceId} />
       <p id={descriptionId} className="ui-text-muted">
         Create a checked build from the current saved version. Publishing remains
         a separate step.
@@ -148,6 +202,9 @@ export function SystemBuildTestModal({
       ) : null}
       {build ? <BuildResultSummary build={build} /> : null}
       <div className="ui-workflow__actions">
+        {!loading && !preparation && open && system && revision ? (
+          <button type="button" onClick={() => void checkSavedRevision()} disabled={busy}>Retry checks</button>
+        ) : null}
         {build && ["queued", "running"].includes(build.status) ? (
           <button
             ref={buildActionRef}
@@ -170,7 +227,7 @@ export function SystemBuildTestModal({
             <span>{building ? "Building & testing…" : "Build & test"}</span>
           </button>
         ) : (
-          <button type="button" onClick={onClose} disabled={busy}>
+          <button type="button" onClick={close} disabled={busy}>
             Close
           </button>
         )}

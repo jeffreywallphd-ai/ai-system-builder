@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 try:
@@ -13,6 +14,7 @@ except ModuleNotFoundError:
 
 from modules.adapters.runtime.python.worker.models import ReviewDatasetRequest
 from modules.adapters.runtime.python.worker.tasks.review_dataset import _bounded_text
+from modules.adapters.runtime.python.worker.tasks.review_dataset import _read_page, _fingerprint, _MAX_INPUT_BYTES
 
 if pa is not None:
     from modules.adapters.runtime.python.worker.tasks.review_dataset import review_dataset
@@ -30,6 +32,74 @@ class ReviewDatasetBoundsTests(unittest.TestCase):
 
 @unittest.skipIf(pa is None, "pyarrow is not installed in this test environment")
 class ReviewDatasetTests(unittest.TestCase):
+    def test_footer_selects_only_overlapping_groups_and_converts_only_page_slices(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "input.parquet"
+            table = pa.table({"value": [f"item {index}" for index in range(100)]})
+            pq.write_table(table, source, row_group_size=10)
+            actual = pq.ParquetFile(source)
+
+            class Batch:
+                def __init__(self, batch, converted):
+                    self.batch = batch
+                    self.num_rows = batch.num_rows
+                    self.converted = converted
+
+                def to_pylist(self):
+                    raise AssertionError("Unbounded or preceding batch conversion")
+
+                def slice(self, start, length):
+                    self.converted.append(length)
+                    return self.batch.slice(start, length)
+
+            class Traced:
+                metadata = actual.metadata
+
+                def __init__(self):
+                    self.groups = []
+                    self.converted = []
+
+                def iter_batches(self, **options):
+                    self.groups.append(options.get("row_groups"))
+                    for batch in actual.iter_batches(**options):
+                        yield Batch(batch, self.converted)
+
+            traced = Traced()
+            page = _read_page(traced, 100, 9, 10)
+            self.assertEqual(traced.groups, [[9]])
+            self.assertEqual(sum(traced.converted), 10)
+            self.assertEqual([r["rowIndex"] for r in page["rows"]], list(range(90, 100)))
+            self.assertEqual(page["rows"][0]["rowFingerprint"], _fingerprint({"value": "item 90"}))
+            crossing = Traced()
+            self.assertEqual([r["rowIndex"] for r in _read_page(crossing, 100, 1, 25)["rows"]], list(range(25, 50)))
+            self.assertEqual(crossing.groups, [[2, 3, 4]])
+            self.assertEqual(sum(crossing.converted), 25)
+            outside = Traced()
+            self.assertEqual(_read_page(outside, 100, 10, 10)["rows"], [])
+            self.assertEqual(outside.groups, [])
+            actual.close()
+
+    def test_skips_preceding_batches_inside_one_group_without_python_conversion(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "input.parquet"
+            pq.write_table(pa.table({"value": list(range(200))}), source)
+            result = _read_page(pq.ParquetFile(source), 200, 9, 10)
+            self.assertEqual([r["values"]["value"] for r in result["rows"]], list(range(90, 100)))
+
+    def test_denies_oversized_source_before_parquet_parse_and_recovers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "input.parquet"
+            with source.open("wb") as stream:
+                stream.truncate(_MAX_INPUT_BYTES + 1)
+            request = ReviewDatasetRequest(operation="read", inputPath=str(source), page=0, pageSize=10, runtime={"runtimeWorkingDirectory":str(root)})
+            with patch("pyarrow.parquet.ParquetFile", side_effect=AssertionError("must not parse")) as parse:
+                with self.assertRaisesRegex(RuntimeError, "bounded non-empty"):
+                    review_dataset(request)
+                parse.assert_not_called()
+            pq.write_table(pa.table({"value":["Recovered"]}),source)
+            self.assertEqual(review_dataset(request)["rows"][0]["values"]["value"], "Recovered")
+
     def test_reads_a_bounded_page_with_fingerprints(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

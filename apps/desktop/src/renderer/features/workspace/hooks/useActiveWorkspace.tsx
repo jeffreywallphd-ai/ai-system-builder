@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import {
+  isWorkspaceId,
   type ActiveWorkspaceSelection,
   type WorkspaceRecord,
 } from "../../../../../../../modules/contracts/workspace";
@@ -79,6 +80,7 @@ export function ActiveWorkspaceProvider({
   >();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
     recordRendererMemorySnapshot({
@@ -92,6 +94,7 @@ export function ActiveWorkspaceProvider({
         workspaceClient.readActiveWorkspaceSelection(),
       ]);
       setWorkspaces([...records]);
+      setLoadFailed(false);
       setActiveWorkspaceId(selection.workspaceId);
       setError(undefined);
       recordRendererMemorySnapshot({
@@ -103,6 +106,7 @@ export function ActiveWorkspaceProvider({
         },
       });
     } catch {
+      setLoadFailed(true);
       setError("Workspace could not be loaded.");
       recordRendererMemorySnapshot({
         milestone: "renderer.workspace-provider.load.error",
@@ -189,11 +193,11 @@ export function ActiveWorkspaceProvider({
 
   const status = useMemo<ActiveWorkspaceReadinessStatus>(() => {
     if (loading) return "loading";
-    if (error) return "error";
+    if (loadFailed) return "error";
     if (activeWorkspace) return "ready";
     if (activeWorkspaceId) return "unavailable";
     return "missing";
-  }, [activeWorkspace, activeWorkspaceId, error, loading]);
+  }, [activeWorkspace, activeWorkspaceId, loadFailed, loading]);
 
   const value = useMemo<ActiveWorkspaceContextValue>(
     () => ({
@@ -282,10 +286,10 @@ function createDesktopWorkspaceClient(): WorkspaceClient {
 
     async readActiveWorkspaceSelection() {
       const response = await getDesktopApi().readActiveWorkspaceSelection?.();
-      return isOkEnvelope(response) &&
-        isActiveWorkspaceSelection(response.value)
-        ? response.value
-        : {};
+      if (!isOkEnvelope(response) || !isActiveWorkspaceSelection(response.value)) {
+        throw new Error("Workspace selection is unavailable.");
+      }
+      return response.value;
     },
 
     async saveActiveWorkspaceSelection(workspaceId) {
@@ -346,9 +350,11 @@ function isWorkspaceCreateValue(
 function isActiveWorkspaceSelection(
   value: unknown,
 ): value is ActiveWorkspaceSelection {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
   const workspaceId = (value as { readonly workspaceId?: unknown }).workspaceId;
-  return workspaceId === undefined || typeof workspaceId === "string";
+  const selectedAt = (value as { readonly selectedAt?: unknown }).selectedAt;
+  return (workspaceId === undefined || isWorkspaceId(workspaceId)) &&
+    (selectedAt === undefined || typeof selectedAt === "string");
 }
 
 function errorMessage(value: unknown, fallback: string): string {

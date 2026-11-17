@@ -1,4 +1,4 @@
-import type { ImageGenerationRequest } from "../../../contracts/image-generation";
+import { assertImageGenerationRequestBounds, snapshotBoundedImageGenerationRequest, type ImageGenerationRequest } from "../../../contracts/image-generation";
 
 export interface ComfyUiImageGenerationWorkflowMapperOptions {
   defaultCheckpoint?: string;
@@ -15,10 +15,22 @@ export interface ComfyUiPromptPayload {
   prompt: Record<string, { class_type: string; inputs: Record<string, unknown> }>;
 }
 
+export function resolveBoundedComfyUiImageRequest(request: ImageGenerationRequest, options: ComfyUiImageGenerationWorkflowMapperOptions): ImageGenerationRequest {
+  request = snapshotBoundedImageGenerationRequest(request);
+  const effective = { ...request, model: request.model ?? options.defaultCheckpoint,
+    width: request.width ?? options.defaultWidth ?? 1024, height: request.height ?? options.defaultHeight ?? 1024,
+    steps: request.steps ?? options.defaultSteps ?? 30, numImages: request.numImages ?? 1,
+    sampler: request.sampler ?? options.defaultSampler ?? 'dpmpp_2m', scheduler: request.scheduler ?? options.defaultScheduler ?? 'karras' };
+  assertImageGenerationRequestBounds(effective);
+  if (!effective.model) throw new Error("ComfyUI image generation requires a model checkpoint. Provide request.model or defaultCheckpoint.");
+  return effective;
+}
+
 export function mapImageGenerationRequestToComfyUiPrompt(
   request: ImageGenerationRequest,
   options: ComfyUiImageGenerationWorkflowMapperOptions,
 ): ComfyUiPromptPayload {
+  request = resolveBoundedComfyUiImageRequest(request, options);
   const checkpoint = request.model ?? options.defaultCheckpoint;
   if (!checkpoint) {
     throw new Error("ComfyUI image generation requires a model checkpoint. Provide request.model or defaultCheckpoint.");
@@ -33,7 +45,7 @@ export function mapImageGenerationRequestToComfyUiPrompt(
   const scheduler = request.scheduler ?? options.defaultScheduler ?? "karras";
   const seed = request.seed ?? (Math.floor(Math.random() * Number.MAX_SAFE_INTEGER) + 1);
   const controlAfterGenerate = request.seed === undefined ? "randomize" : "fixed";
-  const numImages = Math.max(Math.floor(request.numImages ?? 1), 1);
+  const numImages = request.numImages!;
   const hasLatentReference = request.latentSource?.kind === "artifact" && Boolean(options.latentReferenceImageName);
   const faceIdReferences = (request.faceId?.enabled ? request.faceId.references : undefined) ?? [];
   const faceReferenceImageName = options.faceReferenceImageNames?.find((imageName) => imageName.trim().length > 0);

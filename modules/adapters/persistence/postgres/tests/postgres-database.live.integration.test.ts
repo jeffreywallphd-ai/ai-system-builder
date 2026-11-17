@@ -2,21 +2,79 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { createOrganizationId } from "../../../../contracts/organization";
+import { normalizeAssetId } from "../../../../contracts/asset";
 import { normalizeSystemReleaseId } from "../../../../contracts/system-build";
+import {
+  normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId, systemBuilderSuccess,
+  type SystemBuilderRecord, type SystemBuilderRevision,
+} from "../../../../contracts/system-builder";
 import type { SystemDataAuditEntry, SystemDataRecord } from "../../../../contracts/system-data";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 
 import {
   StructuredDocumentConflictError,
   mutateDocumentRecord,
+  type StructuredDocumentStore,
 } from "../../shared";
-import { resolvePostgresPoolConfig } from "../client/createPostgresPool";
-import { openPostgresDatabase } from "../postgres-database";
+import { createPostgresPool, resolvePostgresPoolConfig } from "../client/createPostgresPool";
+import { bindPostgresOrganizationContext, openPostgresDatabase } from "../postgres-database";
+import { createStructuredHeadlessOperationStore } from "../../system-builder/createStructuredHeadlessOperationStore";
+import { createStructuredSystemBuilderRepository } from "../../system-builder/createStructuredSystemBuilderRepository";
 import { createStructuredSystemDataRepository } from "../../system-data";
 import { runSystemBuildPersistenceConformance } from "../../system-build/tests/system-build-persistence-conformance";
 import { runSystemDeploymentPersistenceConformance } from "../../system-deployment/tests/system-deployment-persistence-conformance";
 
 const liveDatabaseUrl = process.env.TEST_POSTGRES_URL?.trim();
+
+test("live PostgreSQL holds exact publication rows through a one-shot decision", { skip: !liveDatabaseUrl }, async () => {
+  const config = resolvePostgresPoolConfig({
+    DATABASE_URL: liveDatabaseUrl, POSTGRES_SSL_MODE: process.env.TEST_POSTGRES_SSL_MODE ?? "disable",
+  });
+  const database = await openPostgresDatabase({ config });
+  const rival = createPostgresPool(config);
+  const org = createOrganizationId(`org-publication-${randomUUID()}`);
+  const exact = database.documents.forOrganization(org);
+  const publication = database.documents.publishWithStableReads!.bind(database.documents);
+  const client = await rival.connect();
+  const lock = () => client.query(
+    "SELECT revision FROM organization_documents WHERE organization_id = $1 AND namespace = $2 AND document_key = $3 FOR UPDATE NOWAIT",
+    [org, "plans", "current"],
+  );
+  let sends = 0;
+  const send = () => { sends++; return true; };
+  try {
+    await exact.writeDocument("plans", "current", { approved: true });
+    assert.equal(await publication(async reader => {
+      const plan = await reader.forOrganization(org).readDocument<{ approved: boolean }>("plans", "current");
+      await client.query("BEGIN");
+      try {
+        await bindPostgresOrganizationContext(client, org);
+        await assert.rejects(lock(), { code: "55P03" });
+      } finally { await client.query("ROLLBACK"); }
+      return plan?.value.approved === true;
+    }, send), true);
+    assert.equal(sends, 1);
+
+    await client.query("BEGIN");
+    await bindPostgresOrganizationContext(client, org);
+    assert.equal((await lock()).rowCount, 1);
+    await assert.rejects(publication(async reader => {
+      await assert.rejects(reader.forOrganization(org).readDocument("plans", "current"), { code: "55P03" });
+      return true;
+    }, send), /publication read failed/);
+    await client.query("ROLLBACK");
+
+    await exact.writeDocument("plans", "current", { approved: false }, { expectedRevision: 1 });
+    assert.equal(await publication(async reader =>
+      (await reader.forOrganization(org).readDocument<{ approved: boolean }>("plans", "current"))?.value.approved === true,
+    send), false);
+    assert.equal(sends, 1);
+  } finally {
+    try { await client.query("ROLLBACK"); }
+    finally { client.release(); }
+    await Promise.all([rival.end(), database.close()]);
+  }
+});
 
 test(
   "live PostgreSQL migration, transaction, health, and revision conformance",
@@ -239,3 +297,181 @@ test(
     }
   },
 );
+
+test("live PostgreSQL atomic headless persistence replays across restricted runtime pools and rollback", {
+  skip: !liveDatabaseUrl, timeout: 45_000,
+}, async () => {
+  const config = resolvePostgresPoolConfig({
+    DATABASE_URL: liveDatabaseUrl,
+    POSTGRES_SSL_MODE: process.env.TEST_POSTGRES_SSL_MODE ?? "disable",
+    POSTGRES_APPLICATION_NAME: "ai-system-builder-owned-transaction-test",
+  });
+  const migration = await openPostgresDatabase({ config });
+  const administrator = createPostgresPool(config);
+  const role = `owned_fixture_${randomUUID().replaceAll("-", "")}`;
+  const runtimeUrl = new URL(config.connectionString);
+  // The existing disposable test database role can assume this fixture's
+  // non-login, non-owner role when each runtime connection starts.
+  const existingOptions = runtimeUrl.searchParams.get("options");
+  runtimeUrl.searchParams.set("options", `${existingOptions ?? ""} -c role=${role}`.trim());
+  const runtime = { ...config, connectionString: runtimeUrl.toString() };
+  const scope = {
+    organizationId: createOrganizationId(`owned-org-${randomUUID()}`),
+    workspaceId: createWorkspaceId(`owned-space-${randomUUID()}`),
+    principalId: "fixture-principal",
+    registeredClientId: randomUUID(),
+  };
+  const other = { ...scope, organizationId: createOrganizationId(`other-org-${randomUUID()}`) };
+  const membershipKey = scope.organizationId;
+  const first = savedSystem("first");
+  const cancelled = savedSystem("cancelled");
+  const authority = { current: true };
+  const pools: Awaited<ReturnType<typeof openPostgresDatabase>>[] = [];
+  let created = false;
+
+  try {
+    await administrator.query(`CREATE ROLE ${role} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS`);
+    created = true;
+    await administrator.query(`GRANT SELECT ON schema_migrations TO ${role}`);
+    await administrator.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON structured_documents, organization_documents TO ${role}`);
+    for (let index = 0; index < 2; index += 1) pools.push(await openPostgresDatabase({ config: runtime, migrate: false }));
+    const firstPool = pools[0].documents;
+    const otherPool = pools[1].documents;
+    const scoped = otherPool.forOrganization(scope.organizationId);
+    await firstPool.writeDocument("headless-test-policy", membershipKey, { allowed: true });
+    const policy = {
+      async authorize(transaction: StructuredDocumentStore) {
+        return (await transaction.readDocument<{ allowed: boolean }>("headless-test-policy", membershipKey))?.value.allowed === true;
+      },
+    };
+    const writer = createStructuredHeadlessOperationStore(firstPool, Date.now, policy);
+    const replay = createStructuredHeadlessOperationStore(otherPool, Date.now, policy);
+    const command = (candidate: typeof first) => ({
+      scope, operation: "systems.create" as const, key: randomUUID(), fingerprint: "a".repeat(64),
+      isCurrent: () => authority.current,
+      async mutate(repository: ReturnType<typeof createStructuredSystemBuilderRepository>) {
+        await repository.createRecordAndRevision(candidate.record, candidate.revision);
+        return systemBuilderSuccess(candidate.reference);
+      },
+    });
+    const fixture = command(first);
+    let waited = () => {};
+    const secondStarted = new Promise<void>((resolve) => { waited = resolve; });
+    let free = () => {};
+    const firstCommitted = new Promise<void>((resolve) => { free = resolve; });
+    const competing = replay.run({ ...fixture, async mutate(repository) {
+      waited();
+      await firstCommitted;
+      return fixture.mutate(repository);
+    } });
+    let observed: Awaited<ReturnType<typeof writer.run>> | undefined;
+    try {
+      await Promise.race([secondStarted, competing.then(() => assert.fail("the contender must enter its mutation"))]);
+      observed = await writer.run(fixture);
+    } finally {
+      free();
+      await competing;
+    }
+    assert.deepEqual(observed, { kind: "committed", reference: first.reference });
+    assert.deepEqual(await competing, { kind: "replayed", reference: first.reference });
+    await pools[0].close();
+    assert.deepEqual(await replay.run({ ...fixture, mutate: () => assert.fail("a durable receipt must avoid the edit") }),
+      { kind: "replayed", reference: first.reference });
+
+    const runtimeRole = createPostgresPool(runtime);
+    try {
+      const result = await runtimeRole.query<{ restricted: boolean }>(
+        "SELECT NOT (r.rolsuper OR r.rolbypassrls OR r.oid = t.relowner) AS restricted FROM pg_roles r, pg_class t WHERE r.rolname = current_user AND t.oid = 'organization_documents'::regclass",
+      );
+      assert.equal(result.rows[0]?.restricted, true);
+      const foreign = await runtimeRole.query("SELECT 1 FROM organization_documents WHERE organization_id = $1", [scope.organizationId]);
+      assert.equal(foreign.rowCount, 0);
+    } finally {
+      await runtimeRole.end();
+    }
+    assert.equal(await replay.watermark(other), 0);
+    const fenced: StructuredDocumentStore = {
+      ...otherPool,
+      runInOwnedTransaction(work, beforeCommit) {
+        return otherPool.runInOwnedTransaction!(work, () => { authority.current = false; beforeCommit(); });
+      },
+    };
+    const stopped = command(cancelled);
+    assert.deepEqual(await createStructuredHeadlessOperationStore(fenced, Date.now, policy).run(stopped), { kind: "denied" });
+    const repository = createStructuredSystemBuilderRepository(scoped);
+    assert.equal(await repository.readRecord(scope.workspaceId, cancelled.record.systemId), undefined);
+    assert.equal(await repository.readRevision(scope.workspaceId, cancelled.record.systemId, cancelled.revision.revisionId), undefined);
+    assert.equal((await scoped.listDocuments("headless/system-builder/receipts")).length, 1);
+    assert.deepEqual(await replay.readChanges(scope, 0), {
+      kind: "changes", watermark: 1, events: [{ ...first.reference, sequence: 1 }],
+    });
+
+    await otherPool.writeDocument("headless-test-policy", membershipKey, { allowed: false });
+    authority.current = true;
+    assert.deepEqual(await replay.run(fixture), { kind: "denied" });
+    assert.deepEqual(await replay.run(stopped), { kind: "denied" });
+    assert.equal(await replay.watermark(scope), 1);
+
+    const summaries = pools[1].listActiveSystemSummaries!;
+    const adjacentWorkspace = createWorkspaceId(`${scope.workspaceId}0`);
+    const foreign = await summaries(other.organizationId, scope.workspaceId);
+    assert.deepEqual(foreign, []);
+    const inScope = await summaries(scope.organizationId, scope.workspaceId);
+    assert.deepEqual(inScope, [{ systemId: first.reference.systemId, revision: 1,
+      currentRevisionId: first.reference.revisionId, status: "draft", targetWorkspaceId: scope.workspaceId }]);
+    await scoped.runInTransaction(async (transaction) => {
+      await transaction.writeDocument("system-builder/records", `${adjacentWorkspace}/near`, {
+        ...first.record, systemId: "near", targetWorkspaceId: adjacentWorkspace,
+      });
+      for (let index = 0; index < 150; index += 1) {
+        const systemId = `a${index.toString().padStart(3, "0")}`;
+        await transaction.writeDocument("system-builder/records", `${scope.workspaceId}/${systemId}`, {
+          ...first.record, systemId, status: index < 10 ? "archived" : "draft", description: "x".repeat(2_048),
+        });
+      }
+    });
+    const bounded = await summaries(scope.organizationId, scope.workspaceId);
+    assert.equal(bounded.length, 129);
+    assert.equal(bounded[0]?.systemId, "a010");
+    assert.equal(bounded.at(-1)?.systemId, "a138");
+    assert.equal(bounded.every((row) => row.status === "draft" && row.targetWorkspaceId === scope.workspaceId), true);
+    assert.doesNotMatch(JSON.stringify(bounded), /description|near|Fixture/);
+  } finally {
+    try {
+      await Promise.all(pools.map((database) => database.close()));
+      await migration.documents.runInTransaction(async (transaction) => {
+        const scoped = transaction.forOrganization(scope.organizationId);
+        for (const namespace of await scoped.listNamespaces()) {
+          for (const document of await scoped.listDocuments(namespace)) await scoped.deleteDocument(namespace, document.key);
+        }
+        await transaction.deleteDocument("headless-test-policy", membershipKey);
+      });
+      if (created) {
+        await administrator.query(`REVOKE ALL ON schema_migrations, structured_documents, organization_documents FROM ${role}`);
+        await administrator.query(`DROP ROLE ${role}`);
+      }
+    } finally {
+      await Promise.all([migration.close(), administrator.end()]);
+    }
+  }
+
+  function savedSystem(name: string) {
+    const at = "2026-11-14T00:00:00.000Z";
+    const systemId = normalizeSystemBuilderSystemId(`fixture-${name}`);
+    const revisionId = normalizeSystemBuilderRevisionId(`${systemId}.r1`);
+    const composition = {
+      compositionId: normalizeAssetId(`${systemId}.composition`),
+      compositionType: "system", displayName: name, version: "0.1.0", lifecycleStatus: "draft",
+      rootInstanceRefs: [], instanceRefs: [], bindingRefs: [], provenance: { sourceKind: "human-authored" },
+    } as const;
+    const record: SystemBuilderRecord = {
+      systemId, targetWorkspaceId: scope.workspaceId, name, status: "draft", revision: 1, currentRevisionId: revisionId,
+      composition, createdAt: at, updatedAt: at, createdBy: "fixture-actor", updatedBy: "fixture-actor",
+    };
+    const revision: SystemBuilderRevision = {
+      systemId, targetWorkspaceId: scope.workspaceId, revisionId, revisionNumber: 1, composition, instances: [], bindings: [],
+      validationIssues: [], createdAt: at, createdBy: "fixture-actor",
+    };
+    return { record, revision, reference: { systemId, revisionId, recordRevision: 1 } };
+  }
+});

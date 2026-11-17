@@ -2,6 +2,19 @@
 import { describe,it,expect,vi } from 'vitest';
 import { createApiModelManagementClient, ModelManagementApiError } from '../api/apiModelManagementClient';
 
+it.each(['envelope','network'] as const)('preserves typed %s failure while diagnostic facts stay bounded',async mode=>{
+ const warning=vi.spyOn(console,'warn').mockImplementation(()=>{}),information=vi.spyOn(console,'info').mockImplementation(()=>{});
+ const failure=new Error('private-transport-error');
+ const fetchMock=mode==='network'?vi.fn().mockRejectedValue(failure):vi.fn().mockResolvedValue({headers:{get:()=> 'application/json'},status:403,json:async()=>({ok:false,error:{message:'private-response-message',code:'private-response-code',details:{data:'private-response-details'}}})});
+ vi.stubGlobal('fetch',fetchMock);
+ try{
+  const operation=createApiModelManagementClient().browseModels({provider:'huggingface',query:'private-query',limit:20});
+  if(mode==='network')await expect(operation).rejects.toBe(failure);
+  else await expect(operation).rejects.toMatchObject({message:'private-response-message',code:'private-response-code',status:403,details:{data:'private-response-details'}});
+  const logged=JSON.stringify([warning.mock.calls,information.mock.calls]);expect(logged).not.toContain('private-');expect(logged).toContain('queryLength');
+ }finally{warning.mockRestore();information.mockRestore();vi.unstubAllGlobals();}
+});
+
 describe('api model management client',()=>{
  it('calls browse endpoint and parses success', async()=>{
   const fetchMock=vi.fn().mockResolvedValue({headers:{get:()=> 'application/json'},status:200,json:vi.fn().mockResolvedValue({ok:true,value:{models:[{modelId:'a',displayName:'A',provider:'huggingface'}]}})});

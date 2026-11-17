@@ -3,7 +3,7 @@ import {
   createUnsupportedAssetResourceBackedViewProvider,
   type AssetResourceBackedViewProvider,
 } from "../../../application/ports/asset";
-import type { ImageAssetDescriptorReadPort } from "../../../application/ports/image";
+import type { ImageAssetDescriptorReadPort, ImageResourceIdentityPort } from "../../../application/ports/image";
 import type { ModelRegistryPort } from "../../../application/ports/model";
 import { createAssetResourceBackedViewAggregateProvider } from "../../../application/services/asset/asset-resource-backed-view-aggregate-provider.service";
 import { createArtifactResourceBackedViewProvider } from "../../../application/services/asset/asset-artifact-resource-backed-view-provider.service";
@@ -23,6 +23,7 @@ import {
 } from "../../../application/services/asset/asset-external-repository-resource-backed-view-provider.service";
 
 export interface ComposeResourceBackedViewProvidersOptions {
+  readonly imageResourceIdentity?: ImageResourceIdentityPort;
   readonly artifactBrowserMetadataRead?: Pick<ArtifactBrowserMetadataReadPort, "browseArtifacts">;
   readonly imageAssetDescriptorRead?: ImageAssetDescriptorReadPort;
   readonly generatedImageOutputDescriptorSource?: GeneratedImageOutputDescriptorSource;
@@ -45,6 +46,7 @@ export function composeResourceBackedViewProviders(
       : unsupportedFamilyProvider("asset-artifact-resource-backed-view-provider", "artifact"),
     options.imageAssetDescriptorRead || options.generatedImageOutputDescriptorSource
       ? createAssetImageResourceBackedViewProvider({
+        imageResourceIdentity: options.imageResourceIdentity,
         imageAssetDescriptorRead: options.imageAssetDescriptorRead,
         generatedImageOutputDescriptorSource: options.generatedImageOutputDescriptorSource,
       })

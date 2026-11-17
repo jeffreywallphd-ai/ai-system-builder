@@ -27,6 +27,9 @@ export function SettingsPanel(props: SettingsPanelProps) {
         successMessage={settings.successMessage}
         errorMessage={settings.errorMessage}
       />
+      <button className="ui-button" type="button" disabled={settings.loading || settings.saving} onClick={() => void settings.refresh()}>
+        Refresh settings
+      </button>
       {settings.definitions.map((definition) => (
         <section key={definition.key} className="settings-panel__field ui-stack ui-stack--sm">
           <header className="ui-stack ui-stack--sm">
@@ -37,7 +40,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <SettingField
             definition={definition}
             value={settings.valuesByKey.get(definition.key)}
-            disabled={settings.loading || settings.saving}
+            disabled={!settings.ready || settings.saving}
             compact={props.compact}
             onSave={async (value) => settings.updateSetting(definition.key, value)}
             onClear={async () => settings.clearSetting(definition.key)}

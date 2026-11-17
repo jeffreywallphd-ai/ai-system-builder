@@ -23,6 +23,7 @@ export * from "./huggingface-dataset-parquet-files-api-contract";
 export * from "./huggingface-files-import-api-contract";
 export * from "./runtime-readiness-api-contract";
 export * from "./dataset-preparation-api-contract";
+export * from "./context-management-api-contract";
 export * from "./dataset-version-api-contract";
 export * from "./dataset-review-api-contract";
 export * from "./asset-registry-api-contract";

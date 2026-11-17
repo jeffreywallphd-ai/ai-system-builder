@@ -7,6 +7,7 @@ import type {
 } from "../../../contracts/asset";
 import {
   ASSET_PLACEMENT_SCHEMA_VERSION,
+  MAX_ASSET_PLACEMENT_DEPTH,
   normalizeAssetId,
   normalizeAssetSlotId,
 } from "../../../contracts/asset";
@@ -14,12 +15,65 @@ import type {
   SystemBuilderComposerAsset,
   SystemBuilderStructure,
 } from "../../../contracts/system-builder";
+import {
+  minimumSystemBuilderSlotItems,
+  isCurrentSystemForm,
+  isCurrentSystemFormElement,
+  SYSTEM_FORM_PLACEMENT_MESSAGE,
+  systemFormPlacementAllowed,
+} from "../../../contracts/system-builder";
 
 export interface SystemComposerDraft {
   readonly instances: readonly AssetInstance[];
   readonly placements: readonly AssetPlacement[];
   readonly bindings: readonly AssetBinding[];
   readonly structure?: SystemBuilderStructure;
+}
+
+export function createSystemComposerFormPlacementPolicy(draft: SystemComposerDraft) {
+  const byId = new Map(draft.instances.map((item) => [String(item.instanceId), item.definitionRef]));
+  const parentByChild = new Map(draft.placements.map((edge) =>
+    [String(edge.childInstanceRef.id), String(edge.parentInstanceRef.id)]));
+  const inForm = new Map<string, boolean>();
+  const containsForm = new Map<string, boolean>();
+
+  function withinForm(parentId: string): boolean {
+    const cached = inForm.get(parentId);
+    if (cached !== undefined) return cached;
+    let cursor: string | undefined = parentId;
+    for (let depth = 0; cursor && depth <= MAX_ASSET_PLACEMENT_DEPTH; depth += 1) {
+      const definition = byId.get(cursor);
+      if (definition && isCurrentSystemForm(definition)) {
+        inForm.set(parentId, true);
+        return true;
+      }
+      cursor = parentByChild.get(cursor);
+    }
+    inForm.set(parentId, false);
+    return false;
+  }
+
+  function subtreeHasForm(id: string): boolean {
+    const cached = containsForm.get(id);
+    if (cached !== undefined) return cached;
+    const contains = [...systemComposerDescendantIds(draft.placements, id)].some((member) => {
+      const definition = byId.get(member);
+      return definition !== undefined && isCurrentSystemForm(definition);
+    });
+    containsForm.set(id, contains);
+    return contains;
+  }
+
+  return {
+    subtreeHasForm,
+    permits(child: AssetReference, parentId: string, slotId: string, movingId?: string): boolean {
+      if (!systemFormPlacementAllowed(child, byId.get(parentId), slotId)) return false;
+      const owned = withinForm(parentId);
+      if (owned && (isCurrentSystemForm(child) || (movingId && subtreeHasForm(movingId)))) return false;
+      if (isCurrentSystemFormElement(child)) return owned;
+      return true;
+    },
+  };
 }
 
 export interface SystemComposerDraftHistory {
@@ -44,46 +98,47 @@ export type SystemComposerDraftResult =
   | { readonly ok: true; readonly value: SystemComposerDraft }
   | { readonly ok: false; readonly message: string };
 
-export function createSystemComposerDraftHistory(
-  draft: SystemComposerDraft,
-): SystemComposerDraftHistory {
-  return { past: [], present: cloneDraft(draft), future: [] };
+// Only snapshots created here can be shared. A caller-frozen object is not
+// trusted: it may still contain mutable descendants or executable accessors.
+const ownedSnapshots = new WeakSet<object>();
+const ownedHistories = new WeakSet<object>();
+
+export function areSystemComposerDraftsEqual(left: SystemComposerDraft | undefined, right: SystemComposerDraft | undefined): boolean {
+  if (!left || !right) return left === right;
+  const a = cloneDraft(left), b = cloneDraft(right);
+  if (a === b) return true;
+  const sameItems = (x: readonly unknown[], y: readonly unknown[]) => x === y || x.length === y.length && x.every((item, index) => item === y[index] || JSON.stringify(item) === JSON.stringify(y[index]));
+  return sameItems(a.instances, b.instances) && sameItems(a.placements, b.placements) && sameItems(a.bindings, b.bindings) &&
+    (a.structure === b.structure || JSON.stringify(a.structure) === JSON.stringify(b.structure));
 }
 
-export function commitSystemComposerDraft(
-  history: SystemComposerDraftHistory,
-  next: SystemComposerDraft,
-): SystemComposerDraftHistory {
-  if (JSON.stringify(history.present) === JSON.stringify(next)) return history;
-  return {
-    past: [...history.past, cloneDraft(history.present)].slice(-50),
-    present: cloneDraft(next),
-    future: [],
-  };
+function immutableHistory(past: readonly SystemComposerDraft[], present: SystemComposerDraft, future: readonly SystemComposerDraft[]): SystemComposerDraftHistory {
+  const history = Object.freeze({ past: Object.freeze(past.slice(-50).map(cloneDraft)), present: cloneDraft(present), future: Object.freeze(future.slice(0, 50).map(cloneDraft)) });
+  ownedHistories.add(history);
+  return history;
 }
 
-export function undoSystemComposerDraft(
-  history: SystemComposerDraftHistory,
-): SystemComposerDraftHistory {
+export function createSystemComposerDraftHistory(draft: SystemComposerDraft): SystemComposerDraftHistory {
+  return immutableHistory([], cloneDraft(draft), []);
+}
+
+export function commitSystemComposerDraft(history: SystemComposerDraftHistory, next: SystemComposerDraft): SystemComposerDraftHistory {
+  const present = cloneDraft(history.present);
+  const changed = cloneDraft(next);
+  if (areSystemComposerDraftsEqual(present, changed)) return ownedHistories.has(history) ? history : immutableHistory(history.past, present, history.future);
+  return immutableHistory([...history.past, present].slice(-50), changed, []);
+}
+
+export function undoSystemComposerDraft(history: SystemComposerDraftHistory): SystemComposerDraftHistory {
   const previous = history.past[history.past.length - 1];
-  if (!previous) return history;
-  return {
-    past: history.past.slice(0, -1),
-    present: cloneDraft(previous),
-    future: [cloneDraft(history.present), ...history.future].slice(0, 50),
-  };
+  if (!previous) return ownedHistories.has(history) ? history : immutableHistory(history.past, history.present, history.future);
+  return immutableHistory(history.past.slice(0, -1), cloneDraft(previous), [cloneDraft(history.present), ...history.future].slice(0, 50));
 }
 
-export function redoSystemComposerDraft(
-  history: SystemComposerDraftHistory,
-): SystemComposerDraftHistory {
+export function redoSystemComposerDraft(history: SystemComposerDraftHistory): SystemComposerDraftHistory {
   const next = history.future[0];
-  if (!next) return history;
-  return {
-    past: [...history.past, cloneDraft(history.present)].slice(-50),
-    present: cloneDraft(next),
-    future: history.future.slice(1),
-  };
+  if (!next) return ownedHistories.has(history) ? history : immutableHistory(history.past, history.present, history.future);
+  return immutableHistory([...history.past, cloneDraft(history.present)].slice(-50), cloneDraft(next), history.future.slice(1));
 }
 
 export function addSystemComposerAsset(
@@ -98,8 +153,12 @@ export function addSystemComposerAsset(
     readonly order?: number;
   },
 ): SystemComposerDraftResult {
-  if (!findInstance(draft, input.parentInstanceId)) {
+  const parent = findInstance(draft, input.parentInstanceId);
+  if (!parent) {
     return failure("Select an available parent asset before adding content.");
+  }
+  if (!createSystemComposerFormPlacementPolicy(draft).permits(input.asset.definitionRef, input.parentInstanceId, input.slotId)) {
+    return failure(SYSTEM_FORM_PLACEMENT_MESSAGE);
   }
   if (findInstance(draft, input.instanceId)) {
     return failure("A unique asset instance id could not be created.");
@@ -158,7 +217,7 @@ export function removeSystemComposerSubtree(
   if (!findInstance(draft, instanceId)) {
     return failure("The selected asset instance is unavailable.");
   }
-  const removedIds = descendantsOf(draft.placements, instanceId);
+  const removedIds = systemComposerDescendantIds(draft.placements, instanceId);
   removedIds.add(instanceId);
   for (const protectedId of protectedInstanceIds) {
     if (removedIds.has(protectedId)) {
@@ -168,6 +227,7 @@ export function removeSystemComposerSubtree(
     }
   }
   return success({
+    ...draft,
     instances: draft.instances.filter(
       (instance) => !removedIds.has(String(instance.instanceId)),
     ),
@@ -236,12 +296,17 @@ export function reparentSystemComposerAsset(
 ): SystemComposerDraftResult {
   const placement = placementForChild(draft.placements, input.instanceId);
   if (!placement) return failure("Root assets cannot be reparented.");
-  if (!findInstance(draft, input.parentInstanceId)) {
+  const child = findInstance(draft, input.instanceId);
+  const parent = findInstance(draft, input.parentInstanceId);
+  if (!child || !parent) {
     return failure("The selected parent asset is unavailable.");
+  }
+  if (!createSystemComposerFormPlacementPolicy(draft).permits(child.definitionRef, input.parentInstanceId, input.slotId, input.instanceId)) {
+    return failure(SYSTEM_FORM_PLACEMENT_MESSAGE);
   }
   if (
     input.instanceId === input.parentInstanceId ||
-    descendantsOf(draft.placements, input.instanceId).has(
+    systemComposerDescendantIds(draft.placements, input.instanceId).has(
       input.parentInstanceId,
     )
   ) {
@@ -250,9 +315,9 @@ export function reparentSystemComposerAsset(
     );
   }
   const slotId = normalizeAssetSlotId(input.slotId);
-  const remaining = draft.placements.filter(
+  const remaining = normalizePlacementOrders(draft.placements.filter(
     (item) => String(item.placementId) !== String(placement.placementId),
-  );
+  ));
   const order = boundedInsertionOrder(
     input.order,
     nextSlotOrder(remaining, input.parentInstanceId, slotId),
@@ -287,7 +352,8 @@ export function attachUnassignedSystemComposerAsset(
     readonly order?: number;
   },
 ): SystemComposerDraftResult {
-  if (!findInstance(draft, input.instanceId)) {
+  const child = findInstance(draft, input.instanceId);
+  if (!child) {
     return failure("The selected asset instance is unavailable.");
   }
   if (input.rootInstanceIds.has(input.instanceId)) {
@@ -298,12 +364,16 @@ export function attachUnassignedSystemComposerAsset(
   if (placementForChild(draft.placements, input.instanceId)) {
     return reparentSystemComposerAsset(draft, input);
   }
-  if (!findInstance(draft, input.parentInstanceId)) {
+  const parent = findInstance(draft, input.parentInstanceId);
+  if (!parent) {
     return failure("The selected parent asset is unavailable.");
+  }
+  if (!createSystemComposerFormPlacementPolicy(draft).permits(child.definitionRef, input.parentInstanceId, input.slotId, input.instanceId)) {
+    return failure(SYSTEM_FORM_PLACEMENT_MESSAGE);
   }
   if (
     input.instanceId === input.parentInstanceId ||
-    descendantsOf(draft.placements, input.instanceId).has(
+    systemComposerDescendantIds(draft.placements, input.instanceId).has(
       input.parentInstanceId,
     )
   ) {
@@ -349,6 +419,15 @@ export function wrapSystemComposerAsset(
 ): SystemComposerDraftResult {
   const placement = placementForChild(draft.placements, input.instanceId);
   if (!placement) return failure("Root assets cannot be wrapped.");
+  const child = findInstance(draft, input.instanceId);
+  const parent = findInstance(draft, String(placement.parentInstanceRef.id));
+  if (!child || !parent) return failure("The selected assets are unavailable.");
+  const formPlacement = createSystemComposerFormPlacementPolicy(draft);
+  if (!formPlacement.permits(input.wrapper.definitionRef, String(parent.instanceId), String(placement.slotId), input.instanceId) ||
+      !systemFormPlacementAllowed(child.definitionRef, input.wrapper.definitionRef, input.wrapperSlotId) ||
+      (isCurrentSystemForm(input.wrapper.definitionRef) && formPlacement.subtreeHasForm(input.instanceId))) {
+    return failure(SYSTEM_FORM_PLACEMENT_MESSAGE);
+  }
   if (findInstance(draft, input.wrapperInstanceId)) {
     return failure("A unique wrapper instance id could not be created.");
   }
@@ -409,7 +488,9 @@ export function buildSystemComposerTree(
   const byParent = new Map<string, AssetPlacement[]>();
   for (const placement of draft.placements) {
     const key = String(placement.parentInstanceRef.id);
-    byParent.set(key, [...(byParent.get(key) ?? []), placement]);
+    const siblings = byParent.get(key);
+    if (siblings) siblings.push(placement);
+    else byParent.set(key, [placement]);
   }
   for (const placements of byParent.values()) {
     placements.sort(
@@ -486,12 +567,17 @@ export function deriveProtectedSystemInstanceIds(
     );
     if (!definition) continue;
     for (const slot of definition.slots) {
-      if (slot.cardinality.minItems < 1) continue;
+      const minimum = minimumSystemBuilderSlotItems(
+        draft.structure?.profile,
+        parent.definitionRef,
+        slot,
+      );
+      if (minimum < 1) continue;
       const requiredChildren = slotPlacements(
         draft.placements,
         parentId,
         slot.slotId,
-      ).slice(0, slot.cardinality.minItems);
+      ).slice(0, minimum);
       for (const placement of requiredChildren) {
         const childId = String(placement.childInstanceRef.id);
         if (protectedIds.has(childId)) continue;
@@ -573,7 +659,7 @@ function findInstance(
   );
 }
 
-function descendantsOf(
+export function systemComposerDescendantIds(
   placements: readonly AssetPlacement[],
   instanceId: string,
 ): Set<string> {
@@ -614,7 +700,35 @@ function normalizePlacementOrders(
 }
 
 function cloneDraft(draft: SystemComposerDraft): SystemComposerDraft {
-  return JSON.parse(JSON.stringify(draft)) as SystemComposerDraft;
+  const ancestors = new Set<object>();
+  const copy = (value: unknown): unknown => {
+    if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (value === undefined) return undefined;
+    if (!value || typeof value !== "object" || ancestors.has(value)) throw new Error("Draft snapshots require acyclic data values.");
+    if (ownedSnapshots.has(value)) return value;
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null && !(Array.isArray(value) && prototype === Array.prototype)) throw new Error("Draft snapshots require plain data values.");
+    ancestors.add(value);
+    try {
+      const descriptors = Object.getOwnPropertyDescriptors(value);
+      const entries: [string, unknown][] = [];
+      for (const key of Reflect.ownKeys(descriptors)) {
+        if (typeof key !== "string") throw new Error("Draft snapshots require plain data fields.");
+        const descriptor = descriptors[key]!;
+        if (!("value" in descriptor)) throw new Error("Draft snapshots require plain data fields.");
+        if (descriptor.enumerable && descriptor.value !== undefined) entries.push([key, copy(descriptor.value)]);
+      }
+      const fields = Object.fromEntries(entries);
+      const result = Array.isArray(value)
+        ? Array.from({ length: value.length }, (_, index) => fields[index] ?? null)
+        : fields;
+      Object.freeze(result);
+      ownedSnapshots.add(result);
+      return result;
+    } finally { ancestors.delete(value); }
+  };
+  return copy(draft) as SystemComposerDraft;
 }
 
 function safeId(value: string): string {

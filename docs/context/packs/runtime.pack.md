@@ -20,10 +20,25 @@
 
 ## Core Guidance
 
+- Generation accelerator totals come only from the current authenticated worker
+  capability response. The lazy driver query has bounded waiting/output and one
+  probe retained until actual exit/output retirement; unknown masks, MIG and
+  unsupported observations remain unknown. Do not substitute JS-host hardware or
+  confuse advisory total capacity with free VRAM, Torch readiness, admission or
+  native/offload ownership. See the runtime architecture and worker README.
+
+- For the two exact pinned Qwen CPU/chat/Standard trials, memory admission uses
+  user-directed3GiB/3.5GiB estimates only after safe-weight hash and size checks;
+  all other profiles retain conservative admission. Read the runtime model and
+  offline qualification guide before extending or interpreting these estimates.
+
 - Node.js + TypeScript is the default core runtime path.
 - Python/ComfyUI and other runtimes are adapter paths under `modules/adapters/runtime`.
 - Shared runtime vocabulary belongs in `modules/contracts/runtime`.
 - Runtime-specific protocol details stay out of core contracts and application/domain logic.
+- Installer repair requires explicit host update approval before I/O. Neither
+  `forceRepair` nor a fallback may grant it; automatic unapproved repair fails
+  closed. See the runtime model for initial-install and provenance boundaries.
 - Runtime operation identity should be helper-driven and transport-neutral.
 - Runtime diagnostics specialize shared structured logging; do not invent parallel runtime-only diagnostics.
 - Runtime readiness describes host-owned capability availability; it is not a runtime protocol payload or task lifecycle record.
@@ -34,6 +49,11 @@
 - The worker startup dependency probe includes the exact patched PyArrow pin
   required for bounded Parquet input/output; Parquet support must not depend on
   an uninstalled training-only requirements file.
+- Managed Python setup includes the exact Context LanceDB requirements. Explicit
+  RAG create/inspect/query repeats the asynchronous one-flight exact-version/import
+  probe and bounded install/re-probe with fixed progress. Passive reads never install.
+- Desktop honors the configured interpreter, then prefers Python 3.10–3.13 for
+  the optional decoder or 3.14 for the core worker. Development can provision it locally. Desktop verifies it before shell admission.
 - Automatic model placement uses the exact managed Accelerate pin. Startup
   repairs it before readiness, and generation preflight reports a sanitized
   repair code instead of degrading a missing component into zero examples.
@@ -53,6 +73,11 @@
   one unload action after each terminal training run without depending on the
   generation-model inventory, because task-local training models are not listed
   there; the existing active-task denial remains authoritative.
+- Generated-model storage denies observed cache snapshot collisions instead of
+  deleting retained targets. Fresh publication uses exclusive staging and
+  cooperative link/identity checks. Protected native ownership/publication and
+  hostile filesystem races remain separate; shared caches confer no deletion
+  authority (ADR-0043).
 - Dataset preparation task profiles are shared contract metadata and executable dataset-output profiles in the Python worker. Text-bearing profiles choose provided source text or local-model-generated text through `task.textInputMode` and `generation.promptTemplate`; built-in generation presets are quality 7B (`Qwen/Qwen2.5-7B-Instruct`) and compact 3B (`Qwen/Qwen2.5-3B-Instruct`). Task-scoped generation parameter defaults live in runtime contracts; UI may expose them in an automated formatting section but must not hardcode QA-generation settings keys or duplicate model parameter fields. LLM profiles can emit structured/generated text rows; diffusion and vision profiles emit image manifest rows from metadata or structured manifests. Model training requests carry the selected training task. Executable Python training supports causal-LM text training for LLM instruction/classification/extraction/embedding/reranker tasks, diffusion LoRA adapter training for image-caption manifests, and vision LoRA or full-finetune training for classification, detection, and segmentation manifests. Image-manifest text generation uses metadata/annotations rather than pixel understanding; image-manifest model training must receive runtime-local source file paths through dataset metadata instead of making the Python worker read artifact storage directly.
 - Capacity-aware model defaults step an untouched 7B preset down to 3B on a
   constrained host. Explicit/saved choices remain authoritative, but live
@@ -146,3 +171,30 @@
 - Typical set: `index` + `runtime`.
 - Add `runtime-task-registry`, `runtime-installer`, or feature packs only when those responsibilities are directly touched.
 - Add `logging` for diagnosability-heavy runtime work and `testing` for fixes/refactors.
+
+- Unmanaged Git roots cannot be adopted by matching origin. Repair requires
+  explicit update approval and consistent installed/missing target/root status
+  before Python/pip or fallback effects. Marker consistency does not establish
+  current tree integrity or immutable source provenance; retain pending proof.
+
+## Optional generation loading
+
+ADR-0045 and `docs/operations/optional-low-memory-inference.md` govern the explicit
+default-off Dataset Preparation offload profile. Use exact capability gating,
+finite native model/tokenizer support, inventory-bound `bounded_model_inputs.py` instead of outer supplier discovery, and separate weight/process/staging budgets. Keep native initialization, aliases and dispatch; the twenty-one-file ordinary lifecycle profile is model-free. Tiny supplier parity and production source/borrower/folder/accounting/worker/restart/resource qualification remain separate pending work.
+Cached-generator ownership survives task completion; teardown cannot rematerialize
+weights or declare unsupported running cancellation complete. Passive reads never
+install/load. Installed-model and native filesystem evidence remain separate. Source sharing permits writers only on nonterminal ancestors. The selected folder and exact files retain read-only sharing, and all objects deny delete sharing. Source tests grant no native, discovery, accounting, worker/restart or offload qualification.
+
+The private Windows/NTFS read-only file-identity prerequisite is not composed into
+production. See `docs/architecture/runtime-model.md` for bounded retained handle
+chains, exact identities, actual native-close fencing and qualification limits.
+It grants no model ownership, stable tree-size proof, offload recovery or delete/
+reveal authority; production controls and unknown staging remain fail-closed.
+
+ADR-0045 also records the approved guarded qualification-restart direction. Its
+current readiness gate reports pending native protection without touching the
+retained slot. Unknown retained usage consumes the full existing 12 GiB budget;
+pure serialized arithmetic never grants a native capability, journal authority or
+fresh model lease. Full guard/job/crash and model qualification remain pending.
+- Test-only Windows exit checks bind held read-only process handles through at most two parent links before app close. See `dev-tools/README.md` for launcher handling, weaker exited-fixture evidence and focused tests. These checks grant no process ownership, native/offload protection, full job-tree or model/parent qualification. PID-only qualification observation also accepts nine exact existing controller windows; root-bound shutdown and the CLI retain 30 seconds. See the runtime model and tool guide for limits. This does not change workload budgets or grant native restart authority. The private Windows file-identity helper is versioned, uncomposed read-only support. Its fixed model-free unit profile and separate native fixture cannot qualify a stable tree fence, file effects, protected accounting or offload restart; see the runtime model and adapter/tool guides. Dependency preparation in ordinary Desktop and Server shares the real Context-then-Worker helper. Preserve commands, dependency/backend gates and authentication. Optional bounded frozen stage labels stay session-only under ADR-0043; returned is not success. A production-rejected controlled qualifier can persist synthetic labels in a fresh exclusive cache. Ordinary directory checks grant no native fence, readiness, ownership or roadmap pass. See the Python adapter README and provided-data qualification guide. Desktop Copy diagnostics exports only cached closed startup facts from the actual host attempt; reads/copy add no probe, setup or install, and unknown versions stay unknown. Retiring a report attempt does not prove worker exit.

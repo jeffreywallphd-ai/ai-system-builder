@@ -24,6 +24,11 @@ The Asset Kernel does not replace storage, runtime, host, transport, or security
 
 Executable source, implementation bundles, build evidence, and system releases are also outside Asset Kernel records. ADR-0030 and `docs/architecture/asset-implementations-and-packages.md` define the separate implementation-release family and its exact bindings to semantic definitions.
 
+Imported package inspection enforces complete bounded semantic-v2 entry identities
+and any declared manifest checksum before admission. Semantic identity cannot
+grant trust, transfer approval or replace immutable package byte verification.
+Foundation releases retain their shipped identities.
+
 ## Canonical Terminology
 
 | Concept                      | Kernel status                             | Canonical meaning                                                                                                                                                           |
@@ -251,7 +256,7 @@ Deferred registry concerns remain explicit: no automatic definition version incr
 
 `AssetRegistryReadFacade` is read-only, transport-neutral, UI-neutral, and validation-on-request. It can read repository records, binding summaries, exact built-in metadata, validation summaries, and optional injected resource-backed views without save/update/delete/seed behavior.
 
-Resource-backed views are computed descriptor read models. They are not persisted mappings, do not create `AssetInstance` records, do not scan storage, do not read bytes/content, do not call providers/network/runtimes, and do not move ownership away from existing artifact/image/dataset/model/storage/repository families.
+Resource-backed views are computed descriptor read models. Their view bodies are not persisted; image/output public identity indexes are the narrow ADR-0043 exception. They do not create `AssetInstance` records, do not scan storage, do not read bytes/content, do not call providers/network/runtimes, and do not move ownership away from existing artifact/image/dataset/model/storage/repository families.
 
 Supported provider families depend on safe host-composed descriptor seams. Unsupported or unwired families return sanitized diagnostics rather than falling back to unsafe reads. Generated outputs remain `generated-output` views until finalization/registration succeeds. External repository objects remain external object views until import/localization/registration succeeds.
 
@@ -270,7 +275,7 @@ All controlled mutations require explicit approval, actor metadata, safe request
 
 `system.foundation` is the canonical versioned, system-trusted default pack. Its entries are full `AssetDefinition` records with source-pack metadata, category metadata, stable definition refs, stable fingerprints, semantic configuration schemas, AI context, ports, and composition guidance.
 
-System defaults are represented as pack entries, not loose hardcoded built-ins. Read-side system-default classification requires trusted system source metadata or a valid installer-managed marker, not source labels alone.
+System defaults are represented as pack entries, not loose hardcoded built-ins. Read-side system-default classification requires complete content equality against the code-owned catalog, including precisely permitted installer enrichment; source labels and editable markers do not grant that classification.
 
 Foundation definitions remain semantic and host-neutral. Functional behavior is supplied by exact trusted implementation-release or declarative-engine bindings under ADR-0034. Definitions do not embed renderer components, CSS, routes, API or IPC handlers, workflow engines, runtime tasks, provider calls, resource readers, storage reads/writes, file uploads, executable code, or implementation bytes.
 
@@ -295,6 +300,19 @@ The resolver is pure and non-destructive. It accepts explicit candidate definiti
 
 Workspace Asset Library reads require explicit workspace context. Missing workspace context must fail safely and must not fall back to global Asset Registry records.
 
+Studio and derived publications additionally become visible through their
+organization-scoped workflow repositories. The shared composition passes only
+these two private published-reference readers to the workspace facade. List and
+detail membership requires the exact published definition identity/version and
+published lifecycle; global existence, user metadata and an unpublished draft
+cannot establish ownership. Floating definition reads may resolve only to an
+actually owned exact published version. Reader failure or malformed/oversized
+ownership data fails closed with a static error. The request-local identity set
+is bounded to 25,000 references per reader; it grants read visibility only and
+does not inspect source bytes, execute code, activate an asset or replace the
+existing transport/workspace authorization. Legacy authoring, reuse and trusted
+pack membership retain their separate rules.
+
 A workspace can see `system.foundation@1.0.0` definitions only when it has an active trusted system-pack activation reference. A bare `sourcePackId` is not sufficient authority, and detail reads must not bypass the workspace effective view.
 
 Workspace creation can create a reference activation for `system.foundation@1.0.0`; it must not copy pack manifests, asset entries, or definitions and must not invoke system pack install behavior.
@@ -316,7 +334,7 @@ Asset Kernel work must preserve clean architecture boundaries:
 Non-goals:
 
 - no automatic asset instance creation from artifacts, generated outputs, previews, or external repository objects,
-- no durable resource-backed mapping repository beyond explicit `AssetInstance` records created by controlled workflows,
+- no durable resource-backed view-body repository; private image/output identity indexes and explicit `AssetInstance` records are distinct controlled records,
 - no arbitrary asset create/update/delete/patch/editor API, IPC, preload method, renderer action, or thin-client action,
 - no public marketplace, ratings, billing, publisher governance, or automatic updates,
 - package import/install/activation is permitted only through ADR-0031's quarantine, inspection, admission, trust, and lifecycle boundary,
@@ -339,3 +357,152 @@ Non-goals:
 - `docs/architecture/asset-authoring-and-execution-security.md` defines coding-model, sandbox, UI isolation, and capability-broker boundaries.
 - `docs/architecture/persistence-and-storage.md` defines artifact/resource/storage boundaries.
 - `docs/architecture/module-dependency-rules.md` defines dependency direction constraints.
+
+
+## Bounded definition browsing
+
+Definition detail requests carrying a version use `asset-definition-version`.
+Ordered internal batches accept at most 250 references and preserve missing
+positions and the single-read projection/membership rules. The local adapter
+reads the definitions collection once per batch; this is not a persistent cache
+or constant-time storage aggregation. Canonical authoring source summaries use
+an explicit contract projection, while generic metadata filtering remains strict.
+
+Workspace browsing pages the active Foundation manifest and registry separately,
+removes exact manifest duplicates, and rechecks the workspace on every request.
+Its versioned query-bound continuation is URI encoded and bounded to 8 KiB at
+the public mapper. Composer retains a separate bounded continuation (16 KiB)
+for compatible Foundation/registry traversal and scans at most 100 source pages
+per request. Scan exhaustion returns a continuation, including an empty page;
+repeated source cursors fail closed. Property schema/defaults remain lazy exact
+reads. Batch output and denial tests do not qualify controlled latency profiles.
+
+Workspace-authored source summaries also use ordered batches of at most 250
+references. The owning authored/revision adapters read each collection once,
+filter workspace ownership before normalization, and retain missing positions.
+Effective-summary enrichment preserves the existing override fallback and never
+shares cached content across requests or workspaces.
+
+Semantic Asset Pack explanatory fields retain non-goal prose such as descriptions
+of resource bytes, prompt text or runtime execution. This allowance never admits
+actual private-key blocks or established credential-prefix representations.
+Validation and JSON parse checks reject those strings with static diagnostics;
+serialization/normalization rejects before returning a document containing them.
+The shared content predicate is pure admission logic, separate from lossy display
+sanitization. This is syntax hardening, not proof that arbitrary prose contains
+no sensitive data. Existing schema, trust and metadata controls still apply.
+Semantic fingerprint utilities now capture and validate complete passive input
+before domain-separated `sha256:semantic-v2` hashes. Display sanitization never
+changes hash input. Only manifest packaging timestamps/checksum and entry self-
+fingerprints are excluded; asset/dependency/override/tag/category set-like ordering
+is normalized while ordered definition arrays remain significant. Optional object
+undefined values mean absence; undefined/holey arrays and nonJSON values deny.
+Existing immutable legacy identities remain unchanged and verification reports
+`legacy-revalidation-required`, never implicit trust or approval migration.
+Package byte integrity remains separate. No provider, model or runtime execution
+is added.
+
+Actual credential checks apply to property names as well as string values.
+Credential-bearing names are denied before descent/copy and never become public
+diagnostic paths; issues refer to the safe parent. Direct serialization also
+rejects those names before creating a document.
+
+Resource-backed model views expose explicit model inventory summary fields, not
+`generatedFromRunId` or arbitrary `record.metadata`. Model metadata cannot
+override workspace/model identity, parameter counts or other declared fields.
+The same projection applies to list, exact scoped detail and backing metadata.
+Omitted metadata is not recursively inspected merely to construct a diagnostic.
+Existing safe model labels, typed summaries, explicit published summaries and
+workspace-scoped source lookups remain supported. This projection adds no
+discovery, runtime, provider, mutation, opaque-ID mapping or provenance authority.
+
+Model diagnostic classification checks only named private-column presence,
+without accessing the omitted metadata property or its getter.
+
+Built-in definition read classification compares complete bounded, descriptor-safe
+content against the code-owned legacy catalog and exact immutable Foundation
+1/2/3 releases before display sanitization. Only raw content and precisely
+reconstructed seeder/installer enrichment match; only declared operational
+timestamps may vary. ID/version or editable marker/fingerprint claims alone
+confer no badge. Unknown enrichment and changed schema, AI context, provenance or
+metadata cannot earn built-in/system/trusted status. List/filter/single/batch
+reads use the same classification, and projected metadata removes editable
+positive cues before downstream UI fallbacks. Ordinary custom-source descriptors
+and nonpositive trust states remain visible. Reads never seed, install or write.
+Each list/single/batch path makes one complete bounded passive copy and classifies
+that owned body through a private full-content matcher before projection. The
+standalone classification API uses the same safe admission; there is no unchecked
+classification entry point or editable-record cache. Invalid authority timestamps
+on otherwise passive custom content withhold badges without denying the read.
+Malformed/accessor-bearing records fail with a static read error. This is read
+classification, not package admission or general proof of trusted provenance.
+Seeder and system-pack installer reuse also captures the complete bounded passive
+stored body before reading markers, and compares it against exact expected source
+content plus declared operational enrichment. An unchanged editable fingerprint
+never makes edited content already current. Nonmatching seeds preserve user edits;
+nonmatching installs deny unless the existing explicit same-pack refresh is
+authorized. Refresh writes validated supplied source content and never treats an
+editable marker as proof of its current body. Immutable legacy fingerprints are
+retained as source identifiers, without migration or promotion to semantic-v2.
+Complete package-integrity migration and native qualification remain pending.
+Rollback retains content comparison and the stronger denial of forged authority cues.
+
+Image/generated-output view identities are persisted random opaque aliases under
+accepted ADR-0043. The narrow identity port stores private organization/workspace
+source and public indexes; a hash appears only in the private source index key,
+never in a public identifier. Active SQLite/PostgreSQL host composition supplies
+the organization-context store. Organization scope is frozen before awaiting;
+unassigned or missing stores deny this projection without a legacy JSON fallback.
+
+Revision-CAS publication reserves one immutable alias per owner/source, inserts
+its exact inverse, then commits the source revision. Only committed consistent
+pairs are returned or resolved. A new reserved publication can resume after an
+authorized descriptor read, using the same alias; committed missing or substituted
+pairs deny without repair. Four conflict attempts bound admission. This avoids
+adding overlapping connection transactions to the existing SQLite seam. Private
+reserved records grant no source authority and are never public evidence.
+
+Image/output/artifact aliases and source cursors use this mapping. Descriptor
+capture rejects active/malformed input before projection. Detail reads use two
+exact index lookups, followed by an exact workspace-scoped source reauthorization;
+there is no source-ID decoding or list fallback. Revoked/mismatched sources deny.
+Image cursor continuation uses the last returned source row, avoiding a skipped
+next item. No image bytes, providers, runtimes, registration or finalization are
+invoked by projection. Generated-output finalization remains uncomposed in hosts.
+
+Existing source-derived view references are not migrated or silently reassigned.
+Explicit owner-approved legacy-reference migration and native persistence/ACL
+qualification remain pending. Preserve mapping records and stronger denials on
+rollback; never restore source-derived public IDs. This component evidence does
+not close parent security increments or establish protected physical-file effects.
+
+## Bounded Foundation bootstrap
+
+Customization target listing takes a fresh exact-definition snapshot through the
+existing ordered repository batch seam in groups of at most250. It deduplicates
+exact identities within that operation and never caches across requests or
+organizations. Ports without the seam read sequentially. Missing definitions
+retain ineligible targets; malformed or mismatched batch responses deny. Scoped
+release/backing reads, revocation checks, filtering and paging remain authoritative.
+This avoids launching hundreds of full-collection reads against the PostgreSQL
+connection pool. Detail reads resolve their exact definition once.
+
+Foundation reconciliation uses ordered exact reads in groups of at most250 and
+optional atomic definition registration under the existing collection schema. Every
+member validates before persistence; expected original bodies are rechecked inside
+every CAS retry, so concurrent inserts/edits fail rather than being overwritten.
+Repositories or injected registration hooks without the batch seam retain the
+existing single-registration path. Installed-body matching still compares complete
+passive content, including permitted operational enrichment; markers are not trust.
+# Scoped custom selection
+
+Workspace list and exact detail reads admit the same persisted authored/reuse
+sources. Shared composition supplies the existing organization-scoped authoring
+repositories. Global custom metadata is never membership authority. Composer
+pushes necessary slot type/family constraints into bounded catalog queries, then
+retains authoritative compatibility checks and query-bound continuation.
+Multi-value repository predicates retain OR within a type/family field and AND
+between fields, before sorting/paging. Definition facade reads consume at most
+their remaining output capacity; oversampling cannot advance an opaque cursor
+past compatible rows that were never returned. Final scoped membership and
+compatibility checks remain authoritative.

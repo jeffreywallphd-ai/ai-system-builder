@@ -348,3 +348,49 @@ describe("AssetDatasetModelResourceBackedViewProvider", () => {
     }
   });
 });
+
+
+it("projects explicit model summaries without internal run IDs, arbitrary payloads or metadata overrides",async()=>{
+ const record=model({workspaceId:"workspace-a" as never,generatedFromRunId:"private-run-correlation",metadata:{workspaceId:"workspace-substitute",modelRecordId:"forged-record",parameterCount:1,safeLabel:"arbitrary-private-summary",benignContainer:{correlation:"private-task-correlation",nested:{request:"private-request-correlation"}}}});
+ const registry=new FakeModelRegistry([record]); const provider=new AssetDatasetModelResourceBackedViewProvider({modelRegistry:registry});
+ const before=structuredClone(record);
+ const listed=await provider.listResourceBackedViews({workspaceId:"workspace-a" as never,viewKinds:["model"]}); const listedView=listed.items[0]!; assert.ok(listedView);
+ const read=registry.getModelRecord.bind(registry);
+ registry.getModelRecord=async(workspaceId,id)=>{assert.equal(workspaceId,"workspace-a");assert.equal(id,"model-1");return read(workspaceId,id);};
+ const detail=await provider.readResourceBackedView(listedView.viewId,{workspaceId:"workspace-a"}); assert.ok(detail);
+ for(const view of [listedView,detail]) {
+  for(const metadata of [view.metadata,view.resourceBacking?.metadata]) {
+   assert.equal(metadata?.workspaceId,"workspace-a"); assert.equal(metadata?.modelRecordId,"model-1"); assert.equal(metadata?.parameterCount,7000000000);
+   assert.equal(metadata?.generatedFromRunId,undefined); assert.equal(metadata?.safeLabel,undefined); assert.equal(metadata?.benignContainer,undefined);
+  }
+  assert.equal(view.displayName,"Demo Model"); assert.deepEqual(view.metadata?.taskTags,["text-generation"]);
+  for(const denied of ["private-run-correlation","arbitrary-private-summary","private-task-correlation","private-request-correlation","workspace-substitute","forged-record"]) assert.equal(JSON.stringify(view).includes(denied),false);
+ }
+ assert.deepEqual(record,before);
+ assert.equal(registry.listCalls,1); assert.equal(registry.readCalls,1); assert.equal(registry.discoveryCalls,0); assert.equal(registry.validationCalls,0); assert.equal(registry.trainingCalls,0); assert.equal(registry.publishingCalls,0); assert.equal(registry.createAssetInstanceCalls,0); assert.equal(registry.persistMappingCalls,0);
+});
+
+it("does not traverse omitted model metadata for projection or diagnostics",async()=>{
+ let calls=0;
+ const accessor=Object.defineProperty({},"nested",{enumerable:true,get:()=>{calls++;throw new Error("private synthetic content");}});
+ const circular:Record<string,unknown>={}; circular.nested=circular;
+ for(const metadata of [accessor,circular]) {
+  const record=model({metadata});const registry=new FakeModelRegistry([record]);const provider=new AssetDatasetModelResourceBackedViewProvider({modelRegistry:registry});
+  const result=await provider.listResourceBackedViews({workspaceId:"workspace-a" as never,viewKinds:["model"]});const view=result.items[0]!; assert.ok(view);
+  assert.ok(await provider.readResourceBackedView(view.viewId,{workspaceId:"workspace-a"}));
+  assert.equal(record.metadata,metadata);assert.equal(view.metadata?.nested,undefined);assert.equal(view.resourceBacking?.metadata?.nested,undefined);
+ }
+ assert.equal(calls,0);
+});
+
+
+it("never evaluates the outer omitted metadata accessor in list or exact detail",async()=>{
+ let calls=0;const record=model();
+ const getter=()=>{calls++;throw new Error("private synthetic metadata");};
+ Object.defineProperty(record,"metadata",{enumerable:true,configurable:true,get:getter});
+ const registry=new FakeModelRegistry([record]);const provider=new AssetDatasetModelResourceBackedViewProvider({modelRegistry:registry});
+ const result=await provider.listResourceBackedViews({workspaceId:"workspace-a" as never,viewKinds:["model"]});assert.equal(result.items.length,1);
+ const detail=await provider.readResourceBackedView(result.items[0]!.viewId,{workspaceId:"workspace-a"});assert.ok(detail);
+ assert.equal(calls,0);assert.equal(Object.getOwnPropertyDescriptor(record,"metadata")?.get,getter);
+ assert.equal(registry.listCalls,1);assert.equal(registry.readCalls,1);assert.equal(registry.discoveryCalls,0);
+});

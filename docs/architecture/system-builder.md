@@ -102,6 +102,70 @@ Design-time statuses are `draft`, `in-composition`, `blocked`, `ready-for-valida
 
 ## Ownership and dependency boundaries
 
+[Headless authoring](../adr/ADR-0047-headless-system-builder-delegation.md)
+uses the same application authority, validation and immutable saved revisions
+as UI authoring. The host authenticates a registered client and checks its
+current workspace access. Saved data notifications must neither steer UI
+navigation nor change a human draft's save base. The initial versioned read
+contract exposes no new product entry point.
+
+The semantic batch request describes exact add, configure, connect, move and
+remove operations against an existing saved revision. The application must
+resolve the exact definitions and enforce its current graph and workspace
+policy before preview or commit. A preview keeps saved state unchanged and
+identifies removed instances and bindings. Apply recomputes the digest,
+checks both saved revision identifiers, and requires a valid result from the
+same graph validator as the editor. If an old reference needs an implicit
+repair, the user can first save it in Composer; a headless batch cannot add
+that change without preview. This internal application path does not enable
+external writes until durable receipt and change delivery are available.
+
+The management contract names the exact installed template when creating a
+system. Rename and clone include the saved record and composition revision
+that the client read. All three requests require an idempotency key and explicit
+workspace. When the host composes the internal authoring service, template
+creation, rename, clone and apply use the existing System Builder use cases.
+Rename preserves the existing description when the client omits it. All
+delegated edits resolve exact definitions through the workspace asset facade.
+Validation stages a single write before the owned transaction. That transaction
+rechecks the saved target and the current host grant, then commits the saved
+change, retry receipt and change notification together. A changed host
+incarnation does not change the saved retry identity. No connector tools
+are granted by the internal service alone.
+
+The committed change reader captures its cursor before reading the saved
+snapshot. A change made during that read can appear again on replay. The
+consumer compares record revisions before applying it. The host binds each
+cursor to its incarnation, organization, workspace, reader and sequence.
+An invalid or expired cursor requires an authorized resync.
+
+The desktop's shared System Builder repository appends committed changes in
+the same transaction as the saved record. Delegated writes use that same
+writer and add their retry receipt to the transaction. A change to a legacy
+record without a current composition revision carries a null revision ID.
+A revision stored without becoming current does not notify readers. The
+journal contains only saved system and revision metadata. Managed server
+wiring remains pending.
+
+Composer saves and upgrade previews use the record revision and exact
+composition revision captured when the draft was opened or saved. A newer list
+response does not advance that base. The Canvas keeps dirty content and undo
+state when a newer revision arrives or the saved system leaves the list.
+Discard loads the current listed revision if it changed. A stale write still
+fails through the application and keeps the user's edits.
+
+A clean Composer can install a newer exact saved revision while keeping the
+active route, tab and compatible asset selection. It leaves the current graph
+usable until the reply arrives. Workspace, target, latest record and request
+generation must still match. Editing, undoing into a dirty draft, saving and
+switching workspaces fence outstanding passive replies.
+
+Desktop chat control requests use the shared modal dialog. A pending or
+dirty-draft request leaves the Canvas and its layout in place. The user can
+revoke from the fixed shell controls or from an open dialog.
+File > New Window opens a second desktop window. A control request and its
+revoke apply to the selected window only.
+
 - System Builder records are workspace-owned and require explicit workspace identity at every future contract, client, transport, use-case, repository, and persistence seam.
 - Asset Kernel definitions, instances, bindings, compositions, and references remain canonical component vocabulary.
 - Asset composition planning remains the non-executing compatibility/planning input. A system record may reference a plan but must not mutate the plan or effective asset projections implicitly.
@@ -135,8 +199,11 @@ customization, and single-asset Studio workflows.
   revisions, declared slot membership, compatible children, complete placement
   coverage, bounded depth, and acyclic containment.
 - New interactive systems start with the Foundation v3 system root, one required
-  selected application layout, its required page hosts, a page layout, and
-  bounded empty content. When a caller does not choose an application layout,
+  selected application layout, and its required page layouts. The page content
+  regions start empty. For interactive systems, the System Builder accepts zero
+  visual children in the content or equal-split panel slots of exact Foundation
+  v3 page layouts. This leaves published asset definitions and required
+  structural placements intact. When a caller does not choose an application layout,
   the canonical default is `builtin.layout.application.minimal@3.0.0`. Service
   and workflow profiles remain explicit and are not assigned an interactive
   hierarchy.
@@ -167,15 +234,136 @@ customization, and single-asset Studio workflows.
   after that bar is opened. States regions start collapsed. Only the active
   details panel body mounts, and disclosure, selection, focus, and panel state
   are not persisted.
+  Design and Connections use arrow keys, Home, and End to select and focus the
+  named panels. Switching panels retains the current draft.
   Every exact slot-bearing Canvas container recursively exposes its named
   regions, placed descendants, and Add element action. Add element opens the
   shared modal scoped to that exact parent. The user chooses an available region
   when needed, searches bounded paged compatible candidates, and selects either
   a new definition or compatible unassigned visual instance. The choice maps to
   the existing canonical add/place command, closes the modal, selects the
-  result, and reveals it on the Canvas. Layers retain explicit native
-  destination and order controls for reparenting and reorder. There is no
+  result, and reveals it on the Canvas. Compatible built-in page layouts
+  appear under **Containers and layout**. Application layouts use the separate
+  Layouts bar. Layers retain explicit native
+  destination and order controls for reparenting and reorder. The selected
+  removable Canvas asset and the Layers panel open the same confirmation.
+  Confirming removes that asset, its descendants, and their connections from
+  the draft as one undoable change. Required layout structure stays protected.
+  Saving creates a new revision. There is no
   persistent Asset Palette, pointer drag behavior, or renderer drag state.
+  In Systems Compose, **Create form system** saves a Minimal system with a
+  section, a form, and its empty first form page in the initial revision. You
+  can leave without adding fields or saving. **Open in Compose** in Manage
+  opens that saved form in the Form editor. If the original form is removed,
+  the system opens in Canvas. Other systems open in Canvas, including systems
+  with embedded forms. **Edit Form** opens the specific form on which it appears.
+  **Back to Canvas** selects that form again. More than one form can share a
+  page, and opening an embedded
+  form preserves its placement and neighboring assets. The two editors use
+  the same workspace-visible asset definitions, draft, undo and redo history,
+  and revision save path. Canvas renders the same placements in either case.
+  Each form page has its own tab. **New Form Page +** adds a numbered page
+  and opens its tab. Expand an element to edit its label, help text, or other
+  respondent text beside that element. Only one content editor opens at a
+  time. Adding a field opens its editor and brings it into view. The **Element**
+  list can also open an editor. Use the **Properties** sidebar
+  for styling, layout, answer rules, routes, and submission behavior. Resetting
+  styling preserves text and behavior. The sidebar
+  moves below the editor when space is limited. The first page cannot be
+  removed in Form Composer. Removing another page or a field requires
+  confirmation and removes its children and affected route or action
+  references in one undoable draft edit.
+  Existing fields outside a form page stay editable in a separate section.
+  A form page is the group of fields respondents see together. Internally it
+  remains a Foundation field group; its asset ID and route bindings are unchanged.
+  Current Foundation form fields, steps, messages, and actions can only be
+  placed in their matching regions inside a form. Canvas filters add and move
+  choices, and revision validation checks the same placement rule and verifies
+  that each form element belongs to a form reachable from the system root.
+  New reference systems group the request fields and artifact filters under
+  form assets. The conversation composer renders its own Send control in
+  preview; the published chat runtime keeps its existing message operation.
+  The rule does not rewrite earlier saved revisions. To validate an earlier
+  system with loose fields, add a Form asset and move the fields into its
+  Fields region or a step. In an older chatbot template, remove the separate
+  Send asset to use the message composer's Send control.
+  Form routes are versioned `control` bindings between exact Foundation step
+  instances. A route to the enclosing form ends the form. The evaluator tries
+  bounded scalar conditions in priority order, then uses an explicit fallback
+  or the next saved step. Revision and build validation reject invalid field
+  references, routes outside the form, cycles, and unreachable steps. The
+  evaluator returns only validated answers on the selected route. Existing
+  declarative forms with no route bindings keep their validation behavior.
+  Form Composer configures choice options, field limits, and routes in the
+  shared draft. Its preview keeps sample answers in the dialog, validates the
+  current step, and drops answers after a changed route. Preview has no save or
+  action transport. It reports which fields would be included without showing
+  their answer values in the result.
+  Radio groups use the same bounded choice values and show native radio
+  buttons in the form journey. **Form and control settings** opens the existing
+  asset property editor for the form, its steps, and the buttons or messages
+  placed inside it. These settings do not grant execution; the separate
+  submission action selects the approved effect. An embedded form can open
+  from a compatible application region even when it has no page ancestor.
+  A form submission binding connects the exact Foundation `submitted-values`
+  port to the existing Create Record operation's `input` port. It lists the
+  form fields the action may receive and their destination record fields.
+  Revision validation rejects duplicate actions, other operations, incompatible
+  ports, and fields outside the form. A saved binding by itself has no effect.
+  A successful build pins each supported form action in its lock. Runtime
+  admission requires this stamp, an approved release with a verified
+  manifest, the exact saved revision, and non-revoked system implementations.
+  An older lock without a form action stamp grants no submission authority.
+  The submission use case validates the exact form again and sends only mapped
+  answers on the final route to the record action. Before creating a record or
+  checking a retry, it refreshes the release and actor authority. The existing
+  record and audit transaction uses a stable ID for the submission. A lost
+  response can be recovered with that ID. Receipts contain status and identity
+  only, and the audit lists field names without their answer values. A private
+  creation marker lets a retry report that the original submission was already
+  recorded even after the record's values have changed.
+  The focused recovery test uses the production local SQLite adapter. A
+  test-owned writer exits after the record and audit commit, before returning
+  its receipt. A fresh process retries and must find the same receipt, one
+  record, and one audit entry. The receipt and audit contain no answer text.
+  In the Form view, After submission lists the existing Create Record
+  operation and compatible destination fields. Setting or removing an action
+  changes only the shared draft. Preview describes the configured action
+  without dispatching it.
+  The published form projection checks the same approved release and its
+  current record-create policy. It returns form steps and field descriptions
+  for the admitted respondent. Action mappings and stored answers stay on the
+  host. The projection does not create a form submission.
+  When the host supplies a form client, **Open forms** on a published build
+  opens the shared respondent dialog for that exact release. Unpublished
+  builds have no form entry point. The dialog uses
+  the same answer and route checks as Preview. If the host does not confirm
+  submission, Retry submission sends the same answers and submission ID.
+  If the answers exceed the host's total text limit, the dialog keeps them
+  available for editing. Closing the dialog does not cancel a request already sent.
+  Closing the dialog or changing release clears the local form session.
+  The host retains responsibility for permission checks and duplicate detection.
+  The API and Desktop IPC expose dedicated list and submit operations only
+  when the host composes the form runtime. The API uses the existing asset
+  read and write scopes and its authenticated actor. Desktop takes identity
+  from its host. The operations accept bounded form data and no caller roles
+  or actor identities.
+  Both hosts use the same gateway to check the active workspace and current
+  organization membership. The server also checks that the authenticated
+  request actor matches the organization context. Each host uses its existing
+  approved release artifacts, revocation records, and release-bound record
+  store. If a host lacks its authorization dependencies, it does not register
+  the form operations.
+  Managed record routes also use the current stored organization role when
+  applying release policies. If the authenticated request cannot be matched to
+  an active membership, the routes deny access. Desktop record access continues
+  to use the local host identity.
+  Desktop Publish passes the selected release through the dedicated form
+  bridge. The preload selects the allowed request fields and checks the
+  response channel before returning a result to the renderer.
+  The browser uses the existing authenticated fetch path. It sends the
+  workspace and release in the list query and puts form answers only in the
+  submission request body.
   Trusted Foundation system/subsystem facades with a qualified declarative
   preview participate as visual containers; ordinary policies, models,
   workflows, and backend resources do not. Canvas container nodes render only
@@ -225,16 +413,34 @@ customization, and single-asset Studio workflows.
   separately in the Layers view under System resources and logic. Missing exact
   catalog metadata fails closed into that nonvisual group. Save remains a
   separate optimistic command that creates a new immutable revision.
-- Composer startup reads structural catalog summaries that omit configuration
-  schemas and defaults. Opening Layouts performs its bounded layout query on
-  demand. Opening Add element performs a region-scoped compatibility query and
-  presents bounded, searchable pages of new definitions and compatible
-  unassigned visual instances. Properties reads exact detail only for the
-  selected asset. Candidate summaries carry only a lightweight category ID so
-  the modal can group and filter results without loading editable metadata.
-  Styling reads exact detail only for the system root while that tab is active. Responses are scoped to their initiating selection so stale
-  requests cannot replace current detail. Full revision instance values remain
-  in the local draft for preview, undo, redo, and save.
+- Composer resolves the exact structural definitions used by the current revision
+  through bounded ID searches and exact version checks, preserving ADR-0037.
+  One reader budget covers at most eight physical structural/detail reads across
+  catalog, inspector, save and navigation generations, with512distinct draft
+  definitions and a bounded inactive-pruned queue. Settled results cannot accept
+  new subscribers, nor can generations without live subscribers; the physical
+  slot remains reserved until final cleanup, so
+  an explicit retry or new navigation cannot inherit a cancelled failure.
+  A new system first resolves the required Minimal
+  layout using its bounded search and stops once found; it does not await the
+  unrelated catalog continuation. Structural queries and candidate browsing omit
+  configuration schemas/defaults; editable detail stays selected-context lazy. Opening Layouts performs its bounded layout query on demand.
+  Opening Add element performs a region-scoped compatibility query and presents
+  bounded searchable pages. Properties and Styling retain their selected/root
+  exact-detail behavior. Every response is scoped to the initiating workspace,
+  system or selection; exact reference substitution fails closed. Legacy test
+  clients without detail support retain bounded catalog loading.
+- Unsaved drafts use privately owned immutable snapshots. Unchanged owned data
+  is shared; mutable or shallow-frozen caller objects are copied, never trusted
+  as immutable. Accessors, executable values and cycles are rejected without
+  invoking them. The saved checkpoint is independent of the50entry Undo limit.
+  Host transactions synchronously lock mutations and fence late responses by
+  scope/system. The editor exposes structural readiness and a failed-definition
+  retry instead of allowing edits against incomplete metadata. Optional history never gates the current Canvas and merges by
+  immutable revision identity so a late snapshot cannot erase a local save.
+  Failed current reads provide an inline retry; raw transport exceptions are
+  not presented. Move targets use indexed definitions and child counts, and
+  same-slot absolute positions refer to the final sequence after removal.
 - Compose provides a design-time UI preview of the current unsaved hierarchy and
   configuration. The shared modal recursively follows canonical placement and
   canonical region order, reports unplaced visual, nonvisual resource, and
@@ -440,3 +646,20 @@ injected; the managed runner template is operator evidence, not sandbox proof.
 Build/release support must not be inferred from design validation, and a release
 must not be treated as deployed or running. See
 `docs/architecture/system-build-and-release.md`.
+
+## Manage request ownership and recovery
+
+The Manage view starts a fresh UI session when its workspace or client changes. Late replies cannot populate a former list/dialog, publish a notification or invoke a former active-systems callback. Initial reads and paging recover from transport rejections. Paging and requested preview results belong to the accepting query sequence. Accepted mutations remain owner-scoped across search/filter changes; a view refresh is not mutation cancellation. Synchronous operation tokens precede awaits and only their owner releases busy state. Notifications distinguish failed requests and saved results; raw thrown transport details are not displayed. These UI controls supplement existing exact revision and server/workspace authority. Local rendered fixtures do not qualify physical app/runtime/native or final combined behavior. Owners retire during layout cleanup at commit, before passive effects. An abandoned replacement render does not change the committed session. Confirmation changes are synchronously refused while an action owns them.
+The desktop takeover shell keeps authorization and local presentation state
+separate. Before accepting with a dirty Composer, the user chooses whether to
+save the existing draft. A denied, invalid or conflicting save returns manual
+control and keeps the draft available. The shell and active modal both offer
+immediate revoke while activation is pending or active. Revoke closes the
+window's local gate before IPC. The Composer stays mounted across Systems tabs
+so the handoff sees any pending draft. During attachment, modal body controls are
+inert and keyboard users can still revoke or close the dialog.
+The paired client can request a saved system, component, validation summary,
+artifact, or run. The window shows the authorized resource in a dedicated
+view while the current draft remains in place. Command delivery and saved
+business results have separate receipts. Native end-to-end qualification is
+tracked in the Headless roadmap.

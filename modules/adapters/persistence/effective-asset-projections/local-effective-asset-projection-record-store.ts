@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { cloneJson } from "../user-library/local-user-library-record-store";
+import { normalizeEffectiveAssetProjectionRecord, normalizeEffectiveAssetProjectionSnapshotRecord } from '../../../contracts/effective-asset-projections';
 import {
   mutateDocumentRecord,
   readDocumentRecord,
@@ -28,12 +29,20 @@ export interface LocalEffectiveAssetProjectionRecordStoreOptions {
   readonly documents?: StructuredDocumentStore;
 }
 
-function assertSafeProjectionJson(value: unknown): void {
-  const encoded = JSON.stringify(value);
-  if (encoded === undefined) {
-    throw new LocalEffectiveAssetProjectionRecordStoreError(
-      "Effective asset projection local store record must be JSON-safe.",
-    );
+function validateCollection<T>(name: CollectionName, value: unknown): T[] {
+  try {
+    if (!Object.prototype.hasOwnProperty.call(files, name) || !Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype ||
+        Reflect.ownKeys(value).length !== value.length + 1) throw new Error();
+    const normalize = name === 'snapshots' ? normalizeEffectiveAssetProjectionSnapshotRecord : normalizeEffectiveAssetProjectionRecord;
+    const out: T[] = [];
+    for (let i=0;i<value.length;i++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value,String(i));
+      if (!descriptor || !('value' in descriptor) || !descriptor.enumerable) throw new Error();
+      out.push(normalize(descriptor.value) as T);
+    }
+    return out;
+  } catch {
+    throw new LocalEffectiveAssetProjectionRecordStoreError('Effective asset projection local store collection is invalid.');
   }
 }
 
@@ -58,19 +67,15 @@ export class LocalEffectiveAssetProjectionRecordStore {
   async readCollection<T>(name: CollectionName): Promise<readonly T[]> {
     await this.ensure();
     const v = await this.readJson(files[name], [] as T[]);
-    if (!Array.isArray(v))
-      throw new LocalEffectiveAssetProjectionRecordStoreError(
-        "Effective asset projection local store collection is invalid.",
-      );
-    return cloneJson(v as T[]);
+    return validateCollection<T>(name, v);
   }
   async writeCollection<T>(
     name: CollectionName,
     records: readonly T[],
   ): Promise<void> {
+    const validated = validateCollection<T>(name, records);
     await this.ensure();
-    assertSafeProjectionJson(records);
-    await this.writeJson(files[name], cloneJson(records));
+    await this.writeJson(files[name], validated);
     await this.writeJson(
       "effective-asset-projection-manifest.json",
       this.manifest(),
@@ -89,14 +94,8 @@ export class LocalEffectiveAssetProjectionRecordStore {
       `effective-asset-projections/${files[name]}`,
       [] as T[],
       (current) => {
-        if (!Array.isArray(current)) {
-          throw new LocalEffectiveAssetProjectionRecordStoreError(
-            "Effective asset projection local store collection is invalid.",
-          );
-        }
-        const next = mutation(cloneJson(current));
-        assertSafeProjectionJson(next.records);
-        return { value: cloneJson([...next.records]), result: next.result };
+        const next = mutation(validateCollection<T>(name, current));
+        return { value: validateCollection<T>(name, next.records), result: next.result };
       },
     );
     await this.writeJson(

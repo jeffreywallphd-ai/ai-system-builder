@@ -66,6 +66,7 @@ interface FeatureEntry<TFeature extends object = object> {
   readonly importFeature: () => Promise<() => TFeature | Promise<TFeature>>;
   readonly idleTimeoutMs: number;
   promise?: Promise<TFeature>;
+  disposing?: Promise<DesktopFeatureDisposeResult>;
   idle?: boolean;
   idleTimer?: ReturnType<typeof setTimeout>;
 }
@@ -149,81 +150,90 @@ export function createDesktopFeatureLifecycleRegistry(
         blockedReason,
       };
     }
+    if (entry.disposing) return entry.disposing;
     clearIdleTimer(entry, reason);
-    const loaded = entry.promise
-      ? await entry.promise.catch(() => undefined)
-      : undefined;
-    if (!loaded) {
-      record("desktop.host.feature.dispose.blocked", {
-        featureKey,
-        reason,
-        blockedReason: "already-disposed",
-      });
-      return {
-        featureKey,
-        disposed: false,
-        policy: entry.policy,
-        alreadyDisposed: true,
-      };
-    }
-
-    try {
-      if (isDisposableFeature(loaded) && loaded.canDispose) {
-        const block = await loaded.canDispose(reason);
-        if (block) {
-          record("desktop.host.feature.dispose.blocked", {
-            featureKey,
-            reason,
-            blockedReason: block.blockedReason,
-            activeTaskCount: block.activeTaskCount,
-          });
-          record("desktop.host.feature.dispose.completed", {
-            featureKey,
-            reason,
-            blockedReason: block.blockedReason,
-            activeTaskCount: block.activeTaskCount,
-          });
-          return {
-            featureKey,
-            disposed: false,
-            policy: entry.policy,
-            blockedReason: block.blockedReason,
-            activeTaskCount: block.activeTaskCount,
-          };
-        }
-      }
-      record("desktop.host.feature.dispose.started", { featureKey, reason });
-      if (isDisposableFeature(loaded) && loaded.dispose)
-        await loaded.dispose(reason);
-      entry.promise = undefined;
-      entry.idle = false;
-      record("desktop.host.feature.memoized.cleared", { featureKey, reason });
-      record("desktop.host.feature.dispose.completed", { featureKey, reason });
-      return { featureKey, disposed: true, policy: entry.policy };
-    } catch (error) {
-      entry.promise = undefined;
-      entry.idle = false;
-      record("desktop.host.feature.memoized.cleared", { featureKey, reason });
-      record("desktop.host.feature.dispose.failed", { featureKey, reason });
-      await options.loggingPort.log({
-        timestamp: new Date().toISOString(),
-        level: "warn",
-        verbosity: "normal",
-        event: "desktop.host.feature.dispose.failed",
-        message: `Desktop feature disposal failed for ${featureKey}; feature will be recreated on next use.`,
-        component: "desktop-host-feature-lifecycle",
-        data: {
+    const disposal = (async (): Promise<DesktopFeatureDisposeResult> => {
+      const owner = entry.promise;
+      const loaded = owner ? await owner.catch(() => undefined) : undefined;
+      if (!loaded) {
+        record("desktop.host.feature.dispose.blocked", {
           featureKey,
           reason,
-          errorName: error instanceof Error ? error.name : typeof error,
-        },
-      });
-      return {
-        featureKey,
-        disposed: false,
-        policy: entry.policy,
-        blockedReason: "dispose-failed",
-      };
+          blockedReason: "already-disposed",
+        });
+        return {
+          featureKey,
+          disposed: false,
+          policy: entry.policy,
+          alreadyDisposed: true,
+        };
+      }
+
+      try {
+        if (isDisposableFeature(loaded) && loaded.canDispose) {
+          const block = await loaded.canDispose(reason);
+          if (block) {
+            record("desktop.host.feature.dispose.blocked", {
+              featureKey,
+              reason,
+              blockedReason: block.blockedReason,
+              activeTaskCount: block.activeTaskCount,
+            });
+            record("desktop.host.feature.dispose.completed", {
+              featureKey,
+              reason,
+              blockedReason: block.blockedReason,
+              activeTaskCount: block.activeTaskCount,
+            });
+            return {
+              featureKey,
+              disposed: false,
+              policy: entry.policy,
+              blockedReason: block.blockedReason,
+              activeTaskCount: block.activeTaskCount,
+            };
+          }
+        }
+        record("desktop.host.feature.dispose.started", { featureKey, reason });
+        if (isDisposableFeature(loaded) && loaded.dispose)
+          await loaded.dispose(reason);
+        if (entry.promise === owner) entry.promise = undefined;
+        entry.idle = false;
+        record("desktop.host.feature.memoized.cleared", { featureKey, reason });
+        record("desktop.host.feature.dispose.completed", {
+          featureKey,
+          reason,
+        });
+        return { featureKey, disposed: true, policy: entry.policy };
+      } catch (error) {
+        entry.idle = false;
+        record("desktop.host.feature.dispose.failed", { featureKey, reason });
+        await options.loggingPort.log({
+          timestamp: new Date().toISOString(),
+          level: "warn",
+          verbosity: "normal",
+          event: "desktop.host.feature.dispose.failed",
+          message: `Desktop feature disposal failed for ${featureKey}; the existing owner is retained for recovery.`,
+          component: "desktop-host-feature-lifecycle",
+          data: {
+            featureKey,
+            reason,
+            errorName: error instanceof Error ? error.name : typeof error,
+          },
+        });
+        return {
+          featureKey,
+          disposed: false,
+          policy: entry.policy,
+          blockedReason: "dispose-failed",
+        };
+      }
+    })();
+    entry.disposing = disposal;
+    try {
+      return await disposal;
+    } finally {
+      if (entry.disposing === disposal) entry.disposing = undefined;
     }
   }
 
@@ -242,6 +252,9 @@ export function createDesktopFeatureLifecycleRegistry(
     };
     entries.set(registration.featureKey, entry as FeatureEntry);
     return async () => {
+      // Never hand out a retiring owner or compose a replacement before cleanup
+      // has a definitive result. Failed cleanup keeps the existing owner.
+      while (entry.disposing) await entry.disposing;
       clearIdleTimer(entry, "feature-reuse");
       if (entry.promise) return entry.promise;
       let stage: "import" | "compose" = "import";
@@ -285,7 +298,13 @@ export function createDesktopFeatureLifecycleRegistry(
     reason: DesktopFeatureDisposeReason = "page-unmount",
   ): boolean {
     const entry = entries.get(featureKey);
-    if (!entry || entry.policy !== "disposable" || !entry.promise) return false;
+    if (
+      !entry ||
+      entry.policy !== "disposable" ||
+      !entry.promise ||
+      entry.disposing
+    )
+      return false;
     clearIdleTimer(entry, reason);
     entry.idle = true;
     record("desktop.host.feature.idle.marked", { featureKey, reason });

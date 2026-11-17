@@ -1,11 +1,17 @@
 import type { AssetDefinitionVersionReaderPort } from "../../../application/ports/asset-implementation";
 import type { AssetRegistryDefinitionReadPort } from "../../../application/ports/asset";
+import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
+import type { HeadlessOperationStorePort } from "../../../application/ports/system-builder";
+import type { AssetReference } from "../../../contracts/asset";
+import { isOrganizationId } from "../../../contracts/organization";
+import type { WorkspaceId } from "../../../contracts/workspace";
 import type { ModelRegistryPort } from "../../../application/ports/model";
 import {
   ArchiveSystemBuilderSystemUseCase,
   CloneSystemBuilderSystemUseCase,
   CreateSystemBuilderFromTemplateUseCase,
   CreateSystemBuilderSystemUseCase,
+  HeadlessSystemAuthoringUseCase,
   ListSystemBuilderRevisionsUseCase,
   ListSystemBuilderSystemsUseCase,
   ListSystemBuilderTemplatesUseCase,
@@ -41,10 +47,19 @@ export interface ComposeSystemBuilderOptions {
   >;
   readonly generateSystemId: () => string;
   readonly now?: () => string;
+  readonly journalChanges?: boolean;
+}
+
+/** Reuse one reader on first use without constructing it for passive host discovery. */
+function lazyRead<Args extends unknown[], Result>(
+  create: () => { execute: (...args: Args) => Promise<Result> },
+) {
+  let reader: ReturnType<typeof create> | undefined;
+  return { execute: (...args: Args) => (reader ??= create()).execute(...args) };
 }
 
 export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
-  const repository = createStructuredSystemBuilderRepository(options.documents);
+  const repository = createStructuredSystemBuilderRepository(options.documents, { journalChanges: options.journalChanges });
   const buildRepository = createStructuredSystemBuildRepository(
     options.documents,
   );
@@ -70,18 +85,46 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
     generateSystemId: options.generateSystemId,
     now: options.now,
   };
+  const readWorkspaceDefinition = async (workspaceId: WorkspaceId, reference: AssetReference) => {
+    if (reference.kind !== "asset-definition-version" || !reference.version) return undefined;
+    const detail = await options.assetRegistryRead.readDefinitionDetail(reference, {
+      workspaceId, includeConfigurationSchema: true, includePorts: true, includeRequirements: true, includeMetadata: true,
+    });
+    const definition = detail?.definition;
+    return definition?.definitionId === reference.id && definition.version === reference.version ? definition : undefined;
+  };
   return {
     repository,
     validator,
     modelAuthority,
+    composeHeadlessAuthoring(delegation: {
+      readonly access: WorkspaceAssetAccessPort;
+      readonly operations: Pick<HeadlessOperationStorePort, "run">;
+      readonly digest: (text: string) => string;
+    }) {
+      const { organizationId } = options.documents;
+      if (!isOrganizationId(organizationId)) throw new Error("Headless authoring requires a verified organization store.");
+      return new HeadlessSystemAuthoringUseCase({
+        ...dependencies, ...delegation, organizationId, templates, resolveDefinition: readWorkspaceDefinition,
+        repository: createStructuredSystemBuilderRepository(options.documents.forOrganization(organizationId)),
+        access: { async authorize(...args) {
+          if (options.documents.organizationId !== organizationId) throw new Error("The request organization changed.");
+          await delegation.access.authorize(...args);
+          if (options.documents.organizationId !== organizationId) throw new Error("The request organization changed.");
+        } },
+        validator: (workspaceId) => new ValidateSystemBuilderRevisionService({
+          readExactDefinition: (reference) => readWorkspaceDefinition(workspaceId, reference),
+        }, options.now, modelAuthority),
+      });
+    },
     useCases: {
       create: new CreateSystemBuilderSystemUseCase(dependencies),
-      listTemplates: new ListSystemBuilderTemplatesUseCase(templates),
+      listTemplates: lazyRead(() => new ListSystemBuilderTemplatesUseCase(templates)),
       createFromTemplate: new CreateSystemBuilderFromTemplateUseCase(
         dependencies,
         templates,
       ),
-      list: new ListSystemBuilderSystemsUseCase(repository),
+      list: lazyRead(() => new ListSystemBuilderSystemsUseCase(repository)),
       listManagement: new ListSystemBuilderManagementUseCase(
         repository,
         buildRepository,
@@ -89,7 +132,7 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
       listModelOptions: new ListSystemBuilderModelOptionsUseCase(
         modelAuthority,
       ),
-      read: new ReadSystemBuilderSystemUseCase(repository),
+      read: lazyRead(() => new ReadSystemBuilderSystemUseCase(repository)),
       rename: new RenameSystemBuilderSystemUseCase(dependencies),
       archive: new ArchiveSystemBuilderSystemUseCase(dependencies),
       restore: new RestoreSystemBuilderSystemUseCase(dependencies),

@@ -9,6 +9,7 @@ import type { DatasetQualityRuntimeConfig } from "./dataset-quality";
 import type { DatasetPreparationAdvancedConfig } from "./dataset-preparation-advanced";
 import type { DatasetPreparationExecutionPlan } from "./dataset-preparation-adaptive";
 import type { DatasetPreparationOutputPurpose } from "./dataset-preparation-output-shape";
+import type { DatasetPreparationRuntimeOcrSources } from "./dataset-preparation-ocr";
 
 export interface DatasetPreparationRuntimeStructuredOutput {
   schema: Record<string, unknown>;
@@ -26,6 +27,8 @@ export interface DatasetPreparationRuntimeOptions {
   runtimeWorkingDirectory?: string;
   /** Host-compiled only. Never accepted directly from a public command. */
   structuredOutput?: DatasetPreparationRuntimeStructuredOutput;
+  /** Host-compiled only. A map or matching digest never authorizes a source. */
+  ocrSources?: DatasetPreparationRuntimeOcrSources;
 }
 
 export interface PrepareTrainingDatasetRequest {

@@ -351,3 +351,22 @@ Runtime records are operational records only and are never reusable asset substi
 The application invocation seam carries an explicit approved source chain: workspace, conversation session, reviewed execution plan, composition plan, runtime-readiness binding, execution approval, and runtime-reference identities. Conversation-session approval validity re-verifies those records before adapter selection; the identity bundle is association context, not independent proof or a persisted replacement for source records.
 
 Materialized system instructions, visible turn content, bounded history, and supported generation settings may cross only the protected context port and remain transient in memory. The context validator requires exact provider-neutral structure and matching source/runtime associations, rejects unexpected payload fields and high-confidence raw secret/executable dumps, and runs before the invocation adapter. Operational run, event, approval, provenance, diagnostic, and session-summary records must not receive this protected context or raw adapter request/response data.
+
+Passive execution plan/run records and commands use explicit field schemas for every
+nested record and provenance entry. The whole DTO is descriptor-inspected before
+normalization: at most12 nesting levels,4096 values,1024 array items,128 fields
+per object,80 characters per key,2048 characters per string and256KiB aggregate
+UTF-8 key/string bytes. Unknown fields, accessors, sparse/extra-property arrays,
+cycles, exotic prototypes, malformed supplied collections and nonfinite numbers
+deny without echoing content or invoking coercion. Free text rejects protected
+representations; typed identities and enums use their own primitive-string parsers.
+Flags require booleans, percentages are finite0..100, attempts are positive safe
+integers, timestamps must represent actual canonical instants and provenance kinds
+are finite. Declared conversation/output/cancellation/retry references roundtrip.
+Missing run collections retain existing empty defaults; malformed supplied values
+never become empty success. Unsafe stored records fail reads without migration or
+rewriting. This adds no execution authority or host/transport composition; controlled
+qualification and previously uncomposed families remain pending/default-denied.
+Recognizable credential representations (including short provider-token prefixes)
+are rejected in public free text and nested metadata; a length-only encoded-data
+check cannot establish non-disclosure. Typed identities retain their own schemas.

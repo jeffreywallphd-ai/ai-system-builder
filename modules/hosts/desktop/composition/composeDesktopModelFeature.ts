@@ -1,6 +1,6 @@
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createHuggingFaceModelBrowseDetailsAdapter, createHuggingFaceModelPublisherAdapter } from "../../../adapters/model/huggingface";
-import { createLocalGeneratedModelStorageAdapter, createLocalModelFilesDeleteAdapter, resolveLocalGeneratedModelStorageRoot } from "../../../adapters/model/local";
+import { createLocalGeneratedModelStorageAdapter, createLocalModelLocationAuthorityAdapter, resolveLocalGeneratedModelStorageRoot } from "../../../adapters/model/local";
 import { resolveConfiguredModelCacheRoot } from "../../../adapters/runtime/python";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import {
@@ -20,6 +20,7 @@ import {
 import { asyncLazyObject } from "./lazyProxy";
 
 export interface ComposeDesktopModelFeatureOptions {
+  taskReconciler?: import("../../../application/services/runtime/owned-task-reconciler.service").OwnedTaskReconcilerService;
   storageRootDirectory: string;
   now: () => string;
   documents?: StructuredDocumentStore;
@@ -32,6 +33,12 @@ export interface ComposeDesktopModelFeatureOptions {
 }
 
 export function composeDesktopModelFeature(options: ComposeDesktopModelFeatureOptions): any {
+  const modelLocations = createLocalModelLocationAuthorityAdapter({
+    rootDirectory: options.storageRootDirectory,
+    documents: options.documents,
+    approvedRoots: [resolveLocalGeneratedModelStorageRoot({ env: process.env }), resolveConfiguredModelCacheRoot(process.env)],
+    revealPath: options.revealModelPath,
+  });
   const modelRegistry = createLocalModelRegistryAdapter({
     filePath: `${options.storageRootDirectory}/model-registry/models.json`,
     rootDirectory: options.storageRootDirectory,
@@ -61,6 +68,7 @@ export function composeDesktopModelFeature(options: ComposeDesktopModelFeatureOp
     saveModelReferenceUseCase: new SaveModelReferenceUseCase({ modelRegistry }),
     downloadModelUseCase: new DownloadModelUseCase({ modelRegistry, modelDownloader: { ensureModelDownloaded: async (request) => { const foundation = await options.getPythonRuntimeFoundation(); await foundation.supervisor.start(); return foundation.runtimePort.ensureModelDownloaded(request); } } }),
     modelDownloadTasksUseCase: new ModelDownloadTasksUseCase({
+      taskReconciler: options.taskReconciler,
       runtimeTaskRegistry: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeTaskRegistry),
       modelDownloadCompletion: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).modelDownloadCompletionPort),
       modelRegistry,
@@ -70,29 +78,13 @@ export function composeDesktopModelFeature(options: ComposeDesktopModelFeatureOp
     deleteModelRecordUseCase: new DeleteModelRecordUseCase({
       modelRegistry,
       artifactCatalogDeletePort: asyncLazyObject(async () => (await options.getArtifacts()).artifactCatalog),
-      modelLocalFilesDeletePort: createLocalModelFilesDeleteAdapter({
-        approvedRoots: async () => {
-          const sharedRoot = await options.readSharedModelStorageDirectory?.();
-          return Array.from(new Set([
-            resolveLocalGeneratedModelStorageRoot({ env: process.env }),
-            resolveConfiguredModelCacheRoot(process.env),
-            ...(sharedRoot ? [sharedRoot] : []),
-          ]));
-        },
-      }),
+      modelLocalFilesDeletePort: modelLocations,
     }),
     revealModelInFolderUseCase: new RevealModelInFolderUseCase({
       modelRegistry,
-      modelLocationRevealer: {
-        async revealPath(localPath) {
-          if (!options.revealModelPath) {
-            throw new Error("Model location reveal is unavailable in this host.");
-          }
-          await options.revealModelPath(localPath);
-        },
-      },
+      modelLocationRevealer: modelLocations,
     }),
-    trainModelUseCase: new TrainModelUseCase({ runtimeTaskRegistry: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeTaskRegistry), modelRegistry, storageBindings: asyncLazyObject(async () => (await options.getArtifacts()).artifactBindings), storage: asyncLazyObject(async () => (await options.getArtifacts()).storage), generatedModelStorage: asyncLazyObject(async () => createLocalGeneratedModelStorageAdapter({ env: process.env })), modelPublisher, taskPowerLifecycle: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).taskPowerLifecycle), runtimeCapabilityGuard: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeCapabilityGuard) }),
+    trainModelUseCase: new TrainModelUseCase({ taskReconciler: options.taskReconciler, runtimeTaskRegistry: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeTaskRegistry), modelRegistry, storageBindings: asyncLazyObject(async () => (await options.getArtifacts()).artifactBindings), storage: asyncLazyObject(async () => (await options.getArtifacts()).storage), generatedModelStorage: asyncLazyObject(async () => createLocalGeneratedModelStorageAdapter({ env: process.env })), modelPublisher, taskPowerLifecycle: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).taskPowerLifecycle), runtimeCapabilityGuard: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeCapabilityGuard) }),
     validateModelUseCase: new ValidateModelUseCase({ runtimeTaskRegistry: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeTaskRegistry), modelRegistry, runtimeCapabilityGuard: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeCapabilityGuard) }),
     publishModelUseCase: new PublishModelUseCase({ modelRegistry, runtimeTaskRegistry: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeTaskRegistry), runtimeCapabilityGuard: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeCapabilityGuard) }),
   };

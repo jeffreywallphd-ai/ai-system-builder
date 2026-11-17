@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, field_validator
 
 
 class PythonRuntimeError(BaseModel):
@@ -33,6 +33,7 @@ class PythonRuntimeHealthCheckResult(BaseModel):
 class PythonRuntimeCapabilitiesResult(BaseModel):
     runtimeId: str
     capabilities: list[str]
+    totalAcceleratorMemoryBytes: StrictInt | None = Field(default=None, gt=0, le=2 ** 53 - 1)
 
 
 class EnsureModelDownloadRequest(BaseModel):
@@ -60,6 +61,7 @@ class LoadedModelDescriptor(BaseModel):
     adapterModelId: str | None = None
     adapterRevision: str | None = None
     localPath: str | None = None
+    memoryMode: Literal["standard", "offload-v1"] = "standard"
 
 
 class ModelStatusResult(BaseModel):
@@ -176,6 +178,7 @@ class LocalModelConfig(BaseModel):
     adapterModelId: str | None = None
     adapterRevision: str | None = None
     memoryOverflowPolicy: Literal["none", "limited", "extended"] = "none"
+    memoryMode: Literal["standard", "offload-v1"] = "standard"
 
 
 class ExampleGenerationConfig(BaseModel):
@@ -224,8 +227,33 @@ class DatasetSplitConfig(BaseModel):
     shuffle: bool | None = None
 
 
+# Mirror validateDatasetPreparationSaveName in contracts/runtime. ECMAScript
+# trim and UTF-16 length are deliberate: Python strip/codepoint length differ.
+_DATASET_NAME_TRIM = "\u0009\u000a\u000b\u000c\u000d\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+
+
+def normalize_dataset_output_base_name(value: object) -> str | None:
+    if value is None:
+        return None
+    if type(value) is not str:
+        raise ValueError("Dataset output name is invalid.")
+    name = value.strip(_DATASET_NAME_TRIM)
+    if not name:
+        return None
+    if (len(name) > 128 or len(name.encode("utf-16-le", errors="surrogatepass")) // 2 > 128
+            or name in (".", "..") or name.endswith((".", " "))
+            or any(character in '<>:"/\\|?*' or ord(character) < 32 for character in name)):
+        raise ValueError("Dataset output name is invalid.")
+    return name
+
+
 class DatasetOutputConfigNaming(BaseModel):
     baseName: str | None = None
+
+    @field_validator("baseName", mode="before")
+    @classmethod
+    def validate_base_name(cls, value: object) -> str | None:
+        return normalize_dataset_output_base_name(value)
 
 
 class DatasetOutputConfig(BaseModel):
@@ -287,8 +315,10 @@ class AdvancedContentProcessingConfig(BaseModel):
     maxTokensPerChunk: int | None = Field(default=None, ge=32, le=4096)
     maxSourceSpans: int | None = Field(default=None, ge=1, le=100_000)
     semanticBoundaryThreshold: float | None = Field(default=None, ge=0.0, le=1.0)
-    layoutEnabled: bool | None = None
-    ocrEnabled: bool | None = None
+    layoutEnabled: StrictBool | None = None
+    ocrEnabled: StrictBool | None = None
+    ocrLanguage: str | None = Field(default=None, strict=True, max_length=35,
+                                   pattern=r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,3}$")
 
 
 class AdvancedSemanticCurationConfig(BaseModel):
@@ -349,6 +379,126 @@ class ReviewDatasetRequest(BaseModel):
     )
     replacementRow: dict[str, Any] | None = None
     runtime: dict[str, Any]
+
+
+class ContextSourceInformation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    author: str | None = Field(default=None, max_length=512)
+    license: str | None = Field(default=None, max_length=512)
+    consent: str | None = Field(default=None, max_length=512)
+    sourceUrl: str | None = Field(default=None, max_length=2_048)
+    language: str | None = Field(default=None, max_length=16)
+
+
+class ContextSourceCheckSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    preset: Literal["recommended", "strict"]
+    allowedLanguages: list[str] = Field(min_length=1, max_length=16)
+    requireLicenseMetadata: bool
+    requireConsentMetadata: bool
+    includeSourceAttribution: bool
+
+
+class ContextGenerationSourceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    artifactId: str = Field(min_length=1, max_length=512)
+    localPath: str = Field(min_length=1)
+    mediaType: str = Field(min_length=1, max_length=200)
+    originalName: str | None = Field(default=None, max_length=512)
+    sourceDigest: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+    sizeBytes: int = Field(ge=0, le=64 * 1024 * 1024)
+    sourceInformation: ContextSourceInformation | None = None
+
+
+class ContextGenerationManualInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(min_length=1, max_length=128)
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=1, max_length=200_000)
+    digest: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+
+
+class ContextChunkingSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    strategy: Literal[
+        "fixed-length",
+        "topic-aware",
+        "sentence",
+        "section",
+        "structure-aware",
+    ]
+    chunkCharacters: int = Field(ge=64, le=32_000)
+    overlapCharacters: int = Field(ge=0, le=8_000)
+    maximumTokensPerChunk: int | None = Field(default=None, ge=32, le=4_096)
+    topicBoundarySensitivity: float | None = Field(default=None, ge=0.0, le=1.0)
+    textFields: list[str] | None = Field(default=None, max_length=32)
+    maximumChunks: int | None = Field(default=None, ge=1, le=100_000)
+
+
+class ContextEmbeddingSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider: Literal["transformers"]
+    modelId: str = Field(min_length=3, max_length=193)
+    dimensions: int | None = Field(default=None, ge=1, le=8_192)
+    batchSize: int = Field(default=16, ge=1, le=128)
+    device: Literal["cpu", "cuda", "auto"] = "cpu"
+
+
+class ContextPackLocalModelSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider: Literal["transformers"]
+    modelId: str = Field(min_length=3, max_length=193)
+    inferenceMode: Literal["auto", "causal", "chat"] = "auto"
+    device: Literal["auto", "cpu", "cuda"] = "auto"
+    torchDtype: Literal["auto", "float16", "bfloat16", "float32"] = "auto"
+    maximumOutputTokens: int = Field(default=1_024, ge=64, le=8_192)
+
+
+class ContextPackSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    inputMode: Literal["manual", "source-materials"]
+    method: Literal["none", "local-model"]
+    cleaningPreset: Literal["standard", "strict"] | None = None
+    maximumSummaryLines: int | None = Field(default=None, ge=1, le=1_000)
+    model: ContextPackLocalModelSettings | None = None
+
+
+class ContextGenerationRuntimeSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    runtimeWorkingDirectory: str = Field(min_length=1)
+
+
+class ContextGenerationTaskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workspaceId: str = Field(min_length=1, max_length=128)
+    kind: Literal["rag-database", "markdown-context-pack"]
+    name: str = Field(min_length=1, max_length=120)
+    sources: list[ContextGenerationSourceInput] = Field(max_length=32)
+    manualEntries: list[ContextGenerationManualInput] = Field(max_length=32)
+    chunking: ContextChunkingSettings
+    sourceChecks: ContextSourceCheckSettings | None = None
+    embedding: ContextEmbeddingSettings | None = None
+    contextPack: ContextPackSettings | None = None
+    runtime: ContextGenerationRuntimeSettings
+
+
+class ContextArtifactOperationTaskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workspaceId: str = Field(min_length=1, max_length=128)
+    operation: Literal["inspect-source", "inspect-artifact", "query"]
+    artifactId: str = Field(min_length=1, max_length=512)
+    localPath: str = Field(min_length=1)
+    mediaType: str = Field(min_length=1, max_length=200)
+    digest: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+    sizeBytes: int = Field(ge=1, le=64 * 1024 * 1024)
+    originalName: str | None = Field(default=None, max_length=512)
+    chunking: ContextChunkingSettings | None = None
+    sourceInformation: ContextSourceInformation | None = None
+    sourceChecks: ContextSourceCheckSettings | None = None
+    query: str | None = Field(default=None, min_length=1, max_length=4_000)
+    maximumResults: int | None = Field(default=None, ge=1, le=20)
+    embeddingDevice: Literal["cpu", "cuda", "auto"] | None = None
+    runtime: ContextGenerationRuntimeSettings
 
 
 class PythonRuntimeOutputDescriptor(BaseModel):

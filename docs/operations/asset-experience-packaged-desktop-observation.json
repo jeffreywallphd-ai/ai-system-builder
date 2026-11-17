@@ -1,0 +1,141 @@
+{
+  "schema_version": "asset-experience-packaged-desktop-observation-v1",
+  "roadmap_id": "asset-experience-layered-customization",
+  "increment_id": "production-qualification",
+  "criterion_id": "desktop-thin-accessibility",
+  "status": "technical-check-pending",
+  "owner": "agent",
+  "observed_source": {
+    "commit": "058d59392b1945566c529bb63c48edee2c2d28cf",
+    "candidate_digest": "826fcc6cf9d4733e79603de5a44658f393f0b810eec7e10c52ed1b3aa1ffaf1e",
+    "product_source": "source.376cfc6924cb4b8941cde35dfa6f7641aef70e4757b1b961b7b1836baa531638"
+  },
+  "package": {
+    "platform": "win32-x64",
+    "normal_forge_production_hooks": true,
+    "offline_electron_zip_sha256": "95db2e9cdbe61d292f28ba42e863518b605115a79e6aebb3c21d5a99b28f35ba",
+    "package_inventory_sha256": "9be0d6bb391caeb3fdab355f3043a5117d36ac00c71998744316adc13f8a4f21",
+    "executable_sha256": "b3df400020e6d0419589831608295d9d0496408b1db0851e9b8b0791e32e509a",
+    "files": 227,
+    "bytes": 384841713,
+    "unchanged_after_cases": true
+  },
+  "observation": {
+    "case_status": "passed",
+    "cases": 2,
+    "retries": 0,
+    "cases_by_viewport": {
+      "standard": {
+        "run_id": "desktop-322321893ae6306e632564d281f8b1fd",
+        "elapsed_ms": 29735,
+        "all_lifecycle_phases_passed": true,
+        "owned_main_process_retirement_confirmed": true,
+        "viewports": [
+          {
+            "width": 1440,
+            "surfaces": [
+              "Browse",
+              "Import Assets",
+              "Studio",
+              "Saved",
+              "Customizations"
+            ]
+          },
+          {
+            "width": 320,
+            "surfaces": [
+              "Browse",
+              "Import Assets",
+              "Studio",
+              "Saved",
+              "Customizations"
+            ]
+          }
+        ],
+        "accessibility_sha256": "51c8aceb3f143c5b4a87de78c2f65630f75a5f40d00a88733e758369f6a7fba0"
+      },
+      "native400": {
+        "run_id": "desktop-66fa5b94d000ea5f0afb57209b623722",
+        "elapsed_ms": 27342,
+        "all_lifecycle_phases_passed": true,
+        "owned_main_process_retirement_confirmed": true,
+        "viewports": [
+          {
+            "width": "native",
+            "surfaces": [
+              "Browse",
+              "Import Assets",
+              "Studio",
+              "Saved",
+              "Customizations"
+            ]
+          }
+        ],
+        "accessibility_sha256": "940d553e0b890e5f6f7db6e1a10a9cf2cdfcac44d6ce3e1e9bce099a6ac14f29",
+        "native_zoom_percent": 400,
+        "surface_measurements": {
+          "Browse": {
+            "innerWidth": 356,
+            "outerWidth": 1440,
+            "dpr": 4,
+            "cssZoom": "1",
+            "visualScale": 1,
+            "overflow": 0
+          },
+          "Import Assets": {
+            "innerWidth": 356,
+            "outerWidth": 1440,
+            "dpr": 4,
+            "cssZoom": "1",
+            "visualScale": 1,
+            "overflow": 0
+          },
+          "Studio": {
+            "innerWidth": 356,
+            "outerWidth": 1440,
+            "dpr": 4,
+            "cssZoom": "1",
+            "visualScale": 1,
+            "overflow": 0
+          },
+          "Saved": {
+            "innerWidth": 356,
+            "outerWidth": 1440,
+            "dpr": 4,
+            "cssZoom": "1",
+            "visualScale": 1,
+            "overflow": 0
+          },
+          "Customizations": {
+            "innerWidth": 356,
+            "outerWidth": 1440,
+            "dpr": 4,
+            "cssZoom": "1",
+            "visualScale": 1,
+            "overflow": 0
+          }
+        }
+      }
+    },
+    "source_unchanged": true,
+    "temporary_bytes_removed": 1136836665.0
+  },
+  "evidence_digests": {
+    "desktop-collection.json": "58b11ae6abb8151dc97583c823ac050df1d374a1a260043f67b24eb018ab10cc",
+    "package-ready.json": "d582d45c968df7494af5f0c835631710ab53aa3e5402a943f76269274f406e35",
+    "desktop-execution.json": "adf766679efbacf682c44157269b544a82e0710a1c6099a734cc9b615f32a214",
+    "desktop-fixture-cleanup.json": "32e4b2dab9086fdf230b6e196ebd8ff5429ae04adc371e5db83fb27101021c99",
+    "standard-report.json": "f82a2204b9ab20b3bca3fd3b64181ef3b7eed4469a2e91bd3a1dc30bed9d9051",
+    "native400-report.json": "1e71a22975f960d6c5dc4677420f7426e476af86f2c2b4ae89020e9b4cabe7f7"
+  },
+  "scope": [
+    "The current packaged Windows app passed Assets authoring, publishing and restart rediscovery.",
+    "All five Assets tabs passed standard widths and native 400 percent zoom.",
+    "This working-tree snapshot includes pre-existing changes outside this work."
+  ],
+  "remaining": [
+    "Verify persistence across a managed server restart.",
+    "Keep the earlier legacy Assets authorization assessment and final system checks pending."
+  ],
+  "parent_qualification_granted": false
+}

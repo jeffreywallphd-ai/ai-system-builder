@@ -1,0 +1,851 @@
+# AI Development Control Plane Threat Model
+
+Reviewed user descriptions are untrusted display input, not acceptance authority.
+The adapter binds criterion identity, complete description hash and qualification,
+or the exact title/objective hash. Support copy binds existing scope/limitation
+text. Refuse stale, duplicate, foreign, oversized or unknown-schema copy. Check
+joined text across fields/list fragments for secret/path redaction before display.
+Render text inertly. Invalid copy cannot expose raw technical fallback, grant an
+approval, change an outcome, clear a pending check or request new human authority.
+Canonical sources and the agent CLI retain technical details. Human action still
+comes only from the explicit governing issue record. The unchanged HTTP limit
+bounds the complete user projection; diagnostics never include rejected text.
+
+- Status: current
+- Verification: `dev-tools/helpers/tests/`, `skills/manage-implementation-roadmaps/tests/test_roadmap.py`
+- Related decisions: ADR-0015, ADR-0042
+
+## Assets and authority
+
+The superseded unstarted Run & Test draft has a fixed separate retirement
+manifest. Admission requires the exact source/Publish pair, no source approval,
+plan, evidence or started chunks, a frozen handoff, current canonical completed
+successor and complete primary/companion coverage. It cannot retire started work
+or change completion facts. Security consolidation still requires its current
+governed owner and all finding identities. Mixed legacy scope uses a separate
+explicit event/archive with the same pending-controlled, current-approval and
+complete-chunk guards. Only human acceptance is archived; model/native/resource/
+provider/security checks and product approval controls remain.
+
+Security roadmap consolidation protects execution ownership, unresolved acceptance
+and original evidence. Folding uses a fixed bounded JSON source, exact frozen
+legacy state and current acceptance definitions, the existing open legacy handoff
+blocker and current governed successor approval. The fixed canonical roadmap
+engine validates state shape, identity and the actual approval fingerprint; a
+truthy stale or malformed approval cannot hide work. The entire successor graph
+must be acyclic, with no incoming or outgoing successor chain through folded
+history. Every unfinished legacy criterion needs
+one known primary owner and explicit companion checks; every successor criterion
+needs current source references and an explicit validity disposition. Both complete finding
+identity inventories and the all-suite completion policy are retained. Missing,
+duplicate, foreign, changed, circular or incomplete mappings leave the original
+records visible with a diagnostic. The site renders only sanitized summaries,
+never approval notes or referenced source content. Folding cannot change status,
+manufacture a pass, grant authority or import historical receipts. Definition
+changes require reinspection; source-review dispositions themselves remain
+inspection evidence, not current execution qualification.
+
+Pending-target qualification protects the same completion authority. It admits
+only currently approved governed implementation with all chunks complete and no
+blockers, retaining other active work. Exact target plan/chunks, criterion
+semantics, latest evidence and bounded regular report bytes are authority-bound.
+Changing any of them invalidates the work. `increment-qualified` requires every
+target criterion passed and consumes exact current completed work/receipt/review
+references with independent all-criterion coverage. It rejects overall-only,
+partial, wrong-target, stale, failed or self-reviewed evidence. No declaration
+auto-promotes a target. Consumed target evidence becomes historical; final overall
+qualification remains required. Cooperative identity/native filesystem limits
+remain; this path supplies no unavailable model/hardware qualification.
+
+Protect repository integrity, approved scope, acceptance and check policy,
+completion truth, local ownership, recovery evidence and protected inputs.
+The human request and accepted repository decisions grant authority. Work records,
+model output, site projections and supplied reviewer IDs cannot grant new effects.
+Local metadata and requests must use non-sensitive synthetic or opaque references;
+never copy a chat transcript, credentials, protected prompts or personal data.
+
+The chunk/work-item projection exposes only bounded plan and recorded-verification
+summaries, with the same redaction and inert text rendering as criteria. It
+preserves the distinction between historical declarations and execution records;
+showing a roadmap chunk cannot manufacture a receipt or reviewer identity.
+
+Delivery totals expose only numeric aggregate facts from exact canonical
+increment bindings. Count each completed work identity once; reject overall,
+unknown or ambiguous targets and invalid or negative durations. Pending values
+are not zero measurements. Aggregate before display truncation, disclose possible
+overlap and never infer chunk timing from criteria, names or dates. No private
+binding path, approval, qualification or chunk-completion fact is added or changed.
+
+The advisory `actively_worked` display bit requires one active, unexpired roadmap
+source claim and an exact, unambiguous canonical state-path/increment match.
+It exposes no private claim or invocation identity or path. Missing, malformed,
+expired, released, completed, overall, foreign and ambiguous inputs do not select
+a panel. This is cooperative activity indication, not authenticated presence,
+approval, current-candidate qualification or execution authority. Browser-local
+disclosure choices are bounded to the current repository's displayed records;
+they are not persisted or sent to a mutation route. Existing inert text rendering,
+loopback, CSP, response bounds and canonical acceptance controls remain unchanged.
+Activity requires unique public-safe increment identities across all source rows,
+including completed rows. A source beyond the 100-row display bound supplies no
+activity indication. Changed-by-presentation identities cannot select a target.
+These refusals preserve canonical history rather than deduplicating or hiding it.
+The browser separately counts full public disclosure keys before view filtering.
+Duplicate keys cannot receive stored manual state, automatic opening or linked
+focus. An ambiguous row may be toggled in its current DOM only. If a previously
+unique key becomes ambiguous, its saved choice is removed and cannot reappear
+when the duplicate later disappears. Canonical records remain unchanged.
+
+## Trust boundaries and controls
+
+| Boundary and failure | Owning control | Evidence |
+| --- | --- | --- |
+| Work expands scope or edits acceptance after starting | Strict work schema, frozen specification digest, exact path scopes, active approved roadmap binding | Scope and acceptance-drift denial tests |
+| Mixed covered/uncovered paths skip checks | Per-path catalog accounting, no arbitrary-command or broad-suite fallback | Mixed-path, deletion and rename tests |
+| Stale or substituted checks support a pass | Source snapshot, catalog/executor digest, exact attempt coverage, before/after stability and receipt integrity | Stale/failed/incomplete receipt tests |
+| Contributor supplies its own review | Separate-invocation attestation, contributor history exclusion, every-criterion coverage, immutable rounds, explicit finding closure | Self-review, coverage and correction tests |
+| Writers race or a process crashes | OS-released locks, predecessor revision/digest, fixed-target recovery journal, fencing claim IDs | Multi-process exclusion and interruption tests |
+| Source traversal or link escapes | Canonical paths, resolved containment, refusal of source symlinks and reserved metadata scopes | Path and scope tests |
+| Test execution consumes unbounded resources or reveals content | Fixed command identities, bounded time/output, streamed discarded output, digests and categorical failures | Timeout/output and non-disclosure tests |
+| Browser reads private records or runs embedded markup | Allowlisted JSON projection, fixed static routes, inert DOM text, no raw Markdown or private ledger access | Projection and browser tests |
+| Loopback service is exposed through rebinding/cross-site requests | Numeric loopback bind, exact Host/Origin, same-site check, no CORS, GET/HEAD only, client limits and CSP | HTTP denial tests |
+| Trial changes the grader or imports a success claim | Immutable task/policy identities, separate trusted assertions over bounded child observations, actual bounded execution, allowed-file and source-stability checks | Five failing/corrected artifact tests, early-exit/forged-output and policy/scope denial tests |
+| Cheap failure is presented as optimized delivery | Unknown-preserving finite measurements, explicit evidence/infrastructure class, strict comparability, all attempts charged against distinct accepted work | Failed/unknown/incomparable/stale measurement tests |
+| Feedback is closed without correcting a defect | Stable observed failure, same-policy changed passing trial, exact repository regression executed red then green with unchanged assertions, current verified and reviewed correction | Feedback failure-to-pass and unrelated-failure denial workflow test |
+| Final roadmap closure uses stale increment results | Separate overall qualification bound to final candidate and configured aggregate suite | Public closure refusal and correction test |
+
+## Residual risk and recovery
+
+Completion-status normalization is a narrow metadata transition for explicitly
+authorized legacy `final-approved` records. Valid prior completion and final
+approval, completed increments, no active increment and no open blocker are
+required. Only current status, update timestamp and an appended history event
+change; approval, creation, evidence, plans, chunks and approved fingerprint stay
+unchanged. Missing/malformed facts, overrides, repeat conversion and later edits
+fail closed. `finalApproval` governs terminal immutability/report removal for both
+legacy and canonical `completed` status. This supplies no new qualification and
+does not authenticate approval against hostile same-user filesystem tampering.
+
+The source-owned review profile is selected only by fixed exact UI asset/test
+patterns. It executes the complete fixed Node DOM/controller file, without name
+filters or arbitrary commands. Substitution needs complete explicit source
+coverage; uncovered impact and an explicit generic focused requirement retain
+their gate. Catalog/data digests bind the policy. Earlier whole-desktop memory
+failures remain unqualified; successful UI checks cannot erase or replace them.
+
+Theme preference is untrusted local browser data. Only literal `dark`/`light`
+values select predefined CSS colors. Invalid values and storage errors fall back
+without blocking review. The button changes no records, routes or permissions;
+the existing fixed assets, CSP, inert text and loopback controls remain intact.
+
+An explicit offline human-acceptance transfer changes scope, not test truth.
+The roadmap engine requires the current approved fingerprint, explicit authority
+reference and human-only attestation, complete implementation, no blocker, pending
+controlled selected criteria and passing retained criteria. Security criteria do
+not transfer. Original criteria/plan/approval are archived and approval is
+invalidated until the exact human-authorized scope is approved again. Independent
+review must distinguish human-only from mixed technical criteria; an operator's
+attestation cannot prove the semantics of arbitrary prose. Public projection omits
+private approval/plan fields, displays offline ownership and asserts no human pass.
+The metadata event refuses any evidence-policy-bearing roadmap. Its legacy scope
+cannot bypass current receipts for governed increment or overall completion.
+
+This is cooperative contributor infrastructure. A malicious process with the same
+filesystem and execution authority can rewrite local state or impersonate a local
+service. Digests detect accidental drift and substitution within the governed
+workflow; they are not signatures. Operator/host review attestations are not
+authenticated independent identity. Claims are not OS write locks over source.
+
+Tests and graders execute code under the existing host sandbox and permissions.
+The fixed runner bounds output and attempts to stop its child tree on timeout;
+it does not establish malicious-code containment or constrain all effects of
+trusted project commands. Use the existing sandbox for that boundary. Remote
+agents, authenticated identity, stronger process containment and external data
+egress require separate authority and controlled qualification.
+
+Recovery preserves malformed bytes and conflicts. It writes only fixed controller
+targets or validated roadmap outputs, and never repairs state by declaring a pass.
+Rollback stops new qualification, retains evidence and journals, and keeps legacy
+declarations visibly unverified. Missing external evidence stays unavailable.
+
+Snapshot storage delta: work baselines use fixed local content-addressed paths,
+strict reference/envelope shapes and verified envelope/file-map digests. Missing,
+oversized or changed snapshots cannot qualify a work item. Existing inline
+records migrate without recomputing receipts or reviews; snapshot publication
+precedes journal publication, so interruption cannot expose a valid reference to
+unwritten bytes. Unreferenced snapshots may remain and are never auto-deleted.
+Atomic writes allocate exclusive unpredictable temporary files with restrictive
+creation defaults, flush bytes and replace only the intended target. This removes
+predictable temporary-name substitution; same-user hostile parent/junction races
+and Windows ACL/privacy qualification remain controlled-platform obligations,
+consistent with this cooperative infrastructure's existing trust boundary.
+
+## Implementation and qualification boundary
+
+Technical acceptance amendments use a distinct replacement-only governed event.
+Current approved fingerprint, complete unique implementation chunks and one pending
+controlled nonsecurity criterion are required. Identity/qualification, evidence,
+chunks, blockers and completion policy remain unchanged; exact old/new definitions,
+plan/approval and explicit policy identity/digest are archived. Local/security,
+passed/failed/missing, changed-ID, removal and malformed requests deny. The archive
+is neither offline human acceptance nor qualification. It invalidates approval and
+semantic bindings; actual narrowly authorized reapproval preserves open blockers,
+and fresh current checks/separate review remain mandatory. Authority/policy fields
+are cooperative operator declarations; independent review must verify actual user
+direction, policy bytes and retained security/resource/runtime obligations. This
+cannot authorize removing controls or turn Standard model output into offload proof.
+
+Acceptance-scope revision is security-relevant evidence authority. Its governed-only
+event requires current approved fingerprint, explicit user human-only attestation,
+completed implementation and selected pending controlled nonsecurity criteria.
+It rejects local/security/failed/passed/missing checks and changed identities or
+qualification modes. Archives preserve original criteria, plan and approval;
+evidence, status, blockers and completion policy cannot change. Old receipt
+bindings become stale after narrow reapproval. Independent semantic review is
+mandatory because the engine cannot infer human-only meaning from prose or
+authenticate the operator attestation. Safe projection exposes only offline scope
+summaries and never archived authority/plan data. Metadata alone cannot qualify
+the candidate or substitute for automated UI/native/security evidence.
+Governed `evidence-recorded` events cannot implicitly promote pending increments.
+An overall receipt may predate controlled qualification and reviews only its
+overall criterion; it cannot supply missing target-specific review. The public
+completion bridge remains mandatory. Legacy promotion stays explicitly declarative.
+
+The functionality crosswalk is requirements data. Its assessor accepts only
+canonical repository owner paths, bounded JSON/source files, complete exact
+criterion ownership and contained procedure/harness references. It executes no
+referenced command and never copies owner free-text evidence, prompts or payloads
+into the report. Before/after source, policy and owner digests detect drift during
+assessment. Current-source release qualification is never inferred from a
+historical declaration or absent participant/hardware environment. The fixed
+ignored report writer uses exclusive temporary ownership and atomic replacement.
+
+Aggregate admission shares the roadmap engine's implementation-readiness
+predicate. Exact nonempty completed chunk sets, current approval, implemented
+predecessors and absence of blockers are mandatory. A final verifying increment
+can run its configured aggregate suite; controlled pending evidence still blocks
+final closure. No test execution, receipt or reviewer identity is inferred.
+
+Both helper and roadmap publication create exclusive unpredictable temporary
+files, flush before atomic replacement, preserve old targets on failure and
+remove only their owned temporary entry. Precreated predictable entries cannot
+redirect writes. Native parent identity/reparse replacement races, hostile local
+writers and supported-platform ACL qualification remain separate residual risks.
+
+Supporting-work projection delta: the single contained JSON input is bounded and
+strictly shaped; targets must match known projected roadmap criteria. Historical
+reviewed support requires actual completed work, valid passed receipt/digest,
+source-stable execution, matching spec/selected criteria, accepted separate review
+and completion references. Invalid or missing records never gain the reviewed
+tier. Safe summaries/digests are projected, never raw execution output, reviewer
+identity, private authority, plans or file paths. The UI renders text inertly.
+Support cannot alter parent outcomes/chunks or establish source-current, native,
+production, scanner or controlled qualification. Mapping scope is independently
+reviewed because prose semantics and operator identity are not cryptographically
+proved by this cooperative local store.
+
+Automated accessibility qualification uses only disposable synthetic workspaces,
+the installed fixed axe script and owned local hosts. Reports retain bounded
+rule diagnostics, fixture selectors, counts and source/profile digests, never
+DOM, credentials or entered content. All incomplete rules remain visible;
+contrast retries measure the same exact element after scrolling, with original
+attempts preserved. A profile mismatch, unresolved rule, browser failure or
+source drift prevents a pass. UI corrections change no authorization, preview
+execution, model loading or data-retention authority.
+
+## Readable proposal display delta
+
+Criterion blocker mapping is a separate fixed bounded JSON trust boundary.
+Known criterion identity/raw description SHA and exact fresh canonical open
+blocker digest are required; data cannot override canonical summary/action,
+qualification, state or approval. Current canonical JSON supplies the source on
+every projection. Reject stale, resolved, foreign, duplicated and malformed
+associations; preserve parent obstacle visibility and a generic diagnostic.
+The operation explanation is sanitized bounded plain text, not new authority.
+Independent association review prevents blanket blocking or treating ordinary
+pending checks as obstacles. No credential values are recorded or displayed.
+
+Acceptance formatting and increment proposals are untrusted display data. The
+fixed contained presentation JSON has finite byte/row/node/depth/text limits;
+exact identity, description SHA-256 and ordered whole-description equivalence
+prevent stale substitutions, omissions, additions and fragment-based redaction
+bypasses. Compare against canonical text only after its existing sanitization.
+Duplicates or malformed/foreign entries cannot override admitted acceptance;
+fallback retains the complete safe original and a generic diagnostic. Browser
+validation repeats finite node/wording checks and uses textContent, never HTML,
+links, evaluation or command execution. Semantic classification of grouping is
+independently reviewed; hashes alone do not establish readable logical scope.
+
+Proposal exposure allowlists only bounded sanitized public work-package and
+procedure strings, excluding research, authority notes and unknown fields. No
+local file lookup or effect follows a displayed identifier. The UI distinguishes
+planned packages from executed chunks and retains one qualification result per
+criterion. Tests cover hostile markup, credentials/paths split across fragments,
+stale hashes, omissions/reordering, duplicates, bounds, fallback, proposal-state
+explanations and unchanged canonical history. Rollback removes decoration only;
+canonical requirements remain visible and all approval/native/security/runtime
+qualification boundaries remain unchanged.
+
+## Plain-language blocker explanations
+
+Optional `plain_language` copy on an existing blocker reference contains exactly
+`needed` (400 characters), `prevents` (800) and `action` (800). The same current
+criterion-description and still-open canonical blocker digest checks govern this
+copy. Shared blocker explanations must agree; conflicting or invalid copy falls
+back to canonical facts with a diagnostic. Sanitization and inert text rendering
+remain mandatory. No copy changes status, authority or qualification.
+
+Parent and affected-criterion views show **What’s needed**, **Why it matters** and
+**What to do**, followed by expandable **Technical details** retaining the original
+canonical summary/action and criterion-specific operation explanation. Historical
+technical wording can predate newly supplied access; primary copy must accurately
+distinguish authorized access from successful verification. Do not ask for access
+again when it has been supplied, or imply it works before an actual check passes.
+
+Execution summary minimization uses a positive success/problem allowlist. Internal
+rationale, baseline, quality and unknown outcome fields remain outside the public
+response. Existing sanitization, inert text rendering, count and 2 MiB byte bounds
+remain mandatory. A display-limit diagnostic retains only validated integer counts;
+malformed counts or unknown diagnostics use generic agent-owned repair guidance.
+Mixed record failures remain visible. No diagnostic grants recovery, changes
+canonical data or supplies a technical pass. Tests preserve original records and
+exercise oversized inventories, excluded fields and malformed/mixed diagnostics.
+
+## Owned Windows qualification command boundary
+
+The separate `dev-tools/helpers/native-qualification/` launcher protects the
+lifetime of newly created local test processes and the integrity of their
+bounded output. It is not a product model loader or a security sandbox. Its
+public entry admits only fixed model-free self-tests. Real consumers require
+separate review of a fixed command factory, executable/source hashes, sanitized
+environment, finite deadlines and fresh nonoverlapping output paths. Never
+accept caller command JSON, shell text, PIDs, arbitrary executables or quota
+overrides. No credentials, provider calls or model accuracy runs belong here.
+
+Create the root suspended with atomic Windows job-list membership and a private
+standard-handle allowlist. Keep the job unnamed and noninherited, prohibit
+breakaway and read back kill-on-close, process count and commit ceilings before
+resume. Own every successfully created handle immediately; a failed close must
+retain ownership and prevent a clean outcome. The job handle must never pass to
+a child. Explicit standard-handle inheritance does not authorize ambient handle
+inheritance.
+
+Require exact root identity/exit, zero active job members, bounded stream drain
+and acknowledged closure. Exercise crash before resume, crash after descendant
+creation, timeout, malformed protocol and uncertain-close paths using synthetic
+model-free fixtures. Root exit or pipe EOF alone cannot prove descendant exit.
+Allocation denial or another observed limit failure is a failed workload;
+absence of a Windows limit notification does not prove no allocation was denied.
+The limits are enforced ceilings, not memory reservations or machine-wide bounds.
+
+Unknown retirement fences only the new run. Preserve earlier fenced output and
+unknown historical ownership; do not look up or terminate old processes, adopt
+partial packages or infer offload recovery. Rollback makes the launcher
+unavailable and keeps existing guards. The cooperative-local threat model does
+not protect against malicious same-user code or an administrator. Other host
+processes may interfere with capacity or file publication and remain outside
+this job's claims.
+
+Use the reviewed pipe-only detached launch policy without weakening job or
+standard-handle membership. Exact fixture counts remain mandatory. A source
+correction can qualify a separately reviewed fixed revision family after actual
+old-job retirement is independently established. Preserve the failed journal
+and fence. This is not an arbitrary reset, process-name exception or permission
+to retry unknown cleanup; no observed identity follows from a plausible cause.
+
+### Fixed combined-UI budget
+
+Two actual thin UI jobs reached the original 2 GiB aggregate commit limit before
+desktop began. Preserve those failures; reducing the Node old-space budget did
+not qualify the combined topology. Fixture/package jobs keep 2 GiB; only an exact
+issued fixed UI intent and its closed native readback fixture select 3 GiB.
+Every process remains at 1 GiB, with 32 active members, the same finite deadlines,
+8 MiB streams, creation-time membership, noninheritance, native readback and exact
+retirement/fencing. Unknown or unissued roles and mismatched readback fail.
+No numeric budget, environment override or new caller execution route exists.
+
+This is a finite cooperative-local test budget, not a reservation, machine-wide
+bound or proof that the workload fits this PC. The new fixed source family must
+qualify the unchanged seven lifecycle cases and exact UI-budget readback before
+any separately reviewed real host run. It grants no old-process, retained-slot,
+model, offload, product or parent-roadmap qualification. A failed new workload
+remains failed; no automatic additional cap increase follows.
+
+### Fixed OCR host scenario
+
+The private reviewed package/UI composition permits the additional exact
+`ocr-documents` scenario. Its literal argv forms, source/environment witnesses,
+and 32-process ceiling remain fixed. The explicitly approved OCR profile uses
+2 GiB per process and 4 GiB per job; Standard profiles retain their earlier
+1 GiB process, 2 GiB package and 3 GiB UI limits.
+There is no new public execution selector or numeric budget. Unknown scenario
+strings remain denied. Actual OCR uses a newly packaged authenticated Python
+worker with synthetic generation; package resource identity and real host results
+need separate evidence. Changed launcher source needs current qualification; an
+older raw source hash is never presented as equal. No old-process, retained-slot,
+offload, model-quality or parent closure follows from this scenario.
+
+Limit diagnostics retain only bounded numeric notification identifiers and
+reported process numbers, with the created root number for correlation. Process
+numbers may be stale or recycled and never grant identity, ownership or action
+authority. No process is opened or queried from these reports. Count-limit or
+invalid process details use `null`. Collection shares the existing 128-message
+poll and 4,096-event total bounds; overflow still fails qualification. Quotas,
+native handles, cleanup evidence, fencing and limit-hit failure are unchanged.
+
+### Closed OCR runtime-import diagnostic
+
+The additional private `ocr-runtime-import` intent has one fixed script and one
+hash-pinned existing isolated Python environment. Its run, working directory,
+temporary files and home are confined to a fresh fixed family. No caller can
+select an executable, command, script, environment or budget. It keeps the 1 GiB
+process, 2 GiB job, 32-process, 20-second and 8 MiB per-stream bounds, atomic job
+membership and all existing retirement/fence requirements. The public CLI and
+production dependency preparation, model admission and provider controls do not
+change.
+
+Supplier imports can print private paths before raising. Therefore this exact
+role discards both raw streams before disk retention and the first-line queue;
+bounded draining, observed-byte accounting and overflow failure stay active.
+Only three exclusive, synced facts of at most 1,024 bytes each carry fixed stage
+names, own process numbers, booleans and a bounded error-class name. Other roles
+retain their original logging. A failed import/query, missing final fact, limit
+hit or uncertain retirement cannot become a success. A native exit code does not
+replace semantic result checks.
+
+The probe has a new directory and minimized environment/output. It is diagnostic
+support for the newly owned root, not the complete production preparer, evidence
+about an older numeric PID, a model or accuracy test, a cap waiver or parent
+qualification. Existing failed app runs and retained data remain unchanged.
+
+### Approved OCR profile and direct-root diagnostic
+
+The approved 2 GiB process/4 GiB job profile is selected only by an exactly issued
+immutable OCR host intent, v2 startup intent or closed OCR-budget fixture. There
+is no caller numeric budget, generic command, runtime path or environment
+selector. Standard roles and the historical v1 diagnostic keep their limits.
+All actual limit fields, flags and member counts must match readback before
+resume and throughout lifetime control. The unchanged time, stream, active-zero,
+handle-acknowledgment and fence rules remain mandatory.
+
+The v2 factory directly starts the pinned base image. It also pins the existing
+venv executable/config and requires the config's base location to match. The
+fixed `__PYVENV_LAUNCHER__` context supplies the venv executable/prefix; it is not
+a caller-provided path. Python 3.12 site activation remains enabled with isolated
+and no-user-site flags. Before supplier import, a safe bounded fact verifies
+exact executable/prefix/base identities, required flags and the installed
+guidance distribution. A mismatch exits without importing Torch. The consumer
+must require all identity booleans and each fact's PID to match its retained
+created root. It cannot substitute a redirector's parent or a reported numeric
+PID. This tightens observation identity; it grants no process lookup authority.
+
+Both diagnostic versions discard raw supplier streams before retention and the
+first-line queue. Counts and overflow remain active. V2 still permits only three
+exclusive, synced facts of at most 1,024 bytes, a 20-second deadline and 32 job
+members. Invalid context, failed import/query, missing facts, cap hits or uncertain
+retirement remain failures. The v4 native family refuses a prior v3 fence and
+the v2 diagnostic refuses the actual `runs/FENCED.json` locations in v1 and v2,
+as well as parent-level fences. Neither route adopts or clears
+old ownership, files or uncertainty.
+
+The explicit budget is a prospective test policy, not a known completing budget,
+RAM reservation or production model policy. New exact-source native readback and
+separate reviewed calibration must establish their actual results. Preserve all
+earlier failures and their old limits. No dependency preparation, OCR app, model,
+offload or parent-roadmap pass follows from this profile or its portable tests.
+
+### Separate single-host qualification commands
+
+The private `ui-thin` and `ui-desktop` roles construct exactly one literal
+Playwright project argument each. They retain all candidate, phase-directory,
+source, Node, helper and environment witnesses. Unknown or injected roles fail
+before identity reads and directory effects. Original package and combined UI
+commands remain byte-for-byte equivalent; the public CLI is unchanged.
+
+Both roles use the existing UI budget and deadline per job: Standard 1 GiB
+process/3 GiB job or the already approved OCR 2 GiB/4 GiB, 32 members and 420
+seconds. No numeric override or new quota is introduced. Native creation,
+readback, inherited handles, drain, zero-member retirement and uncertainty
+fencing are unchanged. The shared active/pending registry prevents overlap or a
+successor when retirement is unknown. Only a separately reviewed consumer can
+compose serial runs; it must use host-specific setup, await strict retirement
+and retain a finite whole-run deadline and per-host results. A project argument
+alone cannot prove which services its trusted setup starts.
+
+Portable policy checks cover exact arguments, unchanged limits, wrong folders,
+injected roles and active/pending-owner refusal. They do not prove physical
+native readback, app fit, memory savings or parent qualification. Fresh actual
+evidence remains required. Do not reinterpret the earlier per-process limit
+failure as a solved aggregate-overlap problem, repeat accepted model accuracy,
+or inspect/recover old processes, retained trees or offload slots.
+
+### Pure qualification environment projection
+
+The shared setup projects thirteen fixed qualification, desktop and runtime
+fields through a pure helper. It accepts only trusted existing launch plans and
+returns an immutable string map; unrelated provider credentials, database
+configuration and ambient environment values are excluded. Missing, oversized
+or NUL/line-break-bearing values fail with a fixed diagnostic. No command,
+resource limit, source path, input plan or ambient environment is changed by the
+helper itself. It imports no file, network or process API.
+
+The normal setup retains its actual source-identity read before applying runtime
+bindings, and its existing package/authentication/lifecycle/cleanup code. A
+source-shaped revision string is not authentication. A future separately
+reviewed desktop-only consumer must independently validate source and package,
+then configure its app without invoking combined web-service startup. This
+source extraction does not prove actual app topology, native readback, owned
+retirement, memory fit or savings. Those observations remain pending; no model
+accuracy, provider publication or old-owner recovery authority is added.
+
+The existing fixed desktop identity-seeding routine is separately reusable by
+trusted source callers. Normal shared setup still builds before seeding. A
+serial caller must first prove actual source and full package identity and apply
+the pure environment map. The routine retains executable checks, the isolated
+desktop data root, the exact seed command and its 30-second hidden-process
+deadline. Optional platform/runner injection supports app-free source tests; it
+is not caller JSON, a new public command, a skip-build flag or launch authority.
+Tests cover both launch plans, pre-allocation denial and bounded redacted child
+failures with inert owned files. They do not run a seed process or qualify apps,
+actual package/source identity, native retirement, memory fit or savings. A
+separately reviewed serial consumer and actual per-host evidence remain required.
+
+Journal publication must not create an unreadable successor solely because
+wrapping state adds indentation. The writer preflights the exact canonical state
+and compact journal encodings under the unchanged 8 MiB limit before either
+publication. Compact whitespace changes neither the parsed journal object nor
+canonical digest, schema, ownership, authority or qualification. Existing locks,
+atomic writes, revision/conflict and integrity checks remain. Near-bound restart
+tests cover interruptions after journal and state writes; capacity and corruption
+denials preserve existing records. Oversized retained journals are not silently
+normalized or deleted. Real store capacity and physical filesystem guarantees
+remain separate constraints; this fix grants no roadmap or native qualification.
+
+### Lossless completed-work archive and capacity bootstrap
+
+The archive is an integrity and availability boundary for contributor evidence.
+Only explicit completed unclaimed IDs can be externalized. Preserve exact work
+objects and all inner digests. Use fixed-root content-addressed files, closed
+reference/envelope schemas, bounded regular single-link reads and canonical
+content hashes. Reject missing, changed, extra-field, escaping, misbound, active
+or claimed objects. Normal transitions cannot edit an archived object.
+
+Physical envelope integrity is separate from both existing logical digest
+contracts. The new reader supports legacy v1 state and journal formats. A v2 journal binds the
+aligned physical/logical predecessor pair; logical equality cannot authorize a
+substituted physical reference index. Check the declared before/after index and
+verify the recovered full logical state. Publish objects before references and
+preflight exact hot/journal bytes first. Failed archive writes may leave harmless
+unreferenced objects; never auto-delete them or clear an uncertain journal.
+
+Retain 8 MiB per document/hot index/journal and cap aggregate archive input at
+8 MiB, archive count at 1,024, IDs per action at 128 and audit entries at 64. Full
+load input is bounded by both tiers together; no exact process-RSS claim follows.
+No model, offload, disk, native, provider, privilege or parent gate is relaxed.
+The archive action cannot execute commands or accept arbitrary storage paths.
+
+A full-store repair must disclose its bootstrap exception. Bind original source,
+store, index, Git and canonical-roadmap identities in a reviewed plan. An
+exclusive marker fences ordinary writers; it does not authenticate the agent or
+grant authority. Inert compatibility and denial/interruption evidence precedes
+independent source review and a separate exact one-use migration plan. Keep raw
+backups and failed attempts. Prove all historical work/receipt/review identities
+remain and that the next real work and its receipts fit. Then retire only the
+exact owned marker with its bytes retained and obtain genuine normal admission,
+current checks and separate review with truthful adopted-source provenance.
+
+Restart the verified owned review process onto the reviewed reader before changing
+the physical format, and verify its full historical support/pending view after.
+Rollback cannot silently restore an old reader or stale store after later writes;
+it needs an independently reviewed exact-revision recovery. Same-user hostile
+filesystem/ACL isolation remains outside this cooperative store, and no native
+security or product qualification follows from archival success.
+
+## Closed training qualification threat/control delta
+
+Protected assets are native process ownership, installed runtime/source integrity,
+the user's app/build/cache roots, private credentials and truthful qualification.
+The new private issuer accepts only named training roles and reviewed fixed-file
+witnesses. It exposes no public command, cwd, environment, numeric quota or cleanup
+selector. Node is a trusted host identity input; Python, source/consumer paths and
+role commands are fixed. Wrong role, slot, runtime context, source, package or hash
+denies before native preparation. Issued immutable identity is required for the
+existing 2 GiB/4 GiB grade. Generic roles and all Job/handle/guardian/retirement
+controls retain their prior behavior; an inert budget child supplies no model fit.
+
+Minimal constructed offline environments exclude inherited credentials. Each
+phase owns its writable roots. Input/readiness have a phase cwd; real readiness
+ports need a read-only spawn adapter there. Package has a fresh copied source tree
+and an empty regular dependency-cache directory checked before preparation. This
+prevents local dependency shadowing and the initial Vite temp-cache fallback into
+the original dependency tree. Consumers must use copied configs, an explicit
+offline ZIP and declared new outputs; no supplier tree/runtime is copied or linked.
+Offline flags and reviewed consumers are not an OS network sandbox or external
+publication authority.
+
+The one-case training app explicitly starts in its fresh admitted data directory.
+The runner and input-only seeds retain their repository working directory for
+fixed source resolution. This directs relative runtime or driver output to the
+owned app case. It does not add filesystem custody or constrain malicious writes.
+
+The generated-only package context cannot redirect legacy models. The fixed
+wrapper argument rejects absolute/drive/whitespace/quote/control substitutions
+and must resolve to the actual source wrapper. Python also checks the exact new
+worker root and bounded stable current-main bytes before import. Reference reads
+retain file identity, size, modification time, regular/reparse state and digest
+checks. Change time is compared within named and descriptor APIs separately to
+avoid their observed Windows mismatch, while still denying changes during reads.
+These cooperative reference checks grant no hostile-filesystem custody, deletion,
+legacy adoption, offload lease, disk credit or supplier-completeness claim.
+
+Focused tests cover role and quota substitution, input reuse, source/runtime/
+package tampering, missing witnesses, pending owners, cache shadowing, post-issue
+growth, time drift and repository spaces. Actual native readback, runtime/model
+behavior, package writes, UI output and owned cleanup require separate reviewed
+effects. Retain failed evidence and unknown fences. Completed accuracy/OCR results
+stay closed, with real resource/native/parent gaps and the later full campaign
+still pending.
+
+
+## Fresh producer-owned tokenizer metadata
+
+The tiny test-input creator can canonicalize the pinned serializer's known base
+label to the explicit fast class only after its exclusive new-slot creation. The
+strict admission inspector is unchanged. No existing acquisition or retained
+failed slot gains write, adoption or retry authority. Before a rewrite, bounded
+regular-file reads reject reparse and multiple-link objects, malformed or
+duplicate JSON, unknown tokenizer classes, `auto_map`, oversized content and
+observed identity/content drift. Same-file writes do not truncate on open; failure
+retains the original exception and partial data without a manifest or automatic
+retry. This cooperative fresh-output correction is not a Native filesystem fence
+or a production model-file capability.
+
+Failure diagnostics expose only a fixed source-stage label and an allowlisted
+exception name. Exception messages, paths, traceback text and unknown class names
+never become diagnostic fields. Existing failure status/exit and success schemas
+remain authoritative. Supplier-shaped fake regressions and controlled file-denial
+tests are source evidence only; actual input, training, crash, file-protection,
+offload and parent qualifications remain separate. No dependency, Native limit,
+standard memory guard, disk budget, lease or old-data authority changes.
+
+## Installed runtime selection after inventory failure
+
+External inventory failure cannot by itself require replacing an installed
+accelerator runtime. Only exact installed/available booleans and one unambiguous
+supported CUDA or ROCm version field can refine the detector's CPU fallback.
+Host support and the original real backend verification still gate readiness.
+Malformed, unavailable, conflicting and failed verification paths cannot supply a
+pass. Existing dependency installation, credential, process and diagnostic
+controls remain authoritative; no package or version is changed by this repair.
+
+The test delegate canonicalizes only physical line endings inside fixed admitted
+source probe literals. Its argument allowlist still refuses installations,
+network probes and unknown scripts before spawning. Model-free actual-port
+regressions establish argument equality and refusal, not a model/runtime or Native
+qualification. Prior failed observations, accepted accuracy/OCR, original memory
+and disk guards, unknown retained data and pending full-system coverage remain.
+
+## Closed Source qualification Job role
+
+One new private issuer admits the exact isolated Source qualifier command. It
+requires the fixed fresh run family, twelve source witnesses, two base-runtime
+witnesses and stable bounded revalidation before Native preparation. It adds no
+public command, executable, environment, quota or runtime selector. Witness hashes
+are cooperative reviewed-source data, not approval or an authentication boundary
+against arbitrary Python code in the same process.
+
+The original Job assignment, explicit inherited handles, no breakaway, retained
+ownership, bounded drains, pending-owner fencing and acknowledged retirement are
+reused. The Source role stays at 1 GiB per process, 2 GiB aggregate and 32 members.
+The fixed 180-second outer execution timeout depends on the live driver; driver
+termination closes its noninherited kill-on-close Job. This does not qualify a
+frozen-alive-driver watchdog. The inner Source lifetime and limits are unchanged.
+
+Only Source stderr is newly discarded. Draining and observed-byte overflow remain
+mandatory; saved empty hashes cannot prove empty original output. A reviewed
+one-use consumer must parse one bounded stdout object, validate the fixed Source
+evidence namespace and fresh leaf, and require the strict inner report and
+original outer retirement. A JSON path or exit code alone cannot qualify it.
+
+Portable tests perform no Native effect. New support references identify only
+already completed source work and retain hash-bound plain descriptions. They grant
+no parent, production, retained-staging, model, memory or later-source pass.
+Actual nested execution and remaining recovery/resource checks stay pending.
+
+## Public Settings test identity delta
+
+The fixed `settings-public-values` qualification purpose removes unnecessary
+declared permissions from the disposable test token. Its exact scopes are
+Settings read/write and workspace read/write. Workspace creation supports the
+existing public UI journey. The four previous purposes retain their exact scope
+lists. In particular, synthetic secret/defaults tests still use their separately
+selected broader Settings purpose.
+
+Unknown purposes fail before the helper reads a launch plan or creates a file.
+The helper retains random independent bearer/HMAC values, a hashed token record,
+the original 30-minute expiry and exclusive creation. An existing credential file
+is never overwritten, and a failed create does not publish a new hash secret.
+Tests use owned temporary files and synthetic data; no real provider or user
+credential is read. No token or hash secret enters public reports.
+
+These are coarse test transport scopes, not a new field-level security boundary.
+The dedicated host's application role and existing Settings authorization still
+apply. A denied sibling feature request must not trigger permission expansion.
+Actual Settings usability with this token needs the separately reviewed host run.
+The fixed source profile checks real fixture behavior and contributor routing;
+explicit, unknown and incomplete impact keep their generic verification guards.
+It performs no app, package, browser, native, model or provider effect. Separate
+current-source package and single-case host reviews remain required. Source tests
+grant no parent pass, physical shutdown proof or later-candidate qualification.
+
+## Settings qualifier listener containment
+
+The dedicated Settings test Server binds IPv4 loopback explicitly before its
+temporary bootstrap mode accepts any requests. The helper has no caller-selected
+host or alternate-interface fallback. Bind failure rejects startup and retains
+the existing canonical owner cleanup. Temporary listening/error handlers are
+removed on success, asynchronous bind error and synchronous listen failure.
+
+Real ephemeral HTTP and occupied-port fixtures verify local request handling,
+the observed socket address and denial without fallback. These fixtures do not
+qualify an actual application or Native run. Loopback is not authentication
+against other local processes: the original synthetic identity, organization
+authorization and token-enforcement lifecycle are still required. No production
+listener or product network policy changes. Actual current-source UI execution
+and complete owned-process retirement remain pending.
+
+## Fixed serial provided-data consumer
+
+The versioned Python coordinator refuses by default. Only a separately reviewed
+compiled literal can name the exact bounded manifest, review and authorization.
+JSON is passive data: no command, role, deadline, model or limit selector is
+accepted. Hashes bind cooperative source, not hostile-user authority. Fresh
+materialization must independently establish the complete source, dependency,
+runtime, Git/state and isolated-site inventory; the template cannot prove that a
+reviewed inventory is semantically complete. The outer Native intent binds all
+five rendered helpers. The manifest carries four MJS hashes, avoiding a circular
+self-hash; the child captures and rechecks its own bytes before each phase.
+
+Bounded readers admit ordinary single-link files before allocation, hash and
+parse one stable byte snapshot, reject duplicate/nonfinite JSON and detect
+identity/size drift. Enumeration is bounded while collecting entries. Inventory
+size and hash must share the admitted snapshot. These checks detect cooperative
+drift; they do not replace a Native hostile-filesystem custody boundary.
+
+Windows extended-length syntax is an internal syscall representation for exact
+local-drive paths. Records retain normal canonical names; caller-supplied
+namespace and UNC aliases are refused. Long names retain every ancestor/reparse,
+single-link, metadata and allocation check. No registry change, path alias,
+junction or custody-policy relaxation is introduced by this representation.
+
+Fixed package, thin-browser and Desktop roles run sequentially. Normal command
+success, Job zero, complete bounded drains and handle closure precede any next
+phase. Source/package/worker preservation and five-cache/three-shutdown evidence
+cannot substitute for Native retirement. The child uses a fresh evidence
+subdirectory and never touches the enclosing owner's live logs. Errors retain
+failed facts, consumed attempts and fences; no reset, adoption, old-PID operation
+or retained-staging cleanup is authorized. The earlier one-use mechanics retry
+remains consumed. Its nine cases do not qualify this changed source or nested Jobs.
+
+Exact report context, typed artifact digests, current four-test/accessibility
+inventory and phase-local acknowledgments prevent partial or stale evidence from
+becoming a host pass. Full package transitions preserve all original files and
+directories and only permit two literal empty GPU log directories. A generic
+passed field never supplies the required feature or cleanup facts. Portable
+tests supply validator evidence only. Actual compiled source/effect review,
+outer/inner retirement, resource peaks and app outcomes remain pending; closed
+model accuracy and OCR criteria are not rerun.
+
+The four MJS producer templates share one null context literal. Effectful entries
+refuse before production imports until that literal is separately rendered and
+reviewed. Its fixed passive schema contains source/runtime/run witnesses and no
+command, limit, profile or executable fallback. The literal has no helper hashes;
+render four MJS files before hashing them into the Python manifest, then bind all
+five final code artifacts in the outer operator. Final rendered source and effects
+need separate review. Cooperative hashes and frozen context do not authenticate
+a hostile operator or prove source-inventory completeness.
+
+Readers use one admitted bounded byte snapshot for hashing and parsing, reject
+duplicate/nonfinite JSON and detect descriptor/named identity drift. Directories
+are bounded while collecting, then checked again. Every original package file,
+selected/deployed worker byte, PE/resource field and phase predecessor remains
+required. The exact short Windows drive anchor retains its ordinary check when
+extended syntax is unusable; long paths still keep normal canonical identities.
+There is no alias, registry change or ownership-policy relaxation.
+
+The unchanged normal production packaging hooks use only the reviewed offline
+ZIP override, bound to the installed Electron version and exact unchanged bytes.
+Single-host setup keeps web services out of the Desktop phase and inventories
+all five current caches. Cleanup failure remains a failed command even when
+other reports can be saved. Sensitive captures stay disabled. Portable Node
+tests use inert resources and mocked public composition, not real app or Native
+results. Required dependency checks retain actual supplier/tooling findings;
+source acceptance grants no clean dependency-tree, release or parent pass.
+
+Worker configuration reload does not carry the runner CLI arguments. Config
+imports therefore use only the reviewed fixed context and deterministic exact
+per-project output directories. Strict single-project admission stays in parent
+global setup before host composition; missing, duplicate or unknown selectors
+still deny. Workers gain no command, project, path or limit selector. A known
+command failure is reported separately from unconfirmed retirement, while every
+normal-exit, Job-zero, handle, stream, limit and failure check remains mandatory.
+The retained first serial attempt proves only its package and safe-retirement
+subset: browser test bodies did not execute and Desktop did not start. No reuse,
+automatic retry, current-source qualification or parent pass follows.
+
+Responsive qualification navigation admits only Home, Data, Artifacts and
+Context before Page access. It selects one visible sidebar button, or one named
+application menu through its existing trigger and keyboard-operated menu item.
+Missing, duplicate, hidden or failed controls deny without forced clicks,
+viewport changes or retries. Settings restart is header-scoped. The reviewed
+second attempt reached test bodies and found actual audit/navigation failures;
+all owned processes retired but no UI test passed. Its namespace and markers
+remain consumed. Audit-tool hypotheses do not suppress failures or qualify a
+host; they require separate reference evidence and review.
+
+Exact operational ownership includes the provided-data journey guide. This
+declaration changes no test inventory or catalog selection algorithm. Complete,
+missing, unknown and explicit-generic routing cases preserve fallback guards.
+Run file-isolation fixtures with the operating-system facility they test rather
+than skipping a denied fixture. This supplies no application/native privilege,
+resource-limit change, failed-history erasure or current host qualification.
+
+Source-only inventory refreshes authenticate complete facts and their prior Git
+rows, preserve all non-source mapping fields and old history bytes, and retain
+unrun host/full-test gaps. The responsive refresh binds all 180 committed pins to
+actual `608679a6` Git blobs, four changed definitions and six archived changed rows.
+It preserves the original mixed-era map, including its two mismatched older pins,
+and every accepted history. Current source drift is limited to four exact working
+versions; changing a baseline cannot supply execution or qualification. Compact formatting keeps the unchanged document cap;
+neither history nor a source fixture supplies an actual execution pass.
+
+The finite training worker fixture uses only the output stage already created
+by the application. Canonical parent, fixed prefix and original device/inode
+checks precede its fixed synthetic writes. It retains bounded owned cleanup,
+review/save/retry/discard and workspace assertions, plus private-path refusal.
+The production guard still rejects foreign output; no real model is loaded.
+
+The shared forced-colors layer follows the system palette only when that mode is
+active. Keep ordinary layout and behavior, warning text, notification severity,
+selection and disabled state, workflow numbers and visible keyboard focus.
+Restore native choice controls without removing unrelated pseudo-element content.
+Do not opt out of system colors or alter the official audit to obtain a pass.
+
+Its closed source profile adds no process, provider, model or native authority.
+Selection tests check actual control attributes and a bounded pseudo-element
+inventory; they do not suppress unsupported ordinary selectors. The DOM test
+environment cannot prove CSS specificity or native painting. Real host evidence
+and all unresolved qualification remain separate from this source support.
+
+Feature-owned trigger paths and complete declared coverage have different roles.
+Shared configuration and borrowed tests must not activate an unrelated profile.
+Startup-only palette work selects the new profile explicitly. Missing required
+profile data still fails closed; do not ignore it to repair cross-profile routing.
+
+Combined source ownership uses only selected, structurally valid profiles from
+one captured configuration document. Keep the existing 200-source and 100-test
+bounds, exact paths and unique test entries. Validate all selected profiles before
+removing a fallback, even when an earlier profile already covers every path.
+Unselected declarations never authorize coverage. Unknown or jointly uncovered
+source and an explicit generic requirement retain the generic check. This routing
+repair changes no command identity, process authority or qualification threshold.
+Actual profile execution and candidate-bound review remain mandatory.

@@ -29,9 +29,9 @@
 - System compositions are limited to `system` and `system-of-subsystems`.
 - System Builder lifecycle is design-time only; never substitute runtime, installer, host, or software-health status.
 - Keep asset composition planning as an optional non-executing source record.
-- Require explicit workspace identity for every future system-owned operation and persistence seam.
+- Require explicit workspace identity for every future system-owned operation and persistence seam. Manage systems uses workspace/client-owned UI state and query-owned paging/preview results. Pending operations use synchronous admission and exact-token cleanup; failed transport calls remain retryable through fixed notification-center messages. Preserve immutable revisions and application authorization. See the canonical System Builder architecture. Owners retire during layout cleanup at commit, before passive effects. An abandoned replacement render does not change the committed session. Confirmation changes are synchronously refused while an action owns them.
 - Systems is workspace-scoped; Settings / Software status remains global and operational.
-- Design identity, immutable revisions, build attempts, immutable releases, deployments, and execution runs are separate record families.
+- Design identity, immutable revisions, build attempts, immutable releases, deployments, and execution runs are separate record families. Build and Publish own committed exact targets, use synchronous action admission and fixed retry notices, and compare acknowledgements to the requested build or confirmed release lock. Keep saved publication distinct from its later list refresh; see `docs/architecture/system-build-and-release.md`. Lifecycle controls also bind replies to the exact release, retain one physical status read until settlement and reconcile denied actions afterward. The desktop conversation window owns reads and turns by its committed preload API, preserves failed drafts and offers read-only connection recovery without automatic turn replay.
 - Security assets may narrow but never widen platform/organization authority; the initial workflow language is finite, typed, and capability-based.
 
 ## Current Implementation Shape
@@ -46,7 +46,7 @@
 - API/IPC transports and clients are present for both hosts; Systems uses the
   shared `modules/ui/shared/system-builder/` editor in desktop and thin client.
 - New interactive records begin with one Foundation v3 system root, a required
-  exact application layout, and a canonical application/page containment tree.
+  exact application layout, and a canonical containment tree with empty page regions.
   The default is `builtin.layout.application.minimal@3.0.0` when no layout is
   requested. Save, clone, persistence, API, IPC, preload, and shared UI paths
   preserve exact structure and placements; legacy-flat revisions remain readable
@@ -61,13 +61,13 @@
   for Properties, Styling, and Layers. Styling uses color pickers and allowlisted typography, density,
   button, form, and surface selects; semantic styles are unavailable through
   Advanced JSON, and per-asset roles remain bounded Properties selects. Canvas
-  States start collapsed. Only the active details body mounts and receives exact
-  definition detail for its current asset. Layers also separates System resources and logic.
+  Design and Connections support arrow, Home and End navigation. States start
+  collapsed. Only active details receive exact definition detail. Layers separates System resources and logic.
   Every exact slot-bearing container exposes Add element. Its shared modal scopes
   compatible new definitions and unassigned visual instances to the selected
-  region, groups and filters them by UI category, and inserts or reattaches a
-  clicked choice without drag state. Explicit Move up, Move down, and Move to
-  controls preserve accessible ordering and reparenting. Foundation layouts
+  region. Compatible built-in page layouts appear under Containers and layout.
+  Insert or reattach from the picker. Use Move up, Move down, and Move to for
+  accessible ordering and reparenting. Foundation layouts
   expose labels but no editable dimensions, regions, responsive rules, raw JSON,
   CSS, or coordinates. Ordinary containers retain bounded Layout fields and
   nested regions. Containers expose structure; leaf nodes render one
@@ -190,8 +190,10 @@
 - Do not rename valid ownership terms such as `system.foundation` or `system-owned`.
 
 ## Companion Packs
-
 - `asset-kernel` for component and composition vocabulary.
 - `asset-composition-planning` for plan inputs and compatibility.
 - `desktop-implementation` for Systems or Settings UI changes.
 - `persistence-storage`, `ipc-electron`, `server-host`, or `testing` only when those boundaries are explicitly in scope.
+
+Composer uses bounded exact batches and query-bound continuations. Keep property details lazy and invalidate late picker responses on target/query/workspace changes; local I/O tests do not qualify controlled performance or manual accessibility. Canvas dirty state follows a saved checkpoint independent of bounded Undo. Transactions lock mutations and fence late workspace/system responses; optional history never gates the current Canvas and merges saved revisions. Real mixed-component UI journeys cover edit/save/reopen/build and explicit policy/model denials; previews do not prove application runtime. See `docs/diagnostics/system-builder-canvas-testing.md`.
+Reference accessibility measures actual-host contrast/motion, tree/modal keyboard behavior and 320-pixel reflow; incomplete checks require measured resolution. Human acceptance stays offline. Named hardware alone does not qualify performance. Custom list/detail membership uses persisted scoped sources; slot alternatives are OR predicates, never simultaneous type/family filters. Repository multi-value alternatives filter before bounded paging; consuming extra raw rows must not discard matches. Tree names exclude descendants; narrow labels/actions wrap without hiding controls.

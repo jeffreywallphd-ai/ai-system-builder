@@ -1,0 +1,1831 @@
+# Optional low-memory local inference
+
+- Status: implementation in progress; installed-model qualification pending
+- Decision: `docs/adr/ADR-0045-optional-bounded-model-offloading.md`
+- Roadmap: `docs/optional-low-memory-inference-implementation-roadmap.md`
+
+Dataset Preparation has an explicit `offload-v1` model memory option. Standard
+remains the default, including for old saved settings. Desktop and thin client
+retain the selected model, device, precision and memory mode. A saved unsupported
+mode reports an error; it cannot silently become Standard or choose another model.
+Status reads never install, download or load a model. The application rechecks the
+exact `dataset-preparation.offload-v1` capability before staging or starting work.
+The UI refreshes capability information every five seconds and rejects stale
+capacity snapshots. An old worker cannot silently ignore the new setting.
+
+## Check unused cache-binding cleanup
+
+The fixed Windows check passed on commit `66a69afee`. It confirmed all 11
+original read handles, 22 retirement identity checks, 11 acknowledged reverse
+closes and a software refusal to reuse the retired binding with zero calls.
+The deadline control and separate parent process/Job/handle retirement passed.
+See [the versioned component results](windows-offload-read-binding-qualification.json).
+This does not enable model offload or complete the parent criterion.
+
+The fixed
+`qualify_windows_offload_read_binding.py` plan defines two cases: a delivered
+deadline control and closure of an unused binding in a fresh empty cache. The
+check observes the actual Core and base Windows API: all original identities
+before the first close, reverse original-only closes, close acknowledgements,
+custody release and a software refusal to reuse the retired binding.
+
+The source tests use synthetic native replies. They are not a Windows pass. A
+separate committed-source effect review must precede actual execution. The
+512 MiB child ceiling and 120-second limit bound this model-free diagnostic;
+they are not a model policy or a production guardian lifetime. Parent process
+exit and parent handle closure are separate observations from Core retirement.
+This check creates no model staging, journal, disk allowance or model worker. It
+cannot establish preservation of existing file contents from an empty cache.
+Production finite execution, stable fencing, aggregate accounting, exact writer
+exit/crash and retained recovery, and measured offload resources remain pending.
+No user action is needed for this agent task. Accepted accuracy and OCR checks
+stay closed; full system testing remains deferred.
+
+## Supported initial profile
+
+Choose CPU or CUDA and an explicit float32, float16 or bfloat16 precision. The
+initial implementation supports inspected native Qwen2/Qwen2.5 causal models;
+chat uses the inspected Qwen2.5 text template shared by the two approved model
+acquisitions. Unknown templates, tokenizer classes/path selectors, architectures,
+rotary extensions, quantization, LoRA and seq2seq offload fail explicitly.
+Standard behavior for these combinations remains available. Context embeddings,
+training and conversation do not implicitly adopt this Dataset Preparation option.
+
+The versioned capability requires the inspected Transformers4.51.3,
+Accelerate1.14.0, Torch2.6.0 CPU/CUDA build and safetensors0.5.2 path. No new
+dependencies are installed. Other versions need separate support and qualification;
+they cannot obtain this capability through a permissive fallback.
+
+Weight placement is limited to1GiB CPU and2GiB CUDA. There is one exclusive
+offload-cache slot and at most12GiB of owned staging. These are **not** total
+process-memory limits. Admission additionally reserves source-width and converted
+loading tensors, the largest execution layer, bounded prefill scratch, KV/cache
+transients, source-width disk-read conversion on the execution device, and runtime
+headroom. Unknown RAM/VRAM/disk observations or insufficient
+capacity deny the profile. It never grants the standard overflow allowance.
+If available headroom falls after loading, the unchanged forward guard reports
+insufficient resources through the existing task error, rather than a generic
+inference/format failure. Bounded numeric observations record that denial; no
+prompt, model output or path is logged, and an unstarted forward is not poisoned.
+Disk streaming may be slower, even when it enables a model that cannot load whole.
+
+Each call uses batch1, at most2048 complete templated input tokens and512 new
+tokens. Oversized tokenization uses a single overflow sentinel and fails; no
+truncated prompt can return a successful generation. Repair calls obey the same
+bounds. Beam/assisted/DoLa expansion, disabled KV caching, static caches and
+retained hidden-state/attention/logit output are outside this profile. Pinned
+generation already keeps last-token logits; the option does not change decoding,
+precision, task/schema validation or the useful-output oracle.
+
+## Loading and ownership
+
+The adapter first validates bounded native configuration, exact safe-weight
+shapes/offsets, shard/index coverage, tokenizer inputs and source digests. It
+rejects PEFT adapter configuration/weight families case-insensitively before any
+supplier load. Native model classes still discover those files when PEFT is
+installed; merely binding them would permit an unsupported base-path redirect.
+Directory-name and byte rechecks also reject an adapter inserted after admission.
+Planning uses a tied meta-model with intact Qwen2 decoder layers and bounded
+nonpersistent rotary buffers. Independent map validation checks complete parameter
+coverage, tied placement, residency limits and rejects all-disk or unknown maps.
+If current RAM permits fewer resident CPU weights, the planner moves complete
+connected CPU placements to disk, preserving tied/no-split groups. It reserves
+the same loading/execution costs first and validates the resulting map again;
+it cannot change the execution device, precision, profile, reserves or ceilings.
+The pinned per-load loader binds an omitted tied output-head disk-index name to
+the verified canonical input-embedding safe tensor before installing dispatch
+hooks. It checks exact shard, source name, precision and disk-name coverage; no
+weight copy is made. Unsupported/conflicting serialized aliases deny opt-in.
+Before the first forward, the pinned dispatcher correction removes its empty
+meta-pointer sentinel and retains only admitted tied-name metadata. Real tied
+storage is preserved. Unknown hook topology or an already populated sentinel
+denies loading. Actual parameter names, shapes and precision are checked afterward.
+The pinned loader references admitted original safetensors and explicitly disables
+secondary state-dict offload temporaries. It uses no remote code, pickle or network.
+
+Private host-cache staging belongs to the cached generator, across task completion.
+Request views share weights and serialized execution while retaining their own
+generation settings. Current source bindings are rechecked before each forward;
+rebinding a model id cannot reuse older weights. Switching profile/source/settings
+that affect model identity requires unloading the existing offload model first.
+An interrupted supplier forward can bypass an offload post-hook. It poisons the
+cached owner for further generation; explicit idle unload must confirm release
+before retrying. It cannot accumulate resident layers through automatic retries.
+The adapter never deletes original model inputs or another owner's staging.
+
+Unloading fences new task admission and rejects queued/running tasks. It drops
+decoder/model references and collects cycles, without detach hooks, `.to`, `.cpu`
+or full-model reconstruction. Live weak references or uncertain deletion retain
+the slot. Cleanup records each confirmed removal so retry cannot adopt a recreated
+file. An ambient/stale slot is never adopted or recursively removed. Verified
+owner recovery after process failure remains a distinct native operation.
+
+An interrupt during model construction, weight loading, dispatch or final sealing
+keeps the original lease and its model-reference list in the current process.
+The original interrupt is returned. The adapter does not run automatic teardown
+for that interrupt. Cleanup also records ownership before garbage collection,
+reference inspection or file operations. Any failure retains that same record;
+only cleanup acknowledged by the original lease as released removes it. A silent
+return without that acknowledgement retains ownership. A different reference
+list cannot replace the one already retained. Fresh model admission stays denied until the existing
+release checks succeed. Model-free fault-injection tests cover these paths.
+If cleanup finished before record removal was interrupted, retry removes only
+the retained record. It does not seal or delete the already released files again.
+These records do not prove native worker exit, lazy-reference retirement or a
+safe restart after process loss. Those qualifications remain pending.
+
+Ordinary lease creation now retains its original owner before creating staging
+files. An interrupted owner-file write or issuance step preserves the partial
+files and denies a different ordinary cache root in that process. Live leases
+retain their reservations within the existing 12 GiB ceiling and a fixed
+64-owner bound until confirmed cleanup; losing a Python reference grants no
+space. The 32-byte owner record must fit before writing, and a short write fails
+without granting an issued lease. Existing occupied-slot denials remain safe to
+retry after the original owner completes cleanup.
+
+A private receipt records confirmed original removal before final bookkeeping.
+If that bookkeeping is interrupted, retry completes it without deleting again
+or adopting files recreated at the old pathname. A mutable completion flag is
+not that receipt. These checks use process-local cooperative ownership only.
+Native protection, durable cross-process accounting, guarded restart and actual
+offload resource/lifecycle qualification remain pending; accepted model accuracy
+is unchanged.
+
+Queued dataset work remains cancellable. Running Dataset Preparation is currently
+not force-cancellable: a request or timeout cannot declare it finished or stop the
+shared worker. Wait for observed completion before retry or unload. The desktop
+unload action remains available for a supported idle runtime to retry cleanup.
+
+## Evidence and limits
+
+The separate [owned Windows worker fixture](../../dev-tools/scripts/native-owned-job/README.md)
+tests a fixed harmless worker and supervisor loss without starting a model or
+accessing retained staging. It is uncomposed qualification support. Actual file
+protection, protected accounting and protection lifetime across a crash remain
+pending agent work; a worker-exit test cannot supply those guarantees.
+
+Focused contract, application, model-input, resource, map, supplier-call,
+partial-load, reference-release, cleanup-retry and UI tests exercise local controls.
+Empty-model diagnostics admit CPU/CUDA maps for both approved models. These
+diagnostics load no generation weights and do not qualify task quality or peak RAM.
+
+A bounded native mechanical trial on2026-10-22 loaded the pinned1.5B bfloat16
+model on CPU, generated one nonempty non-heldout response and confirmed unload,
+native exit zero and zero remaining staging bytes. Load/generation/cleanup took
+13.95/5.68/0.21seconds;5ms whole-child sampling observed1.55GB peak RSS. The
+frozen source was
+`source.720e60c177ce1aa98089265c918f69068b9f6f76a738652c8b4131e499ae33e2`.
+Earlier safe resource denials and failed forwards remain preserved under ignored
+`offload-load-diagnostic` reports. A tiny actual tied-Qwen regression reproduces
+the pinned dispatch failure without its correction, then matches reference logits
+on repeated corrected CPU/disk forwards. Neither trial is heldout quality or
+full resource qualification; the4GiB abort remains sampled, not a hard quota.
+
+The current roadmap separates completed model quality from actual optional
+execution and resource/lifecycle qualification. Completed output uses the approved
+30% small-model/80% larger-model floors in
+`model-software-quality-qualification.json`; admission denials have no accuracy
+outcome. Reuse those verified results without another accuracy run. Keep model,
+precision, source and CPU/CUDA/constrained/unchecked observations distinct.
+The original 24-case/three-repetition, 23-of-24 and no-lost-baseline comparisons
+remain historical protocols; their failures are preserved. Actual optional
+1.5B low-memory CPU delivery, owned cleanup and native staging protection still
+need their own evidence; completed Standard quality is not an offload pass.
+The retained optional measurement harness
+uses a4GiB sampled child-RSS abort budget and existing deadlines; sampling is not
+an allocation guarantee. Historical6GiB trials and failed quality/performance
+results remain intact. No new optional result retroactively passes Standard or
+Context qualification. Native reparse/ACL races and untested hardware remain
+separately pending; cooperative path checks and component tests do not prove them.
+
+A later0.5B trial on source9ee72939 was withdrawn during qualification. Its
+completed Standard CPU first/warm phases scored12/24; CUDA unchecked pairs
+scored9/24 in both modes with no baseline-correct cases lost. These results are
+limited assistance evidence, not an automatic-use quality pass. The CPU offload
+attempts failed unchanged forward guards (for example2,519,232,512bytes available
+against2,925,661,184bytes required); most later Standard CPU loads were denied.
+The declared0.5Bfloat32 and1.5Bbfloat16 profiles have different weight and
+execution costs; parameter count alone does not establish memory suitability.
+No precision or guard was changed to turn these failures into passes.
+
+That withdrawn runner also reported`cleanup_passed:false` with8,519,680bytes
+still allocated in both CUDA arms. A separate model-free process reproduced that
+exact allocation after its first fixed16x16float32 matrix multiply, with a stable
+20,971,520byte reservation after a second multiply. Its zero-allocation-only
+initialization had reported a zero floor. The diagnostic confirmed native exit0,
+stable source/operator and no model load. It is retained under ignored
+`.local-codex/cuda-runtime-floor/e787589885b742db88cb458a8a3a1e76/`.
+This identifies common runtime initialization, not a model-quality pass or a
+guarantee about cold-process allocator fragmentation. The original failed reports
+remain unchanged. The separate production unload fix drops its last loop-local
+Standard generator before collection and allocator release; uncertainty in an
+offload close still retains ownership.
+
+## Retained original qualification protocol
+
+The original runner used the isolated Python runtime and approved acquisition
+manifest: `python dev-tools/scripts/qualification/run_optional_generation_qualification.py
+--model-manifest <repository-relative-acquisition.json>`. This documents the
+historical protocol, not a current instruction to rerun closed accuracy checks.
+No model acquisition is performed by this command. It verifies the pinned
+safe weights and retains separate Standard/offload results for CPU/CUDA,
+unchecked/constrained decoding, three fresh processes and first/warm phases.
+Keep the source unchanged across both model runs. The original generation runner
+and historical gates remain separate and unchanged.
+
+Each new child binds the same bounded protocol bytes to its hash before parsing,
+checks the actual schema/settings/device/profile and preserves raw synthetic
+outcomes. Start, load, first, warm and cleanup phases retain RSS observations;
+the parent samples the whole child at5ms and aborts above4GiB. Private commit is
+not sampled. Native process exit, zero owned staging, reference release and
+allocated/reserved VRAM cleanup must all be confirmed. Observation failures do
+not skip unload. An uncertain native exit prevents launching another cohort.
+The revised prospective protocol initializes the same fixed CUDA matrix multiply
+as the original runner before observing common-runtime allocated/reserved floors.
+Whole-delivery time still includes that initialization. Reports retain the actual
+floors, whether they were observed, and staging-observation error count; the
+comparison independently checks these values rather than trust a cleanup flag.
+It still requires post-unload usage at or below both observed floors. No private
+workspace clearing, production warmup or higher cleanup allowance is introduced.
+Library/driver state may persist in a live runtime; confirmed owned process exit
+remains distinct from model unload and releases that process's context.
+Results stay under ignored `.local-codex/optional-generation/`. This section
+describes the retained original measurement protocol, not an instruction to rerun
+closed accuracy checks. Actual required offload/resource/lifecycle evidence that
+has not executed remains pending independently of completed model quality.
+The parent checks source/operator identity before launch and again before
+interpreting any returned result; drift stops scheduling even when a child
+denied before producing a complete semantic result.
+
+The focused host journey uses the existing visual-composer Playwright config
+with `low-memory.e2e.spec.ts` and the fixed `dataset-profile` worker scenario.
+Its disposable hosts retain normal authentication, staging, approval and storage.
+The thin-client setup uses the existing write-authorized upload route because
+the newer ingestion-task API is deliberately denied pending separate security
+work. It does not admit that API or start workers through passive status reads.
+Host fixtures produce synthetic rows and establish plumbing only; the pinned
+model runner establishes actual generation/resource evidence.
+Desktop generation fields retain explicit accessible names alongside glossary
+help buttons, so keyboard/screen-reader and automated role-based access address
+the actual setting rather than the nested help control.
+Both host fixtures seed sources through the existing authorized upload use case
+(HTTP or trusted IPC), then exercise the actual preparation/review/save UI.
+The desktop Add data path instead uses resumable ingestion. Native testing found
+its finalized explicit-key artifacts lack the storage bindings required by
+Dataset Preparation; those sources fail closed before runtime execution. That
+separate unresolved ingestion finding is not qualified by the upload-seeded
+optional-model journey. Do not adopt missing bindings at read time or infer
+native publication/recovery safety from either fixture.
+
+## Current prospective-v2 qualification limits
+
+The frozen `source.d7d6026c2799f4583f2789cdd307431ec3e5222fdb9521fb40f1c04f694ef25c`
+candidate passed both synthetic host journeys and the focused unload/floor
+regressions. Its actual model matrices did **not** qualify. The 1.5B report
+`09fa0732c3504a60b9de83fd47aefb0e` retains three Standard CPU load denials and
+three optional unchecked CPU forward-resource failures. Those completed attempts
+confirmed native exit zero and cleanup, but supplied no complete useful delivery.
+The first optional constrained CPU child ended with a supervisor `RuntimeError`
+at the fixed 20-minute boundary. Its last retained report contains 16 first-phase
+cases, 14 correct, no warm phase and no completed cleanup observation. The timing
+supports a deadline diagnosis; the failed parent result does not retain a typed
+deadline reason or qualify successful cleanup.
+
+That timeout retained an offload lease. The next child rejected existing staging
+before its ready handshake, so the parent stopped with
+`aborted-unconfirmed-child-exit`. A subsequent 0.5B attempt
+`5fac0890837746a1bae80d6bf6bbfae8` stopped at the same preflight before measuring
+any cohort. These acquisition directories share their parent offload cache;
+different model directories do not isolate that staging root. Read-only native
+inventory later found no matching qualification process or recorded launcher.
+Process absence does not retroactively establish native exit zero or successful
+pre-exit model cleanup.
+
+Both raw reports, old failures and retained staging remain under ignored local
+qualification storage. Do not delete an owner marker, adopt uncertain staging,
+weaken admission or shorten the test population to continue. Remaining model,
+decoder and repetition profiles are pending. Qualification needs a separately
+verified isolation/recovery path and successful complete delivery under the
+unchanged prospective criteria. Passing synthetic UI or component tests cannot
+replace it; neither related roadmap is complete.
+
+## Prospective native supervision correction
+
+New optional runs declare `early-native-identity-v1`. The child sends its native
+identity and waits for observer acknowledgement before plan, model or staging
+preflight. The later measurement-ready message must identify that same worker.
+The real child command dispatch also reaches identity acknowledgement before
+run-ID, output-directory or plan admission; direct function tests alone cannot
+establish that entry-point ordering. Invalid interpreter/import/command syntax
+before dispatch still retains unknown native observation and the launch fence.
+Both startup phases share the existing60-second bound; execution retains the
+1200-second deadline,4GiB sampled RSS ceiling and bounded output/reader handling.
+The native observer covers startup plus execution and shutdown. Existing Context
+callers retain their default single ready/run protocol.
+
+Confirmed failures now retain finite supervisor reasons and actual launcher/native
+exit, reader shutdown and termination-request observations in private reports,
+while preserving the original workload exception type. Startup/deadline, RSS,
+output and protocol failures remain failures. Diagnostic-write failure retains
+known exit facts; unknown exit/reader/stream shutdown retains the serial launch
+fence. A requested or forced termination always leaves model cleanup unobserved
+unless the model report separately establishes it. Exception text, commands,
+environment and raw payloads are not included in the supervisor metadata.
+
+Model-free regression fixtures exercise actual Windows preflight exit23 followed
+by successful owned execution, changed second identity and output-overflow
+termination. Injected tests cover the combined startup deadline, execution/RSS
+limits, diagnostic failure, parent serialization and unknown cleanup fencing.
+These controls supply no model-quality, staging-recovery or historical cleanup
+pass. The prior failed reports and unknown retained owner remain unchanged.
+
+## Guarded restart gate and current limit
+
+The user approved a guarded qualification restart: preserve/protect the retained
+temporary data, count it within the existing 12 GiB total, and admit at most one
+fresh lease only after real protection and capacity proof. Current readiness is
+available without reading that slot or loading a model:
+
+```text
+python -B dev-tools/scripts/qualification/offload_guarded_restart.py --plan
+```
+
+The diagnostic prints `pending-native-protection`, `admitted: false` and
+`qualification_complete: false`. A successful `--plan` exit means only that the
+diagnostic was generated. Without `--plan`, exit 3 means actual restart is pending.
+No root, quota, proof-ticket or permission override is accepted. The optional
+comparison's existing plan includes the same `guarded_restart` result.
+
+Unknown retained data is charged the full ceiling; this is a conservative budget
+reservation, not a measurement claiming the folder uses 12 GiB. The pure immutable
+ledger tests bounded counters, the exact total, one fresh reservation, expected
+generations, retained uncertain charges and malformed/replayed snapshots. Its
+`arithmetic-only` JSON is not a capability, filesystem journal, native observation
+or release certificate. There is no release/adopt/reset API, and the real gate
+does not consume caller-supplied ledger data as authority. This preserves the
+existing staging metric; it does not claim a kernel storage or process quota.
+
+The native read-only identity fixture also demonstrates its limitation: new child
+bytes can be created while the directory lease is held and identity revalidation
+can still succeed. Directory R/RH oplocks likewise notify about content changes
+without blocking them, according to
+[Microsoft's oplock documentation](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_request_oplock).
+Identity handles, owner/DACL observations and notification callbacks therefore
+cannot be promoted into a stable tree/security fence.
+
+Actual guarded restart remains unimplemented pending a qualified protection
+provider, protected durable accounting, owned-worker exit-before-release and
+guardian-crash guarantees. The current component never inspects, changes ACLs,
+moves, copies, adopts or deletes the retained slot. The original failures and
+unknown historical exit/cleanup remain intact. The full CPU/CUDA model matrices
+and parent roadmap closure remain pending; passing gate/accounting tests is
+separate component evidence. Standard-only work remains independently possible.
+
+## Model-free worker lifetime qualification
+
+The closed fixture helper checks new Windows workers without loading models:
+
+```text
+python -B dev-tools/helpers/control_plane/qualification_job.py --self-test
+```
+
+It creates an unnamed job with a noninheritable handle, kill-on-close, at most
+two fixture processes and 256/512 MiB per-process/total committed-memory limits.
+`PROC_THREAD_ATTRIBUTE_JOB_LIST` assigns the fixed suspended worker during
+creation. Membership is checked before resume. Native job membership identifies
+the ordinary descendant; only read/query process handles pass to the supervisor.
+The supervisor duplicates from its exact retained guardian process handle into
+itself, tracking every local handle before validation. It never reopens a parent
+PID or allocates a handle in another process. Failed thread closure retains the
+exact handle for retry. Successful shutdown requires the exact member count and
+integer exit code zero; fixed natural expiry and errors use nonzero codes. A real
+short-expiry negative control must fail that same positive shutdown predicate.
+Normal shutdown and guardian termination, including before resume, require
+observed exit through those exact handles. Unknown exit remains a failure.
+No caller command, PID, directory, staging or quota override is accepted.
+
+Output is `evidence-collected-review-required`, with real restart and parent
+qualification false. This fixture does not protect retained files, supply a
+protected journal, integrate the actual model worker or measure offload delivery.
+The full unknown retained charge and actual restart denial remain. Accepted model
+accuracy stays closed. This is not isolation against a malicious same-user
+process that can obtain additional handles.
+
+Creation-time assignment closes the suspended-before-assignment crash window
+described in [Microsoft's process job example](https://devblogs.microsoft.com/oldnewthing/20230209-00/?p=107812/).
+See also [job-list process attributes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute)
+and [native job limits](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_limit_information).
+
+
+## Reviewed feature support: 2026-10-30
+
+The read-only restart check and its pure budget calculations are committed with
+focused passing checks and a separate review. Unknown retained usage still
+reserves the full 12 GiB ceiling. The check cannot protect retained files or
+grant another model run.
+
+The shared exit observer now accepts only the nine exact existing qualification
+windows through its private PID-only Python API. Root-bound shutdown and the CLI
+retain 30 seconds. This fixes a setup mismatch without changing work deadlines
+or resource limits. The observer's 25 focused tests passed. Nine Windows
+file-identity cases passed on the earlier narrow candidate; independent review
+confirmed that the later extra wait does not change their tested branch.
+
+File identity still permits new child files. Native file protection, protected
+accounting, owned-worker recovery and actual optional offload remain pending.
+Accepted Standard model accuracy stays closed. Full combined testing is deferred
+until the open roadmaps' feature work is complete. No user action is needed for
+the remaining agent-owned implementation.
+
+
+## Directory protection primitive diagnostic
+
+No user action is needed for this agent-owned implementation. The bounded
+`probe_windows_staging_protection.py` diagnostic tests one prerequisite for the
+approved guarded restart. Its default and `--plan` modes make no native changes.
+An explicit `--self-test` uses four new synthetic empty NTFS directories under
+`artifacts/tmp`. It never opens retained offload content or accepts a caller path.
+
+The controls distinguish directory notifications, write denial by permissions,
+and a permission change through a handle opened before the protection. A fourth
+case tests refusal of a folder writer opened before protection. The combined
+case tests whether a directory RH oplock delays a security change until the guard is
+released. This is a hypothesis to measure on the installed filesystem.
+[Microsoft describes directory content breaks as advisory](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_request_oplock).
+The [object-store oplock model](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fsa/306239fb-cb60-49fe-b293-df4d1a5f757a)
+is research input, not proof of this local NTFS behavior.
+
+The diagnostic saves and restores the original DACL and its control bits. It uses
+[single-object NtSetSecurityObject](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntsetsecurityobject)
+on each held fixture. It does not use SetSecurityInfo, which propagates inherited
+entries to child objects. The guard must be unbroken before dispatch. Its native
+break frame, RH-to-R transition and required acknowledgment must then be verified.
+A prebroken or canceled guard cannot establish a security barrier. A
+non-inheriting deny entry affects only each newly created empty fixture; owner
+recovery rights are retained. No owner, audit policy, service, driver, account or
+privilege is changed. Native creation must report a new object. Cleanup uses
+only created handles and never recursively removes unknown children. Unconfirmed
+thread/IO completion or changed restoration prevents cleanup and stops the run.
+Output contains only fixed phases, numeric native codes and synthetic IDs.
+The pure unit profile runs no native test, model, provider or worker.
+
+Even if all three observations succeed, full-tree and existing-file/mapping
+protection, protected durable accounting, owned-worker exit and guardian-crash
+lifetime remain separate work. A failed observation remains failed. The report
+requests evidence review and always reports restart and parent qualification
+as false. The real restart guard and full 12 GiB unknown charge remain unchanged.
+Accepted model accuracy stays closed. Full software testing is deferred.
+
+The diagnostic runs in its own short-lived command process. A fixed 30-second
+watchdog starts before native effects. Each report is limited to 8 KiB, with a
+5-second publication deadline. Normal publication requires native IO, mutation
+threads and the watchdog to be retired first. Native buffers are retained before
+issuing operations. Unconfirmed native lifetime produces failed evidence and
+exits only this diagnostic process without Python object finalization. It never
+terminates another PID. Interrupted fixtures may remain protected; no later
+invocation adopts or removes them. These controls are diagnostic safety, not the
+missing production worker/crash or protected-journal qualification.
+
+The directory request uses the Windows SDK read and handle cache flags (RH).
+The native validator checks those same flags. An untouched fixture is checked
+without an unnecessary permission rewrite. A possible update is marked before
+issue, including interrupted calls. Protection and restoration compare actual
+readback. A mismatch reports only ACL equality and bounded expected/current
+DACL control integers, never ACL bytes, hashes or SIDs. Primary failures remain
+separate from cleanup failures. Earlier failed fixtures are not reused or
+removed by a later invocation.
+
+### Controlled new-folder profile
+
+The prospective `fresh-protected-current-user-v1` profile supplies an explicit,
+protected, non-inheriting DACL during exclusive creation. The only allow entry
+is for the current process user's SID, obtained through a bounded read-only
+query of its own token. The SID is kept in memory and filesystem permissions;
+it is never logged or written to evidence. The entry grants file operations and
+permission recovery, with no write-owner grant or privilege enablement.
+
+Creation must read back the exact intended ACL and protected control value
+before any test action. An unexpected baseline is rejected and is not normalized
+for a pass. This profile does not qualify arbitrary inherited ACLs. Earlier
+inherited-baseline failures, including the lost auto-inherited flag with unchanged
+ACL entries, remain failed. The diagnostic explicitly denies auto-inherit
+requests because the documented operation can propagate to existing children.
+No retained folder is converted to this profile.
+
+A failed lock-frame check records only version, length, original/new levels,
+flags, transferred bytes and native status. It records no access/share payload.
+The advisory control requires completed child creation separately from a genuine
+RH-to-None break. The returned frame may request cache acknowledgment even though
+the content operation already proceeded. The security-change control remains
+stricter: a fresh RH guard, validated RH-to-R break and required acknowledgment,
+a waiting mutation thread, confirmed release/completion and exact restoration.
+A new private baseline does not turn a failed inherited round trip into a pass.
+
+
+## File and mapping protection checks
+
+No user action is needed. The agent uses a fixed companion diagnostic to test
+whether open writers or memory maps can bypass the proposed protection. Each
+case creates a new private directory and regular file with 4096 synthetic bytes.
+It never opens retained model files. Default and `--plan` make no native changes.
+
+The explicit `--self-test` must observe refusal while an existing writable file
+handle, writable section or writable view remains open. A separate positive
+case checks read-only mapping access, refusal of a new writer, and a waiting
+permission change through a preopened handle. The test validates the actual
+Read-Handle oplock frame and thread exit; a prebroken guard or a change that
+finishes before release cannot pass the barrier check.
+[Microsoft lists the writable-section grant restriction](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/granting-oplocks).
+[Creating a writable section can cause a break](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/fs-filter-acquire-for-section-synchronization2),
+so this fixed test combines file sharing with the native grant check.
+
+The code retains anonymous nonexecutable mappings until confirmed release. It
+requires exact identities, file shape and original permission restoration. An
+unknown map, thread, IO or cleanup lifetime stops further cases. The standalone
+process retains the directory diagnostic's fixed deadlines and redacted output.
+
+These observations apply only to new private unnamed-stream files. Existing
+and inherited files, full trees, alternate streams, protected durable accounting
+and owned-worker crash/restart proof remain separate work. Even a passing run
+does not admit real offload or close a parent criterion. The existing guard and
+full 12 GiB charge for unknown retained usage stay in force. Accepted model
+accuracy stays closed. Full software testing remains deferred.
+
+Rejected or unsuccessful native requests have no measured transfer count. Their
+`transferred_bytes` field is `null`. A successful completed-result query records
+its actual count. This reporting distinction does not change admission or the
+required status, frame, acknowledgment and lifetime checks.
+
+
+## Stream metadata and preopened folder writers
+
+No user action is needed. The agent must test these boundaries before composing
+a protection provider for a complete model folder.
+
+- A folder handle opened for writing before protection must prevent admission.
+- A file with a named data stream must be refused. The test creates only one
+  fixed synthetic stream on a new private seed held against replacement.
+- Native stream metadata must have valid bounded lengths, offsets and sizes.
+  Unknown names or sizes must prevent cleanup. The code never reads payloads
+  or includes stream names in reports.
+- Exact permissions, file shape, stream facts and a fresh guard must be checked
+  after the grant. A failed check must not close a handle with a live request.
+
+[Windows maintains sharing modes and oplocks per stream](https://learn.microsoft.com/en-us/windows/win32/fileio/file-streams).
+The bounded parser uses the
+[FILE_STREAM_INFO layout](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_stream_info)
+and [GetFileInformationByHandleEx](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getfileinformationbyhandleex).
+The new synthetic stream is at most 4096 bytes; its fixture has at most 8192
+data bytes. New directory and file controls do not inspect retained content.
+
+A refusal control does not qualify support for arbitrary named streams. Full
+existing or inherited trees, durable accounting and owned-worker crash/restart
+composition remain separate work. Actual offload and parent qualification stay
+pending. Accepted model accuracy stays closed and full software testing is deferred.
+
+An interruption during guard construction leaves ownership uncertain until the
+request is assigned or a completed refusal is proven. Unknown construction
+stops native cleanup and keeps references alive until this test process exits.
+A saved alias of an assigned guard handle must not be closed a second time.
+
+
+## Owned-worker launch and exit controls
+
+No user action is needed. The agent uses a separate fixed inert-worker
+diagnostic to test the Windows job ownership needed for safe restart. It loads
+no models, starts no app worker and changes no model memory guard. The default
+and `--plan` modes have no native effects.
+
+An explicit `--self-test` creates a new anonymous job and one small isolated
+Python worker per case. It must read back the one-process and 512 MiB commit
+ceilings, atomic membership and actual native exit. The worker inherits only
+two unnamed events. The job handle is not inherited. The stop-event case must
+exit with its fixed code. The last-job-handle case must observe actual exit
+after the close. Its own success, timeout and error codes cannot qualify this
+case. The fallback timeout is outside the diagnostic watchdog window. The
+ceiling is not allocated up front.
+
+[Windows job objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)
+provide the ownership mechanism.
+[Startup attributes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute)
+place the new suspended worker in its job before execution.
+[Process termination is asynchronous](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess),
+so the helper must confirm the process handle is signalled; a stop request is
+not completion. Failure cleanup has no arbitrary PID or command interface.
+
+These are cooperative inert-process controls. They do not establish actual
+guardian-process crash behavior, file-guard lifetime ordering, protected durable
+accounting or real model loading and delivery. The app's shared worker and all
+old retained data stay outside this diagnostic. The full 12 GiB unknown charge
+and real restart denial remain in place. Accepted model accuracy stays closed.
+Full software testing remains deferred.
+
+Failed process-count checks keep the observed total, active and limit-terminated
+counts for each fixed phase. These numeric diagnostics do not relax the one-worker
+requirement or qualify an unconfirmed shutdown or cleanup.
+
+The fixed event-only worker uses `DETACHED_PROCESS`. It does not inherit or
+allocate a console. There is no hidden-console or larger-process-limit fallback.
+The memory, ownership, native-exit and cleanup requirements remain the same.
+
+
+## Bounded folder metadata inventory
+
+No user action is needed. The agent is testing a small newly created folder
+before using this mechanism for larger tree accounting. The default and
+`--plan` modes have no native effects. Explicit `--self-test` creates a fresh
+4096-byte file and, for the refusal case, a second empty file. It reads only
+metadata and never opens retained model files.
+
+The helper requires two complete equal listings with root and file guards
+still active. It checks native identities and known file sizes. An additional
+entry must refuse the one-file expected inventory. Uncertain entries or native
+lifetimes prevent cleanup and completion. Only acknowledged new objects with
+matching identities and known streams can be removed. The parent guard must
+retire before child cleanup to avoid a self-deadlock.
+
+[The Windows directory metadata structure](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_extd_dir_info)
+uses variable records with 128-bit IDs.
+[The file information API](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getfileinformationbyhandleex)
+provides classes 20 and 19 for restarting and continuing this listing. A record
+that ends a page does not prove that the complete listing has ended.
+
+Logical data size and native allocation metadata are separate observations.
+They do not measure all physical filesystem storage or grant a quota lease.
+Recursive existing/inherited tree protection, protected saved accounting,
+guardian crash ordering and actual offload remain pending. The unknown retained
+usage still consumes the full 12 GiB budget. Accepted accuracy stays closed;
+full software testing remains deferred.
+
+
+## Nested-folder guard composition
+
+No user action is needed. The agent is testing how the existing guards work
+together across two small newly created folders. Three files contain a total
+of 4096 data bytes. Two empty files have the same name under different parents.
+The default and `--plan` modes have no native effects.
+
+The helper requires two complete equal listings while all folder and file
+guards remain active. It checks native identities under the correct parent.
+A deliberately wrong parent-specific identity must be refused by the metadata
+comparison. No unexpected entry is opened or followed. Native IDs and names
+stay internal; reports contain bounded scalar results.
+
+The nested folder borrows its parent handle. It must not close that handle.
+Cleanup releases all relevant guards before removing known children, then
+confirms the parent is still available before its own cleanup. Unknown native
+close results, constructor returns, guard states or metadata stop cleanup and
+retain ownership. No recursive path deletion or old-data adoption is allowed.
+
+This is a fixed two-level test, not a general recursive protection provider.
+Existing/inherited trees, protected saved accounting, actual guardian crash
+ordering and real low-memory loading still require implementation or evidence.
+The full unknown 12 GiB charge and stronger application denials remain intact.
+Accepted model accuracy stays closed; full software testing remains deferred.
+
+The first Windows attempt failed because a guard changed. Its test files stay
+untouched. Fixed role and step facts now help identify where a later attempt
+fails. A failed test never becomes a completed check through this reporting.
+
+
+## Safe handling of a failed file-handle close
+
+No user action is needed. The agent is fixing a shared test helper. If closing a
+known file handle fails or is interrupted, the helper must keep its ownership
+record and stop. It must not retry that handle or remove the test files.
+
+Focused tests cover failure, interruption, denied retries, confirmed success and
+normal repeated cleanup. They use synthetic native replies. No operating-system
+failure is forced, and no old or failed test folder is inspected or changed.
+
+This closes only a helper failure path. Complete folder protection, saved disk
+accounting, worker recovery and actual low-memory loading still need work.
+Accepted model accuracy stays closed; full software testing remains deferred.
+
+
+## Guarded lifecycle consumer and resource-only entry
+
+The private guarded context reaches the actual generator factory/cache/forward,
+pinned loader and `OwnedOffloadLease`. An explicit guarded request needs its exact
+live host-owned context before model or cache-path inspection. Missing or
+serialized context cannot fall back to ordinary mode. Ordinary empty-root leases
+and Standard loading retain their existing behavior. A second owner cannot reuse
+the first owner's cache or start another fresh lease through that context.
+
+The parent owner is retained before readiness/reserve/create callbacks. The
+native backend must acknowledge protected reservation before supplier writes and
+native sealing before reuse. Supplier interruption or unknown callback results
+retain custody and deny another attempt. Worker cleanup signals reference release
+once; it does not prove process exit, delete guarded files or free the charge.
+Only the separate parent view may confirm native retirement. Unconfirmed exit,
+readers/IRPs, closes or accounting keep cleanup pending.
+
+No production backend is composed. Agent work still includes the protected native
+tree/journal/process provider and actual resource/lifecycle qualification. The
+fixed command below identifies the separate model-quality record and prints
+pending native readiness. It opens no old staging, starts no worker/model and scores no output:
+
+```text
+python -B dev-tools/scripts/qualification/run_offload_resource_qualification.py --plan
+```
+
+Without `--plan`, it reports the same pending state and exits3. A successful plan
+exit is not a test pass or execution authority. There is no root, quota, PID,
+model, force or native-proof option. The four-file model-free lifecycle profile
+uses synthetic new-domain ports and preserves actual native/model gaps. Accepted
+accuracy remains closed; original protocols and failed evidence remain history.
+
+
+## Fresh Windows Core source and qualification limits
+
+No user action is needed. The agent is implementing the private Windows staging
+provider and its real lease consumer. The first Core supports only a namespace
+and leaf it exclusively creates, with zero or one unnamed-stream index file.
+It refuses an existing namespace and unsupported inherited permissions. This is
+not protection or ownership of the old retained slot and cannot reset its charge.
+
+Protected accounting and exact standalone-worker producers remain required.
+Missing producers deny before file effects. Source tests use explicitly synthetic
+new-domain producers, not JSON proof or a production admission switch. Standard,
+ordinary empty-root leases, existing guards and accepted accuracy stay unchanged.
+
+The finite `offload-resource-lifecycle` profile has eleven model-free test files.
+The additional declaration prints the native checks still needed:
+
+```text
+python -B dev-tools/scripts/qualification/qualify_windows_offload_core.py --plan
+```
+
+Default execution reports pending and exits3. Plan and imported calls have no
+effects. The explicit standalone native mode requires a separate reviewed effect
+plan and isolated base Python; it admits no caller root, budget, command, PID or
+proof. It collects initial fresh Core evidence only, not production readiness.
+Protected durable accounting, owned-worker/crash ordering and model resource
+delivery remain additional implementation or qualification. Full testing remains
+deferred until the open roadmap features are worked through.
+
+
+A real finite execution owner is another pending implementation component. The
+Core refuses actual native preparation and dispatch without it. Source tests use
+an explicit finite in-memory dispatcher. They cannot supply a native timing pass.
+A cancel request is not completion: a raced successful change notification keeps
+retirement pending. No user action is needed for these agent-owned repairs.
+
+
+## Initial native component test runner
+
+No user action is needed. The agent is preparing four small Windows tests: verify
+that the test timeout ends its child, create and clean an empty temporary folder,
+repeat with one tiny index file, and refuse an existing folder name. The runner
+uses only new disposable test folders. It does not open retained model files or
+repeat accepted model accuracy checks. Unknown results stop the next test and
+retain the files and failure details.
+
+Default and plan commands still report pending without native effects. A reviewed
+standalone run will save bounded source-bound JSON under a new opaque run folder
+in `.local-codex/windows-offload-core-native-v2/`. Results contain fixed failure
+stages and numeric native error codes, not raw exceptions or private payloads.
+The 512 MiB child ceiling applies to these model-free tests only. The timer has
+host/GIL/suspend limits described in the dev-tools guide; this is not a general
+production deadline guarantee. Existing protected files, durable accounting,
+owned-worker restart/crash behavior and actual offload memory delivery still
+need their own implementation and evidence. No parent criterion passes merely
+because the runner exists or returns zero.
+
+
+### Test-report correction
+
+The first small Windows run observed its timeout control, empty-folder cleanup,
+tiny-index cleanup and existing-name refusal. Its timer field was wrong for
+the folder tests. Those original results remain unchanged, and the incorrect
+field does not count as evidence. The agent corrected the report producer and
+its checks in version 2. Configuration must be confirmed for every successful
+child. An unknown result stops the test before folder operations.
+
+No user action is needed. The separate version 2 native run passed its four
+component checks and independent review. Its exact results are recorded in
+`windows-offload-component-qualification.json`. Timer configuration is different
+from proving that a timeout ended a process. Production offload, durable disk
+accounting, worker restart, retained-file protection and real resources remain
+separate work. Accepted model accuracy and OCR results stay closed.
+
+
+## Fresh protected accounting source and remaining work
+
+No action needed. The agent is adding saved disk accounting for low-memory
+mode. Temporary space must stay reserved after an interrupted run. Space can
+be credited only after the exact worker has exited, staging cleanup has been
+confirmed, and the credit record has been saved and checked.
+
+The private Windows journal has a concrete native API, an independent anchor
+and five fixed records. It charges 128 KiB for its complete bounded data-file
+history within the existing 12 GiB domain. It checks allocation-unit and free
+space facts before creating its fixed sibling namespace/file. Each transition
+requires exact IO completion, a successful file flush and exact readback from
+the held file. Unknown or partial results stop later effects and retain the
+original owner/charge. The accounting history is preserved after handles close.
+
+The source requires a real shared-domain owner and stable mutable protection
+before any bootstrap mutation. No such producer is selected. An absent file,
+new cache, different process, numeric counter or valid record cannot establish
+a fresh zero balance. Unknown retained usage still reserves all 12 GiB, including
+the space a new journal would need. Do not inspect or change old slots to make a
+component test pass. Journal byte accounting is not an NTFS volume quota or a
+claim about every filesystem metadata/physical-sector byte.
+
+The current eleven-file source profile uses explicitly synthetic domain/fence,
+native IO, finite-execution and worker ports with the real journal/backend/lease.
+Those tests do not qualify actual Windows mutation protection, durable crash
+replay, the production finite owner, exact worker recovery or model offload.
+The earlier four-case Windows result remains bound to the exact source in
+`windows-offload-component-qualification.json`; it does not qualify this later
+journal or accounting-binding change. Keep real resources and the final shared
+campaign pending. Do not rerun accepted model accuracy or OCR. No model hard
+Job limit is selected or changed by this component.
+
+
+## Closing an unused read-only cache binding
+
+No action needed. Private source code can now close a cache binding opened only
+for checks. It closes the exact original read handles without creating or
+deleting files or changing permissions. A started journal borrow, model staging,
+reservation, guard or pending native work prevents this cleanup.
+
+Closing these read handles is separate from retiring model staging. It supplies
+no journal witness or disk-capacity credit. The execution owner must acknowledge
+the exact result before custody is released. Cleanup requires its original
+active ownership record. Completed or unregistered bindings cannot add entries
+when a table is full. Failed closes and interrupted, unconfirmed record removal
+keep the original records and refuse another close attempt. Once both removals
+are confirmed, a later caller interruption leaves the closed binding complete
+and out of the tables. Its saved closed facts grant no disk-capacity credit. Focused tests
+use the real Core and close bookkeeping with simulated Windows replies. Actual
+Windows qualification, the production finite owner, shared accounting and file
+protection, worker/restart handling and offload measurements remain pending.
+Earlier Windows results stay bound to their original code. Accepted model
+accuracy and OCR checks stay closed; the combined campaign is deferred.
+
+
+## Journal API component qualification
+
+No action needed. Three small Windows journal API checks passed on the committed
+source and received an independent result review. Exact results are recorded in
+`windows-offload-journal-qualification.json`. The dedicated plan command remains
+effect-free:
+
+```text
+python -B dev-tools/scripts/qualification/qualify_windows_offload_journal.py --plan
+```
+
+The separate diagnostic profile keeps the original Core entry and history. It
+uses only new tiny fixtures, five 512-byte frames and eight repeated reads, with
+the existing one-child 512 MiB/120-second controls and4,096 API calls. These limits
+are neither upfront memory allocation nor a model Job policy. A real native run
+needs its own exact committed-source effect review before execution.
+
+The fixture-only owner exercises the original native path walk, anchor, writer,
+allocation, permission, guard, write completion, flush, exact readback and strict
+retirement predicates. It creates no fake shared-domain owner or production
+lease. Uncertain API work remains retained. Parent exit does not prove successful
+API cleanup; successful API retirement intentionally retains history and grants
+no production capacity. Source tests alone establish no actual Windows outcome.
+
+Real shared accounting, stable namespace/security fencing, production finite
+execution, worker/crash/retained recovery and model offload still need evidence.
+Unknown production usage continues to reserve all 12 GiB. Keep accepted accuracy
+and OCR closed and defer the full combined campaign.
+
+The actual timer control ended its child after about 3.32 seconds. The journal
+case wrote, flushed and read back five 512-byte records. Eight repeated reads
+left no live data IO requests or unretired handle records. The API confirmed
+guard and handle retirement and deliberately kept its small journal history.
+The duplicate-name case refused the folder created by that same test. It kept
+uncertain API ownership and did not claim cleanup. Parent process exit was
+confirmed separately in all three cases.
+
+These results qualify only the fresh tiny-file API trial. They do not establish
+shared disk accounting, a stable mutation fence, production deadlines, crash
+recovery or actual model offload. Test record bytes grant no production capacity.
+The one reviewed run is consumed; another native run needs a new exact review.
+
+
+## Persistent read-session implementation
+
+No action needed. Agent work now supplies a private, model-free read session for
+the Windows Core. It is not enabled as production offload. Focused tests drive
+the actual child-local Core and check startup races, timer cancellation, strict
+messages and retained unknown results with synthetic Windows responses. Those
+tests do not establish a real Windows run.
+
+An owned controller does blocking startup and pipe work. The ordinary caller has
+one 120-second operation budget and performs no blocking cleanup on timeout.
+Idle has no lifetime timer. A 512 MiB limit applies only to the model-free child;
+it is not a model limit or an upfront RAM requirement. Parent call records have
+fixed separate normal and reserved terminal pools.
+
+Real execution of this new source still needs a committed-source effect review
+and independently reviewed native result. Shared disk accounting, stable file
+protection, actual model-worker shutdown/crash recovery and resource evidence
+remain separate technical work. The default factory still refuses unfinished
+offload. Old temporary data, unknown 12 GiB charges and all model guards remain
+unchanged. Accepted model accuracy and OCR stay closed. Full tests stay deferred
+until the cross-roadmap implementation catch-up is complete.
+
+
+## Owned read-worker failure cleanup
+
+The private read-worker source now has an explicit failed-session cleanup path.
+It starts only after the original operation's effectful caller path has ended
+and startup and handle ownership are known. One owned cleanup thread requests
+stop and checks actual thread/process exit and every pending call and close.
+A stop request or a thread's body-done flag is not completion. Unknown results
+keep the existing ownership and prevent replacement.
+
+Confirmed cleanup keeps the operation failed. It does not invent a Core read
+acknowledgement or release any disk reservation. Pure registry bookkeeping may
+finish from a completely published final proof after interruption; no native
+effect or deadline is repeated. The source tests use simulated Windows replies.
+Actual Windows failure paths, shared disk accounting and stable file protection,
+model-writer recovery and real offload resource/delivery measurements still need
+qualification before production use. Accepted accuracy/OCR remain closed, and
+the final combined campaign remains deferred until feature catch-up.
+
+Request setup failures prevent another normal operation. Query checks use
+values copied from the exact original result buffers; replacement buffers cannot
+supply a successful result. These source controls still need native qualification.
+
+Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.
+
+
+## Fixed journal protection source
+
+The agent has added private source for protecting a new fixed accounting file
+and its directory before journal use. It creates the fixed objects privately,
+keeps the original writer, seals the file before its directory and checks exact
+ownership, security and handle identity on later use. Model-free regressions
+exercise the actual API methods with typed synthetic replies and failure paths.
+
+This source is not actual Windows qualification or a working low-memory loader.
+Fresh NTFS tests must still show that new write, resize, extra-stream, delete,
+child-create, DACL and owner-change attempts are denied while the retained
+original writer can write, flush and read back. Construction is trusted and
+unexposed until sealed admission; existing handles are not revoked by an ACL.
+
+Shared durable 12 GiB accounting, existing-file protection, owned model-worker
+shutdown/crash recovery, safe retained restart and actual offload delivery,
+resource and cleanup measurements remain pending agent work. No action is
+needed from the user for this source component. Unknown usage remains charged
+at the full limit. No old files are inspected or changed, no production lease
+is enabled and accepted accuracy/OCR tests stay closed. Full testing is deferred
+until feature work across the open roadmaps is ready.
+
+## Direct journal permission checks: historical v2 definition
+
+Version 2 of the small Windows journal diagnostic adds direct competing-access
+checks. Version 1's three accepted component observations remain valid within
+their original scope. They do not qualify the new mutation case.
+
+The new case first retires the original journal writer, guards and I/O. A separate
+read-only API owner then opens the same fresh objects with all sharing allowed,
+checks original identities and owner/permission bytes, and reads the exact data.
+It requests each mutation right separately. File and namespace deletion,
+permission/owner changes, child creation, extra-stream creation and the cache
+parent's delete-child right each require exact native access denied. A read-only
+resize attempt separately requires Windows error 5. Sharing violations, missing
+objects, unknown statuses and unexpected grants cannot pass. The parent-right
+check is last, after the other access and resize checks. An unexpected grant
+retains its exact output slot and stops further dispatch; it grants no cleanup
+or accounting credit. Reports distinguish original, probe and controller custody.
+No delete, rename, parent ACL change or old staging access is performed.
+
+This is a source-level test definition. Its actual Windows execution still needs
+separate review and evidence. The 120-second owner, three-second timer control,
+one 512 MiB inert child, 4,096 API records and 16,384 controller records remain
+fixed. It starts no model and reopens no completed accuracy or OCR work. Shared
+12 GiB accounting, retained-tree restart protection, model-worker retirement,
+actual offload resources and final combined qualification remain separate.
+
+## Owned accounting parent: source implementation and next check
+
+The Journal now creates and protects its own immediate parent. It does this only
+after the existing domain charge, binding and mutation-fence checks. The original
+exclusive directory-creation record is required. Matching permissions on an
+existing folder do not prove ownership. The file, namespace and parent must all
+be sealed before the first journal write; check, write and flush recheck the same
+live parent capability. Core's borrowed anchor and two-object lifecycle remain.
+
+The current v3 Windows run passed the actual runtime path, fresh-parent
+collision and all 14 strict competing-access denials, with a separate resize
+control and original/probe/process retirement. See the
+[versioned owned-parent results](windows-offload-owned-parent-qualification.json).
+This independently reviewed run qualifies the fresh journal component only.
+The earlier v2 namespace-delete grant remains failed history.
+
+A private parent alone is not a complete restart solution. Its own and its
+ancestors' rename/delete stability, guardian/crash lifetime, shared durable disk
+accounting, model-worker shutdown/restart and actual offload resources/delivery
+and cleanup remain pending. The default factory stays unavailable. Unknown usage
+still charges 12 GiB. The 3/3.5 GiB admission guards and 4 GiB sampled model RSS
+abort are unchanged. Completed accuracy/OCR and deferred full-system testing stay
+as recorded. No old files or existing parent permissions are changed.
+
+## Stalled response and child-exit qualification
+
+The fixed read-session qualifier adds two agent-executable checks to the existing
+worker-retirement work. Its default and `--plan` modes have no native effects.
+A separately reviewed isolated native run suspends only the newly created inert
+child's original thread after membership, readiness and fixed Job-limit checks.
+It observes the original controller response-read intent, fences the session and
+signals only its original completion event. The actual caller must fail and exit
+before the existing terminal retirement can begin. No effect-exit flag, request
+deadline or production API is replaced.
+
+The cancellation case needs nonzero CancelSynchronousIo and the exact original
+ReadFile failure 995, plus controller/reaper/process exit, Job count zero and all
+closes. The child-exit case instead needs its original Job stop and ReadFile
+failure 109. An acknowledgement without the read completion is insufficient; see
+[Microsoft's cancellation contract](https://learn.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-cancelsynchronousio).
+[SuspendThread](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-suspendthread)
+is confined to diagnostic fault control. Recovery acquires no child-held shared
+lock and never resumes an uncertain child.
+
+The unchanged 512 MiB ceiling applies only to the inert child. The wrapper has a
+fixed 120-second timer, with GIL and host-scheduling limitations. These checks do
+not qualify actual 120-second timeout delivery, indefinitely hung kernel calls,
+model IO, model-worker crash recovery, shared durable accounting, retained staging
+restart or model resources. A new test namespace grants no disk credit. Accepted
+accuracy and OCR checks remain closed.
+
+The committed read-session qualifier passed both actual Windows cases on
+`c58084095`. Its original response read settled with cancellation error 995 in
+the first case and child-exit error 109 in the second. Both cases confirmed the
+failed caller frontier, controller/reaper/child exit, an empty Job, all 15 closes
+and zero Native calls on completed cleanup replay. The single-link new summary
+matched captured output. See the independently reviewed
+[versioned reader results](windows-offload-read-session-qualification.json).
+These are fresh model-free IPC controls only. Model file IO, actual timeout or
+hung-kernel delivery, guardian/model-worker crash lifetime, ancestor protection,
+shared accounting, retained restart and model resources remain pending.
+
+## Remove a redundant supplier directory request
+
+No action needed. The agent is checking the safe-weight loader without repeating
+completed model accuracy tests. The loader keeps its verified index in memory and
+omits the supplier folder argument. It still creates its owned staging marker
+and keeps the same positive reservation, disk checks and cleanup rules. This is
+not a mode with no file writes.
+
+The ordinary lifecycle profile now contains twenty model-free test files. A
+separate tiny CPU supplier fixture needs an explicitly bounded offline run. That
+fixture checks compatibility and cleanup only. Production low-memory admission,
+retained-file protection, shared durable accounting, original-reference and
+ancestor protection, worker crash recovery and real resource measurements remain
+pending. The existing memory limits and the 12 GiB staging limit do not change.
+
+## Reviewed supplier and test-isolation results
+
+The loader fix and ordinary-profile isolation are committed, tested and
+independently reviewed. The corrected tiny CPU compatibility run verified the
+actual interpreter before library import, repeated tensor parity, cleanup and
+confirmed exit; its observed peak was 573,714,432 bytes. Earlier wrapper-only
+memory observation remains unqualified history. See the versioned
+[supplier and isolation evidence](safe-weight-supplier-qualification.json).
+
+These are local component results. Production low-memory mode remains
+unavailable pending native/source/ancestor protection, shared durable accounting,
+model-worker/crash and retained-restart proof, and actual offload resources,
+delivery and cleanup. Unknown usage still consumes 12 GiB. Accepted model
+accuracy and OCR stay closed. Full-system tests follow feature implementation.
+
+## Check the original model input records
+
+No user action is needed. The agent added and tested an in-memory record binding
+before implementing native source-file handling. It rejects malformed, copied,
+substituted and changed input records without opening files or starting a model.
+The ordinary lifecycle profile includes its synthetic tests. Tensor sizes must
+fit each declared model file, including its bounded header.
+
+These checks do not prove that files exist, came from the inspector or remain
+unchanged. They grant no native operation or disk capacity. The original 20 GiB
+model-source limit and separate 12 GiB staging limit stay unchanged. Actual file
+and ancestor protection, finite execution, shared accounting, model-worker and
+restart safeguards, and offload resource checks remain pending agent work.
+Accepted accuracy/OCR stay closed. Full-system tests remain deferred until all
+requested feature implementation is worked through.
+
+## Test a second reader and a private mapped view
+
+No user action is needed. The agent added a fixed test definition for reading a
+held model file and changing a private copy of one byte. The source file must
+stay unchanged. This test uses generated files and does not load a real model.
+
+The test must confirm these results:
+
+- The second reader opens the same file, with the expected size and read access.
+- A request for write access fails with the expected sharing error.
+- The 64 KiB private view changes without changing any source file.
+- The original view is unmapped, then the section and reader handles close.
+- The original source handles close only after that cleanup succeeds.
+- A failed or interrupted operation retains its records and stops later cleanup.
+
+The SOURCE v2 definition uses a new evidence namespace. Its synthetic tests
+check the code and failure paths. Actual Windows execution remains pending
+until source and execution reviews are complete. The accepted v1 results remain
+valid for their original cases; they do not prove this new case. Model loading,
+folder protection, optional-file discovery, shared accounting, restart and real
+offload resource checks still need evidence. Accepted accuracy and OCR stay closed.
+
+## Correct the Windows file check
+
+No user action is needed. The first three Windows source tests passed. The new
+reader test failed its final file check. The generated file kept the same file
+identity and content hash, but two Python APIs reported different values for a
+field labelled `ctime`.
+
+The agent corrected the test to compare explicit file-creation time together
+with file identity, size, modification time and content hashes. Missing creation
+time still stops the test. The file guards and model-memory limits stay unchanged.
+
+Failure reports now preserve steps that finished before the failure. They do
+not mark unchanged bytes or source cleanup complete until those checks finish.
+The failed trial stays failed. The corrected code still needs a separately
+reviewed Windows run. Accepted model accuracy and OCR stay closed.
+
+## Hold and check original model files
+
+No user action is needed. The agent added private source code to hold model-file
+references and check their exact bytes. This code is not connected to model
+loading yet. Production must first provide the existing bounded execution service
+and reserve capacity for the complete operation, including cleanup.
+
+The source tests simulate Windows replies. They check read-only file access,
+file identity, file size, hashes and cleanup. They also check failed reads,
+changed references, duplicate or late callbacks and interrupted cleanup. Original
+read and cleanup records remain held even if another record list is cleared. One
+8 MiB read buffer is reused only after the original read has completed with the
+exact byte count. A signaled event or a request to cancel is not sufficient.
+
+Actual Windows tests and the remaining implementation are agent work. They must
+prove file sharing, memory mapping, original-folder protection, safe file discovery,
+bounded execution, shared disk accounting, worker shutdown, restart and resource
+use. Read notifications do not stop new files from appearing in a folder. The
+agent must prove this boundary before the loader can use the files.
+
+Low-memory mode remains unavailable until those checks pass. Existing limits and
+the full charge for unknown temporary files stay in force. Completed model
+accuracy and OCR checks stay closed. Full-system tests remain deferred until all
+requested feature implementation is worked through.
+
+## Prepare fixed Windows checks for model files
+
+No user action is needed. The agent completed the bounded test harness for the
+original model-file owner. A separately reviewed Windows run passed all three
+fixed cases in 11.6 seconds: deadline exit, exact reads with unused cleanup and
+rejection of changed bytes. See the [versioned results](windows-offload-source-qualification.json).
+The generated weight file crossed an 8 MiB read boundary. This was a file-access
+test. It did not load a model or repeat model accuracy checks.
+
+All work shares one finite reservation table, including cleanup and exit work.
+The test keeps actual DLL replies, errors and original read/guard records. It
+checks original read completion before buffer reuse. Requested cancellation and
+event signals cannot replace completion proof. A different setup or read error
+cannot pass the changed-file test. Source-only tests simulate Windows replies.
+Actual Windows execution needs a separate review of committed source and effects.
+
+This adds no production file service or model-file borrower. Low-memory mode
+stays unavailable while file/ancestor/mapping/discovery protection, shared disk
+accounting, worker shutdown, guarded restart and measured offload resources remain
+pending. Unknown temporary-file usage retains its full 12 GiB charge. Accepted
+accuracy and OCR stay closed. Full-system tests follow all feature implementation.
+
+The successful case explicitly closed 20 source handles through 32 cleanup
+calls. The changed-file case retained its uncertain state until the parent
+confirmed that the child had exited and its Job was empty. The agent then
+removed only the eight verified generated inputs, reclaiming about 16 MiB.
+Reports and hashes remain. This housekeeping supplied no production disk credit.
+
+The tested code is not connected to model loading yet. Folder protection,
+mapping, safe file discovery, shared accounting, model-worker recovery, guarded
+restart, optional-mode UI checks and actual offload resources remain agent work.
+
+## Reviewed Windows reader and private-copy results
+
+No user action is needed. All 70 focused source tests passed. A separately
+reviewed Windows run passed all four source and reader cases in 17.4 seconds.
+See the [versioned reader results](windows-offload-source-reader-qualification.json).
+
+The reader opened the same file with read access. Write access was refused.
+The private mapped copy changed while the original file bytes stayed unchanged.
+The original view, section and reader closed in order. The Source file guards
+and handles then completed their separate cleanup checks.
+
+The earlier Windows trial remains failed. It exposed a timestamp-comparison
+bug, which is fixed in the qualified source. Only the 24 generated inputs from
+these two completed trials were removed, reclaiming about 48 MiB. Reports, logs,
+file hashes and both trial histories remain. No model cache or existing
+temporary model files were changed, and no staging capacity was credited.
+
+The agent still needs to connect safe file access to actual model loading,
+protect model folders and optional-file discovery, finish shared temporary-file
+accounting and restart, and confirm worker shutdown and real offload resources.
+These results do not complete the parent roadmap. Accepted model accuracy and
+OCR stay closed. Full-system testing follows the remaining feature work.
+
+
+### Discovery-free optional loading
+
+The agent is replacing hidden supplier file searches with explicit inspected
+inputs. No user action is needed. The private input adapter verifies metadata
+size and hash, bounds parsed structure to one million nodes and 32 levels per
+file, and retains the existing 32 MiB tokenizer and 8 MiB auxiliary file limits.
+Parsing/backend copies are transient private memory, not copied model weights;
+these finite limits are not a measured process-memory guarantee. Existing RAM,
+VRAM, staging and resource admission limits remain unchanged.
+
+Tokenizer settings preserve omitted/null defaults, AddedToken flags and IDs,
+legacy special/added token precedence and independent template priority. The
+loader uses admitted generation settings, or native model-config defaults when
+the file is absent. Generation expansion is checked before safe-weight loading.
+Explicit checkpoint files and a complete inspected key/shard map replace outer
+model resolvers. Native initialization, precision, attention, aliases, dispatch
+skip keys, weak ownership and cleanup remain part of the path. No redundant
+supplier directory or temporary state dict is requested.
+
+The current source checks are model-free. Real tiny supplier parity for both
+single and sharded layouts is separate pending compatibility work, not a new
+accuracy test. Production remains unavailable pending original-source lifetime,
+native borrowing, folder protection, accounting, worker exit/restart and resource
+qualification. Accepted model quality and OCR stay closed. Full-software testing
+is deferred to the shared campaign requested by the user.
+
+
+## Discovery-free loader compatibility results
+
+The source implementation is committed, tested and independently reviewed. Two
+generated tiny CPU fixtures passed single-file and sharded safe-weight loading,
+repeated tensor forwards and owned lease cleanup in 22.61 seconds. The actual
+engine peaked at 575,303,680 bytes of sampled RSS; this is neither a hard OS
+quota nor a larger-model memory measurement. See the versioned
+[component evidence](discovery-free-supplier-qualification.json).
+
+Tokenizer construction was exercised. Text encoding/decoding, chat templates,
+generation-default parity and actual supplier-discovery denial still need their
+own focused checks. The resumed source review also identified a declared data-type
+metadata validation correction; that separate work is pending.
+
+Production source/borrower lifetime, protected folder/accounting, owned model
+worker exit/crash/restart and real offload resource evidence remain pending.
+No user action is needed. Unknown temporary-model usage remains charged at the
+full 12 GiB limit. Accepted model accuracy and OCR remain closed. The shared
+full-software campaign follows completion of all open feature work.
+
+
+### Follow-up review: declared precision settings
+
+The agent corrected model-file precision validation. Invalid objects and other
+unsupported declarations are rejected before model configuration is constructed.
+Missing/null settings and the supported precision names remain valid. The runtime
+still uses the precision selected for the run. All 80 focused model-free inventory
+and loader tests passed. No accuracy, OCR or Native trial was repeated.
+
+The recorded tiny compatibility run remains evidence for its original source
+version and narrow tensor/cleanup scope. Text/settings parity, native ownership,
+restart and real-model resource checks remain pending. The shared system campaign
+is still deferred until all open feature work is implemented.
+
+### Focused text and generation comparisons
+
+The controlled `NativeTextGenerationParityTests` definitions add three synthetic
+local-fixture comparisons. They cover token IDs and flags, modern and legacy
+precedence, an explicitly empty decoder, Unicode normalization and whitespace,
+explicit nulls and the existing approved public chat format. Generation checks
+compare file defaults with config fallback and run two cached token steps twice.
+Candidate loading and use have explicit discovery-denial sentinels; the normal
+supplier reference resolves only the fresh local test input. No acquired model
+weights, external provider or accuracy corpus is used.
+
+These are definitions until a separate exact-source, bounded native run is
+reviewed. Ordinary lifecycle checks remain model-free. Keep accepted accuracy
+and OCR results closed. Native source custody, lazy-reader lifetime, folder
+protection, disk accounting, owned-worker recovery and actual-model resources
+still need their own evidence. Keep full-software testing for the shared campaign
+after all open feature work is implemented.
+
+## Native text and generation: partial observed result
+
+The three new synthetic CPU cases ran once. Legacy token files and an explicitly
+empty modern decoder passed text/settings comparisons, actual prefill3 and cached
+decode1, repeated exact generation, named discovery denials and owned cleanup.
+The modern chat-format case stopped at the template hash check before a lease
+was acquired. A separate pure Windows probe reproduced default text-write
+LF-to-CRLF translation; exact byte writing preserved the admitted template hash.
+The failed fixture bytes were not retained. The agent must correct the fixture
+and qualify only this remaining case. The two passed cases stay recorded.
+
+The engine exited with code1 after 22.015 seconds, with no controller abort or
+truncated output. The [versioned component report](discovery-free-supplier-qualification.json)
+preserves the full partial outcome, earlier report fields and original pending
+descriptions. This result does not qualify production offload, native source or
+reader lifetime, folder/accounting, worker/crash/restart or larger-model resources.
+The production template guard and all resource limits stay unchanged. No user
+action is needed. Accepted model accuracy and OCR stay closed; the shared full
+software campaign remains deferred until all open feature work is implemented.
+
+### Windows chat fixture source correction
+
+The agent replaced a default text write in the generated chat fixture with exact
+UTF8 byte output and a check of the persisted file hash. Windows newline
+translation caused the earlier pre-lease denial; the strict production template
+guard is unchanged. The source correction alone does not pass the modern native
+case. Only that remaining case needs a fresh exact-source reviewed trial. Keep
+the two earlier passed cases and the complete failed run as history. Accepted
+accuracy and OCR stay closed, and full-software testing remains deferred.
+
+## Corrected modern chat case: observed pass
+
+The remaining modern-token/chat-format case passed on the committed byte-exact
+fixture correction. It checked persisted template bytes, text and chat-format
+parity, generation defaults, actual prefill3 then cached decode1, two repeated
+exact outputs, named discovery denials and owned lease cleanup. The direct
+engine exited successfully after 10.859 seconds and peaked at 575,397,888 bytes
+of sampled RSS. This is not a hard OS quota or a larger-model memory result.
+
+Only this one case ran. The earlier legacy and explicit-empty passes were not
+repeated and retain their own recorded source version. The complete failed
+three-case run and pre-trial source-followup status remain historical in the
+[versioned evidence](discovery-free-supplier-qualification.json); the new
+`text_generation_trial_02` records the successful modern case. The current
+pending list no longer includes this chat-fixture check.
+
+Original-source and lazy-reader protection, protected folders, shared durable
+accounting, owned model-worker exit/crash/restart and real-model offload resource
+evidence remain pending. Production offload stays unavailable and unknown
+temporary usage remains charged at the full 12 GiB limit. No user action is
+needed. Accepted accuracy and OCR stay closed; full-software testing remains
+deferred until all open feature work is implemented.
+
+## Runtime-owned source-call ledger
+
+The agent moved reusable physical Source row bookkeeping behind the runtime
+adapter boundary. The existing diagnostic is an actual consumer, while its
+concrete actor and native provenance checks remain unchanged. The shared base
+cannot authorize a native call or invoke a stored function. It retains the
+original 16,384-row total, shared 64-row terminal tail, nonrefund reservations
+and independent original intent/completion custody. Source-owned regression
+checks keep ordinary collection model-free and preserve generic fallback.
+
+The next work chunk is a closed source-only runtime session using the established
+model-free worker envelope. It must preserve v1 protocol and budgets and expose
+only the original parent session live state. This extraction alone implements no
+model borrower, production source authority, shared journal-domain/fence producer
+or owned model worker. The concrete protected journal is retained. Earlier Native
+results keep their recorded source versions; new physical qualification requires
+a separate committed-source effect review. Unknown staging remains fully charged
+at 12 GiB. Accepted accuracy/OCR stay closed; shared full testing stays deferred.
+
+## Source-session implementation and remaining checks
+
+The agent added a private runtime session for a small synthetic source fixture.
+It reuses the existing process and channel machinery. The child checks the files
+itself, checks them once more, releases unused sources, and exits. The parent must
+observe that exit and complete its shutdown checks. A response message alone is
+not proof that files, processes or timers are safe to release.
+
+The test launcher retains partial setup results and records failures. It starts
+an independent watchdog before it allows native work. Its deadline cannot be
+extended. The ready file becomes visible only after the complete message is
+written. Output capture is bounded. Cleanup checks all four new input files before
+deleting any of them and records each actual deletion separately from test status.
+Unknown or changed files are retained. No old staging directory is accessed.
+
+The new source definitions and focused tests do not complete native qualification.
+The agent must review the committed source and run the separately authorized
+Windows check. Model borrowers, protected shared accounting, model-worker
+exit/crash/restart and real-model offload measurements remain pending. Production
+offload stays unavailable. Unknown staging usage remains charged at 12 GiB.
+No user action is needed. Accepted accuracy and OCR checks stay closed. The shared
+whole-software campaign remains deferred until open feature work is implemented.
+
+## Guard the complete file-checking test tree
+
+The agent added a fixed command to the existing process-tree test runner. The
+runner must own the file-checking test from process creation. This closes the gap
+where the launcher could exit before its child had finished setting up its guards.
+The command and environment are fixed. Source and runtime files must match their
+reviewed hashes. The existing memory ceilings stay at 1 GiB per process and 2 GiB
+for the outer test tree. These limits do not reserve memory up front.
+
+The command has a fixed 180-second outer timeout. The file-checking session keeps
+its own 120-second lifetime and 512 MiB child limit. Closing the runner stops its
+owned tree. The outer timeout needs a running driver; it does not prove protection
+against a driver that remains alive but stops running. Forced termination is a
+failed test, even if later cleanup succeeds.
+
+Focused tests use simulated operating-system calls. The actual Windows run still
+needs a separate review and one-use attempt record. No user action is needed.
+Low-memory mode remains unavailable while file protection, shared temporary-file
+accounting, model-worker recovery and real-model resource checks are pending.
+Accepted accuracy and OCR remain closed. Full-software testing remains deferred.
+
+## First Windows Source run: partial result
+
+The first run finished its file-checking sequence and removed all four synthetic
+input files. It confirmed child exit, file and timer retirement, and closure of
+the whole outer test tree. The outer tree counted four processes where the plan
+required three. The complete trial therefore failed. The extra process was not
+identified. See the [recorded component evidence](windows-offload-source-runtime-session-qualification.json).
+
+The agent changed only the Source parent's launch setting to the established
+detached form. A hidden console companion is a possible cause of the extra count;
+it is not an observed identity. The change keeps the expected count at three and
+retains every Job, handle, wire, lifetime and resource check. The legacy IO and
+inner-child launch forms are unchanged. A focused fake-process test checks the
+actual launch arguments without starting a process.
+
+The earlier run remains failed. The original attempt is consumed. A fresh test
+needs a new exact-source effect review; the source correction alone is not Native
+qualification. No user action is needed. Low-memory mode and the remaining model,
+shared accounting, recovery and resource checks stay pending. Accepted accuracy
+and OCR remain closed, and the shared system campaign remains deferred.
+
+## Corrected Windows file handoff test
+
+The corrected test passed with exactly three processes. The child exited, the
+whole test tree retired, all owned handles closed and all four tiny synthetic
+input files were removed. No forced termination was needed. The outer tree used
+about 116 MiB peak committed memory. These observed values are separate from the
+unchanged 1 GiB per-process and 2 GiB tree ceilings.
+
+This closes the extra-process finding for this unused-file handoff case. The
+earlier four-process failure remains in the versioned component evidence. Its
+fourth process was not identified. A separate review checked the new run and the
+unchanged earlier evidence. This one passing case does not qualify every native
+failure or race path.
+
+The agent must still finish model borrowers and cache lifetime, protected shared
+file accounting, model-worker shutdown and restart, and actual offload resource
+measurements. Low-memory mode and parent-roadmap qualification remain pending.
+No user action is needed. Accepted accuracy and OCR stay closed. The shared full
+system campaign remains deferred.
+
+## Test for a file already mapped for writing
+
+The agent is adding a focused Windows check. No user action is needed. The test
+uses one new, tiny synthetic weight file. It keeps a writable memory view open
+after it closes the file handle. It then checks that source admission refuses
+the file for the expected reason. A crash or another access error does not pass.
+
+The parent must match the child's file identity, observe that exact child exit
+and confirm zero active Job members. It must then unmap the view, close the
+section and ancestor handles, and retire the timer. The collected file hash and
+size must match the exact synthetic input manifest before input removal.
+
+The fixed entry is `--native-shared-write-denial`. Ordinary checks only test its
+code with fake Windows replies. Physical execution needs a separate review of
+the committed source and a new one-use attempt. It remains pending. The earlier
+unused-file pass and failed history remain unchanged. No old staging, model
+weights or accepted accuracy/OCR tests are used. All existing resource ceilings,
+security controls and production defaults remain in force. This check does not
+complete the shared-accounting, borrower, worker-recovery or resource work.
+
+## Windows refusal check and failure details
+
+The new refusal check failed on the saved source version. A separate normal file
+access check passed on that version. The versioned mapping qualification JSON
+records both results and their independent reviews. The failed check kept its
+four tiny synthetic inputs. Their 313 bytes remain preserved for diagnosis.
+The successful control removed its own four inputs. Neither result qualifies
+model offloading or completes the parent roadmap.
+
+The old failure output did not identify the failed step. The negative-only
+diagnostic path now uses fixed phase, error-kind and API labels, plus a return
+class and the original immediate Windows error. It excludes exception text,
+paths, file content, handles and addresses. These details explain observations;
+they are not denial or retirement evidence. A child can send an alternative
+unqualified error only through its existing healthy response path. A started
+denial reply is never retried as a diagnostic. An uncertain actor may provide
+no detail. The collector retains only validated details after original exit
+and completed capture, while keeping the failed status and no cleanup credit.
+
+The agent must use a fresh reviewed check to identify and fix the failed step.
+The exact earlier cause is still unknown. Normal/default failure bytes and the
+strict original error801 denial oracle stay unchanged. No user action is needed.
+Accepted accuracy and text-recognition results stay closed. Whole-system tests
+remain deferred until the open feature work is implemented.
+
+## Reviewed diagnostic Windows observations
+
+The refusal check failed again on the committed diagnostic source. The separate
+normal file-access control passed. The mapping qualification JSON preserves both
+new observations, their exact source and independent reviews, and all earlier
+checks. The failed check retained its own four synthetic files, totaling313B.
+The normal control removed only its own four files. Neither result enables
+optional offload or completes the parent roadmap.
+
+The failed-child detail identifies the denial-attribution phase and an original
+file-open nonzero return. It does not contain the actual NTSTATUS or target, so
+it cannot prove the expected error801. Source opens omit FILE_SHARE_WRITE.
+Microsoft documents that an existing writable mapping can therefore reject the
+open before the later oplock request. This is a likely cause, not a qualified
+Native result. The agent must independently review and fix that earlier-refusal
+witness without changing the safe open policy. No user action is needed. All
+resource limits, retained data and genuine qualification gaps remain. Accepted
+model accuracy and OCR stay closed; the combined system campaign stays deferred.
+
+## Separate native file-open status
+
+The negative-only diagnostic now emits source-failure-diagnostic-v2. Its nine
+closed fields add nullable ntstatus to the earlier eight observations. Only the
+known original NtCreateFile signed32-bit return can populate that field, after
+the existing original completion custody. The value is normalized to uint32.
+Other APIs, in-flight calls, unknown binding, bool, overflow and opaque returns
+leave it null. Win32 last-error remains separate; zero is not NTSTATUS success.
+No new Native query, raw path, exception text, handle or address is recorded.
+
+The strict eight-field v1 reader and normal/default failure bytes stay intact.
+The shared IO decoder still rejects nine-field objects. Only the Source reader
+can admit the exact closed child-v2 diagnostic envelope. It rechecks the legacy
+projection through the unchanged shared decoder. Other extra fields, versions,
+duplicate keys, depth, nonfinite values and frame-size violations still fail.
+The original frozen header and negative-only actor checks remain mandatory.
+
+The actual fake Source producer and collector regressions pass. This source
+change has no fresh physical Windows qualification. The saved refusal trials
+remain failed, and the separately passed unused-file controls remain historical.
+A status cannot establish the failed call's target-file identity. Parent and
+collector still fail an alternative diagnostic without cleanup or admission
+credit. No new physical attempt is part of this change. The agent next needs
+concrete shared accounting, original Core execution and owned cached-model
+lifetime integration. Accepted accuracy/OCR stay closed; whole-system tests
+remain deferred. No user action is needed.
+
+## Keep partial default-Core startup owned
+
+The default Core could previously lose its partially initialized Windows API
+when a later DLL load failed before the factory returned. It now retains one
+original API/loader/library record on the already retained Core before loading.
+Each actual returned library enters a preallocated slot before mutable
+observation checks or assignment. A failed or interrupted constructor becomes
+terminal. The same original completed constructor alone can publish the API.
+
+Focused fake-DLL tests cover first/second/third load and signature failures,
+observer/factory/loader drift, direct/reinit/copy/wrong-owner/thread denial,
+retained references and existing custom constructor compatibility. These tests
+use actual Core control flow with synthetic execution and library facts. They
+are not physical Windows qualification or a model run.
+
+The scope is the exact default Core factory. Other factories keep their own
+__new__ and constructor paths. The three fixed loaders/kwargs remain unchanged.
+No new registry, lifetime-ever counter, Native cleanup, capacity credit or
+readiness is added. A record follows its Core lifetime and surviving Journal
+references; ordinary reference behavior does not prove DLL unload or process
+retirement. Low-memory mode remains unavailable until its real finite
+Core/Journal/domain and owned cached-model lifetime compose and qualify.
+Unknown historical staging stays untouched and charged full12GiB. Accepted
+accuracy/OCR stay closed and whole-system tests remain deferred.
+
+## Preserve a call result when later runtime work fails
+
+The Core and Journal now keep the latest Windows callable result before reading
+its error value or checking it. A known None return differs from an interrupted
+call with no known return. Failed validation, error capture, reentry or later
+operation failure keeps the original references. Failed records cannot be
+replaced by resetting visible status fields. Successful calls can replace one
+settled record, so this adds no unbounded success history.
+
+Focused synthetic tests cover the real dispatch and manual anchor paths, failure
+bookkeeping, reader identity, aliases and repeated calls. They load no DLL or
+model. Existing output handles and asynchronous IO records retain their own
+responsibilities. This change does not prove every Native result, finite runtime,
+resource retirement, a safe restart or low-memory model delivery. Shared disk
+accounting, stable protection and owned cached-worker/borrower lifetime remain
+pending. Unknown historical staging remains untouched and charged full12GiB.
+Accepted accuracy/OCR stay closed; whole-software testing remains deferred.
+
+## Keep process-call results when later checks fail
+
+The existing Windows IO dispatcher could lose a call result if reading its
+error failed. A validator could also replace the observed result before it
+reached the caller. Both parent and child now retain the original value before
+error capture and check the same original completion before acknowledgement.
+Mutable row indices, result fields or ledger observations cannot redirect that
+retention or return a foreign handle. The original graph stays owned even when
+several observations change. These internal records are not public diagnostics.
+
+Focused fake-call tests cover reader failure/interruption, malformed/opaque
+values, both IO roles, row/table/owner drift, original-reader identity, output
+buffers, copying/reinit/replay and original after-deadline/terminal regressions.
+Known physical completion is distinct from a healthy task or confirmed exit.
+The existing physical-row counts and strict settled tuple remain unchanged.
+
+Complete Core constructor/output graph and finite engine escape handling, shared
+disk accounting/protection, owned cached-worker/model/storage lifetime and actual
+resource/restart qualification remain pending. Unknown old staging stays
+untouched and charged full12GiB. Accepted accuracy/OCR stay closed; whole-software
+testing remains deferred. This source work enables no new offload lease.
+
+## Reserve model-folder tracking before Windows calls
+
+The private read-only test worker now checks that it can track the whole folder
+chain before it loads the Windows libraries. It reserves space for each call
+and each handle close. Paths that need more tracking space fail before opening
+folders. This does not change the existing global path or resource limits.
+
+The worker retains the original call result and output buffers when a later
+check fails. It uses the existing preparation and reverse-order close paths.
+Focused simulated-call tests cover deep paths, exact capacity, changed tracking
+tables, partial library loading, output errors and attempts to repeat a call.
+These are feature-level source tests. They do not qualify a real model run.
+
+The wider worker lifetime, file protection, shared disk accounting and real
+low-memory resource checks remain pending. No user action is needed for this
+coding work. Accepted model accuracy and OCR results stay closed. Unknown old
+temporary files stay untouched and count against the full 12 GiB limit.
+
+## Keep startup results and retire a known failed startup
+
+The private Windows worker now keeps the original library and process-call
+results before later checks run. It rejects changed output buffers before using
+them. It also prevents repeated library construction. These checks use the
+existing tracking space and resource limits.
+
+The parent can now retire a known child that fails before it reports ready.
+It first checks the original process, Job and handle records. It must confirm
+that the original wait, controller, child and cleanup thread have finished.
+It then closes the original handles. Unknown or incomplete startup records
+remain owned. A timeout or a changed status flag does not prove cleanup.
+
+Focused simulated Windows tests exercise the real constructor, controller,
+launch and retirement methods. They cover successful resource handling and
+failure cases. The qualification collector uses this cleanup path after a
+failed startup, while preserving the failed test result. No real model or
+Native qualification pass follows from these source tests.
+
+No user action is needed for this coding work. Shared disk accounting, file
+protection, the full worker lifetime and actual low-memory resource/restart
+checks remain pending. Accepted accuracy and OCR checks stay closed. Old
+temporary model files remain untouched and count against the full 12 GiB limit.
+
+## Keep cleanup space available before the worker starts
+
+The private Windows worker now reserves its cleanup tracking space before it
+loads Windows libraries. Ordinary work cannot use this reserved space. The
+existing total tracking limit stays the same. The child worker keeps its
+existing capacity.
+
+Focused tests fill all ordinary tracking space, then run the real parent cleanup
+methods with simulated Windows calls. Cleanup uses only its reserved space.
+Tests also interrupt cleanup and change tracking records. These cases must keep
+the original records and reject repeated calls. Cleanup still needs confirmed
+worker exit and confirmed handle closes.
+
+No user action is needed for this coding work. These source tests do not qualify
+a real low-memory model run. Shared disk accounting, file protection, the full
+worker lifetime and real resource/restart checks remain pending. Accepted model
+accuracy and OCR checks stay closed. Old temporary files remain untouched and
+count against the full 12 GiB limit.
+
+## Observed Windows file-open status
+
+The new diagnostic captured a Windows sharing conflict during a file-open call.
+The test stopped before the later protection check. The logging now records
+the original status. It does not identify the exact file or prove that a
+writable file view caused this particular failure. The protection test remains
+failed. The earlier normal control remains a result for its saved source.
+
+An independent review confirmed that the owned test process group exited and
+its outer handles and output streams were closed. Four small input files remain
+recorded as unremoved, totaling 313 bytes. The reviewers did not open those
+input files or old retained inputs. No cleanup authority follows from the test.
+
+No user action is needed. The agent will keep the existing access rules and
+will not repeat this unchanged test. File protection, shared disk accounting,
+cached model and worker ownership, and restart/resource checks remain pending.
+Accepted accuracy and OCR checks stay closed. Whole-software testing stays
+deferred until the open feature work is implemented.
+
+## Keep parent folders usable during source admission
+
+No user action is needed. The private source reader now allows unrelated writes
+on parent folders. The selected model folder and its exact input files keep the
+existing write and delete restrictions. All parent folders keep the delete
+restriction. The reader requests no write access. This uses the same split as
+the existing native file-identity helper.
+
+Focused source tests simulate an existing parent-folder writer, confirm successful
+read and retirement, and keep selected-folder and file writers denied. They also
+cover a drive used as the selected folder and invalid sharing requests. These are
+source tests, not real Windows observations. The earlier sharing failure remains
+failed because its exact target was not recorded. No unchanged native test is
+repeated. Source protection, file discovery, shared disk accounting, worker and
+restart checks, and actual offload resources remain pending. Old files stay
+untouched and count against the full 12 GiB limit. Accepted accuracy and OCR
+checks stay closed. Whole-software tests remain deferred.
+
+## Original mapper output custody
+
+The closed Source mapper retains the actual scalar and output handle before
+reading the last-error code. It also snapshots only its fixed IO, file metadata
+and mapped-region layouts before that getter or later validation can change
+them. Unknown or interrupted publication keeps the original partial graph and
+denies retry or cleanup credit. Consumers use typed copies of captured bytes;
+changed original buffers or output slots cannot supply favorable evidence.
+
+Focused fake-ABI tests cover getter failure, rewritten file identity, IO status
+and mapped-region facts, later buffer mutation and invalid output layouts. This
+adds no Native call, new case, wire field, quota or production capability. The
+strict801 witness and all old failed observations stay unchanged. A separate
+sharing-denial same-file proof and actual Windows qualification remain pending.
+Accepted accuracy/OCR stay closed; unknown staging remains fully charged12GiB.
+
+## Original Source call returns
+
+The private Source owner retains original scalar and acquisition-slot returns
+before the last-error getter. It copies only synchronously successful file-open
+IO status and fixed file-ID outputs. Original pointer types,base addresses and
+spans bind those copies. Existing open and identity consumers use captured typed
+bytes; changed slots,buffers,binding or validator observations deny ACK.
+
+Getter or copy failure keeps physical return custody separate from uncompleted
+public fields. Passive access to retained facts does not require healthy current
+owner aliases and grants no Native action or cleanup credit. Pending async IRPs
+and other metadata are not newly qualified. This adds no Native call or quota.
+Actual Windows same-file,source/cache,worker/accounting/restart/resource proof
+remains pending. Accepted accuracy/OCR stay closed. The strict801 case and prior failures stay unchanged.
+Bookkeeping now reserves 12 KiB per existing call inside the unchanged512MiB
+qualification admission. Model RAM guards and all row/time ceilings are unchanged.
+
+## Separate file-sharing refusal evidence
+
+The new `sharing-open-denial` check addresses a different Windows refusal from
+the existing oplock test. It keeps the production guard unchanged. Four fixed,
+read-only child calls establish the exact mapped file before the original share1
+open. A new strict witness requires the original sharing-violation status and no
+returned handle. A generic error, an old error801 witness or an unknown target
+cannot satisfy this case.
+
+The parent compares the child's original file ID with its own saved ID only after
+the original child has exited and its Job is empty. It then retires the held
+mapping, original handles and timer. The collector keeps its exact fresh-input
+and process cleanup checks. The child's probe is released by process exit, not
+by an invented close acknowledgement. Unknown historical inputs remain untouched.
+
+The source tests use simulated Windows replies. They are not a native pass or a
+safe-restart pass. Actual source protection, supplier/cache lifetimes, protected
+shared accounting, model-worker shutdown, restart and resource checks stay
+pending. Accepted model-quality and OCR results stay closed. Full-system testing
+remains deferred until the approved open implementation work is ready.
+
+## Qualified same-file sharing refusal
+
+The separate `sharing-open-denial` test passed on Windows at source `93cd06c22`.
+Its four read-only probe calls identified the same 81-byte synthetic weight file
+as the parent's writable mapping. The original Source share1 open then returned
+the expected sharing refusal. The owned child exited, its Job became empty, and
+the parent retired its mapping and timer. The outer three-process Job was empty;
+all owned handles and captures completed. The original collector removed its
+four fresh files, which totaled 313 bytes. Independent review accepted this
+narrow result. See [the versioned evidence](windows-offload-source-mapping-qualification.json).
+
+The complete controlled run took 28.406 seconds, including evidence checks.
+Observed peak commit was 88,641,536 bytes for a process and 126,627,840 bytes for
+the Job. Commit is not a process RSS measurement or an upfront RAM requirement.
+The existing process, Job, time and call limits were unchanged. No model or
+accuracy/OCR check ran, and no old input or staging file was accessed.
+
+Windows documents that an open can fail when its sharing rules conflict with an
+existing writable mapping. See [the file-sharing contract](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfile2).
+This result qualifies only the new exact-file case. All earlier strict801 and
+target-unknown failures keep their original outcomes. The full Source failure
+matrix, cached-model lifetime, protected shared accounting, model-worker restart,
+actual offload resources and production composition remain pending. No user
+action is needed for that remaining agent work.
+
+## Interrupted cached generation
+
+No user action is needed. If an interrupt stops an entered low-memory generation
+call, all views of that cached model now reject further requests. The original
+interrupt is preserved. The model and its temporary-file owner remain retained;
+the failure handler does not attempt cleanup or report a successful unload.
+Pre-generation memory denials and completed decoder-output repair keep their
+existing behavior. These model-free regression checks do not qualify actual
+file protection, cache borrowers, shared disk accounting, worker restart or
+offload resources. Accepted accuracy and OCR results stay closed.
+
+## Unloading during a cached request
+
+A model-free test starts generation through a cached view and pauses the fake
+supplier inside the operation lock. The test observes lock contention before
+it checks that unload keeps the original owner and model. After the request
+returns, unload calls the mocked release once with the original lease. It
+refuses the old view. Events order the threads and the fixture bounds its event
+and lock waits.
+
+This confirms the in-process order. Windows staging protection, actual worker
+exit, shared disk accounting, restart and real offload measurements remain open.
+
+The guarded staging owner accepts seal, reuse, release and retirement checks
+only from the private lease it recorded. The model-free test rejects copies and
+substitutes for that private lease and verifies that the original still works.
+This check does not establish the identity of wrapper objects or add native
+permission, staging capacity, or restart proof.

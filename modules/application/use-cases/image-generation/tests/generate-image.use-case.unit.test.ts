@@ -23,6 +23,7 @@ function createRuntimeTaskRegistryFake(): RuntimeTaskRegistryPort {
     })),
     getTaskStatus: testDouble.fn(async () => ({
       requestId: "img-req-1",
+      workspaceId: "workspace-a" as never,
       taskType: TaskType.IMAGE_GENERATION,
       status: "running",
       concurrencyClass: "unknown",
@@ -37,6 +38,18 @@ function createRuntimeTaskRegistryFake(): RuntimeTaskRegistryPort {
 }
 
 describe("GenerateImageUseCase", () => {
+  it('detaches admitted request data before authority and model awaits',async()=>{
+    const runtimeTaskRegistry=createRuntimeTaskRegistryFake();
+    const request:ImageGenerationRequest={prompt:'Original',latentSource:{kind:'artifact',artifactId:'before.latent'},faceId:{enabled:true,references:[{artifactId:'before.face'}]},engineHints:{quality:'balanced'}};
+    const useCase=new GenerateImageUseCase({runtimeTaskRegistry,createRequestId:()=> 'img-req-1',taskAuthority:{reserve:async()=>{
+      request.prompt='x'.repeat(10_001);request.latentSource={kind:'artifact',artifactId:'after.latent'};
+      request.faceId!.references[0].artifactId='after.face';request.engineHints!.quality='changed';
+      return{accept(){},release(){}};
+    },assertOwned:async()=>{}} as never});
+    await useCase.startImageGeneration(request,{workspaceId:'workspace-a'});
+    const payload=(runtimeTaskRegistry.startTask as ReturnType<typeof testDouble.fn>).mock.calls[0][0].payload;
+    expect(payload).toMatchObject({prompt:'Original',latentSource:{artifactId:'before.latent'},faceId:{references:[{artifactId:'before.face'}]},engineHints:{quality:'balanced'}});
+  });
   const validRequest: ImageGenerationRequest = {
     prompt: "cinematic portrait",
     width: 1024,
@@ -45,7 +58,7 @@ describe("GenerateImageUseCase", () => {
   };
 
   it("rejects empty prompt", async () => {
-    const useCase = new GenerateImageUseCase({
+    const useCase = createUseCase({
       runtimeTaskRegistry: createRuntimeTaskRegistryFake(),
     });
     await expect(
@@ -58,7 +71,7 @@ describe("GenerateImageUseCase", () => {
 
   it("rejects generation work that exceeds prompt, dimension, step, and batch budgets", async () => {
     const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
-    const useCase = new GenerateImageUseCase({ runtimeTaskRegistry });
+    const useCase = createUseCase({ runtimeTaskRegistry });
 
     await expect(
       useCase.startImageGeneration(
@@ -105,7 +118,7 @@ describe("GenerateImageUseCase", () => {
         return {};
       }),
     };
-    const useCase = new GenerateImageUseCase({
+    const useCase = createUseCase({
       runtimeTaskRegistry,
       runtimeCapabilityGuard,
       modelCheckpointResolver,
@@ -135,7 +148,7 @@ describe("GenerateImageUseCase", () => {
       status: "starting",
       recommendedActions: ["wait"],
     };
-    const useCase = new GenerateImageUseCase({
+    const useCase = createUseCase({
       runtimeTaskRegistry,
       modelCheckpointResolver: {
         resolveCheckpoint: testDouble.fn(async () => {
@@ -160,7 +173,7 @@ describe("GenerateImageUseCase", () => {
 
   it("resolves selected model into checkpoint before runtime submission", async () => {
     const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
-    const useCase = new GenerateImageUseCase({
+    const useCase = createUseCase({
       runtimeTaskRegistry,
       modelCheckpointResolver: {
         resolveCheckpoint: testDouble.fn(async () => ({
@@ -184,7 +197,7 @@ describe("GenerateImageUseCase", () => {
     const resolveCheckpoint = testDouble.fn(async () => ({
       checkpoint: "sdxl.safetensors",
     }));
-    const useCase = new GenerateImageUseCase({
+    const useCase = createUseCase({
       runtimeTaskRegistry,
       modelCheckpointResolver: { resolveCheckpoint },
       runtimeCapabilityGuard: {
@@ -219,7 +232,7 @@ describe("GenerateImageUseCase", () => {
 
   it("passes through already-valid checkpoint filenames", async () => {
     const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
-    const useCase = new GenerateImageUseCase({
+    const useCase = createUseCase({
       runtimeTaskRegistry,
       modelCheckpointResolver: {
         resolveCheckpoint: testDouble.fn(async () => ({
@@ -238,10 +251,11 @@ describe("GenerateImageUseCase", () => {
   });
   it("read returns runtime task unchanged", async () => {
     const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
-    const useCase = new GenerateImageUseCase({ runtimeTaskRegistry });
-    const result = await useCase.readImageGeneration("img-req-1");
+    const useCase = createUseCase({ runtimeTaskRegistry });
+    const result = await useCase.readImageGeneration("img-req-1", { workspaceId: "workspace-a" });
     expect(result).toEqual({
       requestId: "img-req-1",
+      workspaceId: "workspace-a" as never,
       taskType: TaskType.IMAGE_GENERATION,
       status: "running",
       concurrencyClass: "unknown",
@@ -264,3 +278,7 @@ describe("GenerateImageUseCase", () => {
     }
   });
 });
+
+function createUseCase(dependencies: Omit<ConstructorParameters<typeof GenerateImageUseCase>[0], "taskAuthority" | "createRequestId">) {
+  return new GenerateImageUseCase({ ...dependencies, createRequestId: () => "img-req-1", taskAuthority: { reserve: async () => ({ accept() {}, release() {} }), assertOwned: async () => {} } as never });
+}

@@ -1,3 +1,4 @@
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
 import { normalizeAssetCompositionPlan, normalizeValidateAssetCompositionPlanCommand, type ValidateAssetCompositionPlanCommand, type ValidateAssetCompositionPlanResult } from "../../../contracts/asset-composition";
 import type { AssetCompositionPlanRepositoryPort } from "../../ports/asset-composition";
 import type { EffectiveAssetProjectionRepositoryPort } from "../../ports/effective-asset-projections";
@@ -11,9 +12,10 @@ import { computeValidatedPlanStatus } from "./asset-composition-validation-resul
 import type { EffectiveAssetProjectionId, EffectiveAssetProjectionRecord } from "../../../contracts/effective-asset-projections";
 
 export class ValidateAssetCompositionPlanUseCase {
-  constructor(private readonly d: { repository: AssetCompositionPlanRepositoryPort; projectionRepository: EffectiveAssetProjectionRepositoryPort; now?: () => string }) {}
+  constructor(private readonly d: { repository: AssetCompositionPlanRepositoryPort; workspaceAccess: WorkspaceAssetAccessPort; projectionRepository: EffectiveAssetProjectionRepositoryPort; now?: () => string }) {}
   async execute(command: ValidateAssetCompositionPlanCommand): Promise<ValidateAssetCompositionPlanResult> {
     let c; try { c = normalizeValidateAssetCompositionPlanCommand(command); } catch { return assetCompositionPlanFailure("validation", "asset-composition-command-invalid"); }
+    try { await this.d.workspaceAccess.authorize(c.targetWorkspaceId, "asset-composition:validate-asset-composition-plan", "asset:write"); } catch { return assetCompositionPlanFailure("blocked", "asset-composition-workspace-invalid"); }
     const now = (this.d.now ?? (() => new Date().toISOString()))();
     try {
       const plan = await this.d.repository.readAssetCompositionPlanRecord(c.targetWorkspaceId, c.planId);

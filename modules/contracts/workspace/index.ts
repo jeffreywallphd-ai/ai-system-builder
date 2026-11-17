@@ -1,4 +1,5 @@
 export * from "./workspace-id";
+export { isWorkspaceId } from "./workspace-id";
 export * from "./workspace-status";
 export * from "./workspace-role";
 export * from "./workspace-actor-reference";
@@ -9,3 +10,5 @@ export * from "./workspace-record";
 export * from "./workspace-create-command";
 export * from "./workspace-selection";
 export * from "./workspace-request-context";
+
+export * from "./workspace-summary";

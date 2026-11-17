@@ -1,9 +1,10 @@
 import {
   ApplicationIcon,
+  PageDashboardHeader,
   WorkspaceContextHint,
 } from "../../../../../modules/ui/shared";
-import workspaceOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/workspace-orbit.png";
 import { useActiveWorkspace, WorkspaceSwitcher } from "../features/workspace";
+import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
 import type { DesktopPageKey } from "../routes/desktopPages";
 
 export interface HomePageProps {
@@ -13,7 +14,12 @@ export interface HomePageProps {
 type HomeAreaCard = {
   readonly key: Extract<
     DesktopPageKey,
-    "systems" | "artifacts" | "assets" | "models" | "image-generation"
+    | "systems"
+    | "artifacts"
+    | "context"
+    | "assets"
+    | "models"
+    | "image-generation"
   >;
   readonly title: string;
   readonly eyebrow: string;
@@ -23,7 +29,7 @@ type HomeAreaCard = {
 };
 
 type HomeCardIllustrationKind =
-  "system" | "data" | "assets" | "models" | "image-generation";
+  "system" | "data" | "context" | "assets" | "models" | "image-generation";
 
 const homeAreaCards: readonly HomeAreaCard[] = [
   {
@@ -32,7 +38,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Compose and build",
     description:
       "Construct workspace systems from reusable assets, workflows, pages, tools, models, data, and subsystems.",
-    buttonLabel: "Open Systems",
+    buttonLabel: "Build & Run Systems",
     illustration: "system",
   },
   {
@@ -41,7 +47,16 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Inputs and artifacts",
     description:
       "Upload files, inspect stored artifacts, and keep workspace source material organized.",
-    buttonLabel: "Open Data",
+    buttonLabel: "Manage Data & Build Datasets",
+    illustration: "context",
+  },
+  {
+    key: "context",
+    title: "Context",
+    eyebrow: "Retrieval and knowledge",
+    description:
+      "Build portable RAG databases and Markdown context packs from workspace data.",
+    buttonLabel: "Manage Context",
     illustration: "data",
   },
   {
@@ -50,7 +65,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Workspace library",
     description:
       "Browse system defaults, resource-backed views, and workspace-visible asset definitions.",
-    buttonLabel: "Open Assets",
+    buttonLabel: "Manage System Assets",
     illustration: "assets",
   },
   {
@@ -59,7 +74,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Model inventory",
     description:
       "Manage saved model references and prepare model records for workspace workflows.",
-    buttonLabel: "Open Models",
+    buttonLabel: "Manage and Train Models",
     illustration: "models",
   },
   {
@@ -68,7 +83,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Generate visual outputs",
     description:
       "Create image outputs from prompts and route finished work into the asset pipeline.",
-    buttonLabel: "Open Image Generation",
+    buttonLabel: "Generate Images",
     illustration: "image-generation",
   },
 ];
@@ -127,6 +142,23 @@ function HomeCardIllustration({
     );
   }
 
+  if (kind === "context") {
+    return (
+      <svg
+        className="home-card-illustration"
+        viewBox="0 0 96 72"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <ellipse cx="36" cy="18" rx="19" ry="8" />
+        <path d="M17 18v28c0 4 9 8 19 8s19-4 19-8V18M17 32c0 4 9 8 19 8s19-4 19-8" />
+        <circle cx="72" cy="24" r="7" />
+        <circle cx="72" cy="50" r="7" />
+        <path d="M55 28h10M55 44h10M72 31v12" />
+      </svg>
+    );
+  }
+
   if (kind === "models") {
     return (
       <svg
@@ -174,28 +206,24 @@ export function HomePage({ onNavigate }: HomePageProps) {
       aria-labelledby="home-title"
     >
       <div className="home-workspace-card ui-stack">
-        <div className="home-card__header">
-          <div className="ui-stack ui-stack--sm">
-            <p className="home-card__eyebrow">Welcome back</p>
-            <h1 id="home-title" className="ui-panel__title">
-              {heroTitle}
-            </h1>
-            <p className="ui-text-muted">
-              {workspaceName
-                ? "This is your current workspace. All resources and activities are scoped to this context."
-                : "Create or select a workspace to begin building and managing AI systems."}
-            </p>
-          </div>
-          {workspace.loading ? null : (
-            <img
-              className="home-workspace-card__art"
-              src={workspaceOrbitSrc}
-              alt=""
-              aria-hidden="true"
+        <PageDashboardHeader
+          eyebrow={<p className="home-card__eyebrow">Welcome back</p>}
+          title={heroTitle}
+          titleId="home-title"
+          description={
+            workspaceName
+              ? "This is your current workspace. All resources and activities are scoped to this context."
+              : "Create or select a workspace to begin building and managing AI systems."
+          }
+          controls={<WorkspaceSwitcher />}
+          dashboard={
+            <DesktopPageDashboard
+              kind="home"
+              size="large"
+              workspaceId={workspace.activeWorkspace?.id}
             />
-          )}
-        </div>
-        <WorkspaceSwitcher />
+          }
+        />
       </div>
 
       <WorkspaceContextHint />

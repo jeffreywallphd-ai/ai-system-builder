@@ -1,9 +1,10 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { JSDOM } from "jsdom";
 import { describe, expect, it } from "../../../../testing/node-test";
 
 const readStyle = (relativePath: string): string =>
-  readFileSync(resolve(process.cwd(), relativePath), "utf8");
+  readFileSync(resolve(process.cwd(), relativePath), "utf8").replace(/\r\n?/g, "\n");
 
 const repositoryUiSources = (relativeDirectory: string): readonly string[] => {
   const sources: string[] = [];
@@ -28,6 +29,120 @@ const repositoryUiSources = (relativeDirectory: string): readonly string[] => {
 };
 
 describe("system builder shared styles", () => {
+  it("removes decorative motion from the Build and test dialog outside the Canvas", () => {
+    const dom = new JSDOM(`<style>${readStyle("modules/ui/shared/styles/components/system-composer.css")}</style>
+      <main class="system-builder"></main>
+      <section class="ui-modal-dialog system-build-test-modal" role="dialog"><button>Build &amp; test</button></section>
+      <button>Outside the dialog</button>`);
+    try {
+      const { document, CSSMediaRule, CSSStyleRule } = dom.window;
+      const stylesheet = [...document.styleSheets[0]!.cssRules];
+      const reduced = stylesheet.flatMap(rule =>
+        rule instanceof CSSMediaRule && rule.conditionText === "(prefers-reduced-motion: reduce)" ? [...rule.cssRules] : [],
+      );
+      const suppresses = (rules: CSSRule[], target: Element) => rules.some(rule =>
+        rule instanceof CSSStyleRule &&
+        target.matches(rule.selectorText.split(",").filter(selector => !selector.includes("::")).join(",") || ":not(*)") &&
+        rule.style.getPropertyValue("transition") === "none" &&
+        rule.style.getPropertyValue("animation") === "none",
+      );
+      const [action, outside] = [...document.querySelectorAll("button")];
+      expect(suppresses(reduced, action!)).toBe(true);
+      expect(suppresses(reduced, outside!)).toBe(false);
+      expect(suppresses(stylesheet, action!)).toBe(false);
+    } finally {
+      dom.window.close();
+    }
+  });
+
+  it("disables motion in the portaled Asset details dialog only under reduced motion", () => {
+    const dom = new JSDOM(`<style>
+      ${readStyle("modules/ui/shared/styles/components/feature-surfaces.css")}
+    </style><section class="asset-library-detail-dialog"><button id="details">Close</button></section>
+      <button id="other">Outside the dialog</button>`);
+    try {
+      const { document, CSSMediaRule, CSSStyleRule } = dom.window;
+      const stylesheet = [...document.styleSheets[0]!.cssRules];
+      const targets = ["#details", "#other"].map(selector => document.querySelector(selector)!);
+      const disables = (rule: CSSRule, element: Element) =>
+        rule instanceof CSSStyleRule &&
+        element.matches(rule.selectorText.split(",").filter(selector => !selector.includes("::")).join(",") || ":not(*)") &&
+        rule.style.getPropertyValue("transition").trim() === "none" &&
+        rule.style.getPropertyValue("animation").trim() === "none";
+      const reduced = stylesheet.flatMap(rule =>
+        rule instanceof CSSMediaRule && rule.conditionText === "(prefers-reduced-motion: reduce)" ? [...rule.cssRules] : [],
+      );
+      expect(targets.map(target => reduced.some(rule => disables(rule, target)))).toEqual([true, false]);
+      expect(targets.map(target => stylesheet.some(rule => disables(rule, target)))).toEqual([false, false]);
+    } finally {
+      dom.window.close();
+    }
+  });
+
+  it("gives read-only asset source its own themed reading surface", () => {
+    const dom = new JSDOM(`<style>
+      ${readStyle("modules/ui/shared/styles/components/feature-surfaces.css")}
+    </style><pre class="asset-customizer__readonly-source"><code>Sample</code></pre><textarea></textarea>`);
+    try {
+      const { document, CSSStyleRule } = dom.window;
+      const readingRule = [...document.styleSheets[0]!.cssRules].find(
+        (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule &&
+          document.querySelector("pre")!.matches(rule.selectorText) &&
+          rule.style.getPropertyValue("background").trim() === "var(--color-bg-panel)",
+      );
+      expect(readingRule?.style.getPropertyValue("color").trim()).toBe("var(--color-text-primary)");
+      expect(readingRule?.style.getPropertyValue("overflow").trim()).toBe("auto");
+      expect(document.querySelector("textarea")!.matches(readingRule!.selectorText)).toBe(false);
+    } finally {
+      dom.window.close();
+    }
+  });
+
+  it("uses the selected Layers row foreground for its placement text in forced colors", () => {
+    const dom = new JSDOM(`<style>
+      ${readStyle("modules/ui/shared/styles/forced-colors.css")}
+    </style><div class="system-composer__tree">
+      <button role="treeitem" aria-selected="true"><small id="selected">Region content / layer 1</small></button>
+      <button role="treeitem" aria-selected="false"><small id="unselected">Region content / layer 2</small></button>
+    </div><small id="outside">Other text</small>`);
+    try {
+      const { document, CSSMediaRule, CSSStyleRule } = dom.window;
+      const rules = [...document.styleSheets[0]!.cssRules].find(
+        (rule): rule is CSSMediaRule => rule instanceof CSSMediaRule &&
+          rule.conditionText === "(forced-colors: active)",
+      )!.cssRules;
+      const inheritingRules = [...rules].filter(
+        (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule &&
+          rule.style.getPropertyValue("color").trim() === "inherit",
+      );
+      for (const [id, expected] of [["selected", true], ["unselected", false], ["outside", false]] as const) {
+        expect(inheritingRules.some(rule => document.querySelector(`#${id}`)!.matches(rule.selectorText))).toBe(expected);
+      }
+    } finally {
+      dom.window.close();
+    }
+  });
+
+  it("keeps muted revision text separate from the primary save label", () => {
+    const dom = new JSDOM(`<style>
+      ${readStyle("modules/ui/shared/styles/components/feature-surfaces.css")}
+    </style><footer class="system-builder__footer">
+      <div><span id="revision">r1</span></div>
+      <div class="ui-inline-actions"><button><span id="save">Save and validate revision</span></button></div>
+    </footer>`);
+    try {
+      const { document, CSSStyleRule } = dom.window;
+      const mutedRules = [...document.styleSheets[0]!.cssRules].filter(
+        (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule &&
+          rule.style.getPropertyValue("color") === "var(--color-text-muted)",
+      );
+      expect(mutedRules.some(rule => document.querySelector("#revision")!.matches(rule.selectorText))).toBe(true);
+      expect(mutedRules.some(rule => document.querySelector("#save")!.matches(rule.selectorText))).toBe(false);
+    } finally {
+      dom.window.close();
+    }
+  });
+
   it("uses only declared shared design tokens", () => {
     const tokenSource = readStyle("modules/ui/shared/styles/tokens.css");
     const declaredTokens = new Set(

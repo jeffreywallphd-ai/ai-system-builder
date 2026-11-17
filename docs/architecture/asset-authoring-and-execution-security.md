@@ -36,6 +36,24 @@ Every request includes release identity, system release, workspace, organization
 
 ## UI isolation
 
+The package, Studio and authoring IPC registrars require the desktop's existing
+owned-window main-frame sender policy. Their fixed channel gate runs before any
+request metadata, payload, deferred feature or use case access. Missing, denied
+or throwing policy returns a sanitized `forbidden` response on the matching fixed
+response channel. No request-derived correlation value is echoed on this denial.
+This transport admission does not replace workspace resource authorization or
+atomic approval-bound publication, which require separate application controls.
+
+Studio proposal/draft, package lifecycle and derived customization application
+entries require `WorkspaceAssetAccessPort`. Reads require `asset:read`; inspection,
+review and other mutations require `asset:write`. Both hosts supply the existing
+guard backed by the persisted active workspace and organization operation policy.
+An absent, archived, mismatched or foreign workspace, suspended membership or
+missing policy denies before protected source, model, artifact, definition or
+lifecycle access. Private dependency errors remain sanitized. Derived feature
+readiness follows this admission. Trusted Foundation implementation seeding is an
+internal operation and does not receive user workspace authority from this gate.
+
 Untrusted UI must use:
 
 - no Node integration or preload access;
@@ -159,3 +177,58 @@ controls but do not qualify a sandbox or authorize executable assets.
 - [Node permission model limitations](https://nodejs.org/api/permissions.html)
 - [WASI capability-based security](https://wasi.dev/)
 - [OWASP Secure Coding with AI](https://cheatsheetseries.owasp.org/cheatsheets/Secure_Coding_with_AI_Cheat_Sheet.html)
+
+## Approval-bound definition publication
+
+Studio and derived customization publish through a typed application port and
+`createStructuredAssetDefinitionPublication`. Capture the organization and passive
+command before awaiting verified immutable review bytes. Inside one structured
+transaction, require the exact persisted owning record/revision, workspace, review,
+source snapshot and implementation draft, then atomically insert the absent
+definition, private `asset-publication/receipts` record and published workflow
+record. Derived copies revalidate exact base definition, release, optional release
+snapshot binding, backing descriptor and current revocation truth in that same
+transaction. No artifact I/O, clock, UUID generation or external callback executes
+inside the retryable callback.
+
+The private receipt binds an opaque UUID, owner, workflow kind, complete published
+record and definition; it contains no raw source bytes. A lost acknowledgement
+allows only read-only verification of that exact existing commit and its immutable
+review. Missing/deleted definitions, conflicting identities, absent/foreign
+receipts, changed reviews or unavailable base truth deny without recreation,
+adoption, overwrite or delete compensation. A published retry accepts the original
+reviewed revision or the current published revision only; actor/time and all
+committed records stay unchanged. Other stale or unpublished revisions deny.
+Complete-looking legacy metadata is
+not an owned commit. Generic legacy record APIs are not newly granted authority.
+
+Memory and native SQLite regression matrices cover edits, abandonment, re-review,
+identity collisions, rollback after intermediate writes, lost acknowledgements,
+owner capture and base/review drift in both existing definition partitions; the
+actual Electron runtime matrix remains pending. This component does not establish live
+PostgreSQL qualification, native artifact ownership, legacy authoring authority,
+complete Assets accessibility/security or parent-roadmap completion.
+
+Legacy authoring uses the same required resource boundary: seven application
+mutations authorize `asset:write` before protected reads/writes, target lookup or
+ID/clock effects. Public list/detail endpoints receive a typed eight-method read
+facade requiring `asset:read`; raw repositories and unscoped by-ID lookup are not
+exposed by that facade. List queries are captured before asynchronous admission.
+Both hosts compose the existing persisted-workspace/organization policy. Missing,
+archived or other-organization workspaces and suspended membership deny with safe
+transport failures; server membership middleware remains a separate control.
+Legacy multi-record draft publication is not made atomic by this resource guard;
+its concurrency and complete controlled Assets qualification remain separate.
+
+Read-policy and repository failures settle as fixed unavailable API/IPC responses.
+Missing required fields retain validation failures. Focused tests cover every
+public read, query capture and current persisted membership. No request may
+fall back to raw repositories after access is denied.
+
+Package authority is checked against the same captured workspace and request values used for all later effects. Inspection owns a bounded byte copy; admission owns capability consent; activation changes own workspace, record and actor fields. Desktop also checks before lazy feature initialization. The shared32MiB production upload default is checked before copying, without importing adapter policy into application. Independently configured inspector overrides are preserved; ordinary application uploads keep their existing production budget.
+
+Studio captures fixed request fields before awaiting current workspace authorization. Nested proposal files, context, allowlists, approval arrays, semantic input and resources are owned by the request. Coding providers receive a separate request copy and their output is captured before later waits. Canonical limits remain; policy allowlist universes are not capped at proposal cardinalities. Physical-host qualification remains separate; definition publication uses the transaction boundary above.
+
+Derived customization requests are captured before policy, readiness, catalog and repository waits. IPC supplies a closed handler-owned operation/workspace context to the existing deferred getter; client operation/scope fields never choose authority. Existing unavailable, validation and absent-record outcomes remain distinct. Semantic normalization is followed by a deep copy because it retains aliases. Arbitrary JSON preallocation and physical-host durability remain separate. Definition publication is covered by the transaction boundary above.
+
+Target-catalog collection reads keep current workspace admission and exact normalized release identity. They deduplicate references only within the request, validate ordered batch lengths, owned slots and exact IDs/versions, and capture the consumed primitive summary fields before later waits. Invalid or unavailable data never produces a partial target result. Sequential compatibility keeps one in-flight single read. Batches are limited to 250 references; this does not establish a global collection/allocation quota, hostile-object guarantee, live database pool or physical host performance pass.

@@ -6,11 +6,30 @@
 
 ## Asset Kernel relationship
 
-The Asset Kernel is the semantic composition model for reusable building blocks. Persistence and storage remain separate lower-level architecture concerns. Asset metadata may be persisted as structured records for asset definitions, instances, bindings, compositions, lifecycle, and provenance; binary/content payloads remain storage concerns. The current Asset Kernel persistence stack uses typed local repository adapters over the active host's structured-document seam, while retaining its schema-versioned JSON layout only for unshaped development compatibility and explicit legacy import. Descriptor-only resource-backed mapping/view helpers remain separate. This does not add a durable resource-backed mapping repository or version-history service.
+The Asset Kernel is the semantic composition model for reusable building blocks. Persistence and storage remain separate lower-level architecture concerns. Asset metadata may be persisted as structured records for asset definitions, instances, bindings, compositions, lifecycle, and provenance; binary/content payloads remain storage concerns. The current Asset Kernel persistence stack uses typed local repository adapters over the active host's structured-document seam, while retaining its schema-versioned JSON layout only for unshaped development compatibility and explicit legacy import. Descriptor-only resource-backed mapping/view helpers remain separate. View bodies and version history remain separate; the private image/output identity index described below is the narrow ADR-0043 addition.
 
 Resource-backed assets should reference artifact/resource storage identities instead of embedding raw file paths or bytes in asset metadata. Generated outputs produced by runtime tasks become reusable only after finalization/registration as artifacts or resource-backed assets. Hugging Face repository objects remain external repository objects until registered/imported as resource-backed assets. Existing artifact, model, dataset, and image concepts should not be renamed during Asset Kernel contract baseline.
 
 ## Core distinction
+
+Structured operations on one in-memory root or SQLite connection share FIFO
+ownership across platform and organization wrappers. An async transaction holds
+ownership through commit/rollback, so outside reads wait for committed state and
+outside writes cannot be lost with another callback's rollback or snapshot commit.
+Caller values and revision options are detached before queue waits. Callback and
+derived transaction stores are valid only in their owning async context and expire
+on exit; nested work uses that same supplied store. Root reentry from the callback
+denies explicitly. Transaction callbacks must not perform I/O through captured root
+repositories. PostgreSQL retains its separate-client Serializable transaction and
+bounded retry policy. Its owned transactions keep platform policy reads and
+organization document operations on a single client and require a synchronous
+admission check before commit. Scoped operations pair each organization binding
+with its query. Transaction views expire when the callback ends. A missing
+commit acknowledgment or unconfirmed rollback retires that checked-out client.
+Live managed qualification remains separate.
+If SQLite rollback cannot be confirmed, all wrappers and queued operations on
+that connection deny further access. The original callback error is preserved;
+no automatic reset can admit work into the unfinished transaction.
 
 `ai-system-builder` treats **persistence** and **storage** as separate architecture concerns.
 
@@ -84,6 +103,11 @@ server owns connection lifecycle, health, and adapter selection; credentials and
 connection material enter only through secret/environment configuration at the
 composition boundary. Application/domain modules must not receive connection
 strings, pools, transactions, SQL, or driver errors.
+
+The managed System Builder snapshot selects only saved identifiers, revision,
+status and workspace from a single organization/workspace key range. Schema v3
+indexes active records in that range. The SQL returns at most 129 rows so the
+application can identify a result over its 128-system cap before projection.
 
 Backup method, recovery objective, replication, failover, tenant layout, and
 retention vary by managed environment and require explicit operational decisions.
@@ -234,7 +258,7 @@ application/domain boundaries to SQLite- or PostgreSQL-specific APIs.
 
 `modules/adapters/persistence/asset` provides the current local Asset Kernel persistence adapter. It stores JSON-compatible `AssetDefinition`, `AssetInstance`, `AssetComposition`, and `AssetBinding` records through the active host's structured-document store. Its compatibility/legacy layout remains `asset-kernel/manifest.json`, `definitions.json`, `instances.json`, `compositions.json`, and `bindings.json`; the manifest uses `schemaVersion: 1` and `storeKind: "asset-kernel-local-store"`. The adapter implements application repository ports and remains infrastructure-only: it does not own Asset Kernel validation, business rules, host composition, API/IPC/UI exposure, resource-backed mapping helpers, artifact/object storage, workflow execution, graph execution, runtime readiness, prompt assembly, embeddings, or AI-generated context.
 
-The local adapter persists records and references only. It must not embed raw file/blob bytes, generated model/image/dataset payload bytes, secrets, environment values, local filesystem handles, or adapter-native paths in asset records or public errors. Durable resource-backed asset mapping persistence and explicit persistence-to-storage linkage remain deferred beyond this checkpoint.
+The local adapter persists records and references only. It must not embed raw file/blob bytes, generated model/image/dataset payload bytes, secrets, environment values, local filesystem handles, or adapter-native paths in asset records or public errors. Durable view-body persistence and general persistence-to-storage linkage remain deferred; private image/output public identity indexes do not store view bodies or resource content.
 
 ### Workspace local persistence checkpoint
 
@@ -521,7 +545,7 @@ The registry read facade is an application-layer service only. It reads through 
 
 Read-only Asset Registry API/IPC/preload wrappers and desktop/thin-client Asset Library pages operate over persisted definitions and computed resource-backed view list/detail reads. This does not change the persistence/storage boundary: Asset Library UI and transport code must not access local persistence adapters, storage adapters, filesystem paths, resource bytes, provider clients, runtime roots, resolver result objects, or resource scans directly. Built-ins appear only when already persisted/seeded through internal seeding, and resource-backed views remain computed descriptor-only read models that do not read bytes or turn generated outputs/external repository objects into registered assets.
 
-Resource-backed mappings are still not persisted. Artifact/document, image/generated-output, dataset/model, and external-repository object views are computed from safe descriptor/read seams only. Asset Kernel persistence continues to store records only, not resource bytes, generated outputs, source files, thumbnails, model files, dataset files, provider payloads, or durable resource-backed view mappings.
+Resource-backed view bodies are computed from safe descriptor/read seams. Image/output public identity indexes are persisted separately under ADR-0043; other families do not gain mappings. Asset Kernel persistence continues to store records only, not resource bytes, generated outputs, source files, thumbnails, model files, dataset files, provider payloads, or durable resource-backed view mappings.
 
 ## Runtime roots are not artifact storage roots
 
@@ -529,7 +553,25 @@ Runtime roots are neither persistence nor artifact-object storage roots. Runtime
 
 Artifact storage roots contain durable artifacts and catalog-backed content. ComfyUI `output/` should be treated as runtime/temp staging until generated outputs are finalized into artifact storage.
 
-Shared model storage is a configured host-local storage source for model discovery and reuse across workspaces. It is intentionally separate from workspace model inventory persistence: discovery produces read-only shared inventory entries at list/read time, while workspace downloads and generated models remain persisted workspace records. Model registry files must not persist discovered shared entries just because a workspace listed them. Explicit desktop model deletion keeps record mutation separate from filesystem authority: the application requests deletion through a narrow port, and the host-local adapter accepts only canonical descendants of the generated-model cache or configured shared model root. It deletes a Hugging Face model repository as one cache unit (snapshots plus blobs) or an exact discovered checkpoint file, rejects cache-root, link, traversal, and outside-root targets, and leaves the registry record intact when local deletion fails.
+Context RAG databases follow the artifact boundary rather than the structured
+persistence boundary. Each saved database is one catalog-backed LanceDB ZIP
+blob; its embedded `database/` directory is package content, not a persistence
+root or shared service. The managed Python runtime may materialize a verified
+package into a private temporary directory for one bounded operation, then must
+remove it. Application SQLite, system-runtime SQLite, and Markdown context packs
+are unaffected by the Context RAG storage engine.
+
+Shared model storage is a configured host-local storage source for model discovery and reuse across workspaces. It is intentionally separate from workspace model inventory persistence: discovery produces read-only shared inventory entries at list/read time, while workspace downloads and generated models remain persisted workspace records. Model registry files must not persist discovered shared entries just because a workspace listed them. Desktop model file effects are currently unavailable pending a qualified native file authority. The portable path/rename prototype failed concurrency and supported-cache qualification and is not wired as an effect implementation. Identity-based ports fail before filesystem or shell access; no renderer path, mutable shared discovery root or metadata fallback is used. Registry-only removal remains supported and file removal is an explicit optional UI choice with corrective guidance. A future implementation must bind provenance atomically to the current model record, preserve supported cache links, hold authority through the actual OS operation, and pass positive plus replacement-race qualification. These requirements remain pending; existing disposable preflight denials do not establish that qualification.
+
+Generated model storage checks the source before creating cache storage. It
+reads directory entries incrementally and limits file count, byte count and
+folder count. The folder count uses the same limit as the file count and is
+counted separately. The walk permits at most 64 levels below the source root.
+It applies these limits while staging individual entries and while checking
+the staged result. The staging copy reads only the admitted bytes from each
+open file and checks its identity and metadata before and after transfer. A
+detected change prevents publication. Native protection against concurrent
+file changes and protected ownership still need separate qualification.
 
 Server defaults should keep `SERVER_STORAGE_ROOT` and `SERVER_RUNTIME_ROOT` distinct. Desktop local mode should use desktop-owned runtime roots and desktop-owned artifact storage roots. Server/thin-client mode should use server-owned runtime roots and server-owned artifact storage roots. Future desktop-remote mode should not assume remote artifacts are local files.
 
@@ -572,7 +614,7 @@ Workspace records, active-selection preferences, and system-pack activation reco
 
 Workspace-owned resources require explicit workspace ids and must not fall back to legacy global storage. Artifacts/uploads use a workspace-scoped root/keyspace. Image assets, generated outputs, dataset outputs, model inventory records, and runtime task outputs are workspace-scoped where implemented; legacy global records are not auto-migrated or silently assigned to a hidden/default workspace. Storage descriptors exposed through contracts remain path-free, and public diagnostics must not expose raw roots or provider payloads.
 
-workspace foundations final cleanup hardens resource reads at the storage boundary: artifact byte retrieval must first validate the workspace-owned catalog record and must not fetch bytes after missing, invalid, wrong-workspace, or unavailable catalog ownership checks. Missing catalog files represent an empty catalog, but non-`ENOENT` catalog read failures are operational failures and must not be hidden as empty lists. Storage/catalog/generated-image errors crossing application, API, IPC, preload, renderer, or thin-client boundaries must use fixed sanitized messages plus safe operation/error-code details only. Generated image persistence must validate/brand workspace ids before constructing `workspaces/<workspaceId>/generated/images/...` keys. Normal model UI/API read models omit raw `localPath`, `validationReportPath`, and equivalent filesystem diagnostics; upload clients require an active workspace id before sending API/IPC requests. Desktop Model Management may reveal a local model in the operating-system file manager only through a workspace-scoped model-record command: the application resolves the stored location, the desktop host validates it as an absolute path before invoking the file manager, and IPC/preload responses never return the path. Server Model Management never exposes or opens a host path; after an explicit **Show model files** action in the Details modal, it may return at most 500 relative file names and sizes from the workspace-owned model record. Server enumeration must remain within operator-configured model-cache roots, bound visited entries and directory depth, validate link targets, return no file contents or absolute paths, and fail closed for remote-only, missing, or out-of-root records. Missing records, remote-only records, unavailable host support, and host failures fail closed with bounded path-free messages.
+workspace foundations final cleanup hardens resource reads at the storage boundary: artifact byte retrieval must first validate the workspace-owned catalog record and must not fetch bytes after missing, invalid, wrong-workspace, or unavailable catalog ownership checks. Missing catalog files represent an empty catalog, but non-`ENOENT` catalog read failures are operational failures and must not be hidden as empty lists. Storage/catalog/generated-image errors crossing application, API, IPC, preload, renderer, or thin-client boundaries must use fixed sanitized messages plus safe operation/error-code details only. Generated image persistence must validate/brand workspace ids before constructing `workspaces/<workspaceId>/generated/images/...` keys. Normal model UI/API read models omit raw `localPath`, `validationReportPath`, and equivalent filesystem diagnostics; upload clients require an active workspace id before sending API/IPC requests. Desktop Model Management may reveal a local model in the operating-system file manager only through a workspace-scoped model-record command: the application passes workspace/model identity to the private location authority, which verifies the grant and contained physical identity before the desktop shell validates the local path, and IPC/preload responses never return the path. Server Model Management never exposes or opens a host path; after an explicit **Show model files** action in the Details modal, it may return at most 500 relative file names and sizes from the workspace-owned model record. Server enumeration must remain within operator-configured model-cache roots, bound visited entries and directory depth, validate link targets, return no file contents or absolute paths, and fail closed for remote-only, missing, or out-of-root records. Missing records, remote-only records, unavailable host support, and host failures fail closed with bounded path-free messages. The server inspects at most 2,000 entries across the traversal. A one-entry directory buffer limits prefetch. The adapter uses one extra entry only to detect truncation. When a directory exceeds the remaining allowance, it reads a prefix in filesystem order and sorts that prefix for display.
 
 ## Workspace persistence boundary
 
@@ -596,3 +638,79 @@ retry, and organization RLS isolation when a disposable `TEST_POSTGRES_URL`
 target is available. The reference migration-plan artifact is release evidence;
 it does not execute destructive DDL or replace the monotonic database migration
 ledger.
+
+
+Model download task reads and lists are projections only. Registration is a separate
+idempotent `download-complete` write operation, protected by `model:write` and
+host-derived organization/principal context frozen at start. A later context
+cannot choose another registration tenant. Desktop and thin-client writer flows
+explicitly complete succeeded downloads; status polling alone cannot mutate inventory.
+Public record edits allow display name, inference mode, task tags, artifact form
+and metadata only. Trusted validation/publication use the internal registry seam;
+registry updates always preserve workspace, local path and storage scope.
+
+Effective projection records, snapshots, commands, references and provenance are
+explicitly reconstructed with the shared bounded passive DTO schemas. Declared
+labels/metadata, canonical timestamps, revision identities and finite graph-summary
+counts/actual boolean flags are validated. Projected metadata retains safe nested
+arrays, false/zero/null and existing field rules with bounded recursion; credential
+representations, paths, accessors, cycles and unknown payload fields deny.
+Diagnostic messages remain generic. Snapshot identity is required for snapshots.
+The fixed local projection/snapshot collections validate on read, before writes,
+and before/after mutation callbacks. Invalid stored records deny without rewriting
+bytes or invoking a mutation callback. This does not grant source authority, add
+transport admission, enable uncomposed runtime families or satisfy controlled
+qualification. Rollback must preserve the stronger record denial.
+Duplicated target workspace identities must agree across command/record source,
+target and provenance. Root and target effective references agree exactly on
+kind/id/version, and an optional target projection ID matches the record.
+Source workspace provenance may legitimately differ for library/import sources;
+intended policy may differ from the actual blocked policy. Contradictory records
+deny before persistence or progression, rather than selecting a convenient identity.
+
+Image/generated-output view identities are persisted random opaque aliases under
+accepted ADR-0043. The narrow identity port stores private organization/workspace
+source and public indexes; a hash appears only in the private source index key,
+never in a public identifier. Active SQLite/PostgreSQL host composition supplies
+the organization-context store. Organization scope is frozen before awaiting;
+unassigned or missing stores deny this projection without a legacy JSON fallback.
+
+Revision-CAS publication reserves one immutable alias per owner/source, inserts
+its exact inverse, then commits the source revision. Only committed consistent
+pairs are returned or resolved. A new reserved publication can resume after an
+authorized descriptor read, using the same alias; committed missing or substituted
+pairs deny without repair. Four conflict attempts bound admission. This avoids
+adding overlapping connection transactions to the existing SQLite seam. Private
+reserved records grant no source authority and are never public evidence.
+
+Image/output/artifact aliases and source cursors use this mapping. Descriptor
+capture rejects active/malformed input before projection. Detail reads use two
+exact index lookups, followed by an exact workspace-scoped source reauthorization;
+there is no source-ID decoding or list fallback. Revoked/mismatched sources deny.
+Image cursor continuation uses the last returned source row, avoiding a skipped
+next item. No image bytes, providers, runtimes, registration or finalization are
+invoked by projection. Generated-output finalization remains uncomposed in hosts.
+
+Existing source-derived view references are not migrated or silently reassigned.
+Explicit owner-approved legacy-reference migration and native persistence/ACL
+qualification remain pending. Preserve mapping records and stronger denials on
+rollback; never restore source-derived public IDs. This component evidence does
+not close parent security increments or establish protected physical-file effects.
+
+Asset definition batch writes preserve the existing collection/manifest format.
+At most250 unique exact identities and aligned expected original bodies enter one
+retryable whole-collection mutation. Inputs are passively captured before awaits,
+organization context is bound for the operation, and all comparisons rerun against
+the current collection on conflicts. A batch is atomic for the definition
+collection; manifest refresh remains a separate existing operational write.
+
+## In-memory callback isolation
+
+One in-memory root serializes transactions and ordinary operations across its
+organization views. An outer callback commits its snapshot only on success;
+failure releases ownership without replacing committed state. Nested callbacks
+reuse the active owner and do not create an independent savepoint. Only the
+supplied transaction store is valid within that callback. Foreign contexts,
+expired handles and captured-root reentry deny. Queued writes capture nested
+payloads, revision conditions and timestamps before waiting; reads and returned
+write results are detached copies.

@@ -1,3 +1,4 @@
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
 import type { AssetReference } from "../../../contracts/asset";
 import type {
   AssetCompositionBlocker,
@@ -13,6 +14,7 @@ import type { AssetCompositionPlanListQuery, AssetCompositionPlanRepositoryPort 
 
 export interface WorkspaceAssetCompositionReadModelDependencies {
   readonly compositionPlanRepository: AssetCompositionPlanRepositoryPort;
+  readonly workspaceAccess: WorkspaceAssetAccessPort;
 }
 
 export interface WorkspaceAssetCompositionListRequest {
@@ -72,6 +74,7 @@ export class WorkspaceAssetCompositionReadModelService {
   public constructor(private readonly dependencies: WorkspaceAssetCompositionReadModelDependencies) {}
 
   public async listCompositionPlanSummaries(request: WorkspaceAssetCompositionListRequest): Promise<{ summaries: readonly WorkspaceAssetCompositionPlanSummary[]; nextCursor?: string }> {
+    await this.dependencies.workspaceAccess.authorize(request.targetWorkspaceId, "asset-composition:listCompositionPlanSummaries", "asset:read");
     const query: AssetCompositionPlanListQuery = { targetWorkspaceId: request.targetWorkspaceId, status: request.status, limit: request.limit, cursor: request.cursor };
     const result = await this.dependencies.compositionPlanRepository.listAssetCompositionPlanRecords(query);
     const summaries = result.records.map((r) => this.toSummary(r));
@@ -79,22 +82,26 @@ export class WorkspaceAssetCompositionReadModelService {
   }
 
   public async readCompositionPlanDetail(request: { targetWorkspaceId: WorkspaceId; planId: string }): Promise<WorkspaceAssetCompositionPlanDetail | undefined> {
+    await this.dependencies.workspaceAccess.authorize(request.targetWorkspaceId, "asset-composition:readCompositionPlanDetail", "asset:read");
     const record = await this.dependencies.compositionPlanRepository.readAssetCompositionPlanRecord(request.targetWorkspaceId, request.planId as never);
     if (!record) return undefined;
     return this.toDetail(record);
   }
 
   public async listPlansForProjection(request: { targetWorkspaceId: WorkspaceId; projectionId: string }): Promise<readonly WorkspaceAssetCompositionPlanSummary[]> {
+    await this.dependencies.workspaceAccess.authorize(request.targetWorkspaceId, "asset-composition:listPlansForProjection", "asset:read");
     const plans = await this.dependencies.compositionPlanRepository.listAssetCompositionPlanRecordsBySelectedProjectionId(request.targetWorkspaceId, request.projectionId as never);
     return plans.map((p) => this.toSummary(p));
   }
 
   public async listPlansForEffectiveAssetReference(request: { targetWorkspaceId: WorkspaceId; effectiveAssetReference: AssetReference }): Promise<readonly WorkspaceAssetCompositionPlanSummary[]> {
+    await this.dependencies.workspaceAccess.authorize(request.targetWorkspaceId, "asset-composition:listPlansForEffectiveAssetReference", "asset:read");
     const plans = await this.dependencies.compositionPlanRepository.listAssetCompositionPlanRecordsByEffectiveAssetReference(request.targetWorkspaceId, request.effectiveAssetReference);
     return plans.map((p) => this.toSummary(p));
   }
 
   public async listPlansNeedingAttention(request: { targetWorkspaceId: WorkspaceId }): Promise<readonly WorkspaceAssetCompositionPlanSummary[]> {
+    await this.dependencies.workspaceAccess.authorize(request.targetWorkspaceId, "asset-composition:listPlansNeedingAttention", "asset:read");
     const { records } = await this.dependencies.compositionPlanRepository.listAssetCompositionPlanRecords({ targetWorkspaceId: request.targetWorkspaceId });
     return records.map((r) => this.toSummary(r)).filter((r) => r.needsAttention);
   }

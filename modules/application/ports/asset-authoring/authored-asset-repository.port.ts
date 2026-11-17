@@ -5,6 +5,8 @@ import type { AssetAuthoringStatus, AuthoredAssetId, AuthoredAssetRecord } from 
 export interface AuthoredAssetListQuery { readonly workspaceId: WorkspaceId; readonly status?: AssetAuthoringStatus; readonly baseAssetReference?: AssetReference; readonly text?: string; readonly limit?: number; readonly cursor?: string; }
 export interface AuthoredAssetListResult { readonly records: readonly AuthoredAssetRecord[]; readonly nextCursor?: string; }
 export interface AuthoredAssetRepositoryPort {
+  findAuthoredAssetsByBaseReferences?(workspaceId: WorkspaceId, references: readonly AssetReference[]): Promise<readonly (AuthoredAssetRecord | undefined)[]>;
+  readPublishedAssetReferences?(workspaceId: WorkspaceId): Promise<readonly AssetReference[]>;
  saveAuthoredAssetRecord(record: AuthoredAssetRecord): Promise<AuthoredAssetRecord>;
  updateAuthoredAssetRecord(record: AuthoredAssetRecord): Promise<AuthoredAssetRecord>;
  readAuthoredAssetRecordById(authoredAssetId: AuthoredAssetId): Promise<AuthoredAssetRecord|undefined>;

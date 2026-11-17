@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 import unittest
+import io
+from contextlib import redirect_stdout
+from pathlib import Path
+from threading import Event
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -17,9 +21,126 @@ from modules.adapters.runtime.python.worker.models import StartPythonRuntimeTask
 
 
 class WorkerAppTests(unittest.TestCase):
+    def test_ocr_protocol_capability_does_not_probe_reader_or_source(self):
+        from modules.adapters.runtime.python.worker.ocr import provider, source_snapshot
+        with patch.object(worker_app, "get_constrained_json_decoder_runtime_status", return_value=SimpleNamespace(available=False)), \
+                patch.object(provider, "local_provider", side_effect=AssertionError("Unexpected reader")), \
+                patch.object(source_snapshot, "capture_source", side_effect=AssertionError("Unexpected source")):
+            for system, expected in (("Windows", True), ("Linux", False)):
+                with self.subTest(system=system), patch.object(worker_app.platform, "system", return_value=system):
+                    self.assertEqual(worker_app.OCR_TASK_CAPABILITY in worker_app.capabilities().capabilities, expected)
+
+    def test_ocr_invalid_map_denies_before_output_root_or_preparation(self):
+        from modules.adapters.runtime.python.worker.tests.test_ocr_task_sources import payload_dict
+        from modules.adapters.runtime.python.worker.ocr.protocol import OcrContractError
+        data = payload_dict(); data["runtime"]["ocrSources"]["sources"][0]["sha256"] = "PRIVATE-INVALID"
+        request = StartPythonRuntimeTaskRequest(requestId="ocr-bad-map", taskType="prepare-training-dataset", payload=data)
+        with patch.object(worker_app, "_runtime_output_directory") as root, patch.object(worker_app, "prepare_training_dataset") as prepare:
+            with self.assertRaises(OcrContractError): _run_task(request)
+        root.assert_not_called(); prepare.assert_not_called()
+
+    def test_raw_ocr_flag_denial_exposes_no_payload_in_task_result_or_log(self):
+        from modules.adapters.runtime.python.worker.tests.test_ocr_task_sources import payload_dict
+        data = payload_dict(); data["advanced"]["content"]["ocrEnabled"] = "true"
+        data["sourceInputs"][0]["originalName"] = "PRIVATE-SOURCE-MARKER"
+        request = StartPythonRuntimeTaskRequest(requestId="ocr-bad-flag", taskType="prepare-training-dataset", payload=data)
+        output = io.StringIO()
+        with patch.object(worker_app, "_runtime_output_directory") as root, patch.object(worker_app, "prepare_training_dataset") as prepare, redirect_stdout(output):
+            worker_app._start_async_task(request)
+            worker_app.TASK_REGISTRY[request.requestId]["future"].result(timeout=3)
+        root.assert_not_called(); prepare.assert_not_called()
+        status = worker_app.read_task_status(request.requestId)
+        self.assertEqual(status.status, "failed")
+        self.assertNotIn("PRIVATE", output.getvalue() + status.model_dump_json())
+        self.assertNotIn("ocrSources", output.getvalue() + status.model_dump_json())
+
+    def test_preparation_cancel_remains_running_until_owned_operation_finishes(self):
+        from modules.adapters.runtime.python.worker.tests.test_ocr_task_sources import payload_dict
+        entered, finish = Event(), Event()
+        request = StartPythonRuntimeTaskRequest(requestId="ocr-cancel", taskType="prepare-training-dataset", payload=payload_dict())
+        def prepare(payload, **kwargs):
+            self.assertFalse(kwargs["cancelled"]())
+            entered.set()
+            if not finish.wait(3): raise AssertionError("Synthetic operation was not released")
+            self.assertTrue(kwargs["cancelled"]())
+            raise worker_app.DatasetPreparationCancellationRequested()
+        with patch.object(worker_app, "_runtime_output_directory", return_value=Path("synthetic-output")), \
+                patch.object(worker_app, "prepare_training_dataset", side_effect=prepare):
+            worker_app._start_async_task(request)
+            future = worker_app.TASK_REGISTRY[request.requestId]["future"]
+            try:
+                self.assertTrue(entered.wait(3))
+                cancelled = worker_app.cancel_task(request.requestId)
+                self.assertEqual(cancelled.status, "running")
+                self.assertFalse(cancelled.cancelled)
+                self.assertEqual(worker_app.read_task_status(request.requestId).status, "running")
+            finally:
+                finish.set(); future.result(timeout=3)
+        terminal = worker_app.read_task_status(request.requestId)
+        self.assertEqual(terminal.status, "cancelled")
+        self.assertIsNone(terminal.data); self.assertIsNone(terminal.error)
+
+    def test_ocr_public_error_messages_hide_supplier_and_source_details(self):
+        from modules.adapters.runtime.python.worker.ocr.protocol import OcrContractError, OcrUnavailable
+        for error, code in ((OcrUnavailable("PRIVATE-PROVIDER"), "ocr_unavailable"),
+                            (OcrContractError("PRIVATE-PATH"), "ocr_input_invalid")):
+            with self.subTest(code=code):
+                self.assertEqual(worker_app._safe_task_error_code(error), code)
+                self.assertEqual(worker_app._safe_task_error_stage(error), "normalization")
+                self.assertNotIn("PRIVATE", worker_app._safe_task_error_message(error))
+                self.assertNotIn("PRIVATE", json.dumps(worker_app._safe_task_error_details(error)))
+
     def setUp(self) -> None:
+        capacity = patch.object(worker_app, "read_local_accelerator_memory_bytes", return_value=None)
+        self.capacity = capacity.start()
+        self.addCleanup(capacity.stop)
         with worker_app.TASK_REGISTRY_LOCK:
             worker_app.TASK_REGISTRY.clear()
+
+    def test_capabilities_report_only_the_current_worker_capacity_when_decoder_ready(self) -> None:
+        self.capacity.return_value = 8 * 1024 ** 3
+        with patch.object(worker_app, "get_constrained_json_decoder_runtime_status", return_value=SimpleNamespace(available=True)):
+            self.assertEqual(worker_app.capabilities().totalAcceleratorMemoryBytes, 8 * 1024 ** 3)
+        self.capacity.return_value = None
+        with patch.object(worker_app, "get_constrained_json_decoder_runtime_status", return_value=SimpleNamespace(available=True)):
+            self.assertIsNone(worker_app.capabilities().totalAcceleratorMemoryBytes)
+        self.capacity.reset_mock()
+        with patch.object(worker_app, "get_constrained_json_decoder_runtime_status", return_value=SimpleNamespace(available=False)):
+            self.assertIsNone(worker_app.capabilities().totalAcceleratorMemoryBytes)
+        self.capacity.assert_not_called()
+
+    def test_unload_fences_new_admission_and_releases_after_confirmed_completion(self) -> None:
+        request = StartPythonRuntimeTaskRequest(requestId="after-unload", taskType="prepare-training-dataset", payload={})
+        def unload():
+            with self.assertRaisesRegex(RuntimeError, "cleanup is in progress"):
+                worker_app._start_async_task(request)
+            self.assertFalse(worker_app.TASK_REGISTRY)
+            self.assertEqual(worker_app.unload_models().status_code, 409)
+            return []
+        with patch.object(worker_app, "unload_generation_models", side_effect=unload):
+            response = worker_app.unload_models()
+        self.assertEqual(response.activeTaskCount, 0)
+        self.assertFalse(worker_app.MODEL_UNLOAD_IN_PROGRESS)
+        with patch.object(worker_app.TASK_EXECUTOR, "submit", return_value=SimpleNamespace()):
+            admitted = worker_app._start_async_task(request)
+        self.assertTrue(admitted.accepted)
+
+    def test_unload_failure_retains_safe_pending_response_and_releases_admission_fence(self) -> None:
+        from modules.adapters.runtime.python.worker.tasks.local_model_offload import OffloadAdmissionError
+        with patch.object(worker_app, "unload_generation_models", side_effect=OffloadAdmissionError()):
+            response = worker_app.unload_models()
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(json.loads(response.body)["error"]["code"], "model_cleanup_pending")
+        self.assertFalse(worker_app.MODEL_UNLOAD_IN_PROGRESS)
+
+    def test_queued_and_running_tasks_block_unload_before_model_graph_changes(self) -> None:
+        for status in ("queued", "running"):
+            with self.subTest(status=status):
+                worker_app.TASK_REGISTRY["active"] = {"status": status}
+                with patch.object(worker_app, "unload_generation_models") as unload:
+                    response = worker_app.unload_models()
+                self.assertEqual(response.status_code, 409)
+                unload.assert_not_called()
 
     def test_capabilities_advertise_constrained_json_only_when_ready(self) -> None:
         with patch(
@@ -35,6 +156,14 @@ class WorkerAppTests(unittest.TestCase):
 
         self.assertIn("dataset-preparation.constrained-json", ready.capabilities)
         self.assertNotIn("dataset-preparation.constrained-json", unavailable.capabilities)
+
+    def test_capabilities_advertise_exact_offload_version_only_when_supported(self) -> None:
+        with patch("modules.adapters.runtime.python.worker.tasks.bounded_model_loader.offload_runtime_available", return_value=True):
+            ready = worker_app.capabilities()
+        with patch("modules.adapters.runtime.python.worker.tasks.bounded_model_loader.offload_runtime_available", return_value=False):
+            unavailable = worker_app.capabilities()
+        self.assertIn("dataset-preparation.offload-v1", ready.capabilities)
+        self.assertNotIn("dataset-preparation.offload-v1", unavailable.capabilities)
 
     def test_model_download_success_emits_lifecycle_logs(self) -> None:
         request = EnsureModelDownloadRequest(

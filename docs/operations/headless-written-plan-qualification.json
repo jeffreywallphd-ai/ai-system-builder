@@ -1,0 +1,88 @@
+{
+  "schema_version": "headless-written-plan-qualification-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "plan-from-written-request",
+  "source_revision": "source.49bedcd2d178edf2decd29026d931b4d73757691a4795778359e0ac8c307b1d9",
+  "windows": {
+    "run_id": "2026-11-15t08-10-25-950z-1eb3f98a",
+    "evidence_sha256": "2d87346af261a75ee82f1f4acdbbfe0c95a4689e0fc6bc12d08bb8bf59b77b2a",
+    "status": "passed",
+    "environment": "local-win32-x64",
+    "scope": [
+      "Official stdio MCP and the packaged app",
+      "Whole-plan and per-change approval in either surface",
+      "Permissions and limits, keyboard decline and cancel",
+      "No saved-system changes before approval or after denial",
+      "Ordered saves, exact receipt readback, retry and stale cross-channel actions"
+    ]
+  },
+  "managed_browser": {
+    "run_id": "managed-34b3532749d74d208805b5a7b0fbd9ce",
+    "evidence_sha256": "fa826f3a1df10e9e0b007a885a1d61cfe90b412c807e047a3da19bdede2bb852",
+    "status": "passed",
+    "environment": "Local Chrome and HTTPS, synthetic issuer and restricted PostgreSQL role",
+    "checks": {
+      "plan_only_stdio_catalog": true,
+      "baseline_snapshot_status": 200,
+      "heading_movement_px": 0,
+      "modal_layout_and_keyboard": true,
+      "whole_plan_and_withdrawal": true,
+      "denied_plan_has_no_effect": true,
+      "individual_choices": true,
+      "approval_leaves_saved_systems_unchanged": true,
+      "wrong_client_workspace_revision_and_order_leave_no_effects": true,
+      "ordered_effects_and_exact_replay": true,
+      "withdrawal_preserves_saves_and_closes_replay": true,
+      "chat_whole_plan_and_popup_withdrawal": true,
+      "chat_individual_and_stale_cross_channel_no_duplicate": true,
+      "chat_individual_all_changes_in_chat": true
+    }
+  },
+  "earlier_fixture_failure": {
+    "run_id": "managed-0235037281974e0c8bc7d401bccfc604",
+    "evidence_sha256": "a0e5c3e8d4b75f8fd23cebfb208b355d20b05e23afbf43dba635ff1fd143eba9",
+    "source_revision": "source.f5ba54294c94bc4a041f591b972b6419e3c7e3385e04addf5614617688ad9378",
+    "stage": "chat-individual-both-changes",
+    "correction": "The saved-state feed omits names by design. The test now checks saved revision references in the feed and verifies names through the authorized exact system read."
+  },
+  "portable": {
+    "scope": "Seven deterministic transcript tests plus the independent synthetic skill walkthrough. The actual clients in the host journeys use the official MCP SDK.",
+    "live_frontier_agent": {
+      "run_id": "managed-c2906c63cb3e41ebbd116036d9b75e46",
+      "evidence_sha256": "c54e78bbd0a367ede82c0161e942b291eca2b3cb607dc8889d58ecc199173c03",
+      "host_and_cleanup_sha256": "4d94dce5434258d9a2b5ec1e61569ce074822c4a10db27af3503ab6b5e19c6c9",
+      "case_input_sha256": [
+        "f1a31a4ecf28544ea391b59bd8aeac64129b39a57fcce2344080989666fa4b9e",
+        "5a753817ab1ee6925eca2195138cd01e542356fd83bbe0de58bcc9c51c78c3f5",
+        "3802f0c482253a619575c1d8f0cab8c8128633f2d272da3c3cf9fd290a527d17",
+        "1d113914325e13cd88c74e679de2cf8c53c147ec4ea8e1f169da3309b91665bd",
+        "e93334bfd7524898e8778ba194c3695cbdd9b0e9c819587f490193eca222ff91",
+        "0e2f0e90e6f48112cfdcf3839eb71ba6ce220e620c6a8ce285de4bf471bd6622",
+        "7fa47a5b996f7464f5067abcd387522ae686cb86bdd9b8f0a6c6d2f1c969baf9",
+        "0e2f0e90e6f48112cfdcf3839eb71ba6ce220e620c6a8ce285de4bf471bd6622",
+        "23e668a7da7ff859b354e0c19680adcada7b7b24f41b3789b79d9c70c4c2a872",
+        "0bf7fb84bb609b339fa284ff6006e3e5ea2f4185af4743d530fa1dda0b544092",
+        "4cf1b407532e34f4454f38c9dfe96444f4709e89c2f117708cbabbb17537c9ac"
+      ],
+      "agent_selected_tool_calls": 9,
+      "elapsed_ms": 70630,
+      "saved_verified_systems": 1,
+      "scope": "A separate Codex agent used the skill to supply grounded inputs for a fixed order of actual MCP calls. The isolated fixture used the approved synthetic identity to click the real app popup. The agent verified one saved system by its returned reference.",
+      "budgets": "Tool count and elapsed time were measured. Actual model token counts were unavailable. The deterministic grade checks token limits."
+    }
+  },
+  "limits": [
+    "No production service, external publication, model accuracy or general autonomous tool access is qualified.",
+    "The whole-roadmap check remains separate."
+  ],
+  "windows_setup_retry": {
+    "scope": "Separate two-window Windows fixture during the broader headless check",
+    "failed_run_id": "2026-11-15t08-12-39-923z-47af20e0",
+    "failed_evidence_sha256": "4cea67f8fe6a0eb55c4cd40478d085be4ddeea0b15cbc26f9897a165c3c8f6f9",
+    "failed_control_plane_receipt": "f2599c8074c728c0c68db16abb140fa0f98086bae40d55f0cc7b757010bde8df",
+    "failure": "The native File menu fixture could not confirm its setup save. Its diagnostic did not identify the response code.",
+    "isolated_repeat_run_id": "2026-11-15t08-20-33-357z-a4afc6ea",
+    "isolated_repeat_evidence_sha256": "15624ce6a45aa70617f4b2a3ada3cb30e7cdb0c1a6b59f4f2d93b30f97a4a9de",
+    "isolated_repeat": "Passed on identical source."
+  }
+}

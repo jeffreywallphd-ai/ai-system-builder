@@ -187,28 +187,25 @@ export function SystemCompositionPreview({
       aria-label={systemName + " current UI preview"}
     >
       <div className="system-composition-preview__summary ui-stack ui-stack--xs">
-        <p>
-          This design-time preview recursively renders the current visual
-          hierarchy using registered, side-effect-free System Foundation
-          renderers. It does not execute backend logic, activate a release, or
-          deploy the system.
-        </p>
+        <p>{`System: ${systemName}`}</p>
+        <p>No backend code runs.</p>
+        <p>No release or deployment.</p>
         <div
           className="system-composition-preview__counts"
+          role="group"
           aria-label="Preview coverage"
         >
           <span className="ui-badge ui-badge--info">
-            {model.items.length} frontend{" "}
-            {model.items.length === 1 ? "surface" : "surfaces"}
+            {`${model.items.length} frontend ${model.items.length === 1 ? "surface" : "surfaces"}`}
           </span>
           {model.unavailableCount ? (
             <span className="ui-badge ui-badge--warning">
-              {model.unavailableCount} unavailable
+              {`${model.unavailableCount} unavailable`}
             </span>
           ) : null}
           {model.unassignedCount ? (
             <span className="ui-badge ui-badge--warning">
-              {model.unassignedCount} unassigned
+              {`${model.unassignedCount} unassigned`}
             </span>
           ) : null}
         </div>
@@ -296,6 +293,7 @@ export function SystemCompositionPreviewSurface({
     <div
       className="system-composition-preview__surface"
       data-viewport={viewport}
+      role="group"
       aria-label="Recursive system preview"
     >
       {roots.map((node) => (

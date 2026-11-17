@@ -16,10 +16,10 @@ function formatDiagnostic(diagnostic: ts.Diagnostic): string {
   return `${filePath}:${position.line + 1}:${position.character + 1} ${message}`;
 }
 
-describe("desktop webpack typecheck", () => {
-  it("typechecks the Hugging Face artifact repo storage adapter under desktop webpack tsconfig", () => {
+describe("desktop typecheck", () => {
+  it("typechecks the Hugging Face artifact repo storage adapter under desktop tsconfig", () => {
     const repoRoot = process.cwd();
-    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.webpack.json");
+    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.desktop.json");
     const targetFile = path.resolve(
       repoRoot,
       "modules/adapters/storage/huggingface/createHuggingFaceArtifactRepoStorageAdapter.ts",
@@ -53,9 +53,9 @@ describe("desktop webpack typecheck", () => {
     );
   });
 
-  it("typechecks the desktop host composition dependency closure under desktop webpack tsconfig", () => {
+  it("typechecks the desktop host composition dependency closure under desktop tsconfig", () => {
     const repoRoot = process.cwd();
-    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.webpack.json");
+    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.desktop.json");
     const targetFile = path.resolve(
       repoRoot,
       "modules/hosts/desktop/composition/composeDesktopHost.ts",
@@ -89,9 +89,9 @@ describe("desktop webpack typecheck", () => {
     );
   });
 
-  it("typechecks the python runtime footer hook under desktop webpack tsconfig", () => {
+  it("typechecks the python runtime footer hook under desktop tsconfig", () => {
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
-    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.webpack.json");
+    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.desktop.json");
     const targetFile = path.resolve(
       repoRoot,
       "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
@@ -125,9 +125,9 @@ describe("desktop webpack typecheck", () => {
     );
   });
 
-  it("typechecks the default model resolver under desktop webpack tsconfig", () => {
+  it("typechecks the default model resolver under desktop tsconfig", () => {
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
-    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.webpack.json");
+    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.desktop.json");
     const targetFile = path.resolve(
       repoRoot,
       "modules/application/services/settings/default-model-default-resolver.ts",
@@ -161,9 +161,9 @@ describe("desktop webpack typecheck", () => {
     );
   });
 
-  it("typechecks the application settings IPC adapter under desktop webpack tsconfig", () => {
+  it("typechecks the application settings IPC adapter under desktop tsconfig", () => {
     const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
-    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.webpack.json");
+    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.desktop.json");
     const targetFile = path.resolve(
       repoRoot,
       "modules/adapters/transport/ipc-electron/settings/registerApplicationSettingsIpc.ts",
@@ -197,9 +197,9 @@ describe("desktop webpack typecheck", () => {
     );
   });
 
-  it("typechecks the desktop models renderer surfaces under desktop webpack tsconfig", () => {
+  it("typechecks the desktop models renderer surfaces under desktop tsconfig", () => {
     const repoRoot = process.cwd();
-    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.webpack.json");
+    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.desktop.json");
     const targetFiles = [
       "apps/desktop/src/renderer/features/models/hooks/useModelsFeature.ts",
       "apps/desktop/src/renderer/features/models/api/desktopModelsClient.ts",
@@ -234,9 +234,9 @@ describe("desktop webpack typecheck", () => {
     );
   });
 
-  it("typechecks the desktop artifact browser renderer download and media surfaces under desktop webpack tsconfig", () => {
+  it("typechecks the desktop artifact browser renderer download and media surfaces under desktop tsconfig", () => {
     const repoRoot = process.cwd();
-    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.webpack.json");
+    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.desktop.json");
     const targetFiles = [
       "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
       "apps/desktop/src/renderer/features/artifact-browser/api/desktopArtifactBrowserClient.ts",
@@ -272,9 +272,9 @@ describe("desktop webpack typecheck", () => {
     );
   });
 
-  it("typechecks the desktop dataset preparation progress hook under desktop webpack tsconfig", () => {
+  it("typechecks the desktop dataset preparation progress hook under desktop tsconfig", () => {
     const repoRoot = process.cwd();
-    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.webpack.json");
+    const configPath = path.resolve(repoRoot, "apps/desktop/tsconfig.desktop.json");
     const targetFile = path.resolve(
       repoRoot,
       "apps/desktop/src/renderer/features/dataset-preparation/hooks/modelDownloadProgress.ts",

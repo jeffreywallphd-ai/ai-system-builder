@@ -322,3 +322,22 @@ Readiness language in user-facing surfaces must remain planning-oriented (for ex
 ## Relationship To Asset Composition Planning
 
 Effective asset projections are readiness-for-planning inputs for asset composition planning (`docs/architecture/asset-composition-planning.md`, ADR-0020). Projection `ready` is not runtime-ready and does not imply execution capability.
+
+Effective projection records, snapshots, commands, references and provenance are
+explicitly reconstructed with the shared bounded passive DTO schemas. Declared
+labels/metadata, canonical timestamps, revision identities and finite graph-summary
+counts/actual boolean flags are validated. Projected metadata retains safe nested
+arrays, false/zero/null and existing field rules with bounded recursion; credential
+representations, paths, accessors, cycles and unknown payload fields deny.
+Diagnostic messages remain generic. Snapshot identity is required for snapshots.
+The fixed local projection/snapshot collections validate on read, before writes,
+and before/after mutation callbacks. Invalid stored records deny without rewriting
+bytes or invoking a mutation callback. This does not grant source authority, add
+transport admission, enable uncomposed runtime families or satisfy controlled
+qualification. Rollback must preserve the stronger record denial.
+Duplicated target workspace identities must agree across command/record source,
+target and provenance. Root and target effective references agree exactly on
+kind/id/version, and an optional target projection ID matches the record.
+Source workspace provenance may legitimately differ for library/import sources;
+intended policy may differ from the actual blocked policy. Contradictory records
+deny before persistence or progression, rather than selecting a convenient identity.

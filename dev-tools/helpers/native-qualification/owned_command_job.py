@@ -1,0 +1,1464 @@
+"""Closed native qualification and private reviewed host composition.
+
+Public CLI: --native-selftest only. Internal child roles are fixed. No command,
+PID, cwd, shell or caller JSON execution interface exists. Cooperative reviewed
+Python composition may issue only fixed package/UI forms for synthetic dataset
+delivery or real Windows OCR with synthetic generation.
+Separate private training roles require reviewed runtime and source witnesses;
+ordinary selftests remain model-free and grant no training effect authority.
+The private Source role admits only its fixed standalone synthetic qualifier;
+it grants no model, retained-staging, production or parent qualification.
+"""
+from __future__ import annotations
+import argparse
+import copy
+import ctypes as c
+from dataclasses import dataclass
+import hashlib
+import json
+import os
+from pathlib import Path
+import queue
+import re
+import stat
+import subprocess
+import sys
+import threading
+import time
+from types import MappingProxyType
+import uuid
+
+_MODULE=Path(__file__).resolve()
+_REPO=_MODULE.parents[3]
+_PREVIOUS_SELFTEST_RUNS=_REPO/".local-codex/native-ui-budget-command-selftests-v3"
+_SELFTEST_RUNS=_REPO/".local-codex/native-ocr-budget-command-selftests-v4"
+_PENDING={}
+_LIVE={}
+_ISSUED={}
+_FIXTURES=frozenset(("stdio","failure","timeout","hold","overflow","natural-expiry","ui-budget","ocr-budget"))
+_CONSUMER_FILES=("offline-package.mjs","playwright.config.mjs","global-setup.mjs","package-tree.mjs")
+_SERIAL_PROVIDED_PHASE="serial-provided"
+_SERIAL_PROVIDED_SECONDS=1500
+_SERIAL_PROVIDED_FILES=(*_CONSUMER_FILES,"serial-provided.py")
+_HOST_UI_PROJECTS={
+    "ui":("thin-chrome","packaged-desktop"),
+    "ui-thin":("thin-chrome",),
+    "ui-desktop":("packaged-desktop",),
+}
+_SOURCE_SESSION_ROLE="source-session"
+_SOURCE_MAP_DENIAL_ROLE="source-shared-map-denial"
+_SOURCE_SHARING_DENIAL_ROLE="source-sharing-open-denial"
+_SOURCE_ROLES=(_SOURCE_SESSION_ROLE,_SOURCE_MAP_DENIAL_ROLE,_SOURCE_SHARING_DENIAL_ROLE)
+_SOURCE_SESSION_SECONDS=180
+_SOURCE_SESSION_FILES=tuple("modules/adapters/runtime/python/worker/tasks/"+name for name in (
+    "local_model_offload.py", "offload_recovery.py", "windows_offload_core.py",
+    "windows_offload_backend.py", "windows_offload_source_ledger.py",
+    "windows_offload_native_session.py", "windows_offload_execution.py",
+    "windows_offload_sources.py", "windows_offload_source_session.py",
+    "windows_offload_source_session_child.py")) + (
+    "dev-tools/scripts/qualification/qualify_windows_offload_source_session.py",
+    "dev-tools/scripts/qualification/windows_offload_source_session_fixture.py",
+)
+_TRAINING_DEADLINES=MappingProxyType({
+    "training-input-create":120, "training-readiness":300,
+    "training-package":420, "training-ui":690, "training-budget":8,
+})
+_TRAINING_SOURCES=(
+    "dev-tools/scripts/qualification/visual-composer/training-host-prerequisites.py",
+    "dev-tools/scripts/qualification/visual-composer/training-host-fixture.ts",
+    "dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.mjs",
+    "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py",
+    "node_modules/@playwright/test/cli.js",
+    "modules/adapters/runtime/python/worker/main.py",
+)
+_TRAINING_PACKAGES=(("torch","2.6.0+cu126"),("transformers","4.51.3"),
+    ("accelerate","1.14.0"),("safetensors","0.5.2"),("pydantic","2.10.6"),
+    ("datasets","5.0.1"),("peft","0.15.2"))
+_OCR_IMPORT_RUNS=_REPO/".local-codex/native-ocr-runtime-import-v1/runs"
+_OCR_IMPORT_V2_RUNS=_REPO/".local-codex/native-ocr-runtime-import-v2/runs"
+_OCR_IMPORT_PYTHON_SHA="1c4e9fbd9259294528031a567cef76b0a45254b66d612cf58de267928d1defbb"
+_OCR_IMPORT_CONFIG_SHA="27821a1b627f7753b1cdb5e70b94e668987fd10499ee0ded9214e3add51b92a5"
+_OCR_IMPORT_BASE_SHA="1a078825122b059f04b6c1545909f1d3ed0838dd24ab80d1c7fa60ca68ff9af5"
+_OCR_IMPORT_SCRIPT='''from pathlib import Path
+import json, os, re
+
+def fact(name, stage, **values):
+    body = {"schema_version": "ocr-runtime-import-fact-v1", "stage": stage,
+            "pid": os.getpid(), "parent_pid": os.getppid(), **values}
+    data = (json.dumps(body, separators=(",", ":")) + "\\n").encode()
+    if len(data) > 1024: raise RuntimeError("diagnostic-fact-bound")
+    with Path(name).open("xb") as stream:
+        stream.write(data); stream.flush(); os.fsync(stream.fileno())
+
+fact("01-before-import.json", "before-import")
+imported = False
+stage = "import"
+try:
+    import torch
+    imported = True
+    fact("02-import-complete.json", "import-complete")
+    stage = "accelerator-check"
+    available = bool(torch.cuda.is_available())
+except BaseException as error:
+    kind = type(error).__name__
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", kind): kind = "UnknownError"
+    fact("03-final.json", "finished", imported=imported,
+         accelerator_available=None, success=False, failure_stage=stage, error_type=kind)
+    raise SystemExit(1) from None
+fact("03-final.json", "finished", imported=True,
+     accelerator_available=available, success=True, failure_stage=None, error_type=None)
+'''
+
+_OCR_IMPORT_SCRIPT_V2='''from pathlib import Path
+from importlib import metadata
+import json, os, re, sys
+
+def fact(name, stage, **values):
+    body = {"schema_version": "ocr-runtime-import-fact-v2", "stage": stage,
+            "pid": os.getpid(), "parent_pid": os.getppid(), **values}
+    data = (json.dumps(body, separators=(",", ":")) + "\\n").encode()
+    if len(data) > 1024: raise RuntimeError("diagnostic-fact-bound")
+    with Path(name).open("xb") as stream:
+        stream.write(data); stream.flush(); os.fsync(stream.fileno())
+
+prefix = Path(os.environ["AISB_OCR_EXPECTED_PREFIX"])
+base = Path(os.environ["AISB_OCR_EXPECTED_BASE"])
+identity = {
+    "executable": Path(sys.executable) == prefix/"Scripts/python.exe",
+    "prefix": Path(sys.prefix) == prefix,
+    "exec_prefix": Path(sys.exec_prefix) == prefix,
+    "base_executable": Path(sys._base_executable) == base,
+    "base_prefix": Path(sys.base_prefix) == base.parent,
+    "base_exec_prefix": Path(sys.base_exec_prefix) == base.parent,
+    "isolated": sys.flags.isolated == 1,
+    "no_user_site": sys.flags.no_user_site == 1,
+    "bytecode_disabled": sys.flags.dont_write_bytecode == 1,
+    "site_enabled": sys.flags.no_site == 0,
+}
+try:
+    identity["guidance_distribution"] = (
+        metadata.version("llguidance") == "1.9.1" and
+        Path(metadata.distribution("llguidance").locate_file("")) == prefix/"Lib/site-packages")
+except BaseException:
+    identity["guidance_distribution"] = False
+fact("01-before-import.json", "before-import", identity=identity)
+if not all(identity.values()):
+    fact("03-final.json", "finished", imported=False, accelerator_available=None,
+         success=False, failure_stage="runtime-identity", error_type="RuntimeIdentityMismatch")
+    raise SystemExit(1)
+imported = False
+stage = "import"
+try:
+    import torch
+    imported = True
+    fact("02-import-complete.json", "import-complete")
+    stage = "accelerator-check"
+    available = bool(torch.cuda.is_available())
+except BaseException as error:
+    kind = type(error).__name__
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", kind): kind = "UnknownError"
+    fact("03-final.json", "finished", imported=imported,
+         accelerator_available=None, success=False, failure_stage=stage, error_type=kind)
+    raise SystemExit(1) from None
+fact("03-final.json", "finished", imported=True,
+     accelerator_available=available, success=True, failure_stage=None, error_type=None)
+'''
+
+
+def _retain_pending(owner):
+    # Exact live objects/handles stay strongly referenced; no reset/adoption API.
+    _PENDING[id(owner)]=owner
+
+
+def _assert_no_pending():
+    if _PENDING:raise NativeFailure("uncertain-owned-state-blocks-successor")
+
+
+def _register_owner(owner):
+    _assert_no_pending()
+    need(not _LIVE,"active-owned-state-blocks-successor")
+    _LIVE[id(owner)]=owner
+
+
+def _digest(file):
+    result=hashlib.sha256()
+    with file.open("rb") as stream:
+        for chunk in iter(lambda:stream.read(1024*1024),b""):result.update(chunk)
+    return result.hexdigest()
+
+
+def _implementation_hashes():
+    return {"owned_command_job.py":_digest(_MODULE)}
+
+
+def _regular_directory(path,anchor,create=False):
+    need(anchor.resolve()==anchor and path.is_relative_to(anchor),"directory-confinement")
+    current=anchor
+    for part in path.relative_to(anchor).parts:
+        current=current/part
+        if not current.exists() and not current.is_symlink():
+            need(create,"owned-directory-absent");current.mkdir()
+        info=current.lstat()
+        need(current.is_dir() and not current.is_symlink() and not (getattr(info,"st_file_attributes",0)&0x400) and current.resolve()==current,"redirected-directory")
+
+
+@dataclass(frozen=True)
+class _Intent:
+    phase:str
+    argv:tuple[str,...]
+    cwd:Path
+    environment:object
+    seconds:float
+    folder:Path
+    source_hashes:object
+    consumer_hashes:object
+
+
+def _remember(intent):
+    _ISSUED[id(intent)]=intent
+    return intent
+
+
+def _fixed_fixture_command(argument, role):
+    roles = {
+        "--fixture": _FIXTURES | {"leaf"},
+        "--guardian": {"before-resume", "after-descendant"},
+    }
+    need(type(argument) is str and type(role) is str
+         and role in roles.get(argument, ()), "unknown-fixed-fixture-command")
+    original = getattr(sys, "_base_executable", None)
+    need(type(original) is str and bool(original), "fixed-fixture-interpreter")
+    python = Path(original)
+    need(python.is_absolute() and python.resolve() == python
+         and python.name.lower() == "python.exe", "fixed-fixture-interpreter")
+    info = python.lstat()
+    need(stat.S_ISREG(info.st_mode) and 0 < info.st_size <= 128 * 1024**2
+         and not (getattr(info, "st_file_attributes", 0) & 0x400), "fixed-fixture-interpreter")
+    return (str(python), "-I", "-S", "-B", str(_MODULE), argument, role)
+
+
+def _fixture_intent(role,folder,*,retry=None):
+    need(role in _FIXTURES,"unknown-fixed-fixture-role")
+    need(folder.parent.parent==_SELFTEST_RUNS and re.fullmatch(r"[a-f0-9]{32}",folder.parent.name) and folder.name==role,"fixed-fixture-folder")
+    _regular_directory(folder,_REPO)
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    command = _fixed_fixture_command("--fixture", role) if retry is None else _retry_fixed_command("--fixture", role, retry)
+    interpreter_hash = _digest(Path(command[0])) if retry is None else retry["interpreter_sha256"]
+    source = _implementation_hashes() if retry is None else {"owned_command_job.py": retry["source_hashes"]["owned_command_job.py"]}
+    return _remember(_Intent("fixture:"+role,command,_MODULE.parent,MappingProxyType(env),1.5 if role=="timeout" else 8,folder,MappingProxyType(source),MappingProxyType({command[0]: interpreter_hash})))
+
+
+def _reviewed_host_home(candidate,env):
+    """Check the cooperative Windows profile; never fall back to a user's home."""
+    base=candidate.parent;home=base/"h"
+    need(env.get("TEMP")==env.get("TMP")==str(base/"t") and
+         env.get("HOME")==env.get("USERPROFILE")==str(home),"short-owned-temp-home")
+    need(env.get("APPDATA")==str(home/"AppData/Roaming") and
+         env.get("LOCALAPPDATA")==str(home/"AppData/Local"),"short-owned-appdata")
+    for directory in (base/"t",home,home/"AppData/Local",home/"AppData/Roaming"):
+        _regular_directory(directory,_REPO)
+
+
+def _reviewed_host_inputs(phase,*,candidate,node_executable,node_sha256,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest,consumer_files,bounded_files=False):
+    """Shared passive witnesses; no intent, process or command is issued here."""
+    need(candidate.is_absolute() and candidate.resolve()==candidate and re.fullmatch(r"\.local-codex/q/[a-f0-9]{8}/c",candidate.relative_to(_REPO).as_posix()),"fixed-candidate")
+    helpers=candidate/".local-codex/native-fixed-host-operator/v1"
+    need(run.parent==candidate/".local-codex/native-fixed-host-operator/runs" and re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/phase,"fixed-host-run")
+    need(node_executable.is_absolute() and node_executable.name.lower() in ("node","node.exe") and re.fullmatch(r"[a-f0-9]{64}",node_sha256)
+         and (_training_file(node_executable,node_sha256)>0 if bounded_files else _digest(node_executable)==node_sha256),"reviewed-node-identity")
+    need(type(reviewed_file_hashes) is dict and set(reviewed_file_hashes)==set(consumer_files) and re.fullmatch(r"[a-f0-9]{64}",review_digest),"reviewed-consumer-witness")
+    bindings={}
+    for name,value in reviewed_file_hashes.items():
+        need(re.fullmatch(r"[a-f0-9]{64}",value)
+             and (_training_file(helpers/name,value)>0 if bounded_files else _digest(helpers/name)==value),"consumer-source-drift")
+        bindings[str(helpers/name)]=value
+    env=dict(environment)
+    need(all(type(key) is str and type(value) is str and "\0" not in key+value for key,value in env.items()) and len({key.upper() for key in env})==len(env) and sum(len(key)+len(value)+2 for key,value in env.items())<32760,"bounded-environment")
+    forbidden=("PYTHONPATH","PYTHONSTARTUP","PYTHONINSPECT","PYTHONOPTIMIZE","LD_PRELOAD","DYLD_INSERT_LIBRARIES")
+    need(not any(key in env for key in forbidden) and env.get("NODE_OPTIONS")=="" and env.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO") in ("dataset-profile", "ocr-documents") and env.get("AISB_LOCAL_DESKTOP_UI_RUN")==str(run) and env.get("HF_HUB_OFFLINE")=="1" and env.get("TRANSFORMERS_OFFLINE")=="1" and env.get("PIP_NO_INDEX")=="1" and env.get("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD")=="1","fixed-controlled-environment")
+    need(_digest_bytes(json.dumps(env,sort_keys=True,separators=(",",":")).encode())==environment_sha256,"reviewed-environment-drift")
+    _reviewed_host_home(candidate,env);_regular_directory(folder,_REPO)
+    bindings[str(node_executable)]=node_sha256
+    return helpers,env,bindings
+
+
+def _reviewed_host_intent(phase,*,candidate,node_executable,node_sha256,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest):
+    """Private fixed package/UI forms, never routed from command JSON/CLI.
+
+    Reviewed witnesses coordinate cooperative source, not hostile-user auth.
+    """
+    need(type(phase) is str and (phase=="package" or phase in _HOST_UI_PROJECTS),"unknown-fixed-host-role")
+    helpers,env,bindings=_reviewed_host_inputs(phase,candidate=candidate,node_executable=node_executable,
+        node_sha256=node_sha256,run=run,folder=folder,reviewed_file_hashes=reviewed_file_hashes,
+        environment=environment,environment_sha256=environment_sha256,review_digest=review_digest,
+        consumer_files=_CONSUMER_FILES)
+    argv=(str(node_executable),str(helpers/"offline-package.mjs")) if phase=="package" else (str(node_executable),str(candidate/"node_modules/@playwright/test/cli.js"),"test","--config",str(helpers/"playwright.config.mjs"),*("--project="+project for project in _HOST_UI_PROJECTS[phase]))
+    return _remember(_Intent(phase,argv,candidate,MappingProxyType(env),420,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
+def _reviewed_serial_provided_intent(*,candidate,node_executable,node_sha256,python_executable,runtime_file_hashes,run,folder,reviewed_file_hashes,environment,environment_sha256,review_digest):
+    """One fixed original-Python coordinator, with unchanged Standard quotas.
+
+    The actual reviewed consumer must perform package, thin and desktop phases
+    in sequence and prove each predecessor retired before its successor. This
+    constructor supplies no consumer implementation or physical qualification.
+    """
+    _assert_no_pending()
+    need(not _LIVE,"active-owned-state-blocks-successor")
+    original=getattr(sys,"_base_executable",None)
+    need(type(python_executable) is type(_MODULE) and type(original) is str
+         and python_executable==Path(original) and python_executable.name.lower()=="python.exe",
+         "serial-original-python-required")
+    runtime_paths=(python_executable,python_executable.with_name("python312.dll"))
+    need(type(runtime_file_hashes) is dict and len(runtime_file_hashes)==len(runtime_paths),
+         "serial-exact-runtime-witnesses-required")
+    need(type(reviewed_file_hashes) is dict and len(reviewed_file_hashes)==len(_SERIAL_PROVIDED_FILES),
+         "serial-exact-consumer-witnesses-required")
+    # Capture only the fixed keys before I/O. Caller growth cannot enlarge a
+    # snapshot, and later caller mutation cannot remove an admitted witness.
+    runtime_file_hashes={str(file):dict.get(runtime_file_hashes,str(file)) for file in runtime_paths}
+    reviewed_file_hashes={name:dict.get(reviewed_file_hashes,name) for name in _SERIAL_PROVIDED_FILES}
+    need(all(type(value) is str and len(value)==64 and re.fullmatch(r"[a-f0-9]{64}",value)
+             for value in runtime_file_hashes.values()),"serial-exact-runtime-witnesses-required")
+    need(all(type(value) is str and len(value)==64 and re.fullmatch(r"[a-f0-9]{64}",value)
+             for value in reviewed_file_hashes.values()),"serial-exact-consumer-witnesses-required")
+    for file in runtime_paths: _training_file(file,runtime_file_hashes[str(file)])
+    helpers,env,bindings=_reviewed_host_inputs(_SERIAL_PROVIDED_PHASE,candidate=candidate,
+        node_executable=node_executable,node_sha256=node_sha256,run=run,folder=folder,
+        reviewed_file_hashes=reviewed_file_hashes,environment=environment,
+        environment_sha256=environment_sha256,review_digest=review_digest,consumer_files=_SERIAL_PROVIDED_FILES,bounded_files=True)
+    need(env["PYTHON_RUNTIME_QUALIFICATION_SCENARIO"]=="dataset-profile","serial-provided-scenario-required")
+    _serial_provided_fresh(folder)
+    bindings.update(runtime_file_hashes)
+    argv=(str(python_executable),"-I","-S","-B",str(helpers/"serial-provided.py"))
+    return _remember(_Intent(_SERIAL_PROVIDED_PHASE,argv,candidate,MappingProxyType(env),
+        _SERIAL_PROVIDED_SECONDS,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
+def _serial_provided_fresh(folder):
+    """No old run/fence or output can become a new coordinator's authority."""
+    _regular_directory(folder,_REPO)
+    for parent in (folder.parent.parent.parent,folder.parent.parent,folder.parent,folder):
+        _regular_directory(parent,_REPO)
+        try:(parent/"FENCED.json").lstat()
+        except FileNotFoundError:pass
+        else:raise NativeFailure("serial-provided-family-remains-fenced")
+    with os.scandir(folder) as entries:
+        need(next(entries,None) is None,"serial-provided-fresh-output-required")
+
+
+def _training_file_limit(path):
+    name=path.name.lower()
+    if name=="ai-system-builder.exe":return 256*1024**2
+    if name in ("node", "node.exe", "python.exe"):return 128*1024**2
+    if name=="python312.dll":return 16*1024**2
+    if name=="metadata":return 2*1024**2
+    if name in ("pyvenv.cfg", "input.json"):return 8192
+    need(path.suffix.lower() in (".mjs", ".js", ".py", ".ts"),"unknown-training-source-kind")
+    return 512*1024
+
+
+def _training_file(path, expected):
+    """Stable bounded reference reads; never supplier ownership or deletion."""
+    need(isinstance(path,Path) and path.is_absolute() and path.resolve()==path and
+         type(expected) is str and re.fullmatch(r"[a-f0-9]{64}",expected),"training-file-witness")
+    _regular_directory(path.parent,Path(path.anchor))
+    limit=_training_file_limit(path);before=path.lstat()
+    valid=lambda value:stat.S_ISREG(value.st_mode) and value.st_nlink>=1 and not(getattr(value,"st_file_attributes",0)&0x400) and 0<value.st_size<=limit
+    identity=lambda value:(value.st_dev,value.st_ino,value.st_size,value.st_mtime_ns,value.st_nlink)
+    need(valid(before) and not path.is_symlink(),"training-file-kind-or-bound")
+    h=hashlib.sha256();count=0
+    with path.open("rb") as stream:
+        opened=os.fstat(stream.fileno());need(valid(opened) and identity(opened)==identity(before),"training-file-open-drift")
+        while chunk:=stream.read(min(65536,limit+1-count)):
+            count+=len(chunk);need(count<=limit,"training-file-overflow");h.update(chunk)
+        after=os.fstat(stream.fileno())
+    named=path.lstat()
+    # Named and descriptor queries can expose different Windows ctime values.
+    # Keep identity/size/mtime cross-checks and compare ctime within each API.
+    need(valid(named) and not path.is_symlink() and identity(opened)==identity(after)==identity(named) and
+         before.st_ctime_ns==named.st_ctime_ns and opened.st_ctime_ns==after.st_ctime_ns and
+         count==opened.st_size and h.hexdigest()==expected,"training-file-drift")
+    return count
+
+
+def _training_run(phase,run,folder,review_digest):
+    need(type(phase) is str and phase in _TRAINING_DEADLINES,"unknown-fixed-training-role")
+    _assert_no_pending()
+    need(type(review_digest) is str and re.fullmatch(r"[a-f0-9]{64}",review_digest),"training-review-witness")
+    family=_REPO/".local-codex/native-training-host-v1"
+    need(isinstance(run,Path) and isinstance(folder,Path) and run.parent==family/"runs" and
+         re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/phase,"fixed-training-run")
+    _prior_family_clear(family);_prior_family_clear(run)
+    _regular_directory(folder,_REPO)
+    return _REPO/".local-codex/q"/run.name[:8]
+
+
+def _training_budget_intent(*,run,folder,review_digest):
+    """One inert new-role readback, separate from the nine legacy selftests."""
+    phase="training-budget";_training_run(phase,run,folder,review_digest)
+    python=Path(sys.executable).resolve();expected=_digest(python);_training_file(python,expected)
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    return _remember(_Intent(phase,(str(python),"-I","-S","-B",str(_MODULE),"--fixture","training-budget"),
+        _MODULE.parent,MappingProxyType(env),_TRAINING_DEADLINES[phase],folder,
+        MappingProxyType(_implementation_hashes()),MappingProxyType({str(python):expected})))
+
+
+def _training_empty_cache(short):
+    cache=short/"c/node_modules";_regular_directory(cache,_REPO)
+    with os.scandir(cache) as entries:
+        need(next(entries,None) is None,"training-candidate-cache-not-empty")
+
+
+def _reviewed_training_intent(phase,*,node_executable,node_sha256,run,folder,
+        reviewed_file_hashes,runtime_file_hashes,input_manifest_sha256,review_digest,package_hashes=None):
+    """Literal private roles; the separate effect review still grants authority.
+
+    Node identity is a trusted host witness, as in the legacy private factory.
+    It is never accepted from a public command/JSON execution interface. Python,
+    cwd, source/consumer names, environment and limits have no caller selectors.
+    """
+    need(type(phase) is str and phase in _TRAINING_DEADLINES and phase!="training-budget","unknown-fixed-training-role")
+    if phase!="training-ui":need(package_hashes is None,"unexpected-training-package-witness")
+    short=_training_run(phase,run,folder,review_digest)
+    need(isinstance(node_executable,Path) and node_executable.name.lower() in ("node","node.exe"),"training-node-identity")
+    _training_file(node_executable,node_sha256)
+    base=Path(sys._base_executable).resolve();prefix=_REPO/"artifacts/tmp/lancedb-python312-ai-runtime"
+    python=prefix/"Scripts/python.exe";config=prefix/"pyvenv.cfg"
+    need(base.name.lower()=="python.exe","training-base-identity")
+    runtime=[python,config,base,base.parent/"python312.dll"]
+    runtime.extend(base.parent/"Lib/site-packages"/f"{name}-{version}.dist-info/METADATA" for name,version in _TRAINING_PACKAGES)
+    need(type(runtime_file_hashes) is dict and set(runtime_file_hashes)=={str(file) for file in runtime},"training-runtime-witness")
+    need(sum(_training_file(file,runtime_file_hashes[str(file)]) for file in runtime)<=32*1024**2,"training-runtime-input-bound")
+    with config.open("rb") as stream:raw=stream.read(8193)
+    need(len(raw)<=8192 and hashlib.sha256(raw).hexdigest()==runtime_file_hashes[str(config)],"training-runtime-config-drift")
+    settings={}
+    for line in raw.decode("utf8").splitlines():
+        key,separator,value=line.partition("=")
+        if separator:
+            key=key.strip().lower();need(key not in settings,"training-runtime-config-duplicate");settings[key]=value.strip()
+    need(Path(settings.get("home",""))==base.parent and settings.get("include-system-site-packages","").lower()=="true" and
+         settings.get("version")=="3.12.8","training-runtime-context")
+    helpers=_REPO/".local-codex/native-training-host-operator/v1"
+    files={name:helpers/name for name in _CONSUMER_FILES}
+    files.update({name:_REPO/name for name in _TRAINING_SOURCES})
+    need(type(reviewed_file_hashes) is dict and set(reviewed_file_hashes)==set(files),"training-source-witness")
+    for name,file in files.items():_training_file(file,reviewed_file_hashes[name])
+    acquisition=f".local-codex/training-inputs/tiny-{uuid.UUID(hex=run.name)}/input.json"
+    manifest=_REPO/acquisition;_regular_directory(manifest.parent.parent,_REPO)
+    bindings={str(file):reviewed_file_hashes[name] for name,file in files.items()}
+    bindings.update(runtime_file_hashes);bindings[str(node_executable)]=node_sha256
+    if phase=="training-input-create":
+        need(input_manifest_sha256 is None,"training-input-create-witness")
+        try:manifest.parent.lstat()
+        except FileNotFoundError:pass
+        else:raise NativeFailure("training-input-slot-already-exists")
+    else:
+        _training_file(manifest,input_manifest_sha256);bindings[str(manifest)]=input_manifest_sha256
+    for directory in (short/"t",short/"h",short/"h/AppData/Local",short/"h/AppData/Roaming"):_regular_directory(directory,_REPO)
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    need("SystemRoot" in env and Path(env["SystemRoot"]).is_absolute() and
+         Path(env.get("WINDIR",env["SystemRoot"]))==Path(env["SystemRoot"]),"training-system-environment")
+    env.update({"PATH":os.pathsep.join((str(node_executable.parent),str(base.parent),str(Path(env["SystemRoot"])/"System32"))),
+        "NODE_OPTIONS":"","HOME":str(short/"h"),"USERPROFILE":str(short/"h"),
+        "LOCALAPPDATA":str(short/"h/AppData/Local"),"APPDATA":str(short/"h/AppData/Roaming"),
+        "TEMP":str(short/"t"),"TMP":str(short/"t"),"PYTHONDONTWRITEBYTECODE":"1","PYTHONNOUSERSITE":"1",
+        "__PYVENV_LAUNCHER__":str(python),"PYTHON_RUNTIME_COMMAND":str(python),
+        "PYTHON_RUNTIME_QUALIFICATION_SCENARIO":"training-model-host",
+        "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1","HF_DATASETS_OFFLINE":"1",
+        "PIP_NO_INDEX":"1","PIP_REQUIRE_HASHES":"1","PIP_DISABLE_PIP_VERSION_CHECK":"1","PIP_CONFIG_FILE":os.devnull,
+        "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD":"1","ELECTRON_SKIP_BINARY_DOWNLOAD":"1",
+        "CUDA_VISIBLE_DEVICES":"0","HIP_VISIBLE_DEVICES":"","OMP_NUM_THREADS":"1","MKL_NUM_THREADS":"1",
+        "AISB_LOCAL_TRAINING_UI_RUN":str(run),"VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION":acquisition,
+        "VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT":str(short/"o/ai-system-builder-win32-x64")})
+    if input_manifest_sha256 is not None:env["VISUAL_COMPOSER_TRAINING_INPUT_SHA256"]=input_manifest_sha256
+    cwd=folder
+    if phase=="training-input-create":argv=(str(base),"-I","-B",str(_REPO/_TRAINING_SOURCES[0]),"--create-tiny-input")
+    # This reviewed adapter calls the real dependency ports with a bounded
+    # read-only spawn adapter rooted in this phase, not the shared checkout.
+    elif phase=="training-readiness":argv=(str(node_executable),"--import","tsx",str(helpers/"global-setup.mjs"),"--inspect-prerequisites")
+    elif phase=="training-package":
+        _training_empty_cache(short);cwd=short/"c"
+        argv=(str(node_executable),str(helpers/"offline-package.mjs"))
+    else:
+        cwd=_REPO  # Existing public-UI helpers resolve their declared repo here.
+        package=short/"o/ai-system-builder-win32-x64"
+        _regular_directory(package/"resources/worker",_REPO)
+        need(type(package_hashes) is dict and set(package_hashes)=={"application_sha256","worker_main_sha256"} and
+             package_hashes["worker_main_sha256"]==reviewed_file_hashes[_TRAINING_SOURCES[5]],"training-package-witness")
+        for file,expected in ((package/"ai-system-builder.exe",package_hashes["application_sha256"]),
+                              (package/"resources/worker/main.py",package_hashes["worker_main_sha256"])):
+            _training_file(file,expected);bindings[str(file)]=expected
+        argv=(str(node_executable),str(_REPO/_TRAINING_SOURCES[4]),"test","--config",str(helpers/"playwright.config.mjs"),
+              "--project=packaged-desktop","--grep","packaged desktop trains one local adapter, reviews privately, saves and reopens it$")
+    return _remember(_Intent(phase,argv,cwd,MappingProxyType(env),_TRAINING_DEADLINES[phase],folder,
+        MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
+def _reviewed_ocr_runtime_import_intent(*,run,folder,review_digest):
+    """One closed diagnostic, not the production dependency preparer or a model run.
+
+    No command, script, executable, environment, cwd or quota is caller-selected.
+    Only the reviewed existing isolated runtime is permitted. Raw supplier output
+    is discarded by this exact role; three bounded child facts carry results.
+    """
+    need(run.parent==_OCR_IMPORT_RUNS and re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/"runtime-import","fixed-ocr-import-run")
+    need(re.fullmatch(r"[a-f0-9]{64}",review_digest),"reviewed-ocr-import-witness")
+    runtime=_REPO/".local-codex/ocr-cached-runtime-v1/venv"
+    python=runtime/"Scripts/python.exe";config=runtime/"pyvenv.cfg"
+    for file,expected in ((python,_OCR_IMPORT_PYTHON_SHA),(config,_OCR_IMPORT_CONFIG_SHA)):
+        need(file.is_file() and file.stat().st_size<=1024**2 and file.resolve()==file and not file.is_symlink() and not(getattr(file.lstat(),"st_file_attributes",0)&0x400) and _digest(file)==expected,"fixed-ocr-import-runtime")
+    _regular_directory(folder,_REPO)
+    for name in ("t","h"):_regular_directory(folder/name,_REPO)
+    for name in ("stdout.log","stderr.log","01-before-import.json","02-import-complete.json","03-final.json"):
+        need(not (folder/name).exists() and not (folder/name).is_symlink(),"fresh-ocr-import-output")
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    need("SystemRoot" in env and Path(env["SystemRoot"]).is_absolute(),"fixed-ocr-import-Windows-environment")
+    env.update({"PATH":os.pathsep.join((str(python.parent),str(Path(env["SystemRoot"])/"System32"))),
+                "HOME":str(folder/"h"),"USERPROFILE":str(folder/"h"),"TEMP":str(folder/"t"),"TMP":str(folder/"t"),
+                "PYTHONDONTWRITEBYTECODE":"1","PYTHONNOUSERSITE":"1","PIP_NO_INDEX":"1","PIP_CONFIG_FILE":os.devnull,
+                "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1"})
+    bindings={str(python):_OCR_IMPORT_PYTHON_SHA,str(config):_OCR_IMPORT_CONFIG_SHA}
+    return _remember(_Intent("ocr-runtime-import",(str(python),"-c",_OCR_IMPORT_SCRIPT),folder,MappingProxyType(env),20,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
+def _prior_family_clear(family):
+    # A changed experiment must not bypass an uncertain earlier native owner.
+    if family.exists() or family.is_symlink():
+        _regular_directory(family,_REPO)
+        fence=family/"FENCED.json"
+        need(not fence.exists() and not fence.is_symlink(),"prior-native-family-remains-fenced")
+
+
+def _reviewed_ocr_runtime_import_intent_v2(*,run,folder,review_digest):
+    """Direct pinned interpreter; fixed venv context and the approved OCR budget."""
+    need(run.parent==_OCR_IMPORT_V2_RUNS and re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/"runtime-import","fixed-ocr-import-v2-run")
+    need(re.fullmatch(r"[a-f0-9]{64}",review_digest),"reviewed-ocr-import-witness")
+    _prior_family_clear(_OCR_IMPORT_RUNS.parent)
+    _prior_family_clear(_OCR_IMPORT_RUNS)
+    _prior_family_clear(_OCR_IMPORT_V2_RUNS.parent)
+    _prior_family_clear(_OCR_IMPORT_V2_RUNS)
+    runtime=_REPO/".local-codex/ocr-cached-runtime-v1/venv"
+    python=runtime/"Scripts/python.exe";config=runtime/"pyvenv.cfg"
+    base=Path(sys._base_executable)
+    for file,expected in ((python,_OCR_IMPORT_PYTHON_SHA),(config,_OCR_IMPORT_CONFIG_SHA),(base,_OCR_IMPORT_BASE_SHA)):
+        need(file.is_absolute() and file.is_file() and file.stat().st_size<=1024**2 and file.resolve()==file and not file.is_symlink() and not(getattr(file.lstat(),"st_file_attributes",0)&0x400) and _digest(file)==expected,"fixed-ocr-import-v2-runtime")
+    homes=[line.partition("=")[2].strip() for line in config.read_text(encoding="utf8").splitlines() if line.partition("=")[0].strip().lower()=="home"]
+    need(len(homes)==1 and Path(homes[0])==base.parent,"fixed-ocr-import-v2-base-context")
+    _regular_directory(folder,_REPO)
+    for name in ("t","h"):_regular_directory(folder/name,_REPO)
+    for name in ("stdout.log","stderr.log","01-before-import.json","02-import-complete.json","03-final.json"):
+        need(not (folder/name).exists() and not (folder/name).is_symlink(),"fresh-ocr-import-output")
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    need("SystemRoot" in env and Path(env["SystemRoot"]).is_absolute(),"fixed-ocr-import-Windows-environment")
+    env.update({"PATH":os.pathsep.join((str(base.parent),str(Path(env["SystemRoot"])/"System32"))),
+                "HOME":str(folder/"h"),"USERPROFILE":str(folder/"h"),"TEMP":str(folder/"t"),"TMP":str(folder/"t"),
+                "__PYVENV_LAUNCHER__":str(python),"AISB_OCR_EXPECTED_PREFIX":str(runtime),"AISB_OCR_EXPECTED_BASE":str(base),
+                "PYTHONDONTWRITEBYTECODE":"1","PYTHONNOUSERSITE":"1","PIP_NO_INDEX":"1","PIP_CONFIG_FILE":os.devnull,
+                "HF_HUB_OFFLINE":"1","TRANSFORMERS_OFFLINE":"1"})
+    bindings={str(python):_OCR_IMPORT_PYTHON_SHA,str(config):_OCR_IMPORT_CONFIG_SHA,str(base):_OCR_IMPORT_BASE_SHA}
+    return _remember(_Intent("ocr-runtime-import-v2",(str(base),"-I","-B","-c",_OCR_IMPORT_SCRIPT_V2),folder,MappingProxyType(env),20,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
+def _digest_bytes(value):return hashlib.sha256(value).hexdigest()
+
+
+def _source_session_fresh(folder):
+    _regular_directory(folder,_REPO)
+    _regular_directory(folder/"t",_REPO)
+    with os.scandir(folder) as entries:
+        first=next(entries,None)
+        need(first is not None and first.name=="t" and next(entries,None) is None,
+             "source-session-fresh-phase")
+    with os.scandir(folder/"t") as entries:
+        need(next(entries,None) is None,"source-session-fresh-temp")
+
+
+def _reviewed_source_session_intent(*,run,folder,reviewed_file_hashes,runtime_file_hashes,review_digest):
+    """Issue one literal Source command; witnesses alone grant no effect authority.
+
+    The independent committed-source effect review and its one-use attempt record
+    are separate. No existing role, command selector or larger budget is reused.
+    """
+    return _source_session_intent(_SOURCE_SESSION_ROLE,run=run,folder=folder,
+        reviewed_file_hashes=reviewed_file_hashes,runtime_file_hashes=runtime_file_hashes,
+        review_digest=review_digest)
+
+
+def _reviewed_source_map_denial_intent(*,run,folder,reviewed_file_hashes,runtime_file_hashes,review_digest):
+    """Separate literal case, with the same closed Source process-tree limits."""
+    return _source_session_intent(_SOURCE_MAP_DENIAL_ROLE,run=run,folder=folder,
+        reviewed_file_hashes=reviewed_file_hashes,runtime_file_hashes=runtime_file_hashes,
+        review_digest=review_digest)
+
+
+def _reviewed_source_sharing_denial_intent(*,run,folder,reviewed_file_hashes,runtime_file_hashes,review_digest):
+    """One fixed sharing-open denial; no caller-selected command or budget."""
+    return _source_session_intent(_SOURCE_SHARING_DENIAL_ROLE,run=run,folder=folder,
+        reviewed_file_hashes=reviewed_file_hashes,runtime_file_hashes=runtime_file_hashes,
+        review_digest=review_digest)
+
+
+def _source_session_intent(role,*,run,folder,reviewed_file_hashes,runtime_file_hashes,review_digest):
+    need(type(role) is str and role in _SOURCE_ROLES,"source-session-fixed-run")
+    _assert_no_pending()
+    family=_REPO/".local-codex/native-source-session-host-v1"
+    need(isinstance(run,Path) and isinstance(folder,Path) and run.parent==family/"runs"
+         and re.fullmatch(r"[a-f0-9]{32}",run.name) and folder==run/role,
+         "source-session-fixed-run")
+    need(type(review_digest) is str and re.fullmatch(r"[a-f0-9]{64}",review_digest),
+         "source-session-review-witness")
+    _prior_family_clear(family);_prior_family_clear(run)
+    _source_session_fresh(folder)
+    base=Path(sys._base_executable).resolve()
+    runtime=(base,base.parent/"python312.dll")
+    need(base.name.lower()=="python.exe" and type(runtime_file_hashes) is dict
+         and set(runtime_file_hashes)=={str(path) for path in runtime},"source-session-runtime-witness")
+    need(type(reviewed_file_hashes) is dict and set(reviewed_file_hashes)==set(_SOURCE_SESSION_FILES),
+         "source-session-source-witness")
+    bindings={}
+    total=0
+    for path in runtime:
+        total+=_training_file(path,runtime_file_hashes[str(path)])
+        bindings[str(path)]=runtime_file_hashes[str(path)]
+    for name in _SOURCE_SESSION_FILES:
+        path=_REPO/name;total+=_training_file(path,reviewed_file_hashes[name])
+        bindings[str(path)]=reviewed_file_hashes[name]
+    need(total<=32*1024**2,"source-session-total-input-bound")
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    need("SystemRoot" in env and Path(env["SystemRoot"]).is_absolute()
+         and Path(env.get("WINDIR",env["SystemRoot"]))==Path(env["SystemRoot"]),
+         "source-session-system-environment")
+    env.update({"PATH":os.pathsep.join((str(base.parent),str(Path(env["SystemRoot"])/"System32"))),
+                "TEMP":str(folder/"t"),"TMP":str(folder/"t")})
+    argument={_SOURCE_SESSION_ROLE:"--native",_SOURCE_MAP_DENIAL_ROLE:"--native-shared-write-denial",
+              _SOURCE_SHARING_DENIAL_ROLE:"--native-sharing-open-denial"}[role]
+    argv=(str(base),"-I","-S","-B",str(_REPO/_SOURCE_SESSION_FILES[-2]),argument)
+    return _remember(_Intent(role,argv,folder,MappingProxyType(env),
+        _SOURCE_SESSION_SECONDS,folder,MappingProxyType(_implementation_hashes()),MappingProxyType(bindings)))
+
+
+def _validate_intent(intent,folder):
+    _assert_no_pending()
+    need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent and folder==intent.folder,"external-intent-denied")
+    need(_implementation_hashes()==dict(intent.source_hashes),"launcher-source-drift")
+    if intent.phase in _TRAINING_DEADLINES or intent.phase in _SOURCE_ROLES or intent.phase==_SERIAL_PROVIDED_PHASE:
+        for name,value in intent.consumer_hashes.items():_training_file(Path(name),value)
+        if intent.phase in _SOURCE_ROLES:_source_session_fresh(folder)
+        if intent.phase==_SERIAL_PROVIDED_PHASE:_serial_provided_fresh(folder)
+        if intent.phase=="training-package":
+            _training_empty_cache(_REPO/".local-codex/q"/intent.folder.parent.name[:8])
+    else:
+        need(all(_digest(Path(name))==value for name,value in intent.consumer_hashes.items()),"reviewed-consumer-drift")
+    if intent.phase in ("package",*_HOST_UI_PROJECTS,_SERIAL_PROVIDED_PHASE):
+        _reviewed_host_home(intent.cwd,intent.environment)
+    _regular_directory(folder,_REPO)
+
+
+def _memory_limits(intent):
+    # A caller value, environment setting or lookalike role cannot select a
+    # quota. Only an exact already-issued immutable intent reaches readback.
+    need(type(intent) is _Intent and _ISSUED.get(id(intent)) is intent,"external-budget-intent-denied")
+    phase=intent.phase
+    need(type(phase) is str and (phase in ("package",*_HOST_UI_PROJECTS,_SERIAL_PROVIDED_PHASE,"ocr-runtime-import","ocr-runtime-import-v2",*_SOURCE_ROLES) or phase in _TRAINING_DEADLINES or (phase.startswith("fixture:") and phase[8:] in _FIXTURES)),"unknown-fixed-budget-role")
+    if phase==_SERIAL_PROVIDED_PHASE:return PROCESS_BYTES,UI_JOB_BYTES
+    if phase in _TRAINING_DEADLINES:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
+    ocr=phase in ("ocr-runtime-import-v2","fixture:ocr-budget") or ((phase=="package" or phase in _HOST_UI_PROJECTS) and intent.environment.get("PYTHON_RUNTIME_QUALIFICATION_SCENARIO")=="ocr-documents")
+    if ocr:return OCR_PROCESS_BYTES,OCR_JOB_BYTES
+    return PROCESS_BYTES,UI_JOB_BYTES if phase in _HOST_UI_PROJECTS or phase=="fixture:ui-budget" else JOB_BYTES
+
+
+def _job_memory_limit(intent):return _memory_limits(intent)[1]
+
+
+def _process_memory_limit(intent):return _memory_limits(intent)[0]
+
+
+KILL_CLOSE = 0x2000
+LIMIT_FLAGS = KILL_CLOSE | 0x100 | 0x200 | 0x8
+PROCESS_BYTES = 1024**3
+JOB_BYTES = 2 * 1024**3
+UI_JOB_BYTES = 3 * 1024**3
+OCR_PROCESS_BYTES = 2 * 1024**3
+OCR_JOB_BYTES = 4 * 1024**3
+MEMBERS = 32
+LOG_CAP = 8 * 1024**2
+FORCED_EXIT = 0xE0000042
+READ_PROCESS = 0x100000 | 0x1000
+JOB_LIST_ATTRIBUTE = 0x2000D
+HANDLE_LIST_ATTRIBUTE = 0x20002
+COMPLETION_KEY = 0x51484F53
+DETACHED_PROCESS = 0x8
+ROOT_CREATION_FLAGS = 0x80000 | 0x4 | 0x400 | DETACHED_PROCESS
+
+
+class NativeFailure(RuntimeError):
+    pass
+
+
+def need(value, phase):
+    if not value:
+        raise NativeFailure(phase)
+
+
+class Basic(c.Structure):
+    _fields_ = [("process_time",c.c_int64),("job_time",c.c_int64),("flags",c.c_uint32),("minimum_ws",c.c_size_t),("maximum_ws",c.c_size_t),("active_limit",c.c_uint32),("affinity",c.c_size_t),("priority",c.c_uint32),("scheduling",c.c_uint32)]
+
+
+class Io(c.Structure):
+    _fields_ = [(name,c.c_uint64) for name in ("read_ops","write_ops","other_ops","read_bytes","write_bytes","other_bytes")]
+
+
+class Limits(c.Structure):
+    _fields_ = [("basic",Basic),("io",Io),("process_memory",c.c_size_t),("job_memory",c.c_size_t),("peak_process",c.c_size_t),("peak_job",c.c_size_t)]
+
+
+class Accounting(c.Structure):
+    _fields_ = [(name,c.c_int64) for name in ("user","kernel","period_user","period_kernel")] + [(name,c.c_uint32) for name in ("faults","total","active","terminated")]
+
+
+class Startup(c.Structure):
+    _fields_ = [("cb",c.c_uint32),("reserved",c.c_wchar_p),("desktop",c.c_wchar_p),("title",c.c_wchar_p),*[(name,c.c_uint32) for name in ("x","y","width","height","chars_x","chars_y","fill","flags")],("show",c.c_uint16),("reserved_size",c.c_uint16),("reserved_bytes",c.c_void_p),("stdin",c.c_void_p),("stdout",c.c_void_p),("stderr",c.c_void_p)]
+
+
+class StartupEx(c.Structure):
+    _fields_ = [("startup",Startup),("attributes",c.c_void_p)]
+
+
+class Process(c.Structure):
+    _fields_ = [("process",c.c_void_p),("thread",c.c_void_p),("pid",c.c_uint32),("tid",c.c_uint32)]
+
+
+class Security(c.Structure):
+    _fields_ = [("length",c.c_uint32),("descriptor",c.c_void_p),("inherit",c.c_int)]
+
+
+class FileTime(c.Structure):
+    _fields_ = [("low",c.c_uint32),("high",c.c_uint32)]
+
+
+class CompletionAssociation(c.Structure):
+    _fields_ = [("key",c.c_void_p),("port",c.c_void_p)]
+
+
+class _Win:
+    def __init__(self):
+        need(os.name == "nt" and c.sizeof(c.c_void_p) == 8,"platform")
+        self.k = c.WinDLL("kernel32",use_last_error=True)
+        p,w,b = c.c_void_p,c.c_uint32,c.c_int
+        signatures = {
+          "CreateJobObjectW":([p,c.c_wchar_p],p),"SetInformationJobObject":([p,c.c_int,p,w],b),"QueryInformationJobObject":([p,c.c_int,p,w,p],b),
+          "GetHandleInformation":([p,c.POINTER(w)],b),"SetHandleInformation":([p,w,w],b),"CloseHandle":([p],b),
+          "InitializeProcThreadAttributeList":([p,w,w,c.POINTER(c.c_size_t)],b),"UpdateProcThreadAttribute":([p,w,c.c_size_t,p,c.c_size_t,p,p],b),"DeleteProcThreadAttributeList":([p],None),
+          "CreateProcessW":([c.c_wchar_p,c.c_wchar_p,p,p,b,w,p,c.c_wchar_p,c.POINTER(StartupEx),c.POINTER(Process)],b),
+          "IsProcessInJob":([p,p,c.POINTER(b)],b),"ResumeThread":([p],w),"GetProcessId":([p],w),"GetProcessTimes":([p,*[c.POINTER(FileTime)]*4],b),
+          "WaitForSingleObject":([p,w],w),"GetExitCodeProcess":([p,c.POINTER(w)],b),"TerminateJobObject":([p,w],b),
+          "CreatePipe":([c.POINTER(p),c.POINTER(p),c.POINTER(Security),w],b),"CreateFileW":([c.c_wchar_p,w,w,c.POINTER(Security),w,w,p],p),
+          "ReadFile":([p,p,w,c.POINTER(w),p],b),"PeekNamedPipe":([p,p,w,c.POINTER(w),c.POINTER(w),c.POINTER(w)],b),"GetCurrentProcess":([],p),"DuplicateHandle":([p,p,p,c.POINTER(p),w,b,w],b),
+          "CreateIoCompletionPort":([p,p,c.c_size_t,w],p),"GetQueuedCompletionStatus":([p,c.POINTER(w),c.POINTER(c.c_size_t),c.POINTER(p),w],b),
+        }
+        for name,(arguments,result) in signatures.items():
+            function=getattr(self.k,name);function.argtypes=arguments;function.restype=result
+        need(c.sizeof(Limits)==144 and c.sizeof(StartupEx)==112 and c.sizeof(Process)==24 and c.sizeof(Accounting)==48,"abi")
+
+    def inheritable(self,handle):
+        flags=c.c_uint32();need(self.k.GetHandleInformation(handle,c.byref(flags)),"handle-flags")
+        return bool(flags.value & 1)
+
+    def identity(self,handle):
+        pid=self.k.GetProcessId(handle);times=[FileTime() for _ in range(4)]
+        need(pid and self.k.GetProcessTimes(handle,*[c.byref(item) for item in times]),"handle-identity")
+        return {"pid":pid,"creation_ticks":times[0].low | times[0].high << 32}
+
+    def member(self,handle,job):
+        value=c.c_int();need(self.k.IsProcessInJob(handle,job,c.byref(value)),"membership-query")
+        return bool(value.value)
+
+    def exit_code(self,handle,milliseconds=0):
+        value=c.c_uint32();need(self.k.WaitForSingleObject(handle,milliseconds)==0 and self.k.GetExitCodeProcess(handle,c.byref(value)) and value.value!=259,"root-native-exit")
+        return value.value
+
+    def duplicate_read(self,source_process,source_handle,retain):
+        copied=c.c_void_p()
+        ok=self.k.DuplicateHandle(source_process,source_handle,self.k.GetCurrentProcess(),c.byref(copied),READ_PROCESS,False,0)
+        if copied.value:retain(copied.value)
+        need(ok and copied.value,"read-handle-duplicate")
+        return copied.value
+
+
+def strict_shutdown_codes(codes,count):
+    return type(count) is int and count>0 and len(codes)==count and all(type(code) is int and code==0 for code in codes)
+
+
+class _OwnedJob:
+    """Private fixed-intent adapter. No adoption, AssignProcess, PID termination or breakaway."""
+    def __init__(self,intent,folder):
+        _validate_intent(intent,folder)
+        self.intent,self.folder=intent,folder
+        self.n=None;self.job=None;self.process=None;self.owned={};self.threads=[];self.log_state={};self.overflow=threading.Event();self.pipe_error=threading.Event();self.first=queue.Queue(maxsize=1)
+        self.resume_done=False;self.assigned=False;self.peak_active=0;self.forced=False;self.cleanup_errors=[];self.events=[];self.limit_messages=[];self.limit_notifications=[];self.event_overflow=False
+        self.phase="new";self.final_result=None
+        _register_owner(self)
+        try:self.n=_Win()
+        except BaseException:
+            _retain_pending(self)
+            raise
+
+    def hold(self,name,handle):
+        need(handle and handle!=c.c_void_p(-1).value,"handle-create-"+name);self.owned[name]=handle;return handle
+
+    def close(self,name):
+        handle=self.owned.get(name)
+        if handle:
+            try:
+                need(self.n.k.CloseHandle(handle),"close-"+name)
+            except BaseException as error:
+                self.cleanup_errors.append("close-"+name+":"+type(error).__name__)
+                _retain_pending(self)
+                return False
+            del self.owned[name]
+        return True
+
+    def limits(self):
+        need(self.job is not None and self.owned.get("job")==self.job,"owned-job-ledger-required")
+        expected_job_bytes=_job_memory_limit(self.intent)
+        value=Limits();need(self.n.k.QueryInformationJobObject(self.job,9,c.byref(value),c.sizeof(value),None),"limits-readback")
+        need(value.basic.flags==LIMIT_FLAGS and value.basic.active_limit==MEMBERS and value.process_memory==_process_memory_limit(self.intent) and value.job_memory==expected_job_bytes,"limits-drift")
+        return value
+
+    def accounting(self):
+        need(self.job is not None and self.owned.get("job")==self.job,"owned-job-ledger-required")
+        value=Accounting();need(self.n.k.QueryInformationJobObject(self.job,1,c.byref(value),c.sizeof(value),None),"accounting-readback")
+        need(value.active<=MEMBERS and value.total>=value.active,"accounting-count")
+        self.peak_active=max(self.peak_active,value.active)
+        return {"total":value.total,"active":value.active,"terminated":value.terminated}
+
+    def poll_events(self):
+        # Notifications are advisory. Their absence never proves no limit hit;
+        # native membership/accounting/exit handles independently prove cleanup.
+        port=self.owned.get("completion-port")
+        if not port:return
+        for _ in range(128):
+            message=c.c_uint32();key=c.c_size_t();detail=c.c_void_p()
+            ok=self.n.k.GetQueuedCompletionStatus(port,c.byref(message),c.byref(key),c.byref(detail),0)
+            if not ok:
+                need(c.get_last_error()==258 and not detail.value,"completion-readback");break
+            need(key.value==COMPLETION_KEY,"completion-key")
+            if len(self.events)>=4096:self.event_overflow=True;break
+            # A reported numeric PID is never opened or used for mutation.
+            self.events.append(message.value)
+            if message.value in (3,9,10):
+                self.limit_messages.append(message.value)
+                # Advisory correlation only: even a valid reported number can
+                # be stale/recycled. Never open or act on a process by it.
+                reported=detail.value
+                pid=reported if message.value in (9,10) and type(reported) is int and 0<reported<=0xffffffff else None
+                self.limit_notifications.append({"message":message.value,"reported_pid":pid})
+
+    def _inherited_stdio_handles(self):
+        return tuple(self.owned[name] for name in ("stdin","stdout-write","stderr-write"))
+
+    def _pipe(self,name,security):
+        read,write=c.c_void_p(),c.c_void_p();ok=self.n.k.CreatePipe(c.byref(read),c.byref(write),c.byref(security),65536)
+        if read.value:self.hold(name+"-read",read.value)
+        if write.value:self.hold(name+"-write",write.value)
+        need(ok and read.value and write.value,"pipe-create")
+        need(self.n.k.SetHandleInformation(read,1,0) and not self.n.inheritable(read.value) and self.n.inheritable(write.value),"pipe-inherit")
+        return read.value,write.value
+
+    def prepare(self):
+        import subprocess
+        need(self.phase=="new","prepare-terminal-or-reentry")
+        self.phase="preparing"
+        _validate_intent(self.intent,self.folder)
+        k=self.n.k;self.job=self.hold("job",k.CreateJobObjectW(None,None));need(not self.n.inheritable(self.job),"job-inherit")
+        value=Limits();value.basic.flags=LIMIT_FLAGS;value.basic.active_limit=MEMBERS;value.process_memory=_process_memory_limit(self.intent);value.job_memory=_job_memory_limit(self.intent)
+        need(k.SetInformationJobObject(self.job,9,c.byref(value),c.sizeof(value)),"limits-set");self.limits()
+        port=self.hold("completion-port",k.CreateIoCompletionPort(c.c_void_p(-1).value,None,0,1));need(not self.n.inheritable(port),"completion-port-inherit")
+        association=CompletionAssociation(COMPLETION_KEY,port)
+        need(k.SetInformationJobObject(self.job,7,c.byref(association),c.sizeof(association)),"completion-association")
+        security=Security(c.sizeof(Security),None,True)
+        stdout_read,stdout_write=self._pipe("stdout",security);stderr_read,stderr_write=self._pipe("stderr",security)
+        nul=self.hold("stdin",k.CreateFileW("NUL",0x80000000,3,c.byref(security),3,0x80,None));need(self.n.inheritable(nul),"stdin-inherit")
+        size=c.c_size_t();first=k.InitializeProcThreadAttributeList(None,2,0,c.byref(size));need(not first and c.get_last_error()==122 and 0<size.value<=65536,"attribute-size")
+        storage=c.create_string_buffer(size.value);need(k.InitializeProcThreadAttributeList(storage,2,0,c.byref(size)),"attribute-init")
+        try:
+            jobs=(c.c_void_p*1)(self.job);handles=(c.c_void_p*3)(*self._inherited_stdio_handles())
+            need(k.UpdateProcThreadAttribute(storage,0,JOB_LIST_ATTRIBUTE,c.byref(jobs),c.sizeof(jobs),None,None),"attribute-job-list")
+            need(k.UpdateProcThreadAttribute(storage,0,HANDLE_LIST_ATTRIBUTE,c.byref(handles),c.sizeof(handles),None,None),"attribute-handle-list")
+            startup=StartupEx();startup.startup.cb=c.sizeof(startup);startup.startup.flags=0x100;startup.startup.stdin=nul;startup.startup.stdout=stdout_write;startup.startup.stderr=stderr_write;startup.attributes=c.cast(storage,c.c_void_p)
+            environment=c.create_unicode_buffer("\0".join(key+"="+value for key,value in sorted(self.intent.environment.items(),key=lambda item:item[0].upper()))+"\0")
+            command=c.create_unicode_buffer(subprocess.list2cmdline(self.intent.argv));process=Process()
+            created=k.CreateProcessW(self.intent.argv[0],command,None,None,True,ROOT_CREATION_FLAGS,environment,str(self.intent.cwd),c.byref(startup),c.byref(process))
+            if process.process:self.process=process;self.hold("root",process.process)
+            if process.thread:self.hold("thread",process.thread)
+            need(created and process.process and process.thread,"atomic-process-create")
+            need(not self.n.inheritable(process.process) and not self.n.inheritable(process.thread) and self.n.member(process.process,self.job),"atomic-membership")
+            self.assigned=True;self.root_identity=self.n.identity(process.process)
+        finally:
+            k.DeleteProcThreadAttributeList(storage)
+        need(self.close("stdout-write") and self.close("stderr-write") and self.close("stdin"),"parent-write-close")
+        for name,handle in (("stdout",stdout_read),("stderr",stderr_read)):
+            thread=threading.Thread(target=self._drain,args=(name,handle),daemon=True);self.threads.append(thread);thread.start()
+        need(self.accounting()["active"]==1,"suspended-root-count")
+        self.phase="prepared"
+
+    def resume(self):
+        need(self.phase=="prepared","resume-terminal-or-reentry")
+        _assert_no_pending()
+        need(self.process is not None and self.owned.get("root")==self.process.process and self.owned.get("thread")==self.process.thread,"owned-root-thread-ledger-required")
+        need(self.process and self.assigned and not self.resume_done and self.n.member(self.process.process,self.job),"resume-admission")
+        self.limits();need(self.n.k.ResumeThread(self.process.thread)==1,"resume")
+        self.resume_done=True;self.phase="resumed";need(self.close("thread"),"thread-close")
+
+    def _drain(self,name,handle):
+        saved=0;observed=0;digest=hashlib.sha256();first=bytearray();sent=False
+        discard=self.intent.phase in ("ocr-runtime-import","ocr-runtime-import-v2") or (self.intent.phase in _SOURCE_ROLES and name=="stderr")
+        try:
+            with (self.folder/(name+".log")).open("xb") as stream:
+                buffer=c.create_string_buffer(65536)
+                while True:
+                    count=c.c_uint32();ok=self.n.k.ReadFile(handle,buffer,len(buffer),c.byref(count),None)
+                    if not ok:
+                        need(c.get_last_error()==109,"pipe-read");break
+                    if count.value==0:break
+                    chunk=buffer.raw[:count.value];observed+=len(chunk)
+                    keep=b"" if discard else chunk[:max(0,LOG_CAP-saved)]
+                    if keep:stream.write(keep);digest.update(keep);saved+=len(keep)
+                    if observed>LOG_CAP:self.overflow.set()
+                    if not discard and name=="stdout" and not sent:
+                        first.extend(chunk[:max(0,4097-len(first))])
+                        if b"\n" in first or len(first)>4096:
+                            self.first.put_nowait(bytes(first).split(b"\n",1)[0]);sent=True
+                stream.flush();os.fsync(stream.fileno())
+            self.log_state[name]={"bytes":saved,"observed_bytes":observed,"sha256":digest.hexdigest(),"complete":True,"cap_bytes":LOG_CAP,"path":str(self.folder/(name+".log"))}
+            if discard:self.log_state[name]["raw_content_discarded"]=True
+        except BaseException as error:
+            self.pipe_error.set();self.log_state[name]={"bytes":saved,"observed_bytes":observed,"complete":False,"error_type":type(error).__name__}
+
+    def terminate_owned_job(self):
+        need(self.job is not None and self.owned.get("job")==self.job,"owned-job-required")
+        self.limits();need(self.n.k.TerminateJobObject(self.job,FORCED_EXIT),"owned-job-terminate");self.forced=True
+
+    def finish(self,reason=None):
+        """Observe/retire only this created job; never inspect or adopt other trees."""
+        if self.phase=="finished":return copy.deepcopy(self.final_result)
+        need(self.phase!="finishing","finish-reentry")
+        self.phase="finishing"
+        code=None;account=None;peak=None;drained=False;confirmed=False
+        root_pid=getattr(self.process,"pid",None) if self.process else None
+        if type(root_pid) is not int or not 0<root_pid<=0xffffffff:root_pid=None
+        try:
+            if self.process:
+                need(self.owned.get("root")==self.process.process,"owned-root-ledger-required")
+                account=self.accounting()
+                if account["active"]:
+                    self.terminate_owned_job()
+                end=time.monotonic()+10
+                while self.accounting()["active"]:
+                    need(time.monotonic()<end,"owned-job-exit-timeout");time.sleep(.02)
+                account=self.accounting();need(account["active"]==0,"owned-members-remain")
+                self.poll_events()
+                code=self.n.exit_code(self.process.process,1000)
+                value=self.limits();peak={"process_commit_bytes":value.peak_process,"job_commit_bytes":value.peak_job}
+                for thread in self.threads:thread.join(timeout=3)
+                drained=bool(self.threads) and all(not thread.is_alive() for thread in self.threads) and not self.pipe_error.is_set()
+                need(drained,"pipe-drain-unconfirmed")
+                need(not self.n.inheritable(self.job),"job-inherit-drift")
+                confirmed=True
+            else:
+                # No CreateProcess succeeded; no owned command could have run.
+                confirmed=self.job is None or self.accounting()["active"]==0
+        except BaseException as error:
+            self.cleanup_errors.append(str(error))
+        # No read handle is closed under a still-running ReadFile thread.
+        if drained or not self.threads:
+            self.close("stdout-read");self.close("stderr-read")
+        self.close("stdout-write");self.close("stderr-write");self.close("stdin")
+        if confirmed:
+            self.close("thread");self.close("root");self.close("job");self.close("completion-port")
+        confirmed=confirmed and not self.cleanup_errors and not self.owned and id(self) not in _PENDING
+        if not confirmed:_retain_pending(self)
+        else:
+            _LIVE.pop(id(self),None)
+            self.job=None;self.process=None
+        self.final_result={"root_exit_code":code,"created_root_pid":root_pid,"job_accounting":account,"peak_active_observed":self.peak_active,"peak_commit":peak,"assigned_at_creation":self.assigned,"resumed_after_membership":self.resume_done,"limits":{"flags":LIMIT_FLAGS,"process_bytes":_process_memory_limit(self.intent),"job_bytes":_job_memory_limit(self.intent),"active_limit":MEMBERS},"observed_limit_messages":self.limit_messages,"observed_limit_notifications":self.limit_notifications,"reported_pids_are_process_identity":False,"completion_message_count":len(self.events),"completion_message_overflow":self.event_overflow,"absence_of_limit_hits_claimed":False,"explicit_inherited_handles":3,"job_handle_inherited":False,"forced_owned_job_termination":self.forced,"cleanup_confirmed":confirmed,"all_owned_handles_close_acknowledged":confirmed,"cleanup_errors":self.cleanup_errors,"logs":self.log_state,"log_overflow":self.overflow.is_set(),"reason":reason,"fence_required":not confirmed,"native_proof_for_old_processes":False}
+        self.phase="finished"
+        return copy.deepcopy(self.final_result)
+
+    def run(self):
+        need(self.phase=="new","run-terminal-or-reentry")
+        _assert_no_pending()
+        reason=None;normal_root=False
+        try:
+            deadline = time.monotonic() + self.intent.seconds
+            self.prepare()
+            if time.monotonic() < deadline:
+                self.resume()
+            while True:
+                if time.monotonic() >= deadline:
+                    reason = "timeout"
+                    break
+                self.accounting()
+                self.poll_events()
+                if self.limit_messages:reason="observed-native-limit-hit";break
+                if self.event_overflow:reason="completion-message-overflow";break
+                if self.overflow.is_set():reason="log-overflow";break
+                if self.pipe_error.is_set():reason="pipe-error";break
+                wait=self.n.k.WaitForSingleObject(self.process.process,50)
+                need(wait in (0,258),"root-wait")
+                if time.monotonic() >= deadline:
+                    reason = "timeout"
+                    break
+                if wait==0:
+                    normal_root=True
+                    # An actual command must retire descendants during normal exit.
+                    grace = min(deadline, time.monotonic() + 5)
+                    while self.accounting()["active"] and time.monotonic()<grace:time.sleep(.02)
+                    if time.monotonic() >= deadline:
+                        reason = "timeout"
+                    elif self.accounting()["active"]:
+                        reason = "owned-descendants-remain-after-root"
+                    break
+        except BaseException as error:
+            reason="native-"+type(error).__name__+":"+str(error)
+        result=self.finish(reason)
+        result["command_passed"]=normal_root and reason is None and result["root_exit_code"]==0 and result["cleanup_confirmed"] and not result["forced_owned_job_termination"] and not result["log_overflow"] and not result["observed_limit_messages"] and not result["completion_message_overflow"]
+        result["reviewed_retry_possible"]=not result["command_passed"] and result["cleanup_confirmed"]
+        result["automatic_retry_allowed"]=False
+        return result
+
+
+def dump(path,value):
+    with path.open("xb") as stream:
+        stream.write((json.dumps(value,indent=2)+"\n").encode());stream.flush();os.fsync(stream.fileno())
+
+
+def bounded_line(stream,seconds,maximum=4096):
+    import msvcrt
+    native=_Win();handle=msvcrt.get_osfhandle(stream.fileno());deadline=time.monotonic()+seconds;data=bytearray()
+    while True:
+        available=c.c_uint32()
+        ok=native.k.PeekNamedPipe(handle,None,0,None,c.byref(available),None)
+        if not ok:
+            need(c.get_last_error()!=109,"fixed-protocol-eof")
+            raise NativeFailure("fixed-protocol-peek")
+        if available.value:
+            chunk=os.read(stream.fileno(),min(available.value,maximum+1-len(data)))
+            need(chunk,"fixed-protocol-eof");data.extend(chunk)
+            need(len(data)<=maximum,"fixed-protocol-size")
+            if b"\n" in data:
+                need(data.endswith(b"\n") and data.count(b"\n")==1,"fixed-protocol-extra-data")
+                return bytes(data)
+        need(time.monotonic()<deadline,"fixed-protocol-timeout")
+        time.sleep(.01)
+
+
+def bounded_eof(stream,seconds,maximum):
+    """Bound both protocol tail bytes and time; no inferred writer retirement."""
+    import msvcrt
+    native=_Win();handle=msvcrt.get_osfhandle(stream.fileno());deadline=time.monotonic()+seconds;data=bytearray()
+    while True:
+        available=c.c_uint32()
+        ok=native.k.PeekNamedPipe(handle,None,0,None,c.byref(available),None)
+        if not ok:
+            need(c.get_last_error()==109,"fixed-tail-peek")
+            return bytes(data)
+        if available.value:
+            chunk=os.read(stream.fileno(),min(available.value,maximum+1-len(data)))
+            need(chunk,"fixed-tail-read");data.extend(chunk)
+            need(len(data)<=maximum,"fixed-tail-size")
+        need(time.monotonic()<deadline,"fixed-tail-timeout")
+        time.sleep(.01)
+
+
+
+def fixture(role):
+    if role=="training-budget":
+        os.write(1,b"fixed-native-training-budget\n");return 0
+    if role=="ui-budget":
+        os.write(1,b"fixed-native-ui-budget\n");return 0
+    if role=="ocr-budget":
+        os.write(1,b"fixed-native-ocr-budget\n");return 0
+    if role=="stdio":
+        os.write(1,b"fixed-native-stdout\n");os.write(2,b"fixed-native-stderr\n");return 0
+    if role=="failure":return 23
+    if role=="natural-expiry":time.sleep(.1);return 97
+    if role=="leaf":time.sleep(15);return 97
+    if role=="overflow":
+        for _ in range(132):os.write(1,b"x"*65536)
+        time.sleep(15);return 97
+    need(role in ("hold","timeout"),"fixed-fixture-role")
+    child=subprocess.Popen(_fixed_fixture_command("--fixture", "leaf"),stdin=subprocess.DEVNULL,stdout=sys.stdout,stderr=sys.stderr,close_fds=True,creationflags=DETACHED_PROCESS)
+    native=_Win();handle=int(child._handle)
+    print(json.dumps({"child_handle":handle,**native.identity(handle)}),flush=True)
+    # If the job was not shut down, natural expiry is deliberately nonzero.
+    time.sleep(15);return 97
+
+
+def guardian(mode):
+    need(mode in ("before-resume","after-descendant"),"fixed-guardian-role")
+    _regular_directory(_SELFTEST_RUNS,_REPO,create=True)
+    fresh=_SELFTEST_RUNS/uuid.uuid4().hex;fresh.mkdir()
+    folder=fresh/"hold";folder.mkdir()
+    owned=_OwnedJob(_fixture_intent("hold",folder),folder)
+    extra=None
+    try:
+        owned.prepare()
+        rows=[{"handle":owned.process.process,**owned.n.identity(owned.process.process)}]
+        if mode=="after-descendant":
+            owned.resume()
+            raw=owned.first.get(timeout=10)
+            need(len(raw)<=4096,"child-ready-size")
+            child=json.loads(raw)
+            need(set(child)=={"child_handle","pid","creation_ticks"} and all(type(value) is int and value>0 for value in child.values()),"child-ready-fields")
+            original_identity=owned.n.identity(owned.process.process)
+            need(owned.n.k.WaitForSingleObject(owned.process.process,0)==258,"root-ready-live")
+            extra=owned.n.duplicate_read(owned.process.process,child["child_handle"],lambda value:owned.hold("guardian-child-read",value))
+            need(owned.n.identity(owned.process.process)==original_identity and owned.n.member(extra,owned.job) and owned.n.identity(extra)=={key:child[key] for key in ("pid","creation_ticks")} and owned.n.k.WaitForSingleObject(extra,0)==258,"exact-created-child-read-handle")
+            rows.append({"handle":extra,**owned.n.identity(extra)})
+        count=owned.accounting()["active"]
+        need(count==len(rows)==(1 if mode=="before-resume" else 2),"guardian-owned-count")
+        print(json.dumps({"role":mode,"rows":rows,"active":count,"assigned_at_creation":owned.assigned,"resumed":owned.resume_done,"job_handle_inherited":owned.n.inheritable(owned.job),"limits":owned.limits().basic.flags,"folder":str(folder)}),flush=True)
+        need(bounded_line(sys.stdin.buffer,15,16)==b"crash\n","fixed-crash-request")
+        os._exit(71)  # Actual guardian exit, no Python finally/job cleanup path.
+    finally:
+        owned.close("guardian-child-read")
+        result=owned.finish("guardian-did-not-reach-crash")
+        dump(folder/"guardian-failure.json",result)
+
+
+def _cleanup_observer(observer,native):
+    """Best effort for each exact resource; exceptions never discard ownership."""
+    if observer.get("cleanup_attempted"):return observer.get("cleanup_complete",False)
+    observer["cleanup_attempted"]=True
+    errors=observer.setdefault("cleanup_errors",[]);process=observer.get("process")
+    closed=False
+    def attempt(name,operation):
+        try:return True,operation()
+        except BaseException as error:
+            errors.append(name+":"+type(error).__name__)
+            return False,None
+    try:
+        if process is None:
+            if observer.get("launch_attempted"):errors.append("launch-outcome-unconfirmed")
+        else:
+            ok,value=attempt("guardian-poll",process.poll)
+            if ok and value is None:
+                killed,_=attempt("guardian-retained-handle-kill",process.kill)
+                if killed:attempt("guardian-wait",lambda:process.wait(timeout=10))
+            for name in ("stdin","stdout","stderr"):
+                stream=getattr(process,name,None)
+                if stream is not None:
+                    attempt("stream-close-"+name,lambda stream=stream:stream.close() if not stream.closed else None)
+        remaining=[]
+        for handle in observer["copied"]:
+            ok,value=attempt("observer-read-close",lambda handle=handle:native.k.CloseHandle(handle))
+            if not ok or not value:
+                remaining.append(handle)
+                if ok:errors.append("observer-read-close:false")
+        observer["copied"]=remaining
+        if process is not None:
+            if process.returncode is None:errors.append("guardian-exit-unconfirmed")
+            elif observer.get("guardian_raw") is None:
+                ok,value=attempt("guardian-handle-detach",process._handle.Detach)
+                if ok:observer["guardian_raw"]=value
+            raw=observer.get("guardian_raw")
+            if raw is not None:
+                ok,value=attempt("guardian-handle-close",lambda:native.k.CloseHandle(raw))
+                if ok and value:observer["guardian_raw"]=None
+                elif ok:errors.append("guardian-handle-close:false")
+        closed=not errors and not observer["copied"] and observer.get("guardian_raw") is None
+    except BaseException as error:
+        errors.append("observer-cleanup:"+type(error).__name__)
+    finally:
+        if not closed or id(observer) in _PENDING:_retain_pending(observer);closed=False
+        else:_LIVE.pop(id(observer),None)
+        observer["cleanup_complete"]=closed
+    return closed
+
+
+def crash_case(mode,*,retry=None):
+    if retry is not None: _before_retry_case(retry)
+    copied=[];process=None;result=None;native=None
+    observer={"process":None,"copied":copied,"guardian_raw":None,"launch_attempted":False}
+    _register_owner(observer)
+    env={key:os.environ[key] for key in ("SystemRoot","WINDIR") if key in os.environ}
+    try:
+        native=_Win()
+        if retry is not None:
+            command = _retry_fixed_command("--guardian", mode, retry)
+            _assert_no_pending()
+            need(set(_LIVE) == {id(observer)}, "retry-guardian-owner-drift")
+        observer["launch_attempted"]=True
+        process=subprocess.Popen(_fixed_fixture_command("--guardian", mode) if retry is None else command,cwd=_MODULE.parent,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True,creationflags=DETACHED_PROCESS)
+        observer["process"]=process
+        wire=bounded_line(process.stdout,15)
+        ready=json.loads(wire)
+        expected=1 if mode=="before-resume" else 2
+        need(ready["role"]==mode and ready["active"]==expected and len(ready["rows"])==expected and ready["assigned_at_creation"] and ready["resumed"] is (mode=="after-descendant") and ready["job_handle_inherited"] is False and ready["limits"]==0x2308,"guardian-native-header")
+        guardian_handle=int(process._handle);identity=native.identity(guardian_handle)
+        need(identity["pid"]==process.pid and native.k.WaitForSingleObject(guardian_handle,0)==258,"exact-retained-guardian")
+        for row in ready["rows"]:
+            need(set(row)=={"handle","pid","creation_ticks"} and all(type(row[key]) is int and 0<row[key]<=maximum for key,maximum in (("handle",2**64-1),("pid",2**32-1),("creation_ticks",2**64-1))),"guardian-row")
+            need(native.identity(guardian_handle)==identity and native.k.WaitForSingleObject(guardian_handle,0)==258,"guardian-still-exact-and-live")
+            handle=native.duplicate_read(guardian_handle,row["handle"],copied.append)
+            need(native.identity(handle)=={key:row[key] for key in ("pid","creation_ticks")} and not native.inheritable(handle) and native.k.WaitForSingleObject(handle,0)==258,"observer-read-identity")
+        need(len({row["pid"] for row in ready["rows"]})==expected,"distinct-created-processes")
+        process.stdin.write(b"crash\n");process.stdin.flush();process.stdin.close()
+        process.wait(timeout=10)
+        need(process.returncode==71,"actual-guardian-crash-code")
+        tail=bounded_eof(process.stdout,3,4096);error=bounded_eof(process.stderr,3,LOG_CAP)
+        need(not tail and not error,"guardian-clean-protocol-tail")
+        codes=[native.exit_code(handle,5000) for handle in copied]
+        need(strict_shutdown_codes(codes,expected),"crash-native-zero-oracle")
+        result={"case":"guardian-crash-"+mode,"passed":True,"guardian_exit_code":71,"actual_native_exit_codes":codes,"actual_observed_members":expected,"membership_before_resume":True,"job_handle_not_inherited":True,"source_handle_identity_verified":True,"unknown_process_opened":False,"folder":ready["folder"]}
+    finally:
+        closed=_cleanup_observer(observer,native)
+        need(closed,"observer-or-guardian-close-unconfirmed")
+    result["guardian_handle_close_acknowledged"]=True
+    result["observer_read_handles_close_acknowledged"]=True
+    result["protocol_reader_threads_created"]=0
+    return result
+
+
+_REVIEWED_RETRY_CLAIM = "REVIEWED-RETRY-CLAIMED-v1.json"
+_RETRY_SOURCE_FILES = ("owned_command_job.py", "tests/test_owned_command_job.py", "README.md")
+_RETRY_PROOF_FILES = ("family-stop", "suite-stop", "suite", "stdio", "stdout", "stderr")
+
+
+def _retry_bytes(path, expected, maximum=65536):
+    need(type(expected) is str and re.fullmatch(r"[a-f0-9]{64}", expected), "retry-proof-hash")
+    before = path.lstat()
+    def identity(info):
+        return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns
+    def ordinary(info):
+        return (stat.S_ISREG(info.st_mode) and info.st_nlink == 1
+                and 0 <= info.st_size <= maximum
+                and not (getattr(info, "st_file_attributes", 0) & 0x400))
+    need(ordinary(before) and before.st_ino > 0 and not path.is_symlink()
+         and path.resolve() == path, "retry-proof-file")
+    with path.open("rb") as stream:
+        opened = os.fstat(stream.fileno())
+        need(ordinary(opened) and identity(opened) == identity(before), "retry-proof-open")
+        raw = stream.read(maximum + 1)
+        after = os.fstat(stream.fileno())
+    named = path.lstat()
+    need(ordinary(after) and ordinary(named) and identity(before) == identity(after) == identity(named)
+         and before.st_ctime_ns == named.st_ctime_ns and opened.st_ctime_ns == after.st_ctime_ns
+         and len(raw) == before.st_size and hashlib.sha256(raw).hexdigest() == expected, "retry-proof-drift")
+    return raw
+
+
+def _retry_json(raw):
+    def unique(pairs):
+        value = {}
+        for key, item in pairs:
+            need(key not in value, "retry-proof-json")
+            value[key] = item
+        return value
+    value = json.loads(raw, object_pairs_hook=unique,
+                       parse_constant=lambda _: need(False, "retry-proof-json"))
+    need(type(value) is dict, "retry-proof-json")
+    return value
+
+
+def _validate_reviewed_retry(prior_suite, proof_hashes, source_hashes, interpreter_sha256, review_digest):
+    need(type(review_digest) is str and re.fullmatch(r"[a-f0-9]{64}", review_digest), "retry-review-witness")
+    need(type(prior_suite) is type(_SELFTEST_RUNS) and prior_suite.parent == _SELFTEST_RUNS
+         and re.fullmatch(r"[a-f0-9]{32}", prior_suite.name), "retry-prior-suite")
+    need(type(proof_hashes) is dict and set(proof_hashes) == set(_RETRY_PROOF_FILES)
+         and type(source_hashes) is dict and set(source_hashes) == set(_RETRY_SOURCE_FILES), "retry-witness-set")
+    _regular_directory(prior_suite, _REPO)
+    _regular_directory(prior_suite / "stdio", _REPO)
+    paths = {
+        "family-stop": _SELFTEST_RUNS / "FENCED.json", "suite-stop": prior_suite / "FENCED.json",
+        "suite": prior_suite / "observation.json", "stdio": prior_suite / "stdio/observation.json",
+        "stdout": prior_suite / "stdio/stdout.log", "stderr": prior_suite / "stdio/stderr.log",
+    }
+    raw = {name: _retry_bytes(path, proof_hashes[name]) for name, path in paths.items()}
+    for name in _RETRY_SOURCE_FILES:
+        _retry_bytes(_MODULE.parent / name, source_hashes[name], 1024 * 1024)
+    command = _fixed_fixture_command("--fixture", "stdio")
+    _retry_bytes(Path(command[0]), interpreter_sha256, 128 * 1024**2)
+    family, stop, suite, stdio = (_retry_json(raw[name]) for name in ("family-stop", "suite-stop", "suite", "stdio"))
+    need(family == {"suite": str(prior_suite), "reason": "native-selftest-failed-or-unconfirmed", "automatic_successor_allowed": False}
+         and stop == {"reason": "native-selftest-failed-or-unconfirmed", "repeat_authority": False, "fixture_retained": True}, "retry-prior-stop")
+    need(suite.get("schema_version") == "actual-fixed-host-native-selftest-v1" and suite.get("passed") is False
+         and suite.get("cases") == [{"case": "stdio", "passed": False, "error_type": "NativeFailure", "diagnostic": "native-private-stdio"}]
+         and suite.get("source_unchanged") is True and suite.get("expected_native_cases") == 9
+         and suite.get("actual_platform") == "win32"
+         and suite.get("portable_pass_claimed") is False
+         and suite.get("old_process_or_fence_adopted") is False
+         and suite.get("actual_package_or_UI_executed") is False
+         and suite.get("model_provider_retained_stage_used") is False, "retry-prior-case")
+    need(raw["stdout"] == b"fixed-native-stdout\n" and raw["stderr"] == b"fixed-native-stderr\n", "retry-prior-output")
+    need(type(stdio.get("root_exit_code")) is int and stdio["root_exit_code"] == 0
+         and stdio.get("job_accounting") == {"total": 3, "active": 0, "terminated": 0}
+         and all(type(value) is int for value in stdio["job_accounting"].values())
+         and stdio.get("command_passed") is True and stdio.get("cleanup_confirmed") is True
+         and stdio.get("all_owned_handles_close_acknowledged") is True and stdio.get("cleanup_errors") == []
+         and stdio.get("assigned_at_creation") is True and stdio.get("resumed_after_membership") is True
+         and stdio.get("fence_required") is False and stdio.get("forced_owned_job_termination") is False
+         and stdio.get("automatic_retry_allowed") is False and stdio.get("log_overflow") is False
+         and stdio.get("reason") is None, "retry-prior-retirement")
+    expected_limits = {"flags": LIMIT_FLAGS, "process_bytes": PROCESS_BYTES, "job_bytes": JOB_BYTES, "active_limit": MEMBERS}
+    need(stdio.get("limits") == expected_limits, "retry-prior-budget")
+    for name in ("stdout", "stderr"):
+        row = stdio.get("logs", {}).get(name, {})
+        need(row.get("complete") is True and row.get("path") == str(paths[name])
+             and row.get("bytes") == row.get("observed_bytes") == len(raw[name])
+             and row.get("sha256") == proof_hashes[name] and row.get("cap_bytes") == LOG_CAP, "retry-prior-stream")
+
+
+def _reviewed_native_selftest_retry(*, prior_suite, proof_hashes, source_hashes, interpreter_sha256, review_digest):
+    """Private cooperative source-reviewed exception, never routed from CLI/JSON.
+
+    The caller must hold actual user authority and an independent exact-source
+    review. Hashes attest reviewed bytes; they are not hostile-user permission.
+    """
+    need(os.name == "nt" and c.sizeof(c.c_void_p) == 8, "actual-Windows-x64-required")
+    _assert_no_pending()
+    need(not _LIVE, "active-owned-state-blocks-successor")
+    _prior_family_clear(_PREVIOUS_SELFTEST_RUNS)
+    try:
+        (_SELFTEST_RUNS / _REVIEWED_RETRY_CLAIM).lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        raise NativeFailure("reviewed-native-retry-already-consumed")
+    # Copy cooperative witnesses before any I/O. No caller path selects code.
+    need(type(proof_hashes) is dict and type(source_hashes) is dict, "retry-witness-set")
+    proof_hashes, source_hashes = dict(proof_hashes), dict(source_hashes)
+    interpreter_path = _fixed_fixture_command("--fixture", "stdio")[0]
+    def validate():
+        need(_fixed_fixture_command("--fixture", "stdio")[0] == interpreter_path, "retry-interpreter-path-drift")
+        _validate_reviewed_retry(prior_suite, proof_hashes, source_hashes, interpreter_sha256, review_digest)
+    validate()
+    suite = _SELFTEST_RUNS / uuid.uuid4().hex
+    claim = {"schema_version": "reviewed-native-selftest-retry-v1",
+             "authority_ref": "user-allow-one-guarded-reviewed-retry-20261107",
+             "prior_suite": prior_suite.name, "suite": suite.name,
+             "proof_hashes": proof_hashes, "source_hashes": source_hashes,
+             "interpreter_path": interpreter_path, "interpreter_sha256": interpreter_sha256, "review_digest": review_digest,
+             "automatic_retry_allowed": False}
+    # Exclusive creation refuses every existing entry, including a broken link.
+    # Any write/flush failure leaves this exception consumed; there is no reset.
+    dump(_SELFTEST_RUNS / _REVIEWED_RETRY_CLAIM, claim)
+    validate()
+    _assert_no_pending()
+    need(not _LIVE, "active-owned-state-blocks-successor")
+    suite.mkdir()
+    return _native_selftest_suite(suite, _implementation_hashes(),
+                                  retry={"claim": claim, "validate": validate,
+                                         "source_hashes": MappingProxyType(source_hashes),
+                                         "interpreter_path": interpreter_path,
+                                         "interpreter_sha256": interpreter_sha256})
+
+
+def _before_retry_case(retry):
+    _assert_no_pending()
+    need(not _LIVE, "active-owned-state-blocks-successor")
+    retry["validate"]()
+
+
+def _retry_fixed_command(argument, role, retry):
+    command = _fixed_fixture_command(argument, role)
+    retry["validate"]()
+    need(command[0] == retry["interpreter_path"], "retry-interpreter-path-drift")
+    _retry_bytes(Path(command[0]), retry["interpreter_sha256"], 128 * 1024**2)
+    _retry_bytes(_MODULE, retry["source_hashes"]["owned_command_job.py"], 1024 * 1024)
+    return command
+
+
+def native_selftest():
+    need(os.name=="nt" and c.sizeof(c.c_void_p)==8,"actual-Windows-x64-required")
+    _assert_no_pending()
+    _prior_family_clear(_PREVIOUS_SELFTEST_RUNS)
+    _regular_directory(_SELFTEST_RUNS,_REPO,create=True)
+    try:
+        (_SELFTEST_RUNS / "FENCED.json").lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        raise NativeFailure("native selftest lifecycle remains fenced; no automatic successor")
+    source=_implementation_hashes();suite=_SELFTEST_RUNS/uuid.uuid4().hex;suite.mkdir()
+    return _native_selftest_suite(suite, source)
+
+
+def _selftest_suite_passes(cases, source, retry=None):
+    need(_implementation_hashes()==source,"native-source-changed")
+    _assert_no_pending()
+    need(not _LIVE,"selftest-owned-state-not-retired")
+    if retry is not None: _before_retry_case(retry)
+    return len(cases)==9 and all(case["passed"] for case in cases)
+
+
+def _native_selftest_suite(suite, source, *, retry=None):
+    cases=[];all_passed=False;current_case=None
+    try:
+        for role in ("stdio","failure","natural-expiry","timeout","overflow","ui-budget","ocr-budget"):
+            current_case=role
+            if retry is not None: _before_retry_case(retry)
+            folder=suite/role;folder.mkdir()
+            intent = _fixture_intent(role,folder) if retry is None else _fixture_intent(role,folder,retry=retry)
+            result=_OwnedJob(intent,folder).run()
+            dump(folder/"observation.json",result)
+            need(result["cleanup_confirmed"] and result["all_owned_handles_close_acknowledged"] and result["job_accounting"]["active"]==0 and result["assigned_at_creation"] and result["resumed_after_membership"],"selftest-owned-cleanup-required")
+            if role=="stdio":
+                need(result["command_passed"] and (folder/"stdout.log").read_bytes()==b"fixed-native-stdout\n" and (folder/"stderr.log").read_bytes()==b"fixed-native-stderr\n" and result["job_accounting"]["total"]==1,"native-private-stdio")
+            elif role=="failure":
+                need(not result["command_passed"] and result["root_exit_code"]==23 and not result["forced_owned_job_termination"] and result["reviewed_retry_possible"] and not result["fence_required"],"failure-never-pass-but-cleanup-observed")
+            elif role=="natural-expiry":
+                need(result["root_exit_code"]==97 and not result["command_passed"] and not result["forced_owned_job_termination"] and not strict_shutdown_codes([result["root_exit_code"]],1),"actual-natural97-rejected-as-shutdown")
+            elif role=="timeout":
+                need(result["reason"]=="timeout" and not result["command_passed"] and result["forced_owned_job_termination"] and result["job_accounting"]["total"]==2 and result["peak_active_observed"]==2,"actual-descendant-timeout-retired")
+            elif role=="overflow":
+                need(result["reason"]=="log-overflow" and not result["command_passed"] and result["log_overflow"] and result["logs"]["stdout"]["bytes"]==LOG_CAP and result["forced_owned_job_termination"],"actual-log-overflow-bounded-retired")
+            elif role=="ui-budget":
+                need(result["command_passed"] and result["job_accounting"]["total"]==1 and result["limits"]=={"flags":LIMIT_FLAGS,"process_bytes":PROCESS_BYTES,"job_bytes":UI_JOB_BYTES,"active_limit":MEMBERS} and (folder/"stdout.log").read_bytes()==b"fixed-native-ui-budget\n" and (folder/"stderr.log").read_bytes()==b"","actual-fixed-ui-budget-readback")
+            elif role=="ocr-budget":
+                need(result["command_passed"] and result["job_accounting"]["total"]==1 and result["limits"]=={"flags":LIMIT_FLAGS,"process_bytes":OCR_PROCESS_BYTES,"job_bytes":OCR_JOB_BYTES,"active_limit":MEMBERS} and (folder/"stdout.log").read_bytes()==b"fixed-native-ocr-budget\n" and (folder/"stderr.log").read_bytes()==b"","actual-fixed-ocr-budget-readback")
+            cases.append({"case":role,"passed":True,"observation":str(folder/"observation.json"),"sha256":_digest(folder/"observation.json"),"root_exit_code":result["root_exit_code"],"job_total":result["job_accounting"]["total"],"job_active":result["job_accounting"]["active"]})
+        for mode in ("before-resume","after-descendant"):
+            current_case="guardian-crash-"+mode
+            if retry is not None: _before_retry_case(retry)
+            cases.append(crash_case(mode) if retry is None else crash_case(mode,retry=retry))
+        all_passed=_selftest_suite_passes(cases,source,retry)
+    except BaseException as error:
+        cases.append({"case":current_case,"passed":False,"error_type":type(error).__name__,"diagnostic":str(error)[:500]})
+        raise
+    finally:
+        report={"schema_version":"actual-fixed-host-native-selftest-v1","passed":all_passed,"cases":cases,"expected_native_cases":9,"portable_pass_claimed":False,"actual_platform":sys.platform,"source_hashes":source,"source_unchanged":_implementation_hashes()==source,"limits":{"process_bytes":PROCESS_BYTES,"job_bytes":JOB_BYTES,"ui_job_bytes":UI_JOB_BYTES,"ocr_process_bytes":OCR_PROCESS_BYTES,"ocr_job_bytes":OCR_JOB_BYTES,"active_limit":MEMBERS},"old_process_or_fence_adopted":False,"actual_package_or_UI_executed":False,"model_provider_retained_stage_used":False,"qualification_scope":"Actual new fixed-purpose launcher mechanics and fixed Standard/OCR budget readback only; no old-process cleanup, native filesystem/offload, runtime import, model, parent or product qualification."}
+        if retry is not None: report["reviewed_retry"] = copy.deepcopy(retry["claim"])
+        dump(suite/"observation.json",report)
+        if not all_passed:
+            dump(suite/"FENCED.json",{"reason":"native-selftest-failed-or-unconfirmed","repeat_authority":False,"fixture_retained":True})
+            if not (_SELFTEST_RUNS/"FENCED.json").exists():dump(_SELFTEST_RUNS/"FENCED.json",{"suite":str(suite),"reason":"native-selftest-failed-or-unconfirmed","automatic_successor_allowed":False})
+        print(json.dumps({"passed":all_passed,"observation":str(suite/"observation.json"),"sha256":_digest(suite/"observation.json")}),flush=True)
+    need(all_passed,"actual-native-selftest-failed")
+    return {"observation":str(suite/"observation.json"),"sha256":_digest(suite/"observation.json"),**report}
+
+
+def run_native_selftests():
+    """Run actual closed Windows cases; unsupported platforms refuse, never pass."""
+    return native_selftest()
+
+
+def _parser():
+    parser=argparse.ArgumentParser(description=__doc__)
+    group=parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--native-selftest",action="store_true")
+    group.add_argument("--fixture",choices=("stdio","failure","natural-expiry","timeout","hold","overflow","leaf","ui-budget","ocr-budget","training-budget"),help=argparse.SUPPRESS)
+    group.add_argument("--guardian",choices=("before-resume","after-descendant"),help=argparse.SUPPRESS)
+    return parser
+
+
+def main():
+    args=_parser().parse_args()
+    if args.fixture:return fixture(args.fixture)
+    if args.guardian:return guardian(args.guardian)
+    run_native_selftests();return 0
+
+
+if __name__=="__main__":raise SystemExit(main())

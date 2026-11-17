@@ -1,3 +1,5 @@
+import { getDatasetPreparationMemoryFailureMessage } from "../../../../../../../modules/ui/shared/data-management/datasetPreparationMemoryMessage";
+import { normalizeDatasetPreparationMemoryShortfall } from "../../../../../../../modules/contracts/runtime";
 import {
   getDesktopApi,
   type DesktopPrepareTrainingDatasetInput,
@@ -5,6 +7,7 @@ import {
   type DesktopArtifactBrowseItem,
 } from "../../../lib/desktopApi";
 import { normalizeDatasetPreparationTransportError } from "../hooks/datasetPreparationTransport";
+import { readDatasetVersionReplaySources } from "../../../../../../../modules/ui/shared/dataset-version/readDatasetVersionReplaySources";
 import type {
   DatasetVersionComparison,
   DatasetVersionPublicationRecord,
@@ -53,7 +56,20 @@ export interface DesktopDatasetPreparationRequestContext {
   correlationId?: string;
 }
 
+export interface DesktopDatasetReplaySource {
+  artifactId: string;
+  storageKey: string;
+  label: string;
+  mediaType?: string;
+  sourceKind?: string;
+}
+
 export interface DesktopDatasetPreparationClient {
+  readReplaySourceArtifacts?: (
+    workspaceId: string,
+    sources: readonly { readonly artifactId: string; readonly storageKey: string }[],
+    isCurrent: () => boolean,
+  ) => Promise<DesktopDatasetReplaySource[]>;
   browseSourceArtifacts: (workspaceId?: string) => Promise<
     Array<{
       artifactId: string;
@@ -84,7 +100,7 @@ export interface DesktopDatasetPreparationClient {
     requestId: string,
     workspaceId?: string,
   ) => Promise<
-    | { ok: true }
+    | { ok: true; value: { requestId: string; cancelled: boolean; status: "cancelled" | "running" | "unknown" } }
     | {
         ok: false;
         error: {
@@ -248,6 +264,10 @@ function ensureSuccessEnvelope(
 }
 
 const DATASET_PREPARATION_FAILURE_MESSAGES: Readonly<Record<string, string>> = {
+  ocr_unavailable:
+    "Text recognition is unavailable. Choose an installed Windows recognition language, or turn off scanned-PDF recognition.",
+  ocr_input_invalid:
+    "The scanned PDF or its settings could not be verified. Select the source again and check the recognition language.",
   preparation_input_intent_ambiguous:
     "The selected files mix existing datasets with source material. Prepare those groups separately.",
   preparation_plan_mismatch:
@@ -322,11 +342,22 @@ const DATASET_PREPARATION_FAILURE_MESSAGES: Readonly<Record<string, string>> = {
     "Dataset preparation took longer than allowed. Retry with fewer files or smaller source sections.",
 };
 
+/** Fixed code-owned public copy, shared by task clients and Notifications. */
+export function getDesktopDatasetPreparationFailureMessage(error: { code?: string; details?: Record<string, unknown> } | undefined): string {
+  if (error?.code === "generation_insufficient_resources") {
+    return getDatasetPreparationMemoryFailureMessage(error.details?.memoryShortfall);
+  }
+  return error && Object.prototype.hasOwnProperty.call(DATASET_PREPARATION_FAILURE_MESSAGES, error.code ?? "")
+    ? DATASET_PREPARATION_FAILURE_MESSAGES[error.code!]
+    : "Dataset preparation could not finish. Review the selected files and settings, then retry.";
+}
+
 function mapDatasetPreparationTaskFailure(
   error:
     | {
         code?: string;
         stage?: string;
+        memoryShortfall?: unknown;
       }
     | undefined,
 ): {
@@ -343,28 +374,41 @@ function mapDatasetPreparationTaskFailure(
     ["normalization", "chunking", "generation", "split"].includes(error.stage)
       ? error.stage
       : undefined;
+  const memoryShortfall = code === "generation_insufficient_resources"
+    ? normalizeDatasetPreparationMemoryShortfall(error?.memoryShortfall)
+    : undefined;
+  const details = {
+    ...(stage ? { stage, reasonCode: code } : {}),
+    ...(memoryShortfall ? { memoryShortfall } : {}),
+  };
   return {
     code,
-    message:
-      DATASET_PREPARATION_FAILURE_MESSAGES[code] ??
-      "Dataset preparation could not finish. Review the selected files and settings, then retry.",
-    ...(stage ? { details: { stage, reasonCode: code } } : {}),
+    message: getDesktopDatasetPreparationFailureMessage({ code, details }),
+    ...(Object.keys(details).length ? { details } : {}),
   };
 }
 
 function toBrowseItems(value: unknown): DesktopArtifactBrowseItem[] {
   if (typeof value !== "object" || value === null) {
-    return [];
+    throw new Error("Source file list is incomplete.");
   }
 
   const items = (value as { items?: DesktopArtifactBrowseItem[] }).items;
-  return Array.isArray(items) ? items : [];
+  if (!Array.isArray(items)) throw new Error("Source file list is incomplete.");
+  return items;
 }
 
 export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparationClient {
   const desktopApi = getDesktopApi();
 
   return {
+    async readReplaySourceArtifacts(workspaceId, sources, isCurrent) {
+      return readDatasetVersionReplaySources(workspaceId, sources, isCurrent, async (scope, key) => {
+        const response = await desktopApi.readArtifactDetail({ storageKey: key }, { workspaceId: scope });
+        if (!isPreloadResponseEnvelope(response) || response.ok !== true || !response.value || typeof response.value !== "object") throw new Error();
+        return (response.value as { artifact?: unknown }).artifact;
+      });
+    },
     async browseSourceArtifacts(workspaceId) {
       if (!workspaceId) return [];
       const payload = ensureSuccessEnvelope(
@@ -498,7 +542,7 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
                 details?: Record<string, unknown>;
               };
               result?: DesktopPreparedTrainingDatasetResult;
-              error?: { code?: string; stage?: string; message?: string };
+              error?: { code?: string; stage?: string; message?: string; memoryShortfall?: unknown };
             }
           | undefined;
         if (
@@ -572,7 +616,13 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
             },
           };
         }
-        return { ok: true };
+        const value = response.value as Record<string, unknown> | undefined;
+        if (!value || value.requestId !== requestId || typeof value.cancelled !== "boolean" ||
+            !["cancelled", "running", "unknown"].includes(String(value.status)) ||
+            value.cancelled !== (value.status === "cancelled")) {
+          return { ok: false, error: { code: "internal", message: "Dataset cancellation could not be confirmed." } };
+        }
+        return { ok: true, value: { requestId, cancelled: value.cancelled, status: value.status as "cancelled" | "running" | "unknown" } };
       } catch (error) {
         throw normalizeDatasetPreparationTransportError(error);
       }
@@ -667,7 +717,8 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
         response,
         "Dataset version history could not be loaded.",
       ).value as { versions?: readonly DatasetVersionRecord[] } | undefined;
-      return Array.isArray(value?.versions) ? value.versions : [];
+      if (!Array.isArray(value?.versions)) throw new Error("Dataset version history is incomplete.");
+      return value.versions;
     },
     async compareVersions(workspaceId, fromVersionId, toVersionId) {
       if (!desktopApi.compareDatasetVersions)

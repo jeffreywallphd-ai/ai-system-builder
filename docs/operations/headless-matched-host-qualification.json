@@ -1,0 +1,250 @@
+{
+  "schema_version": "headless-matched-host-qualification-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "server-browser-and-delivery-qualification",
+  "source_commit": "68ff27d11",
+  "source_revision": "source.828b29124af9f444cd889070ab3a1b0ae838ae54a17e4b1f80805866d8ddbd14",
+  "status": "scoped-passed",
+  "windows": {
+    "run_id": "2026-11-14t22-34-47-628z-323e22a1",
+    "evidence_sha256": "b3bf47aa8547b07d15c09ebd1ff1e73776a07ee066a1449357cb90c653e4c669",
+    "checks_passed": 4,
+    "observations": {
+      "observation": {
+        "sha256": "f4721336fe1c4ea85b69b4379324a32edfb99060589bf7ba702c0003cfe1fa84",
+        "values": {
+          "cpuThreads": 20,
+          "ramGiB": 16,
+          "runnerNodeVersion": "24.22.1",
+          "desktop": {
+            "electronVersion": "42.11.18",
+            "nodeVersion": "24.19.0"
+          },
+          "fixtureSystems": 1,
+          "plannedSamples": 100,
+          "maximumOutstandingWrites": 1,
+          "documentVisibleBeforeMeasurement": true,
+          "timingStartsBeforeDispatch": true,
+          "electronMainSampledRssMiB": {
+            "baseline": 252,
+            "peak": 257,
+            "samples": 6
+          },
+          "count": 100,
+          "p50Ms": 846.174399999989,
+          "p95Ms": 865.2086000000018,
+          "maxMs": 879.9544000000024,
+          "failures": 0,
+          "recoveryMs": 921.840200000006,
+          "delivered": 100
+        }
+      },
+      "timing": {
+        "sha256": "4a266cdc1893826480bf3d868df92b6fc42ad750cfa249c4c570f53f4daaa92b",
+        "values": {
+          "delivery": {
+            "count": 100,
+            "p50Ms": 131.9326000000001,
+            "p95Ms": 148.39559999998892,
+            "maxMs": 154.50280000001658
+          },
+          "release": {
+            "count": 105,
+            "p50Ms": 1.800000011920929,
+            "p95Ms": 6.199999988079071,
+            "maxMs": 8
+          },
+          "dialogRelease": {
+            "count": 20,
+            "p50Ms": 6,
+            "p95Ms": 7.600000023841858,
+            "maxMs": 8
+          },
+          "loadingDelivery": {
+            "count": 5,
+            "p50Ms": 108.71169999999984,
+            "p95Ms": 209.73089999999502,
+            "maxMs": 209.73089999999502
+          },
+          "loadingRelease": {
+            "count": 5,
+            "p50Ms": 0.800000011920929,
+            "p95Ms": 2.099999964237213,
+            "maxMs": 2.099999964237213
+          },
+          "ordinaryRevokes": 80,
+          "windows": 1,
+          "warm": true,
+          "osRelease": "10.0.26200",
+          "cpuThreads": 20,
+          "ramGiB": 16,
+          "desktop": {
+            "electron": "42.11.18",
+            "chrome": "148.0.7778.280"
+          },
+          "visible": true
+        }
+      },
+      "native-background": {
+        "sha256": "d37e23161dd6e29a05826b35976eeedf3718047a7d3a233a7648072d9470d317",
+        "values": {
+          "foreground": {
+            "count": 7,
+            "p50Ms": 48.10000002384186,
+            "p95Ms": 62.30000001192093,
+            "maxMs": 62.30000001192093
+          },
+          "background": {
+            "count": 5,
+            "p50Ms": 1000.5,
+            "p95Ms": 1014,
+            "maxMs": 1014
+          },
+          "scope": "native hide",
+          "nativeThrottling": true,
+          "hideToLeaseRetiredMs": 17.57530000002589
+        }
+      },
+      "native-queue": {
+        "sha256": "c43835596fc7a6d13fc8ddb1e52c9da447ccbad88bc34a022e5133a8d63b485f",
+        "values": {
+          "queuePeak": 32,
+          "capacityRejections": 1,
+          "duplicates": 1,
+          "conflicts": 1,
+          "staleEffects": 0,
+          "audit": {
+            "delivered": 1,
+            "applied": 0,
+            "discarded": 31,
+            "unconfirmed": 1,
+            "conflicts": 1
+          }
+        }
+      }
+    }
+  },
+  "chrome": {
+    "timing": {
+      "run_id": "managed-977c5fbfcf6040929071ce910ff1e16a",
+      "evidence_sha256": "b3cfc6d54a5b6084bb79f4f7c775dfc820404f3672f036f4a31572fe9ec8c373",
+      "host_evidence_sha256": "c3b55e2e5cbf8877cd8a2d8cbd7f5a98560041f28c0242ee0a19709783773a05",
+      "environment": {
+        "os": "win32",
+        "architecture": "x64",
+        "os_release": "10.0.26200",
+        "ram_gib": 16,
+        "logical_cpus": 20,
+        "chrome": "156.0.8078.82",
+        "node": "24.22.1",
+        "initial_document_visible": true
+      },
+      "host_profile": "controlled-campus-server-oidc-postgres",
+      "database_image": "postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15",
+      "tls_verified": true,
+      "observations": {
+        "dispatch_to_visible_ms": {
+          "samples": 100,
+          "p50": 360.7925000000032,
+          "p95": 905.4025000000111,
+          "max": 1402.3362999999954
+        },
+        "mcp_reply_to_visible_ms": {
+          "samples": 100,
+          "p50": 318.64830000000075,
+          "p95": 859.8162000000011,
+          "max": 1355.1359999999986
+        },
+        "warm_presentation_ms": {
+          "samples": 100,
+          "p50": 236.24929999999586,
+          "p95": 250.99150000000373,
+          "max": 264.85370000000694
+        },
+        "local_revoke_ms": {
+          "samples": 100,
+          "p50": 1.2999999523162842,
+          "p95": 2.100000023841858,
+          "max": 2.799999952316284
+        }
+      }
+    },
+    "tab_isolation": {
+      "run_id": "managed-43da5b604c7a45038ed38d8bcb3fbb39",
+      "evidence_sha256": "71464a46d1b8bb068a766abcd672453f01dccb4a82542dce8d2b642e7e268299",
+      "host_evidence_sha256": "38075101aaee907a6b97b3709be033dfbf106dc3403c116a5c00f074b536054b",
+      "environment": {
+        "os": "win32",
+        "architecture": "x64",
+        "os_release": "10.0.26200",
+        "ram_gib": 16,
+        "logical_cpus": 20,
+        "chrome": "156.0.8078.82",
+        "node": "24.22.1",
+        "initial_document_visible": true
+      },
+      "host_profile": "controlled-campus-server-oidc-postgres",
+      "database_image": "postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15",
+      "tls_verified": true,
+      "observations": {
+        "browser_queue_peak": 32,
+        "browser_queue_capacity_denials": 1,
+        "browser_stale_panel_appearances": 0,
+        "browser_exact_duplicate_and_conflict": true,
+        "browser_second_tab_cannot_accept": true,
+        "hidden_tab_shows_current_save_with_fresh_registration": true
+      }
+    },
+    "save_and_revoke": {
+      "run_id": "managed-44c7ba23c3954fec9ed987167c8ed5d1",
+      "evidence_sha256": "aaa0048ac5443655f683859cd7f31fe0d4cdf4826023defc76259524d7252730",
+      "host_evidence_sha256": "7447b7af10410c5848ee7040191714a1fabbfc5303d9d9cc49be429ff1b9cceb",
+      "environment": {
+        "os": "win32",
+        "architecture": "x64",
+        "os_release": "10.0.26200",
+        "ram_gib": 16,
+        "logical_cpus": 20,
+        "chrome": "156.0.8078.82",
+        "node": "24.22.1",
+        "initial_document_visible": true
+      },
+      "host_profile": "controlled-campus-server-oidc-postgres",
+      "database_image": "postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15",
+      "tls_verified": true,
+      "observations": {
+        "in_flight_edit_one_durable_save_without_presentation": true,
+        "reverse_managed_refetch_consumed_without_regression": true,
+        "dirty_user_values_and_winning_revision_preserved": true,
+        "stale_save_before_accept_keeps_draft_without_host_grant": true,
+        "lost_create_reply_replayed_one_durable_event": true,
+        "held_context_reply_consumed_after_revoke_with_zero_publications": true,
+        "suspended_member_cannot_read_write_replay_or_present": true,
+        "restored_member_sees_one_prior_save_and_no_old_lease": true
+      }
+    }
+  },
+  "earlier_failed_attempts": [
+    {
+      "id": "2026-11-14t22-30-29-990z-3dc21121",
+      "scope": "Windows setup",
+      "detail": "The test shell did not supply the required absolute npm launcher path."
+    },
+    {
+      "id": "managed-cefbc5edc8654c20b4f84a7d97894847",
+      "scope": "Combined Chrome timing",
+      "detail": "The fixture tried the original tab registration after a workspace switch."
+    },
+    {
+      "id": "managed-3029302709f7414ab72163d619e70b02",
+      "scope": "Combined Chrome queue",
+      "detail": "The fixture reused the initial saved revision after a semantic edit."
+    }
+  ],
+  "qualification_limits": [
+    "The Windows host and the three Chrome runs used the exact recorded source. Each Chrome run had a separate disposable profile and PostgreSQL instance.",
+    "The timings use the local reference host, with one outstanding saved mutation. They do not establish production network latency or deployment sizing.",
+    "The Windows background test measured immediate lease retirement on native hide. Expiry and liveness under that background condition remain pending.",
+    "The supported browser save, replay and reveal cases passed on this source. New browser readiness and watchdog tests and final roadmap-wide checks have their own evidence."
+  ]
+}

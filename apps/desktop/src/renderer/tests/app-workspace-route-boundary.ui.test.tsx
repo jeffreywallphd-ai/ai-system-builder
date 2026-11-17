@@ -226,7 +226,7 @@ describe("desktop app workspace route boundary", () => {
 
     expect(container.textContent).toContain("Workspace required");
     expect(container.textContent).toContain(
-      "Create a workspace to use Systems, Assets, Artifacts, Data, Models, and Images.",
+      "Create a workspace to use Systems, Assets, Artifacts, Data, Context, Models, and Images.",
     );
     expect(container.textContent).not.toContain("Model Management");
     expect(window.desktopApi?.listModels).not.toHaveBeenCalled();

@@ -47,7 +47,8 @@ const profilePlacements: Readonly<
     placement("records-grid", "items", ["list-card", "detail-card"]),
     placement("list-card", "content", ["table"]),
     placement("detail-card", "content", ["detail"]),
-    placement("form", "fields", [
+    placement("form", "fields", ["request-fields"]),
+    placement("request-fields", "fields", [
       "title-input",
       "amount-input",
       "status-input",
@@ -70,12 +71,13 @@ const profilePlacements: Readonly<
       "success",
     ]),
     placement("composer", "input", ["user-input"]),
-    placement("composer", "actions", ["visual-send"]),
   ],
   "secured-data-review": [
     placement("page", "content", ["review-grid"]),
     placement("review-grid", "items", ["browser", "detail-page"]),
-    placement("browser", "filters", ["name-filter", "media-filter"]),
+    placement("browser", "filters", ["filter-form"]),
+    placement("filter-form", "fields", ["filter-fields"]),
+    placement("filter-fields", "fields", ["name-filter", "media-filter"]),
     placement("browser", "results", ["table"]),
     placement("browser", "states", ["loading", "empty"]),
     placement("detail-page", "summary", ["summary"]),
@@ -171,6 +173,7 @@ export function materializeReferenceSystemVisualHierarchy(
         title: "Selected request",
         description: "Inspect the currently selected request.",
       }),
+      visual("request-fields", "Request fields", "builtin.form.field-group", { title: "Request fields" }),
     ]);
     const action = addVisualAction(
       instances,
@@ -181,19 +184,11 @@ export function materializeReferenceSystemVisualHierarchy(
       "Save request",
     );
     bySuffix.set("visual-submit", action);
-  } else if (kind === "controlled-chatbot") {
-    const action = addVisualAction(
-      instances,
-      input,
-      foundationVersion,
-      "visual-send",
-      "Send message",
-      "Send",
-    );
-    bySuffix.set("visual-send", action);
   } else if (kind === "secured-data-review") {
     addSyntheticVisuals(instances, bySuffix, input, foundationVersion, [
       visual("review-grid", "Artifact review workspace", "builtin.ui.grid", {}),
+      visual("filter-form", "Artifact filters", "builtin.form.form", { title: "Artifact filters" }),
+      visual("filter-fields", "Filter criteria", "builtin.form.field-group", { title: "Filter criteria" }),
     ]);
   }
 

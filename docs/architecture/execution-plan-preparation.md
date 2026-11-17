@@ -271,3 +271,22 @@ execution plan preparation remains preview-only and non-executing. Controlled co
 
 
 controlled conversational execution boundary correction: execution plans that feed conversational execution must originate from asset-derived conversational system composition (foundation-referenced reusable assets), not from ad hoc runtime session structures.
+
+Passive execution plan/run records and commands use explicit field schemas for every
+nested record and provenance entry. The whole DTO is descriptor-inspected before
+normalization: at most12 nesting levels,4096 values,1024 array items,128 fields
+per object,80 characters per key,2048 characters per string and256KiB aggregate
+UTF-8 key/string bytes. Unknown fields, accessors, sparse/extra-property arrays,
+cycles, exotic prototypes, malformed supplied collections and nonfinite numbers
+deny without echoing content or invoking coercion. Free text rejects protected
+representations; typed identities and enums use their own primitive-string parsers.
+Flags require booleans, percentages are finite0..100, attempts are positive safe
+integers, timestamps must represent actual canonical instants and provenance kinds
+are finite. Declared conversation/output/cancellation/retry references roundtrip.
+Missing run collections retain existing empty defaults; malformed supplied values
+never become empty success. Unsafe stored records fail reads without migration or
+rewriting. This adds no execution authority or host/transport composition; controlled
+qualification and previously uncomposed families remain pending/default-denied.
+Recognizable credential representations (including short provider-token prefixes)
+are rejected in public free text and nested metadata; a length-only encoded-data
+check cannot establish non-disclosure. Typed identities retain their own schemas.

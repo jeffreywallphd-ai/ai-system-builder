@@ -37,6 +37,7 @@ export function composeDesktopArtifactFeature(options: ComposeDesktopArtifactFea
     logging: options.loggingPort,
     now: options.now,
     artifactCatalogAppend: artifactCatalog,
+    ...(options.documents ? { artifactBindingWrite: artifactBindings } : {}),
   });
   const artifactBrowserRead = createFilesystemArtifactBrowserReadAdapter({
     rootDirectory: options.storageRootDirectory,

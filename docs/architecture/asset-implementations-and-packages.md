@@ -83,6 +83,17 @@ The resolver returns exactly one permitted release or a safe diagnostic. It neve
 
 ## Package lifecycle
 
+The shared desktop/server inspector captures and validates a complete bounded
+semantic manifest before canonical package hashing. It verifies every entry's
+semantic-v2 fingerprint and any supplied manifest checksum without rewriting
+claims. A valid body with stale/legacy claims can remain quarantined but is
+ineligible. Malformed/deep semantic input has a static rejection with no body.
+Admission re-reads verified immutable bytes and repeats this inspection before
+trust evaluation or writes; a retained eligible summary cannot bypass it.
+Package digest evidence exclusions, independent capability/signature/SBOM/
+provenance checks and the zero-definition starter remain unchanged. Existing
+installed records and legacy activation/migration need separate qualification.
+
 ```txt
 source received
   -> quarantine
@@ -99,6 +110,14 @@ The first supported transport is a bounded JSON `.aisb-package` v1 container wit
 Package parsing must reject absolute/device/traversal paths, links, duplicate normalized paths, invalid names, excessive files, excessive compressed or expanded size, excessive ratios, unsupported algorithms, mismatched digests, duplicate identities, unsupported format/runtime versions, and unknown required capabilities.
 
 ## Trust and provenance
+
+Semantic Asset Pack utilities use validated `sha256:semantic-v2` identity under
+ADR-0043. This hash covers complete admitted semantic input, with explicit
+packaging/self-reference exclusions and set-like ordering normalization; it is
+separate from immutable package-byte digests and grants no admission authority.
+Legacy semantic hashes require explicit revalidation/review, with no automatic
+approval, binding or shipped Foundation rewrite. See the Asset Kernel architecture
+and owning threat model for the canonical input and capture bounds.
 
 Trust is an evaluated result, not a source label:
 
@@ -209,3 +228,68 @@ sequence, bounded entry descriptors, evidence, and separate trust decisions.
 - [OCI Image and Distribution 1.1](https://opencontainers.org/posts/blog/2024-03-13-image-and-distribution-1-1/)
 - [SLSA provenance 1.2](https://slsa.dev/spec/v1.2/provenance)
 - [Sigstore blob signing bundles](https://docs.sigstore.dev/cosign/signing/signing_with_blobs/)
+
+Trusted built-in initialization joins only overlapping calls for the same composed
+store/owner. It snapshots missing-release exact definitions in bounded groups for
+that invocation alone. Ordinary publish APIs retain direct reads; later bootstrap
+calls revalidate releases, backing resources and bindings. Successful and failed
+flights are released only after settlement, with no persistent trust/readiness cache.
+Partial immutable publication is preserved for healthy idempotent retry.
+
+Studio and layered-customization definition publication commits the exact current
+review, absent definition and private commit receipt atomically through
+`AssetDefinitionPublicationPort`. Both hosts retain their existing definition and
+organization partitions. Review artifact verification happens before the
+transaction; current record, source snapshot and base/revocation facts are checked
+inside it. Identical existing definitions are not adopted by another draft. A
+published retry verifies its exact private receipt and existing content without
+recreating deleted effects. See the approval-bound publication section in
+`asset-authoring-and-execution-security.md` for qualification limits.
+
+## Package interface sessions and retry
+
+The shared package interface owns a session per workspace and client. Context
+replacement retires the old view and its pending callbacks. Synchronous action
+admission prevents duplicate inspect/install/activate/disable/rollback requests
+before the busy render. After an asynchronous file read, ownership is checked
+before creating the inspection byte view or calling the client. This does not
+cancel an already admitted server operation or replace application policy.
+
+Inspection summaries are checked for the identity and typed fields needed to
+render the review. Eligible summaries need package identity; ineligible summaries
+can omit it and still show safe inspection issues. Every requested capability
+still needs explicit consent. Installation does not activate or execute content.
+Lifecycle replies must match the expected workspace and package record; rollback
+returns the previous active record. No sequential revision requirement is added
+to idempotent lifecycle commands that do not take an expected revision.
+
+List reads have separate ownership and explicit refresh/retry. Starting a package
+mutation retires an older pending initial list. An unknown list is not presented
+as an empty catalogue. After accepted install or lifecycle change, a fresh list
+must contain the acknowledged target with the same package/version/digest and
+an equal or newer revision. An equal revision must retain the acknowledged
+status. An inconsistent or failed refresh retains the accepted local result and
+asks for explicit list retry. A genuinely newer server revision remains valid.
+Thrown failures use static notification text and release only current controls.
+
+The finite package browser tests include native file/buttons, capability consent,
+installation and separate activation/disable/actual-target rollback, malformed
+summaries, safe failures, stale results and identity denials alongside the starter
+download test. Their fixed clients do not qualify real parsing/trust decisions,
+transports, storage, apps, providers, native recovery or code execution.
+
+### Saved asset view sessions
+
+The shared Saved view is scoped by workspace and both client instances. A
+replacement remounts the view, clears former search/list state and retires old
+callbacks. A synchronous owner reserves each list or legacy conversion before
+busy rendering. Only that current owner can accept a response or release busy
+state. Checks run before dispatch as well as before accepting a reply.
+
+The UI preserves separate valid Studio/legacy listings after a source fails and
+does not describe an unknown list as empty. Returned conversion identity and
+legacy provenance are checked before navigation. Existing application reuse can
+return any canonical lifecycle/revision/definition for that same legacy source;
+the UI does not invent a revision-1 or new-definition requirement. Server
+authorization and persistence remain the owning boundaries. Retiring a view is
+not cancellation, rollback or proof of exact-once writes across clients.

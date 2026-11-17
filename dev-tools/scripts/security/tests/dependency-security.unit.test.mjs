@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdtemp, writeFile, rm, mkdir } from "node:fs/promises";
 import http from "node:http";
+import { gzipSync } from "node:zlib";
 import { createRequire } from "node:module";
 import path from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
 import {
   evaluateAuditReport,
+  resolveNpmInvocation,
+  validatePythonContextDependencyInventory,
   validatePythonDecoderDependencyInventory,
   validatePythonModelPlacementDependencyInventory,
   validatePythonParquetDependencyInventory,
@@ -58,18 +62,28 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   ]);
 
   assert.equal(manifest.engines.node, ">=24 <25");
-  assert.equal(manifest.devDependencies.electron, "41.10.2");
+  assert.equal(manifest.devDependencies.electron, "42.11.18");
   assert.equal(manifest.dependencies.selfsigned, "5.5.0");
   assert.deepEqual(manifest.overrides, {
+    "body-parser": "2.4.0",
     "brace-expansion": "$brace-expansion",
-    "fast-uri": "3.1.4",
     tar: "7.5.22",
     tmp: "0.2.7",
-    "webpack-dev-server": "5.2.6",
-    sockjs: { uuid: "11.1.1" },
+    "@electron/get": { undici: "7.30.1" },
+    "@electron/packager": { "@electron/asar": "4.3.2" },
+    "@electron/universal": { "@electron/asar": "4.3.2" },
   });
-  assert.equal(lockfile.packages["node_modules/electron"].version, "41.10.2");
+  assert.equal(lockfile.packages["node_modules/electron"].version, "42.11.18");
+  assert.equal(
+    lockfile.packages["node_modules/electron"].resolved,
+    "https://registry.npmjs.org/electron/-/electron-42.11.18.tgz",
+  );
+  assert.equal(
+    lockfile.packages["node_modules/electron"].integrity,
+    "sha512-hbzodG06x/l7uq+oeyob5ugv6qZBmJRWC7Uto5QEE99xSHUARz6d+++Rz+79T/ssTYTQkONW4ciTTcJuAbXKIQ==",
+  );
   assert.equal(lockfile.packages["node_modules/selfsigned"].version, "5.5.0");
+  assert.equal(lockfile.packages["node_modules/body-parser"].version, "2.4.0");
 
   const lockedPackages = Object.entries(lockfile.packages);
   const versionsFor = (packageName) =>
@@ -78,34 +92,43 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
         packagePath.endsWith(`node_modules/${packageName}`),
       )
       .map(([, entry]) => entry.version);
+  for (const owner of ["@electron/packager", "@electron/universal"]) {
+    const root = `node_modules/${owner}/node_modules/`;
+    const asar = lockfile.packages[root + "@electron/asar"];
+    assert.equal(asar.version, "4.3.2");
+    assert.equal(asar.integrity, "sha512-2nwyO3OgmLgkYQe6TzB8FmyrBKGgmXzSO51ozoG2BpHOLPTPdQpBt/zD0MdPkhQr4UqVgw3u09y4uYxgZKhmtg==");
+    assert.equal(lockfile.packages[root + "glob"].version, "14.0.6");
+    assert.equal(lockfile.packages[root + "minimatch"].version, "11.0.8");
+  }
+  assert.equal(lockfile.packages["node_modules/@electron/asar"].version, "3.4.1");
   assert.deepEqual(lockfile.packages["node_modules/brace-expansion"], {
     resolved: "dev-tools/vendor/brace-expansion-compat",
     link: true,
   });
   assert.equal(
     lockfile.packages["dev-tools/vendor/brace-expansion-compat"].version,
-    "5.0.8",
+    "5.0.12",
   );
-  assert.equal(
-    lockfile.packages["node_modules/brace-expansion-upstream"].version,
-    "5.0.8",
-  );
-  assert.deepEqual([...new Set(versionsFor("fast-uri"))], ["3.1.4"]);
+  // npm may place the exact upstream alias beneath its local file consumer.
+  // Check all locked instances instead of assuming a hoisted physical layout.
+  assert.deepEqual([...new Set(versionsFor("brace-expansion-upstream"))], ["5.0.12"]);
+  assert.deepEqual(versionsFor("fast-uri"), []);
   assert.deepEqual([...new Set(versionsFor("tar"))], ["7.5.22"]);
-  assert.deepEqual([...new Set(versionsFor("tmp"))], ["0.2.7"]);
-  assert.deepEqual([...new Set(versionsFor("uuid"))], ["11.1.1"]);
-  assert.deepEqual([...new Set(versionsFor("webpack-dev-server"))], ["5.2.6"]);
+  // The supported Forge migration removes the old tmp consumer entirely.
+  assert.deepEqual(versionsFor("tmp"), []);
+  for (const obsolete of ["@electron-forge/plugin-webpack", "webpack", "webpack-dev-server", "braces", "micromatch", "http-proxy-middleware"]) {
+    assert.deepEqual(versionsFor(obsolete), [], `${obsolete} must not remain in the resolved toolchain`);
+  }
+  assert.equal(manifest.devDependencies["@electron-forge/plugin-vite"], "8.0.1");
+  assert.equal(manifest.devDependencies.vite, "7.3.7");
+  assert.deepEqual([...new Set(versionsFor("undici").filter(version => version.startsWith("7.")))], ["7.30.1"]);
 });
 
 test("reviewed overrides retain the APIs used by the Electron Forge toolchain", () => {
   const require = createRequire(import.meta.url);
   const braceExpansion = require("brace-expansion");
-  const fastUri = require("fast-uri");
   const glob = require("glob");
   const tar = require("tar");
-  const tmp = require("tmp");
-  const uuid = require("uuid");
-  const WebpackDevServer = require("webpack-dev-server");
 
   assert.equal(typeof braceExpansion, "function");
   assert.equal(braceExpansion.expand, braceExpansion);
@@ -122,64 +145,138 @@ test("reviewed overrides retain the APIs used by the Electron Forge toolchain", 
     glob.sync("package.json", { cwd: process.cwd(), nodir: true }),
     ["package.json"],
   );
-  assert.equal(fastUri.parse("https://example.com/path").host, "example.com");
   assert.equal(typeof tar.extract, "function");
-  assert.match(tmp.tmpNameSync({ postfix: ".txt" }), /\.txt$/);
-  assert.match(
-    uuid.v4(),
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-  );
-  assert.equal(typeof WebpackDevServer, "function");
-  assert.equal(typeof WebpackDevServer.prototype.start, "function");
+
 });
 
-test("patched webpack dev server supports the Forge lifecycle and same-origin response policy", async (t) => {
-  const require = createRequire(import.meta.url);
-  const webpack = require("webpack");
-  const WebpackDevServer = require("webpack-dev-server");
-  const compiler = webpack({
-    mode: "development",
-    entry: {},
-    output: {
-      path: path.resolve(
-        "artifacts",
-        "test-runtime",
-        "webpack-dev-server-compatibility",
-      ),
-    },
-  });
-  const server = new WebpackDevServer(
-    {
-      host: "127.0.0.1",
-      port: 0,
-      static: false,
-      hot: false,
-      client: false,
-      setupExitSignals: false,
-    },
-    compiler,
-  );
-  t.after(async () => {
-    await server.stop();
-    await new Promise((resolve, reject) =>
-      compiler.close((error) => (error ? reject(error) : resolve())),
-    );
-  });
+test("brace expansion compatibility supports both ESM named and CommonJS callable consumers", async () => {
+  const namespace = await import("brace-expansion");
+  assert.equal(typeof namespace.expand, "function");
+  assert.equal(namespace.expand, namespace.default);
+  assert.deepEqual(namespace.expand("file-{a,b}.txt"), ["file-a.txt", "file-b.txt"]);
+});
 
-  await server.start();
-  const address = server.server?.address();
+test("patched proxy subnet matching denies unrelated IPv4 identities", () => {
+  // GHSA-jqcg-44mw-7w3h; synthetic addresses, no external requests.
+  const require = createRequire(import.meta.url);
+  const proxyaddr = require("proxy-addr");
+  for (const subnet of ["::ffff:10.0.0.0/8", "::/1"]) {
+    const trust = proxyaddr.compile([subnet]);
+    assert.equal(trust("203.0.113.20", 0), false);
+    assert.equal(proxyaddr({ socket: { remoteAddress: "203.0.113.20" },
+      headers: { "x-forwarded-for": "10.1.2.3" } }, trust), "203.0.113.20");
+  }
+  for (const subnet of ["10.0.0.0/8", "::ffff:10.0.0.0/104"]) {
+    const trust = proxyaddr.compile([subnet]);
+    assert.equal(trust("10.1.2.3", 0), true);
+    assert.equal(trust("203.0.113.20", 0), false);
+  }
+});
+
+test("Vite development serves source but denies private evidence and foreign origins", { timeout: 15_000 }, async (t) => {
+  const { createServer } = await import("vite");
+  // The aggregate runner stages executable files, not renderer HTML. Exercise
+  // the real repository server config and filesystem boundary in either mode.
+  const { createDesktopRendererConfig } = await import(pathToFileURL(
+    path.resolve("apps/desktop/vite.renderer.shared.mjs"),
+  ).href);
+  const config = createDesktopRendererConfig("main_window", "renderer", 0);
+  assert.equal(config.root, path.resolve("apps/desktop/src/renderer"));
+  const privateRoot = path.resolve(".local-codex/t");
+  await mkdir(privateRoot, { recursive: true });
+  const fixtureRoot = await mkdtemp(path.join(privateRoot, "vite-denial-"));
+  const privateFile = path.join(fixtureRoot, "synthetic-private-diagnostic.json");
+  await writeFile(privateFile, '{"fixture":"private evidence must not be served"}');
+  const artifactRoot = path.resolve("artifacts/test-runtime");
+  await mkdir(artifactRoot, { recursive: true });
+  const artifactFixtureRoot = await mkdtemp(path.join(artifactRoot, "vite-denial-"));
+  const artifact = path.join(artifactFixtureRoot, "synthetic-private-diagnostic.json").replaceAll("\\", "/");
+  await writeFile(artifact, '{"fixture":"private artifact must not be served"}');
+  // This test owns HTTP exposure, not React transformation. Avoid dependency
+  // optimization/watch work shared with concurrent bundle tests; real dev and
+  // packaged UI journeys qualify the unchanged React pipeline separately.
+  const server = await createServer({ ...config, configFile: false, logLevel: "silent", plugins: [], server: { ...config.server, watch: null, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+  t.after(async () => { server.httpServer?.closeAllConnections(); await server.close(); await rm(fixtureRoot, { recursive: true, force: true }); await rm(artifactFixtureRoot, { recursive: true, force: true }); });
+  await server.listen();
+  const address = server.httpServer.address();
   assert.ok(address && typeof address === "object");
-  const response = await new Promise((resolve, reject) => {
-    const request = http.get(
-      { host: "127.0.0.1", port: address.port, path: "/" },
-      (result) => {
-        result.resume();
-        result.once("end", () => resolve(result));
-      },
-    );
-    request.once("error", reject);
+  const request = (requestPath, headers = {}) => new Promise((resolve, reject) => {
+    http.get({ host: "127.0.0.1", port: address.port, path: requestPath, headers }, response => {
+      response.resume(); response.once("end", () => resolve(response));
+    }).once("error", reject);
   });
-  assert.equal(response.headers["cross-origin-resource-policy"], "same-origin");
+  assert.equal((await request("/")).statusCode, 200);
+  const denied = await request(`/@fs/${privateFile.replaceAll("\\", "/")}`);
+  assert.equal(denied.statusCode, 403);
+  assert.equal((await request(`/@fs/${artifact}`)).statusCode, 403);
+  const crossOrigin = await request("/", { Origin: "https://untrusted.example" });
+  assert.equal(crossOrigin.headers["access-control-allow-origin"], undefined);
+  assert.equal((await request("/", { Host: "untrusted.example" })).statusCode, 403);
+});
+
+test("Electron downloader retains compatible patched proxy dispatcher APIs", async (t) => {
+  const require = createRequire(import.meta.url);
+  const downloaderRequire = createRequire(require.resolve("@electron/get"));
+  const { EnvHttpProxyAgent, fetch } = downloaderRequire("undici");
+  assert.equal(downloaderRequire("undici/package.json").version, "7.30.1");
+  const agent = new EnvHttpProxyAgent({ noProxy: "*" });
+  const server = http.createServer((request, response) => {
+    if (request.url === "/redirect") {
+      response.writeHead(302, { location: "/ok" });
+      response.end();
+    } else response.end("offline downloader fixture");
+  });
+  t.after(async () => { await agent.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/`, { dispatcher: agent });
+  assert.equal(await response.text(), "offline downloader fixture");
+  const redirected = await fetch(`http://127.0.0.1:${address.port}/redirect`, { dispatcher: agent });
+  assert.equal(await redirected.text(), "offline downloader fixture");
+  await assert.rejects(fetch(`http://127.0.0.1:${address.port}/redirect`, { dispatcher: agent, redirect: "error" }));
+});
+
+test("patched request parser preserves normal bodies, bounded refusals and continued service", { timeout: 15_000 }, async (t) => {
+  const { default: express } = await import("express");
+  const app = express();
+  app.use(express.json({ limit: "1kb" }));
+  app.use(express.urlencoded({ extended: true, limit: "1kb" }));
+  app.post("/parse", (request, response) => response.json(request.body));
+  app.use((error, _request, response, _next) => response.status(error.status ?? 400).json({ refused: true }));
+  const server = http.createServer(app);
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const post = (body, type = "application/json", encoding) => new Promise((resolve, reject) => {
+    const request = http.request({ host: "127.0.0.1", port: address.port, path: "/parse", method: "POST",
+      headers: { "content-type": type, "content-length": body.length, ...(encoding ? { "content-encoding": encoding } : {}) } }, response => {
+      const chunks = []; let count = 0;
+      response.on("data", chunk => {
+        count += chunk.length;
+        if (count > 4096) response.destroy(new Error("Bounded fixture response exceeded."));
+        else chunks.push(chunk);
+      });
+      response.on("error", reject);
+      response.on("end", () => resolve({ status: response.statusCode, body: JSON.parse(Buffer.concat(chunks).toString()) }));
+    });
+    request.setTimeout(3000, () => request.destroy(new Error("Bounded fixture request timeout.")));
+    request.on("error", reject); request.end(body);
+  });
+  const body = Buffer.from(JSON.stringify({ fixture: "local request", items: [1, 2] }));
+  const expected = { status: 200, body: { fixture: "local request", items: [1, 2] } };
+  assert.deepEqual(await post(body), expected);
+  assert.deepEqual(await post(gzipSync(body), "application/json", "gzip"), expected);
+  assert.deepEqual(await post(Buffer.from("label=fixture&nested%5Bvalue%5D=two"), "application/x-www-form-urlencoded"),
+    { status: 200, body: { label: "fixture", nested: { value: "two" } } });
+  assert.equal((await post(Buffer.from("not gzip"), "application/json", "gzip")).status, 400);
+  const oversized = gzipSync(Buffer.from(JSON.stringify({ fixture: "x".repeat(2048) })));
+  assert.equal((await post(oversized, "application/json", "gzip")).status, 413);
+  // A single tiny owned fixture exercises late decoder cleanup. The supplier
+  // can reject early or finish the valid frame; the next request must work.
+  const trailing = await post(Buffer.concat([gzipSync(body), Buffer.from("x")]), "application/json", "gzip");
+  assert.ok([200, 400].includes(trailing.status));
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.equal((await post(body)).status, 200);
 });
 
 test("runtime SBOM validation requires SPDX packages and relationships", () => {
@@ -218,6 +315,7 @@ test("conditional Python decoder dependencies retain exact reviewed inventory", 
         license: "Apache-2.0",
       },
       { name: "jsonschema", version: "4.26.0", license: "MIT" },
+      { name: "llguidance", version: "1.9.1", license: "MIT" },
     ],
   );
   assert.throws(
@@ -227,6 +325,18 @@ test("conditional Python decoder dependencies retain exact reviewed inventory", 
       ),
     /reviewed exact version/,
   );
+  for (const replacement of ["llguidance==1.9.2", "llguidance>=1.9.1", "llguidance==1.9.1 --extra-index-url https://invalid.example"]) {
+    assert.throws(
+      () => validatePythonDecoderDependencyInventory(requirements.replace("llguidance==1.9.1", replacement)),
+      /reviewed exact version|incomplete/,
+    );
+  }
+  for (const replacement of ["", "--no-binary=llguidance", "--only-binary=:all:", "--only-binary=llguidance\n--no-binary=:all:"]) {
+    assert.throws(
+      () => validatePythonDecoderDependencyInventory(requirements.replace("--only-binary=llguidance", replacement)),
+      /wheel-only policy/,
+    );
+  }
   assert.throws(
     () =>
       validatePythonDecoderDependencyInventory(
@@ -338,6 +448,43 @@ test("Python text training retains the reviewed exact direct inventory", async (
   );
 });
 
+test("Python Context retains the reviewed exact LanceDB inventory", async () => {
+  const requirements = await readFile(
+    "modules/adapters/runtime/python/worker/requirements-context.txt",
+    "utf8",
+  );
+  const inventory = validatePythonContextDependencyInventory(requirements);
+  assert.equal(inventory.supportedPython, ">=3.10 <3.15");
+  assert.deepEqual(inventory.packages, [
+    {
+      name: "lancedb",
+      version: "0.34.0",
+      license: "Apache-2.0",
+      purl: "pkg:pypi/lancedb@0.34.0",
+    },
+    {
+      name: "pyarrow",
+      version: "25.0.0",
+      license: "Apache-2.0",
+      purl: "pkg:pypi/pyarrow@25.0.0",
+    },
+  ]);
+  assert.throws(
+    () =>
+      validatePythonContextDependencyInventory(
+        requirements.replace("lancedb==0.34.0", "lancedb>=0.34.0"),
+      ),
+    /reviewed exact version/,
+  );
+  assert.throws(
+    () =>
+      validatePythonContextDependencyInventory(
+        `${requirements}requests==2.32.5\n`,
+      ),
+    /unreviewed direct packages/,
+  );
+});
+
 test("CI and image builds use the tracked lockfile and immutable action references", async () => {
   const [gitignore, workflow, dockerfile] = await Promise.all([
     readFile(".gitignore", "utf8"),
@@ -350,4 +497,59 @@ test("CI and image builds use the tracked lockfile and immutable action referenc
   assert.doesNotMatch(workflow, /uses:\s+[^\s]+@(?![0-9a-f]{40}(?:\s|$))/);
   assert.match(dockerfile, /COPY package\.json package-lock\.json/);
   assert.doesNotMatch(dockerfile, /npm install/);
+});
+
+test("npm invocation preserves inherited CLI and non-Windows behavior", () => {
+  const node = "C:\\Selected Node\\node.exe";
+  const cli = "C:\\Trusted tools & data\\npm\\bin\\npm-cli.js";
+  const noProbe = () => assert.fail("The existing invocation must not inspect PATH");
+  assert.deepEqual(resolveNpmInvocation({ platform: "win32", npmExecPath: cli, executablePath: node, isFile: noProbe }), { command: node, prefixArgs: [cli] });
+  for (const platform of ["linux", "darwin"]) {
+    assert.deepEqual(resolveNpmInvocation({ platform, npmExecPath: "", searchPath: "unneeded", isFile: noProbe }), { command: "npm", prefixArgs: [] });
+  }
+});
+
+test("direct Windows npm.cmd installation uses the current Node and one literal CLI path", () => {
+  const directory = "C:\\Program Files\\Node & Tools";
+  const cli = path.win32.join(directory, "node_modules", "npm", "bin", "npm-cli.js");
+  const files = new Set([path.win32.join(directory, "npm.cmd"), cli]);
+  assert.deepEqual(resolveNpmInvocation({ platform: "win32", npmExecPath: "", executablePath: "C:\\Selected Node\\node.exe", searchPath: `"${directory}"`, isFile: (p) => files.has(p) }), { command: "C:\\Selected Node\\node.exe", prefixArgs: [cli] });
+});
+
+test("direct Windows native npm shims remain supported in configured PATH order", () => {
+  for (const extension of ["exe", "com"]) {
+    const shim = `C:\\Native tool\\npm.${extension}`;
+    const later = "C:\\Later tool\\npm.exe";
+    assert.deepEqual(resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: "C:\\Native tool;C:\\Later tool", isFile: (p) => p === shim || p === later }), { command: shim, prefixArgs: [] });
+  }
+});
+
+test("Windows lookup ignores relative, current-directory, network and control-character entries", () => {
+  const probes = [];
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: ".;relative;C:relative;\\\\server\\share;C:\\bad\nentry;;", isFile: (p) => { probes.push(p); return true; } }), /npm CLI is unavailable/);
+  assert.deepEqual(probes, []);
+});
+
+test("an incomplete command-script installation never falls back to a shell or a pass", () => {
+  const onlyWrapper = "C:\\Incomplete\\npm.cmd";
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: "C:\\Incomplete", isFile: (p) => p === onlyWrapper }), /npm CLI is unavailable/);
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: "", isFile: () => assert.fail("Empty PATH must not probe") }), /npm CLI is unavailable/);
+});
+
+test("Windows tool lookup bounds the PATH string and the number of inspected entries", () => {
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: "x".repeat(32_769), isFile: () => assert.fail("Oversized PATH must not probe") }), /npm CLI is unavailable/);
+  const probes = [];
+  const entries = Array.from({ length: 128 }, (_v, i) => `C:\\Missing${i}`);
+  entries.push("C:\\Beyond bound");
+  assert.throws(() => resolveNpmInvocation({ platform: "win32", npmExecPath: "", searchPath: entries.join(";"), isFile: (p) => { probes.push(p); return p.startsWith("C:\\Beyond bound"); } }), /npm CLI is unavailable/);
+  assert.equal(probes.some((p) => p.startsWith("C:\\Beyond bound")), false);
+  assert.ok(probes.length > 0 && probes.length <= 4 * 128);
+});
+
+test("Windows lookup selects the next complete installed tool without changing the scan arguments", () => {
+  const complete = "C:\\Second tool";
+  const cli = path.win32.join(complete, "node_modules", "npm", "bin", "npm-cli.js");
+  const files = new Set(["C:\\First tool\\npm.cmd", path.win32.join(complete, "npm.cmd"), cli]);
+  const invocation = resolveNpmInvocation({ platform: "win32", npmExecPath: "", executablePath: "C:\\Node\\node.exe", searchPath: "C:\\First tool;C:\\Second tool", isFile: (p) => files.has(p) });
+  assert.deepEqual([invocation.command, ...invocation.prefixArgs, "audit", "--omit=dev", "--json"], ["C:\\Node\\node.exe", cli, "audit", "--omit=dev", "--json"]);
 });

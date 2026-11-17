@@ -2,8 +2,8 @@
 
 # Systems Publish Runtime Lifecycle Implementation Roadmap
 
-- Status: `final-approved`
-- Updated: `2026-07-29T11:51:52Z`
+- Status: `completed`
+- Updated: `2026-10-22T12:44:42Z`
 
 ## Objective
 

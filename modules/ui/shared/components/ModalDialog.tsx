@@ -2,11 +2,13 @@ import {
   useEffect,
   useId,
   useRef,
+  type FormEvent,
   type MouseEvent,
   type ReactNode,
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
+import { RevokeWindowTakeoverButton, useWindowTakeover } from "../takeover/WindowTakeoverContext";
 
 const focusableSelector = [
   "a[href]",
@@ -20,11 +22,14 @@ const focusableSelector = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
-const modalStack: string[] = [];
+type ModalLayer = "default" | "stacked" | "window-consent";
+const modalLayerOrder = { default: 0, stacked: 1, "window-consent": 2 } as const;
+const modalStack: Array<{ id: string; layer: ModalLayer; element: HTMLElement; focus: () => void }> = [];
 
 interface ModalScrollLockState {
   count: number;
   readonly documentElementOverflow: string;
+  readonly documentElementScrollbarGutter: string;
   readonly bodyOverflow: string;
 }
 
@@ -40,8 +45,17 @@ function lockModalScroll(ownerDocument: Document): void {
   modalScrollLocks.set(ownerDocument, {
     count: 1,
     documentElementOverflow: ownerDocument.documentElement.style.overflow,
+    documentElementScrollbarGutter: ownerDocument.documentElement.style.scrollbarGutter,
     bodyOverflow: ownerDocument.body.style.overflow,
   });
+  // Keep the viewport width when hiding a classic scrollbar. Nested dialogs
+  // share this scroll lock and restore its original styles on final close.
+  const viewport = ownerDocument.defaultView;
+  const root = ownerDocument.documentElement;
+  if (viewport && root.clientWidth > 0 && viewport.innerWidth > root.clientWidth &&
+      !viewport.getComputedStyle(root).scrollbarGutter.includes("stable")) {
+    root.style.scrollbarGutter = "stable";
+  }
   ownerDocument.documentElement.style.overflow = "hidden";
   ownerDocument.body.style.overflow = "hidden";
 }
@@ -54,16 +68,18 @@ function unlockModalScroll(ownerDocument: Document): void {
 
   ownerDocument.documentElement.style.overflow =
     current.documentElementOverflow;
+  ownerDocument.documentElement.style.scrollbarGutter =
+    current.documentElementScrollbarGutter;
   ownerDocument.body.style.overflow = current.bodyOverflow;
   modalScrollLocks.delete(ownerDocument);
 }
 
 function isTopmostModal(modalId: string): boolean {
-  return modalStack[modalStack.length - 1] === modalId;
+  return modalStack[modalStack.length - 1]?.id === modalId;
 }
 
 function unregisterModal(modalId: string): void {
-  const index = modalStack.lastIndexOf(modalId);
+  const index = modalStack.findIndex(modal => modal.id === modalId);
   if (index >= 0) {
     modalStack.splice(index, 1);
   }
@@ -75,6 +91,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   ).filter(
     (element) =>
       !element.hidden &&
+      !element.closest("[inert]") &&
       element.getAttribute("aria-hidden") !== "true" &&
       element.tabIndex >= 0,
   );
@@ -85,6 +102,7 @@ function isFocusableElement(element: HTMLElement | null): element is HTMLElement
     element &&
       element.matches(focusableSelector) &&
       !element.hidden &&
+      !element.closest("[inert]") &&
       element.getAttribute("aria-hidden") !== "true" &&
       element.tabIndex >= 0,
   );
@@ -116,6 +134,7 @@ export interface ModalDialogProps {
   readonly closeDisabled?: boolean;
   readonly closeOnBackdrop?: boolean;
   readonly stacked?: boolean;
+  readonly windowConsent?: boolean;
   readonly descriptionId?: string;
   readonly initialFocusRef?: RefObject<HTMLElement | null>;
   readonly overlayClassName?: string;
@@ -132,12 +151,15 @@ export function ModalDialog({
   closeDisabled = false,
   closeOnBackdrop = false,
   stacked = false,
+  windowConsent = false,
   descriptionId,
   initialFocusRef,
   overlayClassName,
   dialogClassName,
   bodyClassName,
 }: ModalDialogProps) {
+  const { controller, presentationAttached } = useWindowTakeover();
+  const layer: ModalLayer = windowConsent ? "window-consent" : stacked ? "stacked" : "default";
   const instanceId = useId();
   const dialogRef = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
@@ -160,12 +182,15 @@ export function ModalDialog({
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
     unregisterModal(instanceId);
-    modalStack.push(instanceId);
+    const nextLayer = modalStack.findIndex(modal => modalLayerOrder[modal.layer] > modalLayerOrder[layer]);
+    modalStack.splice(nextLayer < 0 ? modalStack.length : nextLayer, 0, {
+      id: instanceId, layer, element: dialog,
+      focus: () => { focusInitialElement(dialog, initialFocusRefValue.current); },
+    });
     lockModalScroll(dialog.ownerDocument);
-    const initialTarget = focusInitialElement(
-      dialog,
-      initialFocusRefValue.current,
-    );
+    const initialTarget = isTopmostModal(instanceId)
+      ? focusInitialElement(dialog, initialFocusRefValue.current)
+      : dialog;
     const MutationObserverConstructor =
       dialog.ownerDocument.defaultView?.MutationObserver;
     const preferredFocusObserver = MutationObserverConstructor
@@ -181,6 +206,7 @@ export function ModalDialog({
               : null;
           const activeElement = dialog.ownerDocument.activeElement;
           if (
+            isTopmostModal(instanceId) &&
             preferredTarget &&
             preferredTarget !== activeElement &&
             (activeElement === initialTarget ||
@@ -257,16 +283,20 @@ export function ModalDialog({
       document.removeEventListener("keydown", handleKeyDown, true);
       document.removeEventListener("focusin", handleFocusIn, true);
       preferredFocusObserver?.disconnect();
+      const wasTopmost = isTopmostModal(instanceId);
       unregisterModal(instanceId);
       unlockModalScroll(dialog.ownerDocument);
       if (
-        previouslyFocused?.isConnected &&
+        wasTopmost && previouslyFocused?.isConnected &&
         typeof previouslyFocused.focus === "function"
       ) {
         previouslyFocused.focus();
       }
+      const exposed = modalStack[modalStack.length - 1];
+      if (wasTopmost && exposed?.element.isConnected &&
+          !exposed.element.contains(dialog.ownerDocument.activeElement)) exposed.focus();
     };
-  }, [instanceId, open]);
+  }, [instanceId, layer, open]);
 
   if (!open) {
     return null;
@@ -275,7 +305,8 @@ export function ModalDialog({
   const titleId = `${instanceId}-title`;
   const overlayClasses = [
     "ui-modal-overlay",
-    stacked ? "ui-modal-overlay--stacked" : undefined,
+    layer === "stacked" ? "ui-modal-overlay--stacked" : undefined,
+    layer === "window-consent" ? "ui-window-takeover-consent-overlay" : undefined,
     overlayClassName,
   ]
     .filter(Boolean)
@@ -309,6 +340,13 @@ export function ModalDialog({
     }
   };
 
+  function fenceBodyAction(event: MouseEvent<HTMLDivElement> | FormEvent<HTMLDivElement>) {
+    const status = controller?.getSnapshot().status;
+    if (status !== "activating" && status !== "active") return;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   const dialog = (
     <div
       className={overlayClasses}
@@ -326,6 +364,7 @@ export function ModalDialog({
       >
         <header className="ui-modal-header">
           <h2 id={titleId}>{title}</h2>
+          <RevokeWindowTakeoverButton />
           <button
             className="ui-modal-close"
             type="button"
@@ -336,7 +375,12 @@ export function ModalDialog({
             Close
           </button>
         </header>
-        <div className={bodyClasses}>{children}</div>
+        <div className={bodyClasses} inert={presentationAttached || undefined}
+          onClickCapture={fenceBodyAction}
+          onSubmitCapture={fenceBodyAction}
+        >
+          {children}
+        </div>
       </section>
     </div>
   );

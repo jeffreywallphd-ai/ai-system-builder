@@ -83,6 +83,23 @@ describe("release-bound system-data definition resolver", () => {
     expect(await incomplete.resolve(workspaceId, releaseId, "service-request")).toBeUndefined();
   });
 
+  it("can select the exact hosted form from a release with more than one form without widening the ordinary resolver", async () => {
+    const data = manifest();
+    const assets = data.instances.filter((item) => item.definitionRef.id !== "builtin.form.form");
+    const form = (instanceId: string, title: string, version: string) => ({ instanceId,
+      definitionRef: { kind: "asset-definition-version", id: "builtin.form.form", version }, selectedConfiguration: { title } });
+    const service = new ReleaseBoundSystemDataDefinitionService(
+      { async readRelease() { return release(); } } as any,
+      { async readVerified() { return new TextEncoder().encode(JSON.stringify({ instances: [
+        ...assets, form("form.intake", "Intake", "3.0.0"), form("form.questions", "Questions", "3.0.0"), form("form.old", "Old", "2.0.0"),
+      ] })); } },
+    );
+    expect(await service.resolve(workspaceId, releaseId, "service-request")).toBeUndefined();
+    expect((await service.resolve(workspaceId, releaseId, "service-request", { formInstanceId: "form.questions" }))?.descriptor.title).toBe("Questions");
+    expect(await service.resolve(workspaceId, releaseId, "service-request", { formInstanceId: "form.old" })).toBeUndefined();
+    expect(await service.resolve(workspaceId, releaseId, "service-request", { formInstanceId: "form.missing" })).toBeUndefined();
+  });
+
   it("rejects ambiguous or misbound security and operation declarations", async () => {
     const candidates = [
       (() => {

@@ -7,6 +7,7 @@ import { DEFAULT_COMFYUI_REPOSITORY_URL } from "../installer/comfyui/createComfy
 import { createComfyUiHttpClient, type ComfyUiHttpClient } from "./createComfyUiHttpClient";
 import type { ComfyUiRuntimeHealth } from "./comfyUiRuntimeHealth";
 import { buildComfyUiRuntimeEnvironment } from "./comfyUiPythonEnvironment";
+import { terminateOwnedProcess } from "../shared/terminateOwnedProcess";
 
 
 export interface CreateComfyUiRuntimeSupervisorOptions {
@@ -54,25 +55,6 @@ function normalizeRuntimeOutput(text: string): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function waitForProcessExit(process: ChildProcess, timeoutMs = 5_000): Promise<void> {
-  return new Promise((resolve) => {
-    let settled = false;
-    const complete = () => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timeout);
-      process.off("exit", complete);
-      process.off("error", complete);
-      resolve();
-    };
-    const timeout = setTimeout(complete, timeoutMs);
-    process.once("exit", complete);
-    process.once("error", complete);
-  });
-}
-
 export function buildComfyUiRuntimeLaunchArguments(input: {
   host: string;
   port: number;
@@ -101,6 +83,11 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
   const client: Pick<ComfyUiHttpClient, "getSystemStats"> = createComfyUiHttpClient({ baseUrl: url, fetchImplementation: options.fetchImplementation });
 
   let processHandle: ChildProcess | undefined;
+  let startFlight: Promise<void> | undefined;
+  let startGeneration: number | undefined;
+  let stopFlight: Promise<void> | undefined;
+  let requiresConfirmedStop = false;
+  let lifecycleGeneration = 0;
   let status: ComfyUiRuntimeHealth["status"] = "stopped";
   let lastCheckAt = Date.now();
   let startupFailure: string | undefined;
@@ -137,8 +124,9 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
     });
   };
 
-  const bindRuntimeOutput = (stream: Readable | null | undefined, source: "stdout" | "stderr") => {
+  const bindRuntimeOutput = (stream: Readable | null | undefined, source: "stdout" | "stderr", owner: ChildProcess) => {
     stream?.on("data", (chunk: string | Buffer) => {
+      if (processHandle !== owner) return;
       appendRuntimeOutput(chunk.toString(), source);
     });
   };
@@ -191,6 +179,15 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
 
   return {
     async start() {
+      if (stopFlight) throw new Error("ComfyUI is stopping; retry after confirmed termination.");
+      if (startFlight) {
+        if (startGeneration !== lifecycleGeneration) throw new Error("Previous ComfyUI startup is still stopping.");
+        return startFlight;
+      }
+      const generation = lifecycleGeneration;
+      const assertCurrent = () => { if (generation !== lifecycleGeneration) throw new Error("ComfyUI startup was stopped."); };
+      const operation = (async () => {
+      if (processHandle && (requiresConfirmedStop || status === "unhealthy")) throw new Error("ComfyUI startup failed; stop the owned process before retrying.");
       if (processHandle && status !== "stopped") {
         log("info", "ComfyUI runtime start skipped because a process is already active.", {
           status,
@@ -221,6 +218,7 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
           },
         });
 
+        assertCurrent();
         if (installResult.status !== "installed") {
           log("error", "ComfyUI auto-install failed.", { installRoot: options.installRoot, error: installResult.error });
           if (installResult.error?.code === "unmanaged-install-root") {
@@ -239,6 +237,7 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
       }
 
       const attemptStart = async (attempt: number): Promise<void> => {
+        assertCurrent();
         const startStartedAt = Date.now();
         startupFailure = undefined;
         status = "starting";
@@ -258,49 +257,61 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
         }
         const spawnedProcess = spawnedProcessCandidate ?? throwMissingSpawnedProcess();
         processHandle = spawnedProcess;
+        requiresConfirmedStop = false;
         log("info", "ComfyUI runtime process spawned; polling health endpoint.", {
           attempt,
           url,
           startupTimeoutMs,
           healthCheckIntervalMs,
         });
-        bindRuntimeOutput(spawnedProcess.stdout, "stdout");
-        bindRuntimeOutput(spawnedProcess.stderr, "stderr");
+        bindRuntimeOutput(spawnedProcess.stdout, "stdout", spawnedProcess);
+        bindRuntimeOutput(spawnedProcess.stderr, "stderr", spawnedProcess);
         spawnedProcess.on("error", (error) => {
+          if (processHandle !== spawnedProcess) return;
           startupFailure = `ComfyUI runtime process failed to start: ${error.message}`;
           status = "unhealthy";
+          requiresConfirmedStop = true;
           lastCheckAt = Date.now();
           log("error", "ComfyUI runtime process failed to spawn.", { attempt, error: error instanceof Error ? error.message : String(error), pythonExecutable });
         });
 
-        spawnedProcess.once("exit", (code, signal) => {
+        const onTerminal = (code: number | null, signal: NodeJS.Signals | null) => {
+          if (processHandle !== spawnedProcess) return;
           if (status === "starting") {
             startupFailure = `ComfyUI runtime process exited during startup (code=${String(code ?? "null")}, signal=${String(signal ?? "null")}).`;
           }
           processHandle = undefined;
+          requiresConfirmedStop = false;
           status = status === "starting" ? "unhealthy" : "stopped";
           lastCheckAt = Date.now();
           log(status === "unhealthy" ? "error" : "info", "ComfyUI runtime process exited.", {
             attempt, code, signal, status, startupFailure,
             recentRuntimeOutput: recentRuntimeOutput.length > 0 ? [...recentRuntimeOutput] : undefined,
           });
-        });
+        };
+        spawnedProcess.once("exit", onTerminal);
+        spawnedProcess.once("close", onTerminal);
+        const assertActive = () => {
+          assertCurrent();
+          if (processHandle !== spawnedProcess) throw new Error("ComfyUI runtime exited before health check completed.");
+          assertStartupProcessActive();
+        };
 
         const timeoutAt = Date.now() + startupTimeoutMs;
         let healthCheckAttempts = 0;
         let lastHealthWaitLogAt = 0;
         while (Date.now() < timeoutAt) {
-          assertStartupProcessActive();
+          assertActive();
           healthCheckAttempts += 1;
           try {
             await client.getSystemStats();
-            assertStartupProcessActive();
+            assertActive();
             status = "ready";
             lastCheckAt = Date.now();
             log("info", "ComfyUI runtime is ready.", { attempt, url, healthCheckAttempts, durationMs: elapsed(startStartedAt) });
             return;
           } catch {
-            assertStartupProcessActive();
+            assertActive();
             status = "starting";
             lastCheckAt = Date.now();
             if (Date.now() - lastHealthWaitLogAt >= 10_000) {
@@ -314,8 +325,12 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
           }
         }
 
-        processHandle?.kill("SIGTERM");
-        processHandle = undefined;
+        assertCurrent();
+        requiresConfirmedStop = true;
+        status = "unhealthy";
+        try { await terminateOwnedProcess(spawnedProcess); }
+        catch { /* Unconfirmed termination deliberately retains the owned handle. */ }
+        assertCurrent();
         status = "unhealthy";
         lastCheckAt = Date.now();
         log("error", "ComfyUI runtime startup timed out.", {
@@ -330,6 +345,7 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
       try {
         await attemptStart(1);
       } catch (firstError) {
+        assertCurrent();
         const classification = classifyDependencyMismatchFailure();
         log("info", "[ai-system-builder][comfyui][supervisor] Dependency mismatch classification result.", {
           classification,
@@ -337,6 +353,8 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
           startupFailure,
           recentRuntimeOutput: [...recentRuntimeOutput],
         });
+        assertCurrent();
+        if (processHandle) throw firstError;
         if (!classification.isDependencyMismatch || classification.confidence === "low") {
           throw firstError;
         }
@@ -362,6 +380,7 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
           forceRepair: false,
           metadata: { repairReason: classification.reason, repairConfidence: classification.confidence },
         });
+        assertCurrent();
         if (repairResult.status !== "installed") {
           log("error", "[ai-system-builder][comfyui][supervisor] ComfyUI dependency repair failed.", { attempt: 1, installRoot: options.installRoot, runtimeDeviceMode, repairStatus: repairResult.status, repairError: repairResult.error });
           throw new Error(`ComfyUI dependency mismatch detected (torchaudio/torchvision). The system attempted repair but failed. runtimeDeviceMode=${runtimeDeviceMode}`);
@@ -375,12 +394,17 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
           await attemptStart(2);
           log("info", "[ai-system-builder][comfyui][supervisor] ComfyUI retry startup succeeded after dependency repair.", { attempt: 2, installRoot: options.installRoot, runtimeDeviceMode });
         } catch (retryError) {
+          assertCurrent();
           log("error", "[ai-system-builder][comfyui][supervisor] ComfyUI retry startup failed after dependency repair.", {
             attempt: 2, installRoot: options.installRoot, runtimeDeviceMode, startupFailure, recentRuntimeOutput: [...recentRuntimeOutput],
           });
           throw new Error("ComfyUI failed after dependency repair. See logs for details.");
         }
       }
+      })();
+      startFlight = operation;
+      startGeneration = generation;
+      try { await operation; } finally { if (startFlight === operation) { startFlight = undefined; startGeneration = undefined; } }
     },
     getRecentRuntimeOutput() {
       return [...recentRuntimeOutput];
@@ -402,17 +426,21 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
         return { status: "stopped", url, port, lastCheckAt };
       }
 
+      const owner = processHandle, generation = lifecycleGeneration;
+      const current = () => owner === processHandle && generation === lifecycleGeneration && !stopFlight && !requiresConfirmedStop;
       try {
         await client.getSystemStats();
-        status = "ready";
+        if (current()) status = "ready";
       } catch {
-        status = status === "starting" ? "starting" : "unhealthy";
+        if (current()) status = status === "starting" ? "starting" : "unhealthy";
       }
-      lastCheckAt = Date.now();
+      if (current()) lastCheckAt = Date.now();
       return { status, url, port, lastCheckAt };
     },
 
     async stop() {
+      if (stopFlight) return stopFlight;
+      lifecycleGeneration++;
       if (!processHandle) {
         status = "stopped";
         lastCheckAt = Date.now();
@@ -420,12 +448,15 @@ export function createComfyUiRuntimeSupervisor(options: CreateComfyUiRuntimeSupe
       }
 
       const processToStop = processHandle;
-      const stopped = waitForProcessExit(processToStop);
-      processToStop.kill("SIGTERM");
-      await stopped;
-      processHandle = undefined;
-      status = "stopped";
-      lastCheckAt = Date.now();
+      requiresConfirmedStop = true;
+      status = "unhealthy";
+      const operation = Promise.resolve().then(() => terminateOwnedProcess(processToStop)).then(() => {
+        if (processHandle === processToStop) processHandle = undefined;
+        status = "stopped";
+        lastCheckAt = Date.now();
+      });
+      stopFlight = operation;
+      try { await operation; } finally { if (stopFlight === operation) stopFlight = undefined; }
     },
   };
 }

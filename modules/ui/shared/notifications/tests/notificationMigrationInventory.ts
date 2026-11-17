@@ -34,6 +34,7 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     "modules/ui/shared/asset-package/AssetPackageManager.tsx",
     "modules/ui/shared/asset-studio/AssetStudioManager.tsx",
     "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx",
+    "modules/ui/shared/context-management/ContextStudio.tsx",
     "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
     "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
     "modules/ui/shared/system-builder/SystemPublishedLifecycleCard.tsx",
@@ -42,7 +43,9 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
   ].map((path) => ({
     path,
     classification: "migrated-with-contextual-state" as const,
-    rationale: "Transient action outcomes publish globally; validation, loading, diagnostics, progress, result detail, or retry context remains inline.",
+    rationale: path.includes("/dataset-preparation/")
+      ? "Memory-admission errors publish in the notification center without inline duplication; contextual validation, progress and other readiness controls remain inline."
+      : "Transient action outcomes publish globally; validation, loading, diagnostics, progress, result detail, or retry context remains inline.",
   })),
   ...[
     "apps/thin-client/src/pages/SettingsPage.tsx",
@@ -65,12 +68,17 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     "apps/thin-client/src/features/workspace/components/WorkspaceCreateForm.tsx",
     "apps/thin-client/src/features/workspace/components/WorkspaceRequiredSurface.tsx",
     "apps/thin-client/src/features/workspace/components/WorkspaceSwitcher.tsx",
+    "apps/thin-client/src/features/security/components/SecurityStatusPanel.tsx",
     "modules/ui/shared/artifact-preview/ArtifactPreviewPanel.tsx",
     "modules/ui/shared/asset-library/assetLibraryDetailPanels.tsx",
     "modules/ui/shared/asset-library/AssetMutationConfirmationDialog.tsx",
     "modules/ui/shared/foundation-assets/FoundationAssetPreview.tsx",
     "modules/ui/shared/foundation-assets/FoundationAssetSurface.tsx",
     "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+    "modules/ui/shared/data-management/DatasetPreparationOcrSettings.tsx",
+    "modules/ui/shared/dataset-review/DatasetReviewModal.tsx",
+    "modules/ui/shared/dataset-version/DatasetVersionPanel.tsx",
+    "modules/ui/shared/page-dashboard/PageDashboard.tsx",
     "modules/ui/shared/system-builder/SystemBuildTestModal.tsx",
     "modules/ui/shared/system-builder/SystemComposerClickEditor.tsx",
     "modules/ui/shared/system-builder/SystemComposerInspector.tsx",
@@ -81,6 +89,41 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     classification: "contextual-only" as const,
     rationale: "Inline feedback is required to validate, unblock, retry, inspect, or follow active task progress in this surface.",
   })),
+  {
+    path: "apps/desktop/src/renderer/features/settings/components/HeadlessClientSettings.tsx",
+    classification: "contextual-only",
+    rationale: "Pairing and client access outcomes tell the user whether to retry, enter the one-time code, or check the current client list. Code and credential material are never part of the status.",
+  },
+  {
+    path: "apps/desktop/src/renderer/features/settings/components/RecentHeadlessChatTasks.tsx",
+    classification: "contextual-only",
+    rationale: "This read-only panel reports loading, absence, and availability for the scoped task list. It does not announce task outcomes or publish notifications.",
+  },
+  {
+    path: "modules/ui/shared/headless/HeadlessPlanApprovalDialog.tsx",
+    classification: "contextual-only",
+    rationale: "The current approval view shows loading and decision feedback for the exact request. This lets the user open the current request again when a decision could not be confirmed.",
+  },
+  {
+    path: "modules/ui/shared/takeover/WindowTakeoverControls.tsx",
+    classification: "contextual-only",
+    rationale: "The live window control region tells the user who controls the current window and keeps revoke available. Its status is separate from independent chat task outcomes.",
+  },
+  {
+    path: "modules/ui/shared/system-builder/SystemFormComposerView.tsx",
+    classification: "contextual-only",
+    rationale: "A preview readiness error belongs to the current form draft and disappears when that draft changes.",
+  },
+  {
+    path: "modules/ui/shared/system-builder/SystemFormPreview.tsx",
+    classification: "contextual-only",
+    rationale: "The preview announces validation next to the affected field and shows which fields are included without saving answers or reporting action outcomes.",
+  },
+  {
+    path: "modules/ui/shared/system-builder/SystemPublishedFormDialog.tsx",
+    classification: "contextual-only",
+    rationale: "Respondents must be able to correct answers, check the result of the current submission, or retry it without leaving the form. No answer or receipt data is announced.",
+  },
   ...[
     "apps/desktop/src/renderer/components/layout/DesktopPageLoadingFallback.tsx",
     "apps/desktop/src/renderer/components/ui/LoadingSpinner.tsx",

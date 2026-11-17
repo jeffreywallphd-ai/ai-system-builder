@@ -1,0 +1,40 @@
+{
+  "schema_version": "working-ui-census-update-v1",
+  "scope": "working-source-facts-only-no-execution",
+  "roadmap_id": "comprehensive-ui-automation",
+  "prior_commit": "a35834b49a9e056d49973a1377b10f819fbaa8b9",
+  "prior_census_path": "docs/operations/comprehensive-ui-automation-current-census.json",
+  "prior_census_git_sha256": "f15352d7fa8c9d4154342e0e4fe8043485c6b9a33f765a7e97dc63e7bfdf2837",
+  "prior_census_working_sha256": "f15352d7fa8c9d4154342e0e4fe8043485c6b9a33f765a7e97dc63e7bfdf2837",
+  "source_baseline": "be0a48e241ca94d1ad18fda89ffa8f095d98e56c",
+  "preserved_fields_sha256": "41c59fc3280c851bf833651bf3ffd275bade3c04dc9c61e79ce07085cdcec26c",
+  "qualification_effect": {
+    "executed_tests": 0,
+    "actual_host_pass": false,
+    "parent_qualification_granted": false,
+    "full_testing_status": "deferred-by-user"
+  },
+  "sources": [
+    {
+      "path": "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+      "prior_row_sha256": "53f4b1a19d718b33af52a65acde1c0dc18121ab60d86d61db595188ef416dab5",
+      "current_row_sha256": "56d17bd6463bbfb6cffc57643612f582f2555409f5902f3614a0bf6af792bc21"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
+      "prior_row_sha256": "b3adaaacfe94012e5c3a448912f54b1e8972e267ce2f6a422b0252edfdc9d070",
+      "current_row_sha256": "f8a39279a10e8972375c0f6f227e90921be7fde3277a735850a63f44c7adfedd"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
+      "prior_row_sha256": "39179ece323370e4c501cbfddbf2b2be5c6a974cd36f4b57300396bf72d1cc1c",
+      "current_row_sha256": "9b2fa36c79323c5c0398543790243ec6c1f05ccefa42947561b86ed487bcb4c9"
+    }
+  ],
+  "unreviewed_source_drift": [
+    "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts"
+  ],
+  "reason": "Update only current navigation/accessibility definition facts. Committed pins, prior history and every unreviewed working-source gap remain; this inventory grants no executed or parent qualification."
+}

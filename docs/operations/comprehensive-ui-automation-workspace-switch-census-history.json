@@ -1,0 +1,273 @@
+{
+ "schema_version": "historical-ui-census-update-v1",
+ "scope": "historical-source-update-only-no-execution",
+ "roadmap_id": "comprehensive-ui-automation",
+ "prior_commit": "f62aa7176eccfb065eab27ea56edf6bbb1bc0dbc",
+ "prior_census_path": "docs/operations/comprehensive-ui-automation-current-census.json",
+ "prior_census_git_sha256": "163fb254c691e8261c2b5df8927e4e0438f0a47fcc7818287120700499e1ae54",
+ "prior_census_working_sha256": "163fb254c691e8261c2b5df8927e4e0438f0a47fcc7818287120700499e1ae54",
+ "prior_source_baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+ "source_baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+ "old_archive": {
+  "path": "docs/operations/comprehensive-ui-automation-census-source-history.json",
+  "sha256": "658a1ec6e35cb74385177abf1a751c306b34b6414456d178b7d7189cad74bf23",
+  "bytes": 13560
+ },
+ "prior_history": {
+  "path": "docs/operations/comprehensive-ui-automation-private-test-privacy-census-history.json",
+  "sha256": "a7c2b3c55c9acb2c1a9ebd795e9825611d97df84b35ce8681a9a8b1483d410c0",
+  "bytes": 7392
+ },
+ "reason": "Refresh only three functional journey definitions after correcting pending-versus-active workspace switching. Preserve all180 historical committed pins, the original source baseline, mappings, inventories, pending work and earlier histories. The shared helper and focused regressions are checked separately. Source facts grant no execution, host, security or parent qualification.",
+ "preserved_fields_sha256": "845bf0d2019604d92eb52a8642bacd53e143ae953da64c9ac039873ba3c22dc1",
+ "qualification_effect": {
+  "executed_tests": 0,
+  "actual_host_pass": false,
+  "parent_qualification_granted": false,
+  "full_testing_status": "deferred-by-user"
+ },
+ "sources": [
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/provider-source-host-journey.ts",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/provider-source-host-journey.ts",
+    "facts": {
+     "sha256": "9ddcfcbe620a754857065c4d28c7368d3bf4f870d0b0ce32771c8e87a0780662",
+     "bytes": 11862,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "providerArtifactUi",
+       "line": 13
+      },
+      {
+       "name": "closeDetail",
+       "line": 16
+      },
+      {
+       "name": "workspace",
+       "line": 17
+      },
+      {
+       "name": "list",
+       "line": 21
+      },
+      {
+       "name": "ingestion",
+       "line": 22
+      },
+      {
+       "name": "notificationCount",
+       "line": 23
+      },
+      {
+       "name": "completedNotification",
+       "line": 26
+      },
+      {
+       "name": "open",
+       "line": 29
+      },
+      {
+       "name": "uploadInventory",
+       "line": 34
+      },
+      {
+       "name": "publishProviderHostEvidence",
+       "line": 45
+      },
+      {
+       "name": "qualifyProviderSourceHostJourney",
+       "line": 60
+      },
+      {
+       "name": "step",
+       "line": 63
+      },
+      {
+       "name": "check",
+       "line": 64
+      }
+     ],
+     "assertionCount": 25,
+     "assertionDigest": "b633e80f0500a4b2b3c202e4342df285036b71c0010ea70e2d1259cc93cf647d",
+     "assertionExamples": [
+      {
+       "line": 18,
+       "kind": "expect",
+       "sha256": "cc6cedf61e81d1e229dab367883eff9949597e7d9f6e37d388387cfe31004944"
+      },
+      {
+       "line": 19,
+       "kind": "expect",
+       "sha256": "37f336940234459d6961c2745a710d52e8fa760fdcfc7767e5cb6e8e754d63b7"
+      },
+      {
+       "line": 19,
+       "kind": "expect",
+       "sha256": "7e834bea6cada968ceada9b2b47a886c8b3903cb45e83ebebca519af3e266fda"
+      },
+      {
+       "line": 19,
+       "kind": "expect",
+       "sha256": "c7232a477505f246242709a97942adf1a5b80e1698d20fa642b19a8906efdcd5"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "9ddcfcbe620a754857065c4d28c7368d3bf4f870d0b0ce32771c8e87a0780662"
+   },
+   "prior_row_sha256": "ae1fbf447f7dbb2ee92eec0b004929f0c03910885b86bd928e87ad8427eb0bd0",
+   "current_row_sha256": "64e1d6d56186c568a4f2bd57783d2a19b9f674d6f2fd2c1e6aae761e8b1d57b7"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/artifact-lifecycle-host-journey.ts",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/artifact-lifecycle-host-journey.ts",
+    "facts": {
+     "sha256": "14225c5974a305f52ad7ff64dfdc4bbd0bc6a28836d58986859d3fa55c787dfd",
+     "bytes": 11778,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "qualifyArtifactLifecycleHostJourney",
+       "line": 9
+      },
+      {
+       "name": "step",
+       "line": 19
+      },
+      {
+       "name": "makeWorkspace",
+       "line": 20
+      },
+      {
+       "name": "list",
+       "line": 27
+      },
+      {
+       "name": "inspect",
+       "line": 30
+      },
+      {
+       "name": "openBrowser",
+       "line": 31
+      },
+      {
+       "name": "closeDetail",
+       "line": 32
+      },
+      {
+       "name": "openExact",
+       "line": 33
+      },
+      {
+       "name": "upload",
+       "line": 41
+      },
+      {
+       "name": "reload",
+       "line": 52
+      },
+      {
+       "name": "switchTo",
+       "line": 53
+      }
+     ],
+     "assertionCount": 42,
+     "assertionDigest": "7e4df6a6f3410b2b25eea651c104c6af851897ce513891247341a68ea2d6e78f",
+     "assertionExamples": [
+      {
+       "line": 21,
+       "kind": "expect",
+       "sha256": "cc6cedf61e81d1e229dab367883eff9949597e7d9f6e37d388387cfe31004944"
+      },
+      {
+       "line": 24,
+       "kind": "expect",
+       "sha256": "37f336940234459d6961c2745a710d52e8fa760fdcfc7767e5cb6e8e754d63b7"
+      },
+      {
+       "line": 24,
+       "kind": "expect",
+       "sha256": "7e834bea6cada968ceada9b2b47a886c8b3903cb45e83ebebca519af3e266fda"
+      },
+      {
+       "line": 24,
+       "kind": "expect",
+       "sha256": "c7232a477505f246242709a97942adf1a5b80e1698d20fa642b19a8906efdcd5"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "14225c5974a305f52ad7ff64dfdc4bbd0bc6a28836d58986859d3fa55c787dfd"
+   },
+   "prior_row_sha256": "c9e6aff8b30abecb4331d8b2cf4ef3a98c19ef1b280d6bae2488e354922a2ee7",
+   "current_row_sha256": "916a5aefd62d3e84bfa7a6e8bd1d0713d91f22b2e8136667dcad8f22317c7342"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-reference-host-journey.ts",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/model-reference-host-journey.ts",
+    "facts": {
+     "sha256": "890e4a512bc30ee63f50d27a6686e0c713869df3bfb42ff6bad6fc4a9aff1ae7",
+     "bytes": 6563,
+     "cases": [],
+     "dynamicCases": 0,
+     "functions": [
+      {
+       "name": "qualifyModelReferenceHostJourney",
+       "line": 7
+      },
+      {
+       "name": "step",
+       "line": 13
+      },
+      {
+       "name": "openModels",
+       "line": 15
+      },
+      {
+       "name": "inventoryCard",
+       "line": 16
+      },
+      {
+       "name": "expectSavedDetails",
+       "line": 21
+      }
+     ],
+     "assertionCount": 22,
+     "assertionDigest": "7318c0e9e0dca13e3e5862a8ab20274b2cb49fe88aab7a2a6f024470d370af60",
+     "assertionExamples": [
+      {
+       "line": 22,
+       "kind": "expect",
+       "sha256": "cd774a0e2287335b31b4a27bda8f71a361e282d56ee9de30ed34081ebb12d7c5"
+      },
+      {
+       "line": 22,
+       "kind": "expect",
+       "sha256": "58384cf956bd8ce226ff6ebbe4a0d910700f3f25d968f9299b43a8687ea40353"
+      },
+      {
+       "line": 23,
+       "kind": "expect",
+       "sha256": "c9c5d68f533abd6d46f9aff28b78cd20a0c11249ec0f3e921734047ddcd16b81"
+      },
+      {
+       "line": 25,
+       "kind": "expect",
+       "sha256": "503826a2018dc807717e939e1ac449de012a3f07e79519957b561495bef07519"
+      }
+     ],
+     "modifiers": []
+    },
+    "committed_sha256": "890e4a512bc30ee63f50d27a6686e0c713869df3bfb42ff6bad6fc4a9aff1ae7"
+   },
+   "prior_row_sha256": "246ffca0fd2312457c6be962ed9eb674860910f599c607a75f6e7c44664bdd9d",
+   "current_row_sha256": "21bd6fabcc01714a3f9fb07fdd859e0970d960e7b378f793ce6866947862205d"
+  }
+ ]
+}

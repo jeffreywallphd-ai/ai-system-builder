@@ -1,0 +1,269 @@
+{
+  "schema_version": "standard-model-tooling-delivery-v1",
+  "status": "model-free-software-checks-passed",
+  "work_id": "standard-model-tooling-dependency-candidate",
+  "baseline_commit": "25ccb8f5d3895f032db1ed70c73c76c7816ce950",
+  "scope": "Finite Standard/diagnostic/supervisor/slot, conditional inventory, launcher and documentation dependency closure. Software fixture checks only; no trained model, parent or native staging qualification.",
+  "model_accuracy_rerun": false,
+  "trained_weights_loaded": false,
+  "providers_called": false,
+  "retained_offload_staging_accessed": false,
+  "source_files": [
+    {
+      "path": "dev-tools/README.md",
+      "sha256": "156ac8a616afcd2a0b4e0e8ab3b9351cf8874f11a1c34783f18bc08a7a698a3e"
+    },
+    {
+      "path": "dev-tools/config/model-blocker-qualification.json",
+      "sha256": "8347fa5366f3e8feeca40c0e4df23ef86ad324f59cf08d5ea04b3e370e8d5dbd"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/model_qualification_lock.py",
+      "sha256": "32102487f1593383555942e4937b38602fec108e3f4987de1a070f44ccb9b9b3"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/run-model-tests.cmd",
+      "sha256": "edb656560c53425899d2e54516c202f99c80bd1db936c08a4a9c1becb126142a"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/run-model-tests.ps1",
+      "sha256": "8907895a2215a0d4b96ef2dc0129624608ed93195f7dd75a74ccc65e13eb61ec"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/run_model_blocker_tests.py",
+      "sha256": "908e4ae1c5516015c8b7029b42b164f521fe18cad954a20cec7e117d2c1f913a"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/run_standalone_model_tests.py",
+      "sha256": "85ee14df21a46de3dc5a7255de6842a006424d43f6bd26adb23e0a132131c685"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/run_standard_generation_qualification.py",
+      "sha256": "ecb0af19f19eba78ee86982f00c9d69c87a99f1f0d4c4b97bb6412c3b39bfdb8"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/run_trained_context_qualification.py",
+      "sha256": "03ec78635c435d3bc3c1630c639ec707debdd3e09e305ce3acbc6eef6a4ff434"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/test_model_blocker_tests.py",
+      "sha256": "7f5ac0ffd3eae1ab69f0c36925fab349b36c966f849f5b033138a0b93b53fd72"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/test_model_qualification_lock.py",
+      "sha256": "eb753d8b883f686bf20ff5c5771e4ab5a539d155c57afc606a09ccb0fe278dd3"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/test_standalone_model_tests.py",
+      "sha256": "27a63a1a76c9630f8ac44c7cfa0b3911c05a42359357f1bb5ca3523041189848"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/test_standard_generation_qualification.py",
+      "sha256": "035f2244f2141724ec2c01d098421ea114106bdd04d83aa25de2edbf509ea285"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/test_trained_context_qualification.py",
+      "sha256": "497cfbc661542344bddca57c0d0b34925b2f55525d7bd3f3fb1b2d7df4191057"
+    },
+    {
+      "path": "docs/operations/model-blocker-testing.md",
+      "sha256": "82ea41f62b2ce581ba6e55ab09fac0801944aac983aa10daa15975bc98e67b03"
+    },
+    {
+      "path": "docs/operations/standalone-model-testing.md",
+      "sha256": "79fb3a2d90e3df5ad76c439186a9a4fc95194a65473761420ae6833d4aa8313b"
+    }
+  ],
+  "software_tests": [
+    {
+      "test_path": "dev-tools/scripts/qualification/tests/test_context_efficiency_qualification.py",
+      "exit_code": 0,
+      "seconds": 0.125,
+      "tests": 4,
+      "skipped": 0,
+      "logs": [
+        {
+          "path": ".local-codex/standard-tooling-final-test_context_efficiency_qualification-stdout.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        {
+          "path": ".local-codex/standard-tooling-final-test_context_efficiency_qualification-stderr.log",
+          "sha256": "6b7b90c2652a6d24a6bcc84263bf832fece03888c8b27ade7bed6fcce8048798",
+          "bytes": 949
+        }
+      ]
+    },
+    {
+      "test_path": "dev-tools/scripts/qualification/tests/test_installed_generation_qualification.py",
+      "exit_code": 0,
+      "seconds": 0.891,
+      "tests": 14,
+      "skipped": 0,
+      "logs": [
+        {
+          "path": ".local-codex/standard-tooling-final-test_installed_generation_qualification-stdout.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        {
+          "path": ".local-codex/standard-tooling-final-test_installed_generation_qualification-stderr.log",
+          "sha256": "6edcb734da5e31c7798cdf3e77fdfbaa44ae0ee284a5c4f0075119f4d6b026f3",
+          "bytes": 3154
+        }
+      ]
+    },
+    {
+      "test_path": "dev-tools/scripts/qualification/tests/test_model_qualification_lock.py",
+      "exit_code": 0,
+      "seconds": 0.984,
+      "tests": 3,
+      "skipped": 0,
+      "logs": [
+        {
+          "path": ".local-codex/standard-tooling-final-test_model_qualification_lock-stdout.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        {
+          "path": ".local-codex/standard-tooling-final-test_model_qualification_lock-stderr.log",
+          "sha256": "003977e987f484143d31dd78c6832537c396f2bfe70eb1f5f44bfd714df5d58d",
+          "bytes": 596
+        }
+      ]
+    },
+    {
+      "test_path": "dev-tools/scripts/qualification/tests/test_standalone_model_tests.py",
+      "exit_code": 0,
+      "seconds": 1.703,
+      "tests": 27,
+      "skipped": 0,
+      "logs": [
+        {
+          "path": ".local-codex/standard-tooling-final-test_standalone_model_tests-stdout.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        {
+          "path": ".local-codex/standard-tooling-final-test_standalone_model_tests-stderr.log",
+          "sha256": "7fa9d76e4c6f9f4df0094e9071d3e76c40175165ac9b3eb431f1cd1ff3fff1c6",
+          "bytes": 5237
+        }
+      ]
+    },
+    {
+      "test_path": "dev-tools/scripts/qualification/tests/test_trained_context_qualification.py",
+      "exit_code": 0,
+      "seconds": 1.125,
+      "tests": 23,
+      "skipped": 0,
+      "logs": [
+        {
+          "path": ".local-codex/standard-tooling-final-test_trained_context_qualification-stdout.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        {
+          "path": ".local-codex/standard-tooling-final-test_trained_context_qualification-stderr.log",
+          "sha256": "e45d38d0865c3b81f14dab09d15968901725749adc066e1a9d5c010c809587f2",
+          "bytes": 5132
+        }
+      ]
+    },
+    {
+      "test_path": "dev-tools/scripts/qualification/tests/test_standard_generation_qualification.py",
+      "exit_code": 0,
+      "seconds": 3.36,
+      "tests": 33,
+      "skipped": 0,
+      "logs": [
+        {
+          "path": ".local-codex/standard-tooling-final-test_standard_generation_qualification-stdout.log",
+          "sha256": "b02fe3cb7c15f37a172653d5d5c73f3b6611f32971ddc6f0ad9e5a63e07fd6fd",
+          "bytes": 946
+        },
+        {
+          "path": ".local-codex/standard-tooling-final-test_standard_generation_qualification-stderr.log",
+          "sha256": "58dd1f487389e5d99d6dd255a10864a2689c06cb217833879c2bce080bf4e393",
+          "bytes": 6799
+        }
+      ]
+    },
+    {
+      "test_path": "dev-tools/scripts/qualification/tests/test_model_blocker_tests.py",
+      "exit_code": 0,
+      "seconds": 5.359,
+      "tests": 28,
+      "skipped": 0,
+      "logs": [
+        {
+          "path": ".local-codex/standard-tooling-final-test_model_blocker_tests-stdout.log",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        {
+          "path": ".local-codex/standard-tooling-final-test_model_blocker_tests-stderr.log",
+          "sha256": "24ab3c96dccb0c6ee89d65e87ff78525d0ac1da5d3380c32307929709042c71d",
+          "bytes": 5440
+        }
+      ]
+    }
+  ],
+  "total_tests": 132,
+  "skipped": 0,
+  "current_quality_policy": {
+    "qwen05_minimum_correct_percent": 30,
+    "qwen15_minimum_correct_percent": 80,
+    "status": "previously-accepted-closed",
+    "note": "These software tests do not generate or rescore model output. Frozen historical23/24 and1.20 comparison protocols remain historical; this file supplies no new quality measurement."
+  },
+  "preserved_controls": [
+    "Exact safe-weight/model/source/protocol admission and conservative unknown-input denial; diagnostic identity now includes the shared lock source.",
+    "Supported diagnostic, direct Standard and bundle commands use the same coordinator and worker admission; children acquire worker ownership only after the native supervision handshake.",
+    "Native exit and reader shutdown must be confirmed before a successor. Standard/bundle stop on unknown model cleanup. Diagnostics may continue after confirmed exit while retaining failed or unobserved cleanup and a nonqualifying outcome; native exit never asserts graceful model unload.",
+    "RAM/VRAM and bounded process-lifetime rules remain unchanged.",
+    "Canonical registry, all six owners and13 criterion references; pending criteria do not require a human blocker.",
+    "All-targets-complete, missing-target, unknown-owner and issue-only security admission denials.",
+    "No provider, optional offload lease, old staging recovery or restricted legacy Assets review."
+  ],
+  "failure_history": [
+    {
+      "work_id": "functionality-host-dependency-reviewed-delivery",
+      "receipt": "2978d4761ecea7bc7bc2e6fcf8a7e3898a05a2df8bfb8adbb6dad4ebef5b9990",
+      "status": "failed",
+      "cause": "The former inventory required open issue records for registered targets that still had pending technical qualification.",
+      "correction": "Keep canonical registered incomplete owners even without an open issue; never treat resolved issue metadata as technical completion.",
+      "root_correction_receipt": "51163fc34b77f9db95f174baa50f0dd8d1a7ca7b30123950a91496b753e97e22",
+      "root_correction_review": "0f0c9b94bd1ddc1931732c40d31a36f4c4cdfc0e31e6ba6f27ef33c995fe5cf6"
+    }
+  ],
+  "limits": [
+    "Test subprocesses use disposable fixtures. They do not prove shared-host budgets, historical worker ownership, protected retained trees or offload recovery.",
+    "No old operator plan, measurement, approval, source hash or failure was rewritten.",
+    "The selected dependency files are available and software-tested; availability is not authority for a new model run.",
+    "Exact current candidate checks and independent review remain required. A chunk checkpoint grants no parent pass, main advancement or release."
+  ],
+  "review_correction": {
+    "initial_preflight_sha256": "6cc5316f404516c467389a01436d1c95106bf7924f3273d4dc5db4e64a80d6db",
+    "finding": "Diagnostic commands bypassed shared admission; direct Standard CLI lacked coordinator admission. The initial121 software passes did not exercise those integrations.",
+    "correction": "Guard supported execution entrypoints, retain child worker ownership after native handshake, bind shared lock source and add11 focused model-free regression tests. Plan-only and bundle dispatch avoid nested locks.",
+    "fixed_tests": 11,
+    "initial_test_iterations": [
+      {
+        "status": "failed-test-isolation",
+        "tests": 26,
+        "errors": 1,
+        "error_type": "FileNotFoundError",
+        "correction": "Isolate the existing source-drift fixture that changes the repository root; actual OS/native slot integration remains separately tested."
+      },
+      {
+        "status": "failed-fixture-edit",
+        "tests": 26,
+        "errors": 1,
+        "error_type": "TypeError",
+        "correction": "Remove an accidental unary plus from the fixture patch. Production code was unchanged by this fixture correction."
+      }
+    ],
+    "limits": "No accuracy or installed-model run supplied by these tests. Parent and native staging qualification remain separate."
+  }
+}

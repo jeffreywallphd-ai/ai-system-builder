@@ -65,3 +65,63 @@ Workspace records may carry passive collaboration/readiness placeholders for fut
 ## UI route boundary
 
 Workspace-required UI routes must be blocked at the app route boundary before the requested page becomes the visible shell state. Page-level workspace gates remain defensive boundaries, but setup, loading, and unavailable-workspace surfaces must be stable and must not flash or mark the pending workspace page active until a valid active workspace is available.
+
+
+## Workspace summary projection
+
+`ReadWorkspaceSummaryUseCase` accepts one validated workspace and finite page
+kind. It resolves the persisted active workspace and requires workspace read
+authority before invoking any projection. Each requested systems/assets,
+models, datasets or artifacts group additionally requires its owning read scope;
+a denied or failed group yields unavailable values without suppressing independent
+authorized metrics. Host composition and IPC sender trust are required; absent
+authority is unavailable rather than a permissive fallback.
+
+The versioned response contains only the page's fixed scalar metrics. Desktop
+and thin pages use one summary request. Counts use repository-owned release/model
+and exact custom-asset identity projections, with one read per owning collection,
+no model discovery, runtime bootstrap, model completion, release locks, resource
+content or model catalogs returned to renderers. System publication and latest
+release asset semantics match the established reducers; custom identities are
+deduplicated across all four sources. Logical dataset counts require a locally
+available Parquet version and avoid catalog/content reads; raw Parquet objects
+without a dataset identity do not increase the count. Stored model paths indicate
+inventory availability, not fresh disk qualification.
+
+Underlying aggregate documents still require linear reads. The large local
+fixture establishes exact counts, bounded response size and collection-read
+counts; it does not qualify dedicated-profile p95 budgets. Rollback must preserve
+workspace/group authority and unavailable states, without restoring full-catalog
+renderer count requests or inferred zero values.
+
+## Workspace form admission and selection failures
+
+Both workspace creation forms take a synchronous per-form admission fence before
+calling the existing workspace client. Name, Foundation choice and Submit are
+disabled while the request is pending. The form releases admission after success
+or failure; a refused create retains the entered name for an explicit retry.
+This presentation fence does not replace transport/application authorization.
+
+A failed or malformed active-selection response is a load failure. Both default clients reject it so the provider shows its fixed load
+error and keeps workspace-owned content gated. An actual successful empty
+selection still means no workspace was selected. Recovery repeats existing reads;
+it does not create or select a default workspace. Arrays, invalid workspace
+identities and non-string optional timestamps are rejected. The canonical empty
+object stays valid. A valid identity whose workspace is absent keeps the existing
+Unavailable state instead of becoming a load error.
+
+Composed tests mount both real forms, switchers and gates with their default
+clients, actual preload/registered IPC handlers or loopback HTTP routes, the
+creation use case and newly owned JSON repositories. They verify two explicit
+workspace identities, stored selection after remount, required names, one pending
+create, refused-create retry, failed-selection recovery and absence of gated child
+reads. Foundation choices remain reference-only: one trusted activation reference
+or none, with no baseline installer or asset copy. Context Clear is tested through
+the existing hook API and is not presented as a new product UI control.
+
+The fixtures use a fixed synthetic organization/access policy, in-process invoke
+or constrained relative-URL resolution. They restore browser globals/storage,
+drain finite creation/transport work, close only the owned listener and check
+identity, containment, regular files and finite bytes before deleting a new tree.
+They do not qualify physical Electron/sender policy, a browser shell, production
+authentication/SQLite, hostile native file races or final combined testing.

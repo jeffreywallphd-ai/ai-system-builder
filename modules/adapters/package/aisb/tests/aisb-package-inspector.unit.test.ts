@@ -14,6 +14,57 @@ import {
 import { createAisbPackageInspector } from "../createAisbPackageInspector";
 
 describe(".aisb-package bounded inspector", () => {
+  it("rejects stale semantic entry and manifest identities without rewriting claims", async () => {
+    const inspector = createAisbPackageInspector();
+    const { container } = await createPackageFixture(inspector);
+    const semantic = container.manifest.semanticManifest;
+    const first = semantic.assets[0]!;
+    for (const changed of [
+      { ...semantic, assets: [{ ...first, definition: { ...first.definition, displayName: "Changed semantic panel" } }] },
+      { ...semantic, displayName: "Changed semantic manifest" },
+      { ...semantic, assets: [{ ...first, fingerprint: `fnv1a:${"0".repeat(8)}` }] },
+      { ...semantic, checksum: `sha256:${"0".repeat(64)}` },
+    ]) {
+      const result = await inspector.inspect({
+        inspectionId: "inspection-stale-semantic",
+        workspaceId: createWorkspaceId("workspace-a"),
+        bytes: encode({ ...container, manifest: { ...container.manifest, semanticManifest: changed } }),
+        inspectedAt: "2026-07-17T12:00:00.000Z",
+      });
+      expect(result.summary.eligibleForAdmission).toBe(false);
+      expect(result.summary.issues.some((value) => value.code.startsWith("package.semantic.identity."))).toBe(true);
+      expect(JSON.parse(JSON.stringify(result.container?.manifest.semanticManifest))).toEqual(JSON.parse(JSON.stringify(changed)));
+    }
+  });
+
+  it("returns static ineligible results for malformed declaration rows and deep raw content", async () => {
+    const inspector = createAisbPackageInspector();
+    const { container } = await createPackageFixture(inspector);
+    const implementation = container.manifest.implementations[0]!;
+    const malformed = [
+      { ...container, entries: [null] },
+      { ...container, manifest: { ...container.manifest, dependencies: [null] } },
+      { ...container, manifest: { ...container.manifest, implementations: [null] } },
+      { ...container, manifest: { ...container.manifest, implementations: [{ ...implementation, definitionRef: null }] } },
+      { ...container, manifest: { ...container.manifest, implementations: [{ ...implementation, facets: [null] }] } },
+    ];
+    const deep = `{"nested":`.repeat(12000) + "null" + "}".repeat(12000);
+    const raw = new TextDecoder().decode(encode({ ...container, manifest: { ...container.manifest, extra: "__deep_fixture__" } }));
+    const inputs = [...malformed.map(encode), Buffer.from(raw.replace('"__deep_fixture__"', deep))];
+    for (const bytes of inputs) {
+      const result = await inspector.inspect({
+        inspectionId: "inspection-malformed",
+        workspaceId: createWorkspaceId("workspace-a"), bytes,
+        inspectedAt: "2026-07-17T12:00:00.000Z",
+      });
+      expect(result.summary.eligibleForAdmission).toBe(false);
+      expect(result.container).toBe(undefined);
+      expect(JSON.stringify(result.summary)).not.toContain("TypeError");
+      expect(JSON.stringify(result.summary)).not.toContain("RangeError");
+      expect(JSON.stringify(result.summary)).not.toContain("contentBase64");
+    }
+  });
+
   it("accepts the deterministic non-executing starter package", async () => {
     const inspector = createAisbPackageInspector();
     const firstText = serializeAssetPackageStarter();
@@ -60,6 +111,41 @@ describe(".aisb-package bounded inspector", () => {
     expect(inspected.summary.implementationCount).toBe(1);
     expect(JSON.stringify(inspected.summary)).not.toContain("contentBase64");
     expect(JSON.stringify(inspected.summary)).not.toContain("console.log");
+    const withoutEvidenceEntry = await inspector.inspect({
+      inspectionId: "inspection-digest-binding", workspaceId: createWorkspaceId("workspace-a"),
+      bytes: encode({ ...packageFixture.container, entries: packageFixture.container.entries.filter((value) => value.path !== packageFixture.container.manifest.provenanceEntryPath) }),
+      inspectedAt: "2026-07-17T12:00:00.000Z",
+    });
+    expect(withoutEvidenceEntry.summary.packageDigest).toBe(inspected.summary.packageDigest);
+    const { checksum: _checksum, ...semanticManifest } = packageFixture.container.manifest.semanticManifest;
+    const absentChecksum = await inspector.inspect({
+      inspectionId: "inspection-no-checksum", workspaceId: createWorkspaceId("workspace-a"),
+      bytes: encode({ ...packageFixture.container, manifest: { ...packageFixture.container.manifest, semanticManifest } }),
+      inspectedAt: "2026-07-17T12:00:00.000Z",
+    });
+    expect(absentChecksum.summary.eligibleForAdmission).toBe(true);
+  });
+
+  it("rejects deep or malformed semantics before canonicalizing even legacy claims", async () => {
+    const inspector = createAisbPackageInspector();
+    const { container } = await createPackageFixture(inspector);
+    let metadata: unknown = { note: "deep" };
+    for (let index = 0; index < 40; index++) metadata = { nested: metadata };
+    for (const changed of [
+      { ...container.manifest.semanticManifest, metadata, checksum: `fnv1a:${"0".repeat(8)}` },
+      { ...container.manifest.semanticManifest, assets: [null] },
+      { ...container.manifest.semanticManifest, assets: {} },
+    ]) {
+      const result = await inspector.inspect({
+        inspectionId: "inspection-unsafe-semantic", workspaceId: createWorkspaceId("workspace-a"),
+        bytes: encode({ ...container, manifest: { ...container.manifest, semanticManifest: changed } }),
+        inspectedAt: "2026-07-17T12:00:00.000Z",
+      });
+      expect(result.container).toBe(undefined);
+      expect(result.summary.eligibleForAdmission).toBe(false);
+      expect(result.summary.issues[0]?.code).toBe("package.semantic.invalid");
+      expect(JSON.stringify(result.summary)).not.toContain("fnv1a:");
+    }
   });
 
   it("fails closed for traversal, device paths, duplicates, oversize content, and digest tampering", async () => {

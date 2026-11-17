@@ -2,12 +2,15 @@ import type { OrganizationRequestContextProviderPort } from "../../../applicatio
 import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import type { ArtifactStoragePort, ArtifactStreamStoragePort } from "../../../application/ports/storage";
 import type { WorkspaceRepository } from "../../../application/ports/workspace";
-import { createStructuredIngestionAcquisitionRepository } from "../../../adapters/persistence/ingestion";
+import type { ArtifactCatalogDeletePort } from "../../../application/ports/artifact-catalog";
+import { createStructuredIngestionFilePublicationRepository } from "../../../adapters/persistence/ingestion";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import { createWebsiteHtmlAcquisitionPort, GovernedWebsiteCaptureAdapter } from "../../../adapters/ingestion";
 import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
+import { createFilesystemIngestionFileByteStorageAdapter, createLocalArtifactCatalogPersistenceAdapter, createLocalArtifactStorageBindingAdapter } from "../../../adapters/storage/filesystem";
 import {
   GovernedIngestionTaskUseCases,
+  IngestionFilePublicationService,
   GovernedWebsiteIngestionUseCases,
   IngestWebsitePageUseCase,
   IngestWebsitePagesBatchUseCase,
@@ -16,10 +19,12 @@ import {
 import type { ApplicationRequestContext } from "../../../application/ports";
 import type { IngestionTaskTransportCommand, IngestionTaskTransportValue } from "../../../contracts/ingestion";
 import { createContractError, createFailureResult, type ContractResult } from "../../../contracts/shared";
+import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 
 export interface ComposeDesktopIngestionFeatureOptions {
-  readonly artifacts: { readonly storage: ArtifactStoragePort & ArtifactStreamStoragePort };
-  readonly remoteArtifacts: { readonly registerArtifactFromRepoUseCase: Pick<RegisterArtifactFromRepoUseCase, "execute"> };
+  readonly artifacts: { readonly storage: ArtifactStoragePort & ArtifactStreamStoragePort; readonly artifactCatalog?: ArtifactCatalogDeletePort };
+  readonly remoteArtifacts: { readonly registerArtifactFromRepoUseCase: Pick<RegisterArtifactFromRepoUseCase, "execute"> &
+    Partial<Pick<RegisterArtifactFromRepoUseCase, "prepare">> };
   readonly storageRootDirectory: string;
   readonly documents?: StructuredDocumentStore;
   readonly workspaceRepository: Pick<WorkspaceRepository, "readWorkspace">;
@@ -30,6 +35,7 @@ export interface ComposeDesktopIngestionFeatureOptions {
 
 export interface DesktopIngestionTaskCommands {
   executeCommand(command: IngestionTaskTransportCommand, context?: ApplicationRequestContext): Promise<ContractResult<IngestionTaskTransportValue>>;
+  readonly finalizeApprovedLocalFile?: GovernedIngestionTaskUseCases["finalizeApprovedLocalFile"];
 }
 
 export interface DesktopIngestionFeature {
@@ -46,22 +52,36 @@ export function composeDesktopIngestionFeature(options: ComposeDesktopIngestionF
   const ingestWebsitePageUseCase = new IngestWebsitePageUseCase({ acquisition: websiteHtmlAcquisition, storage: options.artifacts.storage, now: options.now });
   const ingestionTasks: DesktopIngestionTaskCommands = options.documents
     ? (() => {
-        const repository = createStructuredIngestionAcquisitionRepository(options.documents!);
+        const repository = composeIngestionAcquisitionRepository(options.storageRootDirectory, options.documents!);
+        const checkpoints = createFilesystemIngestionCheckpointStorage({
+          rootDirectory: options.storageRootDirectory,
+          organizationContextProvider: options.organizationContextProvider,
+        });
+        const filePublication = new IngestionFilePublicationService({
+          repository,
+          publications: createStructuredIngestionFilePublicationRepository(options.documents!),
+          checkpoints,
+          // Match desktop's canonical object mapping; checkpoint storage above
+          // separately uses the host's organization prefix.
+          bytes: createFilesystemIngestionFileByteStorageAdapter({ rootDirectory: options.storageRootDirectory }),
+          bindings: createLocalArtifactStorageBindingAdapter({ rootDirectory: options.storageRootDirectory, documents: options.documents }),
+          catalog: createLocalArtifactCatalogPersistenceAdapter({ rootDirectory: options.storageRootDirectory, documents: options.documents }),
+          now: options.now,
+        });
         const website = new GovernedWebsiteIngestionUseCases({
           repository,
           capture: new GovernedWebsiteCaptureAdapter({ now: options.now }),
           streamStorage: options.artifacts.storage,
           artifactCleanup: options.artifacts.storage,
+          artifactCatalogCleanup: options.artifacts.artifactCatalog,
           workspaceRepository: options.workspaceRepository,
           workspaceAuthorization: options.workspaceAuthorization,
           now: options.now,
         });
         return new GovernedIngestionTaskUseCases({
         repository,
-        checkpoints: createFilesystemIngestionCheckpointStorage({
-          rootDirectory: options.storageRootDirectory,
-          organizationContextProvider: options.organizationContextProvider,
-        }),
+        checkpoints,
+        filePublication,
         streamStorage: options.artifacts.storage,
         artifactCleanup: options.artifacts.storage,
         registerArtifactFromRepo: options.remoteArtifacts.registerArtifactFromRepoUseCase,

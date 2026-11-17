@@ -1,4 +1,5 @@
 import type { DatasetPreparationVisualOutputShape } from "./dataset-preparation-output-shape";
+import type { DatasetPreparationMemoryMode } from "./dataset-preparation-memory";
 
 export interface DatasetPreparationSourceInput {
   artifactId: string;
@@ -705,6 +706,8 @@ export interface LocalModelConfig {
   torchDtype?: "auto" | "float16" | "bfloat16" | "float32";
   /** Bounded permission for system-managed disk/swap when CPU memory is tight. */
   memoryOverflowPolicy?: DatasetPreparationMemoryOverflowPolicy;
+  /** Explicit optional loading policy; omitted settings retain standard loading. */
+  memoryMode?: DatasetPreparationMemoryMode;
 }
 
 export interface ExampleGenerationConfig {

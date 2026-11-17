@@ -9,6 +9,23 @@ migrations, supplies transactional structured documents with optimistic
 revisions, reports sanitized health, and performs online backup plus validated
 restore. See ADR-0026.
 
+Structured operations sharing one SQLite connection use one adapter-owned FIFO
+queue, including reads and organization wrappers. An asynchronous transaction
+owns that connection until commit or rollback; another request cannot observe its
+uncommitted records or have an acknowledged write rolled back with it. Use only
+the supplied transaction store inside the callback. Its scoped children expire
+with it and deny use from a foreign asynchronous context. Root reentry fails
+explicitly instead of deadlocking. If rollback cannot be confirmed, the connection stays unavailable
+to queued requests and every store wrapper; the original callback error is kept.
+There is no automatic reset or adoption of that unfinished transaction. Confirmed
+rollback permits normal queue progress. Values and revision options are copied before
+queue waits. Separate database objects have independent adapter queues. Native
+SQLite file locks and busy-timeout policy still govern connections to the same
+file. The independent-progress test uses separate in-memory databases. Nested
+callbacks reuse the active transaction and do not create savepoints. The installed
+Electron runtime runs the same concurrency checks as the native Node SQLite
+fixture, alongside existing migration/backup/restore checks.
+
 Schema version 2 separates platform/legacy documents from organization-owned
 documents with a composite organization key. First launch explicitly creates a
 generated local organization/principal profile. New feature repositories use its

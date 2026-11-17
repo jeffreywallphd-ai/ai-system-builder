@@ -14,6 +14,13 @@ This register tells contributors and automated agents whether architecture-sensi
 
 ## Current Decision Surface
 
+ADR-0043 accepts the remaining model-file ownership/native-effect, aggregate
+admission, session-diagnostic, opaque-image identity, versioned semantic
+fingerprint and principal-owned personal-library choices. Implementation may
+proceed within those boundaries. Native and controlled qualification remain
+pending; design approval does not grant physical file effects or legacy data
+ownership, waive dependency findings, or admit unsupported routes.
+
 | Area                                                                                        | Readiness         | Authority and boundary                                                                                                                                                                                                               | Agent action                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Repository shape and dependency direction                                                   | ready             | ADR-0001 and `docs/architecture/module-dependency-rules.md`                                                                                                                                                                          | Follow the existing layers; changing dependency direction requires an ADR update or successor.                                                                                                                                                                            |
@@ -38,6 +45,32 @@ This register tells contributors and automated agents whether architecture-sensi
 
 ## How to Use This Register
 
+Headless System Builder access is ready within
+[ADR-0047](ADR-0047-headless-system-builder-delegation.md): add the optional
+desktop connector and separate revocable window authority before managed
+parity. Preserve current application and organization authorization. This
+decision excludes desktop-to-server synchronization, external relay, generic
+window control and deployment scaling.
+
+ADR-0045 accepts implementation of explicit bounded model offloading through the
+existing managed Transformers/Accelerate adapter. Standard loading remains the
+default; the versioned capability must remain unavailable until its loader,
+ownership and readiness wiring exists. Preserve the reviewed resource/staging
+limits and actual technical qualification; no new engine, implicit offload,
+unsafe loading or immediate running cancellation is authorized.
+
+Desktop tooling is ready within ADR-0044: use the exactly pinned official Forge
+Vite plugin, preserve both isolated renderer/preload entries, source-confined
+loopback development and self-contained provider imports. Updates need actual
+dev/package/feature compatibility and a clean dependency gate. Non-Windows and
+manual/reference qualification remain pending until executed.
+
+The contributor development control plane is ready within ADR-0042 and
+`docs/architecture/ai-development-control-plane.md`: preserve the existing
+roadmap authority, bounded execution, JSON-only loopback review projection,
+current evidence and explicit cooperative-local trust limits. Remote execution,
+authenticated reviewer identity and public hosting require successor decisions.
+
 1. Locate the nearest row for the proposed change.
 2. Read its linked ADR and architecture sources.
 3. If `ready`, stay inside the stated boundary, apply the security impact screen, and use the change-impact matrix.
@@ -45,3 +78,13 @@ This register tells contributors and automated agents whether architecture-sensi
 5. If `proposed` or `decision-required`, stop before implementation and present decision options, consequences, and affected boundaries.
 
 When a decision is accepted, superseded, or materially constrained, update this register in the same change as the ADR and affected architecture/context docs.
+
+## Optional local document OCR
+
+[ADR-0046](ADR-0046-replaceable-local-document-ocr.md) accepts Windows OCR behind
+a replaceable managed-runtime provider boundary. Implementation can proceed
+within that explicit choice and the existing application runtime/task ports.
+The portable contract does not make OCR available: trusted helper/build,
+native lifetime, normalization, installed-language readiness and actual host
+qualification remain required. New suppliers, remote transfer or expanded
+source/task support require their own applicable review.

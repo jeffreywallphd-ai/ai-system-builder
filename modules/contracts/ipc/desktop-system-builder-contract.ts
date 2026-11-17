@@ -24,6 +24,18 @@ import { createIpcChannel } from "./ipc-channel";
 import { createIpcRequest, type IpcRequest } from "./ipc-request";
 import type { IpcResponse } from "./ipc-response";
 
+const DESKTOP_PUBLISHED_FORM_LIST = createTransportOperation("system-builder", "list-published-forms");
+const DESKTOP_PUBLISHED_FORM_SUBMIT = createTransportOperation("system-builder", "submit-published-form");
+export const DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS = {
+  listPublishedForms: { request: createIpcChannel(DESKTOP_PUBLISHED_FORM_LIST, "request"), response: createIpcChannel(DESKTOP_PUBLISHED_FORM_LIST, "response") },
+  submitPublishedForm: { request: createIpcChannel(DESKTOP_PUBLISHED_FORM_SUBMIT, "request"), response: createIpcChannel(DESKTOP_PUBLISHED_FORM_SUBMIT, "response") },
+} as const;
+export const createDesktopPublishedFormRequest = <T>(operation: keyof typeof DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS,
+  payload: T) =>
+  operation === "listPublishedForms"
+    ? createIpcRequest(DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS.listPublishedForms.request, payload)
+    : createIpcRequest(DESKTOP_SYSTEM_BUILDER_PUBLISHED_FORM_CHANNELS.submitPublishedForm.request, payload);
+
 export const DESKTOP_SYSTEM_BUILDER_OPERATIONS = {
   create: createTransportOperation("system-builder", "create"),
   listTemplates: createTransportOperation("system-builder", "list-templates"),

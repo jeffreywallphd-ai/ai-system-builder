@@ -1,3 +1,3 @@
 export interface ModelLocationRevealerPort {
-  revealPath(localPath: string): Promise<void>;
+  revealModelLocation(input: { workspaceId: string; modelRecordId: string }): Promise<void>;
 }

@@ -27,6 +27,10 @@
 
 - Runtime readiness binding is non-executing readiness only.
 - Depend on validated asset composition plans.
+- Validation requires a fresh scoped plan identity/status/version check. Missing
+  authority, changed version or fresh blockers cannot become ready through
+  provider availability. Recompute old derived failures; preserve invalid or
+  unselected binding state until corrected selection.
 - Use safe runtime inventory abstractions only.
 - Surface explicit blockers/diagnostics for missing, unavailable, unsupported, stale, invalid, or unvalidated requirements.
 - Do not expose secrets/tokens/raw env/raw paths/bytes/base64/provider payloads/signed URLs.

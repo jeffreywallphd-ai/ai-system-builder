@@ -1,11 +1,15 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { platform as runtimePlatform, tmpdir } from "node:os";
+import { platform as runtimePlatform } from "node:os";
+import type { PythonStartupEnvironmentFacts } from "./pythonRuntimeStartupDiagnostics";
+import { readPythonStartupVersion } from "../../../contracts/runtime";
 import {
   spawnSync,
   type SpawnSyncReturns,
   type SpawnSyncOptions,
 } from "node:child_process";
+import {
+  createPreparationStageDiagnostics, readPreparationObserver, snapshotPreparationEnvironment, WORKER_PREPARATION_STAGES,
+  type PreparationStageDiagnostics, type PythonRuntimePreparationObserver,
+} from "./pythonRuntimePreparationDiagnostics";
 
 export interface EnsurePythonRuntimeWorkerDependenciesOptions {
   command: string;
@@ -13,7 +17,12 @@ export interface EnsurePythonRuntimeWorkerDependenciesOptions {
   env?: NodeJS.ProcessEnv;
   requirementsFile?: string;
   trainingRequirementsFile?: string;
+  /** @deprecated Ignored: a pathname grants no private persistence authority. */
   diagnosticsFile?: string;
+  onDiagnosticOutcomes?: (outcomes: PythonDependencyOutcomes) => void | Promise<void>;
+  onDiagnosticEnvironment?: (facts: PythonStartupEnvironmentFacts) => unknown;
+  /** Passive trusted session observer; command contents are never supplied. */
+  onDiagnosticStage?: PythonRuntimePreparationObserver;
   torchPackageSpecifier?: string;
   torchIndexesByBackend?: Partial<Record<TorchInstallBackend, string>>;
   installTimeoutMs?: number;
@@ -30,6 +39,8 @@ interface PythonRuntimeEnvironmentInspection {
   pythonMajor: number;
   pythonMinor: number;
   pythonExecutable: string;
+  huggingfaceHubVersion?: string | null;
+  transformersVersion?: string | null;
 }
 
 interface TorchInstallTarget {
@@ -49,29 +60,48 @@ interface TorchInstallationProbeResult {
   importError?: string;
 }
 
+const OUTCOME_STAGES = WORKER_PREPARATION_STAGES;
+type OutcomeStage = typeof OUTCOME_STAGES[number];
+
 interface CommandExecutionRecord {
-  stage: string;
-  command: string;
-  args: readonly string[];
+  stage: OutcomeStage;
+  backend?: TorchInstallBackend;
   exitCode: number | null;
-  stdout: string;
-  stderr: string;
-  errorMessage?: string;
+  success: boolean;
+  attempts: number;
+  failedAttempts: number;
 }
 
 interface TorchInstallDiagnostics {
+  operation: "worker" | "model-training";
+  success: boolean;
   os: string;
-  pythonVersion?: string;
-  packageManagerPath?: string;
   detectedAccelerator?: TorchInstallBackend;
-  selectedInstallTarget?: TorchInstallTarget;
+  selectedBackend?: TorchInstallBackend;
   executedCommands: CommandExecutionRecord[];
+  readonly stageObserver: PreparationStageDiagnostics;
   verificationResult?: {
     success: boolean;
     backend: TorchInstallBackend;
-    detail: string;
   };
-  fallbackActions: string[];
+}
+
+export interface PythonDependencyOutcomes {
+  readonly schemaVersion: "python-dependency-outcomes-v1";
+  readonly operation: "worker" | "model-training";
+  readonly platform: string;
+  readonly success: boolean;
+  readonly detectedBackend?: TorchInstallBackend;
+  readonly selectedBackend?: TorchInstallBackend;
+  readonly verificationResult?: Readonly<{ success: boolean; backend: TorchInstallBackend }>;
+  readonly stages: readonly Readonly<CommandExecutionRecord>[];
+}
+
+// Two finite operation keys, replaced on every attempt; no transcript history.
+const sessionOutcomes = new Map<PythonDependencyOutcomes["operation"], PythonDependencyOutcomes>();
+
+export function readPythonRuntimeDependencySessionOutcomes(): readonly PythonDependencyOutcomes[] {
+  return Object.freeze([...sessionOutcomes.values()]);
 }
 
 const DEFAULT_TORCH_INDEX_BY_BACKEND: Record<TorchInstallBackend, string> = {
@@ -95,16 +125,31 @@ const ENV_INSPECTION_SCRIPT = `
 import json
 import platform
 import sys
+try:
+  import importlib.metadata as diagnostic_metadata
+except Exception:
+  diagnostic_metadata = None
+def diagnostic_version(name):
+  if diagnostic_metadata is None:
+    return False
+  try:
+    return diagnostic_metadata.version(name)
+  except diagnostic_metadata.PackageNotFoundError:
+    return None
+  except Exception:
+    return False
 print(json.dumps({
   "platform": platform.system(),
   "pythonVersion": ".".join(str(v) for v in sys.version_info[:3]),
   "pythonMajor": int(sys.version_info[0]),
   "pythonMinor": int(sys.version_info[1]),
   "pythonExecutable": sys.executable,
+  "huggingfaceHubVersion": diagnostic_version("huggingface_hub"),
+  "transformersVersion": diagnostic_version("transformers"),
 }))
 `.trim();
 
-const WORKER_DEPENDENCY_PROBE_SCRIPT = `
+export const WORKER_DEPENDENCY_PROBE_SCRIPT = `
 # asb:worker-dependency-probe
 import importlib.metadata
 import importlib.util
@@ -112,7 +157,7 @@ import sys
 required = ["accelerate", "docx", "fastapi", "hf_xet", "huggingface_hub", "markdownify", "peft", "pyarrow", "pypdf", "safetensors", "transformers", "uvicorn"]
 decoder_supported = (3, 10) <= sys.version_info[:2] < (3, 14)
 if decoder_supported:
-  required.extend(["jsonschema", "outlines", "outlines_core"])
+  required.extend(["jsonschema", "outlines", "outlines_core", "llguidance"])
 missing = [name for name in required if importlib.util.find_spec(name) is None]
 if missing:
   raise ModuleNotFoundError(f"No module named '{missing[0]}'")
@@ -121,7 +166,7 @@ core_mismatched = [name for name, expected in core_expected_versions.items() if 
 if core_mismatched:
   raise RuntimeError("Core dependency version mismatch")
 if decoder_supported:
-  expected_versions = {"jsonschema": "4.26.0", "outlines": "1.3.2", "outlines-core": "0.2.14"}
+  expected_versions = {"jsonschema": "4.26.0", "outlines": "1.3.2", "outlines-core": "0.2.14", "llguidance": "1.9.1"}
   mismatched = [name for name, expected in expected_versions.items() if importlib.metadata.version(name) != expected]
   if mismatched:
     raise RuntimeError("Decoder dependency version mismatch")
@@ -180,30 +225,62 @@ function runCommand(
     EnsurePythonRuntimeWorkerDependenciesOptions,
     "cwd" | "env" | "installTimeoutMs"
   >,
+  diagnostics: TorchInstallDiagnostics,
+  stage: string,
 ): SpawnSyncReturns<string> {
-  return spawnSyncImplementation(command, args, {
-    cwd: options.cwd,
-    env: options.env,
-    encoding: "utf8",
+  const capturedArgs = Object.freeze([...args]);
+  const dispatchOptions = {
+    cwd: options.cwd, env: options.env, encoding: "utf8" as const,
     timeout: options.installTimeoutMs ?? DEFAULT_INSTALL_TIMEOUT_MS,
-  } satisfies SpawnSyncOptions);
+  } satisfies SpawnSyncOptions;
+  const identity = stageIdentity(stage);
+  const token = diagnostics.stageObserver.enter(identity.stage, identity.backend);
+  try {
+    const result = spawnSyncImplementation(command, capturedArgs, dispatchOptions);
+    diagnostics.stageObserver.settle(token, "returned");
+    return result;
+  } catch (error) {
+    diagnostics.stageObserver.settle(token, "threw");
+    throw error;
+  }
+}
+
+function stageIdentity(stage: string): { stage: OutcomeStage; backend?: TorchInstallBackend } {
+  const backendStage = /^(install-torch|verify-torch)-(cpu|cuda|rocm)(?:-attempt-\d+)?$/.exec(stage);
+  const outcomeStage = backendStage?.[1] ?? stage;
+  return {
+    stage: OUTCOME_STAGES.includes(outcomeStage as OutcomeStage) ? outcomeStage as OutcomeStage : "other",
+    backend: backendStage?.[2] as TorchInstallBackend | undefined,
+  };
 }
 
 function buildRecord(
   stage: string,
-  command: string,
-  args: readonly string[],
+  _command: string,
+  _args: readonly string[],
   result: SpawnSyncReturns<string>,
 ): CommandExecutionRecord {
+  const exitCode = typeof result.status === "number" && Number.isSafeInteger(result.status) && result.status >= 0 ? result.status : null;
+  const success = exitCode === 0 && !result.error;
   return {
-    stage,
-    command,
-    args,
-    exitCode: result.status,
-    stdout: typeof result.stdout === "string" ? result.stdout : "",
-    stderr: typeof result.stderr === "string" ? result.stderr : "",
-    errorMessage: result.error?.message,
+    ...stageIdentity(stage),
+    exitCode,
+    success,
+    attempts: 1,
+    failedAttempts: success ? 0 : 1,
   };
+}
+
+function appendOutcome(diagnostics: TorchInstallDiagnostics, outcome: CommandExecutionRecord): void {
+  const existing = diagnostics.executedCommands.find(record => record.stage === outcome.stage && record.backend === outcome.backend);
+  if (!existing) {
+    diagnostics.executedCommands.push(outcome);
+    return;
+  }
+  existing.attempts = Math.min(Number.MAX_SAFE_INTEGER, existing.attempts + 1);
+  existing.failedAttempts = Math.min(Number.MAX_SAFE_INTEGER, existing.failedAttempts + outcome.failedAttempts);
+  existing.exitCode = outcome.exitCode;
+  existing.success = outcome.success;
 }
 
 function parseJsonFromOutput<T>(label: string, output: string): T {
@@ -216,15 +293,6 @@ function parseJsonFromOutput<T>(label: string, output: string): T {
   }
 }
 
-function parsePipPathFromVersion(output: string): string | undefined {
-  const match = output.match(/\(([^)]+)\)/);
-  if (!match?.[1]) {
-    return undefined;
-  }
-
-  return match[1];
-}
-
 function inspectPythonRuntimeEnvironment(
   spawnSyncImplementation: typeof spawnSync,
   options: EnsurePythonRuntimeWorkerDependenciesOptions,
@@ -235,8 +303,10 @@ function inspectPythonRuntimeEnvironment(
     options.command,
     ["-c", ENV_INSPECTION_SCRIPT],
     options,
+    diagnostics,
+    "inspect-environment",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "inspect-environment",
       options.command,
@@ -257,7 +327,13 @@ function inspectPythonRuntimeEnvironment(
       ? inspectionResult.stdout.trim()
       : "",
   );
-
+  try {
+    void Promise.resolve(options.onDiagnosticEnvironment?.(Object.freeze({
+      pythonVersion: readPythonStartupVersion(parsed.pythonVersion),
+      huggingfaceHubVersion: parsed.huggingfaceHubVersion === null ? null : readPythonStartupVersion(parsed.huggingfaceHubVersion),
+      transformersVersion: parsed.transformersVersion === null ? null : readPythonStartupVersion(parsed.transformersVersion),
+    }))).catch(() => {});
+  } catch { /* Observation cannot change the real inspection. */ }
   return parsed;
 }
 
@@ -278,7 +354,6 @@ function validatePrerequisites(
     options,
     diagnostics,
   );
-  diagnostics.pythonVersion = environment.pythonVersion;
 
   if (environment.pythonMajor !== 3 || environment.pythonMinor < 9) {
     throw new Error(
@@ -291,8 +366,10 @@ function validatePrerequisites(
     options.command,
     ["-m", "pip", "--version"],
     options,
+    diagnostics,
+    "probe-pip",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "probe-pip",
       options.command,
@@ -305,9 +382,6 @@ function validatePrerequisites(
       `Python pip is unavailable for runtime dependency setup. ${normalizeOutput(pipVersionResult)}`,
     );
   }
-  diagnostics.packageManagerPath = parsePipPathFromVersion(
-    typeof pipVersionResult.stdout === "string" ? pipVersionResult.stdout : "",
-  );
 
   if (!options.cwd) {
     return environment;
@@ -322,8 +396,10 @@ function validatePrerequisites(
       options.cwd,
     ],
     options,
+    diagnostics,
+    "probe-write-access",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "probe-write-access",
       options.command,
@@ -335,23 +411,6 @@ function validatePrerequisites(
       writeAccessProbe,
     ),
   );
-  if (writeAccessProbe.status !== 0) {
-    diagnostics.fallbackActions.push(
-      `Unable to verify write access for Python runtime worker directory (${options.cwd}); continuing startup without write-access precondition.`,
-    );
-    return environment;
-  }
-
-  if (
-    !String(writeAccessProbe.stdout ?? "")
-      .trim()
-      .endsWith("1")
-  ) {
-    diagnostics.fallbackActions.push(
-      `Python runtime worker directory is not writable (${options.cwd}); continuing startup with read-only worker directory.`,
-    );
-  }
-
   return environment;
 }
 
@@ -365,8 +424,10 @@ function detectComputeBackend(
     "nvidia-smi",
     ["--query-gpu=name", "--format=csv,noheader"],
     options,
+    diagnostics,
+    "detect-accelerator-nvidia",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "detect-accelerator-nvidia",
       "nvidia-smi",
@@ -388,8 +449,10 @@ function detectComputeBackend(
     "rocminfo",
     [],
     options,
+    diagnostics,
+    "detect-accelerator-rocm",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord("detect-accelerator-rocm", "rocminfo", [], rocmResult),
   );
   if (
@@ -437,8 +500,10 @@ function probeTorchInstallation(
     options.command,
     ["-c", TORCH_INSTALL_PROBE_SCRIPT],
     options,
+    diagnostics,
+    "probe-torch",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "probe-torch",
       options.command,
@@ -478,6 +543,20 @@ function torchMatchesTarget(
   return !probe.cudaVersion && !probe.hipVersion;
 }
 
+function availableInstalledAccelerator(
+  probe: TorchInstallationProbeResult,
+  platform: NodeJS.Platform,
+): "cuda" | "rocm" | undefined {
+  if (probe.installed !== true || probe.cudaAvailable !== true) return undefined;
+  const versions = [probe.cudaVersion, probe.hipVersion];
+  if (versions.some(value => value != null && (typeof value !== "string" || !value.trim()))) return undefined;
+  const cuda = typeof probe.cudaVersion === "string" && probe.cudaVersion.trim().length > 0;
+  const rocm = typeof probe.hipVersion === "string" && probe.hipVersion.trim().length > 0;
+  if (cuda && !rocm && (platform === "win32" || platform === "linux")) return "cuda";
+  if (rocm && !cuda && platform === "linux") return "rocm";
+  return undefined;
+}
+
 function ensureNetworkReachabilityForIndex(
   spawnSyncImplementation: typeof spawnSync,
   options: EnsurePythonRuntimeWorkerDependenciesOptions,
@@ -497,8 +576,10 @@ function ensureNetworkReachabilityForIndex(
     options.command,
     ["-c", networkProbeScript],
     options,
+    diagnostics,
+    "probe-network",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "probe-network",
       options.command,
@@ -539,8 +620,10 @@ function executeInstallWithRetry(
       options.command,
       installArgs,
       options,
+      diagnostics,
+      `install-torch-${target.backend}-attempt-${attempt}`,
     );
-    diagnostics.executedCommands.push(
+    appendOutcome(diagnostics,
       buildRecord(
         `install-torch-${target.backend}-attempt-${attempt}`,
         options.command,
@@ -619,8 +702,10 @@ except Exception as error:
     options.command,
     ["-c", verificationScript],
     options,
+    diagnostics,
+    `verify-torch-${backend}`,
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       `verify-torch-${backend}`,
       options.command,
@@ -642,29 +727,37 @@ except Exception as error:
   };
 }
 
-function persistDiagnostics(
+function publishDiagnostics(
   options: EnsurePythonRuntimeWorkerDependenciesOptions,
   diagnostics: TorchInstallDiagnostics,
 ): void {
-  const diagnosticsDirectory = join(
-    tmpdir(),
-    "ai-system-builder",
-    "python-runtime",
-  );
-  const defaultPath = join(
-    diagnosticsDirectory,
-    "worker-dependency-diagnostics.json",
-  );
-  const filePath = options.diagnosticsFile ?? defaultPath;
+    // Explicit projection: never serialize subprocess transcripts, command inputs,
+    // environment inspection, index URLs, error messages or arbitrary payloads.
+    const outcomes: PythonDependencyOutcomes = Object.freeze({
+      schemaVersion: "python-dependency-outcomes-v1",
+      operation: diagnostics.operation,
+      platform: SUPPORTED_PLATFORMS.has(diagnostics.os as NodeJS.Platform) ? diagnostics.os : "other",
+      success: diagnostics.success,
+      detectedBackend: diagnostics.detectedAccelerator,
+      selectedBackend: diagnostics.selectedBackend,
+      verificationResult: diagnostics.verificationResult ? Object.freeze({
+        success: diagnostics.verificationResult.success,
+        backend: diagnostics.verificationResult.backend,
+      }) : undefined,
+      stages: Object.freeze(diagnostics.executedCommands.map(record => Object.freeze({
+        stage: record.stage,
+        backend: record.backend,
+        exitCode: record.exitCode,
+        success: record.success,
+        attempts: record.attempts,
+        failedAttempts: record.failedAttempts,
+      }))),
+    });
+  sessionOutcomes.set(outcomes.operation, outcomes);
   try {
-    mkdirSync(dirname(filePath), { recursive: true });
-    writeFileSync(
-      filePath,
-      `${JSON.stringify(diagnostics, null, 2)}\n`,
-      "utf8",
-    );
+    void Promise.resolve(options.onDiagnosticOutcomes?.(outcomes)).catch(() => {});
   } catch {
-    // Best-effort diagnostics persistence. Dependency setup should still fail/succeed independently.
+    // A trusted observer cannot change setup success/failure; retain no observer exception.
   }
 }
 
@@ -679,8 +772,10 @@ function installWorkerRequirementsIfNeeded(
     options.command,
     ["-c", WORKER_DEPENDENCY_PROBE_SCRIPT],
     options,
+    diagnostics,
+    "probe-worker-dependencies",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "probe-worker-dependencies",
       options.command,
@@ -700,7 +795,7 @@ function installWorkerRequirementsIfNeeded(
   }
 
   const missingDependencyPattern =
-    /(?:No module named ['"](?:accelerate|docx|fastapi|hf_xet|huggingface_hub|jsonschema|markdownify|outlines|outlines_core|peft|pyarrow|pypdf|safetensors|transformers|uvicorn)['"]|Core dependency version mismatch|Decoder dependency version mismatch)/i;
+    /(?:No module named ['"](?:accelerate|docx|fastapi|hf_xet|huggingface_hub|jsonschema|llguidance|markdownify|outlines|outlines_core|peft|pyarrow|pypdf|safetensors|transformers|uvicorn)['"]|Core dependency version mismatch|Decoder dependency version mismatch)/i;
   if (!missingDependencyPattern.test(probeOutput)) {
     throw new Error(
       `Python dependency probe failed for an unexpected reason; aborting startup. ${probeOutput}`,
@@ -712,8 +807,10 @@ function installWorkerRequirementsIfNeeded(
     options.command,
     ["-m", "pip", "install", "-r", requirementsFile],
     options,
+    diagnostics,
+    "install-worker-dependencies",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "install-worker-dependencies",
       options.command,
@@ -744,8 +841,10 @@ function installModelTrainingRequirementsIfNeeded(
     options.command,
     probeArgs,
     options,
+    diagnostics,
+    "probe-model-training-dependencies",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "probe-model-training-dependencies",
       options.command,
@@ -777,8 +876,10 @@ function installModelTrainingRequirementsIfNeeded(
     options.command,
     installArgs,
     options,
+    diagnostics,
+    "install-model-training-dependencies",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "install-model-training-dependencies",
       options.command,
@@ -797,8 +898,10 @@ function installModelTrainingRequirementsIfNeeded(
     options.command,
     probeArgs,
     options,
+    diagnostics,
+    "verify-model-training-dependencies",
   );
-  diagnostics.executedCommands.push(
+  appendOutcome(diagnostics,
     buildRecord(
       "verify-model-training-dependencies",
       options.command,
@@ -822,7 +925,7 @@ function attemptTorchInstallFlow(
   let target = initialTarget;
 
   for (let fallbackAttempt = 0; fallbackAttempt < 2; fallbackAttempt += 1) {
-    diagnostics.selectedInstallTarget = target;
+    diagnostics.selectedBackend = target.backend;
     ensureNetworkReachabilityForIndex(
       spawnSyncImplementation,
       options,
@@ -840,9 +943,6 @@ function attemptTorchInstallFlow(
     if (installResult.status !== 0) {
       const installOutput = normalizeOutput(installResult);
       if (target.fallbackBackend) {
-        diagnostics.fallbackActions.push(
-          `Torch ${target.backend.toUpperCase()} install failed; falling back to CPU install target.`,
-        );
         target = resolveInstallTarget(target.fallbackBackend, options);
         continue;
       }
@@ -861,16 +961,12 @@ function attemptTorchInstallFlow(
     diagnostics.verificationResult = {
       success: verification.success,
       backend: target.backend,
-      detail: verification.detail,
     };
     if (verification.success) {
       return;
     }
 
     if (target.fallbackBackend) {
-      diagnostics.fallbackActions.push(
-        `Torch ${target.backend.toUpperCase()} verification failed; falling back to CPU install target.`,
-      );
       target = resolveInstallTarget(target.fallbackBackend, options);
       continue;
     }
@@ -885,14 +981,37 @@ function attemptTorchInstallFlow(
   );
 }
 
+function captureWorkerOptions(options: EnsurePythonRuntimeWorkerDependenciesOptions): EnsurePythonRuntimeWorkerDependenciesOptions {
+  const indexes = options.torchIndexesByBackend;
+  const captured = {
+    command: options.command, cwd: options.cwd, env: snapshotPreparationEnvironment(options.env),
+    requirementsFile: options.requirementsFile, trainingRequirementsFile: options.trainingRequirementsFile,
+    torchPackageSpecifier: options.torchPackageSpecifier,
+    torchIndexesByBackend: indexes === undefined ? undefined : Object.freeze({ ...indexes }),
+    installTimeoutMs: options.installTimeoutMs, retryCount: options.retryCount,
+    platform: options.platform, spawnSyncImplementation: options.spawnSyncImplementation,
+  };
+  let onDiagnosticOutcomes: EnsurePythonRuntimeWorkerDependenciesOptions["onDiagnosticOutcomes"];
+  let onDiagnosticEnvironment: EnsurePythonRuntimeWorkerDependenciesOptions["onDiagnosticEnvironment"];
+  try {
+    const observer = options.onDiagnosticOutcomes;
+    if (typeof observer === "function") onDiagnosticOutcomes = observer;
+  } catch { /* An optional observer cannot replace setup. */ }
+  try { if (typeof options.onDiagnosticEnvironment === "function") onDiagnosticEnvironment = options.onDiagnosticEnvironment; } catch { /* Optional observer only. */ }
+  return Object.freeze({ ...captured, onDiagnosticOutcomes, onDiagnosticEnvironment, onDiagnosticStage: readPreparationObserver(options) });
+}
+
 export function ensurePythonRuntimeWorkerDependencies(
   options: EnsurePythonRuntimeWorkerDependenciesOptions,
 ): void {
+  options = captureWorkerOptions(options);
   const spawnSyncImplementation = options.spawnSyncImplementation ?? spawnSync;
   const diagnostics: TorchInstallDiagnostics = {
+    operation: "worker",
     os: options.platform ?? runtimePlatform(),
     executedCommands: [],
-    fallbackActions: [],
+    stageObserver: createPreparationStageDiagnostics("worker", readPreparationObserver(options)),
+    success: false,
   };
 
   try {
@@ -908,14 +1027,24 @@ export function ensurePythonRuntimeWorkerDependencies(
       options,
       diagnostics,
     );
-    const target = resolveInstallTarget(detectedBackend, options);
-    diagnostics.selectedInstallTarget = target;
+    let target = resolveInstallTarget(detectedBackend, options);
+    diagnostics.selectedBackend = target.backend;
 
     const currentTorch = probeTorchInstallation(
       spawnSyncImplementation,
       options,
       diagnostics,
     );
+    // Inventory tools can fail even when the installed runtime can use its GPU.
+    // Refine only their CPU fallback, then retain the real verification below.
+    const installedBackend = detectedBackend === "cpu"
+      ? availableInstalledAccelerator(currentTorch, options.platform ?? runtimePlatform())
+      : undefined;
+    if (installedBackend) {
+      target = resolveInstallTarget(installedBackend, options);
+      diagnostics.detectedAccelerator = installedBackend;
+      diagnostics.selectedBackend = installedBackend;
+    }
     if (torchMatchesTarget(currentTorch, target)) {
       const verification = verifyTorchInstallation(
         spawnSyncImplementation,
@@ -926,9 +1055,9 @@ export function ensurePythonRuntimeWorkerDependencies(
       diagnostics.verificationResult = {
         success: verification.success,
         backend: target.backend,
-        detail: verification.detail,
       };
       if (verification.success) {
+        diagnostics.success = true;
         return;
       }
     }
@@ -939,19 +1068,24 @@ export function ensurePythonRuntimeWorkerDependencies(
       target,
       diagnostics,
     );
+    diagnostics.success = true;
   } finally {
-    persistDiagnostics(options, diagnostics);
+    diagnostics.stageObserver.close();
+    publishDiagnostics(options, diagnostics);
   }
 }
 
 export function ensurePythonRuntimeModelTrainingDependencies(
   options: EnsurePythonRuntimeWorkerDependenciesOptions,
 ): void {
+  options = captureWorkerOptions(options);
   const spawnSyncImplementation = options.spawnSyncImplementation ?? spawnSync;
   const diagnostics: TorchInstallDiagnostics = {
+    operation: "model-training",
     os: options.platform ?? runtimePlatform(),
     executedCommands: [],
-    fallbackActions: [],
+    stageObserver: createPreparationStageDiagnostics("model-training", readPreparationObserver(options)),
+    success: false,
   };
   try {
     validatePrerequisites(spawnSyncImplementation, options, diagnostics);
@@ -960,20 +1094,9 @@ export function ensurePythonRuntimeModelTrainingDependencies(
       options,
       diagnostics,
     );
+    diagnostics.success = true;
   } finally {
-    persistDiagnostics(
-      {
-        ...options,
-        diagnosticsFile:
-          options.diagnosticsFile ??
-          join(
-            tmpdir(),
-            "ai-system-builder",
-            "python-runtime",
-            "model-training-dependency-diagnostics.json",
-          ),
-      },
-      diagnostics,
-    );
+    diagnostics.stageObserver.close();
+    publishDiagnostics(options, diagnostics);
   }
 }

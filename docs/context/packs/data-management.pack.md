@@ -5,7 +5,7 @@
 ## Purpose
 
 - Route work involving ingestion, staged source artifacts, dataset preparation, split integrity, curation, versioning, or dataset publication.
-- Summarize the implemented boundary without replacing canonical architecture, ADR, security, storage, or runtime guidance.
+- Summarize the implemented boundary without replacing canonical guidance. Real provided-data host tests: `dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md`; source checks grant no host or parent pass.
 
 ## Use When
 
@@ -16,10 +16,11 @@
 
 ## Core Guidance
 
+- Memory denials notify globally without inline duplication; preserve guards, project bounded numeric shortfalls, subtract permitted overflow, round upward, and never invent missing measurements.
 - Preserve ADR-0008 staged-artifact semantics and ADR-0009's separation of internal artifact identity from local and remote backing.
 - `modules/contracts/runtime/dataset-preparation-capabilities.ts` owns
   advertised source/task support; do not create host-specific allowlists.
-- Reject unsupported or incompatible paths before runtime work with a plain-language reason and corrective action.
+- Reject unsupported or incompatible paths before runtime work with a plain-language reason and corrective action. Saved setup reuse first uses shared dataset-version/datasetVersionReplay.ts to validate the complete workspace/version/artifact/lineage/source association and supported settings into one frozen value or fixed denial. This component grants no authorization, byte identity, runtime/OCR readiness or provider authority; Both Browser details now expose exact-key version history, read retry/refresh and explicit input-bound publication with private default; Preparation now scopes source replies to the current workspace/client/request, distinguishes loading/failure/empty with direct retry and denies dispatch until sources are ready; The internal Desktop restore hook captures bounded frozen saved meaning, preserves observed duplicate/conflict denials and resolves at most 100 canonical source keys through existing workspace-authorized metadata reads with fixed sequential concurrency and a 15-second caller deadline, then checks complete settings against the rebuilt request before merging options and form together; ordinary browse 250 and pure matching 256 bounds stay intact, retires stale callbacks and resets provider controls; Both apps use the same bounded exact-key metadata resolver and frozen one-use page handoff, retire edits/navigation/client/scope/task changes and announce success only after the consumer form commit; Thin retains incompatible observed duplicates and rejects the whole restore when its actual command cannot represent the saved meaning; actual host/provider/scale checks remain separate. See canonical Data architecture and threat model.
 - Carry workspace and managed organization context through transport,
   application, storage/provider, runtime-task, result, and publication
   boundaries. UI selection is not authorization.
@@ -27,19 +28,18 @@
   runtime-local paths. Localization is an explicit application/storage action
   that requires workspace context at the boundary and preserves that context
   through binding, provider, object-storage, and catalog operations.
-- Add data acquisition uses bounded workspace-scoped tasks. Local files stream
-  through digest-verified ordered checkpoints; provider files require exact
-  commit revisions; website capture is secure-egress mediated, robots-aware,
-  user-bounded to explicit pages or one sitemap, and has no recursive crawl or
-  permissive robots override.
-- The shared Hugging Face selector browses a bounded namespace and bounded
-  importable file list through host clients, lets users check exact files, and
-  passes only adapter-returned immutable revisions to the governed task. Do not
-  reintroduce free-form provider paths or mutable revision entry in the primary
-  workflow. Provider users and organizations are source coordinates, never
-  application organization scope; the host must add authoritative organization
-  and principal context and reject missing or conflicting context before task
-  creation.
+- Add data uses bounded workspace-scoped tasks. Local files use digest-verified ordered checkpoints.
+  Provider files require exact commit revisions. Website capture uses secure egress and robots policy,
+  accepts user-bounded explicit pages or one sitemap, and has no recursive crawl or permissive robots override.
+  Compensate only known new capture keys. Both hosts delete each catalog entry after its byte cleanup succeeds.
+  Byte denial preserves metadata. Old snapshots, unknown data and native/uncertain recovery stay separate.
+- The shared Hugging Face selector browses bounded datasets and files and filters
+  provider-declared licenses. All data retains non-open and unknown declarations.
+  Pass only checked files at adapter-returned revisions to the governed task.
+  Keep free-form provider paths and mutable revision entry outside the primary
+  workflow. A provider namespace identifies a source. The host supplies the
+  authorized application organization and principal, and rejects missing or
+  conflicting context before task creation.
 - Staging recovers omitted byte-descriptor names and media types from the
   workspace-authorized catalog; it never guesses JSON. Provider registration
   persists task workspace on catalog and imported-source records. Parquet
@@ -51,9 +51,8 @@
   needed for private or gated datasets. Keep the token out of task commands,
   errors, logs, and roadmap evidence. The guided workflow is the sole mounted
   ingestion path; do not restore the retired Other import tools beside it.
-- Acquisition progress comes from persisted host state. Task/source snapshot
-  visibility and changed-refresh/new-snapshot visibility commit atomically;
-  cancellation races compensate any uncommitted artifact writes.
+- Saved host state reports progress. Verified provider catalog and backing records commit with the task and source snapshot. Task/source and changed-refresh/snapshot pairs commit atomically.
+  A website file conflict leaves the task unchanged. Keep bytes after an uncertain save; clean up only after confirmed cancellation without a snapshot. Local-file recovery keeps uncertain effects without adoption or cleanup.
 - The baseline worker emits aggregate plus physical train, validation, and test
   outputs. Fixed-seed results are deterministic; source groups and exact
   duplicates cannot cross splits.
@@ -73,8 +72,8 @@
 - Standard quality checks are the complete baseline; Strict includes the same
   checks with tighter bounded admission rules. Apply task-specific checks and
   per-example source association without assuming tabular rows.
-- Preserve exact normalized artifact/span/region/page lineage. Report unavailable
-  OCR or other capabilities honestly and fail closed instead of implying work ran.
+- Preserve exact normalized artifact/span/region/page lineage. Report unavailable OCR honestly and fail closed; do not imply recognition ran.
+  Use [ADR-0046](../../adr/ADR-0046-replaceable-local-document-ocr.md) for the replaceable worker OCR contract, strict framing, bounded native owner and source/page/language-bound provider. The fixed installed-toolchain build runs through Forge before start/package, with pinned inputs and source/binary manifest; runtime never compiles. Separate synthetic document/build/copy checks are local support. Private all-page PDF normalization now preserves exact source/page/line geometry, bounds one immutable read and combined output, omits confidence and never skips OCR failures. OCR stays unavailable until public task/staging and both-host delivery qualify. No inward Windows imports, supplier selection or model accuracy rerun is added.
 - For images, distinguish inspected metadata/annotations from uninspected
   pixels. Do not claim OCR, face detection, or pixel-level personal-data or
   credential inspection when those capabilities did not run.
@@ -99,7 +98,7 @@
   decoder. With none, keep the baseline worker available, advertise decoder
   capability as unavailable, disable constraints in both hosts, and return a
   distinct safe unavailable reason for stale requests.
-- Preserve desired-example field order in decoder grammar serialization while keeping integrity fingerprints order-independent. On Windows, use the pinned Outlines mask kernel's eager callable to avoid Torch's optional compiler probe without changing masking or mandatory post-validation.
+- Preserve desired-example field order and the pinned Core regex, default whitespace and singleton-token projection, with order-independent fingerprints. Use the bounded lazy LLGuidance processor with forced tokenization disabled, explicit native limits, sanitized failures and eager safe-byte Torch masks. Do not import either backend's compiled mask kernel. Keep mandatory original-schema validation; see the canonical Runtime Model for bounds.
 - Example output layouts are edited through bounded visual fields and
   plain-language sample values, never raw schema. Compile one deterministic
   schema, schema-valid example envelope, and protected training-purpose map for
@@ -183,17 +182,18 @@
 - Exact normalized-span lineage, bounded semantic comparison, source-cap and
   mixing invariants, synthetic schema/citation/grounding/critic/safety/diversity
   denial paths, and aggregate-only evidence tests.
-- Default-schema completeness for every generated task, schema-fingerprint and
-  purpose-path mismatch denial, custom-purpose mapping through quality admission
-  and reporting, trusted attribution, sanitized URLs, and unselected absence.
-- Desktop/thin-client ordered-step, disclosure, warning, keyboard, reflow, and reduced-motion checks.
-- Applicable docs, architecture, agent-support, host build, package, and full repository gates after an increment.
+- Default-schema completeness, fingerprint/purpose-path denial, custom mappings, trusted attribution, sanitized URLs, and unselected absence.
+- Desktop/thin-client UX checks plus applicable repository gates.
 
 ## Adjacent Packs
 
+- Exact `POST /api/ingestion/tasks/execute` needs `artifact:write`, including read/list. Application organization/workspace/task/file checks still apply; other unsupported paths and methods stay denied. See the canonical Data architecture and transport README.
+- Fresh uploads bind verified local storage; staging requires exact workspace/key metadata and a primary origin. Resumable files use pre-reservation checksum checks, exclusive writing CAS, durable bytes and one acknowledged origin-issued CAS before conditional metadata and atomic task/snapshot/receipt commit. Recovery verifies existing exact origin without recreating missing/deleted records. Unknown effects stay retained; completed retry is read-only. Native/crash/parent qualification stays separate; see canonical architecture/threat model and artifact-store README.
+- `context-management` for RAG databases, context packs, and browser handoffs.
 - `persistence-storage` for object/repository storage or source isolation.
-- `runtime` or `runtime-task-registry` for worker execution/lifecycle.
+- `runtime` or `runtime-task-registry` for worker execution/lifecycle; ADR-0045 and `docs/operations/optional-low-memory-inference.md` govern explicit memory profiles, current exact capability gating, ownership and qualification. ADR-0046 requires authorized copied PDFs, a separate SHA256 port in both hosts, explicit language/structure-aware settings and a host-only `staged-pdf-ocr-v1` map; caller maps deny. Protocol support is not reader readiness. Windows protocol support does not probe the reader; shared off-by-default PDF controls require an explicit installed language. The controlled OCR app procedure uses the actual packaged worker with synthetic generation; full host delivery remains pending.
 - `desktop-implementation` for renderer and thin-client experience.
 - `server-host` for Express/API composition.
-- `security` whenever authority, untrusted parsing, provider access,
-  diagnostics, or publication changes.
+- `security` when authority, untrusted parsing, provider access, diagnostics, or publication changes.
+- Browser preparation retires workspace/client sessions during commit, admits actions synchronously and checks task/review/page identities. Unknown status retains ownership. See `docs/architecture/data-management.md` and `docs/security/data-management-threat-model.md`.
+- Dataset-file browsing preserves converted-first selection and full commit pins. Only an exact missing converted ref or a complete valid empty listing permits original Parquet in the same repository. One token/deadline and bounded HTTPS origin/repo/commit pagination protect metadata; auth, malformed, incomplete or oversized results never authorize fallback. See the canonical Data architecture and threat model; local tests do not qualify a provider or parent roadmap.

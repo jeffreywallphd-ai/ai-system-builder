@@ -1,0 +1,1641 @@
+{
+  "blockers": [
+    {
+      "id": "user-ordered-predecessor-closure",
+      "kind": "dependency",
+      "recordedAt": "2026-10-23T15:40:37Z",
+      "requiredAction": "Complete both predecessor roadmaps through their own actual qualification and closure. Revalidate both canonical completed states and the current UI roadmap approval, then resolve this scheduling blocker through the roadmap engine before starting the first UI increment. Do not substitute local support, implementation-only or pending qualification for roadmap completion.",
+      "resolution": "The user clarified that an approved roadmap waiting to start is pending/queued, not blocked. Resolve this scheduling classification only; neither predecessor is asserted completed and the user-ordered start condition remains in the approved plan.",
+      "resolvedAt": "2026-10-23T15:55:19Z",
+      "status": "resolved",
+      "summary": "The approved UI roadmap is queued by the user until both optional-low-memory-inference and functionality-optimization are actually completed; neither predecessor is qualified by this approval."
+    }
+  ],
+  "chunks": [
+    {
+      "areas": [
+        "Shared Data Management renderer mounted by desktop and thin client",
+        "Current route/scenario coverage census",
+        "Affected README, architecture and threat model"
+      ],
+      "chunkId": "scoped-ingestion-and-coverage-ledger",
+      "completedAt": "2026-10-26T13:04:55Z",
+      "criteriaIds": [
+        "daily-capability-and-variation-map",
+        "daily-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "modules/ui/shared/data-management/README.md",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/operations/comprehensive-ui-automation-coverage.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "daily-data-and-ai-journeys-scoped-ingestion-and-coverage-ledger",
+      "incrementId": "daily-data-and-ai-journeys",
+      "summary": "Implemented synchronous Add data start/retry ownership, workspace/task/client/mount fences and explicit status reconciliation after unconfirmed cancellation. Kept bounded multi-file slices and exact digests, existing source paths and safe errors. Added16 acquisition regressions plus an AST-backed39-family route/source census. Feature and related ingestion checks pass; actual host/provider/native and final combined suites remain pending. This declaration does not qualify the whole increment.",
+      "tests": [
+        "Eight new race cases failed on the original implementation and passed after repair.",
+        "Changed component file plus related ingestion-publication profile passed; current receipt b6adb1364ce1d30b8409187b14079b51f7c821aa26588d973c0a725ba4feb85f.",
+        "Both changed TypeScript files have zero scoped syntax/semantic diagnostics; no emit.",
+        "Documentation and architecture checks passed. Full suites intentionally deferred by the current user instruction."
+      ],
+      "title": "Keep Add data tasks in the correct workspace"
+    },
+    {
+      "areas": [
+        "Shared Context renderer",
+        "Browser Dataset Preparation",
+        "Shared Dataset Review and existing two-host replay boundaries"
+      ],
+      "chunkId": "dataset-context-roundtrips",
+      "completedAt": "2026-10-26T14:24:36Z",
+      "criteriaIds": [
+        "daily-capability-and-variation-map",
+        "daily-real-host-roundtrips",
+        "daily-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/context-management.md",
+        "docs/security/context-management-threat-model.md",
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/operations/comprehensive-ui-automation-coverage.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "daily-data-and-ai-journeys-dataset-context-roundtrips",
+      "incrementId": "daily-data-and-ai-journeys",
+      "summary": "Completed focused Context and Dataset UI components with exact session/action/request/artifact/report/page identity checks and safe failure handling. Context checkpoint e192f3f64 and Dataset checkpoint b28e6163b are tested and independently reviewed. Nine provided-data training goals and existing review/edit/version/replay controls pass at the feature level. Real host/runtime/provider and final combined tests remain in later work; no parent criterion is qualified by this declaration.",
+      "tests": [
+        "Context29/29 cases plus related10-file profile passed; receipt 79a00ee250223e413be31a2ec6dc89d710296a5eda977ce1c09645c44e381256; accepted review bb149dd3b244f22343f8ebc110e76fecdd52b4d3d4940053e29a1ba323390c2f.",
+        "Dataset36/36 cases plus related dataset-version-browser profile/docs/agent/architecture passed; receipt242ee3379bd5a63a291beb0a9a882d0b5147483ff8041a280a79bcc07c638619; accepted review eb0920b9ec3fbb93a8dc7a61d36e06d226da941c64c78204487b931376cf6eb0.",
+        "Two current shared Dataset Review UI files passed through exact one-worker runner, including row edit as a new version and explicit approve/reject behavior.",
+        "Actual regressions failed before correction. Current scoped TypeScript probes report zero diagnostics. Full suites deferred by user; completed model accuracy and OCR not rerun."
+      ],
+      "title": "Test dataset and Context workflows"
+    },
+    {
+      "areas": [
+        "Browser Models",
+        "Desktop Train Model",
+        "Desktop and browser Image generation"
+      ],
+      "chunkId": "model-training-image-controls",
+      "completedAt": "2026-10-26T17:48:26Z",
+      "criteriaIds": [
+        "daily-capability-and-variation-map",
+        "ai-controls-and-owned-task-states",
+        "daily-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/runtime-model.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/operations/comprehensive-ui-automation-coverage.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "daily-data-and-ai-journeys-model-training-image-controls",
+      "incrementId": "daily-data-and-ai-journeys",
+      "summary": "Completed and checkpointed current Model, Desktop Training and both Image renderer/client controls with exact task/session/review/output ownership and safe failure notifications. Model 04d0ac48e, Training e0f59779a and Image 5a5200e00 are tested and independently reviewed component outcomes. Actual host transport/storage journeys and final qualification remain in the fourth chunk and later checks; no whole parent criterion is qualified by this declaration.",
+      "tests": [
+        "Models: 43 focused cases; exact receipt 840121633239324f29b5e15098251119c52cc7828b31376c1df6c05d85223d28; accepted review 2b74ccfe0864625f71e84402102eb10cc3b2eb9b73711bcd22385e28cab24079.",
+        "Training: 29 focused cases; exact receipt 85cc9bf06224db2dbab09f8b2e1b1c1f59451345e66043c58251cb065f271e93; accepted review 0e12ab3e99cc35930fd4e77ae98787daefacfc04923f29e82d02e4571088bcd4.",
+        "Image: 44 focused regressions plus related task profile, zero diagnostics in 9 changed TypeScript roots and thin-client build passed; receipt ac5e1a6b2b4205d67a9c76c0fb9b239f17120b9fa115e2068f67b72aa6dc3f65; accepted review 9e0763b4090becf0f4b3832aba1c77b7cd3dec2bd07167dd5948e9acc9ade3bf.",
+        "Retained real red regressions and earlier failures. No full suite, actual model accuracy/OCR or native/provider qualification run."
+      ],
+      "title": "Test model, training and image controls"
+    },
+    {
+      "areas": [
+        "Daily Data/Context/model/training/image UI and real transport/storage test wiring",
+        "Exact scenario census and historical completed support reconciliation"
+      ],
+      "chunkId": "daily-journey-host-wiring",
+      "completedAt": "2026-10-27T03:39:07Z",
+      "criteriaIds": [
+        "daily-capability-and-variation-map",
+        "daily-real-host-roundtrips",
+        "ai-controls-and-owned-task-states",
+        "daily-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/operations/roadmap-supporting-work.json",
+        "Affected feature README/architecture/threat models already checkpointed"
+      ],
+      "feedbackAddressed": [],
+      "id": "daily-data-and-ai-journeys-daily-journey-host-wiring",
+      "incrementId": "daily-data-and-ai-journeys",
+      "summary": "Connected the existing source-bound daily app cases, including the missing saved Parquet approval/edit/reject/restart journey. Reconciled39completed historical support records with exact receipt/review identities. Physical app execution and final combined qualification remain pending.",
+      "tests": [
+        "Saved-row fixed worker17pass, history/read oracle48pass; two real app cases collect without execution.",
+        "Current source-bound dataset profile/docs/architecture and separate reviewed contributor recovery checks passed at their recorded feature checkpoints.",
+        "Fresh combined increment-relevant feature checks and all-criterion review follow before implementation completion; no physical/final pass."
+      ],
+      "title": "Connect and check daily app journeys"
+    },
+    {
+      "areas": [
+        "Shared Assets and Studio UI",
+        "Controlled Assets authoring journey and exact restart oracles"
+      ],
+      "chunkId": "asset-ui-import-studio-customization",
+      "completedAt": "2026-10-27T21:59:17Z",
+      "criteriaIds": [
+        "asset-authoring-lifecycle",
+        "authoring-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/diagnostics/system-builder-canvas-testing.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-to-published-system-journeys-asset-ui-import-studio-customization",
+      "incrementId": "asset-to-published-system-journeys",
+      "summary": "Reviewed and committed Assets import, Studio, publication, base-preserving customization and owned desktop restart test definitions. Historical source receipts and independent readiness preflight support implementation only; actual host and restart qualification remains pending.",
+      "tests": [
+        "Completed source Works referenced by the 27-link support audit; independent-source-preflight-01.json and addendum02 verify source readiness.",
+        "Current parent verification01: Assets profile passed; overall receipt failed in separate browser test setup and is not qualification."
+      ],
+      "title": "Import, Studio, Saved and customized copies"
+    },
+    {
+      "areas": [
+        "Systems Manage and Canvas",
+        "Three meaningful system authoring journeys"
+      ],
+      "chunkId": "meaningful-systems-and-management",
+      "completedAt": "2026-10-27T21:59:17Z",
+      "criteriaIds": [
+        "meaningful-scratch-compositions",
+        "system-management-build-and-approval",
+        "authoring-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/diagnostics/system-builder-canvas-testing.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-to-published-system-journeys-meaningful-systems-and-management",
+      "incrementId": "asset-to-published-system-journeys",
+      "summary": "Reviewed and committed three useful multi-component system construction journeys, exact saved hierarchy/definition/configuration observations, management and edit ownership regressions, and owned desktop restart definitions. Actual controlled host qualification remains pending.",
+      "tests": [
+        "Completed source Works referenced by the exact support audit; independent readiness preflight confirms original implementation scope.",
+        "Current parent verification01: Canvas and management profiles passed; no parent all-check or host pass asserted."
+      ],
+      "title": "Useful scratch systems and Manage"
+    },
+    {
+      "areas": [
+        "Shared Build, Publish and projected lifecycle controls",
+        "Published desktop conversation and scoped preload",
+        "Controlled desktop/browser runtime drivers and exact store verifier"
+      ],
+      "chunkId": "exact-build-publication-runtime",
+      "completedAt": "2026-10-27T22:22:51Z",
+      "criteriaIds": [
+        "system-management-build-and-approval",
+        "published-runtime-ui-integration",
+        "authoring-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/diagnostics/system-builder-canvas-testing.md",
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-to-published-system-journeys-exact-build-publication-runtime",
+      "incrementId": "asset-to-published-system-journeys",
+      "summary": "Reviewed and committed exact saved-build publication, projected lifecycle and conversation recovery source, plus the repaired controlled runtime test definitions. The desktop definition now verifies the intended Compose/modal build, captured-window Stop, A/B/A conversation separation and two exact release/runtime/database/session stores. Historical local receipts and test collection support implementation only. Actual packaged/browser/native/runtime/server qualification remains pending.",
+      "tests": [
+        "Thirty linked historical supporting references resolve to26 actually completed, separately reviewed Works; two latest source checkpoints are committed and ancestry/blob checked.",
+        "Latest runtime source support passed18 finite positive/denial/order cases, five type roots, two collected host definitions and five related checks. These are not actual host or current parent qualification."
+      ],
+      "title": "Exact build, approval and supported runtime"
+    },
+    {
+      "areas": [
+        "Assets/System UI definitions, regressions and current evidence reconciliation"
+      ],
+      "chunkId": "authoring-ui-feature-reconciliation",
+      "completedAt": "2026-10-27T22:41:25Z",
+      "criteriaIds": [
+        "asset-authoring-lifecycle",
+        "meaningful-scratch-compositions",
+        "system-management-build-and-approval",
+        "published-runtime-ui-integration",
+        "authoring-errors-and-repair-loop",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/operations/roadmap-supporting-work.json",
+        "docs/operations/roadmap-user-descriptions.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "asset-to-published-system-journeys-authoring-ui-feature-reconciliation",
+      "incrementId": "asset-to-published-system-journeys",
+      "summary": "Audited32 historical support links to27 completed Works, preserved all39 original scenarios, and completed current nine-profile verification plus genuine all-six independent review. Workspace runner, exact runtime Stop/two-store definitions and rendered activation/denial/retry construction repairs are committed. Three actual-host controlled criteria remain pending.",
+      "tests": [
+        "Current six feature profiles plus documentation, architecture and roadmap checks passed.",
+        "Separate review covers all six original criteria; actual desktop/browser/native/restart execution is pending."
+      ],
+      "title": "Repair defects and reconcile current feature evidence"
+    },
+    {
+      "areas": [
+        "Desktop Settings renderer/client consumption",
+        "Finite Settings check profile and routing denials"
+      ],
+      "chunkId": "settings-save-and-query-recovery",
+      "completedAt": "2026-10-27T23:03:45Z",
+      "criteriaIds": [
+        "operational-and-task-ui",
+        "safe-repeatable-ui-runs",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "apps/desktop/src/renderer/features/settings/README.md",
+        "docs/diagnostics/ai-development-control-plane.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-settings-save-and-query-recovery",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Implemented and feature-tested committed Settings query/mutation ownership, duplicate admission, fixed notification errors, explicit Refresh and truthful readback. Failed secrets and newer queued edits survive old results; malformed rows fail inside the read boundary. Corrected related test fixtures without changing assertions or dependencies. Six current checks passed with zero diagnostics on nine selected source/test roots; exact source preflight found no further issue. Actual host/final testing and other operational chunks remain pending.",
+      "tests": [
+        "42 synthetic Settings cases in4fixedfiles passed through current settings-ui receipt.",
+        "Five profile-routing denial tests; current documentation, architecture, agent-support, control-plane and roadmap checks passed.",
+        "Nine exact selected/HEAD module builds and nine selected source/test type roots with0diagnostics; raw input applicability verified."
+      ],
+      "title": "Reliable settings and secret-safe recovery"
+    },
+    {
+      "areas": [
+        "Mounted thin Security status and canonical transport recovery",
+        "Desktop Python runtime controls and notification ownership",
+        "Existing workspace/shell/readiness/task-family regressions",
+        "Two named isolated real-host operational UI definitions; collected only"
+      ],
+      "chunkId": "operational-task-and-shell-coverage",
+      "completedAt": "2026-10-28T14:08:42Z",
+      "criteriaIds": [
+        "operational-and-task-ui",
+        "safe-repeatable-ui-runs",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Control-plane bounded Operational profile and dev-tools host-definition guidance updated with explicit evidence scope.",
+        "Original all7criteria,5planned chunks and approval remain. Actual-host/native/provider/final gates stay pending; main held."
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-operational-task-and-shell-coverage",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Implemented, feature-tested, independently reviewed and committed Security status recovery, runtime ownership/controls, task notification/shell inventory and exact operational desktop/thin UI definitions. Corrected observed-sequence validator and canonical runtime log expectations. Actual host/full/native qualification remains pending; no criterion or parent pass.",
+      "tests": [
+        "Completed source Work security-status-ui-owned-recovery: receipt faf0a73c65ccbc4ba9ea6a505290381ef688ae66733e8c2378c01377818fcdab; independent review 602511e749f9885d03e0aa3399520b3fcb3f5d8e8e2b281cdd6dd1ca17ad3668",
+        "Completed source Work operational-runtime-and-notification-inventory-recovery: receipt 620965e773ff15155bb794b9330db075cf2de8a570a8f1fd40b26813419ecdf7; independent review 1638fe7cd889e3b2de02e0025db7a7455bbf7af22e7ad59f1741ff410ff43352",
+        "Completed source Work operational-host-journey-definitions: receipt c6f6e571b9b2b8ffc036fe42d1656129bec93356b9696c6c331139da888a8ec6; independent review d6f8ca1007cfce10320fe6b10ee550195ce5c037ba562a90845f44f07923984c",
+        "Committed checkpoints fe0a0084e,18466038a,a8803c470. Latest fixed Operational38file checks and53oracle/slot cases passed;7selected type roots0diagnostics;2named host cases collected, not executed.",
+        "Earlier failures and exact selected/mixed-source applicability are retained. No accepted accuracy/OCR rerun or app/provider/native/full-suite execution."
+      ],
+      "title": "Operational controls, task notifications and shell recovery"
+    },
+    {
+      "areas": [
+        "Shared critical accessibility and native frame definitions",
+        "Local browser and packaged desktop journey definitions",
+        "Opened-menu keyboard behavior and startup observation boundaries"
+      ],
+      "chunkId": "accessible-host-observation-definitions",
+      "completedAt": "2026-10-29T10:57:48Z",
+      "criteriaIds": [
+        "automated-accessibility-and-local-host-observation",
+        "safe-repeatable-ui-runs",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/diagnostics/ai-development-control-plane.md",
+        "dev-tools/README.md",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-accessible-host-observation-definitions",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Completed reusable standard and native accessibility definitions for all 35 critical views, including the opened navigation menu. Added separately named local-host cases with exact owned-window/browser zoom, bounded private-free reports and source admission/cleanup regressions. Startup and Canvas measurements remain separate. Focused tests, source builds/types and test collection passed with independent review. Actual running-app/native and final combined qualification remain pending.",
+      "tests": [
+        "Current lifecycle/OCR Work lifecycle-ocr-native-test-definitions passed six scoped gates; receipt 804085abe2f82c977e1cccc5f1a35ca71e5e62cfe8528f662458b38874cf3b34.",
+        "Exact selected-source fixtures:161 Vitest and18 runtime oracle tests passed; nine builds and nine type roots have zero diagnostics; eight cases discovered.",
+        "Earlier menu, core/browser, desktop, Data/Context, Assets/System and startup commits retain their separately reviewed evidence. Independent combined readiness confirms all35 critical IDs have correct native host construction.",
+        "No actual app, model, OCR engine, provider or full suite was run for this declaration. Parent technical qualification remains pending."
+      ],
+      "title": "Accessible UI and startup observations"
+    },
+    {
+      "areas": [
+        "Bounded truthful test reports and owned cleanup failure recovery",
+        "Fresh workspace setup and meaningful system journey listener recovery",
+        "Read-only review UI, final response bytes and current versioned metadata"
+      ],
+      "chunkId": "review-site-and-run-evidence-recovery",
+      "completedAt": "2026-10-29T13:13:52Z",
+      "criteriaIds": [
+        "review-site-ui-regressions",
+        "safe-repeatable-ui-runs",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/diagnostics/ai-development-control-plane.md",
+        "dev-tools/review-site/README.md",
+        "dev-tools/README.md",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-review-site-and-run-evidence-recovery",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Completed review-site and reporting feature recovery. Reports preserve primary, cleanup and publication failures without promoting a short diagnostic. Managed UI journeys explicitly create a fresh workspace. The read-only site keeps all canonical detail within its final byte limit and validates current user descriptions without requiring ignored historical receipts. Current source checks, simulated failure paths, review UI contracts and local HTTP tests passed with separate review. Actual app/native and final combined qualification remain pending.",
+      "tests": [
+        "Four coherent source Works are committed with current executed receipts and genuine separate reviews; combined readiness preserves their exact scope.",
+        "Owned-run source passed210Node and29Vitest fixture tests,17selected builds,12type roots and seven scoped gates; five UI cases were discovered, not executed.",
+        "Review-site source passed7wire,14presentation/current-repository and14realHTTP tests plus reviewUI/controller/documentation/architecture gates. The live server preserves22roadmaps and198plannedworkitems.",
+        "Existing read-only status/order/work-item/theme/refresh and finite collection/admission/cleanup tests remain. No actual app, model, provider, native or full suite is qualified by this declaration."
+      ],
+      "title": "Read-only review UI and reliable test reporting"
+    },
+    {
+      "areas": [
+        "Meaningful current UI bodies and exact functional assertions",
+        "Bounded source coverage and immutable historical inventory",
+        "Clear reviewed support and final qualification scheduling"
+      ],
+      "chunkId": "coverage-census-and-qualification-readiness",
+      "completedAt": "2026-10-30T04:57:35Z",
+      "criteriaIds": [
+        "coverage-complete-and-honest",
+        "final-current-ui-and-repository-gates",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/comprehensive-ui-automation-current-census.json",
+        "docs/operations/comprehensive-ui-automation-census-source-history.json",
+        "docs/operations/comprehensive-ui-automation-coverage.json",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "operational-ui-and-coverage-qualification-coverage-census-and-qualification-readiness",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "summary": "Finished feature-level UI test construction and coverage readiness. All39 supported families and131 original behavior requirements link current reviewed test definitions and applicable hosts. Settings, model-reference, local-artifact and provider journeys have focused helper and source checks. Eight unused inventory rows are preserved as history within unchanged limits. Current candidate source mapping passed27 focused checks and separate review. This records implementation readiness only; actual app/native/provider observations and final combined qualification remain pending or deferred. Accepted model accuracy stays closed.",
+      "tests": [
+        "Settings, model-reference, artifact and provider source chunks are committed with passed scoped checks and genuine separate reviews.",
+        "Provider source passed80Node and327Vitest checks,31 selected builds,21 type roots with zero diagnostics, and exact2Desktop/1Thin test discovery. No app or provider case was executed.",
+        "The final source map passed27 focused checks. All39 families,131 requirements,16 inventories and29 host files remain; aggregate190 source inputs and489516 document bytes meet unchanged limits.",
+        "Actual running-app, managed authorization, native accessibility/performance/runtime and the final all-suite campaign remain pending. Source inspection, discovery and synthetic outcomes grant no parent pass."
+      ],
+      "title": "Complete coverage map and final qualification readiness"
+    }
+  ],
+  "completion": null,
+  "completionSuite": "all",
+  "createdAt": "2026-10-23T13:55:23Z",
+  "currentIncrementId": "operational-ui-and-coverage-qualification",
+  "decisions": [
+    {
+      "approvalNote": "The user already selected the option extending existing Playwright/Vitest with real host journeys and focused variation tests suited to this PC. The resumed request continues preparation after the blockers-first checkpoint; this records that existing strategy selection, not full-roadmap or implementation approval.",
+      "approvedAt": "2026-10-23T15:34:17Z",
+      "approvedFingerprint": "2b3091f6d940d7a7d7317deaa28101a71c07d2422345dc57f82a678590688610",
+      "context": "Both options cover the current mounted functionality and require tests, execution and defect repair. They differ in scenario fidelity, qualification environment dependencies, runtime cost and resource pressure. Existing owned Playwright/Node/Vitest boundaries already support reuse; no product architecture change is needed for the recommendation.",
+      "id": "ui-automation-execution-strategy",
+      "options": [
+        {
+          "consequences": [
+            "Add missing scenarios, execute them and repair reproduced defects in cohesive vertical slices",
+            "Publish a machine-readable coverage/evidence ledger with genuine gaps visible",
+            "No new automation framework dependency or product architecture is needed"
+          ],
+          "id": "layered-existing-toolchain",
+          "label": "Extend the existing layered UI toolchain",
+          "recommended": true,
+          "summary": "A finite source-linked scenario manifest maps every mounted supported capability to behavioral UI tests and a real desktop/thin-client journey. Parameterized variants run at the narrowest meaningful layer; named managed/native/physical-runtime witnesses remain separate. Reuse existing Playwright/Vitest and owned host harnesses.",
+          "tradeoffs": [
+            "Keeps real UI coverage while avoiding repeated large model loads and duplicate workflows",
+            "Requires explicit classification so deterministic workers are never mislabeled real inference",
+            "Fits the current laptop by running one browser/desktop worker and serial resource-heavy checks"
+          ]
+        },
+        {
+          "consequences": [
+            "Requires a provisioned qualification environment for many variants and more external execution authority",
+            "Fewer isolated failures; diagnostics and rerun costs increase",
+            "Existing component and adapter checks still remain necessary for owned invariants"
+          ],
+          "id": "whole-host-all-variants",
+          "label": "Require complete host/runtime execution for every UI variant",
+          "recommended": false,
+          "summary": "Use the same scenario inventory but make full packaged desktop and managed-browser real-runtime journeys the primary gate for each supported task, input, settings and failure variation.",
+          "tradeoffs": [
+            "More direct integration coverage for every combination",
+            "Much longer and more fragile runs, repeated model loading and higher RAM/VRAM demands",
+            "Unavailable native/provider/runtime environments block a larger part of the roadmap"
+          ]
+        }
+      ],
+      "proposalFingerprint": "2b3091f6d940d7a7d7317deaa28101a71c07d2422345dc57f82a678590688610",
+      "question": "Should comprehensive UI coverage extend the existing layered toolchain or require whole-host real-runtime execution for every variant?",
+      "selectedOptionId": "layered-existing-toolchain",
+      "status": "approved",
+      "title": "Comprehensive UI automation execution strategy"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "No implementation before actual option and complete-roadmap approval",
+      "No human testing criteria",
+      "No public marketplace, arbitrary workflows/imported code sandbox, hybrid synchronization or new advanced diagnostic UI",
+      "No new model/dependency/provider download or credential use without authority",
+      "No restricted independent legacy security review retry by another tool/agent",
+      "No inspection/adoption/deletion/move/ACL change of retained old offload staging and no fresh lease until owning native protection/accounting/process proof qualifies",
+      "Existing dirty rebuild work remains intact; use serial control-plane source claims and no history mutation.",
+      "No duplication of existing roadmap-owned native/security/model qualification work; link exact support without awarding parent pass.",
+      "Every current UI capability is mapped; intentionally unsupported or unmounted behavior remains explicit."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-10-23T13:55:23Z",
+    "securityImpact": {
+      "abuseCases": [
+        "A fixture bypasses auth or injects hidden composition and falsely qualifies user workflow",
+        "Traces/screenshots retain tokens, prompts or private data",
+        "Cancellation or restart deletes unknown old stage or loses owned worker",
+        "Repeated external publication/download consumes authority not granted",
+        "A skipped/empty/failing child is reported as complete"
+      ],
+      "assets": [
+        "Synthetic test artifacts and exact immutable provenance",
+        "Workspace/organization identity and authorizations",
+        "Model/provider secrets and private user content excluded from retained evidence",
+        "Owned host processes, files and resource budgets"
+      ],
+      "controls": [
+        "Use actual mounted UI and public typed boundaries with least privilege synthetic fixtures",
+        "Finite scenario/operation allowlists and contained disposable owned profiles",
+        "Keep resource admission and safe-weight integrity unchanged unless separately reviewed",
+        "Disable sensitive capture and retain finite numeric/status metadata",
+        "No new provider/model/dependency/native-effect authority from test planning",
+        "Keep fixture, actual host, physical runtime and external qualification separate"
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Physical native/offload protection, unavailable provider credentials and model capacity cannot be proven by UI fixtures",
+        "Restricted security review remains outside agent authority",
+        "New product capabilities uncovered by tests require separate explicit scope decisions"
+      ],
+      "summary": "The proposed harness drives authenticated API/IPC, credentials, untrusted files/packages/model output, persistence and runtime side effects. Preparation changes documentation only; implementation must preserve every authority and isolation boundary.",
+      "trustBoundaries": [
+        "Browser/renderer to authenticated API or sender-bound preload/IPC",
+        "Application policy to persistence/storage/provider/runtime",
+        "Untrusted source/package/model content to inert UI preview",
+        "Runner to disposable host/profile and sanitized evidence"
+      ],
+      "verification": [
+        "Positive plus denial/malformed/stale/scope/failure behavior at each owned boundary",
+        "Safe evidence schema/path/content checks and runner failure/empty/teardown regressions",
+        "Current source-bound executed receipts and genuine independent review per increment",
+        "Threat model delta and safe rollback reviewed before each product fix"
+      ]
+    },
+    "sources": [
+      {
+        "note": "Proposed behavior/oracle/host/reuse/gap map and source-authority conflicts; not qualification evidence.",
+        "title": "Comprehensive UI automation discovery and scenario matrix",
+        "url": "docs/operations/comprehensive-ui-automation-discovery.json"
+      },
+      {
+        "title": "Current mounted desktop routes",
+        "url": "apps/desktop/src/renderer/routes/desktopPages.ts"
+      },
+      {
+        "title": "Current mounted thin-client routes",
+        "url": "apps/thin-client/src/routes/thinClientPages.ts"
+      },
+      {
+        "title": "Testing standards",
+        "url": "docs/standards/testing-standards.md"
+      },
+      {
+        "title": "Canvas testing and actual preview/runtime limits",
+        "url": "docs/diagnostics/system-builder-canvas-testing.md"
+      },
+      {
+        "title": "Data Management architecture",
+        "url": "docs/architecture/data-management.md"
+      },
+      {
+        "title": "Context architecture",
+        "url": "docs/architecture/context-management.md"
+      },
+      {
+        "title": "Current published lifecycle and advanced workflow boundary",
+        "url": "docs/architecture/system-run-workflows.md"
+      },
+      {
+        "title": "Mandatory security design standards",
+        "url": "docs/standards/security-by-design-standards.md"
+      }
+    ],
+    "summary": "Researched all current product route groups and nested workflows. Existing UI coverage is substantial but concentrated in Composer, Assets and lifecycle; Data, Context, Models/training, Image, Settings and rendered auth/recovery need an explicit cross-host scenario census. The proposed source-linked matrix covers 39 scenario families and calls for writing tests, running them, diagnosing failures and fixing in-scope defects. No tests or product fixes are implemented or qualified by preparation."
+  },
+  "evidence": [
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-daily-ui-reconciliation-after-local-repairs",
+      "criterionId": "daily-capability-and-variation-map",
+      "id": "evidence-1",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T05:46:18Z",
+      "summary": "Current increment-relevant profiles passed against the source-linked census of 39 scenario families and explicit host/task/input/output variation mappings. 44 completed support references were checked exactly; their earlier receipts remain historical. No absent UI or physical pass is invented."
+    },
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": null,
+      "criterionId": "daily-real-host-roundtrips",
+      "id": "evidence-2",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "summary": "Pending actual packaged Windows/Chrome execution. Fixed public-UI preparation/version/manual/source Context, RAG and saved-row edit/reject/restart cases exist and collect, but were not run. The actual source/RAG worker is tested with finite embeddings and the local UI transport/storage joins include Desktop Image and fresh source-pack rebuild. Fixture/oracle/composed checks do not qualify actual windows, sidecars, full process restart, native retirement or providers. Final combined testing remains deferred by user."
+    },
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-daily-ui-reconciliation-after-local-repairs",
+      "criterionId": "ai-controls-and-owned-task-states",
+      "id": "evidence-3",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "summary": "Current functionality-tasks/context profiles passed the scoped mounted model/training/image controls and owned task review/save/discard/retry/cancel checks with declared finite workers/providers and real transport/storage joins. No actual model execution, native ownership release or implicit fallback is qualified."
+    },
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-daily-ui-reconciliation-after-local-repairs",
+      "criterionId": "daily-errors-and-repair-loop",
+      "id": "evidence-4",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "summary": "All four current daily feature profiles passed. Their component/transport/storage denial and correction cases cover duplicate, retired or foreign scope, unavailable dependencies, malformed output and save/finalize faults. App collection is explicit; actual whole-host execution stays with its controlled pending criterion."
+    },
+    {
+      "artifact": ".local-codex/comprehensive-daily-reconciliation-v2-20261027/daily-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-daily-ui-reconciliation-after-local-repairs",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-5",
+      "incrementId": "daily-data-and-ai-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "summary": "Current scoped positive/denial checks and documentation/architecture gates passed. The exact historical completed threat/control reviews are linked and verified, including the reviewed Image/source Context/pack-format/fresh-session repairs. Native/provider/physical/final gaps remain pending; guards, authority and resource limits are retained. Separate current-candidate all-criterion review is required before implementation completion."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": null,
+      "criterionId": "asset-authoring-lifecycle",
+      "id": "evidence-6",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "summary": "Source-defined actual-host Assets import, Studio save/reopen/review/publish and base-preserving customization/restart cases exist, with committed local recovery, stable names and exact comparison tests. Current related profiles pass. Actual packaged desktop/Chrome and owned process/server restart have not run in this feature-only phase. Finite tests and collection cannot qualify that controlled requirement."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": null,
+      "criterionId": "meaningful-scratch-compositions",
+      "id": "evidence-7",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "summary": "Three meaningful multi-component scratch-system journeys and exact persisted hierarchy/definition/configuration/system-switch and owned desktop restart checks are implemented and locally tested. Current Canvas, browse and related profiles pass. Actual host/native/server restart and measured execution remain pending; no preview-only business submission or inference success is claimed."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-authoring-ui-reconciliation-after-activation-coverage",
+      "criterionId": "system-management-build-and-approval",
+      "id": "evidence-8",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "summary": "Current management, Build/Publish and related profiles pass against this working source. Reviewed committed controls and regression fixtures cover exact saved revision/build publication, supported manage/edit flows, stale or foreign owner replies, failed/duplicate actions and explicit projected lifecycle commands. Actual whole-host qualification remains with its controlled criteria."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": null,
+      "criterionId": "published-runtime-ui-integration",
+      "id": "evidence-9",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "summary": "Committed controlled desktop definitions select the exact Compose/modal build and public release context; check captured Page close before A/B/A replacement, input limit/Shift+Enter and separate conversations; verify two exact stored release/runtime/database/session contexts and no control-store leakage. Local 18-case oracles and 29-case lifecycle UI coverage pass, including Activate/Deactivate denial/retry. Browser keeps its server-owned lifecycle flow. Actual windows/native revocation/workers/server restart remain pending."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-authoring-ui-reconciliation-after-activation-coverage",
+      "criterionId": "authoring-errors-and-repair-loop",
+      "id": "evidence-10",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T22:41:27Z",
+      "summary": "All six current feature profiles pass. The earlier Node import-time failure was repaired without product import changes. Separate source review found and repaired missing exact runtime Stop/two-store construction and rendered Activate/Deactivate dispatch/revision recovery. Original cases and failed diagnostics remain. Local stale/foreign scope, duplicate admission, unavailable/failed operations, validation/save/build/publication and conversation recovery fixtures pass; actual-host requirements remain pending."
+    },
+    {
+      "artifact": ".local-codex/authoring-feature-reconciliation-v3-20261027/authoring-feature-checks-report.json",
+      "command": "python dev-tools/helpers/development_control_plane.py verify comprehensive-authoring-ui-reconciliation-after-activation-coverage",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-11",
+      "incrementId": "asset-to-published-system-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-27T22:41:27Z",
+      "summary": "Current feature positive/denial checks plus docs/architecture/roadmap gates pass. Exact completed security and source reviews are linked and audited, including bounded public contexts, exact workspace/release/revision actions, fail-closed page retirement and store separation. Original criteria, approval, all39 scenario requirements, failures and unowned work remain. No authority, isolation, resource/native control or accepted model/OCR threshold is changed. Actual native/provider/physical/final qualification remains pending; separate current all-criterion review is required."
+    },
+    {
+      "artifact": "docs/operations/comprehensive-ui-review-site-feature-evidence.json",
+      "command": "node node_modules/@playwright/test/cli.js test --config dev-tools/config/playwright.review-site.config.ts",
+      "criterionId": "review-site-ui-regressions",
+      "id": "evidence-12",
+      "incrementId": "operational-ui-and-coverage-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-11-06T13:01:04Z",
+      "summary": "Passed 27 review-site DOM tests and subtests and all three Chrome cases. Coverage includes creation order, completion and supporting evidence, dynamic refresh, recovery from a simulated unavailable response, theme preference, blocked storage, and keyboard use in a narrow viewport. The first browser run stopped before assertions because it could not verify the local server. This evidence covers the review site."
+    }
+  ],
+  "evidencePolicy": "control-plane-v1",
+  "feedback": [],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "b8ee2966b86678324901e3b2415908dc7dcdac43d8b6a67d747dd61872396616",
+      "recordedAt": "2026-10-23T13:55:23Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "9dda6e82b57756a554e2a2dfbf7a656ba9341e28ce40b9ce5c0ad038b769c98a",
+      "recordedAt": "2026-10-23T13:55:23Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "19ad8b0ad231773f1c046475eb617aa80079e4110b2347543b5807e45dfb1d12",
+      "recordedAt": "2026-10-23T15:34:17Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "2c871c6c0abd651f0e96e056d92462492f663c17616c44da410afb130a6ea844",
+      "recordedAt": "2026-10-23T15:34:17Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "bd1c8e7db88b129aef597b26f03a86a017fdf27e41f99abb9d96ce7d8bf48d57",
+      "recordedAt": "2026-10-23T15:40:37Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "3dfb871666a39f42a5c4bfde91ff371fd7e42ca0264de6dc6f3f31600b9203a9",
+      "recordedAt": "2026-10-23T15:40:37Z",
+      "sequence": 6,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "393870dd530e9479421f484c97952054d92268c5bc4521aef7b4607b76bf45b3",
+      "recordedAt": "2026-10-23T15:55:19Z",
+      "sequence": 7,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "288505e2f5d6d36cb5f27351887a15f6bce4e58c25c8871c466ffc540835845a",
+      "recordedAt": "2026-10-26T12:45:52Z",
+      "sequence": 8,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "6c7402f7bee60d4fdb29bd18cee2191d613c68136fa871ee81b4541fbfb9ee55",
+      "recordedAt": "2026-10-26T12:45:52Z",
+      "sequence": 9,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "5dab7925d375a90fc72cf69b7f5c1cdb211adb5686688cec85d62f4ec4d7abb8",
+      "recordedAt": "2026-10-26T12:45:52Z",
+      "sequence": 10,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "a143d500606feaf6b83abc8d699be58bf87e53bb5805187d13afb597e5dc7537",
+      "recordedAt": "2026-10-26T12:45:53Z",
+      "sequence": 11,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "d979c6498f1a39103555355485c365cdade874dac6bc6cda83b29c0911f46b34",
+      "recordedAt": "2026-10-26T13:04:55Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "a6a6a5be67f3eaf4a193613bf9927b2266b21143cd7f179a149b142440bb15df",
+      "recordedAt": "2026-10-26T14:24:36Z",
+      "sequence": 13,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "be165faa142d189d1de010a5db46d32be6357f09619a9630c95d41917abfd2f4",
+      "recordedAt": "2026-10-26T17:48:26Z",
+      "sequence": 14,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "499b7b9dc9158e05980f8127704f91e80e0a1616a5f369726102ec38f65be157",
+      "recordedAt": "2026-10-27T03:39:07Z",
+      "sequence": 15,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0b60e10e2d42f8baa47978ad1727f28ddd2cc1ac7e847c7530d7a159a18a54f0",
+      "recordedAt": "2026-10-27T05:46:18Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bccadfcf1d24fbdfbb8a144c91def9e9853178e64a3a098852d8eb8fece5bb97",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "af0035bb41e931f6d4505573321c65da785a4a16f64bbbc57e6a71eeeeb62dd8",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "18efb2b2f53e871404c114e4462c2a59782b3d974f9f284bbe37e114c62c90ba",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "8b6d3f4ff44dca11a3b87089bcd69c263b330dac6b5c2c72965a82c94155ced9",
+      "recordedAt": "2026-10-27T05:46:19Z",
+      "sequence": 20,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7b1ab5feb6118893093d641092c396b07f62c8e362cd8a3917d6bb4c28ae300d",
+      "recordedAt": "2026-10-27T05:51:02Z",
+      "sequence": 21,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "858069f90fc8c72580d1f4474241d0fd8526bb1274d20cb572d1464f49b9781a",
+      "recordedAt": "2026-10-27T05:54:03Z",
+      "sequence": 22,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "35b3d2794839df65f49e9211a06548b7e02cb3fac57c4d8781411ffb9bc21c74",
+      "recordedAt": "2026-10-27T05:54:03Z",
+      "sequence": 23,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "929da5f64663fb273522f2c714c936142861f482d9649128b3c9aea7ec1dcef5",
+      "recordedAt": "2026-10-27T05:54:03Z",
+      "sequence": 24,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "47f0922830e4ab03a5d5fea27ef9f6e489425ad87a9b6fc96359cac3662bfd96",
+      "recordedAt": "2026-10-27T21:59:17Z",
+      "sequence": 25,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ba111858de46c8eba65c3fbb82600f52996f77f0d4be20b21ac12cd68b650995",
+      "recordedAt": "2026-10-27T21:59:17Z",
+      "sequence": 26,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "64e6b42f0b92571b2ee8e129a854a18e0d0d885eee5343849bf19ac1d3ca8a5e",
+      "recordedAt": "2026-10-27T22:22:51Z",
+      "sequence": 27,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "cdeb7a44938ff855ee27b21c8589a27ad1e9329021ca0005b5423433d6eec758",
+      "recordedAt": "2026-10-27T22:41:25Z",
+      "sequence": 28,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0d1b4013836e8ece310fed140e89dbb158f08bf55e553d458cf21114d0503bae",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "57f8ba91feb5247d2f28ef2049b1524a876fc7ba09b39bb08768f08e9ebe8119",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "sequence": 30,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "576d4967a2bc08a468f77af1d87c94e7e6ecad5eab75fda52a64e3fc786be7ff",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "sequence": 31,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f731ecfb142b8e69ee9a0acefa15d727abf9747b923b68c05944e6de493b51c0",
+      "recordedAt": "2026-10-27T22:41:26Z",
+      "sequence": 32,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "68ae8802b91a8dc039624e28117cb61a6707b9b2425301383d29c6cb25e90c99",
+      "recordedAt": "2026-10-27T22:41:27Z",
+      "sequence": 33,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "335c50e0581d0998d9f113361998e17706cf365c05701e6a0921175dc7209b24",
+      "recordedAt": "2026-10-27T22:41:27Z",
+      "sequence": 34,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "8eabd0dd2e3dda0d506f56e2c833913669f9e5efb1d350a7fe7a800ee25281bc",
+      "recordedAt": "2026-10-27T22:41:35Z",
+      "sequence": 35,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "f27c19f8e869f833b2f0dba110595bd00edb185f4b36921fe6c731d2945974c8",
+      "recordedAt": "2026-10-27T22:46:18Z",
+      "sequence": 36,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "b6e5640450858ee7a2626a75161d28a44ab101207b0a03d17949a085e1242c00",
+      "recordedAt": "2026-10-27T22:46:18Z",
+      "sequence": 37,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "186feab84d06ab44a3dcc0dfd35e746e8b4b10d989a748f76e173a4902141719",
+      "recordedAt": "2026-10-27T22:46:19Z",
+      "sequence": 38,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "2f1abdc6c4d44226749f12791c69a9284d28af09afd790610fe9ac768fc95383",
+      "recordedAt": "2026-10-27T23:03:45Z",
+      "sequence": 39,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b72bd6996314f7d7e1e07232bfa50dc1ed352f9f0661307ec9fc6d4b4e1378f6",
+      "recordedAt": "2026-10-28T14:08:42Z",
+      "sequence": 40,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "03ec82720e872f5d0be05656c7308461b4c154ed7abf2f8f0f1fcb6a23af0cc8",
+      "recordedAt": "2026-10-29T10:57:48Z",
+      "sequence": 41,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "da23112794bb75b3d0331dff8726d9dccaeacb48445dfe17ff2a433961062997",
+      "recordedAt": "2026-10-29T13:13:52Z",
+      "sequence": 42,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "877d5dfa0766a09e29bb244c78631bcb7dd401910bb9fac90db23d67c0fd4fcc",
+      "recordedAt": "2026-10-30T04:57:35Z",
+      "sequence": 43,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "06a3576211f3d3182cc05b6c5fc9f4622a333059ba00efc26ae0099853db352d",
+      "recordedAt": "2026-11-06T13:01:04Z",
+      "sequence": 44,
+      "type": "evidence-recorded"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Every currently supported Data/Context/Models/Image capability and desktop Train Model action has a source-linked scenario and host applicability record. All registry-supported nine-goal task/input/method/output variants have meaningful UI assertions, including early unsupported-format, invalid-field and inactive-setting behavior. No hidden API-only or absent thin-client training UI is invented.",
+          "id": "daily-capability-and-variation-map",
+          "qualification": "local"
+        },
+        {
+          "description": "Current packaged Windows desktop and local Chrome journeys use public mounted UI for workspace creation/selection and fresh source acquisition, preparation/review/approval/save, row edit/reject/version selection, manual Context creation and supported Context/browser actions. Assert exact persisted artifact identity, nonempty bounded bytes/schema/counts/lineage or a verified supported denial; reload/reopen preserves the result. A seeded response or visible success string alone cannot pass. Finite runtime/provider doubles are declared and do not qualify their external/physical semantics.",
+          "id": "daily-real-host-roundtrips",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Both mounted hosts preserve exact supported model/device/dtype, constrained-output/adaptive override and optional memory-mode choices, including reopen and clear unavailable states. Model/training/image starts, progress, review/save/discard/finalize/retry and supported cancellation are exercised with bounded deterministic workers and real host transport/storage. Refused cancellation or insufficient RAM/VRAM remains visibly non-successful; no implicit fallback, download, publication or release of an unconfirmed owned worker is allowed.",
+          "id": "ai-controls-and-owned-task-states",
+          "qualification": "local"
+        },
+        {
+          "description": "Execute each applicable new or reused daily-workflow UI test on the candidate. Every in-scope failure is diagnosed against its current expected contract, repaired and covered by a passing regression; duplicate submissions, stale/foreign workspace responses, unavailable dependencies, malformed output and save/finalize failure retain safe correction/retry. Unexpected missing capability is an explicit scoped finding or decision, never a fabricated implementation or hidden skip.",
+          "id": "daily-errors-and-repair-loop",
+          "qualification": "local"
+        },
+        {
+          "description": "Refresh the security-relevant threat/control review for the actual changed paths. Prove scoped identity/authority, inert untrusted content, bounds, redaction, failure and cleanup behavior with positive and denial evidence. Never weaken security, native ownership or resource guards to satisfy a UI test; preserve explicitly excluded native/provider/security owner gaps and a rollback at least as secure as the forward change.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-10-27T05:51:02Z",
+      "completedChunks": [
+        "scoped-ingestion-and-coverage-ledger",
+        "dataset-context-roundtrips",
+        "model-training-image-controls",
+        "daily-journey-host-wiring"
+      ],
+      "completionSummary": "Daily UI implementation and four local criteria are complete on current source. Six related profiles passed with independent review. Actual packaged Windows/Chrome roundtrips remain pending for later qualification. All four original chunks and technical requirements are preserved. Full testing is deferred by user direction; the roadmap remains open.",
+      "deliverables": [
+        "Versioned machine-readable mapping from current supported route/tab/action/task capability to stable scenario IDs, host applicability, expected contract/oracle, exact test file and fixture/host/runtime evidence tier.",
+        "Parameterized focused UI variants for all nine task types and every registry-supported material/format combination, including inactive/invalid controls, source association, output-shape assignment and review decisions.",
+        "Packaged Windows Electron and local Chrome server-backed journeys exercising actual mounted UI, IPC/HTTP authorization, disposable persistence/storage, meaningful results and reload/reopen.",
+        "Defect regressions and owning-layer fixes with safe failure logs and current source-bound run evidence, plus affected README/canonical documentation reconciliation."
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Human studies, physical/manual screen-reader acceptance and other human acceptance testing are user-owned offline; product review/approval controls remain mandatory.",
+        "No new model download, provider credential, remote publication, dependency or runtime-engine authority follows from test execution; use installed approved dependencies, synthetic local fixtures and separately authorized destinations only.",
+        "Do not inspect, adopt, move, delete or change ACLs on retained old offload staging, acquire a replacement offload lease, or retry a restricted independent security review by another tool or agent.",
+        "This UI roadmap does not close existing owner roadmaps, rerun accepted model-accuracy matrices, or qualify physical offload/native identity races, model semantics, external provider operations, production security or a malicious-code sandbox from fixtures.",
+        "New product capabilities or policy/authority/architecture decisions revealed by tests require their own explicit scope decision. Unsupported or intentionally unmounted features are tested as such, not implemented by inference.",
+        "Semantic/model-quality thresholds and accepted historical CPU/GPU measurements remain with the existing functionality/model owners. UI configuration/structural correctness is not an accuracy pass.",
+        "External private repository, website and publishing success may use finite local boundary fixtures; real external roundtrips are separately named opt-in qualification, not required credentials for deterministic UI closure."
+      ],
+      "id": "daily-data-and-ai-journeys",
+      "number": 1,
+      "objective": "Deliver a source-linked UI coverage ledger with its first full daily-workflow consumers: create/select a workspace, acquire and inspect source data, prepare and curate a dataset, create and use Context artifacts, manage models, and exercise supported training/image review and recovery. Write and execute the tests, then repair reproduced in-scope defects.",
+      "pendingCriteria": [
+        "daily-real-host-roundtrips"
+      ],
+      "plan": {
+        "assumptions": [
+          "No new product capability, architecture decision, download or dependency is authorized by UI tests.",
+          "Pending controlled qualification does not count as a pass; no workflow implementation/policy changes are requested."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "daily-capability-and-variation-map",
+              "daily-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "scoped-ingestion-and-coverage-ledger",
+            "outcome": "Test and repair duplicate, stale, foreign and unconfirmed-cancellation behavior in the shared workflow; publish a source-linked scenario census with untested layers visibly pending.",
+            "title": "Keep Add data tasks in the correct workspace"
+          },
+          {
+            "criteriaIds": [
+              "daily-capability-and-variation-map",
+              "daily-real-host-roundtrips",
+              "daily-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "dataset-context-roundtrips",
+            "outcome": "Exercise supported preparation variants, review/edit/reject/save/version/reuse and Context actions with exact persisted values and safe correction paths; repair reproduced defects.",
+            "title": "Test dataset and Context workflows"
+          },
+          {
+            "criteriaIds": [
+              "daily-capability-and-variation-map",
+              "ai-controls-and-owned-task-states",
+              "daily-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "model-training-image-controls",
+            "outcome": "Exercise supported choices, unavailable states and deterministic task review/save/discard/finalize/retry/cancel; preserve accepted accuracy and native ownership.",
+            "title": "Test model, training and image controls"
+          },
+          {
+            "criteriaIds": [
+              "daily-capability-and-variation-map",
+              "daily-real-host-roundtrips",
+              "ai-controls-and-owned-task-states",
+              "daily-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "daily-journey-host-wiring",
+            "outcome": "Add exact source-bound host journeys and scenario/variation mapping; execute only feature-relevant cases now. Keep unavailable native/provider/managed evidence and final combined suites pending.",
+            "title": "Connect and check daily app journeys"
+          }
+        ],
+        "completionTests": [
+          "Only feature/related-feature checks and applicable documentation/architecture checks during catch-up.",
+          "Full standard/E2E/AI and combined cross-roadmap testing deferred by explicit current user direction; no full-suite pass inferred."
+        ],
+        "documentation": [
+          "Shared feature README and affected canonical architecture/threat model.",
+          "Versioned coverage ledger and canonical roadmap/report; review site remains dynamic."
+        ],
+        "fingerprint": "a8501809bbe4bfcb6494e56a59b9d05c7b5c68691badd304623b3c9bb125d76f",
+        "focusedTests": [
+          "Exact changed UI test file while iterating.",
+          "Existing ingestion-publication profile for shared acquisition plus related application/storage/transport behavior.",
+          "Exact dataset/Context/model/training/image component/client files as their chunks change."
+        ],
+        "recordedAt": "2026-10-26T12:45:53Z",
+        "rollback": "Revert only owned coherent test/feature patches, retaining actual data, history, guards and failed evidence.",
+        "steps": [
+          "Publish current source-linked coverage census and fix/test shared acquisition races.",
+          "Exercise dataset review and Context roundtrips with exact artifact/settings oracles; fix discovered defects.",
+          "Exercise model/training/image controls and owned task states with bounded fixtures; fix discovered defects.",
+          "Connect focused host journeys and reconcile every daily scenario, preserving external/physical/final-suite gaps."
+        ],
+        "summary": "Deliver daily UI coverage in four coherent feature chunks; run each affected feature and its related boundaries, retain real host/runtime gaps and defer full combined suites until cross-roadmap catch-up implementation is complete."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-26T12:45:52Z",
+          "risks": [
+            "Security-relevant workspace/task identity, safe diagnostics and async ownership must remain fail closed.",
+            "A frontend fixture is not native/provider/model or actual host qualification.",
+            "Retained old offload state and restricted legacy Assets review remain excluded."
+          ],
+          "sources": [
+            {
+              "title": "Mounted shared ingestion workflow",
+              "url": "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx"
+            },
+            {
+              "title": "Current UI discovery census",
+              "url": "docs/operations/comprehensive-ui-automation-discovery.json"
+            },
+            {
+              "title": "Data architecture",
+              "url": "docs/architecture/data-management.md"
+            },
+            {
+              "title": "Data threat model",
+              "url": "docs/security/data-management-threat-model.md"
+            }
+          ],
+          "summary": "Refresh current mounted daily UI and prior39-family discovery. Both Add data hosts use the same GuidedIngestionTaskPanel. Source inspection finds unfenced late task responses, state-only duplicate admission and cancellation clearing busy before proof. Existing ingestion-publication profile covers this first feature and related production paths. Preserve existing Data/OCR/model qualification history."
+        }
+      ],
+      "rollback": "Revert the coherent tested harness/feature correction at its owning layer while preserving committed user artifacts, immutable dataset/source history, current public contracts and security guards. Retain failed evidence. Remove only current test-owned disposable profiles/resources after confirmed ownership/exit; unknown files or stages remain untouched.",
+      "startedAt": "2026-10-26T12:45:52Z",
+      "status": "implemented-pending-qualification",
+      "title": "Data, Context and AI preparation journeys",
+      "verification": [
+        "Run exact changed component/client and owning application/adapter test files through existing focused Node/Vitest helpers; test harness admission, empty discovery, safe diagnostics, failure and teardown with bounded negative fixtures.",
+        "Run exact new or reused relevant Playwright cases under dev-tools/config/playwright.visual-composer.config.ts with one worker; fresh package and isolated current-source profiles are mandatory for desktop. Use the existing managed-reference configuration only for its declared authorized identity/database/TLS subset.",
+        "Check actual decoded image/PDF pixels, bounded preview semantics, saved dataset bytes/schema/counts and immutable Context/source associations. Synthetic image/embedding/generation results are labeled integration fixtures, never live-model quality evidence.",
+        "For each reproduced in-scope defect, identify the owning current contract and user-visible oracle, add a red regression when practical, fix the owning layer, rerun the exact regression and relevant cross-host journey, and document the resulting behavior. Preserve first failures and every retry; skips/quarantine never count as required passes.",
+        "Use focused tests within coherent chunks, current executed receipts and genuine separate-invocation review; release every live source claim before an exact-owned-change local checkpoint commit. Keep parent qualification pending as appropriate; a checkpoint grants no push, main advancement or release authority.",
+        "After this increment is implemented run only its change-relevant checks/builds/docs gates. Reserve complete standard/E2E/AI/aggregate suites until every roadmap implementation chunk is complete."
+      ],
+      "workPackages": [
+        {
+          "id": "bounded-ledger-and-first-data-journeys",
+          "outcome": "Extend existing Node/Vitest/Playwright and owned host fixtures with a finite capability/scenario manifest, scoped setup/teardown and safe reports, delivered with workspace and actual file acquisition/browse/decoder/export first consumers.",
+          "title": "Coverage ledger and real data acquisition"
+        },
+        {
+          "id": "dataset-and-context-roundtrips",
+          "outcome": "Cover current task/input/method/output-shape combinations and a real UI review/save/reopen lifecycle with exact data/lineage oracles; cover manual/source Context and RAG controls and persistence using bounded synthetic material and explicit fixture/runtime labels.",
+          "title": "Preparation, curation and Context roundtrips"
+        },
+        {
+          "id": "model-training-and-image-workflows",
+          "outcome": "Cover model discovery/reference/inventory/download UI, desktop-only training configuration and review/save/discard, image configuration/results/finalization, memory denial and task recovery with finite worker boundaries; no new downloads or model-accuracy trial.",
+          "title": "Models, training and image task behavior"
+        },
+        {
+          "id": "daily-defect-repair-and-evidence",
+          "outcome": "For each reproduced in-scope defect, identify the owning current contract and user-visible oracle, add a red regression when practical, fix the owning layer, rerun the exact regression and relevant cross-host journey, and document the resulting behavior. Preserve first failures and every retry; skips/quarantine never count as required passes. Use focused tests within coherent chunks, current executed receipts and genuine separate-invocation review; release every live source claim before an exact-owned-change local checkpoint commit. Keep parent qualification pending as appropriate; a checkpoint grants no push, main advancement or release authority.",
+          "title": "Run, diagnose and repair daily-workflow defects"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "On both current hosts, inspect/install a bounded inert package, create and save a resource-backed Studio asset, reopen it from Saved, review and explicitly publish, then customize exact Foundation/imported bases into new workspace-owned copies. Original source/semantic bytes remain unchanged across process restart; malformed package/resource, stale revision, failed list/save/review/publish and duplicate click have safe tested outcomes. Publication grants no install/activation/execution authority.",
+          "id": "asset-authoring-lifecycle",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Through actual UI from an empty workspace, construct and coexistently retain request-intake, operations-dashboard and conversation-interface systems, each with at least six distinct useful definitions beyond the Foundation shell. Configure meaningful labels/required fields/options and supported styles/resources; assert native validation, input, table/status/disclosure behavior, hierarchy, Add/Move/reparent/remove/undo/redo, unsaved checkpoint guards and exact save/reload/reopen/system-switch preservation on packaged Windows and local Chrome. Nonexecuting preview is never represented as durable business submission or inference.",
+          "id": "meaningful-scratch-compositions",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Manage search/filter/page/duplicate/archive/restore, layout/property changes and explicit supported legacy upgrade preserve exact immutable revisions and active editor state. Build & test admits only the exact eligible saved revision; Publish names and approves the exact ready build. Dirty, archived, missing-model/implementation, stale digest/lock and unauthorized actions fail with bounded actionable state and create no false release.",
+          "id": "system-management-build-and-approval",
+          "qualification": "local"
+        },
+        {
+          "description": "Exercise only application-projected install/start/stop/activate/deactivate/uninstall actions and their freshness guards. Current desktop controlled-chatbot runtime opens/focuses the exact release, accepts button and Enter submission with Shift+Enter newline, bounds input, preserves transcript/restart isolation and closes/revokes the exact session on Stop; local Chrome verifies its actual server-owned lifecycle state without inventing a local runtime window. Finite synthetic inference proves UI/transport/lifecycle integration only. API-only secured-entry/review handlers retain boundary tests; absent record/review runtime UI and blank-composition policy authoring are explicit product gaps outside this acceptance.",
+          "id": "published-runtime-ui-integration",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "All applicable new/reused Assets/System tests execute on current source. Reproduced in-scope construction, save, validation, build, publication and lifecycle defects are fixed with owning regression coverage and rerun. Cross-workspace and stale asynchronous results, failed launch compensation, unavailable runtime, revoked source and duplicate actions cannot overwrite current work, expose data or orphan an owned runtime. Retain failures and real environment gaps.",
+          "id": "authoring-errors-and-repair-loop",
+          "qualification": "local"
+        },
+        {
+          "description": "Refresh the security-relevant threat/control review for the actual changed paths. Prove scoped identity/authority, inert untrusted content, bounds, redaction, failure and cleanup behavior with positive and denial evidence. Never weaken security, native ownership or resource guards to satisfy a UI test; preserve explicitly excluded native/provider/security owner gaps and a rollback at least as secure as the forward change.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-10-27T22:41:35Z",
+      "completedChunks": [
+        "asset-ui-import-studio-customization",
+        "meaningful-systems-and-management",
+        "exact-build-publication-runtime",
+        "authoring-ui-feature-reconciliation"
+      ],
+      "completionSummary": "All four original Assets/System implementation chunks and three local criteria are complete on current source with nine related checks and independent review. Three actual-host/native/restart controlled criteria remain pending under the approved implementation-only policy. Original approval, technical requirements and failures are retained; full testing is deferred by user direction and the roadmap remains open.",
+      "deliverables": [
+        "Expanded existing whole-host Assets/System journey drivers and focused boundary regressions, avoiding cloned suites and prebuilt-composition injection into scratch-building cases.",
+        "Three concurrently retained useful systems, each built through UI with at least six distinct component definitions beyond the required Foundation shell, with meaningful input/validation/table/status/disclosure/transcript-region outcomes and exact persisted composition oracles.",
+        "Current Save/Review/Publish/build/release/runtime-window and supported server lifecycle observations, including immutable identity, workspace isolation, explicit approval and recovery.",
+        "In-scope product fixes, safe failure evidence and documentation updates describing actual supported behavior and any explicitly unimplemented capability."
+      ],
+      "dependsOn": [
+        "daily-data-and-ai-journeys"
+      ],
+      "excluded": [
+        "Human studies, physical/manual screen-reader acceptance and other human acceptance testing are user-owned offline; product review/approval controls remain mandatory.",
+        "No new model download, provider credential, remote publication, dependency or runtime-engine authority follows from test execution; use installed approved dependencies, synthetic local fixtures and separately authorized destinations only.",
+        "Do not inspect, adopt, move, delete or change ACLs on retained old offload staging, acquire a replacement offload lease, or retry a restricted independent security review by another tool or agent.",
+        "This UI roadmap does not close existing owner roadmaps, rerun accepted model-accuracy matrices, or qualify physical offload/native identity races, model semantics, external provider operations, production security or a malicious-code sandbox from fixtures.",
+        "New product capabilities or policy/authority/architecture decisions revealed by tests require their own explicit scope decision. Unsupported or intentionally unmounted features are tested as such, not implemented by inference.",
+        "No resurrection of drag-based authoring or a standalone generic Run & Test tab superseded by current accepted work.",
+        "No new arbitrary runtime policy-authoring, secured-record/review graphical runtime, generic workflow engine or imported/authored execution sandbox. Test and report current limitations; a new capability requires an explicit successor decision.",
+        "Existing Assets independent security/native qualification remains separately owned; functional UI evidence never closes those criteria by implication."
+      ],
+      "id": "asset-to-published-system-journeys",
+      "number": 2,
+      "objective": "Protect the complete supported asset-authoring and system-building user journey on both hosts. Build meaningful multi-component systems through the actual current modal/click editor, preserve configuration and immutable versions, build/publish exact revisions and exercise the currently mounted controlled-conversation runtime. Execute tests and repair identified defects.",
+      "pendingCriteria": [
+        "asset-authoring-lifecycle",
+        "meaningful-scratch-compositions",
+        "published-runtime-ui-integration"
+      ],
+      "plan": {
+        "assumptions": [
+          "Existing approved product/architecture contracts govern; no new dependency, provider, capability or resource-policy choice is inferred.",
+          "All mutations use supported UI or existing authorized application test paths. Foundation/imported originals stay immutable; authoring does not activate code.",
+          "User requires feature-level testing during implementation and one later full testing effort. Controlled qualification can remain pending under the original approved policy; original acceptance requirements remain."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "asset-authoring-lifecycle",
+              "authoring-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "asset-ui-import-studio-customization",
+            "outcome": "Reconcile and reuse supported package inspection/install, resource-backed Studio save/reopen/review/publication and exact Foundation/imported customization. Fill meaningful local UI/transport/storage and negative gaps, repairing only reproduced scoped defects.",
+            "title": "Import, Studio, Saved and customized copies"
+          },
+          {
+            "criteriaIds": [
+              "meaningful-scratch-compositions",
+              "system-management-build-and-approval",
+              "authoring-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "meaningful-systems-and-management",
+            "outcome": "Reuse request-intake, operations-dashboard and conversation-interface builds with useful heterogeneous definitions, properties/styles/hierarchy, native behavior, Add/Move/reparent/remove/undo/redo, save/reopen/switch and Manage lifecycle. Add missing local and app-driver assertions with exact immutable revision oracles.",
+            "title": "Useful scratch systems and Manage"
+          },
+          {
+            "criteriaIds": [
+              "system-management-build-and-approval",
+              "published-runtime-ui-integration",
+              "authoring-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "exact-build-publication-runtime",
+            "outcome": "Cover dirty/archived/stale/denied builds and exact saved revision publication approval. Verify only projected supported lifecycle actions, desktop transcript/input/restart isolation and browser server-owned lifecycle, with explicit finite inference and owned cleanup limits.",
+            "title": "Exact build, approval and supported runtime"
+          },
+          {
+            "criteriaIds": [
+              "asset-authoring-lifecycle",
+              "meaningful-scratch-compositions",
+              "system-management-build-and-approval",
+              "published-runtime-ui-integration",
+              "authoring-errors-and-repair-loop",
+              "security-impact-reviewed"
+            ],
+            "id": "authoring-ui-feature-reconciliation",
+            "outcome": "Run applicable increment-level feature checks, repair reproduced failures with owning regressions, reconcile source-linked coverage and exact completed support, and independently review all criteria. Preserve controlled app/runtime/native/managed/final qualification rather than converting fixtures into a pass.",
+            "title": "Repair defects and reconcile current feature evidence"
+          }
+        ],
+        "completionTests": [
+          "After all four implementation chunks, execute only increment-relevant registered feature profiles and related documentation/architecture checks, plus independent current-candidate review.",
+          "Actual packaged/managed/local-browser runtime/zoom/native and final combined all-suite checks remain separate for the planned later qualification effort. Accepted model accuracy and actual OCR are not rerun."
+        ],
+        "documentation": [
+          "docs/operations/comprehensive-ui-automation-coverage.json",
+          "docs/operations/roadmap-supporting-work.json",
+          "docs/operations/roadmap-user-descriptions.json",
+          "Affected nearest README, architecture/threat-model and test-operator guidance"
+        ],
+        "fingerprint": "ac7af0e7e300ef747e16b9d6210bec0fb2c15d728f79906b1002d2a31c32ad68",
+        "focusedTests": [
+          "Exact touched shared UI/client/transport/application/storage unit and interaction files, with meaningful exact-output and refusal/retry/stale/workspace assertions.",
+          "Exact existing browser/Desktop journey oracle tests, focused types and Playwright collection; collection is not actual host execution.",
+          "Relevant source-owned functionality-browse/functionality-outcomes/security-authority profiles only where triggered; documentation/architecture and agent/dependency gates only for actual impact."
+        ],
+        "recordedAt": "2026-10-27T05:54:03Z",
+        "rollback": "Revert only the exact scoped test/implementation delta using reviewed boundaries. Preserve original published/source artifacts, secure admission, immutable approvals and failed evidence; retain fail-closed refusal if a secure implementation cannot be kept.",
+        "steps": [
+          "Audit exact current capability/test/owned-change provenance and security boundaries.",
+          "Implement one meaningful existing work-package chunk at a time; repair reproduced owning-layer defects without broadening product scope.",
+          "Run exact feature and related boundary/type/doc checks, review independently and checkpoint only coherent owned changes.",
+          "Reconcile current increment evidence and advance implementation while preserving actual controlled qualification and final full testing."
+        ],
+        "summary": "Implement and verify the approved Assets/System authoring UI journeys using existing contracts, bounded fixtures and public controls; commit independently reviewed feature chunks and defer full testing until the roadmap catch-up is implemented."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-27T05:54:03Z",
+          "risks": [
+            "Security-relevant workspace/publication/source/revision/digest/revocation/resource and runtime boundaries need actual positive and denial checks. Inert package/resource authoring grants no activation or execution authority.",
+            "Current branch contains other Assets/security/native work. Newly committed tests must not silently depend on uncommitted unrelated behavior; adopt only exact justified owned changes with fresh checks and independent review.",
+            "Collected app tests do not qualify actual app selectors, process restart, managed authorization, runtime windows or native retirement. Finite inference does not qualify models. Preserve unavailable technical proof."
+          ],
+          "sources": [
+            {
+              "title": "Current Asset authoring constraints",
+              "url": "docs/context/packs/asset-authoring.pack.md"
+            },
+            {
+              "title": "Shared Studio lifecycle and qualification",
+              "url": "modules/ui/shared/asset-studio/README.md"
+            },
+            {
+              "title": "Existing meaningful multi-component systems",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts"
+            },
+            {
+              "title": "Existing exact build/publication/runtime workflow",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts"
+            },
+            {
+              "title": "Layered derived customization",
+              "url": "docs/adr/ADR-0035-layered-derived-asset-customization.md"
+            }
+          ],
+          "summary": "Reuse the existing Assets and three meaningful scratch-system UI drivers, current shared renderer interactions, and real host boundary fixtures. Preserve supported immutable source/publication/runtime contracts. Before adopting dirty Assets helpers or dependencies, reconcile their exact prior Work and commit provenance; no unrelated source is staged implicitly. Feature checks and test implementation run now; actual host and combined qualification remains a later effort."
+        }
+      ],
+      "rollback": "Revert the scoped tested authoring/lifecycle corrections and harness extension without mutating historical definitions/revisions/releases, erasing user data, restoring obsolete insecure paths or weakening sandbox/approval denial. Stop only exact test-owned runtimes with confirmed authority and retain unconfirmed ownership for recovery.",
+      "startedAt": "2026-10-27T05:54:03Z",
+      "status": "implemented-pending-qualification",
+      "title": "Assets to useful compositions and published runtimes",
+      "verification": [
+        "Run exact shared Assets/System UI tests and changed contract/use-case/client/host boundary tests, preserving immutable source/release and denied imported/authored execution oracles.",
+        "Reuse meaningful-system-journeys.ts, browse-authoring-journey.ts, asset-experience-journey.ts and guided-system-lifecycle.ts in exact one-worker packaged-desktop and local Chrome cases; declare real transport/storage versus synthetic runtime boundaries.",
+        "Compare exact definitions/versions/configuration/placements and reopened artifact/release identities rather than snapshots or successful clicks. Observe actual runtime windows, nonempty synthetic transcript and current owned native exit where relevant, without claiming native file-race or model-quality qualification.",
+        "For each reproduced in-scope defect, identify the owning current contract and user-visible oracle, add a red regression when practical, fix the owning layer, rerun the exact regression and relevant cross-host journey, and document the resulting behavior. Preserve first failures and every retry; skips/quarantine never count as required passes.",
+        "Use focused tests within coherent chunks, current executed receipts and genuine separate-invocation review; release every live source claim before an exact-owned-change local checkpoint commit. Keep parent qualification pending as appropriate; a checkpoint grants no push, main advancement or release authority.",
+        "Reconcile obsolete Run & Test and drag prose against the current mounted Publish/modal editor; no new public UI or runtime policy is silently introduced. Run only change-relevant gates at this increment boundary."
+      ],
+      "workPackages": [
+        {
+          "id": "asset-import-studio-and-customization",
+          "outcome": "Reuse existing Assets drivers for starter/package inspection/install, inert resource editing, Studio save/review/publish/Saved reopening and exact Foundation/imported customization, extending missing negative and stale-response paths without activating authored code.",
+          "title": "Import, Studio, Saved and customized copies"
+        },
+        {
+          "id": "useful-scratch-systems-and-management",
+          "outcome": "Reuse and expand request-intake, operations-dashboard and conversation-interface construction from an empty workspace, with explicit properties/styles, nested slots, current Add/Move controls, undo/redo, save/reopen, search/duplicate/archive/restore and explicit migration behavior.",
+          "title": "Useful multi-component construction and Manage"
+        },
+        {
+          "id": "exact-build-publish-runtime",
+          "outcome": "Exercise dirty/archived/stale/build-denied states and exact saved build/publication approval; run supported projected lifecycle actions, desktop runtime input/transcript/restart and thin server-owned lifecycle outcomes, with bounded synthetic inference declared.",
+          "title": "Exact revision build, publication and mounted runtime"
+        },
+        {
+          "id": "authoring-defect-repair-and-evidence",
+          "outcome": "For each reproduced in-scope defect, identify the owning current contract and user-visible oracle, add a red regression when practical, fix the owning layer, rerun the exact regression and relevant cross-host journey, and document the resulting behavior. Preserve first failures and every retry; skips/quarantine never count as required passes. Use focused tests within coherent chunks, current executed receipts and genuine separate-invocation review; release every live source claim before an exact-owned-change local checkpoint commit. Keep parent qualification pending as appropriate; a checkpoint grants no push, main advancement or release authority.",
+          "title": "Run, diagnose and repair authoring/lifecycle defects"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Actual mounted Settings, thin Security, runtime readiness/control, workspace summaries, shell navigation/menu/collapse/help and every task-family notification preserve documented load/empty/error/quiet-read/success behavior, least privilege and exact workspace ownership. Save/clear/restart/refresh/retry/mark-read/dismiss/clear-completed and supported cancellation/reconnect execute through current host boundaries; safe numeric memory denial is distinct from a model quality failure or successful run.",
+          "id": "operational-and-task-ui",
+          "qualification": "local"
+        },
+        {
+          "description": "Packaged Windows desktop and local Chrome complete the critical workflows with keyboard, focus/return, role/name/state, status/error announcement semantics, 320px control access, supported native zoom/reflow, computed reduced motion/forced colors and resolved automated contrast results. Observe declared cold startup/readiness and edit/input-to-paint workloads separately from inference; use existing named-profile budgets or prospectively frozen local baselines, never an arbitrary global fast-inference target. No manual/human acceptance is required or inferred.",
+          "id": "automated-accessibility-and-local-host-observation",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Regenerate the mounted route/tab/action and capability registry census and map every supported functionality item and all 39 discovery scenario families to current executed tests, exact meaningful assertions, applicable host and evidence tier. Existing tests may satisfy coverage when actually rerun on the candidate. Unsupported/unmounted cases need explicit code/ADR authority; an applicable missing/failed/blocked UI test prevents this roadmap closure. External model accuracy, native offload, private-provider and restricted review qualifications remain visible under their existing owners without becoming unrelated prerequisites or receiving a pass.",
+          "id": "coverage-complete-and-honest",
+          "qualification": "local"
+        },
+        {
+          "description": "Use one Playwright worker and no competing AI/build/performance workload, isolated owned profile/storage/listener roots, declared fixture seeds and bounded deadlines. Empty discovery, setup/teardown error, stale source, unconfirmed cleanup or unexpected runtime exception fails the run. Reports retain finite safe error/stage facts and no token/prompt/private content; sensitive traces/capture are disabled. Interrupted runs can restart without deleting unknown retained state; rerun only missing relevant evidence and required current-source regressions. Flaky required tests are defects, not completion by retry or quarantine.",
+          "id": "safe-repeatable-ui-runs",
+          "qualification": "local"
+        },
+        {
+          "description": "The existing read-only contributor review UI passes relevant DOM/browser tests for Open and Completed sections, original creation-date order, canonical completion, dynamic refresh, readable work chunks and acceptance/evidence links, dark/light preference and blocked storage. Failed/missing/blocked parent qualification and local supporting work remain distinct; no UI grants approval or mutation authority.",
+          "id": "review-site-ui-regressions",
+          "qualification": "local"
+        },
+        {
+          "description": "After every planned implementation chunk is complete, all applicable declared packaged-desktop/local Chrome UI journeys and exact managed-reference authorization subset execute successfully on final source, every reproduced in-scope defect is repaired and no required case is hidden by skip. Run npm run test:all once at the final boundary plus documentation/architecture and affected build/package gates, adding agent-support/dependency gates only when triggered. Named packaged/managed tests remain explicit outside test:all. Complete current overall control-plane qualification and genuine independent review before roadmap completion; no fresh held-out model-accuracy trial or unrelated owner closure is required.",
+          "id": "final-current-ui-and-repository-gates",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Refresh the security-relevant threat/control review for the actual changed paths. Prove scoped identity/authority, inert untrusted content, bounds, redaction, failure and cleanup behavior with positive and denial evidence. Never weaken security, native ownership or resource guards to satisfy a UI test; preserve explicitly excluded native/provider/security owner gaps and a rollback at least as secure as the forward change.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": null,
+      "completedChunks": [
+        "settings-save-and-query-recovery",
+        "operational-task-and-shell-coverage",
+        "accessible-host-observation-definitions",
+        "review-site-and-run-evidence-recovery",
+        "coverage-census-and-qualification-readiness"
+      ],
+      "deliverables": [
+        "Actual host UI coverage for operational controls, all task-family notifications, rendered security/readiness failures, explicit retry and confirmed cleanup boundaries.",
+        "Automated semantic/keyboard/focus/status/contrast/reflow coverage for every critical workflow, safe capture policy and current named host/environment observations.",
+        "Machine-readable capability/scenario/evidence ledger containing exact test/source/profile/runtime identities and distinct passed/failed/blocked/not-run/not-applicable statuses, with first failures and each retry retained.",
+        "Current-candidate executed full applicable UI matrix, in-scope defect corrections, final repository completion receipts/reviews and permanent guidance for maintaining coverage as supported functionality changes."
+      ],
+      "dependsOn": [
+        "daily-data-and-ai-journeys",
+        "asset-to-published-system-journeys"
+      ],
+      "excluded": [
+        "Human studies, physical/manual screen-reader acceptance and other human acceptance testing are user-owned offline; product review/approval controls remain mandatory.",
+        "No new model download, provider credential, remote publication, dependency or runtime-engine authority follows from test execution; use installed approved dependencies, synthetic local fixtures and separately authorized destinations only.",
+        "Do not inspect, adopt, move, delete or change ACLs on retained old offload staging, acquire a replacement offload lease, or retry a restricted independent security review by another tool or agent.",
+        "This UI roadmap does not close existing owner roadmaps, rerun accepted model-accuracy matrices, or qualify physical offload/native identity races, model semantics, external provider operations, production security or a malicious-code sandbox from fixtures.",
+        "New product capabilities or policy/authority/architecture decisions revealed by tests require their own explicit scope decision. Unsupported or intentionally unmounted features are tested as such, not implemented by inference.",
+        "No whole-host real-model/performance Cartesian matrix for every UI variation. Deterministic behavioral variants and a representative actual-host UI journey protect the same declared functionality with explicit evidence labels.",
+        "No blanket new latency SLA, new browser/OS support promise, cross-host synchronization, OIDC login/admin UI or secret-store policy. Existing named platform/profile support and fail-closed behavior govern.",
+        "No requirement that functionality-optimization, optional-low-memory-inference, security-findings-refresh or other owner roadmaps fully close before these UI-specific criteria can pass. Relevant actual UI failures must still be fixed; owner gaps remain separately visible."
+      ],
+      "id": "operational-ui-and-coverage-qualification",
+      "number": 3,
+      "objective": "Complete cross-surface settings, secret-safe configuration, security status/denial, notifications, runtime controls, accessibility, startup/responsiveness and contributor review UI coverage. Run the complete declared current UI matrix, repair remaining in-scope defects, reconcile every supported capability and perform the final applicable repository gates without requiring unrelated owner-roadmap closure.",
+      "plan": {
+        "assumptions": [
+          "The existing renderer, client, public contract and profile architecture is retained with no new dependency or provider.",
+          "The user approved this roadmap and ordered feature-level catch-up before combined testing.",
+          "UI guard fixes do not establish physical host or secret-store qualification; actual final checks remain pending."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "operational-and-task-ui",
+              "safe-repeatable-ui-runs",
+              "security-impact-reviewed"
+            ],
+            "id": "settings-save-and-query-recovery",
+            "outcome": "Current Settings reads/writes, retry and drafts preserve exact committed ownership, no duplicate mutation, truthful refresh outcome and fixed public errors. Finite synthetic tests and bounded routing support a reviewed source checkpoint.",
+            "title": "Reliable settings and secret-safe recovery"
+          },
+          {
+            "criteriaIds": [
+              "operational-and-task-ui",
+              "safe-repeatable-ui-runs",
+              "security-impact-reviewed"
+            ],
+            "id": "operational-task-and-shell-coverage",
+            "outcome": "Cover supported Security, runtime/readiness, workspace/shell and task-family actions through owning component/transport fixtures and exact host definitions; repair discovered supported defects with related regressions.",
+            "title": "Operational controls, task notifications and shell recovery"
+          },
+          {
+            "criteriaIds": [
+              "automated-accessibility-and-local-host-observation",
+              "safe-repeatable-ui-runs",
+              "security-impact-reviewed"
+            ],
+            "id": "accessible-host-observation-definitions",
+            "outcome": "Meaningful reusable accessibility and responsiveness assertions, bounded exact host setup and declared observation workloads exist with local oracle tests. Actual packaged/Chrome native observations remain pending until executed.",
+            "title": "Accessible UI and startup observations"
+          },
+          {
+            "criteriaIds": [
+              "review-site-ui-regressions",
+              "safe-repeatable-ui-runs",
+              "security-impact-reviewed"
+            ],
+            "id": "review-site-and-run-evidence-recovery",
+            "outcome": "Read-only review/status/order/work-item/theme/refresh regressions and finite run collection, safe error/cleanup/interruption and missing-evidence selection are exercised at their owned layer. No local support becomes parent qualification.",
+            "title": "Read-only review UI and reliable test reporting"
+          },
+          {
+            "criteriaIds": [
+              "coverage-complete-and-honest",
+              "final-current-ui-and-repository-gates",
+              "security-impact-reviewed"
+            ],
+            "id": "coverage-census-and-qualification-readiness",
+            "outcome": "All39 supported families and current mounted actions are mapped to exact meaningful tests and appropriate hosts with retained missing/failed/not-run evidence. Scoped feature defects are repaired and documentation supports final named host/all-suite qualification; controlled final checks remain pending until actually executed.",
+            "title": "Complete coverage map and final qualification readiness"
+          }
+        ],
+        "completionTests": [
+          "Only increment-relevant operational, accessibility-definition, review-site and evidence/census profiles plus documentation/architecture and triggered agent-support/control-plane gates after all implementation chunks.",
+          "Actual packaged Windows/local Chrome and exact managed-reference subset remain controlled pending until executed.",
+          "Combined standard/end-to-end/AI and affected package/build gates stay at the final cross-roadmap testing boundary requested by the user; accepted model accuracy and OCR are not rerun merely for a checkpoint."
+        ],
+        "documentation": [
+          "Settings feature README and control-plane bounded-profile guidance",
+          "Current coverage and support/user descriptions with exact evidence tiers",
+          "Generated roadmap/state and concise temporary report"
+        ],
+        "fingerprint": "3d4fcbb895121ac826b509db99f15122b95825ce58c0fa414b3e161fa6886537",
+        "focusedTests": [
+          "Settings synthetic rendered/hook/API and fixed catalog denial tests for chunk1.",
+          "Exact owning thin Security, runtime/readiness, shell and task notification tests for chunk2.",
+          "Existing technical-accessibility/startup/native-observation definition and bounded lifecycle oracle tests for chunk3; no actual model run.",
+          "Exact review-site DOM/controller, finite report and owned interruption/cleanup tests for chunk4.",
+          "Changed census/admission/schema and exact collection/meaningful assertion checks for chunk5."
+        ],
+        "recordedAt": "2026-10-27T22:46:19Z",
+        "rollback": "Revert only selected owned changes; preserve user/foreign changes, fixed diagnostics, security/host/resource guards, original failures and immutable evidence. Unknown native ownership and retained offload staging remain untouched.",
+        "steps": [
+          "Add synthetic Settings regressions for failed secret save, refresh truthfulness, query/client retirement, duplicate admission and safe errors. Repair the owning renderer and exact bounded Settings check routing; commit tested/reviewed work.",
+          "Inspect and test mounted thin Security, readiness/runtime controls, shell/workspace summaries and each task notification family; repair supported behavior and keep actual host authority separate.",
+          "Extend current keyboard/focus/name/state/reflow and startup observation definitions plus their deterministic oracles. Use current budgets and user-supported native behavior.",
+          "Verify read-only review statuses/order/theme/refresh, safe finite run reporting and restart/interruption admission; fix only reproduced in-scope defects.",
+          "Regenerate the current capability/scenario census; map every39family to meaningful current test and host/evidence tier. Prepare exact remaining actual-host/final checks; do not substitute collection or local fixtures for their outcomes."
+        ],
+        "summary": "Complete operational UI definitions and focused regression repairs, then reconcile current coverage and preserve later combined/actual-host qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-27T22:46:18Z",
+          "risks": [
+            "Unknown exception text may contain protected content; use fixed public diagnostics and synthetic secret fixtures only.",
+            "UI retirement must not claim host-side cancellation, authorization or physical cleanup.",
+            "Profile/catalog amendments must be exact finite tests and preserve generic coverage for unknown/explicitly required impact.",
+            "No accepted accuracy/OCR rerun, model/provider/dependency authority, native/offload data action or guard relaxation follows from this work.",
+            "Actual named host/accessibility/restart/final suites remain pending until executed; no human acceptance is introduced."
+          ],
+          "sources": [
+            {
+              "title": "Approved operational increment",
+              "url": ".implementation-roadmaps/comprehensive-ui-automation/state.json"
+            },
+            {
+              "title": "Mounted surface census",
+              "url": "docs/operations/comprehensive-ui-automation-coverage.json"
+            },
+            {
+              "title": "Settings hook",
+              "url": "apps/desktop/src/renderer/features/settings/hooks/useApplicationSettings.ts"
+            },
+            {
+              "title": "Secret field",
+              "url": "apps/desktop/src/renderer/features/settings/components/SecretSettingField.tsx"
+            },
+            {
+              "title": "Settings panel regressions",
+              "url": "apps/desktop/src/renderer/features/settings/tests/settings-panel.unit.test.tsx"
+            },
+            {
+              "title": "Thin Security",
+              "url": "apps/thin-client/src/features/security/components/SecurityStatusPanel.tsx"
+            },
+            {
+              "title": "Owned task host journey",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/owned-task-journey.ts"
+            },
+            {
+              "title": "Technical accessibility assertions",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts"
+            },
+            {
+              "title": "Read-only review projection",
+              "url": "docs/diagnostics/ai-development-control-plane.md"
+            },
+            {
+              "title": "Security boundary rules",
+              "url": "docs/standards/security-by-design-standards.md"
+            }
+          ],
+          "summary": "Security-relevant operational UI work follows current renderer/client and host authority boundaries. Existing Settings hook accepts retired reads, lacks synchronous mutation ownership, exposes unknown error.message, and resolves failed saves so SecretSettingField can erase a failed draft. Reproduce with synthetic local fixtures before repair. Inspect and extend current thin Security, task/readiness, shell, accessibility, review-site and bounded host evidence paths; retain39 scenario families and controlled final-host gaps. Current user direction defers combined testing until all roadmap implementation is caught up."
+        }
+      ],
+      "rollback": "Revert scoped operational UI and harness corrections while retaining secure settings defaults, exact current guards, read-only review semantics and immutable evidence. Never erase failed runs, downgrade policy, clear unknown native ownership or delete retained staging as a recovery shortcut. Preserve user data and use explicit retry/blocked state when proof is unavailable.",
+      "startedAt": "2026-10-27T22:46:18Z",
+      "status": "verifying",
+      "title": "Operational recovery and complete UI coverage qualification",
+      "verification": [
+        "Run exact settings/security/client, notification/task-observation, runtime/readiness, memory-shortfall, shell/dashboard and shared accessibility tests; retain a rendered denied/failure path for each changed trust boundary.",
+        "Reuse technical-accessibility.ts, native-browser-zoom.mjs and current one-worker host lifecycle/reporting. Test all newly registered bounded scenario/check rules and denial of arbitrary command, path or unsupported host input.",
+        "Execute only the exact authorized managed-reference identity/database/TLS subset needed for UI claims; unavailable applicable host evidence remains a UI blocker. Do not require or grant overall security, native/offload, provider or model-quality owner completion.",
+        "Use safe finite worker faults and disposable fixtures for UI recovery. Do not touch retained old offload stages, add new credentials/models/dependencies or infer physical runtime success from synthetic output.",
+        "For each reproduced in-scope defect, identify the owning current contract and user-visible oracle, add a red regression when practical, fix the owning layer, rerun the exact regression and relevant cross-host journey, and document the resulting behavior. Preserve first failures and every retry; skips/quarantine never count as required passes.",
+        "Use focused tests within coherent chunks, current executed receipts and genuine separate-invocation review; release every live source claim before an exact-owned-change local checkpoint commit. Keep parent qualification pending as appropriate; a checkpoint grants no push, main advancement or release authority.",
+        "At the final all-implementation-ready boundary run npm run test:all once, npm run docs:check and npm run architecture:check, relevant desktop package/server/thin builds and the applicable named UI projects; run agent-support/security:dependencies only when changed inputs trigger them. Record exact commands, failures, skips and source-bound receipts; independent review and final overall approval remain required."
+      ],
+      "workPackages": [
+        {
+          "id": "operational-controls-and-safe-faults",
+          "outcome": "Test actual mounted settings save/clear/restart and synthetic secret controls; thin security status/rendered auth denials; all task notification families; explicit runtime readiness/control, reconnect, refused cancellation and safe memory-shortfall messages.",
+          "title": "Settings, identity, runtime and background task recovery"
+        },
+        {
+          "id": "cross-surface-accessibility-and-responsiveness",
+          "outcome": "Apply reusable accessibility assertions to every critical reachable form/dialog/tab/tree/menu and actual native zoom where available, while separating cold startup, UI input-to-paint and long inference timing under predeclared source/environment/workload observations.",
+          "title": "Keyboard, focus, reflow and bounded responsiveness"
+        },
+        {
+          "id": "review-site-and-evidence-admission",
+          "outcome": "Preserve read-only review sorting/status/work-item/theme/refresh behavior and extend finite scenario admission, safe logs, interruption-safe owned runs, accurate skip/block/failure statuses and missing-evidence rerun selection.",
+          "title": "Contributor review UI and reliable evidence reporting"
+        },
+        {
+          "id": "final-ui-defect-repair-and-qualification",
+          "outcome": "For each reproduced in-scope defect, identify the owning current contract and user-visible oracle, add a red regression when practical, fix the owning layer, rerun the exact regression and relevant cross-host journey, and document the resulting behavior. Preserve first failures and every retry; skips/quarantine never count as required passes. Reconcile every one of the 39 discovery families and all actual supported actions to current applicable tests, then run the final scoped host matrix, required aggregate and repository gates once after implementation is ready. Use focused tests within coherent chunks, current executed receipts and genuine separate-invocation review; release every live source claim before an exact-owned-change local checkpoint commit. Keep parent qualification pending as appropriate; a checkpoint grants no push, main advancement or release authority.",
+          "title": "Run the complete declared UI matrix and fix remaining defects"
+        }
+      ]
+    }
+  ],
+  "name": "Comprehensive Functional UI Automation",
+  "objective": "Create, execute and maintain comprehensive agent-executable UI regression journeys for all currently supported software functionality, fix defects exposed by those tests, and preserve real security, runtime and resource qualification gaps.",
+  "paths": {
+    "report": "docs/tmp/comprehensive-ui-automation-report.md",
+    "roadmap": "docs/comprehensive-ui-automation-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/comprehensive-ui-automation/state.json"
+  },
+  "resumeAudits": [
+    {
+      "blockerId": "user-ordered-predecessor-closure",
+      "reconciliation": "Preserve the actual full approval, all three pending increments/eighteen criteria/thirty-nine families and every prior approval/blocker event. No UI implementation starts. After optional-low-memory-inference and functionality-optimization actually close, follow the retained user order before starting the first approved UI increment; this is an operator/workflow constraint, not an automatic cross-roadmap gate.",
+      "recordedAt": "2026-10-23T15:55:19Z"
+    }
+  ],
+  "roadmapApproval": {
+    "approvedAt": "2026-10-26T12:45:52Z",
+    "fingerprint": "299252410bb192339fd7626a891ae124aedb87091ac9c0d5a4d0951fbb97d8b5",
+    "note": "Existing roadmap content remains approved. The latest explicit catch-up direction authorizes feature-first execution across open roadmaps before final qualification; preserve genuine pending checks and defer all full suites without changing workflow."
+  },
+  "schemaVersion": 1,
+  "slug": "comprehensive-ui-automation",
+  "status": "executing",
+  "updatedAt": "2026-11-06T13:01:04Z"
+}

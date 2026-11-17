@@ -59,7 +59,10 @@ Do not create a parallel threat model when a current one already owns the bounda
   never retain raw exceptions, paths, secrets, prompts, logs, provider/runtime
   payloads, or protected identifiers. Filter workspace-owned records before
   presentation, and keep security, authorization, readiness, and other
-  fail-closed blockers inline when the user must act on them.
+  fail-closed blockers inline when the user must act on them. Dataset Preparation
+  memory-admission errors use the notification center under the explicit product
+  requirement; their guard still blocks dispatch/loading. Only bounded numeric
+  shortfalls and fixed corrective copy may enter those notifications.
 
 ## Verification and Evidence
 

@@ -3,6 +3,7 @@ import type { SystemBuilderSystemId } from "../../../contracts/system-builder";
 import type { WorkspaceId } from "../../../contracts/workspace";
 
 export interface SystemBuildRepositoryPort {
+  readReleaseSummary?(workspaceId: WorkspaceId): Promise<{readonly publishedSystemIds: readonly string[]; readonly assetsUsed: number}>;
   createBuild(build: SystemBuildRecord): Promise<SystemBuildRecord>;
   readBuild(workspaceId: WorkspaceId, buildId: SystemBuildId): Promise<SystemBuildRecord | undefined>;
   listBuilds(workspaceId: WorkspaceId, systemId?: SystemBuilderSystemId): Promise<readonly SystemBuildRecord[]>;

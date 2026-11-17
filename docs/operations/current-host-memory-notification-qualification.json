@@ -1,0 +1,145 @@
+{
+  "schema_version": "current-host-memory-notification-qualification-v1",
+  "status": "qualified-current-synthetic-hosts",
+  "scope": "Current actual packaged desktop and thin-client synthetic Dataset Preparation journeys plus existing automated Canvas browse/accessibility journeys. No actual model accuracy/inference/offload/native-staging qualification.",
+  "work_id": "current-host-memory-notification-qualification-retry",
+  "model_accuracy_rerun": false,
+  "host_results": [
+    {
+      "path": "artifacts/qualification/visual-composer/runs/2026-10-23t17-43-13-828z-045529a1/low-memory-dataset/desktop.json",
+      "sha256": "cc9e20fc57216c08cfaac7ea40044a15500b215d56e2b2ab116f77f13afd5037",
+      "observed": {
+        "schemaVersion": "low-memory-dataset-host-journey-v1",
+        "status": "passed",
+        "host": "desktop",
+        "sourceRevision": "source.982d165850cc7a20284b22ec8dca64a20d62197d2003316b6ceeb866f5ff8d98",
+        "resourceDenial": true,
+        "notificationCenter": true,
+        "notificationRecordCount": 1,
+        "measuredRamShortfallMiB": 243,
+        "inlineMemoryDuplicate": false,
+        "rawWorkerMessageExposed": false,
+        "sameSettingsRetry": true,
+        "runningCancellationNotClaimed": true,
+        "readyRowsReviewed": true,
+        "approvedArtifactVisible": true,
+        "queuedCancellationAndRetry": true,
+        "evidence": "real host plumbing with synthetic worker; model qualification separate"
+      }
+    },
+    {
+      "path": "artifacts/qualification/visual-composer/runs/2026-10-23t17-43-13-828z-045529a1/low-memory-dataset/thin.json",
+      "sha256": "5f72a71530234442fee93014beb62d7202ac81e7ba3b8b2ad852ed50b4e44756",
+      "observed": {
+        "schemaVersion": "low-memory-dataset-host-journey-v1",
+        "status": "passed",
+        "host": "thin",
+        "sourceRevision": "source.982d165850cc7a20284b22ec8dca64a20d62197d2003316b6ceeb866f5ff8d98",
+        "resourceDenial": true,
+        "notificationCenter": true,
+        "notificationRecordCount": 1,
+        "measuredRamShortfallMiB": 243,
+        "inlineMemoryDuplicate": false,
+        "rawWorkerMessageExposed": false,
+        "sameSettingsRetry": true,
+        "runningCancellationNotClaimed": true,
+        "readyRowsReviewed": true,
+        "approvedArtifactVisible": true,
+        "queuedCancellationAndRetry": true,
+        "evidence": "real host plumbing with synthetic worker; model qualification separate"
+      }
+    }
+  ],
+  "parent_roadmap_qualification": false,
+  "attempt_history": [
+    {
+      "run_id": "2026-10-23t17-35-05-095z-760e557f",
+      "evidence": "artifacts/qualification/visual-composer/runs/2026-10-23t17-35-05-095z-760e557f/evidence.json",
+      "result": "2 Canvas browse journeys passed; both memory journeys failed.",
+      "diagnosis": [
+        "Browser test incorrectly assumed no workspace existed after another spec created one.",
+        "Desktop test unconditionally toggled the bell after the task bridge had already opened its panel, closing the expected view."
+      ],
+      "qualification": false
+    },
+    {
+      "run_id": "2026-10-23t17-39-39-029z-3123c5b0",
+      "evidence": "artifacts/qualification/visual-composer/runs/2026-10-23t17-39-39-029z-3123c5b0/evidence.json",
+      "result": "Both Canvas journeys passed. Browser memory notification had one exact243MiB record; subsequent incorrect main-wide duplicate selector counted that record. Desktop center was closed before terminal inspection.",
+      "qualification": false
+    },
+    {
+      "run_id": "2026-10-23t17-43-13-828z-045529a1",
+      "evidence": "artifacts/qualification/visual-composer/runs/2026-10-23t17-43-13-828z-045529a1/evidence.json",
+      "result": "All4actualhostjourneys passed after test-only corrections; source stable at teardown.",
+      "qualification": "current-synthetic-hosts-only"
+    }
+  ],
+  "run_id": "2026-10-23t17-43-13-828z-045529a1",
+  "source_revision": "source.982d165850cc7a20284b22ec8dca64a20d62197d2003316b6ceeb866f5ff8d98",
+  "completed_at": "2026-10-23T17:44:32.167Z",
+  "evidence_path": "artifacts/qualification/visual-composer/runs/2026-10-23t17-43-13-828z-045529a1/evidence.json",
+  "evidence_sha256": "c00b92a9a4b7783b1fa6366bb31ed569d617343777d07133348bc4fd2e55e3da",
+  "accessibility_results": [
+    {
+      "host": "packaged-desktop",
+      "path": "artifacts/qualification/visual-composer/runs/2026-10-23t17-43-13-828z-045529a1/technical-accessibility/packaged-desktop/evidence.json",
+      "sha256": "7130ce03d3faa0e4d53c32765babf59c09ed4cef693f73caecad6c78d3eea547",
+      "status": "passed",
+      "profile_sha256": "62228030f20d6cf88878012f66d1775d681327cab8451b9876a8a5748ef98ecb",
+      "scope": "Existing automated Canvas browse/accessibility journey; no manual study or whole-product claim."
+    },
+    {
+      "host": "thin-chrome",
+      "path": "artifacts/qualification/visual-composer/runs/2026-10-23t17-43-13-828z-045529a1/technical-accessibility/thin-chrome/evidence.json",
+      "sha256": "79fd9e9c559978b5bd227bf6dc86fee6085796cee03d706a44c964ac4ef56465",
+      "status": "passed",
+      "profile_sha256": "62228030f20d6cf88878012f66d1775d681327cab8451b9876a8a5748ef98ecb",
+      "scope": "Existing automated Canvas browse/accessibility journey; no manual study or whole-product claim."
+    }
+  ],
+  "owned_desktop_cleanup": {
+    "path": "artifacts/qualification/visual-composer/runs/2026-10-23t17-43-13-828z-045529a1/owned-host/cleanup-3dab3d403208bd67.json",
+    "sha256": "e3bd94960c6c03290d9d6a68715653c07d60a2c6af9de75a224ecd4b270b7f89",
+    "main_exit_code": 0,
+    "physical_workers_observed": 1,
+    "physical_workers_alive": 0,
+    "scope": "Only the actual isolated controlled-worker desktop journey; not historical retained worker/staging proof."
+  },
+  "checks": [
+    {
+      "target": "thin-chrome",
+      "status": "passed",
+      "duration_ms": 6193
+    },
+    {
+      "target": "thin-chrome",
+      "status": "passed",
+      "duration_ms": 17873
+    },
+    {
+      "target": "packaged-desktop",
+      "status": "passed",
+      "duration_ms": 9708
+    },
+    {
+      "target": "packaged-desktop",
+      "status": "passed",
+      "duration_ms": 26191
+    }
+  ],
+  "source_bindings": {
+    "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs": "457e104ad56bda16ad80029719852bdc4704d6f324f1a6def779a7ba63831637",
+    "dev-tools/scripts/qualification/visual-composer/e2e/low-memory-dataset-journey.ts": "167536747830705c5cf9fb183f561ee218900d3aa70826fb743dd7637a945193",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-low-memory.e2e.spec.ts": "d022cf0be8c203560ce12f97ee10421d9db9bacf7f195fcf74a5011c3aff51d5",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-low-memory.e2e.spec.ts": "8948d7268c07daf06f1d0dbacca362f26cecfeaf6532d8ab4359ea2b9143c984",
+    "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts": "b5b24ff65eb4ef5d884df19e9176b879215e5b4c7a2a7fb3ee69dcc74e049eba",
+    "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts": "fc5d2ef5d20990046e53d6e3dc8183da23f158d5d5079645614c3a58a01261dd"
+  },
+  "limits": [
+    "No accuracy rerun, real model inference, model download or offload lease.",
+    "Synthetic profile identity and host delivery do not qualify actual offload memory/speed/cleanup or protected native staging/accounting.",
+    "Native/offload/security gaps and parent roadmap qualification remain independently owned.",
+    "Two failed host runs remain recorded; temporary test assumptions are not product failures or passing evidence."
+  ]
+}

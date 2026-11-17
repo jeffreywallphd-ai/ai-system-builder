@@ -56,6 +56,11 @@ conversation session before the instance database and platform database.
   supplies workspace/organization authority. Renderers receive opaque task,
   progress, snapshot-result, and sanitized error data, never checkpoint paths,
   credentials, or raw provider responses.
+- Context Management uses one allowlisted typed execute channel. Preload and
+  main independently normalize identifier-only source/browser commands and
+  bounded generation/query settings. Main denies untrusted senders before lazy
+  feature resolution, injects the authoritative local actor, and delegates to
+  the same application facade used by the server host.
 
 Current test coverage for this slice:
 
@@ -64,3 +69,9 @@ Current test coverage for this slice:
 - negative sender-trust, oversized-upload, and workspace-publication tests
 - negative runtime-window sender, subframe, stale-session, and malformed-message
   tests
+
+
+Workspace summary IPC independently validates the identifier-only request and
+requires the host-owned trusted sender policy before application calls. The
+preload validates requests and normalized scalar responses. Application workspace
+and per-group read authorization applies below this transport boundary.

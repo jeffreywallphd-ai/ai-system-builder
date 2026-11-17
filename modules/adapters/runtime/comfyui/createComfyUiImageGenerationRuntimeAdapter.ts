@@ -15,6 +15,7 @@ import type { RuntimeTaskRegistryPort } from "../../../application/ports/runtime
 import type { ComfyUiHttpClient } from "./createComfyUiHttpClient";
 import {
   mapImageGenerationRequestToComfyUiPrompt,
+  resolveBoundedComfyUiImageRequest,
   type ComfyUiImageGenerationWorkflowMapperOptions,
 } from "./comfyUiImageGenerationWorkflowMapper";
 
@@ -44,6 +45,7 @@ interface Deps {
   now?: () => string;
   maximumActiveTasks?: number;
   maximumRetainedTasks?: number;
+  maximumTaskDurationMs?: number;
 }
 
 const GENERIC_NO_OUTPUT_MESSAGE =
@@ -131,15 +133,23 @@ function resolveComfyUiFailure(
 
 export function createComfyUiImageGenerationRuntimeAdapter(
   deps: Deps,
-): RuntimeTaskRegistryPort {
+): RuntimeTaskRegistryPort & { closeAdmission(): void; settleAfterRuntimeStop(): Promise<void> } {
   type PreparedReference = { imageName: string; cleanup?: () => Promise<void> };
   type TrackedRequest = {
     promptId: string;
     submittedAt: string;
+    deadline: number;
     workspaceId: string;
     preparedReferences: readonly PreparedReference[];
   };
   const byRequest = new Map<string, TrackedRequest>();
+  const startingIds = new Set<string>();
+  const starts = new Set<Promise<StartRuntimeTaskResult>>();
+  const orphaned = new Map<string, { preparedReferences: readonly PreparedReference[]; safe: boolean }>();
+  for (const value of [deps.maximumActiveTasks, deps.maximumRetainedTasks, deps.maximumTaskDurationMs]) {
+    if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) throw new Error("Image runtime bounds are invalid.");
+  }
+  const maximumTaskDurationMs = Math.min(6 * 60 * 60 * 1000, Math.max(1000, deps.maximumTaskDurationMs ?? 30 * 60 * 1000));
   const finalResults = new Map<string, RuntimeTaskRecord>();
   const now = deps.now ?? (() => new Date().toISOString());
   const maximumActiveTasks = Math.min(
@@ -266,16 +276,32 @@ export function createComfyUiImageGenerationRuntimeAdapter(
     };
   };
 
-  const cleanupPreparedReferences = async (
-    tracked: Pick<TrackedRequest, "preparedReferences">,
-  ) => {
-    await Promise.allSettled(
-      tracked.preparedReferences.map((reference) => reference.cleanup?.()),
-    );
+  const cleaned = new WeakSet<PreparedReference>();
+  const cleaning = new WeakMap<PreparedReference, Promise<void>>();
+  const cleanupPreparedReferences = async (tracked: Pick<TrackedRequest, "preparedReferences">) => {
+    await Promise.all(tracked.preparedReferences.map(async (reference) => {
+      if (cleaned.has(reference)) return;
+      const existing = cleaning.get(reference); if (existing) return existing;
+      const operation = (async () => { await reference.cleanup?.(); cleaned.add(reference); })();
+      cleaning.set(reference, operation);
+      try { await operation; } finally { cleaning.delete(reference); }
+    }));
   };
-
-  return {
+  let fenced = false;
+  let runtimeStopped = false;
+  let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+  const retrySafeCleanup = async () => {
+    for (const [id, item] of orphaned) {
+      if (!item.safe && !runtimeStopped) continue;
+      try { await cleanupPreparedReferences(item); orphaned.delete(id); } catch { /* Retain ownership for retry. */ }
+    }
+    if ([...orphaned.values()].some((item) => item.safe)) {
+      cleanupTimer = setTimeout(() => void retrySafeCleanup(), 15_000); cleanupTimer.unref?.();
+    }
+  };
+  const port: RuntimeTaskRegistryPort = {
     async startTask(request: StartRuntimeTaskRequest) {
+      if (fenced) throw new Error("Image runtime task admission is closed.");
       if (request.taskType !== TaskType.IMAGE_GENERATION) {
         throw new Error(
           `ComfyUI runtime adapter only supports ${TaskType.IMAGE_GENERATION} tasks.`,
@@ -286,14 +312,20 @@ export function createComfyUiImageGenerationRuntimeAdapter(
           "Workspace id is required for image generation runtime tasks.",
         );
       }
-      if (byRequest.size >= maximumActiveTasks) {
+      const requestId = request.requestId ?? randomUUID();
+      if (!requestId.trim() || requestId.length > 512 || byRequest.has(requestId) || finalResults.has(requestId) || startingIds.has(requestId) || orphaned.has(requestId)) throw new Error("Image generation task identity is unavailable.");
+      if (byRequest.size + startingIds.size + orphaned.size >= maximumActiveTasks) {
         throw new Error(
           "ComfyUI image generation queue is at its active-task capacity.",
         );
       }
-      const imageRequest = request.payload as ImageGenerationRequest;
+      const imageRequest = resolveBoundedComfyUiImageRequest(request.payload as ImageGenerationRequest, deps.mapperOptions);
+      startingIds.add(requestId);
+      try {
       await deps.supervisor.start();
+      if (fenced) throw new Error("Image runtime task admission is closed.");
       const preparedReferences: PreparedReference[] = [];
+      let submissionAttempted = false;
       let submitted: Awaited<ReturnType<ComfyUiHttpClient["submitPrompt"]>>;
       try {
         const latentReference =
@@ -349,21 +381,31 @@ export function createComfyUiImageGenerationRuntimeAdapter(
           latentReferenceImageName: latentReference?.imageName,
           faceReferenceImageNames,
         });
+        if (fenced) throw new Error("Image runtime task admission is closed.");
+        submissionAttempted = true;
         submitted = await deps.client.submitPrompt(payload);
       } catch (error) {
-        await Promise.allSettled(
-          preparedReferences.map((reference) => reference.cleanup?.()),
-        );
+        // A lost submission reply can follow acceptance. Retain inputs until
+        // confirmed worker stop instead of deleting files a worker may consume.
+        orphaned.set(requestId, { preparedReferences, safe: !submissionAttempted });
+        await retrySafeCleanup();
         throw error;
       }
-      const requestId = request.requestId ?? randomUUID();
       const submittedAt = now();
       byRequest.set(requestId, {
         promptId: submitted.prompt_id,
         submittedAt,
+        deadline: Date.parse(submittedAt) + maximumTaskDurationMs,
         workspaceId: request.workspaceId,
         preparedReferences,
       });
+      if (runtimeStopped) {
+        const tracked = byRequest.get(requestId)!;
+        await cleanupPreparedReferences(tracked);
+        byRequest.delete(requestId);
+        rememberFinal(requestId, { ...taskRecordFromTracked(requestId, tracked), status: "failed", error: { code: "host_stopped", message: "The image runtime stopped before generation completed." } });
+        throw new Error("The image runtime stopped before task acceptance completed.");
+      }
       return {
         requestId,
         status: submitted.number === undefined ? "running" : "queued",
@@ -374,6 +416,7 @@ export function createComfyUiImageGenerationRuntimeAdapter(
           runtimeDeviceMode: deps.supervisor.getRuntimeDeviceMode?.(),
         },
       } as StartRuntimeTaskResult;
+      } finally { startingIds.delete(requestId); }
     },
 
     async getTaskStatus(requestId) {
@@ -389,12 +432,10 @@ export function createComfyUiImageGenerationRuntimeAdapter(
           deps.client.getQueue(),
           deps.client.getHistory(),
         ]);
-      } catch (error) {
-        const record = failedRuntimeReadRecord(requestId, tracked, error);
-        await cleanupPreparedReferences(tracked);
-        byRequest.delete(requestId);
-        rememberFinal(requestId, record);
-        return record;
+      } catch {
+        // Network failure and old runtime log text do not prove worker exit.
+        // Keep ownership and prepared inputs until terminal or host-stop evidence.
+        throw Object.assign(new Error("Image generation status is temporarily unavailable."), { code: "unavailable" });
       }
       const historyRecord = history[tracked.promptId] as
         Record<string, unknown> | undefined;
@@ -459,6 +500,14 @@ export function createComfyUiImageGenerationRuntimeAdapter(
         return record;
       }
 
+      if (Date.parse(now()) >= tracked.deadline) {
+        const cancellation = await port.cancelTask(requestId);
+        if (cancellation.cancelled) {
+          const record: RuntimeTaskRecord = { ...finalResults.get(requestId)!, status: "failed", error: { code: "comfyui_task_timeout", message: "Image generation exceeded the host execution deadline." } };
+          rememberFinal(requestId, record); return record;
+        }
+        return { ...taskRecordFromTracked(requestId, tracked), status: "unknown", error: { code: "comfyui_timeout_pending", message: "Image generation exceeded its deadline; runtime cancellation remains pending." } };
+      }
       const pending = queue.queue_pending.some(
         (entry) =>
           Array.isArray(entry) && String(entry[1] ?? "") === tracked.promptId,
@@ -522,7 +571,8 @@ export function createComfyUiImageGenerationRuntimeAdapter(
           message: "Runtime task is no longer cancellable.",
         };
       }
-      await deps.client.cancelPrompt(tracked.promptId);
+      const cancellation = await deps.client.cancelPrompt(tracked.promptId);
+      if (!cancellation.cancelled) return { requestId, cancelled: false, status: "running", message: "Image generation cancellation is pending." };
       await cleanupPreparedReferences(tracked);
       byRequest.delete(requestId);
       const record: RuntimeTaskRecord = {
@@ -566,6 +616,46 @@ export function createComfyUiImageGenerationRuntimeAdapter(
             ? tasks.slice(0, Math.max(0, request.limit))
             : tasks,
       };
+    },
+  };
+  const serial = new Map<string, Promise<unknown>>();
+  const reads = new Map<string, Promise<Awaited<ReturnType<RuntimeTaskRegistryPort["getTaskStatus"]>>>>();
+  const cancellations = new Map<string, Promise<Awaited<ReturnType<RuntimeTaskRegistryPort["cancelTask"]>>>>();
+  const serialize = async <T>(requestId: string, work: () => Promise<T>): Promise<T> => {
+    const previous = serial.get(requestId) ?? Promise.resolve();
+    const operation = previous.catch(() => undefined).then(work); serial.set(requestId, operation);
+    try { return await operation; } finally { if (serial.get(requestId) === operation) serial.delete(requestId); }
+  };
+  return { ...port,
+    async startTask(request) {
+      const operation = port.startTask(request); starts.add(operation);
+      try { return await operation; } finally { starts.delete(operation); }
+    },
+    closeAdmission() { fenced = true; },
+    async getTaskStatus(requestId) {
+      const existing = reads.get(requestId); if (existing) return existing;
+      const operation = serialize(requestId, () => port.getTaskStatus(requestId)); reads.set(requestId, operation);
+      try { return await operation; } finally { reads.delete(requestId); }
+    },
+    async cancelTask(requestId) {
+      const existing = cancellations.get(requestId); if (existing) return existing;
+      const operation = serialize(requestId, () => port.cancelTask(requestId)); cancellations.set(requestId, operation);
+      try { return await operation; } finally { cancellations.delete(requestId); }
+    },
+    async settleAfterRuntimeStop() {
+      // Host-only fence: call after the owning supervisor confirms stop.
+      fenced = true;
+      runtimeStopped = true;
+      await Promise.allSettled([...starts]);
+      clearTimeout(cleanupTimer);
+      await retrySafeCleanup();
+      for (const [requestId, tracked] of [...byRequest]) await serialize(requestId, async () => {
+        if (!byRequest.has(requestId)) return;
+        await cleanupPreparedReferences(tracked);
+        rememberFinal(requestId, { requestId, workspaceId: tracked.workspaceId as never, taskType: TaskType.IMAGE_GENERATION, status: "failed", concurrencyClass: "gpu-exclusive", completedAt: now(), error: { code: "host_stopped", message: "The image runtime stopped before generation completed." }, metadata: { workspaceId: tracked.workspaceId, engine: "comfyui" } });
+        byRequest.delete(requestId);
+      });
+      if (orphaned.size) throw new Error("Image reference cleanup remains pending.");
     },
   };
 }

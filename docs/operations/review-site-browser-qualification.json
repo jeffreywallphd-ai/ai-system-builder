@@ -1,0 +1,83 @@
+{
+  "schema_version": "review-site-browser-qualification-v1",
+  "status": "passed",
+  "summary": "All three automated review-site browser journeys passed. No user action is needed for these checks.",
+  "scope": "Read-only review site only. Product app, model, provider, native offload and whole-software checks keep their separate results.",
+  "observed_source": {
+    "head": "42179ebae1106046efaa035d8c3682b974237dfb",
+    "working_source_digest": "45c8882374268ead2842d981098d7b1c066e6623acf3ed9cfd1c01bf42fe4974",
+    "before_report_publication": true
+  },
+  "execution": {
+    "tests": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "global_errors": 0,
+    "process_exit_code": 0,
+    "duration_ms": 29516.0,
+    "source_stable": true,
+    "output_streams_complete": true
+  },
+  "cases": [
+    {
+      "case": "live",
+      "status": "passed",
+      "duration_ms": 12355,
+      "retry": 0,
+      "observed_phases": [
+        "server-verified",
+        "canonical-view-opened",
+        "sections-ordered",
+        "criteria-and-support-reviewed",
+        "linked-work-opened",
+        "parent-returned"
+      ],
+      "fixture_cleanup_passed": true
+    },
+    {
+      "case": "refresh-recovery",
+      "status": "passed",
+      "duration_ms": 2300,
+      "retry": 0,
+      "observed_phases": [
+        "server-verified",
+        "canonical-copy-opened",
+        "refresh-observed",
+        "unavailable-safe",
+        "connection-recovered"
+      ],
+      "fixture_cleanup_passed": true
+    },
+    {
+      "case": "theme-storage",
+      "status": "passed",
+      "duration_ms": 8388,
+      "retry": 0,
+      "observed_phases": [
+        "server-verified",
+        "dark-default",
+        "light-selected",
+        "preference-reopened",
+        "narrow-keyboard-view",
+        "storage-refusal-usable"
+      ],
+      "fixture_cleanup_passed": true
+    }
+  ],
+  "controls": [
+    "One background Chrome worker used a fresh output directory and isolated browser contexts.",
+    "The fixed proxy required the reference header and format marker, read only the authorized loopback routes, and checked current repository identity and shipped assets.",
+    "No app setup, provider credentials, model loading, screenshot, trace, video, download or external publication was part of these cases.",
+    "The report retains only fixed phase/result facts. It contains no page contents, private errors, credentials, prompts or local paths."
+  ],
+  "limits": [
+    "Source-definition checks and inventory entries do not execute or pass a browser journey. This report records the separately executed three-case command.",
+    "Fixture/request cleanup and normal runner exit are ordinary test observations. They do not qualify physical process trees, native file protection, model-worker crash recovery or offload resources.",
+    "The controlled refresh cases use a declared synthetic copy and failure. The live case reads the actual bounded local server.",
+    "No parent roadmap or final-current-source qualification is granted. Full software/system tests remain deferred until open feature implementation is worked through.",
+    "Earlier failed controller/source observations remain preserved. Accepted model accuracy/OCR stay closed, private-provider website checking stays deferred, and headless implementation stays on hold."
+  ],
+  "parent_qualification_granted": false
+}

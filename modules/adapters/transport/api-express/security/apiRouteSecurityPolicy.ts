@@ -1,4 +1,13 @@
 import type { OrganizationRole } from "../../../../contracts/organization";
+import { MANAGED_BROWSER_CONSENT_PATH, MANAGED_BROWSER_OBSERVE_PATH } from "../../../../contracts/headless";
+import { MANAGED_BROWSER_PLAN_APPROVAL_PATH, MANAGED_BROWSER_PLAN_CHAT_PATH } from "../../../../contracts/headless";
+import { MANAGED_BROWSER_ACKNOWLEDGE_PATH, MANAGED_BROWSER_CONTEXT_PATH, MANAGED_BROWSER_DELIVERY_PATH,
+  MANAGED_BROWSER_PUBLISH_CONTEXT_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_AGENT_WINDOW_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_PLAN_REVIEW_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_PLAN_STEP_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH } from "../../../../contracts/headless";
+import { MANAGED_HEADLESS_PROVIDER_FILE_PREVIEW_PATH } from "../../../../contracts/headless";
 import type { SecurityScope } from "../../../../contracts/security";
 
 export interface ApiRoutePolicy {
@@ -9,10 +18,56 @@ export interface ApiRoutePolicy {
   securityCode?: string;
 }
 
+export const MANAGED_SAVED_STATE_PATHS = {
+  snapshot: "/api/headless/system-builder/snapshot",
+  changes: "/api/headless/system-builder/changes",
+  stream: "/api/headless/system-builder/stream",
+} as const;
+export const MANAGED_HEADLESS_AGENT_PATHS = {
+  read: "/api/headless/agent/read",
+  author: "/api/headless/agent/author",
+  "plan-review": MANAGED_HEADLESS_PLAN_REVIEW_PATH,
+  "plan-step": MANAGED_HEADLESS_PLAN_STEP_PATH,
+  "local-file-preview": MANAGED_HEADLESS_LOCAL_FILE_PREVIEW_PATH,
+  "provider-file-preview": MANAGED_HEADLESS_PROVIDER_FILE_PREVIEW_PATH,
+  window: MANAGED_HEADLESS_AGENT_WINDOW_PATH,
+} as const;
+export function isManagedSavedStatePath(method: string, path: string): boolean {
+  return method === "POST" && Object.values(MANAGED_SAVED_STATE_PATHS).some((route) => route === path);
+}
+
 export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   string,
   ApiRoutePolicy
 >([
+  [`POST ${MANAGED_BROWSER_CONSENT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_BROWSER_OBSERVE_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_BROWSER_PLAN_APPROVAL_PATH}`, { public: false, scopes: ["workspace:read", "asset:read", "asset:write"] }],
+  [`POST ${MANAGED_BROWSER_PLAN_CHAT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read", "asset:write"] }],
+  [`POST ${MANAGED_BROWSER_DELIVERY_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_BROWSER_ACKNOWLEDGE_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_BROWSER_CONTEXT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_BROWSER_PUBLISH_CONTEXT_PATH}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS.read}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  // The authoring use case requires the write scope for mutations. Preview is a read.
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS.author}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS["plan-review"]}`, { public: false, scopes: ["workspace:read", "asset:read", "asset:write"] }],
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS["plan-step"]}`, { public: false, scopes: ["workspace:read", "asset:read", "asset:write"] }],
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS["local-file-preview"]}`, { public: false, scopes: ["workspace:read", "artifact:read"] }],
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS["provider-file-preview"]}`, { public: false, scopes: ["workspace:read", "artifact:read"] }],
+  [`POST ${MANAGED_HEADLESS_AGENT_PATHS.window}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_SAVED_STATE_PATHS.snapshot}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_SAVED_STATE_PATHS.changes}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  [`POST ${MANAGED_SAVED_STATE_PATHS.stream}`, { public: false, scopes: ["workspace:read", "asset:read"] }],
+  ["POST /api/asset-composition/workspaces/:workspaceId/plans", {public: false, scopes: ["asset:write"]}],
+  ["PATCH /api/asset-composition/workspaces/:workspaceId/plans/:planId", {public: false, scopes: ["asset:write"]}],
+  ["POST /api/asset-composition/workspaces/:workspaceId/plans/:planId/projections", {public: false, scopes: ["asset:write"]}],
+  ["POST /api/asset-composition/workspaces/:workspaceId/plans/:planId/relationships", {public: false, scopes: ["asset:write"]}],
+  ["POST /api/asset-composition/workspaces/:workspaceId/plans/:planId/validate", {public: false, scopes: ["asset:write"]}],
+  ["GET /api/asset-composition/workspaces/:workspaceId/projections/:projectionId/plans", {public: false, scopes: ["asset:read"]}],
+  ["GET /api/asset-composition/workspaces/:workspaceId/effective-assets/:kind/:id/plans", {public: false, scopes: ["asset:read"]}],
+  ["GET /api/asset-composition/workspaces/:workspaceId/plans-needing-attention", {public: false, scopes: ["asset:read"]}],
+  ["GET /api/workspaces/summary", { public: false, scopes: ["workspace:read"] }],
   ["GET /api/security/status", { public: true }],
   ["POST /api/security/pairing/complete", { public: true }],
   [
@@ -21,7 +76,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   ["GET /api/security/tls/local-ca.pem", { public: true }],
   ["GET /api/security/dev-mode", { public: true }],
-  ["POST /api/security/dev-mode", { public: true }],
+  ["POST /api/security/dev-mode", { public: false, scopes: ["security:admin"] }],
 
   ["GET /api/workspaces", { public: false, scopes: ["workspace:read"] }],
   ["POST /api/workspaces", { public: false, scopes: ["workspace:write"] }],
@@ -52,6 +107,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   ["POST /api/model/download/read", { public: false, scopes: ["model:read"] }],
   ["POST /api/model/download/list", { public: false, scopes: ["model:read"] }],
+  ["POST /api/model/download/complete", { public: false, scopes: ["model:write"] }],
   [
     "POST /api/model/download/cancel",
     { public: false, scopes: ["model:write"] },
@@ -195,6 +251,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["artifact:write"] },
   ],
   ["POST /api/artifact/upload", { public: false, scopes: ["artifact:write"] }],
+  ["POST /api/ingestion/tasks/execute", { public: false, scopes: ["artifact:write"] }],
   [
     "POST /api/artifact/ingest-website-page",
     { public: false, scopes: ["artifact:write"] },
@@ -216,11 +273,23 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["artifact:read"] },
   ],
   [
+    "GET /api/dataset-preparation/tasks/:requestId/review-page",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
     "POST /api/dataset-preparation/tasks/:requestId/approve",
     { public: false, scopes: ["artifact:write"] },
   ],
   [
     "POST /api/dataset-preparation/tasks/:requestId/cancel",
+    { public: false, scopes: ["artifact:write"] },
+  ],
+  [
+    "POST /api/context-management/read",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
+    "POST /api/context-management/write",
     { public: false, scopes: ["artifact:write"] },
   ],
   ["GET /api/dataset-reviews", { public: false, scopes: ["artifact:read"] }],
@@ -415,6 +484,8 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ["GET /api/systems/release", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/releases", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/publication", { public: false, scopes: ["asset:read"] }],
+  ["GET /api/systems/published-forms", { public: false, scopes: ["asset:read"] }],
+  ["POST /api/systems/published-forms/submit", { public: false, scopes: ["asset:write"] }],
   [
     "GET /api/systems/published-lifecycle",
     { public: false, scopes: ["asset:read"] },

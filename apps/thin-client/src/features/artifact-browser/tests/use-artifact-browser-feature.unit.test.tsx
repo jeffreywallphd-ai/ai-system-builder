@@ -18,6 +18,28 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+async function expectConfirmationLabel(input: HTMLInputElement, text: string): Promise<void> {
+  const labels = Array.from(input.labels ?? []);
+  expect(labels).toHaveLength(1);
+  const label = labels[0]!;
+  expect(label.control).toBe(input);
+  expect(label.textContent?.trim()).toBe(text);
+  expect(input.id).not.toBe("");
+  expect(label.htmlFor).toBe(input.id);
+  expect(Array.from(document.querySelectorAll("[id]")).filter((node) => node.id === input.id)).toHaveLength(1);
+  expect(label.querySelector("button")).toBeNull();
+  const hint = label.parentElement?.querySelector<HTMLButtonElement>(".ui-glossary-hint__button");
+  expect(hint).toBeInstanceOf(HTMLButtonElement);
+  if (!hint) throw new Error("The confirmation help is unavailable.");
+  const value = input.value;
+  await act(async () => { hint.click(); });
+  expect(hint.getAttribute("aria-expanded")).toBe("true");
+  expect(input.value).toBe(value);
+  await act(async () => { hint.click(); });
+  expect(hint.getAttribute("aria-expanded")).toBe("false");
+  expect(input.value).toBe(value);
+}
+
 describe("ArtifactBrowserFeature", () => {
   let mountedRoot: Root | undefined;
   let mountedContainer: HTMLDivElement | undefined;
@@ -95,6 +117,83 @@ describe("ArtifactBrowserFeature", () => {
     expect(container.textContent).toContain("Selected key");
     expect(container.textContent).toContain(storageKey);
     expect(onInitialSelectionHandled).toHaveBeenCalledOnce();
+  });
+
+  it("enables Convert to RAG only after authoritative readiness and forwards the artifact id", async () => {
+    const storageKey = "datasets/chunked-support.parquet";
+    const onConvertToRag = vi.fn();
+    const readContextConversionReadiness = vi.fn().mockResolvedValue({
+      artifactId: storageKey,
+      ready: true,
+      locallyReadable: true,
+      textFields: ["question", "answer"],
+      alreadyChunked: true,
+      chunkCount: 4,
+    });
+    const client = {
+      browseArtifacts: vi.fn().mockResolvedValue([
+        {
+          storageKey,
+          originalName: "chunked-support.parquet",
+          artifactFamily: "tabular" as const,
+          mediaType: "application/vnd.apache.parquet",
+        },
+      ]),
+      readArtifactDetail: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        originalName: "chunked-support.parquet",
+        artifactFamily: "tabular" as const,
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+      }),
+      readArtifactContent: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+        availability: "available" as const,
+        retrieval: "deferred" as const,
+      }),
+      createArtifactMediaViewUrl: vi.fn().mockReturnValue(""),
+      deleteRegisteredArtifact: vi.fn(),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi.fn(),
+      clearHuggingFaceToken: vi.fn(),
+      publishArtifactToHuggingFace: vi.fn(),
+      verifyPublishedArtifactBacking: vi.fn(),
+      registerArtifactFromRepo: vi.fn(),
+      localizeArtifactFromRepo: vi.fn(),
+    };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    mountedContainer = container;
+    mountedRoot = createRoot(container);
+
+    await act(async () => {
+      mountedRoot?.render(
+        <ArtifactBrowserFeature
+          client={client}
+          workspaceId="workspace-a"
+          initialSelectedStorageKey={storageKey}
+          readContextConversionReadiness={readContextConversionReadiness}
+          onConvertToRag={onConvertToRag}
+        />,
+      );
+    });
+
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain(
+        "4 persisted chunks are ready to reuse.",
+      ),
+    );
+    const convert = [
+      ...document.body.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((candidate) => candidate.textContent === "Convert to RAG database")!;
+    expect(convert.disabled).toBe(false);
+    await act(async () => convert.click());
+    expect(readContextConversionReadiness).toHaveBeenCalledWith(storageKey);
+    expect(onConvertToRag).toHaveBeenCalledWith(storageKey);
   });
 
   it("hides token and publish controls while showing published backing details", async () => {
@@ -277,11 +376,27 @@ describe("ArtifactBrowserFeature", () => {
       deleteButton.click();
     });
 
-    const confirmationInput = Array.from(
+    let confirmationInput = Array.from(
       document.body.querySelectorAll("input"),
     ).find(
       (input) => input.getAttribute("placeholder") === "Delete",
     ) as HTMLInputElement;
+    await expectConfirmationLabel(confirmationInput, "Confirmation");
+    const firstConfirmationId = confirmationInput.id;
+    const confirmationDialog = confirmationInput.closest('[role="dialog"]')!;
+    const cancel = Array.from(confirmationDialog.querySelectorAll("button")).find((button) => button.textContent === "Cancel")!;
+    await act(async () => { cancel.click(); });
+    expect(document.getElementById(firstConfirmationId)).toBeNull();
+    expect(client.deleteRegisteredArtifact).not.toHaveBeenCalled();
+    await act(async () => { deleteButton.click(); });
+    confirmationInput = document.querySelector<HTMLInputElement>('input[placeholder="Delete"]')!;
+    await expectConfirmationLabel(confirmationInput, "Confirmation");
+    expect(confirmationInput.id).toBe(firstConfirmationId);
+    await act(async () => { setInputValue(confirmationInput, "delete"); });
+    const wrongCaseConfirm = Array.from(confirmationInput.closest('[role="dialog"]')!.querySelectorAll("button")).find((button) => button.textContent === "Confirm delete")!;
+    expect(wrongCaseConfirm.disabled).toBe(true);
+    await act(async () => { wrongCaseConfirm.click(); });
+    expect(client.deleteRegisteredArtifact).not.toHaveBeenCalled();
     setInputValue(confirmationInput, "Delete");
 
     const confirmButton = Array.from(document.body.querySelectorAll("button")).find(
@@ -340,6 +455,12 @@ describe("ArtifactBrowserFeature", () => {
     const deleteAllInput = Array.from(document.body.querySelectorAll("input")).find(
       (input) => input.getAttribute("placeholder") === "Delete All",
     ) as HTMLInputElement;
+    await expectConfirmationLabel(deleteAllInput, "Bulk delete confirmation");
+    await act(async () => { setInputValue(deleteAllInput, "delete all"); });
+    const wrongCaseBulk = Array.from(document.body.querySelectorAll("button")).find((button) => button.textContent?.includes("Delete Selected"))!;
+    expect(wrongCaseBulk.disabled).toBe(true);
+    await act(async () => { wrongCaseBulk.click(); });
+    expect(client.deleteRegisteredArtifact).not.toHaveBeenCalled();
     setInputValue(deleteAllInput, "Delete All");
     const deleteSelected = Array.from(
       document.body.querySelectorAll("button"),

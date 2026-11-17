@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, open, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ParquetDatasetReviewPort } from "../../../application/ports/dataset-review";
 import type { DatasetReviewRow } from "../../../contracts/dataset";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import { TaskType } from "../../../contracts/runtime";
+import { RETRIEVE_ARTIFACT_MAXIMUM_BYTES } from '../../../contracts/storage';
 import type { RuntimeTaskRegistryPort } from "../../../application/ports/runtime";
 import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "./pythonRuntimeTaskTimeoutPolicy";
 
@@ -78,7 +79,7 @@ async function runReviewTask(
   content: Uint8Array,
   operation: Record<string, unknown>,
 ): Promise<Record<string, unknown> & { outputContent?: Uint8Array }> {
-  if (!(content instanceof Uint8Array) || content.byteLength === 0) {
+  if (!(content instanceof Uint8Array) || content.byteLength === 0 || content.byteLength > RETRIEVE_ARTIFACT_MAXIMUM_BYTES) {
     throw new Error("Dataset review requires a non-empty Parquet artifact.");
   }
   const workingDirectory = await mkdtemp(
@@ -115,7 +116,7 @@ async function runReviewTask(
           const outputPath = join(workingDirectory, outputHandle);
           return {
             ...data,
-            outputContent: new Uint8Array(await readFile(outputPath)),
+            outputContent: await readBoundedReviewOutput(outputPath),
           };
         }
         return data;
@@ -138,6 +139,30 @@ async function runReviewTask(
     throw new Error("Dataset review timed out.");
   } finally {
     await rm(workingDirectory, { recursive: true, force: true });
+  }
+}
+
+async function readBoundedReviewOutput(path: string): Promise<Uint8Array> {
+  let file: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    file = await open(path, 'r');
+    const stat = await file.stat();
+    if (!stat.isFile() || stat.size <= 0 || stat.size > RETRIEVE_ARTIFACT_MAXIMUM_BYTES)
+      throw new Error('Revised dataset exceeds the review byte limit.');
+    // One extra byte detects growth without an unbounded readFile allocation.
+    const content = new Uint8Array(stat.size + 1);
+    let offset = 0;
+    while (offset < content.byteLength) {
+      const {bytesRead} = await file.read(content, offset, content.byteLength - offset, null);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    if (offset !== stat.size) throw new Error('Revised dataset changed during review.');
+    return content.subarray(0, stat.size);
+  } catch {
+    throw new Error('Revised dataset is unavailable, changed, or exceeds the review byte limit.');
+  } finally {
+    try {await file?.close();} catch {throw new Error('Revised dataset read could not be completed.');}
   }
 }
 

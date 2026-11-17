@@ -14,6 +14,14 @@ import {
 } from "..";
 
 describe("desktop python runtime ipc contract", () => {
+  it("round trips explicit loaded mode and denies unrecognized mode metadata", () => {
+    const payload = {
+      supervisorStatus: "ready" as const, healthy: true, runtimeStatus: "ready", capabilities: [], logs: [],
+      loadedModels: [{ provider: "transformers" as const, modelId: "fixture/model", inferenceMode: "chat" as const, memoryMode: "offload-v1" as const }],
+    };
+    expect(createDesktopPythonRuntimeStatusReadSuccessResponse(payload).value.loadedModels?.[0]?.memoryMode).toBe("offload-v1");
+    expect(() => createDesktopPythonRuntimeStatusReadSuccessResponse({ ...payload, loadedModels: [{ ...payload.loadedModels[0], memoryMode: "unsupported" as any }] })).toThrow();
+  });
   it("defines operation and channel identities", () => {
     expect(DESKTOP_PYTHON_RUNTIME_STATUS_READ_OPERATION).toBe("runtime.python-status-read");
     expect(DESKTOP_PYTHON_RUNTIME_CONTROL_OPERATION).toBe("runtime.python-control");
@@ -98,4 +106,20 @@ describe("desktop python runtime ipc contract", () => {
     expect(controlResponse.ok).toBe(true);
     expect(controlResponse.value.supervisorStatus).toBe("starting");
   });
+});
+it("normalizes optional startup diagnostics independently from legacy status and ignores accessors", () => {
+  const startupDiagnostics = { schemaVersion: "1", attempt: 1, outcome: "failed", phase: "context", reason: "unsupported-python", dependencies: [], stages: [] } as const;
+  const payload = { supervisorStatus: "failed" as const, healthy: false, runtimeStatus: "failed", capabilities: [], logs: [], startupDiagnostics };
+  expect(createDesktopPythonRuntimeStatusReadSuccessResponse(payload).value.startupDiagnostics).toEqual(startupDiagnostics);
+  expect(createDesktopPythonRuntimeStatusReadSuccessResponse({ ...payload, startupDiagnostics: { ...startupDiagnostics, raw: "private" } as any }).value.startupDiagnostics).toBeUndefined();
+  let calls = 0;
+  Object.defineProperty(payload, "startupDiagnostics", { get() { calls++; throw new Error("private"); } });
+  expect(createDesktopPythonRuntimeStatusReadSuccessResponse(payload).value.startupDiagnostics).toBeUndefined();
+  expect(calls).toBe(0);
+  const optionalTrap = new Proxy({ supervisorStatus: "failed" as const, healthy: false, runtimeStatus: "failed", capabilities: [], logs: [] }, { getOwnPropertyDescriptor(target, key) {
+    if (key === "startupDiagnostics") throw new Error("synthetic optional descriptor failure");
+    return Reflect.getOwnPropertyDescriptor(target, key);
+  } });
+  expect(createDesktopPythonRuntimeStatusReadSuccessResponse(optionalTrap).value.supervisorStatus).toBe("failed");
+  expect(createDesktopPythonRuntimeStatusReadSuccessResponse(optionalTrap).value.startupDiagnostics).toBeUndefined();
 });

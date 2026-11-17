@@ -108,12 +108,23 @@ describe("createLogger", () => {
       event: "observability.logging.write_failed",
       component: "observability-logger",
       host: "desktop",
-      data: {
-        failedEvent: "upload.failed",
-        sinkErrorMessage: "sink unavailable",
-      },
     });
 
+    expect(JSON.stringify(failureEvent)).not.toContain("sink unavailable");
     consoleErrorSpy.mockRestore();
   });
+});
+
+it("contains normalization, serialization and fallback failures without disclosing payloads", async () => {
+  const sink = testDouble.fn();
+  const spy = testDouble.spyOn(console, "error").mockImplementation(() => { throw new Error("console unavailable"); });
+  const logger = createLogger({ sink });
+  const base = { timestamp: "now", component: "test", level: "error", verbosity: "normal", event: "test", message: "safe" } as StructuredLogEvent;
+  const cyclic: any = {}; cyclic.self = cyclic;
+  try {
+    for (const event of [{ ...base, timestamp: undefined }, { ...base, data: cyclic }, { ...base, data: { value: 1n } }]) {
+      await expect(logger.log(event as never)).resolves.toBeUndefined();
+    }
+    expect(sink).not.toHaveBeenCalled();
+  } finally { spy.mockRestore(); }
 });

@@ -1,4 +1,4 @@
-declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
-declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
-declare const SYSTEM_RUNTIME_WEBPACK_ENTRY: string;
-declare const SYSTEM_RUNTIME_PRELOAD_WEBPACK_ENTRY: string;
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
+declare const MAIN_WINDOW_VITE_NAME: string;
+declare const SYSTEM_RUNTIME_VITE_DEV_SERVER_URL: string | undefined;
+declare const SYSTEM_RUNTIME_VITE_NAME: string;

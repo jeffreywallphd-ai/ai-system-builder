@@ -57,6 +57,7 @@ export interface UseArtifactBrowserFeatureResult {
     showRegisterForm: boolean;
   };
   viewState: ArtifactBrowserViewState;
+  isDeleting: boolean;
   pendingDeleteConfirmation?: PendingDeleteConfirmation;
   deleteConfirmationInput: string;
   selectArtifact: (storageKey: string) => Promise<void>;
@@ -168,7 +169,7 @@ export function useArtifactBrowserFeature(
     client: artifactClient,
     workspaceId,
     refreshArtifacts: artifacts.refreshArtifacts,
-    clearSelectedArtifact: selection.clearSelectedArtifact,
+    captureSelectionClear: selection.captureSelectionClear,
     setViewState,
   });
 
@@ -237,6 +238,7 @@ export function useArtifactBrowserFeature(
     publishForm: publishLogic.publishForm,
     registerForm: huggingFace.registerForm,
     viewState,
+    isDeleting: deleteFlow.isDeleting,
     pendingDeleteConfirmation: deleteFlow.pendingDeleteConfirmation,
     deleteConfirmationInput: deleteFlow.deleteConfirmationInput,
     selectArtifact: selection.selectArtifact,
@@ -277,7 +279,7 @@ export function useArtifactBrowserFeature(
     setRepositoryVisibility: publishLogic.setRepositoryVisibility,
     togglePublishForm: publishLogic.togglePublishForm,
     readArtifactMedia: (storageKey: string) =>
-      artifactClient.readArtifactMedia({ storageKey }),
+      artifactClient.readArtifactMedia({ storageKey }, { workspaceId }),
     setRegisterRepository: huggingFace.setRegisterRepository,
     setRegisterNamespace: huggingFace.setRegisterNamespace,
     setRegisterPathInRepo: huggingFace.setRegisterPathInRepo,

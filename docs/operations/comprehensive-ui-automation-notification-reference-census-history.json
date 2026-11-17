@@ -1,0 +1,40 @@
+{
+  "schema_version": "working-ui-census-update-v1",
+  "scope": "working-source-facts-only-no-execution",
+  "roadmap_id": "comprehensive-ui-automation",
+  "prior_commit": "6c785c91f117d816829a899428433e162accfde2",
+  "prior_census_path": "docs/operations/comprehensive-ui-automation-current-census.json",
+  "prior_census_git_sha256": "ee29ddfbc1e7db4fc1b0ba6db7c091df07d994607015ed70c91f070ebac00d68",
+  "prior_census_working_sha256": "ee29ddfbc1e7db4fc1b0ba6db7c091df07d994607015ed70c91f070ebac00d68",
+  "source_baseline": "be0a48e241ca94d1ad18fda89ffa8f095d98e56c",
+  "preserved_fields_sha256": "41c59fc3280c851bf833651bf3ffd275bade3c04dc9c61e79ce07085cdcec26c",
+  "qualification_effect": {
+    "executed_tests": 0,
+    "actual_host_pass": false,
+    "parent_qualification_granted": false,
+    "full_testing_status": "deferred-by-user"
+  },
+  "sources": [
+    {
+      "path": "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+      "prior_row_sha256": "56d17bd6463bbfb6cffc57643612f582f2555409f5902f3614a0bf6af792bc21",
+      "current_row_sha256": "4c14c656bcfe7e816d524ca0312eb73ca1c77a0765cc9852d9a91e528fbe4859"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
+      "prior_row_sha256": "f8a39279a10e8972375c0f6f227e90921be7fde3277a735850a63f44c7adfedd",
+      "current_row_sha256": "c92654392392d3336f3b059de545e1f63083aeef2ae8e120584c3f09eb885a7e"
+    },
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts",
+      "prior_row_sha256": "9b2fa36c79323c5c0398543790243ec6c1f05ccefa42947561b86ed487bcb4c9",
+      "current_row_sha256": "856727edfd10d91ea72a750ceaa93a19cf27b6f0eb5448967f8e06bbd23dedc4"
+    }
+  ],
+  "unreviewed_source_drift": [
+    "dev-tools/scripts/qualification/tests/critical-surface-accessibility.unit.test.ts",
+    "dev-tools/scripts/qualification/tests/technical-accessibility-observation.unit.test.ts",
+    "dev-tools/scripts/qualification/visual-composer/e2e/technical-accessibility.ts"
+  ],
+  "reason": "Update only current notification reference proof and state-coverage definition facts. Committed pins, prior history and every unreviewed working-source gap remain; this inventory grants no executed or parent qualification."
+}

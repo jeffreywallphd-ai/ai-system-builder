@@ -9,7 +9,7 @@ const recoveryImplementation =
   "dev-tools/scripts/persistence/postgres-recovery-drill.ts";
 
 test("CI continuously runs the disposable PostgreSQL 18 live conformance suite", async () => {
-  const workflow = await readFile(".github/workflows/ci.yml", "utf8");
+  const workflow = (await readFile(".github/workflows/ci.yml", "utf8")).replace(/\r\n?/g, "\n");
   const packageJson = await readFile("package.json", "utf8");
   const recoveryDrill = await readFile(recoveryImplementation, "utf8");
   const recoveryLauncher = await readFile(recoveryEntrypoint, "utf8");

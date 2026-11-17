@@ -19,6 +19,7 @@ export interface TabbedPanelProps {
   readonly activeTabId?: string;
   readonly defaultTabId?: string;
   readonly tabListAriaLabel?: string;
+  readonly tabListAction?: ReactNode;
   readonly className?: string;
   readonly panelClassName?: string;
   readonly onTabChange?: (tabId: string) => void;
@@ -39,6 +40,7 @@ export function TabbedPanel({
   activeTabId: controlledActiveTabId,
   defaultTabId,
   tabListAriaLabel,
+  tabListAction,
   className,
   panelClassName,
   onTabChange,
@@ -126,8 +128,7 @@ export function TabbedPanel({
     .join(" ");
   const panelId = `${instanceId}-panel-${activeTab.id}`;
 
-  return (
-    <section className={tabbedPanelClassName}>
+  const tabList = (
       <div
         className="ui-tabbed-panel__tablist"
         role="tablist"
@@ -164,6 +165,11 @@ export function TabbedPanel({
           );
         })}
       </div>
+  );
+
+  return (
+    <section className={tabbedPanelClassName}>
+      {tabListAction ? <div className="ui-tabbed-panel__tab-row">{tabList}{tabListAction}</div> : tabList}
       {hasPersistentTabs ? (
         tabs.map((tab) => {
           const isActive = tab.id === activeTab.id;

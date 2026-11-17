@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import contextmanager
+import errno
 import json
+import os
 from pathlib import Path
 from shutil import rmtree
+import stat
 import sys
 from tempfile import TemporaryDirectory
 from threading import Thread
@@ -29,6 +33,7 @@ from modules.adapters.runtime.python.worker.tasks.local_text_generation import (
     _SystemMemorySnapshot,
     _create_structured_snapshot_tqdm,
     _ensure_model_load_resources,
+    _calibrated_cpu_memory_requirement,
     _start_snapshot_cache_progress_monitor,
     _resolve_snapshot_download_profile,
     _structured_huggingface_file_progress,
@@ -197,6 +202,252 @@ class _NoChatTokenizer:
 class LocalTextGenerationTests(unittest.TestCase):
     def setUp(self) -> None:
         _GENERATOR_CACHE.clear()
+
+    def _indexed_snapshot_fixture(self, *, linked: bool = False):
+        fixture_root = Path.cwd() / "artifacts"
+        fixture_root.mkdir(exist_ok=True)
+        temporary = TemporaryDirectory(prefix="hf-index-", dir=fixture_root)
+        self.addCleanup(temporary.cleanup)
+        cache = Path(temporary.name) / "hub"
+        model_id = "synthetic/indexed-model"
+        repository = cache / "models--synthetic--indexed-model"
+        revision = "c" * 40
+        snapshot = repository / "snapshots" / revision
+        snapshot.mkdir(parents=True)
+        blobs = repository / "blobs"
+        blobs.mkdir()
+        (snapshot / "config.json").write_text("{}", encoding="utf-8")
+        (snapshot / "tokenizer.json").write_text("{}", encoding="utf-8")
+        shard_name = "model.safetensors-00001-of-00001.safetensors"
+        index = snapshot / "model.safetensors.index.json"
+        index_bytes = json.dumps({"weight_map": {"layer": shard_name}}).encode("utf-8")
+        if linked:
+            (blobs / ("a" * 64)).write_bytes(b"synthetic fixture; never loaded")
+            (blobs / ("b" * 40)).write_bytes(index_bytes)
+            try:
+                (snapshot / shard_name).symlink_to(Path("../../blobs") / ("a" * 64))
+                index.symlink_to(Path("../../blobs") / ("b" * 40))
+            except OSError as error:
+                if error.errno == errno.EPERM or getattr(error, "winerror", None) == 1314:
+                    self.skipTest("Actual file-symlink coverage unavailable: filesystem privilege denied")
+                raise
+        else:
+            (snapshot / shard_name).write_bytes(b"synthetic fixture; never loaded")
+            index.write_bytes(index_bytes)
+        return SimpleNamespace(
+            cache=cache, repository=repository, snapshot=snapshot, blobs=blobs,
+            model=LocalModelConfig(provider="transformers", modelId=model_id),
+            shard_name=shard_name, index=index, revision=revision,
+        )
+
+    @contextmanager
+    def _snapshot_link_observations(self, links):
+        # Controlled link observations supplement real copied-file tests. They
+        # never qualify the actual filesystem cases skipped for missing privilege.
+        original_lstat, original_resolve, original_readlink = Path.lstat, Path.resolve, os.readlink
+
+        def lstat(path):
+            if path in links:
+                return SimpleNamespace(st_mode=stat.S_IFLNK, st_size=0)
+            return original_lstat(path)
+
+        def resolve(path, strict=False):
+            if path in links:
+                return original_resolve(path.parent / links[path], strict=strict)
+            return original_resolve(path, strict=strict)
+
+        def readlink(path):
+            if Path(path) in links:
+                return str(links[Path(path)])
+            return original_readlink(path)
+
+        with patch.object(Path, "lstat", lstat), patch.object(Path, "resolve", resolve), patch.object(os, "readlink", readlink):
+            yield
+
+    def _assert_indexed_download(self, *, linked: bool):
+        fixture = self._indexed_snapshot_fixture(linked=linked)
+        calls = []
+
+        def snapshot_download(**kwargs):
+            calls.append(kwargs)
+            if kwargs["local_files_only"]:
+                raise FileNotFoundError("Synthetic cache miss")
+            return str(fixture.snapshot)
+
+        with (
+            patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}),
+            patch.dict(sys.modules, {"huggingface_hub": SimpleNamespace(snapshot_download=snapshot_download)}),
+            patch.dict(_RESOLVED_MODEL_REFERENCES, {}, clear=True),
+        ):
+            result = ensure_generation_model_downloaded(fixture.model)
+            self.assertEqual(_RESOLVED_MODEL_REFERENCES[fixture.model.modelId], str(fixture.snapshot))
+        self.assertEqual([call["local_files_only"] for call in calls], [True, False])
+        self.assertEqual(calls[-1]["repo_id"], fixture.model.modelId)
+        self.assertEqual(calls[-1]["ignore_patterns"], list(GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE.ignore_patterns))
+        self.assertNotIn("allow_patterns", calls[-1])
+        self.assertEqual(result.cache_handle, f"models--synthetic--indexed-model/snapshots/{fixture.revision}")
+        self.assertEqual(result.local_path, str(fixture.snapshot))
+        self.assertTrue(result.downloaded)
+        self.assertFalse(result.from_cache)
+
+    def test_indexed_download_keeps_real_cache_profile_and_handle_validation(self) -> None:
+        self._assert_indexed_download(linked=False)
+
+    def test_linked_indexed_download_keeps_real_cache_profile_and_handle_validation(self) -> None:
+        self._assert_indexed_download(linked=True)
+
+    def _assert_indexed_cache_hit(self, *, linked: bool):
+        fixture = self._indexed_snapshot_fixture(linked=linked)
+        calls = []
+
+        def snapshot_download(**kwargs):
+            calls.append(kwargs)
+            self.assertTrue(kwargs["local_files_only"])
+            return str(fixture.snapshot)
+
+        with (
+            patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}),
+            patch.dict(sys.modules, {"huggingface_hub": SimpleNamespace(snapshot_download=snapshot_download)}),
+            patch.dict(_RESOLVED_MODEL_REFERENCES, {}, clear=True),
+        ):
+            result = ensure_generation_model_downloaded(fixture.model)
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(result.from_cache)
+        self.assertFalse(result.downloaded)
+        self.assertEqual(result.cache_handle, f"models--synthetic--indexed-model/snapshots/{fixture.revision}")
+
+    def test_indexed_cache_hit_keeps_real_profile_and_handle_validation(self) -> None:
+        self._assert_indexed_cache_hit(linked=False)
+
+    def test_linked_indexed_cache_hit_keeps_real_profile_and_handle_validation(self) -> None:
+        self._assert_indexed_cache_hit(linked=True)
+
+    def test_indexed_snapshot_controlled_links_stay_in_selected_repository(self) -> None:
+        fixture = self._indexed_snapshot_fixture()
+        shard = fixture.snapshot / fixture.shard_name
+        blob = fixture.blobs / ("a" * 64)
+        blob.write_bytes(shard.read_bytes())
+        index_blob = fixture.blobs / ("b" * 40)
+        index_blob.write_bytes(fixture.index.read_bytes())
+        selected = {shard: Path("../../blobs") / blob.name, fixture.index: Path("../../blobs") / index_blob.name}
+        foreign_blobs = fixture.cache / "models--synthetic--foreign" / "blobs"
+        foreign_blobs.mkdir(parents=True)
+        foreign_blob = foreign_blobs / blob.name
+        foreign_blob.write_bytes(b"synthetic foreign fixture")
+        outside = fixture.cache.parent / "outside-blob"
+        outside.write_bytes(b"synthetic external fixture")
+        with patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}):
+            with self._snapshot_link_observations(selected):
+                _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+            for target in (
+                Path(os.path.relpath(foreign_blob, shard.parent)),
+                Path(os.path.relpath(outside, shard.parent)),
+                blob,
+                Path("../../blobs") / ("d" * 64),
+            ):
+                with self.subTest(target_kind=target.parent.name), self._snapshot_link_observations({shard: target}):
+                    with self.assertRaisesRegex(RuntimeError, "weight shards are missing or invalid"):
+                        _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+            for directory in (fixture.repository, fixture.repository / "snapshots", fixture.blobs, blob):
+                with self.subTest(directory=directory.name), self._snapshot_link_observations({**selected, directory: Path("untrusted-alias")}):
+                    with self.assertRaises(RuntimeError):
+                        _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+
+    def test_foreign_index_link_is_denied_before_index_bytes_are_read(self) -> None:
+        fixture = self._indexed_snapshot_fixture()
+        foreign = fixture.cache / "models--synthetic--foreign" / "blobs" / ("b" * 40)
+        foreign.parent.mkdir(parents=True)
+        foreign.write_bytes(b"synthetic foreign index; must not be read")
+        target = Path(os.path.relpath(foreign, fixture.index.parent))
+        with (
+            patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}),
+            self._snapshot_link_observations({fixture.index: target}),
+            patch.object(Path, "open", side_effect=AssertionError("Index must be denied before open")) as opened,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "weight shards are missing or invalid"):
+                _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+            opened.assert_not_called()
+
+    def test_copied_snapshot_from_another_repository_is_not_the_selected_model(self) -> None:
+        fixture = self._indexed_snapshot_fixture()
+        selected_model = LocalModelConfig(provider="transformers", modelId="synthetic/different-model")
+        with patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}):
+            with self.assertRaisesRegex(RuntimeError, "selected repository"):
+                _validate_snapshot_profile_result(selected_model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+
+    def test_selected_repository_directory_junction_is_denied(self) -> None:
+        fixture = self._indexed_snapshot_fixture()
+        alias = fixture.cache / "models--synthetic--alias"
+        self.assertTrue(fixture.repository.resolve().is_relative_to(fixture.cache.resolve()))
+        if os.name == "nt":
+            import _winapi
+            _winapi.CreateJunction(str(fixture.repository), str(alias))
+        else:
+            alias.symlink_to(fixture.repository, target_is_directory=True)
+        try:
+            self.assertEqual(alias.resolve(), fixture.repository.resolve())
+            with patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}):
+                with self.assertRaisesRegex(RuntimeError, "selected repository"):
+                    _validate_snapshot_profile_result(
+                        LocalModelConfig(provider="transformers", modelId="synthetic/alias"),
+                        GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE,
+                        str(alias / "snapshots" / fixture.revision),
+                    )
+            self.assertTrue((fixture.snapshot / fixture.shard_name).is_file())
+        finally:
+            if os.name == "nt":
+                alias.rmdir()
+            else:
+                alias.unlink()
+
+    def test_indexed_snapshot_rejects_malformed_maps_and_unsafe_names(self) -> None:
+        fixture = self._indexed_snapshot_fixture()
+        values = [
+            {"weight_map": {"layer": fixture.shard_name, "invalid": value}}
+            for value in (None, 1, False, [], {})
+        ] + [
+            {"weight_map": {"layer": name}}
+            for name in ("", "../outside", "/outside", "C:/outside", "C:outside", "a\\b", "./weights", "a//weights", "a/../weights", "x" * 1025)
+        ] + [[], {"weight_map": []}, {"weight_map": {}}, {}]
+        with (
+            patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}),
+            patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._cleanup_failed_huggingface_cache") as cleanup,
+        ):
+            for case, payload in enumerate(values):
+                with self.subTest(case=case):
+                    fixture.index.write_text(json.dumps(payload), encoding="utf-8")
+                    with self.assertRaisesRegex(RuntimeError, "weight shards are missing or invalid"):
+                        _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+            cleanup.assert_not_called()
+
+        fixture.index.write_text(json.dumps({"weight_map": {"one": fixture.shard_name, "two": "another.safetensors"}}), encoding="utf-8")
+        with (
+            patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}),
+            patch("modules.adapters.runtime.python.worker.tasks.local_text_generation.DEFAULT_HUGGINGFACE_MAX_CACHE_FILES", 1),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "weight shards are missing or invalid"):
+                _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+
+    def test_weight_index_read_is_bounded_even_when_it_grows_after_metadata(self) -> None:
+        fixture = self._indexed_snapshot_fixture()
+        original_open = Path.open
+        observed = []
+
+        def grow_before_open(path, *args, **kwargs):
+            if path == fixture.index:
+                with open(path, "ab") as writer:
+                    writer.write(b" " * 256)
+                observed.append(True)
+            return original_open(path, *args, **kwargs)
+
+        with (
+            patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}),
+            patch("modules.adapters.runtime.python.worker.tasks.local_text_generation.MAX_TRANSFORMERS_WEIGHT_INDEX_BYTES", 128),
+            patch.object(Path, "open", grow_before_open),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "weight index is too large"):
+                _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+        self.assertEqual(observed, [True])
 
     def test_auto_model_placement_fails_before_cache_lookup_without_accelerate(self) -> None:
         config = ExampleGenerationConfig(
@@ -642,60 +893,33 @@ class LocalTextGenerationTests(unittest.TestCase):
             )
 
     def test_transformers_snapshot_requires_complete_weights_and_tokenizer(self) -> None:
-        snapshot_path = Path.cwd() / "artifacts" / "hf-transformers-validation-test"
-        rmtree(snapshot_path, ignore_errors=True)
-        self.addCleanup(lambda: rmtree(snapshot_path, ignore_errors=True))
-        snapshot_path.mkdir(parents=True)
-        (snapshot_path / "config.json").write_text("{}", encoding="utf-8")
+        fixture = self._indexed_snapshot_fixture()
+        snapshot_path = fixture.snapshot
+        fixture.index.unlink()
+        (snapshot_path / fixture.shard_name).unlink()
+        (snapshot_path / "tokenizer.json").unlink()
         (snapshot_path / "merges.txt").write_text("merge", encoding="utf-8")
-
-        with self.assertRaisesRegex(RuntimeError, "model weights are missing"):
-            _validate_snapshot_profile_result(
-                LocalModelConfig(provider="transformers", modelId="Qwen/Qwen2.5-7B-Instruct"),
-                GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE,
-                str(snapshot_path),
-            )
-
-        (snapshot_path / "model.safetensors").write_bytes(b"weights")
-        with self.assertRaisesRegex(RuntimeError, "tokenizer files are missing"):
-            _validate_snapshot_profile_result(
-                LocalModelConfig(provider="transformers", modelId="Qwen/Qwen2.5-7B-Instruct"),
-                GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE,
-                str(snapshot_path),
-            )
-
-        (snapshot_path / "vocab.json").write_text("{}", encoding="utf-8")
-        _validate_snapshot_profile_result(
-            LocalModelConfig(provider="transformers", modelId="Qwen/Qwen2.5-7B-Instruct"),
-            GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE,
-            str(snapshot_path),
-        )
+        with patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}):
+            with self.assertRaisesRegex(RuntimeError, "model weights are missing"):
+                _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(snapshot_path))
+            (snapshot_path / "model.safetensors").write_bytes(b"weights")
+            with self.assertRaisesRegex(RuntimeError, "tokenizer files are missing"):
+                _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(snapshot_path))
+            (snapshot_path / "vocab.json").write_text("{}", encoding="utf-8")
+            _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(snapshot_path))
 
     def test_transformers_snapshot_rejects_missing_indexed_weight_shards(self) -> None:
-        snapshot_path = Path.cwd() / "artifacts" / "hf-transformers-shard-validation-test"
-        rmtree(snapshot_path, ignore_errors=True)
-        self.addCleanup(lambda: rmtree(snapshot_path, ignore_errors=True))
-        snapshot_path.mkdir(parents=True)
-        (snapshot_path / "config.json").write_text("{}", encoding="utf-8")
-        (snapshot_path / "tokenizer.json").write_text("{}", encoding="utf-8")
-        (snapshot_path / "model.safetensors.index.json").write_text(
-            json.dumps({"weight_map": {"layer": "model-00001-of-00002.safetensors"}}),
-            encoding="utf-8",
-        )
-
-        with self.assertRaisesRegex(RuntimeError, "weight shards are missing or invalid"):
-            _validate_snapshot_profile_result(
-                LocalModelConfig(provider="transformers", modelId="Qwen/Qwen2.5-7B-Instruct"),
-                GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE,
-                str(snapshot_path),
-            )
-
-        (snapshot_path / "model-00001-of-00002.safetensors").write_bytes(b"weights")
-        _validate_snapshot_profile_result(
-            LocalModelConfig(provider="transformers", modelId="Qwen/Qwen2.5-7B-Instruct"),
-            GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE,
-            str(snapshot_path),
-        )
+        fixture = self._indexed_snapshot_fixture()
+        shard = fixture.snapshot / fixture.shard_name
+        shard.unlink()
+        with patch.dict(environ, {"HF_HUB_CACHE": str(fixture.cache)}):
+            with self.assertRaisesRegex(RuntimeError, "weight shards are missing or invalid"):
+                _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+            shard.write_bytes(b"")
+            with self.assertRaisesRegex(RuntimeError, "weight shards are missing or invalid"):
+                _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
+            shard.write_bytes(b"synthetic weight fixture")
+            _validate_snapshot_profile_result(fixture.model, GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE, str(fixture.snapshot))
 
     def test_model_download_reports_cache_miss_cause_before_snapshot_download(self) -> None:
         calls: list[dict] = []
@@ -1079,6 +1303,50 @@ class LocalTextGenerationTests(unittest.TestCase):
             "The selected generation model could not be loaded by the local runtime.",
         )
         self.assertNotIn(private_error, str(context.exception))
+
+    def test_calibrated_cpu_estimates_require_exact_safe_weights_profile_and_size(self) -> None:
+        import hashlib
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'model.safetensors').write_bytes(b'fixture')
+            (root / 'config.json').write_bytes(b'config')
+            for model, dtype, sha, config_sha, required in (
+                ('Qwen/Qwen2.5-0.5B-Instruct','float32','fdf756fa7fcbe7404d5c60e26bff1a0c8b8aa1f72ced49e7dd0210fe288fb7fe',
+                 '18e18afcaccafade98daf13a54092927904649e1dd4eba8299ab717d5d94ff45',3*1024**3),
+                ('Qwen/Qwen2.5-1.5B-Instruct','bfloat16','dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee',
+                 '98d2ff8cc47488d08a2b0b3acf4eb99ef210779b42bd48605f6b8e36acdbf670',7*1024**3//2)):
+                config = LocalModelConfig(provider='transformers',modelId=model,torchDtype=dtype,device='cpu',inferenceMode='chat')
+                def digest(stream, algorithm):
+                    return SimpleNamespace(hexdigest=lambda:config_sha if Path(stream.name).name=='config.json' else sha)
+                with patch.object(hashlib, 'file_digest', side_effect=digest):
+                    self.assertEqual(_calibrated_cpu_memory_requirement(config,root,7), required)
+                    for change in ({'device':'cuda'},{'device':'auto'},{'torchDtype':'auto'}, {'memoryMode':'offload-v1'},
+                                   {'adapterModelId':'other/adapter'}, {'modelId':'other/model'}, {'inferenceMode':'causal'}):
+                        self.assertIsNone(_calibrated_cpu_memory_requirement(config.model_copy(update=change),root,7))
+                    self.assertIsNone(_calibrated_cpu_memory_requirement(config,root,8))
+                    self.assertIsNone(_calibrated_cpu_memory_requirement(config,root,4*1024**3))
+                with patch.object(hashlib, 'file_digest', return_value=SimpleNamespace(hexdigest=lambda:sha)):
+                    self.assertIsNone(_calibrated_cpu_memory_requirement(config,root,7))
+                self.assertIsNone(_calibrated_cpu_memory_requirement(config,root,7))
+
+    def test_calibrated_cpu_admission_denies_below_exact_threshold_without_overflow(self) -> None:
+        with TemporaryDirectory() as directory:
+            config = LocalModelConfig(provider='transformers',modelId='Qwen/Qwen2.5-0.5B-Instruct',
+                                      torchDtype='float32',device='cpu',inferenceMode='chat')
+            prefix = 'modules.adapters.runtime.python.worker.tasks.local_text_generation.'
+            for required in (3*1024**3,7*1024**3//2):
+                with patch(prefix+'_resolved_model_reference_for',return_value=directory), \
+                     patch(prefix+'_snapshot_model_weight_bytes',return_value=1024**3), \
+                     patch(prefix+'_calibrated_cpu_memory_requirement',return_value=required):
+                    with patch(prefix+'_read_system_memory_snapshot',return_value=_SystemMemorySnapshot(16*1024**3,required)):
+                        self.assertIsNone(_ensure_model_load_resources(config))
+                    with patch(prefix+'_read_system_memory_snapshot',return_value=_SystemMemorySnapshot(16*1024**3,required-1)):
+                        with self.assertRaises(GenerationInsufficientResourcesError) as raised:
+                            _ensure_model_load_resources(config)
+                        self.assertEqual(raised.exception.memory_shortfall, {
+                            "resource": "ram", "requiredBytes": required,
+                            "availableBytes": required - 1, "allowedOverflowBytes": 0,
+                        })
 
     def test_model_load_rejects_implicit_disk_offload_when_memory_is_insufficient(self) -> None:
         with TemporaryDirectory() as directory:

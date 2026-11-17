@@ -1,8 +1,106 @@
 # Data Management Threat Model
 
+The private provided-data version fixture accepts only its small synthetic
+provided-row classification source and production review path. It denies
+generation, OCR, downloads, other tasks and linked or external source paths.
+It retains authentication, offline dependency preparation and Standard native
+limits. Restart qualification requires complete resource close/reopen, fresh
+per-session evidence and exclusive closed-phase shutdown records. A readiness
+response, old acknowledgment or source test cannot supply a restart pass.
+Uncertain shutdown prevents another owner. Reports exclude inputs, credentials
+and supplier exception text. Actual host evidence and parent review remain
+separate from portable source checks.
+
+## Current preparation source-list admission
+
+The Hugging Face namespace request reads one JSON listing from its configured
+provider endpoint. It refuses redirects, uses a 15-second fetch deadline, and
+limits the response to 512 KiB and 100 rows. It returns safe repository identities
+and at most eight recognized license codes. Unrecognized provider strings become
+an unknown marker and conflicting duplicate repository rows are omitted.
+License labels and filters do not grant repository access, extend acquisition
+authority, or verify reuse rights. Existing exact file revision and task admission
+checks remain authoritative. Repository-level labels do not bind terms to
+collected files. On import, an optional lookup uses the verified repository and
+full selected commit. The response must identify both exactly. The task reuses
+one result per repository and commit and gives its metadata reads a shared
+five-second budget. Each read accepts at most 64 KiB. After reading credentials,
+the host observes the task revision and rechecks workspace access before
+dispatching the request. A missing or mismatched reply supplies no license
+metadata. A request already sent can finish after access changes. The final
+authority recheck and the atomic task compare-and-save govern publication.
+
+Desktop retires source reads with an exact workspace/client scope and a monotonic
+request identity. Thin-client source effects capture their own lifetime rather
+than accepting the current value of a mutable mounted flag. Scope changes,
+superseding reads and unmount prevent old success and failure replies from
+changing source data, current selections, readiness or task status. Loading,
+failed and successfully empty source lists remain distinct, with contextual retry.
+Neither host dispatches preparation without a current ready list. Both forms
+reject malformed source arrays exposed by their clients; duplicate source matches
+are retained for later exact replay validation. Desktop malformed source and
+version-list envelopes no longer become empty results. The shared thin-client
+HTTP source client rejects missing or nonarray items with fixed safe text; actual
+client-to-form tests cover retry to a genuine empty response.
+Fixed failure copy exposes no supplier exceptions or private paths.
+Application authorization remains authoritative. These local controls do not
+qualify one-use saved setup replay or actual provider, model, native or scale work.
+
+## Saved-version Browser response and consent controls
+
+Both Browser detail views associate history only through an exact unique
+complete-dataset artifact key in normalized workspace-qualified records.
+Ambiguous, duplicate, foreign, malformed and mismatched version responses are
+denied. Scope-keyed sessions retire late reads and action replies on selection,
+workspace or service replacement. List and comparison errors use fixed inline
+retry text; publication failures use fixed notification text and do not claim
+that a dispatched remote operation was cancelled or rolled back.
+
+Explicit publication captures the current workspace, version, repository,
+visibility and creation choice. A synchronous guard prevents duplicate dispatch.
+Public consent resets when any relevant input changes and after dispatch. Only
+an exact matching normalized publication response produces success. Application
+authorization, provider credentials and immutable-byte verification remain below
+the UI. Local component tests do not qualify real provider availability or the
+later page-owned setup reuse, source freshness and edit-preservation boundary.
+
+The direct Python worker entrypoint loads relative application and task modules
+only from its own deployment directory, using a fixed private package. It does
+not search repository ancestors or change the interpreter search path. A missing
+deployed app, conflicting private package or orphan private submodule fails
+startup. Cached private files and namespace directories must match their exact
+deployed locations before reuse. This does not isolate arbitrary code running
+inside the Python process. A cached repository
+app is not a fallback. Flat-deployment subprocess tests cover these denials.
+Loopback-only binding, launch authentication and nonprivileged port validation
+remain mandatory. A model-free packaged-start observation is separate from
+model execution, free-memory admission and native/offload qualification.
+
+Accelerator-capacity recommendations accept only a minimized positive-safe-integer
+total from the authenticated worker. Optional malformed facts become unknown
+without weakening core capability validation. A lazy fixed system-driver query
+uses no shell or caller executable, excludes inherited credentials, caps output
+and public waiting, and retains its single active probe until actual child exit
+and output retirement. Ambiguous visibility, MPS, multiple devices and MIG changes
+deny a total. No raw driver output, device identity or path enters public status.
+The fact is advisory installed capacity: live memory admission, decoder readiness,
+model authorization and native/offload ownership remain authoritative. A synthetic
+UI capacity profile is never physical hardware or model qualification.
+
 ## Scope
 
-This model covers workspace source selection, local and Hugging Face staging, structured and document parsing, optional local-model generation, quality policy resolution, curation and quarantine, split creation, human approval, task lifecycle transport, result materialization, immutable dataset versions, publication evidence, warnings, and diagnostics.
+The text-training local reader admits only the supported format allowlist and
+maps JSON Lines to the built-in JSON builder. A missing base-model reference
+fails before dataset or model loading. Corrupt safetensors, tensor-read failures
+and malformed or empty shard indexes produce invalid validation results.
+Reader failures discard partial tensor keys and shapes and expose only fixed
+messages, without native exceptions or paths. Missing reader dependencies remain
+an explicit incomplete check and deny publish-bound validation. These controls
+do not establish model quality, native file ownership or physical training
+qualification; offline synthetic tests and actual local-file reads are separate
+from those checks.
+
+This model covers workspace source selection, local and Hugging Face staging, structured and document parsing, optional local-model generation, quality policy resolution, curation and quarantine, split creation, human approval, task lifecycle transport, result materialization, immutable dataset versions, publication evidence, warnings, and diagnostics. Artifact Browser handoffs into Context Management are additionally governed by `docs/security/context-management-threat-model.md`.
 
 ## Protected assets
 
@@ -17,7 +115,7 @@ This model covers workspace source selection, local and Hugging Face staging, st
 | Boundary                             | Primary threats                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Required controls                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | UI to IPC or HTTP                    | forged workspace/task identifiers, oversized body, guessed task reads                                                                                                                                                                                                                                                                                                                                                                                                                                                      | deny-by-default route policy, authenticated principal and organization context, normalized workspace context, bounded requests, opaque not-found denial, no UI-only authorization                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| Resumable acquisition task           | dishonest progress, reordered or replayed chunks, whole-file memory pressure, stale checkpoints, cancellation/finalization race                                                                                                                                                                                                                                                                                                                                                                                            | bounded chunk/file/batch totals, per-chunk digest and exact offset, authoritative persisted progress, idempotent last-chunk retry, streaming finalization, optimistic revision, atomic task/snapshot commit, durable 24-hour cleanup intent, compensating artifact deletion                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Resumable acquisition task           | dishonest progress, reordered or replayed chunks, whole-file memory pressure, stale checkpoints, cancellation/finalization race                                                                                                                                                                                                                                                                                                                                                                                            | bounded chunk/file/batch totals, per-chunk digest and exact offset, authoritative persisted progress, idempotent last-chunk retry, streaming finalization, optimistic revision, atomic task/snapshot commit, durable 24-hour checkpoint cleanup intent, retained uncertain local-file publication effects without adoption or destructive compensation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Artifact catalog/bindings to staging | cross-workspace reads, unscoped records hidden after apparent success, mutable substitution, traversal, source-type confusion                                                                                                                                                                                                                                                                                                                                                                                              | authoritative task workspace persisted on both catalog record and imported-source binding before success, workspace-scoped port context, contained storage locators, catalog name/media-type reconciliation when byte descriptors omit metadata, immutable provider revisions, early capability guard                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Provider retrieval                   | credential disclosure, mutable revision, unsafe payload, unbounded transfer, cross-workspace localization                                                                                                                                                                                                                                                                                                                                                                                                                  | repository port, organization-scoped credentials, explicit revision, bounded localization, authoritative workspace context on binding read/provider retrieval/local object and catalog write/binding update, sanitized failure                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Artifact preview rendering           | script execution, active HTML/PDF features, dangerous URL schemes, remote tracking content, hostile parser input, oversized renderer work, internal build metadata disclosure                                                                                                                                                                                                                                                                                                                                              | bounded byte/line/character previews, React element construction without raw-HTML injection, conservative Markdown allowlist, raw HTML escaped, only credential-free HTTP(S) links, opener isolation, remote Markdown images omitted, exact pinned PDF.js rasterization of one bounded page with active annotations/XFA/eval disabled, workspace-authorized 10-row Parquet reads, and the internal system-build namespace plus every `+json` filename/media type excluded from user lists                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
@@ -32,7 +130,7 @@ This model covers workspace source selection, local and Hugging Face staging, st
 | Split stage                          | duplicate or source leakage, fabricated counts, nondeterminism                                                                                                                                                                                                                                                                                                                                                                                                                                                             | deterministic component partitioning, source/group and exact-content isolation, physical outputs, count invariants                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Quality policy and curation          | permissive fallback, unbounded duplicate work, hidden row loss, sensitive review samples                                                                                                                                                                                                                                                                                                                                                                                                                                   | host-owned fail-closed policy resolution, mandatory controls, bounded candidate checks, reversible quarantine, count invariants, sanitized bounded samples                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Advanced processing and generation   | fabricated OCR or capability readiness, unbounded pair comparison, source-free generated content, single-pass self-approval, sensitive embeddings or examples in evidence                                                                                                                                                                                                                                                                                                                                                  | explicit capability status and fail-closed denial, bounded local comparison, exact normalized-span citations, independent schema/grounding/critic/safety/diversity verification, mandatory quarantine and approval, aggregate-only evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Adaptive task recipe                 | renderer-selected incompatible method, optimistic total-memory recommendation under current memory pressure, unbounded disk/swap pressure, shared-host utilization disclosure, ignored controls, mixed source roles, unsafe legacy migration, misleading image inspection claims                                                                                                                                                                                                                                           | contract-owned task/source resolution, desktop-only available-memory fact, server total-memory reserve, ordered 7B/3B/1.5B fallback for untouched choices, explicit/saved choice preservation, closed 0/1/4 GiB CPU-overflow policy, mandatory worker live-memory preflight, CUDA overflow denial, application and worker reconciliation, inactive-field rejection, deterministic safe migration, exact inspected-surface evidence, explicit unavailable pixel/OCR/face capabilities                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Adaptive task recipe                 | renderer-selected incompatible method, optimistic total-memory recommendation under current memory pressure, unbounded disk/swap pressure, shared-host utilization disclosure, ignored controls, mixed source roles, unsafe legacy migration, misleading image inspection claims                                                                                                                                                                                                                                           | contract-owned task/source resolution, sanitized available-memory facts in desktop and server, installed-memory reserve only when that fact is absent, ordered 7B/3B/1.5B fallback for untouched choices, explicit/saved choice preservation, closed 0/1/4 GiB CPU-overflow policy, mandatory worker live-memory preflight, CUDA overflow denial, application and worker reconciliation, inactive-field rejection, deterministic safe migration, exact inspected-surface evidence, explicit unavailable pixel/OCR/face capabilities                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Long-running runtime task            | premature model-download failure, semantic over-fragmentation causing excessive inference, opaque first-batch model loading, unbounded worker occupation, cancellation of unrelated work                                                                                                                                                                                                                                                                                                                                   | central task-class deadlines, twelve-hour model-download and twenty-four-hour training caps, minimum semantic section size plus maximum token/span limits, explicit global loading-model phase followed by bounded section progress, task-scoped cancellation, terminal cleanup, no renderer-controlled unlimited timeout                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Review and approval                  | guessed task, stale or replayed approval, altered report, cross-workspace row disclosure, oversized or malicious row values, blocked dataset admission                                                                                                                                                                                                                                                                                                                                                                     | recorded workspace/organization/principal scope, validated effective policy/report, timing-safe exact fingerprint comparison, fixed 10-row pages, bounded stream/line/value/depth/field limits, prototype-key removal, one-time pending state, explicit whole-ready-set approval, application-owned approvalAllowed denial                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Materialization/publication          | wrong destination, path-like user save name, partial or unverifiable result, cross-workspace output                                                                                                                                                                                                                                                                                                                                                                                                                        | withhold final outputs before approval, validate and bound the optional filename-like save name at UI and application boundaries, explicit destination, workspace metadata/context, result validation, partial-write compensation, later version-level atomicity                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -63,6 +161,12 @@ This model covers workspace source selection, local and Hugging Face staging, st
 - A provider task cannot report success for an unscoped catalog or backing
   write. Both records retain the authoritative task workspace, and normal
   workspace-filtered Artifact Browser reads remain fail-closed.
+- For a verified provider file, the host checks workspace access again after
+  the provider reply. The storage owner matches the selected repository file
+  and immutable revision to its task, catalog record and backing. It commits
+  the catalog, backing, source snapshot and task revision together. A failed
+  write rolls back the complete set. A competing run confirms the exact
+  committed snapshot before reporting a saved source.
 - Provider localization cannot read a binding, retrieve bytes, write the local
   object/catalog record, or update source and primary bindings without the same
   authoritative workspace context. Missing scope fails before provider access.
@@ -75,6 +179,11 @@ This model covers workspace source selection, local and Hugging Face staging, st
   state, and the form reset neither exposes nor clears the host-owned provider
   credential.
 - Runtime output handles containing absolute paths or traversal are rejected.
+- A `Convert to RAG database` navigation handoff carries only an artifact
+  identifier and is not authorization. Context Management repeats the
+  authenticated workspace read, shared capability check, digest verification,
+  and contained staging. Chunk boundaries are trusted as already processed
+  only when every row has valid chunk index and source lineage metadata.
 - A missing quality-policy provider, malformed report, policy mismatch, blocked report, wrong-scope approval, stale fingerprint, or replayed approval fails closed.
 - Aggregate review reads expose bounded sanitized summaries and descriptors.
   Exact report-line row reads are separately authorized, fixed to 10 rows,
@@ -145,7 +254,23 @@ This model covers workspace source selection, local and Hugging Face staging, st
   attempt. A recoverable failure may invoke one correction attempt with the
   same schema and constraints; failure never invokes an unconstrained retry.
   Grammar serialization preserves the intended field order without weakening
-  the order-independent integrity fingerprint. Windows uses the pinned
+  the order-independent integrity fingerprint. Conditional object lowering is
+  limited to required distinct string discriminators and exact known property
+  subsets, retaining all other root constraints in each complete branch.
+  Combined original/expanded schema and cache budgets apply without increases;
+  unsupported or over-budget forms retain the original constraint. Original
+  final validation remains authoritative. Built-in bounded label choices follow
+  the configured task policy; old saved schemas retain their identity.
+  The pinned backend default whitespace policy is retained. A compact-formatting
+  experiment passed lexical checks but failed actual model quality and was
+  withdrawn; semantic model outcomes require separate verification. Original
+  string values, validation and byte/cache limits remain enforced. Callers
+  cannot supply a regex or request a weaker fallback.
+  Prompt schema/sample serialization preserves existing sorted canonical
+  presentation, exact values and source-data quoting; an experimental ordering
+  change was withdrawn after real quality regression. Grammar representation
+  never replaces the original sorted integrity fingerprint or final validation.
+  Windows uses the pinned
   Outlines kernel's eager callable to avoid an optional compiler probe and
   retains the same token mask and mandatory post-validation. Desktop startup uses
   only fixed bounded version probes to prefer an installed decoder-compatible
@@ -171,10 +296,9 @@ This model covers workspace source selection, local and Hugging Face staging, st
   CUDA-only placement never receives this allowance. Desktop defaults to the
   1 GiB choice, while an omitted policy fails closed to memory-only. The renderer
   cannot supply arbitrary limits. Actual overflow emits bounded task progress and
-  a deduplicated slowdown warning without paths or host identity. Desktop may use
-  its local available-memory fact to select the next smaller built-in default;
-  shared server hosts retain a total-memory reserve. Neither path can override an
-  explicit or saved model.
+  a deduplicated slowdown warning without paths or host identity. Both hosts use a sanitized current available-memory fact for untouched defaults;
+  only a missing fact permits the installed-memory reserve. A reported zero
+  remains zero. Neither path can override an explicit or saved model.
 - Parser, provider, and model failures cannot place raw content, prompts, model output, credentials, provider payloads, or local paths into public errors or logs.
 - Cancellation and terminal reads clean staged runtime files; cleanup failure must not broaden access.
 - A dataset-version identifier cannot be reused with different normalized
@@ -212,6 +336,16 @@ This model covers workspace source selection, local and Hugging Face staging, st
 
 ## Residual risk
 
+Generated-model publication no longer recursively removes a selected cache
+snapshot. Any observed existing target or uncertain filesystem state denies;
+fresh publication retains the existing cache layout. Requested source-root links
+are checked before canonicalization, copied content is revalidated, and staging
+is created exclusively with cooperative identity checks before publication or
+cleanup. Unknown/substituted staging is retained. Native parent/substitution
+races, source mutation during copying, crash-consistent owned publication and
+cross-platform atomic no-replace remain unqualified. Shared/provider caches are
+reference-only for physical deletion; a successful copy cannot confer ownership.
+
 Automated schema, language, duplicate, semantic similarity, source-support,
 critic, diversity, personal-data, credential, safety, license, consent, benchmark,
 robots parsing, and readable-text extraction can produce false positives or
@@ -230,3 +364,2598 @@ resource use. The decoder's native processor memory cannot be measured exactly
 from canonical schema bytes; schema complexity, retained schema bytes, and cache
 entry count therefore provide hard indirect bounds, while representative CPU and
 accelerator memory/latency qualification remains required.
+
+
+## Dataset source staging authority
+
+Preparation reads bindings with the authoritative workspace and request context,
+verifies every returned artifact/workspace identity, and rejects absent or
+conflicting bindings before object reads, provider retrieval or task start.
+An artifact id is never an unbound local storage key. A remote-only binding goes
+directly through authorized provider localization; localization allocates a new
+opaque storage key with overwrite disabled and persists that returned key in the
+same workspace binding. Equal logical source ids in two workspaces cannot replace
+one another's localized objects. Original file metadata uses the storage adapter's
+`originalFileName` field so supported formats remain usable. Rollback keeps these
+checks or disables staging; it cannot restore guessed-key fallback.
+
+Parquet dataset review propagates the existing64MiB artifact retrieval maximum and
+checks actual returned source bytes before runtime admission. The Python adapter
+rejects oversized source before staging, the worker checks staged size before
+Parquet parsing, and revised output uses one bounded file-handle read with a growth
+probe instead of unbounded readFile. Application output bounds precede hashing
+or storage. Output I/O failures have static outward messages. Worker Parquet
+handles close explicitly. Footer row counts select only overlapping row groups;
+preceding batches use num_rows, and only page slices convert to Python rows.
+Exact row fingerprints, curation semantics and workspace authorization remain.
+Small installed-PyArrow fixtures qualify these local controls. Compressed-source
+limits and display budgets do not bound decoded-cell memory; adversarial decode
+memory, host admission fairness, private-stage filesystem identity and physical
+resource qualification remain pending. Existing worker queue/deadline controls
+remain in force, including the two-hour dataset-review deadline. No new expanded
+memory budget, model/provider download or runtime authority is introduced.
+
+Dataset preparation output names are validated in the Python model and again at
+task entry, before planning/source/model/generation/output effects. The worker
+mirrors the existing host save-name rule: ECMAScript whitespace trimming,128
+UTF-16 code units, no path punctuation/control characters, dot/dot-dot or trailing
+period. Blank names keep the existing default; safe spaces/Unicode remain valid.
+A captured primitive name feeds both row and JSON-report emitters even if a
+callback mutates the request. Rejections use static text. The worker's canonical
+absolute/non-symlink output-directory check remains in force. These controls do
+not qualify source-path authority, parent substitution, identity-preserving native
+file operations or controlled resource behavior; those R30 gaps remain pending.
+Rollback retains stronger naming denial.
+
+## Optional offload delta
+
+The explicit `offload-v1` mode adds a settings-to-worker resource boundary and
+private host-cache staging. Default Standard behavior and existing workspace/task
+authority remain. An exact versioned capability check precedes staging/start;
+unknown or malformed saved profiles cannot downgrade silently. Native Qwen2
+configuration, safe-weight indexes/offsets/shapes, tokenizer paths/classes and the
+inspected bounded chat template are checked before supplier loading. Parsed bytes
+are bound to full-file digests; source rebind/drift denies cached reuse/forward.
+Adapter configuration and weight-name families are rejected case-insensitively
+before supplier reads: native model classes can otherwise discover installed
+PEFT support and redirect the base path despite explicit local-only configuration.
+No remote code, pickle, network, implicit overflow or precision fallback is used.
+
+Placement is not a process-memory or disk quota. Separate admission covers
+loading source/conversion transients, execution/KV/prefill/runtime headroom and
+finite owned staging. Specific insufficient-resource failures retain bounded numeric
+observations without prompts, outputs or paths. An unstarted forward retains
+safe retry ownership. One exclusive slot, cached-input leases, serialized request
+views, native task-admission/unload fencing, weak-reference release and recorded
+per-file cleanup progress preserve ownership through load/OOM/decoder/deletion
+failures. Stale or foreign slots and recreated files are retained and denied,
+not adopted or recursively deleted. Queued cancellation and unsupported running
+Dataset Preparation cancellation remain truthful; the shared worker is not killed.
+
+Focused failure-path/UI evidence is local control evidence. Actual installed-model
+resource/quality qualification, native parent-substitution/ACL recovery and other
+hardware profiles remain distinct; cooperative identity/hash observations do not
+prove native immutability. Rollback withdraws only optional support and retains
+stronger loading/ownership/cleanup controls and failed evidence. The exact support
+and prospective measurement protocol are in
+`docs/operations/optional-low-memory-inference.md`.
+
+Composed-host tests exposed fresh uploaded catalog entries without the explicit
+local binding now required by source staging. Desktop/server storage composition
+therefore injects a binding writer at the verified write origin for newly generated
+workspace upload keys only. Workspace/catalog presence is checked before I/O;
+no-overwrite creation precedes the primary binding and catalog success. Persisted
+binding/catalog identity must be absent before publication and again before
+binding; metadata-only collisions deny. Key/workspace/overwrite snapshots cannot
+be changed by an asynchronous producer. Distinct conditional metadata operations
+repeat absence checks inside their owning revision CAS and preserve competing
+records; JSON compatibility refuses those operations. No unassigned organization
+is invented. Failed
+binding persistence fails closed. Explicit keys and existing missing/foreign
+bindings are not adopted, and preparation retains its pre-I/O denial. Failed
+or uncertain metadata acknowledgement can retain unregistered owned bytes; the operation reports
+failure and does not delete another file. This is not an atomic publication or a
+replacement for pending native ACL/reparse qualification. Rollback preserves the
+missing-binding denial even if upload availability is reduced.
+
+The local dataset source test runs the application with the server's request
+organization scope, binding and catalog adapters, and real filesystem objects.
+Two concurrent requests with identical workspace, source, and storage IDs stage
+different bytes from their own organizations. An ID bound only in the other
+organization is denied before object reads, provider calls or worker dispatch.
+The test uses synthetic files, in-memory records and a fake worker; it does not
+qualify a managed database, identity provider, or native filesystem races.
+
+Prepared review pages use the exact existing GET task-review endpoint with
+`artifact:read`, normal token/organization middleware and owning application
+workspace/task/report-fingerprint checks. Unknown routes and intentionally
+unsupported task APIs remain denied. The review dialog distinguishes pending,
+failed and confirmed-empty pages; a failed read cannot imply that no rows exist.
+Running Dataset Preparation also shields its shared worker from automatic
+cancellation/deadline restart, including a sibling task's recovery. Confirmed
+queued cancellation, real terminal responses and owned process-exit failure
+remain authoritative; worker resource/admission bounds remain in force.
+
+## Read-only native identity prerequisite
+
+Security impact: security-relevant filesystem, process and local build authority.
+The private Windows/NTFS model file-identity helper is not wired into production.
+It retains a no-follow handle chain from a drive root, validates exact full
+volume/file identities, rejects unsupported/reparse/multiply linked objects, and
+rechecks private owner/DACL facts before releasing. Read/list access and explicit
+sharing enforce writer/delete conflicts on inspected objects; ancestor handles
+allow writers while denying delete sharing. No write/delete right, shell command,
+privilege enablement, ownership adoption or cache mutation is available.
+
+Malformed/oversized frames, foreign child identity, changed object identity,
+preexisting writers, junction roots/ancestors/children and multiple file links
+deny. Actual newly created fixture directories cover normal release, timeout
+release, replacement before open, attempted replacement while held, finite
+non-disclosing failures and successful reopening afterward. Portable protocol and
+inert process tests additionally cover frozen facts, binary mismatch, stale
+leases and persistent unknown-exit fencing. Fixture cleanup checks its own
+absolute boundary and original directory identity; failed attempts remain failed.
+
+The fixed no-fetch MSVC/SDK build inventories source, compiler-directory files,
+selected headers and explicit libraries before/after compilation. A disposable
+output namespace is created only after each existing ancestor is admitted; an
+observed redirect cannot receive an initial directory write. This is cooperative
+admission, not qualification of hostile check/use substitutions. A disposable
+worker uses an unnamed kill-on-close job with verified 2-GiB commit and eight
+process limits. Lingering compiler descendants are stopped only after exact
+opened-handle job membership, then native exit and handle release are confirmed.
+Image names or caller PIDs never authorize termination. Native build/fixture
+results establish this installed profile only; the OS and installed toolchain
+remain trusted inputs.
+
+Residuals: binary path-to-execution integrity requires protected production
+packaging; stable tree growth/accounting, ACL protection, ownership/publication,
+cross-user and hostile races, crash recovery, destructive effects and other
+platform/filesystem profiles remain unqualified. Rollback leaves production
+deletion/reveal denied. An existing unknown offload slot is not modified or
+adopted by this mechanism, and parent roadmap criteria remain pending.
+
+## Ingestion commit acknowledgement uncertainty
+
+Security impact: security-relevant data-loss and recovery authority. Uploaded-file
+and provider task finalization previously attempted artifact deletion when the
+task/snapshot transaction threw, even if it had committed. Those error paths now
+retain the returned artifact. Exact readback verifies original owner/workspace,
+task identity/kind/definition, monotonic revision, complete finalized file/output,
+source/snapshot IDs, key, size, media, digest/provider revision and locator. A new
+commit additionally compares the complete normalized original snapshot. Existing
+later task progress cannot substitute a different file/output. Unknown or foreign
+readback has no adoption, compensation or success fallback. Errors remain bounded.
+
+Completed retries validate the requested digest and existing snapshot relationship
+before any checkpoint effect. Succeeded tasks are immutable; failed/cancelled task
+states cannot be revived by cleanup. Exact cleanup-completion commit readback can
+reconcile lost acknowledgement. An explicit cancellation winning finalization
+remains cancellation and does not authorize artifact deletion.
+
+Real disposable upload/checkpoint and structured repository tests cover prior
+failure reproduction, commit-then-throw, unavailable/uncommitted/foreign/changed
+readback, missing/changed snapshots, retained physical bytes, explicit cancellation,
+cleanup failure/retry, immutable success and fake-provider acknowledgement loss.
+No provider/network/model request is made. Rollback preserves non-destructive
+uncertainty and immutable succeeded state.
+
+The resumable file publisher now owns a private bounded intent: reserved, writing,
+bytes-acknowledged, origin-issued, origin-complete and committed. Checkpoint inspection rejects
+invalid content before reservation; a corrected checksum can resume safely.
+Only the exact returned writing CAS permits one opaque no-overwrite target. The
+dedicated writer validates digest/size before final linking, copies chunks before
+hash/write awaits, and never deletes a published candidate. Lost writing or byte
+acknowledgement retains ambiguity; it cannot authorize a retry or fresh candidate.
+
+Only the exact successful origin-issued CAS acknowledgement after durable bytes
+permits one conditional binding/catalog attempt. Lost issuance acknowledgement
+grants no creation authority. Retries verify complete exact existing origin only;
+missing, partial or deleted metadata is never recreated. This includes actual
+registered deletion, whose adapters physically remove rows rather than retaining
+tombstones. Synthetic tombstone denial does not substitute for that regression.
+Complete exact readback reconciles metadata acknowledgements. Substituted origins deny.
+The task/source transaction requires the exact origin-complete private record,
+matching document revision, immutable owner/checkpoint/output tuple and capture
+time, then commits all three records. Generic task saves cannot finalize local
+files, and finalized outputs cannot change. Completed retry only verifies its
+committed private receipt and origin; it never repairs a missing legacy receipt.
+Preparation metadata reads include workspace/key and reject foreign returned data.
+
+Actual disposable-byte, CAS concurrency, metadata fault/tombstone/substitution and
+composed desktop Add data-to-staging tests cover these controls. The latter uses
+a fake runtime and supplies no generation or full UI qualification. Residuals
+remain for content after publication, filesystem/metadata atomicity, protected
+crash recovery, unknown-byte cleanup, hostile native races and parent closure.
+Legacy/missing bindings remain denied. Website acquisition retains its separate
+owner, compensating cleanup and qualification boundary.
+
+## Opt-in private-provider restart qualification
+
+The contributor-only private-provider operator retains synthetic version and
+publication metadata in a fresh exclusively allocated UUID run using the
+production SQLite adapter. Artifact bytes and credentials are not stored in this
+database. Existing human authorization for the exact private provider destination
+remains mandatory; neither configuration nor a replay record supplies authority.
+Existing bounded Hub transport, secure download egress, private visibility,
+immutable revisions, no remote deletion and credential redaction remain intact.
+
+After the first database connection closes, a fixed new Node child reopens only
+that run. Admission checks a bounded ownership marker and nonce, strict run IDs,
+contained nonlinked directories, the exact database file inventory and 1 MiB
+per-file limits. The child has fixed source/argv, bounded secret-free input,
+4 KiB per output stream and a 20-second parent timeout. Explicit inert Windows
+identity/PATH settings prevent automatic ambient inheritance. No provider adapter
+or credential store is loaded by the child. Artifact and publisher calls refuse;
+successful replay requires both call counts to stay zero, the same version digest
+and revision, one publication record, actual database close and actual child exit.
+Failure paths use fixed safe codes and retain the small synthetic metadata.
+
+Focused real SQLite/new-process tests cover successful reuse, saved-version
+preservation after provider failure, later retry, changed ownership, excess bytes,
+unexpected files, links, malformed input and secret non-inheritance. These are
+cooperative contributor checks. They do not prove hostile native check/use race
+protection, app-wide crash recovery, mounted UI, provider page rendering, retained
+offload staging, protected accounting or whole-roadmap qualification.
+
+## Memory-denial diagnostic delta
+
+Notification history is a public diagnostic sink. On the exact
+`generation_insufficient_resources` code, the worker/transport/UI allowlist only
+the RAM/VRAM/combined resource enum and nonnegative safe-integer required,
+available and permitted-overflow byte counts, bounded to 1 PiB. Reject
+contradictory/nonfinite facts and VRAM overflow; discard unrelated fields.
+Only fixed copy and those numeric facts reach memory notifications. Unknown
+measurements do not invent an amount. The existing model-admission decision,
+workspace authority, runtime/source containment, resource limits and retained
+offload ownership are unchanged. Automated denial, numeric-bound, private-field
+non-disclosure and two-host notification tests cover this delta. Native staging
+protection and actual optional offload qualification retain their separate gaps.
+
+## Admission and saved-profile failure handling
+
+A Dataset POST can have taken effect before its response is delivered. The runtime
+foundation retains bounded private ownership before dispatch and after transport,
+parse or identity uncertainty. No automatic sibling cancellation/deadline or
+model-download recovery may stop that protected worker. A shared recovery fence
+also rejects new dispatch during stop/start and after unconfirmed recovery failure.
+Exact task/type/generation observations and actual owned exit govern release;
+contradictory cancellation, unknown status and late acknowledgements cannot erase
+or resurrect ownership. Deterministic deferred-response and fake-child tests cover
+these timelines without accessing retained offload staging or claiming native proof.
+
+Saved-version reuse validates the memory mode before any form setters. Unsupported
+profiles produce fixed validation and leave the visible original setup unchanged,
+without dispatch. Explicit valid profiles and omitted legacy Standard remain
+supported; invalid mode input never silently substitutes an earlier selection.
+
+
+## Lazy constrained-decoder token masks
+
+Security-relevant: native parsing and dependency execution protect worker
+availability, exact output intent and qualification integrity. Compiler-owned
+bounded schemas and already admitted local tokenizers cross into a native
+matcher; generated text remains untrusted until the original schema validates.
+The eager Core all-state token index exhausted memory on an ordinary instruction
+layout. Replace only that private index with bounded reached-state matching.
+Preserve the original regex, whitespace, token projection and EOS-alias removal;
+disable forced canonical tokenization. Reject excessive IDs, sparse extremes,
+projected bytes before native tokenizer construction. Bound regex input before
+conversion, generated grammar before matcher construction, and batch count
+before per-row matcher copies.
+Enforce wheel-only installation for the exact optional native pin. Use explicit
+parser limits, silent native logging, nonverbose errors, checked
+constructor/consume/mask results, healthy accepting EOS and fixed public errors.
+Mask holes, aliases and padded score positions. Use safe owned byte masks and
+eager Torch operations; never import the compiled native mask kernels.
+
+Verification includes malformed/oversized vocabulary and grammar denial,
+native error/consume/mask failure, reset/cache isolation, invalid prefixes,
+EOS and empty finite-score denial, full-token comparisons for small layouts,
+and the original full instruction tokenizer-only case with observed owned-child
+memory/exit. These controls bound complexity, not physical process memory.
+Model admission, final validation and fail-closed behavior remain required.
+No provider authority, credential access, retained staging, offload lease,
+restricted Assets review or accepted model-accuracy rerun is authorized here.
+Actual model/native/GPU/parent qualification remains separate.
+
+## Closed owned-worker lifetime fixture
+
+Security impact: security-relevant process ownership and qualification integrity.
+The control-plane qualification helper creates only its own fixed model-free
+Python worker and descendant. An unnamed noninheritable kill-on-close job uses
+creation-time job-list assignment; no post-creation assignment crash window or
+breakaway permission is allowed. Exact limits and pre-resume membership are read
+back. Native job members and minimal read-only duplicated process handles prove
+exit across normal and forced guardian shutdown. No caller command, existing
+process action, privilege change, protected payload or ambient credentials cross
+this boundary. IPC, process count, commit and observation time are bounded.
+The supervisor pulls handles from the exact Popen-created guardian into its own
+process and records each duplicate before verification; no remote target or
+parent PID lookup exists. Failed thread closure preserves ownership. A shared
+strict exit-code/count oracle rejects natural expiry and errors; an actual fixed
+expiry negative control tests that rejection through the same native handle.
+
+Admission, native API, identity, protocol and cleanup uncertainty grant no pass
+or release. The fixture supplies no retained-tree protection, durable accounting,
+actual offload-worker integration or malicious same-user isolation. It never
+accesses retained staging, changes the unknown 12 GiB charge, reopens accepted
+accuracy or conducts the restricted Assets assessment. Physical evidence is
+explicitly opt-in; a skip is not qualification or a parent roadmap pass.
+
+## Selected-file ambiguity and real host qualification
+
+Use the contract normalizer's filename for both uniqueness and transfer lookup.
+Leading/trailing spaces are removed by that contract; comparing raw File names
+would allow a collision and could select the first source twice. Normalize the
+whole selection, reject duplicate canonical name/size pairs before create/resume,
+and select original bytes by that exact map. Reject ambiguous saved task entries
+before transfer. No independent UI filename-normalization policy is introduced.
+
+Security impact: security-relevant source integrity and bounded evidence. The
+shared Add data panel matches task files by name and size during transfer/resume.
+Reject duplicate pairs before any task creation, byte read or host mutation,
+including pairs with different modification times. Keep the user's selection
+and provide a fixed rename-and-select correction. Distinct sizes remain valid.
+This prevents choosing the first file twice and silently importing the wrong
+source. Server checks, checksum verification, acknowledged publication and
+workspace/organization authorization still apply independently.
+
+Model-free real desktop/browser journeys use only isolated synthetic files and
+production IPC/HTTP controls. They observe numeric slice sizes and progress;
+whole-file reads, ambiguous admission, missing outputs and failed source discovery
+cannot pass. Bearer-bearing traces, screenshots and video are disabled. No saved
+credential, provider request, model or retained staging is needed. These checks
+are not protected native/crash, real provider, whole-process memory or parent
+qualification; they never reopen accepted model accuracy.
+
+The separately admitted exact `POST /api/ingestion/tasks/execute` uses existing
+`artifact:write` coarse scope for every action, including read/list. It does not
+infer ownership from the request body. Normal authentication and dedicated-tenant
+checks run before JSON parsing; application authorization repeats the active
+organization, workspace and exact task/file checks before effects. Missing or
+invalid credentials, reader-only scope and another organization cannot reach
+parsing or acquisition. A task from another workspace stays not found. Malformed
+commands cannot run an effect. Unknown paths/methods and other unsupported API
+families remain denied. Real HTTP tests use synthetic token verification and
+real composed local publication; the host UI separately uses its generated
+device credential. These tests supply no broader route, provider or native pass.
+Rollback denies this route and retains the application's authority checks.
+
+The server composes ingestion only with organization-scoped documents and an
+authoritative context provider. An injected scoped store receives the same
+authenticated request context as PostgreSQL storage. A store name or body field
+cannot supply authority. Missing context returns unavailable before acquisition;
+organization mismatch remains denied. Unscoped stores never become a fallback.
+
+## Replaceable OCR request and result contract
+
+The approved Windows provider direction is documented in
+[ADR-0046](../adr/ADR-0046-replaceable-local-document-ocr.md). This first boundary
+is pure managed-runtime data validation; it adds no process, file, model,
+language-pack, credential or network operation and does not advertise readiness.
+
+Protected assets are source content and identity, original page lineage, resource
+availability and safe diagnostics. Inputs and provider results can be oversized,
+mutable, duplicated, swapped, malformed, non-finite or instruction-bearing.
+Immutable bytes/tuples and frozen records, exact digest/provider/version/language/
+page matching, strictly ordered original pages, finite contained rectangles,
+per-page pixel limits and aggregate line/text limits fail closed. Booleans are
+not accepted as numeric dimensions or page numbers. Recognized line control and
+surrogate characters are rejected; content is not copied into error messages or
+representations. Empty recognition remains empty and no confidence is fabricated.
+
+Application workspace/source authorization is still required before a provider
+call. Text remains untrusted data when later consumed by generation. These
+portable checks do not qualify a Windows parser, native isolation, trusted helper
+identity, timeouts, cancellation, cleanup, model quality or host UI. Those controls
+and measured failure paths remain required before enabling actual OCR. No cloud
+fallback, arbitrary executable/path or supplier download is authorized here.
+
+## Private OCR helper framing and recognition source
+
+Protected content crosses only a length-prefixed private byte stream. The
+Python codec enforces the response byte cap before JSON parsing; duplicate keys,
+unknown fields, invalid UTF-8, type confusion, non-finite coordinates and global
+line/text overflow fail with one fixed error. Parsed records alone grant no
+source authorization: exact source/provider/language/page binding remains
+mandatory. Recognized content stays data and is excluded from error text.
+
+Windows helper source accepts bounded source bytes, never caller paths or URLs.
+It checks that the actual engine language tag exactly matches the requested
+installed canonical tag, refusing Windows resolution substitutions or aliases.
+It never downloads a language; caps original PDF page
+count/selected pages, raster dimensions and decoded pixel product before native
+bitmap extraction/rendering; limits global lines and Unicode scalar text; and
+refuses overflow instead of truncating. Output is one bounded versioned response
+with source digest and rendered pixel-page geometry, without invented confidence.
+Helper code emits no exception or diagnostic payload; a future native owner must
+also discard/bound system diagnostics. Its managed input/work wait is finite.
+
+Compilation proves source compatibility only. Native allocation/memory, pipe
+retirement, creation-time Job ownership, deadline/cancellation, trusted compiled
+resource identity and crash cleanup remain unqualified. No helper launch or
+product OCR availability follows from this component. Actual malformed-image,
+scanned-PDF, native denial/failure and product/UI checks remain pending; existing
+source authorization, accepted model accuracy and retained offload data stay
+unchanged. This helper is not a sandbox against a hostile same-user deployment.
+
+## Bounded native OCR process and resource lease
+
+The runtime's private Windows owner protects source privacy, executable identity,
+resource availability and ownership. It accepts only a fixed resource; requests
+cannot select commands, paths, environments or services. A bounded trusted-build
+manifest binds current source and x64 binary bytes. Native file/ancestor leases
+reject reparse points and deny file write/delete and ancestor deletion through
+retirement. This detects stale/substituted resources within a trusted installation;
+it is not a signature, AppContainer, network sandbox or defense against a party
+who can rewrite the installed application or its build metadata. No process or
+file authority crosses into application/domain modules.
+
+Directory leases require list-directory plus read-attributes access, without
+enumerating entries. Attribute-only handles proved insufficient for Windows
+delete-sharing denial in the new synthetic resource test. This protects the
+named ancestor identity; it is not a child-creation fence or retained-tree proof.
+
+Creation-time JobList membership, suspended start and exact native limit readback
+precede resume. The one-member job and process each cap commit at 512 MiB; only
+three stdio handles are inherited. The job handle and runtime secrets are not
+inherited. Input/result use bounded private pipes. Stderr is counted/discarded;
+any stderr, overflow, I/O failure, nonzero exit or observed native limit denies
+success. A finite 120-second parent deadline and cancellation terminate only this
+new owned Job. The helper's own 110-second wait is not used as cleanup proof.
+The parent requires a signalled native root, zero active members, stopped pipe
+threads and acknowledged native closes. False or raised close results retain
+exact handles/owners and deny successors. The qualification operator likewise
+retains failed guardian/observer ownership and stops after a failed test.
+
+Actual new-owned native failure/crash evidence is separate from portable protocol
+checks. The read-only crash observer duplicates a process handle, never a Job
+handle; kill-on-last-owner-close must end the newly created helper. Neither this
+component nor its tests inspect or change unknown retained offload trees, repeat
+accepted model accuracy, qualify legacy restricted Assets or enable OCR. Trusted
+packaging, actual document recognition/lineage, provider/readiness and host UI
+integration remain required. Ordinary Canvas startup does not probe this engine.
+
+## OCR provider exchange binding
+
+The concrete adapter protects source/page identity and private content across
+two separately retired exchanges: fresh exact-language readiness, then bounded
+recognition. The parsed document must match immutable authorized source bytes,
+selected original pages and the actual ready provider/version/language. No ready
+cache, provider fallback, path/command selector or language download is permitted.
+Absent resources return fixed unavailable reasons; corrupted responses fail the
+contract. Cancellation and unsafe retirement remain failures and never produce
+partial documents. Existing native resource/process limits remain in force.
+
+Synthetic local document checks cover actual image/PDF content and denial paths,
+without private sources, credentials, models or retained files. Fixture Pillow
+and Arial are qualification tools, not runtime provider dependencies. Packaging,
+normalization, source authorization and actual host delivery remain required;
+this component does not advertise OCR or qualify the parent roadmap.
+
+## Trusted OCR build inputs and publication
+
+The build protects source/executable integrity, private environment and resource
+availability. Only fixed repository helper source, builder and hook, the installed
+compiler and literal SDK/framework references are accepted. Native file/ancestor
+leases reject redirects and deny file write/delete sharing. Only those fixed
+system toolchain files allow servicing hard links; repository/runtime single-link
+guards remain strict. Each installed file is at most 64 MiB, all inputs 128 MiB.
+
+The builder copies pinned source into a fresh ignored UUID directory. Its compiler
+environment contains only OS directory values and new private temporary paths.
+There is no shell, caller-selected command/source/flag, credential forwarding or
+download. The trusted compiler is limited to 120 seconds and 64 KiB saved output
+per stream; any stderr, overflow, failure or uncertain native root/pipe/handle
+retirement denies publication. A detached handle remains strongly owned when exit
+cannot be proved. This does not claim compiler process-tree containment or defend
+against a hostile compiler/installation writer. Runtime recognition retains its
+separate native Job and resource limits.
+
+An exclusive OS-owned file lock serializes builds and releases on termination.
+No old PID, run or retained model slot is adopted. Only the fixed generated exe
+and manifest are replaced, manifest last; native resource validation binds current
+source and executable digests, PE identity and size before reuse. Interrupted
+publication leaves a detectable mismatch and a fresh attempt can rebuild without
+deleting historical evidence. Optional build failure preserves Standard startup,
+while missing/stale resources remain unavailable. Build/copy evidence does not
+grant application or parent qualification. Actual document normalization, source
+authorization and both-host delivery still require separate checks.
+
+## Complete OCR normalization boundary
+
+Private PDF bytes, recognized text and source/page lineage remain untrusted.
+The provider-neutral orchestrator validates readiness, exact source digest,
+provider/version/language, every original page and a consistent total count.
+It rejects totals above 16 and applies aggregate line, character and neutral
+encoded-byte limits to the combined result. Partial recognition is not success.
+Supplier exceptions use fixed public text without retained content in diagnostics.
+
+The normalizer bounds one immutable PDF read at 16 MiB, rejects non-regular or
+observed redirected sources, checks compatible path/handle metadata and compares
+open-handle change time before and after reading. It does not authorize a source
+or establish native protection against a hostile same-user path/content writer;
+those source-staging and R30 native-race requirements remain pending. No new
+executable, service, path selector, file format or implicit language install is
+introduced. OCR failure/cancellation cannot be hidden by unsupported-file skip.
+Normalized text and private paths are excluded from representations. Geometry
+and original page metadata remain exact; no OCR confidence is invented.
+Portable and actual fixed-resource synthetic normalization evidence supports this
+adapter only. Public task/capability, native source authority, both-host delivery
+and parent qualification remain separate. Old offload and accepted model quality
+are unchanged. Rollback must preserve denial rather than silently drop OCR options.
+
+## Bound staged-PDF capture
+
+Private PDF bytes and source lineage cross a native file boundary. The private
+snapshot adapter checks canonical local task-stage and direct-child syntax,
+exact artifact/context coherence, bounded expected length and SHA256. These are
+integrity checks, not source authorization: the application must compile the
+binding from its authorized retrieved byte copy before public OCR integration.
+
+Read leases reject reparse points, non-regular files and multiple hard links;
+pin ancestors before descendants; deny file write/delete and ancestor deletion;
+and compare one immutable bounded capture with the expected bytes. Cancellation
+is checked between 64 KiB synchronous reads. It does not promise an asynchronous
+hard deadline for a blocked operating-system call or a directory child fence.
+Every acquired close is attempted independently. Unknown retirement retains the
+exact owner and denies later capture without resetting or retrying stale handles.
+Errors and representations exclude private identifiers, paths and source text.
+Actual synthetic sharing/reparse/content checks support this private slice only;
+upstream authorization, task/capability/UI delivery and broader R30 qualification
+remain required. No historical offload tree or restricted legacy work is touched.
+
+A mapped network drive can have a canonical drive letter and disk-file type.
+The snapshot adapter therefore requires a typed `GetDriveTypeW` result of
+`DRIVE_FIXED` for the explicit anchor before opening files. All other or failed
+queries deny; no current-drive fallback or network-share probe is performed.
+
+## OCR application-to-runtime source identity
+
+Protect source authorization and byte identity against forged caller maps,
+cross-workspace bindings, misleading metadata, adapter buffer reuse and ignored
+options on an old worker. Public runtime/source-map fields deny. The application
+requires strict opt-in/language/method coherence, an independent hasher and the
+exact versioned worker protocol before source I/O. Binding identity remains
+authority; catalog records must match the workspace/key and cannot authorize a
+different source.
+
+Copy final retrieved bytes before further awaited work. Derive the bounded PDF
+map and staged file from that copy; validate `sha256:` plus 64 lowercase hex
+before passing the raw hash to native capture. Both hosts compose the port even
+without version storage. Fixed short ordinal names avoid display-title leakage
+and needless long paths. Invalid, empty, excessive or non-PDF inputs cannot
+dispatch. Hashing, capability-check and task-start exceptions use fixed public
+errors; private paths, source maps and native details cannot enter those errors.
+
+An allocation or recursive removal can fail after partial effects. Register a
+private OCR owner before invoking the operation, retain its exact promise/attempt
+on uncertainty and deny successors across use-case instances. A cleanup attempt
+is terminal; repeat reads cannot retry removal or discard task/stage maps without
+confirmation. A rejected start RPC is not evidence that a worker did not run.
+OCR therefore issues its own fresh task identity and requires an exact request-id
+echo. An ambiguous acknowledgement retains the stage, exact start attempt and
+actual task reservation. Passive reconciliation cannot cancel, retry or retire
+this unknown task. There is no old-tree inspection, adoption, reset or retry interface.
+The ledger is process-local; durable crash and native/task reconciliation remain
+qualification work. Filesystem cleanup alone supplies no worker-retirement pass.
+
+These source-map controls do not qualify both-host UI or full packaging. The
+managed task now consumes the map as described below. No engine is probed on
+ordinary startup and no model-quality test is rerun. Existing retained-offload,
+unknown-start recovery and broader security gaps remain separate. Rollback must
+keep OCR denied, not silently ignore a requested map.
+
+## OCR managed task consumption
+
+Reject malformed or inactive maps, unbounded or reordered sources, mismatched
+identities/paths and incompatible method/language settings before task I/O. Validate
+raw OCR/layout booleans strictly. Repeat map admission before API output-root
+resolution and direct preparation. Immutable bindings select native PDF capture;
+display names cannot redirect into CSV/JSON loading or a Standard/skip fallback.
+Absent MIME does not replace the host identity; explicit incompatible MIME denies.
+
+Use the qualified native capture and fixed PDF decoder. Native read/recognition
+retirement guards remain authoritative. Propagate unavailable language/reader and
+capture failures without partial success. Public errors contain fixed useful
+actions, no raw supplier errors, source paths or map payloads. Reports mark OCR
+ready only after actual complete recognition and contain aggregate facts, not text,
+source hashes, paths, invented confidence or inferred accuracy.
+
+Cooperative preparation cancellation checks run between completed operations.
+The asynchronous API returns running/requested until execution unwinds. Unknown
+native retirement overrides cancellation rather than supplying an exit pass.
+Preserve Standard behavior and all existing generation, quality, review and memory
+controls. Local task fixtures, even with actual OCR, do not qualify model accuracy,
+whole-host UI, package delivery, unknown-start recovery or durable crash recovery.
+
+### Scanned-PDF form and saved-setting controls
+
+Treat renderer choices and browser storage as untrusted. A strict shared contract
+rejects non-boolean activation, missing or invalid language, incompatible methods,
+missing source-format entries, mixed source types and selections over 256 files.
+The forms and request builders apply the check before dispatch. Inactive settings
+never send a stale language. A checked choice cannot silently fall back after a
+source change; explicit method/goal changes turn it off. Task-owned inputs remain
+locked until observed retirement, including a cancellation request still running.
+
+These are convenience guards. Application authorization, exact protocol support,
+private host byte bindings, native integrity capture and per-task installed-language
+checks remain the security boundary. No renderer-supplied path, hash, source map,
+provider command, model download or language download is introduced. Desktop saved
+settings store only user choices; old records start off and malformed activation
+stops submission. Version reuse must match currently available PDF sources before
+restoration and is checked again by the host at execution.
+
+Display only bounded completed-recognition facts and an explicitly explained
+text-character check. Do not expose arbitrary provider identity/version strings or
+present character hygiene as OCR confidence. Focused form tests cover invalid
+choices, migration, saved-setting restoration, source/method changes, cancellation
+and inactive-request compatibility. Full mounted-host and package proof remains
+separate; browser state and client doubles grant no native or parent qualification.
+
+Scanned-PDF recognition accepts at most 16 pages per PDF. Split a longer PDF
+into smaller source files before using recognition. A version replay must retain
+the exact structure-aware/layout/Markdown settings and a compatible training goal;
+an explicit saved plan cannot bypass those checks.
+
+## Controlled OCR delivery checks
+
+The OCR fixture has no external provider or model access. It accepts only its two
+fixed synthetic generation identifiers, CPU Standard settings, an explicit test
+language and one source. The actual application and deployed worker still check
+authorization, exact staging bytes, protocol, language, bounds, review and output
+admission. Model downloads, training and conversation are refused by the fixture.
+No fixture branch exists in product code. Both hosts retain production dependency
+preparation; the server omits the simulated Node worker's preparation override.
+
+Create only new bounded synthetic PDF files under the current qualification run.
+The fixture font comes from the Windows directory API. Keep bearer-bearing traces,
+screenshots and video off. Log only selected native counters/status, never frames,
+recognized text, task tokens or paths. The fixed native operator requires exact
+source/tool/package/environment witnesses, finite unchanged limits, actual root
+exit, zero active members and acknowledged handle retirement. Preserve every
+failed run. Unknown ownership never permits a successor.
+
+A single Windows language/profile and synthetic generation cannot qualify all
+OCR documents, model accuracy, inference performance or a parent criterion.
+
+PDF chooser metadata is a routing hint only. Adding the existing PDF input type
+and its empty-browser-MIME fallback does not change backend admission or validate
+a PDF signature. Existing source authorization, raw-byte publication and native
+PDF decoding remain required. Preserve all structured file choices and streaming
+checks; do not accept caller metadata as proof of recognized content.
+
+## Saved-version renderer integrity admission
+
+- Boundary: untrusted saved preparation JSON and selected workspace metadata to
+  one complete shared form value. Existing application authorization and recipe
+  digest verification remain authoritative; renderer validation grants no access.
+- Threats: source/version substitution, ambiguous source matches, unsupported
+  settings causing a partially restored form, oversized or prototype-bearing
+  JSON, executable accessors and disclosure through raw errors.
+- Controls: exact workspace/version/dataset/artifact association; canonical full
+  lineage equality; ordered unique source IDs and exact logical storage keys;
+  ready workspace-scoped source projection with duplicate matches preserved;
+  closed supported settings and whole-value rejection before any setter.
+- Observed-match projection retains every matching duplicate and its order,
+  including incompatible rows. Reject accessor/sparse rows and more than 256
+  matches as a whole. Unrelated rows do not consume this bound. Never filter
+  conflicting matches away or treat the capped 250 browse page as complete.
+- Both apps capture bounded frozen reproduction/selection meaning before I/O.
+  Resolve at most 100 unique canonical lineage keys through the existing explicit
+  workspace `artifact.detail.read`/`artifact:read` operation, sequentially within
+  a 15-second caller deadline. Every await checks the exact current request,
+  client and committed form frame. Returned locator equality supplies key-derived
+  source identity; it cannot prove a different missing legacy ID. Preserve all
+  observed duplicate/conflict denials. Errors are fixed, path/payload-free copy.
+  Keep fetched options private until full replay validation and actual serialized
+  request equality pass, then merge only with the complete current form update.
+  No partial option merge, stale progress overwrite, automatic dispatch or late
+  acknowledgment. The shared `readDatasetVersionReplaySources` enforces the same
+  metadata bounds for both authorized transport adapters and rejects accessor
+  fields without invoking them. Timeout makes no transport cancellation or native-cleanup claim.
+  Source-byte, physical host, provider, scale-runtime and parent checks stay separate.
+- Bounds: recipe snapshot 512 KiB, reproduction envelope 1 MiB, JSON depth 16
+  and 20,000 nodes, selected-source projection 256. The existing version-record
+  normalizer still limits persisted lists to 100. Inspect property descriptors
+  before cloning; reject accessors, unsafe prototype keys, non-JSON values and
+  non-finite numbers. Compile output shapes through the existing contract.
+- Return fixed safe failure copy only. Do not expose prompts, raw exceptions,
+  paths, credentials or provider details. Returned values are cloned and frozen.
+  Retain only form-supported quality choices; current backend mandatory policy,
+  approval and consent must be resolved again. Do not restore destinations.
+- Residual scope: no proof of current source bytes, async page freshness, runtime
+  memory admission, installed OCR language, model readiness or provider authority.
+  The internal Desktop restore hook now calls the validator with the exact
+  selected version/file, observed list conflicts and bounded current exact-key
+  source metadata. It
+  builds a complete replacement, rebuilds the normal serialized request and
+  requires identical normalized meaning before setters. A committed-frame and
+  source-request fence retires stale edits, workspace/client/retry/unmount and
+  task-start callbacks; active tasks and reviews retain their status. Successful
+  application retires the invocation and resets all provider controls to local.
+  Desktop now offers reuse through a page-owned exact one-use request and opaque
+  consumer claim. Capture inspects descriptors without invoking getters/toJSON,
+  limits each reproduction/selection capture to 1 MiB, 20,000 nodes and depth16, clones
+  and freezes data, and releases settled request references. Recipe undefined
+  values remain invalid; only normalized selection optional object fields omit
+  undefined values. Current page scope retires navigation/workspace/superseded
+  requests before the consumer's passive post-commit acknowledgment. Consumer
+  identity, current source status, form edit capture and one-use application
+  prevent stale writes and false success. StrictMode cleanup tickets preserve a
+  still-mounted session and retire actual disposal. The surviving page announces
+  one fixed scoped success after commit, never after queue/navigation. Cancellation
+  makes no unchanged-state, rollback or publication claim. Reuse dispatches no
+  task/model/provider action. Thin now uses the same one-use handoff and metadata
+  resolver, retaining all observed rows before supported-source filtering. Its
+  actual command roundtrip denies unsupported values before every setter; it
+  never inserts original snapshot values to hide a builder mismatch. Form capture
+  and committed-frame guards retire edits, client/scope changes and task start
+  before late replies. Full-host/provider/scale checks remain separate; these
+  local UI checks grant no parent, native, source-byte or application authorization qualification.
+
+### Add data asynchronous session fencing
+
+The shared renderer treats task responses as scope-bound data. Before progress,
+notification or completion effects it requires the current mounted workspace and
+client session, exact task identity, and the active operation owner. Replacement
+or unmount stops further renderer-originated polls/chunks without claiming host
+termination or deleting accepted work. A synchronous owner prevents duplicate
+start/retry dispatch before the busy render. Existing transport/application
+authority, byte limits, provenance, checkpoints and resource ownership remain.
+
+A cancel request alone cannot release UI admission. A failed or nonterminal
+response retains the task and requires status confirmation; only a matching
+terminal response releases the owner. Duplicate status/cancel operations are
+refused, early cancel waits for identity and stale completion cannot overwrite
+the confirmed result. Tests exercise actual shared rendering with deferred
+responses, foreign identities, unmount during a slice, duplicate operations and
+multi-file exact-byte/digest assertions. These finite fixtures do not qualify
+real host/native retirement, provider egress or model semantics. No unknown old
+staging, process or filesystem object is inspected, adopted or cleaned up.
+
+Session retirement runs in the layout cleanup of the committed tree, before
+passive effects. This closes the commit-to-passive interval for late completion
+and notification effects without changing accepted host task ownership.
+
+### Browser preparation asynchronous effects
+
+Protected UI assets include source selection, accepted task identity, exact quality
+review identity, save/discard intent, prepared page content and completion callbacks.
+Workspace/client replacement, same-frame duplicate submission, foreign replies,
+late pages and raw exceptions can confuse or disclose that presentation. The
+renderer retires sessions in layout cleanup, fences typed operations before and
+after await, synchronously admits one start/review mutation and matches task/page
+identities before use. A review/page sequence invalidates superseded results.
+
+Failed, foreign or Unknown task reads retain the accepted owner and continue
+observation. Unconfirmed discard retains the exact quality review. An old client
+approval cannot trigger completion in a replacement session. Public diagnostics
+do not echo unexpected transport exceptions. Memory denials keep the existing
+bounded numeric notification formatter; resource guards and host/application
+authorization are unchanged. Navigation never claims worker termination.
+
+Focused rendered journeys exercise nine supported task recipes plus duplicate,
+stale-client, status failure, wrong task/page, review and cancellation cases.
+Related version/replay checks remain required. Synthetic API fixtures confer no
+physical runtime, provider, native protection or model-quality qualification.
+Unknown historical offload data and restricted legacy security review remain
+outside this presentation change.
+
+Missing report/review, foreign fingerprint and wrong review state retain accepted
+ownership until matching review or authoritative terminal evidence. Eight rendered
+denial/recovery cases failed before the correction and passed after it.
+
+### Browser model selection and action integrity
+
+Model reference, registry, file-list and download controls preserve workspace/client
+session identity across awaits. Same-frame duplicate mutation is refused; stale
+save/download/delete results cannot refresh the old workspace or announce success
+in its replacement. Details/file/save/download/delete replies must match the
+requested identity. A file dialog sequence refuses closed or superseded replies.
+Deletion keeps explicit confirmation and record-only intent; no file-delete
+authority is introduced. Accepted host tasks are not cancelled on page retirement.
+
+Unexpected API exceptions use fixed public and diagnostic messages. Inventory
+timeouts are bounded and cleared. Focused synthetic tests exercise the complete
+browse/reference/download/inspect/record-delete workflow and denial/recovery cases.
+No token, private provider, physical files, model accuracy, native staging or
+restricted legacy Assets assessment is exercised or qualified by this change.
+
+The real Models API client also uses fixed failure diagnostic copy before the
+renderer handles an exception. Diagnostics retain only public operation/provider,
+bounded query length, identifier-presence flags, status and elapsed time; they omit
+raw queries, identifiers, endpoints, provider error text/code/details and content
+type. Thrown API error message/status/code/details remain unchanged for typed
+callers. Actual client-to-renderer denial tests cover that separate boundary.
+
+### Desktop training task and review replies
+
+Protected presentation state includes exact workspace/client/run identity, selected
+prepared datasets, parameter values and explicit save/discard intent. A committed
+session retires stale callbacks and follow-up reads. Synchronous action ownership
+refuses duplicate starts and mutations. Status/cancellation replies must name the
+accepted run. Review mutation keeps its identity until matching terminal save or
+discard proof; missing registered save output remains unconfirmed. Accepted host
+work is not cancelled by navigation. Host authorization and resource bounds remain
+authoritative and unchanged.
+
+Unexpected action exceptions do not enter rendered messages. Errors use fixed
+workspace-scoped Notifications copy. Successful-save status remains authoritative
+when a subsequent inventory read fails. Focused real-form/hook cases cover nine
+profiles, explicit zero values, duplicate/stale/foreign actions, uncertain task
+status and review retention. Synthetic results prove no physical training, model
+quality, provider publication, native staging or worker retirement.
+
+Focused deferred-reply tests also cover recovery-key ownership and terminal
+observation during cancellation. Neither a retired Start nor a late Stop may
+replace a newer accepted identity or confirmed review. Uncertain cancellation
+remains observable with safe Notifications and unchanged host authority.
+
+### Image presentation isolation and output evidence
+
+Image presentation protects workspace/client/request identity, source references,
+explicit start/cancel/finalize intent and artifact-backed output. A committed
+session retires old replies and recovery writes. Synchronous mutation admission,
+exact observed request identity and complete bounded registered-asset checks
+prevent duplicate submissions and false completion. Uncertain status retains
+accepted task identity; cancellation cannot regress confirmed finalization.
+
+The form applies existing contract bounds before dispatch. Public unexpected
+failures omit supplier exception text; Notifications owns generation errors.
+Finite regressions include duplicate, stale, foreign, malformed, unsafe numeric,
+late-cancel and retry cases on both hooks. They grant no runtime readiness, model
+quality, provider, native staging or worker-stop proof. Existing host guards and
+retained-object restrictions remain unchanged.
+
+Focused review regressions also deny retired Refresh admission and preserve the
+committed output consumer during a suspended replacement render.
+
+### Daily UI task evidence and safe diagnostics
+
+The owned-task app-journey helper treats HTTP/IPC results as untrusted evidence.
+It keeps existing same-origin pairing and host authority, bounds response bytes,
+refuses redirects and malformed success values, and prints only closed failure
+categories. Provider codes, messages and payloads are not assertion diagnostics.
+Finite helper tests preserve exact dispatch and exercise denial/stream cleanup;
+they do not qualify actual apps, model semantics, native ownership or old stages.
+
+### Training notification outcome integrity
+
+The Desktop training notification bridge checks exact run identity and a closed
+status set before classifying a read. Uncertain reads keep shared observation
+active; committed client/workspace retirement rejects late publication. Shared
+snapshots are checked again before presentation. The bridge owns exact listener
+cleanup, including synchronous cached delivery, and remembers at most 100 terminal
+identities to refuse duplicate start replay within the mounted session.
+
+Public progress uses only safe integer current/total pairs with a positive total
+and current within range. Fixed messages replace runtime progress and error text;
+no prompt, provider diagnostic, path or payload is copied into history. Existing
+host authority, memory guards and task lifetime stay unchanged. Rendered synthetic
+regressions cover denial, retry, valid review/terminal states and shared cleanup;
+actual host, model, native recovery and final testing remain separate.
+
+### Dataset notification failure and memory facts
+
+Dataset Notifications consumes the owning client's closed failure-code map and
+existing numeric shortfall formatter. The client forwards only normalized memory
+facts plus the existing allowed stage/reason fields; arbitrary worker details and
+messages stay excluded. Fixed progress copy and ordered safe-integer counts avoid
+private content and invalid progress. Only an actual boolean overflow flag can
+produce the once-per-request disk warning.
+
+Committed workspace/client sessions and per-subscription identity retire stale
+replies and shared cached-result cleanup. Closed supported status checks leave
+malformed reads uncertain for retry; explicit authoritative unknown remains an
+unknown outcome. A bounded terminal cache refuses replay. Host authority, memory
+guards, task lifetime and model expectations do not change. Synthetic rendered
+and real client-mapping regressions are local support, not physical model/OCR,
+native recovery, actual host or parent-roadmap qualification.
+
+### Shared model-download notification boundaries
+
+A complete download page is checked for current workspace, bounded unique task
+identity, model/display fields and supported status before optional completion.
+No valid prefix of an invalid page can trigger completion. Identity capture
+prevents a caller from changing the expected task while completion is awaiting.
+Returned completion and shared cached pages are checked before publication.
+Committed client/workspace cleanup fences late replies. Existing live/history
+reconciliation and host/application registration controls remain authoritative.
+
+Fixed public messages replace runtime progress/error text. Numeric progress uses
+ordered safe integers or a finite in-range percentage when counts are absent;
+unknown units and invalid values are omitted. Only bounded valid timestamps are
+forwarded. Synthetic UI regressions preserve the existing history behavior and
+exercise malformed/foreign/duplicate/oversized pages, mutable identity, wrong
+completion, retirement and safe copy. They do not qualify downloads, models, real
+hosts, physical native protections or any parent roadmap.
+
+The shared download bridge preserves the exact known worker-stop classification
+through capture using only `python_runtime_worker_exited` plus failed status.
+Its public copy is fixed; raw runtime message text is never trusted. Forged text
+under another code and a known code on unknown status cannot assert worker exit.
+Existing real host recovery assertions remain unchanged. Local bridge/runtime
+fixtures support this compatibility repair without claiming an actual host fault
+or native retirement qualification.
+
+Desktop model views use commit-bound object leases and exact read tickets to
+reject late results after workspace/client retirement and out-of-order reads.
+Strict Mode replay cannot reactivate earlier ownership. Scope retirement clears
+private model selection, destructive confirmation and action outcomes. Model
+exceptions never enter public view/notification copy. Deletion is single-admission
+and requires exact record, success and requested-effects acknowledgement before
+confirmation closes; a failed follow-up read retains its retry guidance. These
+rendered synthetic regressions do not qualify native file effects, main-process
+sender authorization, provider/model behavior or the restricted legacy review.
+
+Delete confirmation ownership is separate from request and workspace ownership.
+A replacement form retires earlier consent. Exact current target and text are
+checked at dispatch; a late result cannot clear a replacement or publish an
+outcome over it, including same-record reopening and follow-up refresh races.
+
+The Desktop Models composed UI fixture retains the real native-location denial
+adapter. A requested file action must remain non-successful and leave the fresh
+fixture record and bytes intact. The actual renderer client omits location paths.
+Provider failures use fixed public copy, and workspace-owned references survive
+bridge/registry reconstruction. The invoke event and provider are bounded offline
+fixtures, not sender-authentication or native-effect qualification. Temporary
+cleanup checks only the fresh owned regular tree after UI retirement; old
+retained resources and production credentials are never inspected.
+
+When separating image start contexts, API and IPC mappings inspect passive
+generation-field descriptors. Only workspace context is removed. The mapping
+and fixed application allowlist together deny unknown, accessor and hidden
+generation fields. The application
+request allowlist, workspace task authority and existing failure envelopes remain
+unchanged. Positive and denial regressions preserve transport correlation.
+
+The browser image HTTP fixture uses a bounded deterministic worker and an exact
+synthetic credential/authorization policy. Its new owned output tree feeds the
+real persistence, catalog, binding, asset registry and finalizer. A registration
+failure retains the completed persistence receipt and retries without recopying
+or duplicating publication. Refused cancellation remains active; after UI
+retirement an isolated foreign read must fail before worker I/O. Byte/pixel and
+registry oracles do not qualify real ComfyUI, browser decoding, production auth,
+native ownership, provider behavior or the restricted legacy security review.
+
+Image HTTP start validation precedes context extraction and diagnostic reads.
+Accessor and hidden-field regressions run with logging enabled, prove no getter
+execution and retain header correlation. Diagnostic summaries use a model-presence
+flag instead of a selector that could contain a local path; prompt text is absent.
+The passive snapshot and fixed application allowlist still reject unsupported
+requests before worker admission.
+
+The Desktop Training form does not copy runtime progress messages, task IDs or
+validation-report paths into public status messages. It generates fixed state
+copy plus independently validated epoch/batch pairs: safe integers, nonnegative
+current, positive total and current no greater than total. Malformed counters
+cannot claim progress or remove Stop/review controls. Report availability is a
+fixed message. The current run remains internal for ownership and explicit
+review. Rendered client-fixture regressions preserve those controls and do not
+qualify physical training, native behavior, providers or final host execution.
+
+Training default selection must not restore a path removed by the Models client.
+It consumes the existing safe availability flag, retaining the legacy direct-client
+path-presence fallback only when no boolean flag exists. The hint grants no file,
+native or loading authority. The form still submits an exact workspace/model
+record; application resolution and admission remain unchanged. Rendered tests
+exercise the actual client sanitizer with finite preload envelopes and verify
+path-free presentation/requests, unsuitable-default refusal and existing model
+preference/fallback behavior. They do not qualify actual training or native files.
+
+Composed Training tests join real UI/preload/handlers/orchestration with newly
+owned staged input files, cooperative output storage and a durable JSON registry.
+Independent byte and reopened-identity oracles protect exact input/output mapping,
+explicit review, workspace refusal, retained failed-save review and no duplicate
+storage on retry. The finite worker and passive input-binding/settings/runtime ports do
+not prove physical training or host authorization. Fixture cleanup checks the
+identity, containment, entry/byte bounds and regular-file tree of only directories
+created for that test. It never inspects or cleans retained model/offload data,
+and no native race-protection or atomic-publication qualification is inferred.
+
+Training status reads require a canonical workspace-bearing bridge request, just
+like cancel and explicit Save/Discard. The client rejects malformed workspace
+identity before entering the bridge. This aligns declarations with the existing
+preload contract and preserves all handler/application validation. Exact consumed
+preload methods type-check without hiding the mismatch behind a broad cast.
+The composed fixture reads input bytes from a real new filesystem store, while
+input binding and artifact-list policy remain declared fixtures.
+
+Desktop Download uses one view-owned synchronous ticket while its start request
+is pending. Disabled controls are presentation; the hook ticket prevents same-tick
+reentry before React renders. Retirement releases the old view ticket and rejects
+late state changes without changing host/application authorization. Composed
+fixtures use exact workspace/task/model identities, finite offline worker records
+and a new bounded file tree. The real completion handler supplies write authority;
+renderer payloads do not. Repeated completion registers once, failed tasks do not
+register, and a foreign completion is refused before worker reads. Notifications
+show fixed progress/failure copy without worker diagnostics or local paths. Owned
+fixture cleanup checks identity, containment, entry/byte bounds and regular files.
+No retained resources, real model/provider, native file proof or physical host
+authorization is qualified by these synthetic task records.
+
+Composed browser download tests use only a new loopback listener, a fixed synthetic
+credential and identity-checked bounded files. The real client serializes requests
+through actual routes and the task use case; test middleware refuses missing test
+credentials before admission. The visible foreign-workspace notification panel
+contains no owner activity or progress, and foreign completion is denied before
+runtime reads. Path-free public records and fixed task messages preserve host
+paths and worker diagnostics. Durable model identity is checked after reopening
+the actual JSON registry; replay does not register again. Tests restore previous
+browser storage/globals, close the exact listener and remove only the newly owned
+regular-file tree. The synthetic access fixture grants no production-authentication
+qualification, and no real provider/model or native/physical host pass follows.
+
+## Website capture catalog compensation
+
+A changed refresh cannot be stored alone. Its new snapshot must point to the
+same previous snapshot as the refresh record. The transaction verifies the
+previous record's identity, source, workspace, and organization before writing.
+
+A website capture can write raw and readable objects before its source
+transaction returns. A lost save response cannot authorize deletion. Exact
+scoped readback of the finalized task file or changed refresh and its immutable
+snapshot can confirm the save. Missing, mismatched, or unreadable readback leaves
+the outcome unconfirmed and preserves bytes and catalog evidence. An initial
+capture cleans its own files only when the scoped task confirms terminal
+cancellation for that file and the attempted snapshot is absent. Both hosts
+supply the existing catalog-delete port; it runs after each byte deletion
+succeeds. A derived-write failure still cleans only its acknowledged raw output.
+An exclusive create conflict cannot mark a shared task failed or authorize
+adoption of the existing artifact. A concurrent save may still own those bytes.
+Focused tests cover lost responses, cancellation, and byte-denial/raw-only
+ordering. Native races, durable cleanup recovery, real egress, and production
+access policy remain separate.
+
+## Browser artifact deletion intent and stale replies
+
+Single and bulk local deletion share a synchronous pending owner. Confirmation
+stays exact and workspace-scoped. Changing workspace or client clears old
+selection and confirmation; accepted host work is not reported as cancelled.
+Each layout setup owns a fresh lease and retires it during layout cleanup.
+Uncommitted renders cannot revoke the visible session. Async work captures its
+exact lease, including across development effect replay. Older list/detail/media
+replies cannot replace current state. Deletion retires
+prior reads and holds its guard until every dispatched bulk request settles.
+Partial success removes only acknowledged targets from the retry selection and
+refreshes authoritative records. UI admission is not an authorization boundary.
+The existing application workspace checks, catalog-last deletion and prohibition
+on remote-provider deletion remain authoritative. New synthetic fixture roots
+are identity, containment, type, entry and byte checked before removal; exact
+owned listeners and requests are retired. This local evidence does not qualify
+production authentication, physical/native races, provider or durable restart.
+
+## Desktop Artifact Browser leases and deletion intent
+
+Local artifact lists, previews and popup updates are admitted only by their
+current committed lease and exact request identity. Layout cleanup retires the
+lease before passive effects. An uncommitted replacement does not alter the
+visible owner. Retired replies cannot issue subsequent content/media requests;
+prepared orphan object URLs use existing revocation. Current type/storage
+filters cannot be undone by an older list response.
+
+Registered and unregistered deletion share synchronous pending admission with
+exact typed confirmation. A failure retains confirmation for explicit retry.
+Old completion cannot clear a new workspace or publish success there. This is
+UI intent coordination; application authorization, storage containment and
+catalog-last local deletion still enforce access and effects. Remote provider
+deletion is unchanged. Only fresh bounded fixture trees are inspected/removed,
+with exact root identity, containment, regular types and entry/byte limits.
+Composed preload tests use finite sender/provider/settings/timing fixtures and
+do not qualify physical Electron, production access, native races or recovery.
+
+Deletion captures the selected target, committed lease and selection sequence
+before dispatch. Completion clears only that exact selection; choosing another
+artifact or choosing the same artifact again creates a new selection. A newer
+preview is a retained snapshot, not proof that deleted bytes still exist. Clearing
+the current selection also closes its detail popup.
+
+After a current-workspace deletion succeeds, refresh uses the latest committed
+list callback. Changing type or storage filters while deletion is pending cannot
+leave the removed item in the displayed list. The callback is updated in layout,
+never during an uncommitted render; the existing workspace/client lease check
+still prevents refreshing another view.
+
+## Provider browse and stale file selection
+
+A repeated browse or an outdated file selection can confuse local provider intent.
+The shared panel admits one browse synchronously, checks exact request/session
+ownership after replies, and clears dependent choices when namespace or dataset
+selection changes. A fresh browse invalidates old files before awaiting metadata.
+A synchronous current-file-list gate prevents an old Add data handler from sending
+a task during that transition. These are presentation/intent controls; typed host
+validation, workspace/organization authorization and immutable revision checks
+remain authoritative. Remote registration is not local byte acquisition.
+
+Both-client composed scenarios retain actual pre-fix selection/duplicate failures,
+partial retry, selected-file-only effects, old-workspace replies and fixed safe
+provider refusal. Credentials, provider metadata/existence, sender/access and timing
+are synthetic boundaries; provider writes/downloads are disabled. Only fresh root
+identity/containment/type/entry/byte checked files are removed after finite owned
+work drains and globals are restored. No real provider, model, native, physical
+host or parent security/roadmap qualification is claimed.
+
+## Dataset configuration matrix boundary
+
+The focused both-app configuration matrix admits only finite synthetic source
+metadata and captured commands. Task clients refuse before acceptance, unused
+model/download/runtime/provider mutations are unavailable fixtures, and no real
+credential, network provider, source decoding, OCR or inference is used. It checks
+incompatible source refusal, exact source IDs and task choices, invalid active
+limits and omission of inactive task/model/division fields. Actual visible parent
+controls are opened before interaction; hidden controls cannot be a test shortcut.
+
+Each case owns a unique workspace and at most two captured commands. Unmount
+retires component timers and finite continuations. Only exact owned workspace
+storage keys are restored; unrelated storage and globals retain their original
+values. These tests do not establish transport authorization, native cleanup,
+file-parser safety, model semantics, offload ownership or production security.
+No product authority, policy, guard or implementation changes in this chunk.
+
+## Preparation approval response and UI ownership
+
+The composed Dataset tests reproduced duplicate desktop approval dispatch, a
+same-render Save/Discard race and success callbacks after page retirement.
+Desktop review actions now share a synchronous token bound to committed scope;
+only its current owner can apply a response or release busy state. Existing
+application task/report/workspace checks and serialization remain authoritative.
+Accepted writes are not undone merely because the page retires.
+
+A partial materialization failure also exposed storage-controlled error text
+through both registered app connections. The approval exception boundary now
+returns fixed application-owned retry text. The tests inspect actual failure
+envelopes and UI, preserve the pending review, verify compensated output bytes
+are absent and retry after the storage port recovers. Other diagnostic paths,
+rollback durability, native/process effects and final qualification are not
+claimed by this correction. All tests use newly owned bounded synthetic resources;
+no credentials, real model/OCR/provider action or unknown retained tree is used.
+
+## Saved-version callback scope and recipe read checks
+
+Eighteen composed local cases exercise real persisted recipe digests and version
+identity through the existing mounted panel and registered app connections.
+Missing or changed recipe bytes refuse the callback, hide a synthetic private
+port marker and permit corrected retry. Wrong workspace/current-version
+association cannot select a setup. Completed actual recipe reads held by a finite
+delay fixture cannot call a retired panel after unmount or changed client,
+workspace or artifact props. Existing version, source and consent guards remain.
+
+The comparison UI correction only distinguishes recipe changes from changed
+data-role digests. It changes no stored bytes, hash, authorization, publication
+or runtime policy. A successful synthetic consumer callback is not proof that
+a receiving page applied setup. Actor/access/readiness and worker quality/output
+computation remain fixtures. Current new owned roots, SQLite/listener/tasks and
+globals use the prior bounded teardown; store-call admission is prospectively40
+per case to allow two versions. Other resource bounds are unchanged. No actual
+model/accuracy/OCR/provider, physical/native/process restart or final/parent
+qualification is granted, and accepted model/OCR checks remain closed.
+
+## Saved-row mutation and response ownership checks
+
+The composed saved-row tests keep workspace/version checks, source digests,
+row fingerprints and immutable storage guards in the actual application. Foreign
+workspace, missing version and malformed fingerprint requests refuse before
+codec/storage mutation. Real model-free Python codec tests separately prove
+stale fingerprint, incompatible schema and last-row rejection denial. A finite
+TypeScript registry is not claimed as real hash/codec enforcement.
+
+A synchronous shared UI owner admits one visible edit/reject action before a busy
+render. Pending fields/selection are disabled. Empty numbers fail locally. Old
+list/page/edit replies cannot update a retired workspace/service or unmounted
+view. Accepted backend effects continue and remain in their original workspace.
+Storage exceptions at the revised-dataset save call return a fixed public error;
+contract failures do the same. Exact drafts/original bytes survive pre-write
+failures and corrected retry. This does not prove unknown partial-write atomicity
+or authorize deletion/adoption of effects after a failed storage acknowledgment.
+
+Tests use fixed synthetic typed Parquet and principals, exact new checked roots,
+SQLite and an owned loopback listener. Registry task/status/UI/application/store
+counts and fixture file sizes are bounded. The actual staging adapter cleans
+new stages; teardown verifies root identity, containment, types and byte/count
+bounds before removal and restores globals/storage. The Python codec creates and
+removes only its exact checked two-file staging roots. No unknown retained data,
+model/OCR/provider/native process or current security policy is changed. Four
+codec-function tests are separate from44composed UI tests; physical sidecar,
+installed-host, process/restart and parent qualification remain unproved. Accepted
+model/OCR checks stay closed.
+
+The composed lineage oracle requires exactly one imported root and one child
+in the same workspace/dataset, with an exact parent pointer and source key/hash.
+It binds the actual recipe bytes and operation/fingerprint, quality report hash
+and dataset role metadata to the expected mutation. Complete persisted records
+remain equal after UI remount and local SQLite close/reopen. No child is accepted
+merely because it has a parent pointer. This adds no native restart proof.
+
+## Desktop model reference-save admission
+
+The existing desktop model view lease now holds one synchronous reference-save
+ticket. Repeated clicks cannot send a second request while the first is pending.
+A failed attempt releases only its own ticket for explicit retry. Retired
+workspace/client/unmounted views cannot publish old success or refresh inventory;
+an already accepted write keeps its original workspace and model identity.
+
+Five variations join actual UI/client/preload/registered handlers/application/
+JSON registry with a finite provider, in-process invoke and explicit held or
+failing pre-delegate save. A pre-delegate error creates no record and reaches
+fixed public notification copy; it is not a partial-write recovery proof. Exact
+workspace/provider/model/task/inference/lifecycle fields and non-registration in
+a foreign workspace are asserted. Existing typed deletion and native file denial
+are preserved. New fixture requests are drained before exact new-root cleanup,
+which checks identity, containment, links, types and count/byte limits. The test
+restores its React flag and API descriptor. No physical sender authentication,
+SQLite, actual download/model/OCR/provider/native process or parent/final pass is
+claimed. Accepted model/OCR checks stay closed; no security or resource guard is
+weakened.
+
+The private saved-row host fixture permits one additional provided CSV-to-Parquet
+case only. Fixed name/closed fixture shape, exact bounded bytes, regular contained
+source identity and single-link witnesses prevent arbitrary input admission.
+Generation, OCR, downloads, extra sources, advanced preparation and unsupported
+tasks stay denied. Production processors and public UI mutation authority remain.
+Read-only evidence is bounded and scoped; malformed/wrong-version pages, changed
+parent/source/recipe/digests/counts and private read failures fail fixed oracles.
+Existing serial host/worker ownership, offline settings and native resource limits
+are unchanged. Source/helper tests do not prove physical file identity, Electron
+sender authority, process restart, native shutdown or final qualification.
+
+### Desktop image joined test scope
+
+Security-relevant assets are workspace/task identity, generated bytes and their
+catalog/binding/image registration, plus public presentation/session state. The
+composed regression traverses actual Desktop UI/client/preload/registered IPC/
+application and fresh filesystem/JSON persistence. A finite worker emits one
+fixed small PNG; access, invoke events and passive inventory/settings/media reads
+are explicit fixtures. The preview reader requires workspace context; supplying
+that existing context fixes omitted presentation scope without relaxing guards.
+
+Oracles bind exact settings, pixels/dimensions/digest and reopened ownership.
+Foreign task read/cancel/finalize are denied before worker/storage effects.
+Failed registration uses safe public copy; retry retains the original persisted
+image. Cancellation refusal keeps observation active. Cleanup drains owned
+invocations and checks root identity/containment, regular single-link files and
+count/byte limits, then restores prior bridge/React/session/URL state. Physical
+Electron sender isolation, production authorization/SQLite, real model/provider
+semantics, native effects and parent qualification remain separate and pending.
+
+### Joined Context query and rebuild follow-up
+
+Security-relevant assets are selected workspace/source/artifact/task identity,
+saved bytes and lineage, public excerpts/citations, device choices and errors.
+The existing two-host join now exercises real Context UI/clients/preload/IPC or
+owned loopback HTTP/application/runtime-adapter/staging/catalog/bindings/bytes.
+Closed finite task/archive/embedding/query/access/invoke seams are explicit.
+A post-application acknowledgement fault tests renderer refusal; it is not proof
+of transport redaction. Separate malformed runtime output and unavailable CUDA
+failures cross the actual adapter/application failure boundary without leaking
+the synthetic private diagnostic or silently choosing CPU.
+
+The tests found an old detail dialog covering an accepted rebuild and a malformed
+score crashing query presentation. Accepted rebuild now closes that dialog;
+refusal keeps correction available. Query display validates bounds/score/selected
+artifact and canonical citations before storing results, and retires an earlier
+answer on a new attempt. Denial cases include foreign identity, malformed score
+or citation, oversized excerpt and more matches than requested. A corrected
+explicit query succeeds; earlier source/artifact bytes remain unchanged.
+
+Actual saved records/primary bindings/digests and source/chunk lineage are checked
+after reopen. Owned stage witnesses, task/power pairing, finite calls/bytes and
+restored environments/closed listeners retain the existing cleanup controls.
+Physical sender/authorization/SQLite, real LanceDB/embedding/model semantics,
+native process/restart/scale and final/parent evidence remain separate. Existing
+manual/source tests and accepted model accuracy/OCR are preserved. Source-pack/
+RAG whole-app helper code is still required before its controlled execution.
+
+### Fixed source Context worker admission
+
+The private app-test worker retains its task allowlist, offline/native ownership
+and current source/run/temp bindings. The source fixture is read with regular
+single-link identity/size witnesses and exact bytes/name/digest/settings. New RAG
+operations require the current staged input, matching size/digest, bounded ZIP
+entries/expansion, no aliases/links/traversal/encryption, and the declared source
+manifest/model/dimensions. Only one fixed CPU query is admitted. Production
+archive/table/citation validation follows admission. A finite embedding callback
+replaces all real model loading; it grants no new model, download, OCR or provider
+authority. Existing manual input and all native/resource guards are unchanged.
+Negative tests deny changed bytes/settings/paths/query and malformed archives
+before processor effects; local package tests preserve original source bytes.
+App/native restart and final qualification remain pending.
+
+A real package regression found that source Markdown headings and citation-like
+lines could be mistaken for package structure. New generated topics use a fixed
+versioned header and exact bounded summary character framing. The reader consumes
+that body before requiring the citation footer and next section; it never retries
+a malformed framed document with the legacy parser. Summaries and source bytes
+are preserved exactly. Single-line titles, limits, legacy/manual compatibility
+and malformed/trailing/frame/citation denials have focused regression coverage.
+
+The same wrapper also admits only the declared source-pack manifest/name/source
+lineage/settings and exact member set. Manual packs retain their 16 KiB limit and
+fixed entry/digest identity. Changed source-pack names, source lists and model
+methods are denied before processor invocation. Reserved framing metadata is
+recognized even if a header is prefixed or damaged; it cannot enter the legacy
+parser. Titles ending with any line separator are refused by writer and reader.
+
+### Fixed source Context app-journey controls
+
+The source-pack/RAG app helper uses a separate workspace and the exact synthetic
+Markdown. It checks the actual source storage identifier and digest, complete
+catalog, saved bytes and inspected manifest settings/lineage. Read-only Data
+readiness admits only its existing structure-aware1200/120 preset for this source;
+that preset does not authorize generation. The fixed generation/query settings
+and existing native/offline/owned-worker/resource limits remain unchanged.
+Mutations use UI controls. Rebuild/discard/cancelled deletion preserve complete
+records; confirmed deletion targets one created artifact and proves only public
+removal/refusal/reload behavior. Physical erasure/native retirement stay pending.
+Desktop download streams are bounded and compared with saved digest/size, and the
+owned Playwright download handle is deleted. Evidence is bounded/source-bound and
+contains no credential or private diagnostic. Local oracle/type/collection checks
+do not qualify actual app behavior, physical ownership, model quality or roadmap
+closure. The fresh-session pack-rebuild display risk remains separate agent work.
+
+The review oracle checks the complete exact ordered chunk/topic content and
+citation sequence with progress/count/navigation/decision boundaries before any
+approval. The expected fixture output was obtained from actual production
+processors with finite embeddings. Getter-bearing/extra arrays and unsafe nested
+metadata are refused before serialization. Retained artifact bytes are read again
+after cancelled deletion. These strengthen local test evidence without claiming
+physical app execution or curing the separate fresh-session pack-mode finding.
+
+### Fresh-session rebuild ownership and manual-content protection
+
+A saved source-pack rebuild restores review mode only after accepted current
+action ownership. A refusal preserves detail; stale workspace/client/unmount
+successes and errors cannot install a task key or change current mode. The
+scoped client already provided stale-session isolation; focused regressions
+retain it, with explicit action-token checks at the renderer update. Manual
+packs remain non-rebuildable, preventing implicit loss of manual input. Both
+transport/storage fixtures re-open original/source bytes and catalog/bindings
+and require explicit review/save of a separate source-pack successor. The
+earlier fresh-session display finding is repaired locally; physical app/native
+qualification remains pending and no accepted model test is reopened.
+
+
+### Opt-in private provider UI test fixtures
+
+The fixed contributor fixture protects the explicitly supplied test credential,
+the already authorized private repository, workspace references and qualification
+integrity. Pure declaration/collection paths perform no credential or provider
+I/O. Executing paths use only an explicit bounded ignored input, the production
+store in a physically checked fresh run/case, and fixed authorized HTTPS reads.
+No secret enters Page, browser storage, arguments, environment, launch records,
+captures, raw errors or evidence; neither token hashes nor masked suffixes are
+recorded. Configuration supplies no authority or ambient credential fallback.
+
+Opaque admission requires the derived root absent before identity seeding.
+Existing destinations, links, path escape, multiple links, malformed/oversized
+input and stale stop reports deny. Exact owned credential retirement requires
+known consumer exit and its canonical acknowledgement. Desktop main and launcher
+PIDs can differ; the fresh canonical main-exit report binds both. Server uses its
+actual bounded shutdown acknowledgement. Identity/stop uncertainty retains data
+and fails. The source input is preserved, and independent cleanup failures remain
+visible. Plaintext production-store behavior is unchanged: these controls grant
+no secure erasure, DPAPI/ACL, hostile native race, full-job or managed-tenant proof.
+
+Provider reference registration and optional bounded localization are distinct.
+Catalog size can be absent after localization, so exact bytes use a separate
+bounded media read. Private publication requires a live private-state observation
+and absent unique path, disables creation, retains its real local branch and
+obtains a separate immutable remote-commit byte witness. Redirects, uncertain
+visibility, auth/404 confusion, changed content, malformed UTF8 and stream/request
+exhaustion fail closed under fixed budgets and sanitized reason codes. No test
+creates another dataset/repository, changes visibility/conversion or deletes
+remote data. Concurrent remote administration is outside this cooperative proof.
+Source/loader/contract tests and collection grant no actual app/provider/native,
+full-suite, parent or accepted-model-accuracy qualification.
+
+
+## Private Windows identity component boundary
+
+The versioned read-only Windows identity helper is a prerequisite, not a file
+effect or ownership service. Bounded native framing, handle-relative no-follow
+opens, exact expected identities, revalidation, finite handles/deadlines and
+confirmed helper exit reduce accidental substitution and cleanup errors in
+new disposable fixtures. The fixed installed compiler profile has bounded
+process/memory/time/output and source/tool/binary observations, without fetch.
+
+Read-only handles do not prevent new child bytes or all security changes.
+Private owner/DACL facts do not authorize deletion, reveal, protected publication
+or durable storage accounting. Binary path checks are not production packaging
+or a hostile replacement guarantee. Protected worker/file lifetime, crash
+recovery and actual offload remain pending. Production composition stays absent;
+unknown retained sources are not inspected, adopted, moved, deleted or changed.
+Model-free unit and native fixture evidence remain separate from parent closure.
+
+
+### Inert original model inventory binding
+
+The private source-input component validates only an original in-memory
+`LocalModelInventory`. Exact classes and primitive field shapes are checked
+before callbacks or equality on untrusted values. Names, counts, config bytes,
+file-size/hash records, tensor metadata and the ordered source digest are bounded.
+Each complete per-shard tensor payload must fit the declared file size with its
+eight-byte prefix and the existing bounded header. Capture rechecks the original
+records before returning; this is not an atomic or filesystem ownership claim.
+Original-object and field-reference identity plus an independently captured
+immutable value snapshot reject later drift. Copy, deep-copy and serialization
+transfer are denied; fixed representation and errors disclose no path or data.
+
+A manually constructed valid record can pass: this is no inspector-issuance or
+file-integrity proof, and is not isolation from malicious code in the same Python
+process. There is no file/native/provider/model IO, budget reservation, borrower,
+callback port, native readiness, handle or staging credit. The existing source
+20 GiB and staging 12 GiB limits remain separate. Actual source/ancestor guards,
+absent-optional-file discovery, whole finite-operation/terminal reservation,
+native retirement, shared journal/model worker and restart qualification remain
+pending. The unavailable production factory, unknown full staging charge,
+Standard loading and accepted accuracy/OCR are unchanged.
+
+## Unused original source API and custody delta
+
+The original inventory binding stays inert. A separate unused private owner now
+defines a fixed read-only Windows ABI. Explicit prepare/check/retire operations
+require a trusted original finite producer and actual shared whole-graph capacity
+before DLL bootstrap; production provides no producer. No-op synthetic ports,
+opaque reservation objects or metadata alone are not authority. Private Python
+composition seams do not isolate malicious code in the same process.
+
+System-only DLL loading, asynchronous read-only/share-read opens, exact original
+ancestor/file identities, bounded kind/link/default-stream facts and advisory R
+guards precede held-handle hashing. Original slots, installed native values,
+generations, call records, IOSBs, offsets, buffer and guard requests are retained
+before effects. Independently held original handle/guard/read/native-call and
+operation membership detects in-place list clearing or reordering and retains
+unfinished IRPs even when mutable owner fields lose their elements. Native
+last-error is captured immediately, before producer
+bookkeeping. Every read reset/reuse requires original completed status and exact
+bytes. Pending reads, timeout or cancellation requests cannot authorize reuse.
+No read IOSB is cast to a guard OVERLAPPED or a two-argument NtCancelIoFileEx call.
+
+The graph includes per-file rounded reads, metadata, reset/wait/guard calls,
+handles, bounded retained memory and unused-reference retirement. Existing
+16,384 normal/64 shared terminal calls, 120 seconds, 512 MiB and four IPC operations
+stay fixed. A+5F+1 terminal calls is only the completed-read source close lower
+bound; original pending-I/O and producer/process retirement also need capacity
+in the same actual ledger. Missing, foreign or insufficient reservation denies
+before API construction. Additional checks require incremental normal capacity.
+
+Uncertain acquisition, substituted references, skipped/double/late callbacks,
+read or close failure retain the original graph and fence reuse. Only unused
+completed-read references may retire after exact guard cancellation/completion
+and original close acknowledgements. Original retirement graphs remain retained
+and count toward the same bounded owner registry; no disk/worker credit is issued.
+There is no ACL, write, directory creation, delete, rename, borrower or context
+operation, and no production selection. Unknown historical trees are untouched.
+
+Synthetic Win64 ABI tests prove source predicates only. Actual Native byte custody,
+reader/mapping compatibility, ancestor and absent-file discovery isolation,
+finite-producer composition, shared accounting, model-worker/crash/restart and
+offload resources remain pending. Advisory notifications do not fence child
+creation. Source 20 GiB and staging 12 GiB stay separate; unknown staging remains
+fully charged. Standard loading and accepted accuracy/OCR are unchanged.
+
+## Guarded offload lifecycle consumer delta
+
+The private parent/worker context reaches the actual generator factory/cache,
+pinned loader and lease. Explicit guarded requests cannot use an ordinary owner,
+serialized ticket, caller path, PID or missing provider as native authority.
+Before model/path inspection, fresh loading checks the exact live context; reuse
+and forward recheck its sealed owner. The ordinary/default path stays separate.
+
+Strong backend and per-lease custody precede native callback dispatch. A bounded
+retained-owner registry refuses saturation without evicting uncertain owners.
+The native backend must itself register acquisitions before uncertain effects,
+durably reserve within the same12GiB domain before writes and establish protected
+seal/accounting before readiness. Constructor/supplier interruption, reentry or
+malformed acknowledgements retain custody and fence retries. Raw exceptions and
+paths are not reports or evidence of release.
+
+Worker weak-reference release signals only that event, at most once. A distinct
+private parent view must confirm exact owned exit, active-zero where queryable,
+reader/IRP retirement, closes and durable cleanup before capacity is released.
+There is no parent flag or worker-callable retirement operation and no shared
+worker stop. The backend remains unavailable in production. Synthetic new-domain
+ports exercise source behavior only; they do not qualify native protection,
+durable journal, crash recovery, actual offload resources or a parent roadmap.
+Retained historical data and failed native fixtures are not accessed or changed.
+
+
+### OCR close-attempt custody
+
+The process owner and trusted resource lease retain strong custody before native
+handle-close dispatch. A per-handle ledger preserves the exact attempted value
+through unknown returns, interruption and post-acknowledgement bookkeeping
+failures. Cleanup cannot retry an uncertain numeric handle or infer retirement
+from an empty or replaced handle table. Other independently known handles can
+retire, while terminal uncertainty keeps successor admission denied. Normal
+in-flight close custody is separate from terminal uncertainty at resume.
+
+Resource close serializes with synchronous pin/read operations. Cancellation
+callbacks are followed by an active-generation check before native acquisition
+or further use. No close lock spans pipe-thread joins. These controls preserve
+the fixed helper identity, Job limits, atomic membership, source binding and
+fixed public errors. Model-free fault and caller tests cover these paths; they
+do not establish physical Windows resource locks, host OCR or crash qualification.
+
+
+### Native OCR qualification retirement
+
+The model-free OCR test operator keeps a private exact-entry retirement ledger
+before any observer or guardian cleanup effect. A confirmed repeated retirement
+is a no-op. False returns, exceptions, reentry, interrupted metadata and unknown
+detachment retain the exact entry and deny later close/detach attempts. The
+guardian captures its original process wrapper and numeric handle before Detach,
+and validates the exact acknowledged transfer before one native close. A copied
+or unregistered dictionary cannot authorize a close. State locks do not span
+native calls or reader joins. Existing source-bound run identity, fixed process
+limits, crash assertions and public failure codes remain. Portable fault checks
+are not native execution or a parent-roadmap pass.
+
+
+### Fresh Windows staging Core and concrete consumer
+
+The private native Core owns output slots before handle-returning dispatch,
+retains descriptor allocations and IRP buffers, and records close/disposition
+attempts before effects. Interruptions, reentry, unknown results, stale guards,
+unexpected inventory and failed retirement retain the exact owner; they cannot
+authorize retry, adoption, recursive deletion or capacity credit.
+
+Only exclusively new private namespaces/leaves and an optional unnamed-stream
+index are within this initial Core. Directory protection requires the exact new
+protected-current-user descriptor; inherited profiles are refused rather than
+normalized. Fixed-local NTFS and non-reparse ancestor/file identities, complete
+bounded metadata, single-link files and live guards are required. Cleanup targets
+held original objects and refuses unknown content. Actual OS behavior, including
+mapping/security-change and late-break behavior, is not qualified by the portable
+fault tests. Existing or failed native fixtures are not revisited.
+
+The concrete backend requires separate trusted protected-journal and exact
+standalone-worker producers. None has a no-op successful implementation. Durable
+reservation precedes supplier staging, quiescence precedes protected sealing,
+and acknowledged worker/readers/IRP/native retirement precedes file cleanup and
+durable credit. Missing producers deny before Core effects. Synthetic new-domain
+ports exercise the actual lease but grant no production readiness. Current factory,
+full unknown charge, accepted accuracy and the stronger application denials stay
+unchanged. This is not malicious same-user isolation or a parent-roadmap pass.
+
+
+Native preparation and dispatch additionally require a trusted finite-execution
+producer, which remains missing. Synthetic finite callbacks do not qualify real
+operation deadlines. Exact callback/thread/result admission and predispatch
+custody survive early, duplicate or skipped execution. Copied Core/backend/API
+objects cannot dispatch original owners. Retirement accepts only acknowledged
+aborted completion with the cancelled native status; a raced successful break
+keeps the watch, owner and charge retained. The original failed source and causal
+regression remain history; no actual Windows failure or parent pass is invented.
+
+
+### Unused read-chain custody and credit separation
+
+The private read-binding retirement method has no caller path, amount, handle,
+receiver or policy argument. It refuses unprepared, copied/foreign, borrowed,
+staged or malformed ownership before a close. Its independent bounded snapshot
+pins the original API/factory/execution/binding, chain/container and native slot
+generations through callbacks and interrupted final bookkeeping. Active and uncertain custody uses
+the existing 64-owner ceiling. A completed or unregistered object cannot mint
+admission after rejection. Exact native identities are checked before the
+first close; only held original read handles close through the existing
+one-attempt ledger, without directory enumeration, deletion or ACL mutation.
+
+The source distinguishes read-binding and staging retirement. Only the latter
+can satisfy the existing canonical borrowed journal witness. No charge is
+credited by read cleanup. After the exact finite-dispatch acknowledgement,
+custody may be released under an outer BaseException fence. A partial/unknown
+close, callback swap/reentry or wrong result retains the original snapshot and
+denies retry. Interrupted uncommitted removals restore both entries while the
+shared lock still reserves capacity. After acknowledged removal commit, caller
+interruption leaves the confirmed closed owner complete and unregistered; its
+closed snapshot remains on the Core. Full-table retries and competing admission
+regressions cover this distinction. A reserved read-retirement operation excludes
+other Core dispatch before the first callback. Simulated native fault tests
+qualify these source predicates only. Real finite execution, shared domain/fence,
+worker/crash/retained recovery and actual offload resources remain pending; old
+native results retain their original source bindings and are not rerun here.
+
+
+### Fresh Core diagnostic authority and lifetime
+
+The new explicit standalone component runner accepts no caller command, root,
+PID, budget, proof or model. Default/plan/imported calls are effect-free. The fixed
+installed base image, DLL/selected standard-library files and six repository
+inputs are hash-bound before/after use. `-I -S -B`, an OS-derived minimal environment
+and a fixed working directory avoid ambient Python startup. A private exact-source
+package bypasses unrelated framework initialization without modifying Core checks.
+This is cooperative source integrity, not hostile same-user installation isolation.
+
+The parent records output slots and attributes before issue, atomically assigns
+one suspended child to its held noninherited kill-on-close Job, and verifies
+membership/512 MiB ceilings/active-one before resume and dispatch. Only two fixed
+event handles and a preopened bounded report handle are inherited. Reports are
+read after actual process exit and active-zero. Partial/unknown create, timeout,
+limit drift, oversized/malformed/source-drifted report or unconfirmed close stops
+the sequence and denies acceptance. Canonical owners reject copied sessions;
+close and attribute retirement are one attempt. Failed fresh fixtures remain.
+
+A held one-shot native timer terminates only this diagnostic process; it cannot
+target a caller PID. The short control requires observed timer-caused native exit,
+not a configured flag. No arbitrary thread cancellation, GIL-free guarantee,
+suspend qualification or indefinitely stuck kernel-I/O guarantee is claimed.
+Callback/timer/buffer custody lasts through final output and self-termination.
+Parent exit/Job release after uncertainty is never evidence of confirmed cleanup.
+The child uses the real Core unchanged for empty/index retirement and an actual
+newly created namespace collision; that denial retains Core uncertainty and is
+not a cleanup pass. No old fixture, native ACL relaxation, production journal,
+model/worker admission, quota change or roadmap closure is authorized by this
+source work. Those boundaries need separate current qualification.
+
+
+Source execution uses the exact bounded hash-checked buffer, not
+SourceFileLoader; `-B` alone would still allow cached-code reads. The entry and
+fixed child bootstrap bind their loaded helper bytes. Copied local fixed Job ABI
+definitions avoid transitive probe loaders. Existing selected runtime caches are
+also recorded. The summary directory is latched only after exclusive creation
+succeeds, and its identity is rechecked before output. A failed create never
+opens the candidate's summary path. These checks do not establish malicious
+same-user filesystem or Python-installation isolation.
+
+
+The native report version 2 correction closes an evidence-integrity defect:
+version 1 armed the Core-child timer but left its report field false, and its
+oracle required that false value. The producer now records confirmed actual
+configuration for every successful child, and the oracle refuses false/unknown
+states. A distinct report schema and fresh diagnostic namespace prevent old
+reports from being interpreted as corrected evidence. Original raw/source facts
+stay immutable, with the erroneous Core timer field excluded from historical
+qualification. Timer configuration still proves no callback delivery, native
+exit or physical cleanup. No execution authority, resource limit, model policy,
+production factory or parent qualification changes in this reporting repair.
+
+
+### Fresh protected accounting: provenance and pending controls
+
+The journal's protected assets are its shared-domain charge, temporary-file
+ownership, original safe weights and live native argument/IRP lifetime. Only
+trusted private composition can supply the real domain and finite owner; no
+user payload, parsed frame, numeric balance, fresh name or boolean is admitted
+as a capability. Default construction/composition remains unavailable before
+native/model effects. The shared-domain/mutable-fence producer is not supplied.
+
+The concrete API uses a fixed sibling FILE_CREATE namespace/file, independent
+Core-anchor duplication, exact native identity/type/private-descriptor checks,
+bounded preallocation and same-held-file protection. It retains every output
+slot, callback, buffer and IO record before dispatch. Completion status and
+exact byte count, separate successful flush, bounded exact readback and current
+metadata/guard checks all precede a record acknowledgement. A pending request
+or cancel request is never completion; unknown IO/close cannot release custody.
+The mutation-fence dependency must be established before first mutation and
+remain live across writes. Before/after checks or directory RH alone do not
+fence mutable size/timestamp/security changes. Native controls remain unqualified.
+
+The five-record sequence is bounded and replay/generation/root/padding checked.
+Its checksums provide integrity diagnostics, not ownership or malicious-writer
+isolation. Journal overhead is precharged within the same12GiB; unknown old
+ownership consumes the full ceiling and denies bootstrap. The first slice does
+not reopen, truncate, repair, compact or delete prior accounting names. Successful
+credit preserves history and its overhead; no new root/process restores zero.
+
+The exact canonical Core witness is unavailable after copied, unfinished or
+uncertain retirement. Journal resources never enter Core's close collections.
+Worker reference release is not native exit. Credit follows exact worker/Core
+retirement, durable journal acknowledgement and confirmed journal-native closes;
+lost acknowledgements retain uncertainty. Original old slots, historical failed
+fixtures and model weights are not accessed or changed by this source work.
+
+Synthetic domain/fence/IO/worker fixtures exercise the real journal and backend.
+They qualify no actual Windows protection, shared domain, crash recovery, finite
+native deadline, resource delivery or parent roadmap. The prior schema2 Core
+evidence remains bound to its recorded source. No model Job policy, privilege,
+supplier, default capability or accepted accuracy/OCR result changes. File flush
+is an API-level acknowledgement under the supported filesystem assumptions;
+it is not universal hardware/power-loss durability or an NTFS volume quota.
+
+
+### Unused read-binding diagnostic boundary
+
+Assets are exact native handle custody, retained data, accounting credit and
+source/report integrity. A third canonical diagnostic profile uses the existing
+source-bound Job/handshake/timer controller; copied or cross-mode profiles deny.
+The check opens the read-only metadata chain from the drive through the ancestors
+to the fresh empty cache; it does not access old staging, history or file contents. Before retirement, observers retain exact
+original chain rows, containers, handle slots and generations. Retirement has
+its own identity/close ledger and cannot count preparation identities. Base API
+results and close acknowledgements remain mandatory; unknown results stop
+effects and retain the owner, with no cleanup retry or credit.
+
+The strict bounded report separates child Core closure from parent exit and
+handle retirement. A late borrow is a software refusal with zero receiver/native
+calls, not a Windows permission denial. No existing-file content preservation
+claim follows from an empty cache. Source tests provide no actual Windows,
+production finite owner, stable fence, shared accounting, writer/crash/retained
+recovery, model resource or parent qualification. Native effects require a
+later exact committed-source review. Old fixtures are neither inspected nor
+cleaned, and accepted model quality/OCR are not rerun.
+
+### Journal API diagnostic boundary
+
+The dedicated journal diagnostic is a dev-tools consumer of the original adapter
+API. Its code-owned immutable profile binds the exact entry, module, sources,
+cases and separate report schema. The existing Core entry retains its case and
+schema semantics. Neither JSON nor an imported call selects a native command,
+root, budget, process or proof. Actual execution requires separate committed
+source and effect review, one bounded owned child and the existing handshake,
+Job, timer, source-buffer and output controls.
+
+The fixture context is pinned before API construction. It retains native
+arguments, buffers, IRPs and handles before dispatch, including partial
+construction, post-call predicate and bookkeeping failures. Only real terminal
+completion and acknowledged close permit IO/event retirement. It creates no
+JournalDomainPort, production phase owner, capacity credit or readiness claim.
+Collision uses only a namespace created by that fixed case, retains uncertainty
+and is last. Unknown API state has no cleanup or retry path.
+
+Reports separate API retirement, deliberately retained history, actual child
+exit and zero active processes and parent handle retirement. Source simulations cannot qualify
+Windows, and tiny API results cannot qualify production mutation fences, shared
+accounting, worker/crash/retained recovery, model resources or a parent roadmap.
+Unknown production usage remains 12 GiB. No existing slot, model, privilege,
+supplier, memory guard, accepted accuracy/OCR or full-suite policy changes.
+
+
+### Private persistent IO execution boundary
+
+The read-only execution source admits one canonical session and preserves its
+original native slots, callback functions, buffers and call records before any
+effect. A creation-time one-process Job and exact four-handle allowlist separate
+the isolated child from the shared worker. A retained CRT controller handles
+blocking launch and IO; caller timeout never performs inline termination, close
+or join. Unknown results retain the single slot and permit no source/root reset.
+
+Exact source/session/operation/deadline frames reject replay, extra fields,
+invalid types, deep JSON, duplicate keys and oversized data. The actual Core and
+API remain child-local on the exact port thread. Observed image paths and hashes
+are checked, but do not replace installed-runtime integrity or a stable mutation
+fence. The root comes only from explicit host configuration, once.
+
+One timer generation arbitrates completion and expiry before native deletion.
+The original completion event must acknowledge callback retirement. A copied or
+stale callback cannot poison the canonical child or stop later work. Unknown exit
+acknowledgement uses one child-only exit attempt and retained parking; no shared
+worker termination is available. Fixed record pools reserve terminal metadata
+before effects. No staging, accounting credit, retained-tree access, model writer
+or production backend authority follows. Synthetic ABI failure tests exercise
+the concrete producer and Core; real Windows and later composition stay pending.
+
+
+## Failed private read-worker lifetime
+
+The terminal path accepts no caller command, PID, root, callable or budget. Its
+authority is the canonical original read-session API, handle generations,
+per-request effect-path exits and full lifetime native ledger. Partial/unknown
+acquisition, late creation/resume, copied origins, mutated slots or lost close
+publication deny release before any replacement.
+
+One fixed-generation reaper requests cancellation only on the original CRT
+controller, wakes only its exact pending idle wait into refusal, and terminates
+only the already-owned inert IO Job. A successful cancel, NOT_FOUND or Job stop
+request cannot certify completion. Every original/terminal call and callback
+remains retained until actual controller/process/reaper exit, Job active zero
+and one-attempt close acknowledgements establish the final local proof.
+No native primitive or join holds a state or ledger lock. Bounded reserved
+records and one cleanup budget prevent polling, repeated effects or renewal.
+
+Known normal/aborted/error native return is distinct from task success. Core
+read retirement, terminal process cleanup and storage credit are separate facts.
+Only a fully published original final proof permits pure registry reconciliation
+after interruption, with no effect on a newer owner. Unknown native state keeps
+the complete graph and admission slot; it cannot authorize fresh staging.
+
+Synthetic ABI fault/race tests are not actual Windows, retained-file, stable
+fence, durable-accounting or model-writer/resource qualification. Production
+composition remains unavailable; unknown storage still consumes all 12 GiB.
+Rollback withdraws this private operation while retaining the stronger denial.
+No model guard, accepted accuracy, OCR or shared-worker policy changes.
+
+Terminal query outputs are pinned to their original typed buffers. Identity
+checks after native return and bounded immutable scalar observations prevent a
+favorable replacement field from supplying exit or Job-count proof. Interrupted
+request allocation, list/map insertion or active/busy publication fences the
+original before retry; both request and exit records remain bounded to four.
+Pure state, replay and concurrent-admission denial does not poison a healthy
+owner. Final budget observation is repeated after settlement validation.
+
+Normal nonfinal requests publish their effect-exit marker before releasing busy admission. Marker validation or publication failures fence the still-live owner under the same state gate. The marker is attempted once; a later bookkeeping failure cannot replace the original error. Actual normal retirement and its registry handoff remain final even if exit-marker publication fails. This is a model-free source regression claim, not native failure/recovery or parent qualification.
+
+
+## Fresh fixed accounting security boundary
+
+New fixed journal objects use an explicit current-token principal owner and a
+private construction descriptor. Their immediate parent also comes from the
+Journal-owned native creation path. Fixed children precede the permanent
+file-then-namespace-then-parent deny. The sealed descriptor denies data/namespace
+mutation, delete, WRITE_DAC and WRITE_OWNER; explicit OWNER RIGHTS admits only
+READ_CONTROL. Original privately held control/writer handles remain authoritative
+and must never be exported to an untrusted supplier or caller. Descriptor reads
+are bounded to one validated self-relative allocation; SID/ACL bytes stay private.
+
+Each concrete protection attempt is retained before its first query/set and
+binds the canonical API, owner, thread and original handle slot/value/identity.
+Copies, incomplete attempts, changed generations or mismatched owner/security
+readback cannot supply the later protection check. Failure retains the exact
+allocation, output slots, ownership and charge; it never credits or retries an
+uncertain native effect. Directory notifications remain supplementary signals.
+
+Trusted, unexposed fresh construction precedes sealed admission. ACL changes do
+not revoke preopened rights, and this source does not claim hostile same-user
+race protection or safe adoption of old files. Actual NTFS enforcement and
+original-writer behavior need separately reviewed fresh native controls. Shared
+durable accounting, model-worker shutdown/crash proof, retained restart and
+actual optional-offload resources remain pending. The missing domain/bootstrap
+gates, unavailable production factory and full 12 GiB unknown reservation remain.
+Rollback withdraws this private operation and retains the existing denial.
+
+## Immediate-parent construction and deletion delta
+
+The v2 Windows diagnostic observed granted delete access to the accounting
+namespace. Parent delete-child permission is a likely alternative described by
+[Windows delete access](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-deletefilew);
+that separate probe was not reached. Preserve the failed result and strict oracle.
+
+Journal bootstrap now owns a fresh fixed parent, namespace and file. It creates
+them only after trusted domain charge/binding/fence admission, then seals file,
+namespace and parent before data writes. The original creation record comes only
+from the canonical exclusive directory-create path and keeps its generation,
+private owner/security, identity and original handle custody. Imported roots,
+matching ACL bytes, JSON and copied or incomplete records supply no authority.
+The parent capability binds the actual third canonical protection attempt;
+primitive validation precedes comparisons, callbacks and native observations.
+
+The source bounds remain two directory records and three fixed protection rows
+per API; Core still uses its original two objects. Check, write and flush refuse
+missing or altered parent authority and retain failed/partial output custody.
+There is no existing-parent ACL rewrite, historical adoption, cleanup or quota
+reset. Unknown usage still charges 12 GiB. The mandatory domain fence remains:
+ancestor/new-anchor rename or deletion, unknown preopened rights, guardian/crash
+lifetime, shared accounting, worker/restart and resource qualification are pending.
+New fixture definitions require separate source/effect review before execution.
+Rollback retains unavailable production admission and all earlier evidence.
+
+### Redundant safe-weight supplier folder
+
+The admitted pinned safe-weight loader no longer supplies `offload_folder`. Its
+verified original-file disk index stays in memory. Safe format, local-only input,
+remote-code denial, exact supplier versions, explicit dtype and strict disk-index
+coverage remain mandatory. Missing or changed shard, weight or dtype bindings
+fail closed before dispatch; no directory or unsafe-format fallback is added.
+
+Positive staging reservation, owner-marker creation, disk admission, guarded
+readiness, sealing and retained-reference cleanup are unchanged. Fake-only tests
+cover the caller, index denials and readiness frontier. The separate tiny native
+fixture is excluded from ordinary collection and cannot supply model accuracy,
+production admission or resource evidence. Old staging is not accessed and unknown
+usage still consumes the full 12 GiB limit. Original-reference/ancestor protection,
+real model-worker/crash ownership, shared durable accounting and retained restart
+remain pending.
+
+### Generated input for the fixed Desktop training journey
+
+The additive generated-input profile separates a tiny local software fixture
+from the approved Qwen model. Trusted test composition must bind an exact fresh
+input manifest, its expected hash and current generator source. Inspect exactly
+six regular single-link input files under the declared new root, with bounded
+bytes, stable read identities and fixed model/tokenizer configuration. Reject
+duplicate manifest fields, remote-code mappings, changed or extra files and
+partial inputs. Inspection imports no model library. An interrupted creation
+retains its slot and cannot be retried or adopted. No old model/cache/staging
+root is searched, adopted, moved, deleted or credited.
+
+The local input uses a distinct synthetic identifier and unknown provider.
+Qualification removes inherited provider secrets, fixes the generated profile's
+CUDA/HIP visibility and keeps real read-only dependency probes. The unchanged
+production training task runs at most once; failures remain failures, downloads
+are denied, private review precedes explicit Save and the UI checks reopening.
+A seed contains only model and dataset inputs, never a trained adapter or result.
+
+These are cooperative local input checks, not hostile Windows path or native
+ownership protection. Actual input generation, optimizer execution, process/job
+cleanup and resource evidence require a separate current reviewed effect plan.
+No new effect, limit, model download, provider publication, offload lease, disk
+credit, quality result or roadmap pass follows from source tests. Secure rollback
+removes this additive profile and retains the existing offline approved-model
+path and all product security controls.
+
+### Finite original-source diagnostic producer
+
+This additive diagnostic uses the existing exact source-owner API and a private
+SOURCE profile. Production supplies no producer or borrower. One original table
+preallocates 16,384 rows, including its shared 64-row terminal tail. Bind physical
+row/reservation/payload/completion membership before each Native dispatch; reserve
+source prepare, one live check and unused closes plus producer/report/exit debts
+before SourceAPI construction. No row, source close or uncertain exit refunds
+capacity or staging. Preserve old profiles, runtime limits and the four IPC
+operations.
+
+Bind the actual original Job/timer/thread/source context at budgeted boundaries.
+Per-call predicates are pure. System bootstrap retains the exact original DLL
+object and immediate error; typed calls retain their actual scalar reply/error.
+Known-return custody survives cleared observation lists or changed payloads, but
+observation drift denies ACK, further dispatch and replay. Retain partial output
+slots, read IOSBs/buffers/events and separate guard OVERLAPPED requests. A requested
+cancel, signaled event, timer setting or self-exit intent is not completion proof.
+Only the original parent process observation can prove child exit and empty Job.
+
+Fixed new synthetic input cases cover an 8 MiB boundary and exact hash-denial
+frontier. Other setup/read/Native failures remain failed cases. Default/import/plan
+paths grant no effect. Focused synthetic positive/denial/lifetime/routing tests
+precede independent review and an owned source checkpoint; actual Windows effects
+require another exact-source/effect review. No historical tree is inspected,
+adopted, moved, removed, ACL-changed or credited.
+
+Residual production source/ancestor/mapping/discovery, protected shared accounting,
+model-worker/crash/restart and offload resource proof remain pending. No model
+quality, OCR or parent qualification follows. Rollback removes only this additive
+diagnostic and retains production denial, all unknown usage and prior evidence.
+
+### Fixed second-reader and private-view diagnostic
+
+Security impact: security-relevant. Protect original source bytes, file identity,
+mapped memory, exact resource lifetime and the shared dispatch/terminal budget.
+The SOURCE v2 test is a diagnostic seam, not production loading authority.
+
+Reserve the reader's actual 16 normal rows before source DLL acquisition and
+bind its three cleanup calls to the existing safety4 reservation inside the
+64-row tail. Pin original reader, writer-probe, section and view output nodes
+before dispatch. Retain original completions, immediate errors, pointers and
+generations independently of mutable observations. A valid unexpected writer
+handle or unknown return fails the test and remains held; it never triggers
+speculative cleanup.
+
+Require the second reader's disk type, noninheritance, non-reparse attributes,
+original volume/file identity and size. Only exact sharing error 32 qualifies
+the write-open refusal. Use a fixed unnamed, noninherited, nonexecutable,
+file-backed copy-on-write section and a nonzero 64 KiB private view. Account for
+the whole view's commit. Before every byte access, bind the original successful
+map completion, slot, pointer, generation, live state and nonoverflowing range.
+Never dereference a replaced, failed, stale or unmapped pointer. A mapped-page
+fault can terminate the isolated child; there is no guaranteed Python recovery.
+
+Require original unmap, section-close and reader-close ACKs in that order before
+Source retirement. Any uncertain operation retains both graphs and stops later
+cleanup. Recheck only the four newly generated inputs against original file
+identity, size and hash. No old tree is followed, adopted, moved, removed or
+credited. Strict v2 fields cannot qualify old cases or relabel v1 evidence.
+
+Focused memory-only positive, denial, interruption, custody, pointer-bound and
+retirement tests precede independent source review and checkpoint. Actual Windows
+effects require separate committed-source/effect review. These checks do not
+qualify supplier discovery/mapping, production borrowing, ancestor fences,
+model-worker/cache policy, shared durable accounting, crash/restart or offload
+resources. Existing guards and limits remain. Accuracy/OCR stay closed.
+
+### Windows named and held timestamp compatibility
+
+Security impact: security-relevant. The source diagnostic must compare the same
+five facts across named and held observations: device, file ID, size,
+modification time and explicit creation time. Windows CPython's deprecated
+`ctime` is unsuitable for this cross-API creation-time comparison. Use valid
+`st_birthtime_ns` and fail closed if it is unavailable. This preserves creation
+identity rather than discarding a check to obtain a pass.
+
+Retain original Source/file/guard custody, the four exact fresh leaves, and
+ordinary-file, single-link, non-reparse, before/open/after identity and SHA-256
+checks. Validate held-file type/link facts before reading. Modification,
+creation, identity or hash drift still denies. Bounded allowlisted failure
+stages disclose no path, pointer, payload or arbitrary exception text.
+
+Report only completed preparation, reader calls and reader retirement before
+later verification can fail. Unchanged source bytes, unused Source retirement
+and full qualification remain distinct. Process exit and an empty Job do not
+replace missing Source retirement ACKs. Preserve the failed v2 trial, its
+evidence and earlier v1 results. Source tests and checkpoint grant no retry or
+cleanup authority; actual execution requires a new independent exact-source
+effect review. Production/source/discovery/accounting/worker/restart/resource
+gaps and all existing guards, limits and unknown-usage charge remain unchanged.
+
+
+### Optional model input discovery boundary
+
+The private bounded-model input adapter addresses supplier searches for unbound
+configuration, tokenizer, adapter and generation files. It reads only a finite
+set of original inventory-bound metadata, rechecks size/hash, and supplies a
+native tokenizer backend plus complete safe-weight checkpoint references. It
+rejects unsupported selectors, traversal, malformed/duplicate/nonfinite/deep
+metadata and expansion settings before weights or dispatch. AddedToken and
+legacy precedence are explicit, preventing silent behavior loss while removing
+directory resolution. No global supplier I/O patch, fake PEFT availability,
+unsafe fallback, full resident state dict or extra temporary tree is used.
+
+The adapter owns an exact shared-default-dtype restoration boundary on success
+and construction failure. Native config retains the selected dtype. Generation
+field type validation and a scoped warning capture prevent private settings
+from appearing in supplier validation warnings. No supplier I/O or logger is
+globally patched.
+
+The source gate covers successful single/sharded fake loads and denial/failure
+cleanup without importing model frameworks. Tiny installed-supplier parity
+remains separately qualified. These cooperative checks do not fence namespace
+mutation or later disk-backed forwards. Native source/borrower lifetime, protected
+folder/accounting, worker exit/crash/restart and bounded resources remain pending;
+production capability stays unavailable. Unknown retained staging data remains
+untouched and fully charged. There is no new provider, protocol or privilege.
+
+
+### Declared model precision validation
+
+The finite flat-Qwen profile validates the optional source `torch_dtype` before
+native configuration construction. Only a missing/null declaration or a supported
+scalar precision name is admitted. Objects, containers, booleans and unsupported
+names deny before supplier formatting or weight loading. This closes the observed
+input-validation gap without changing selected runtime precision, safe-weight
+identity/shape/type checks, resource limits or production readiness. The logging
+consequence was supported by installed source inspection; no emitted private log
+was observed. Synthetic positive and denial regressions cover the correction.
+
+### Shared Source row mechanism retains closed actor authority
+
+The runtime-owned Source ledger is pure bookkeeping. Its default actor guards
+deny reservation, and stored native functions are never invoked by the module.
+The concrete diagnostic retains its original actor/profile/Job/timer/thread,
+source, ABI and retirement checks and its fixed safe error mapping. A row or
+reservation is not a capability. Positive allocation still requires the concrete
+consumer original graph, and invocation acknowledgement proves neither IO nor
+process retirement. The original independent tables preserve known returns when
+mutable observation lists drift; acknowledgement and replay stay denied.
+
+The common 16,384-row total includes a single 64-row terminal tail. No refund,
+second pool, new deadline, private model input, arbitrary command/callback
+selection, Native effect or readiness authority is introduced by extraction.
+Focused original-graph, copy/rebinding, exhaustion, return-custody, failure
+redaction and routing regressions cover the source boundary. Source-only session,
+borrower, shared-domain and owned model-worker composition remain pending. Old
+retained trees remain untouched and fully charged; no parent qualification follows.
+
+### Closed Source runtime composition
+
+The private Source parent/child consume the same concrete launch and ownership
+mechanics as the existing IO session. The separate v2 protocol cannot select v1
+operations. Fixed source buffers, runtime identity, nonce, exact sequence and a
+nonrenewable deadline bind the synthetic session. Original inventory and Source
+objects are constructed inside the child. Production entry and shared-worker use
+deny; no serialized response grants Source, process or filesystem authority.
+
+One physical Source table per actor reserves engine, Source and terminal work.
+Reinitialization, copy and rebinding do not create a new budget. Known native
+returns remain in original custody when acknowledgement fails. Uncertainty
+prevents replay or retirement claims. The creator's original-handle watchdog
+precedes its unnamed inherited dispatch signal; a ready file cannot admit native
+work. The source timer and bounded frame attempts add internal lifetime bounds.
+Healthy retirement still requires actual child exit, Job zero, original closes
+and callback quiescence. Forced exit is not cleanup evidence.
+
+The controlled collector retains partial acquisition results and reader objects,
+publishes complete readiness telemetry, bounds captured output and records exact
+input-deletion progress. Failure summaries omit raw stream text and exception
+payloads. Only newly created fixed synthetic inputs may be removed after healthy
+shutdown and unchanged-identity/hash checks. Source tests are model-free; current
+Windows effects remain separately reviewable and pending. Borrower/cache lifetime,
+shared durable journal domain, owned model workers and actual offload resources
+remain unqualified. Old staging and the full 12 GiB charge remain unchanged.
+
+### Outer ownership for the fixed Source qualification
+
+The existing native qualification runner gains one closed Source intent. It
+selects only the fixed isolated Base-Python Source qualifier and fresh synthetic
+run family. Exact twelve-source and two-runtime witnesses are read through the
+existing stable bounded reader before Native preparation. The minimal fixed
+environment excludes ambient search paths and credentials. Private witness
+strings are cooperative reviewed-source data, never public execution authority.
+
+The original atomic outer Job assignment, noninherited Job handle, handle list,
+no-breakaway, retirement and pending-owner fencing remain. Source uses the existing
+1 GiB process, 2 GiB aggregate and 32-member policy; its fixed 180-second execution
+timeout adds no reservation or quota selector. The nested Source child retains
+its own 512 MiB limit and 120-second session lifetime. Job close covers driver
+termination, while the outer polling timeout requires a live scheduled driver.
+No stronger frozen-driver guarantee is claimed.
+
+Source stderr is drained and discarded, with original observed-byte overflow
+retained. An empty saved log does not prove empty original output. A separately
+reviewed one-use consumer must validate the bounded stdout object, fixed evidence
+namespace, exact Source bindings, inner report and original outer retirement.
+Definitions and portable tests grant no actual Native or parent pass. Model
+borrowers, protected shared accounting, model-worker recovery and actual resources
+remain pending. Unknown staging remains untouched and fully charged at 12 GiB.
+
+### Detached Source parent after the failed count check
+
+The actual first Source trial observed the intended unused-source sequence and
+natural retirement, but its outer Job counted four processes instead of three.
+The whole trial remains failed. The fourth identity is unknown; no PID was opened
+or adopted. Inner Source success and outer cleanup do not waive that count or
+qualify the parent, production mode or another source version.
+
+Only the Source qualification parent's Popen form changes from CREATE_NO_WINDOW
+to DETACHED_PROCESS, matching the established pipe-only outer helper practice.
+DETACHED_PROCESS grants no Job breakaway. The original fixed image, command,
+environment, event/stdio inheritance, watchdog, inner Job/timers, expected count
+and limits remain. The legacy v1 and inner-child launch paths are untouched.
+Portable tests intercept the real collector launch before process creation and
+check the detached flag, fixed arguments and retained prelaunch failure state.
+
+The versioned partial report preserves exact failed-tool, source/runtime, inner
+observation and independent-audit hashes. Its safe copy states that a fresh check
+is pending. Console allocation is a candidate explanation, not measured identity.
+There is no automatic retry or Native effect in this correction. All retained old
+staging and its full 12 GiB charge remain unchanged.
+
+### Observed detached unused-Source component
+
+The fresh committed-source test counted exactly three outer processes and
+confirmed natural exit, zero active Job members, original handle and timer
+retirement, and removal of the four exclusively created synthetic input files.
+Independent outcome review retained the earlier failed count and rehashed its
+known evidence. No PID adoption, limit/count relaxation, old staging access or
+model loading occurred.
+
+This evidence qualifies only the declared unused-Source roundtrip. It does not
+qualify all native denial/race paths, borrower or cache lifetime, protected shared
+journal accounting, model-worker crash/restart, actual offload resources,
+production composition or parent-roadmap completion. Unknown retained staging
+still consumes the full 12 GiB. The live-driver outer-timeout limitation remains.
+
+### Section-only write access and attributed Source refusal
+
+The closed Source diagnostic defines a distinct negative case for an already
+created shared writable memory view. Its original parent retains ordinary
+relative-open ancestors, opens only the new tiny synthetic weight file, validates
+identity/type/size, creates PAGE_READWRITE/FILE_MAP_WRITE, verifies actual view
+protection/span and hashes bounded bytes without writing. It acknowledges closing
+the original writer before child launch. It adds no process topology or Core
+worker capability. The whole graph fits the parent's existing normal/final rows
+before the mapper DLL loads; no separate pool, refund or deadline is introduced.
+
+Only the child's original prepare operation, physical DeviceIoControl completion,
+Read-oplock request, immediate error801 and independently retained target identity
+can emit the fixed denial observation. The parent matches that identity and still
+requires original child exit9/Jobactive0-total1. Immutable exit-output snapshots,
+the sealed resource graph and prebound known-return cells prevent mutable
+diagnostics from granting retirement or losing a partially returned resource.
+Unmap/section/ancestor close acknowledgements precede parent timer retirement.
+Unknown setup, writer-close, exit, map or teardown outcomes retain custody and
+fail the case; they do not retry or credit staging. Generic errors and unexpected
+successful admission cannot qualify the expected refusal.
+
+Focused fake-Native tests cover the actual Source producer, mapped setup and
+original exit/cleanup paths. The new physical case remains pending separate
+committed-source effect review, execution and outcome audit. Rollback withdraws
+only this diagnostic case; the unused-Source/v1 defaults and all guards remain.
+No accepted accuracy/OCR check is reopened. Protected shared accounting, borrower
+and cache lifetime, model-worker crash/restart, actual resources, production and
+parent qualification remain pending; unknown old staging keeps its full12GiB charge.
+
+### Unqualified Source failure diagnostics
+
+The saved-source shared-write refusal trial failed; the separate unused-Source
+control passed. Both one-use allowances are consumed. Independent audits retain
+the failed four-file313B input set, all original outcomes and the earlier history.
+The failed process count and generic141-byte output do not prove the mapper
+frontier, child identity or original denial. Unknown old staging is untouched
+and still charges the full12GiB.
+
+The negative-only reporting delta uses exactly eight closed scalar fields.
+Original dispatch boundaries retain only fixed API identity labels, return
+classes and immediate errors after physical completion custody. Reporting issues
+no Native query or extra ownership/cleanup operation. Closed semantic phases
+and error kinds are informational. No raw exception display, path, stack,
+content, pointer or handle is serialized. A separate unqualified response must
+retain the original sequence0/nonce/source/deadline header and still fails.
+The original denial witness and all resource/retirement predicates stay strict.
+After any denial write starts, no diagnostic write retry is permitted. If actor
+health refuses the existing response path, the detail remains unavailable.
+
+The collector admits only the fixed failure shape after its original exit
+witness and capture threads settle. Nonzero or forced exit never becomes healthy
+retirement, input removal or credit. Simulated failure tests supply no physical
+pass. Rollback removes only new diagnostic reporting; default behavior and all
+fail-closed staging, journal, borrower, model-worker and parent gaps remain.
+
+### Actual Source diagnostic collection
+
+On committed064eeda86, the negative check still failed while its separate
+unused-Source control passed. The failed original child supplied a closed
+attribute-denial/open-file/nonzero/Win32-error0 diagnostic. Its alternative
+response remained failed. It proves neither the original NTSTATUS nor target
+identity nor the801 denial, and grants no input cleanup or retained-tree credit.
+The original outer Job settled at total3/active0/terminated0 without forced
+termination, with original handle and drain acknowledgements. Those facts do
+not turn a failed inner check into healthy retirement.
+
+The current source uses read-only sharing. Microsoft documents a writable-map
+conflict when FILE_SHARE_WRITE is absent. An earlier NtCreateFile refusal is
+therefore a supported hypothesis, not a newly qualified native status. Follow-up
+work must retain original call/argument/return custody and target attribution
+before any new witness can qualify. Do not weaken file sharing, accept generic
+nonzero failure, reinterpret Win32-error0 as NT success, or delete retained
+inputs to complete this test. Both one-use effect references are consumed.
+All old evidence, unknown staging charged full12GiB, production denial and
+model/borrower/journal/restart/resource gaps remain unchanged.
+
+### API-specific NTSTATUS diagnostic extension
+
+The private negative Source diagnostic v2 has nine exact fields. Its added
+nullable ntstatus is captured only for the unique original NtCreateFile label
+and an exact signed32-bit return already retained by the original completion
+path. Signed values normalize to uint32 without invoking conversion hooks.
+Other API returns remain only classes; no handle/address or raw exception is
+serialized, and no additional Native query, file operation or retry is issued.
+Immediate Win32-error0 is distinct from NTSTATUS0. Missing or uncertain facts
+remain null. The closed legacy v1 reader remains available for saved evidence.
+
+Focused tests exposed the shared decoder's eight-field object limit. That
+decoder is unchanged. A Source-only fallback admits just the exact child-v2
+error envelope after closed diagnostic validation and validates its eight-field
+legacy projection through the unchanged shared decoder. It gives no other
+object a ninth field, larger frame, deeper nesting or duplicate/nonfinite
+exception. Frozen sequence/nonce/source/deadline and actor admission still run
+against the original owner. This is non-authoritative failed observation data.
+
+Actual fake-ABI Source/collector tests cover signed status, wrong API, in-flight
+and malformed returns, record mutation, legacy compatibility and unchanged
+failed retirement. No physical Native effect occurred in this source checkpoint.
+The original801 denial, target/mapping identity and resource/retirement guards
+remain strict. Existing failed trials and retained inputs are not reclassified
+or deleted. A path/hash/status cannot supply the missing same-file-object proof.
+Production remains unavailable; shared domain/Core/cache/borrower/restart and
+resource qualification, including the unknown full12GiB charge, remain pending.
+
+### Default Core partial API and library retention
+
+The exact default Core prepare branch now retains an original one-shot
+constructor record/API before initialization. It is rooted by the existing
+Core custody and separately retains original factory/dispatch/thread/loader
+bindings and each actual returned library object. Three preallocated return
+slots are written before drift checks or k/a/n observer exposure. Partial DLL
+or later signature failure therefore preserves the known prefix and unknown
+failed call. The record becomes failed before fallible Core observer
+bookkeeping; failed construction grants no automatic retry or cleanup.
+
+At constructor entry the registered-default or existing custom path is selected
+once. API-to-original-record binding prevents owner/factory observation drift
+from demoting a registered construction to the legacy path. Canonical default
+direct/reinit/copy/wrong-owner/foreign-context calls deny before DLL effects.
+Only complete original initialization publishes _api. Custom subclass factories,
+PinnedApi, TrackedApi and diagnostic Journal owners keep their prior hooks and
+contracts and receive no new qualification from this narrow change. All three
+literal library names/order/kwargs stay the same. No arbitrary library path,
+Native query, Source-ledger widening or new execution producer is added.
+
+One record follows each existing admitted Core lifetime; there is no new global
+ever-counter or release hook. Existing successful Core retirement may release
+its prior custody entry, while surviving Core/Journal references still retain
+that record. This is Python retention, not FreeLibrary, process exit, staging
+credit or a process-lifetime resource budget. Arbitrary trusted in-process
+private-field/module tampering is not claimed to be isolated.
+
+Local fake consumers test failure/interruption and observation redirection; no
+physical Native effect ran for this checkpoint. General per-call known-return
+and finite whole-graph/terminal accounting, shared mutation/domain fences,
+owned worker/model/cache/borrower lifetime and actual resources remain pending.
+Unknown old staging remains untouched and charges full12GiB. Neither retained
+objects nor completed model quality admit optional offload or close its parent.
+
+### Original callable outcomes survive later failure
+
+The concrete Core and Journal dispatch consumers retain one private original
+current/last callable record, rooted through existing owner custody. Exact
+function/args/validator/keep, API, dispatch/thread and ctypes error-reader
+references precede invocation. A private registration/pending/phase check denies
+unattached or rebound entry before the callable. Actual opaque return and error
+objects are retained before validation; returned, valid-error and call-ACK facts
+remain distinct from terminal owner failure. Error absence is never fabricated
+zero. No opaque object is coerced, formatted or publicly serialized.
+
+Failure marks the original record before fallible origin/custody/domain
+callbacks; copied owners cannot mark another owner record. A terminal record
+prevents call replacement and real operation acknowledgement, including the
+manual Journal anchor path. Only acknowledged nonterminal records can be
+replaced. Existing four-field pending observations, API predicates and Journal
+per-operation call bound remain compatible. This is trusted internal failure
+retention, not isolation from arbitrary private Python/module mutation.
+
+One last record is not all prior output provenance or ownership transfer.
+Inner wrappers may fail before returning; direct GetCurrentProcess and library
+construction are not covered finite rows. Existing handles/allocations/guards/
+IRPs remain owners. Actual finite whole-graph/terminal execution, shared domain
+and mutation fence, cached worker/model/storage borrower lifetime and resource
+restart qualification remain pending. No new Native effect, release, disk credit,
+model/cache quota or production readiness is granted. Historical unknown staging
+remains untouched and fully charged12GiB; accepted model quality stays closed.
+
+### Original IO scalar-return custody and strict acknowledgement
+
+The existing IO parent/child Native dispatcher now prebinds a private return
+record to an original physical row location, claim, API/owner, function/args/
+validator/keep/thread and error reader. Original identity tables route retention
+without trusting mutable row.index/pool/payload after the call. An owner-private
+passive owner/API/ledger tuple roots that graph before DLL effects or the first
+trusted synthetic consumer; dispatch uses the captured ledger afterward. It
+changes no constructor loader target, kwargs, role or selection policy.
+
+Actual opaque return is stored before error capture or any observer/type checks.
+Reader-returned and valid-error flags preserve uncertainty without fabricated
+zero, coercion, exception/traceback retention or public serialization. Known raw
+facts remain independently reachable when observer validation fails. Only valid
+complete scalar facts produce the original strict four-value settled tuple.
+After the original validator, unchanged completion/intent and pure owner/API/
+ledger identity are checked before ACK. The caller receives the actual original
+value. A validator cannot supply a substituted handle through row.result.
+
+No new post-Native healthy-owner/deadline gate discards an original committed
+completion or blocks legitimate fenced-owner cancellation/retirement. Native
+completion/ACK remains distinct from task success, output adoption, actual process
+exit and capacity credit. The same16384 normal plus64 terminal physical rows
+and existing constructor/Source roles remain. Unknown outputs and original
+keep objects stay owned; no retry, reset, new global counter or release hook is
+added. This is trusted internal failure custody, not arbitrary Python isolation.
+
+Fake actual-consumer tests retain red/green evidence. No physical Native/model
+run occurred. Core three-library/typed-output subreservation, enclosing engine
+terminal escape/debt, protected shared domain/mutation fence and owned cached
+worker/model/borrower/storage lifetime and resource qualification remain pending.
+Unknown historical staging stays untouched and fully charged12GiB; completed
+model quality does not enable optional offload or qualify its parent.
+
+### Original finite Core read-subgraph reservation
+
+The existing IO child's bind-read frontier now consumes a concrete closed Core
+read graph in the original physical ledger. Original private row locations,
+intents, claims, known returns and acknowledgements establish the spent frontier;
+public counters or replacement pool tables cannot refund it. Before the first
+Core DLL it irreversibly reserves normal `6*n+5`, fixed terminal `n`, and requires
+8908 additional normal positive-path engine entries. Fixed closes consume the
+carved terminal rows directly; normal-first terminal dispatch is not a reserve.
+The existing IO 16384+64 and Source 16384-total/64-inside roles remain distinct.
+
+The original Child/Core/Port/factory/API/thread/dispatch and constructor phases
+bind the first consumer. The pure default-None loader hook preserves registered
+default-Core guarding and custom/Journal constructor compatibility. Original
+three-DLL returns and the five fixed read ABI functions, original handle/slot,
+Unicode/attributes/parent/IOSB, kind8-byte, identity24-byte, volume buffers and
+close debt remain in original physical records. Actual return/output facts are
+captured before the error reader and live-observer validation. Unknown outcomes
+are retained without retry, adoption or capacity credit. Only the unchanged
+canonical prepare/check/unused-retirement sequence acknowledges the subgraph.
+
+This is trusted failure custody, not arbitrary Python isolation. Focused fake
+ABI evidence is source-level only. It does not prove the enclosing park/exit or
+response-write deadline, parent ledger/lifetime, production Core+Journal, shared
+protected domain/journal mutation fence or cached actor/model/borrower/storage
+composition. Actual Native/resource/restart qualification remains pending.
+Production admission stays denied. No old retained tree is inspected or changed;
+unknown historical usage stays charged the full 12 GiB. Accepted model accuracy
+and OCR checks stay closed and the combined full-software campaign stays deferred.
+
+### Original IO bootstrap, typed outputs and known startup handoff
+
+An exact one-shot IO constructor producer now owns two original normal physical
+loader rows before its first DLL entry. Fixed original loaders/readers/kwargs,
+library handles, API/owner/thread and Kernel/CRT function identities, original
+argtype lists plus immutable entries/result/no-errcheck metadata stay retained.
+Loader admission uses the original request/private child-bootstrap deadline.
+Unknown library construction stays pinned; no unload or replacement is granted.
+
+A closed existing-ABI output graph captures original values before the error
+reader, then checks original input/output observations before publication/ACK
+or dependent use. It covers pipe/process/controller output slots, locator and
+image buffers, flags, attribute size and opaque attribute-list bytes, timer/IO
+outputs and process/thread/Job retirement readbacks. Attribute inputs must match
+their last original acknowledged output. CreateProcessW permits command-buffer
+mutation during the call; pre-call input and actual post-call bytes are retained
+separately, as specified by the [Windows API contract](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw).
+No snapshot of a later mutable buffer supplies the missing original output.
+
+The original controller thread-ID row and actual Resume ACK bind the concrete
+known-startup first consumer. All 13 original handle numbers and slots derive
+from original scalar or typed returns, with process/Job/readback/attribute-delete/
+two pipe-close chronology. Only original ready/second-readback/dispatch records
+establish full launch for this production/controller path. Public flags, copied
+slots or current process_info cannot admit a known pre-ready cleanup.
+
+The existing explicit parent-owned Job reaper consumes that narrow generation.
+An outstanding ready-only wait retains its exact original array/thread/deadline;
+no pipe cancellation, artificial ready signal or protocol change is added.
+Actual wait/controller/process/Job/reaper exit and every original close remain
+mandatory. The qualification collector attempts this same drain after failed
+prepare returns, only while its own outer containment is live; failure stays a
+failure, including when no safe drain can be proved. Reports expose bounded
+counts/status only, not Native handles, source buffers or file contents.
+
+Strict scalar completion tuples and original after-deadline/fenced cleanup
+behavior remain. The same IO 16384+64 physical pool counts the extra two loader
+entries; Core 8908 future normal demand and Source total/inside-tail remain.
+The existing 48-entry late retirement check is not a complete lifetime reserve.
+Child Exit/Sleep/park, blocked reply writes, earlier unknown construction, whole
+parent/child lifetime, protected shared domain and cached model/borrower/storage
+composition and actual Native/resource/restart/production qualification remain
+pending. Production admission stays denied. Unknown old staging is not inspected
+or changed and remains fully charged 12 GiB. Accepted accuracy/OCR are not rerun.
+
+### Pre-effect reservation of original parent cleanup capacity
+
+The exact private IO parent irreversibly reserves 48 references to original
+terminal rows before Native bootstrap. This supersedes the late combined-free
+capacity check described above; the original 16384 normal plus 64 extra profile
+is unchanged. Only 16 extra rows remain available for general overflow. Exact
+child/Core and the separate Source total/inside-tail contracts are unchanged.
+
+Original reservation identity, physical slot/table identity and untouched
+private intent/claim/return facts gate bootstrap and the failed-retirement
+frontier. Reserved occupancy is distinct from actual completed calls. The
+frontier derives actual normal/general use from original physical facts and
+rejects hidden, replaced or inconsistent observed counters and rows.
+
+The existing original TerminalRetirement is the sole consumer. Its original
+owner/API/caller/call-list/thread and label chronology bind consumption. Private
+consumption precedes exposed row intent, observer map, append and commit. Lost
+publication or interrupted dispatch keeps the same row and denies retry; no
+normal-row fallback, second pool, quota reset or cleanup credit is provided.
+The original process/Job/controller/reaper/close proof and deadline remain.
+An exact owner-type check also denies foreign-owner substitution before reflection.
+
+Actual-parent synthetic ABI tests exhaust normal and general capacity before
+the real retirement consumer, and exercise original reservation, interruption,
+counter/table/row/call-list/map changes, reentry, wrong-thread and copy denials.
+These are source checks. They do not qualify Native execution, earlier unknown
+startup, the complete engine lifetime, shared disk protection/accounting,
+cached model/worker/borrower/storage or actual resource/restart behavior.
+Production remains denied; old staging stays untouched and fully charged
+12 GiB. Accepted model accuracy/OCR and prior failure history remain intact.
+
+### Original file-open status observed without protection qualification
+
+One fresh exact-source diagnostic on committed88301cf46 observed the original
+child NtCreateFile return as unsigned0xC0000043. The closed nine-field v2 frame
+retains open-file/attribute-denial/returned/nonzero/Win32-error0 with that status;
+the parent read-file frame has null NTSTATUS. Microsoft defines the code as
+[STATUS_SHARING_VIOLATION](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55).
+Win32 last-error0 is a separate fact. The omitted FILE_SHARE_WRITE and held
+writable mapping are a possible cause; no original successful target handle,
+same-object identity or mapping completion report establishes that causal link.
+This supersedes the earlier absence of an exact open status, not the801 oracle.
+
+The negative Source case stays failed. Outer original Job total3/active0/
+terminated0, nonforced exit and all outer handle/drain acknowledgements settle
+the owned test tree only. The inner parent report remains absent; watchdog
+termination was attempted and input cleanup did not occur. The manifest records
+four unremoved files/313B; reviewers did not inspect any old or new input leaf.
+All69 earlier references remain exact through their original manifest, while
+only admitted old metadata is rehashed. No prior input is adopted or deleted.
+
+The fixed1GiB process/2GiB Job/32-member/180s outer and512MiB/120s inner limits,
+read-only role, original source access/share rules, strict801/same-object/
+mapping/retirement predicates and production denial remain. The one-use effect
+is consumed; no unchanged-oracle retry is planned. Actual shared protection,
+accounting, cached model/worker/borrower/storage and resource/restart/production
+qualification remain pending. Unknown old staging stays untouched and fully
+charged12GiB. Accepted model accuracy/OCR and all prior failures remain intact.
+
+## Original mapper output custody
+
+The closed Source mapper retains the actual scalar and output handle before
+reading the last-error code. It also snapshots only its fixed IO, file metadata
+and mapped-region layouts before that getter or later validation can change
+them. Unknown or interrupted publication keeps the original partial graph and
+denies retry or cleanup credit. Consumers use typed copies of captured bytes;
+changed original buffers or output slots cannot supply favorable evidence.
+
+Focused fake-ABI tests cover getter failure, rewritten file identity, IO status
+and mapped-region facts, later buffer mutation and invalid output layouts. This
+adds no Native call, new case, wire field, quota or production capability. The
+strict801 witness and all old failed observations stay unchanged. A separate
+sharing-denial same-file proof and actual Windows qualification remain pending.
+Accepted accuracy/OCR stay closed; unknown staging remains fully charged12GiB.
+
+## Original Source call returns
+
+The private Source owner retains original scalar and acquisition-slot returns
+before the last-error getter. It copies only synchronously successful file-open
+IO status and fixed file-ID outputs. Original pointer types,base addresses and
+spans bind those copies. Existing open and identity consumers use captured typed
+bytes; changed slots,buffers,binding or validator observations deny ACK.
+
+Getter or copy failure keeps physical return custody separate from uncompleted
+public fields. Passive access to retained facts does not require healthy current
+owner aliases and grants no Native action or cleanup credit. Pending async IRPs
+and other metadata are not newly qualified. This adds no Native call or quota.
+Actual Windows same-file,source/cache,worker/accounting/restart/resource proof
+remains pending. Accepted accuracy/OCR stay closed. The strict801 case and prior failures stay unchanged.
+Bookkeeping now reserves 12 KiB per existing call inside the unchanged512MiB
+qualification admission. Model RAM guards and all row/time ceilings are unchanged.
+
+### Sharing-refusal evidence integrity
+
+The fixed Source negative check now distinguishes a file-sharing refusal from an
+oplock refusal. A held read-only probe uses exactly four precharged calls in the
+original child's physical table. Stage, ABI, layout and pointer checks precede
+every call. Original slot, thread, scalar and typed bytes are retained before
+error callbacks; changed observations deny qualification. An original-custody
+input check runs after the Source error setter and before its target function,
+so a changed parent or filename cannot cross that callback gap.
+
+Only a null-slot original sharing-violation return at that exact frontier can
+produce the new witness. The existing801 witness remains strict. Parent file-ID
+comparison requires original child exit9/Job active0,total1 before any mapping
+retirement. Probe release is by that process exit, never a fabricated close or
+unused-owner pass. Collector and outer ownership, drain, bounds and cleanup
+controls remain. Fake-ABI tests do not establish actual Windows protection or
+production readiness. Old unknown staging stays untouched and fully charged12GiB;
+shared durable accounting, source/cache borrowers, worker recovery and resources
+remain pending. No model-quality or OCR rerun is required for this source change.
+
+### Interrupted optional forward
+
+An interrupted supplier call can leave offload post-hooks incomplete. The bounded
+generator therefore treats BaseException, including process-exit and keyboard
+interrupt exceptions, as uncertain execution after generation is entered. It
+poisons the original shared owner and re-raises the same exception. No request
+view may retry, and the handler cannot release a lease, rebuild weights or claim
+cleanup. Fixed completed decoder-output validation remains repairable; failed
+pre-forward admission remains a no-forward result. Synthetic regressions verify
+these boundaries and non-disclosure. Native borrower, worker and accounting
+qualification remains pending, with all existing guards preserved.
+
+
+### Passive pre-launch dependency observations
+
+Context and Worker dependency preparation now expose optional closed immutable
+stage facts before command dispatch and at actual return or throw. A returned
+command is not a passing dependency check. Private command inputs and child
+environments are captured before observers run. Observer throws, rejected promises,
+invalid values and late Context subscriptions cannot bypass original commands,
+single-flight behavior, dependency/backend gates or failure results. Sixty-four
+commands and sixteen listeners per flight bound session retention. No command,
+path, environment, output, exception, process ID or credential enters a fact.
+
+The private provided-data qualifier delegates to the real shared setup helper and
+is rejected in production. It exclusively creates a source-bound synthetic cache;
+existing caches are refused without adoption. At most 256 one-KiB records use
+exclusive writes, flush, identity/size checks and acknowledged close before their
+counts advance. Malformed, duplicate, mismatched or reentrant phases, replaced or
+linked paths, partial writes and uncertain closes fence later records. Partial
+bytes remain; uncertain descriptors are not closed again or used as authority.
+These cooperative directory checks do not protect against a hostile concurrent
+filesystem actor and are not a native staging fence. Missing facts remain missing
+evidence. No readiness, allocating-process identity, protected accounting, native
+restart authority or roadmap pass follows. Focused synthetic denial tests cover
+these boundaries. Actual controlled-host and native qualification remain separate;
+all resource limits and earlier failed evidence remain intact.
+
+## Dataset-file metadata and pagination authority
+
+The Hugging Face file browser protects the host-owned token, private metadata,
+exact source identity and bounded app resources. Provider JSON, status-like
+exceptions and Link headers are data, never new destination or fallback authority.
+The installed Hub client receives a scoped fetch function that accepts only the
+selected HTTPS origin, repository and immutable tree path. It cannot forward a
+credential to a different origin, repository, revision or unexpected query.
+Redirects, response-URL substitution, ambiguous next relations, malformed cursors
+and repeated pages fail before another credential-bearing request.
+
+Only the actual exact converted-ref 404 response or a fully consumed valid empty
+converted listing permits an exact same-repository `main` lookup. Auth errors,
+tree/page 404s, thrown status objects, incomplete/unsafe metadata, timeouts and
+other failures do not permit it. Revisions require full 40- or 64-character hashes.
+Source file paths remain exact and contained; no caller-controlled mutable ref,
+anonymous retry, implicit download, repository write or visibility change is added.
+
+One captured token and one 15-second monotonic deadline cover token/SDK waits,
+both source lookups, all streamed metadata and iteration. Limits are 4 KiB per
+revision, 64 KiB/100 entries per page, 4 MiB total, 64 pages, 66 requests, 512
+chunks per response and 4096 chunks total, plus existing inspected-entry and file
+limits. Unknown, oversized or unfinished work has no accepted prefix. Abort and
+late-response guards deny further requests. All outward failures use fixed safe
+categories and copy, including token, SDK-loader and iterator failures. They omit
+raw errors, provider payloads, tokens, headers and URLs. Local synthetic tests
+exercise the installed client; actual provider, hostile-network and host/native
+qualification remain separate. Rollback must retain the metadata protections.

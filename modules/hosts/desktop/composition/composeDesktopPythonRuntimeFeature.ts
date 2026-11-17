@@ -1,19 +1,21 @@
 import type { LoggingPort } from "../../../application/ports/logging";
+import type { createPythonRuntimeStartupDiagnostics } from "../../../adapters/runtime/python";
 import type { DesktopPythonRuntimeLogEntry } from "../../../contracts/ipc";
 import { PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES } from "../../../contracts/runtime";
 import {
   resolvePythonRuntimeBaseUrl,
   resolvePythonRuntimeHostAndPort,
-  resolveDesktopPythonRuntimeCommand,
-  resolveDesktopPythonRuntimeWorkerDirectory,
   classifyPythonRuntimeStdioLogLevel,
   shouldPreparePythonRuntimeWorkerDependencies,
   type DesktopPythonRuntimeFeature,
 } from "./desktopPythonRuntimeHelpers";
+import { resolveDesktopPythonRuntimeLaunch, type DesktopPythonRuntimeLaunch } from "./desktopPythonRuntimeInstallation";
 
 const PYTHON_RUNTIME_STARTUP_TIMEOUT_MS_DEFAULT = 60_000;
 
 export interface ComposeDesktopPythonRuntimeFeatureOptions {
+  launch?: DesktopPythonRuntimeLaunch;
+  startupDiagnostics?: ReturnType<typeof createPythonRuntimeStartupDiagnostics>;
   loggingPort: LoggingPort;
   now: () => string;
   runtimeLogs: DesktopPythonRuntimeLogEntry[];
@@ -29,9 +31,12 @@ export async function composeDesktopPythonRuntimeFeature(
 ): Promise<DesktopPythonRuntimeFeature> {
   const {
     createPythonRuntimeAdapterFoundation,
+    ensurePythonRuntimeContextDependencies,
     ensurePythonRuntimeModelTrainingDependencies,
-    ensurePythonRuntimeWorkerDependencies,
+    preparePythonRuntimeEnvironment,
+    createPythonRuntimeStartupDiagnostics,
   } = await import("../../../adapters/runtime/python");
+  const diagnostics = options.startupDiagnostics ?? createPythonRuntimeStartupDiagnostics();
   const pythonRuntimeEndpoint = resolvePythonRuntimeHostAndPort();
   const pythonRuntimeBaseUrl = resolvePythonRuntimeBaseUrl();
   const configuredPythonRuntimeStartupTimeoutMs = Number(
@@ -52,42 +57,39 @@ export async function composeDesktopPythonRuntimeFeature(
     HF_HUB_DISABLE_SYMLINKS_WARNING:
       process.env.HF_HUB_DISABLE_SYMLINKS_WARNING ?? "1",
   };
-  const pythonRuntimeCommand = resolveDesktopPythonRuntimeCommand({
-    configuredCommand: process.env.PYTHON_RUNTIME_COMMAND,
-  });
-
-  const pythonRuntimeWorkerDirectory =
-    resolveDesktopPythonRuntimeWorkerDirectory({
-      configuredWorkerDirectory: process.env.PYTHON_RUNTIME_WORKER_DIR,
-      resourcesPath: (process as NodeJS.Process & { resourcesPath?: string })
-        .resourcesPath,
-    });
+  const { command: pythonRuntimeCommand, cwd: pythonRuntimeWorkerDirectory, args } =
+    options.launch ?? resolveDesktopPythonRuntimeLaunch();
   const shouldPrepareDependencies =
     shouldPreparePythonRuntimeWorkerDependencies(pythonRuntimeCommand);
   const foundation = createPythonRuntimeAdapterFoundation({
     client: { baseUrl: pythonRuntimeBaseUrl },
     supervisor: {
       command: pythonRuntimeCommand,
-      args: process.env.PYTHON_RUNTIME_ARGS?.split(" ").filter(Boolean) ?? [
-        "main.py",
-      ],
+      args: [...args],
       cwd: pythonRuntimeWorkerDirectory,
       env: pythonRuntimeEnvironment,
       startupTimeoutMs: pythonRuntimeStartupTimeoutMs,
       requiredCapabilities:
         PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES,
+      onStartupEvent: diagnostics.event,
       ...(shouldPrepareDependencies
         ? {
-            prepareRuntimeEnvironment(context: {
+            async prepareRuntimeEnvironment(context: {
               command: string;
               args: readonly string[];
               cwd?: string;
               env?: NodeJS.ProcessEnv;
+              startupToken?: object;
             }) {
-              ensurePythonRuntimeWorkerDependencies({
+              await preparePythonRuntimeEnvironment({
                 command: context.command,
                 cwd: context.cwd,
                 env: context.env,
+                ...(context.startupToken ? {
+                  onDiagnosticStage: (value) => diagnostics.stage(context.startupToken!, value),
+                  onDiagnosticEnvironment: (value) => diagnostics.environment(context.startupToken!, value),
+                  onDiagnosticFailure: (operation, code) => diagnostics.preparationFailed(context.startupToken!, operation, code),
+                } : {}),
               });
             },
           }
@@ -117,8 +119,22 @@ export async function composeDesktopPythonRuntimeFeature(
   });
   return {
     ...foundation,
+    readStartupDiagnostics: diagnostics.read,
     ...(shouldPrepareDependencies
       ? {
+          prepareContextEnvironment(
+            onProgress?: (progress: {
+              readonly phase: "installing" | "installed";
+              readonly message: string;
+            }) => void,
+          ) {
+            return ensurePythonRuntimeContextDependencies({
+              command: pythonRuntimeCommand,
+              cwd: pythonRuntimeWorkerDirectory,
+              env: pythonRuntimeEnvironment,
+              onProgress,
+            }).then(() => undefined);
+          },
           prepareModelTrainingEnvironment() {
             ensurePythonRuntimeModelTrainingDependencies({
               command: pythonRuntimeCommand,

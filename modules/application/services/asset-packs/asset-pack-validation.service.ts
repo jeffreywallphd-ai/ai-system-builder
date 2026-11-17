@@ -24,6 +24,7 @@ import {
   isUnsafeAssetMetadataString,
 } from "../asset/asset-safe-metadata";
 import { validateAssetDefinition } from "../asset/validate-asset-definition.service";
+import { hasActualAssetPackCredential } from "./asset-pack-content-safety";
 
 export interface AssetPackValidationResult {
   readonly status: AssetValidationSummaryStatus;
@@ -364,6 +365,10 @@ function validateSafeObject(
 ): void {
   if (!value) return;
   walk(value, path, (current, currentPath) => {
+    if (typeof current.key === "string" && hasActualAssetPackCredential(current.key)) {
+      addIssue(issues, "error", "security", "Asset pack manifest contains an unsafe field.", currentPath);
+      return;
+    }
     if (typeof current.key === "string" && isUnsafeAssetMetadataKey(current.key)) {
       addIssue(issues, "error", "security", "Metadata key is unsafe for asset pack manifests.", currentPath);
     }
@@ -379,6 +384,10 @@ function validateNoForbiddenValues(
   path: readonly string[],
 ): void {
   walk(value, path, (current, currentPath) => {
+    if (typeof current.key === "string" && hasActualAssetPackCredential(current.key)) {
+      addIssue(issues, "error", "security", "Asset pack manifest contains an unsafe field.", currentPath);
+      return;
+    }
     if (typeof current.key === "string" && isUnsafeManifestFieldKey(current.key)) {
       addIssue(issues, "error", "security", "Asset pack manifest contains an unsafe payload field.", currentPath);
       return;
@@ -435,7 +444,13 @@ function walk(
     value.forEach((entry, index) => walk(entry, [...path, String(index)], callback, seen));
     return;
   }
-  Object.entries(value as Record<string, unknown>).forEach(([key, entry]) => {
+  Object.keys(value).forEach((key) => {
+    if (hasActualAssetPackCredential(key)) {
+      // The unsafe name must never become a public issue path or be descended.
+      callback({ key, value: undefined }, path);
+      return;
+    }
+    const entry = (value as Record<string, unknown>)[key];
     callback({ key, value: entry }, [...path, key]);
     walk(entry, [...path, key], callback, seen);
   });
@@ -463,6 +478,7 @@ function isUnsafeValueContextPath(path: readonly string[]): boolean {
 function isActualUnsafePayloadString(value: string): boolean {
   const trimmed = value.trim();
   return (
+    hasActualAssetPackCredential(trimmed) ||
     LOCAL_FILESYSTEM_PATH_VALUE_PATTERN.test(trimmed) ||
     AUTH_BEARING_VALUE_PATTERN.test(trimmed) ||
     DATA_BASE64_VALUE_PATTERN.test(trimmed) ||

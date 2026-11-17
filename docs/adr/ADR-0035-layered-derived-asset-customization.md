@@ -79,3 +79,21 @@ automatic rebase, floating base remap, or silent conflict resolution is allowed.
   materialization, and host composition are complete.
 - Qualify accessibility and the untrusted-source security boundary before the
   workflow is described as production-ready.
+
+## Publication transaction clarification
+
+The existing distinct-copy decision uses a typed application publication port.
+The structured adapter atomically binds the exact current owning review to the
+absent definition and an owner-bound private commit receipt under ADR-0028. Base,
+release, snapshot/backing and revocation facts are rechecked inside the transaction;
+immutable source verification and identity generation happen before it. This fixes
+a stale-definition side effect without changing the user lifecycle or definition
+placement. Acknowledgement recovery verifies the exact existing commit only; it
+never recreates missing content or adopts legacy metadata. Controlled native
+artifact, live database and complete UI/security qualification remain separate.
+
+A lost response leaves the editor at the original reviewed revision. A retry may
+reconcile a persisted published record at that exact revision plus one, or at its
+current published revision. Every other stale revision and every unpublished
+revision mismatch still denies. Reconciliation verifies the exact private commit
+and retains its original publication actor and time without any writes.

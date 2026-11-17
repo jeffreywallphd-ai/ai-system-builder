@@ -426,8 +426,8 @@ function assertHubClient(client: Partial<HuggingFaceModelHubClient>): HuggingFac
 }
 
 async function loadOfficialHubClient(): Promise<HuggingFaceModelHubClient> {
-  const dynamicImport = new Function("return import('@huggingface/hub');") as () => Promise<unknown>;
-  const loaded = await dynamicImport() as Partial<HuggingFaceModelHubClient>;
+  // Keep the official client lazy while making it visible to desktop bundlers.
+  const loaded = await import("@huggingface/hub") as unknown as Partial<HuggingFaceModelHubClient>;
   return assertHubClient(loaded);
 }
 

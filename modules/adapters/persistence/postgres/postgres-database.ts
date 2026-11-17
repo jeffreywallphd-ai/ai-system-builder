@@ -1,6 +1,9 @@
-import type { PoolClient } from "pg";
+import { AsyncLocalStorage } from "node:async_hooks";
 
-import type { OrganizationId } from "../../../contracts/organization";
+import { isOrganizationId, type OrganizationId } from "../../../contracts/organization";
+import type { SystemBuilderRecord } from "../../../contracts/system-builder";
+import { isWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
+import { SYSTEM_BUILDER_RECORD_NAMESPACE } from "../system-builder/createStructuredSystemBuilderRepository";
 import {
   StructuredDocumentConflictError,
   cloneStructuredJson,
@@ -15,7 +18,7 @@ import {
   type ResolvedPostgresPoolConfig,
 } from "./client/createPostgresPool";
 
-export const POSTGRES_SCHEMA_VERSION = 2;
+export const POSTGRES_SCHEMA_VERSION = 3;
 export const POSTGRES_MIGRATION_LOCK_KEY = 6_517_390_241;
 export const POSTGRES_MIGRATION_0001 = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -59,6 +62,12 @@ CREATE POLICY organization_documents_isolation ON organization_documents
   WITH CHECK (organization_id = current_setting('app.organization_id', true));
 `;
 
+export const POSTGRES_MIGRATION_0003 = `
+CREATE INDEX organization_documents_system_builder_workspace_idx
+  ON organization_documents (organization_id, document_key COLLATE "C")
+  WHERE namespace = 'system-builder/records' AND payload_json->>'status' <> 'archived';
+`;
+
 export interface PostgresHealthReport {
   readonly healthy: boolean;
   readonly schemaVersion: number;
@@ -75,9 +84,12 @@ export interface PostgresHealthReport {
 
 export interface OpenedPostgresDatabase {
   readonly documents: StructuredDocumentStore;
+  readonly listActiveSystemSummaries?: (organizationId: OrganizationId, workspaceId: WorkspaceId) => Promise<readonly PostgresActiveSystemSummary[]>;
   checkHealth(): Promise<PostgresHealthReport>;
   close(): Promise<void>;
 }
+
+export type PostgresActiveSystemSummary = Pick<SystemBuilderRecord, "systemId" | "revision" | "currentRevisionId" | "status" | "targetWorkspaceId">;
 
 export interface OpenPostgresDatabaseOptions {
   readonly config: ResolvedPostgresPoolConfig;
@@ -116,6 +128,7 @@ export async function openPostgresDatabase(options: OpenPostgresDatabaseOptions)
   let closed = false;
   return {
     documents: createPostgresStructuredDocumentStore(pool, now),
+    listActiveSystemSummaries: (organizationId, workspaceId) => listActiveSystemSummaries(pool, organizationId, workspaceId),
     async checkHealth() {
       const startedAt = performance.now();
       const result = await pool.query<{ schema_version: number }>(
@@ -193,6 +206,13 @@ export async function migratePostgresDatabase(
         [2, "create-organization-document-store-with-rls", now()],
       );
     }
+    if (version < 3) {
+      await client.query(POSTGRES_MIGRATION_0003);
+      await client.query(
+        "INSERT INTO schema_migrations (version, name, applied_at) VALUES ($1, $2, $3)",
+        [3, "index-workspace-saved-state", now()],
+      );
+    }
     await client.query("COMMIT");
   } catch (error) {
     try {
@@ -204,65 +224,174 @@ export async function migratePostgresDatabase(
   }
 }
 
+async function listActiveSystemSummaries(pool: PostgresPoolLike, organizationId: OrganizationId, workspaceId: WorkspaceId) {
+  if (!isOrganizationId(organizationId) || !isWorkspaceId(workspaceId) || transactionContext(pool).getStore())
+    throw new Error("The saved-state scope is unavailable.");
+  // Workspace IDs are ASCII. '/' ends the prefix and '0' is the next byte.
+  // The partial index excludes archived records before applying the row cap.
+  return executeOrganizationTransaction(pool, organizationId, async (client) => {
+    const result = await client.query(`
+      SELECT LEFT(payload_json->>'systemId', 97) AS system_id,
+        CASE WHEN jsonb_typeof(payload_json->'revision') = 'number' THEN LEFT(payload_json->>'revision', 24) END AS record_revision,
+        LEFT(payload_json->>'currentRevisionId', 161) AS revision_id, LEFT(payload_json->>'status', 17) AS status,
+        LEFT(payload_json->>'targetWorkspaceId', 97) AS workspace_id
+      FROM organization_documents
+      WHERE organization_id = $1 AND namespace = '${SYSTEM_BUILDER_RECORD_NAMESPACE}'
+        AND document_key COLLATE "C" >= $2 AND document_key COLLATE "C" < $3
+        AND payload_json->>'status' <> 'archived'
+      ORDER BY document_key COLLATE "C" LIMIT 129
+    `, [organizationId, `${workspaceId}/`, `${workspaceId}0`]);
+    return result.rows.map((row) => ({
+      systemId: row.system_id as PostgresActiveSystemSummary["systemId"],
+      revision: typeof row.record_revision === "string" && /^\d{1,16}$/.test(row.record_revision) ? Number(row.record_revision) : NaN,
+      currentRevisionId: (row.revision_id === null ? undefined : row.revision_id) as PostgresActiveSystemSummary["currentRevisionId"],
+      status: row.status as PostgresActiveSystemSummary["status"],
+      targetWorkspaceId: row.workspace_id as WorkspaceId,
+    }));
+  });
+}
+
+async function executeOrganizationTransaction<T>(pool: PostgresPoolLike, organizationId: OrganizationId,
+  work: (client: PostgresQueryable) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  let discardClient = false;
+  try {
+    await client.query("BEGIN");
+    await bindPostgresOrganizationContext(client, organizationId);
+    const result = await work(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    try { await client.query("ROLLBACK"); } catch { discardClient = true; }
+    throw error;
+  } finally {
+    client.release(discardClient);
+  }
+}
+
 export function createPostgresStructuredDocumentStore(
   pool: PostgresPoolLike,
   now: () => string = () => new Date().toISOString(),
 ): StructuredDocumentStore {
-  return createStore(pool, pool, now, false);
+  return createStore(pool, now);
+}
+
+interface PostgresTransactionOwner {
+  readonly client: PostgresQueryable;
+  readonly guarded: boolean;
+  readonly stableReads: boolean;
+  active: boolean;
+  pointReadFailed: boolean;
+  pending: number;
+  tail: Promise<void>;
+}
+
+type PostgresTransactionPhase = "work" | "admission" | "commit" | "rolled-back";
+
+const transactionContexts = new WeakMap<PostgresPoolLike, AsyncLocalStorage<PostgresTransactionOwner>>();
+
+function transactionContext(pool: PostgresPoolLike): AsyncLocalStorage<PostgresTransactionOwner> {
+  let context = transactionContexts.get(pool);
+  if (!context) {
+    context = new AsyncLocalStorage<PostgresTransactionOwner>();
+    transactionContexts.set(pool, context);
+  }
+  return context;
 }
 
 function createStore(
   pool: PostgresPoolLike,
-  queryable: PostgresQueryable,
   now: () => string,
-  insideTransaction: boolean,
+  owner?: PostgresTransactionOwner,
   organizationId?: OrganizationId,
 ): StructuredDocumentStore {
-  const executeScoped = async <T>(work: (active: PostgresQueryable) => Promise<T>): Promise<T> => {
-    if (organizationId === undefined) return work(queryable);
-    if (insideTransaction) {
-      await bindPostgresOrganizationContext(queryable, organizationId);
-      return work(queryable);
+  const context = transactionContext(pool);
+  function assertOwner() {
+    const current = context.getStore();
+    if (owner && (!owner.active || current !== owner)) {
+      throw new Error("PostgreSQL transaction owner is not active in this context.");
     }
+    if (!owner && current?.guarded) {
+      throw new Error("Use the supplied PostgreSQL transaction store for owned operations.");
+    }
+  }
 
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      await bindPostgresOrganizationContext(client, organizationId);
-      const result = await work(client);
-      await client.query("COMMIT");
+  function assertOrdinaryOperations() {
+    if (owner?.stableReads) throw new Error("A PostgreSQL publication view supports point reads only.");
+  }
+
+  const executeScoped = async <T>(work: (active: PostgresQueryable) => Promise<T>): Promise<T> => {
+    assertOwner();
+    if (owner) {
+      owner.pending += 1;
+      // Bind and query as one unit so concurrent derived views cannot replace
+      // the transaction-local organization setting between the two statements.
+      const result = owner.tail.then(async () => {
+        assertOwner();
+        if (organizationId !== undefined) {
+          await bindPostgresOrganizationContext(owner.client, organizationId);
+          assertOwner();
+        }
+        return work(owner.client);
+      }).catch((error: unknown) => {
+        // A rejected statement can release the row locks by aborting the
+        // transaction. Preserve that failure even if the policy catches it.
+        if (owner.stableReads) owner.pointReadFailed = true;
+        throw error;
+      }).finally(() => { owner.pending -= 1; });
+      owner.tail = result.then(() => undefined, () => undefined);
       return result;
-    } catch (error) {
-      try {
-        await client.query("ROLLBACK");
-      } catch {
-        // Preserve the scoped operation failure.
-      }
-      throw error;
-    } finally {
-      client.release();
     }
+    if (organizationId === undefined) return work(pool);
+
+    return executeOrganizationTransaction(pool, organizationId, work);
   };
 
   return {
     organizationId,
+    ...(!owner ? {
+      runInOwnedTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit: () => void) {
+        return transact(work, beforeCommit);
+      },
+    } : {}),
+    ...(!owner && organizationId === undefined ? {
+      async publishWithStableReads(check: (reader: StructuredDocumentStore) => Promise<boolean>, publish: () => boolean) {
+        let ready = false;
+        let published = false;
+        await transact(async reader => {
+          ready = await check(reader) === true;
+        }, () => {
+          if (!ready) return;
+          const sent: unknown = publish();
+          if (typeof sent !== "boolean") {
+            if (sent instanceof Promise) void sent.catch(() => undefined);
+            throw new Error("PostgreSQL publication must be synchronous.");
+          }
+          published = sent;
+        }, true);
+        return published;
+      },
+    } : {}),
     forOrganization(requestedOrganizationId) {
+      assertOwner();
       assertOrganizationScope(organizationId, requestedOrganizationId);
-      return createStore(pool, queryable, now, insideTransaction, requestedOrganizationId);
+      return createStore(pool, now, owner, requestedOrganizationId);
     },
     async readDocument<T>(namespace: string, key: string) {
+      const lock = owner?.stableReads ? " FOR SHARE NOWAIT" : "";
       const result = await executeScoped((active) => organizationId === undefined
         ? active.query(
-          "SELECT namespace, document_key, payload_json, revision, updated_at FROM structured_documents WHERE namespace = $1 AND document_key = $2",
+          "SELECT namespace, document_key, payload_json, revision, updated_at FROM structured_documents WHERE namespace = $1 AND document_key = $2" + lock,
           [namespace, key],
         )
         : active.query(
-          "SELECT namespace, document_key, payload_json, revision, updated_at FROM organization_documents WHERE organization_id = $1 AND namespace = $2 AND document_key = $3",
+          "SELECT namespace, document_key, payload_json, revision, updated_at FROM organization_documents WHERE organization_id = $1 AND namespace = $2 AND document_key = $3" + lock,
           [organizationId, namespace, key],
         ));
       return result.rows[0] ? mapDocument<T>(result.rows[0]) : undefined;
     },
     async listNamespaces() {
+      assertOrdinaryOperations();
       const result = await executeScoped((active) => organizationId === undefined
         ? active.query<{ namespace: string }>(
           "SELECT DISTINCT namespace FROM structured_documents ORDER BY namespace",
@@ -277,6 +406,7 @@ function createStore(
       return result.rows.map((row) => row.namespace);
     },
     async listDocuments<T>(namespace: string) {
+      assertOrdinaryOperations();
       const result = await executeScoped((active) => organizationId === undefined
         ? active.query(
           "SELECT namespace, document_key, payload_json, revision, updated_at FROM structured_documents WHERE namespace = $1 ORDER BY document_key",
@@ -289,11 +419,13 @@ function createStore(
       return result.rows.map((row) => mapDocument<T>(row));
     },
     async writeDocument<T>(namespace: string, key: string, value: T, options: StructuredDocumentWriteOptions = {}) {
+      assertOrdinaryOperations();
+      const { expectedRevision } = options;
       const updatedAt = options.updatedAt ?? now();
       const payload = cloneStructuredJson(value);
       const result = await executeScoped(async (active) => {
         if (organizationId !== undefined) {
-          return options.expectedRevision === undefined
+          return expectedRevision === undefined
             ? active.query(`
                 INSERT INTO organization_documents (organization_id, namespace, document_key, payload_json, revision, updated_at)
                 VALUES ($1, $2, $3, $4::jsonb, 1, $5::timestamptz)
@@ -303,7 +435,7 @@ function createStore(
                   updated_at = EXCLUDED.updated_at
                 RETURNING namespace, document_key, payload_json, revision, updated_at
               `, [organizationId, namespace, key, JSON.stringify(payload), updatedAt])
-            : options.expectedRevision === 0
+            : expectedRevision === 0
               ? active.query(`
                   INSERT INTO organization_documents (organization_id, namespace, document_key, payload_json, revision, updated_at)
                   VALUES ($1, $2, $3, $4::jsonb, 1, $5::timestamptz)
@@ -315,9 +447,9 @@ function createStore(
                   SET payload_json = $4::jsonb, revision = revision + 1, updated_at = $5::timestamptz
                   WHERE organization_id = $1 AND namespace = $2 AND document_key = $3 AND revision = $6
                   RETURNING namespace, document_key, payload_json, revision, updated_at
-                `, [organizationId, namespace, key, JSON.stringify(payload), updatedAt, options.expectedRevision]);
+                `, [organizationId, namespace, key, JSON.stringify(payload), updatedAt, expectedRevision]);
         }
-        return options.expectedRevision === undefined
+        return expectedRevision === undefined
         ? active.query(`
             INSERT INTO structured_documents (namespace, document_key, payload_json, revision, updated_at)
             VALUES ($1, $2, $3::jsonb, 1, $4::timestamptz)
@@ -327,7 +459,7 @@ function createStore(
               updated_at = EXCLUDED.updated_at
             RETURNING namespace, document_key, payload_json, revision, updated_at
           `, [namespace, key, JSON.stringify(payload), updatedAt])
-        : options.expectedRevision === 0
+        : expectedRevision === 0
           ? active.query(`
               INSERT INTO structured_documents (namespace, document_key, payload_json, revision, updated_at)
               VALUES ($1, $2, $3::jsonb, 1, $4::timestamptz)
@@ -339,14 +471,15 @@ function createStore(
             SET payload_json = $3::jsonb, revision = revision + 1, updated_at = $4::timestamptz
             WHERE namespace = $1 AND document_key = $2 AND revision = $5
             RETURNING namespace, document_key, payload_json, revision, updated_at
-          `, [namespace, key, JSON.stringify(payload), updatedAt, options.expectedRevision]);
+          `, [namespace, key, JSON.stringify(payload), updatedAt, expectedRevision]);
       });
       if (!result.rows[0]) {
-        throw new StructuredDocumentConflictError(namespace, key, options.expectedRevision ?? 0);
+        throw new StructuredDocumentConflictError(namespace, key, expectedRevision ?? 0);
       }
       return mapDocument<T>(result.rows[0]);
     },
     async deleteDocument(namespace: string, key: string, expectedRevision?: number) {
+      assertOrdinaryOperations();
       const result = await executeScoped((active) => organizationId === undefined
         ? expectedRevision === undefined
           ? active.query("DELETE FROM structured_documents WHERE namespace = $1 AND document_key = $2 RETURNING revision", [namespace, key])
@@ -360,29 +493,80 @@ function createStore(
       return (result.rowCount ?? 0) === 1;
     },
     async runInTransaction<T>(work: (transaction: StructuredDocumentStore) => Promise<T>) {
-      if (insideTransaction) return work(this);
-      for (let attempt = 1; attempt <= 4; attempt += 1) {
-        const client = await pool.connect();
-        try {
-          await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
-          if (organizationId !== undefined) await bindPostgresOrganizationContext(client, organizationId);
-          const result = await work(createStore(pool, client, now, true, organizationId));
-          await client.query("COMMIT");
-          return result;
-        } catch (error) {
-          try {
-            await client.query("ROLLBACK");
-          } catch {
-            // Preserve the work failure.
-          }
-          if (!isRetryablePostgresTransactionError(error) || attempt === 4) throw error;
-        } finally {
-          (client as PoolClient).release();
-        }
+      assertOrdinaryOperations();
+      assertOwner();
+      if (!owner) return transact(work);
+      owner.pending += 1;
+      try {
+        return await work(this);
+      } finally {
+        owner.pending -= 1;
       }
-      throw new Error("PostgreSQL transaction retry loop ended unexpectedly.");
     },
   };
+
+  async function transact<T>(work: (transaction: StructuredDocumentStore) => Promise<T>, beforeCommit?: () => void,
+    stableReads = false): Promise<T> {
+    assertOwner();
+    if (beforeCommit && context.getStore()) throw new Error("An owned PostgreSQL transaction must start at the root.");
+
+    const attempts = stableReads ? 1 : 4;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const client = await pool.connect();
+      const transaction = { client, guarded: beforeCommit !== undefined, stableReads,
+        active: true, pointReadFailed: false, pending: 0, tail: Promise.resolve() };
+      let began = false;
+      const transactionStatus: { phase: PostgresTransactionPhase } = { phase: "work" };
+      let discardClient = false;
+      try {
+        await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+        began = true;
+        if (stableReads) await client.query("SET LOCAL lock_timeout = '1000ms'");
+        if (organizationId !== undefined) await bindPostgresOrganizationContext(client, organizationId);
+        return await context.run(transaction, async () => {
+          const result = await work(createStore(pool, now, transaction, organizationId));
+          transaction.active = false;
+          if (transaction.pending) throw new Error("Unfinished PostgreSQL transaction operations.");
+          if (transaction.pointReadFailed) throw new Error("A PostgreSQL publication read failed.");
+          transactionStatus.phase = "admission";
+          const admission: unknown = beforeCommit?.();
+          if (admission !== undefined) {
+            if (admission instanceof Promise) void admission.catch(() => undefined);
+            throw new Error("The PostgreSQL before-commit check must be synchronous.");
+          }
+          transactionStatus.phase = "commit";
+          const commit = await client.query("COMMIT");
+          if (commit.command !== "COMMIT") {
+            if (commit.command === "ROLLBACK") transactionStatus.phase = "rolled-back";
+            throw new Error("PostgreSQL did not commit the transaction.");
+          }
+          return result;
+        });
+      } catch (error) {
+        transaction.active = false;
+        await transaction.tail;
+        const failed = transactionStatus.phase;
+        const retryable = (failed === "work" || failed === "commit") && isRetryablePostgresTransactionError(error);
+        discardClient = !began || (failed === "commit" && !retryable);
+        if (began && failed !== "rolled-back") {
+          try {
+            const rollback = await client.query("ROLLBACK");
+            if (rollback.command !== "ROLLBACK") throw new Error("PostgreSQL did not acknowledge rollback.");
+          } catch {
+            discardClient = true;
+            if (beforeCommit) throw new Error("The owned PostgreSQL transaction rollback could not be confirmed.");
+            throw error;
+          }
+        }
+        if (failed === "commit" && !retryable) throw new Error("The PostgreSQL transaction commit could not be confirmed.");
+        if (!retryable || attempt === attempts) throw error;
+      } finally {
+        transaction.active = false;
+        client.release(discardClient);
+      }
+    }
+    throw new Error("PostgreSQL transaction retry loop ended unexpectedly.");
+  }
 }
 
 export async function bindPostgresOrganizationContext(

@@ -1,3 +1,4 @@
+import { sanitizeAssetDefinitionList, sanitizeAssetDefinitionView } from "../../../../application/services/asset/asset-definition-view-sanitizer";
 import type { AssetRegistryDefinitionReadPort } from "../../../../application/ports/asset";
 import { sanitizeAssetViewValue } from "../../../../application/services/asset/asset-safe-metadata";
 import {
@@ -72,7 +73,7 @@ export function registerAssetRegistryApiRoutes(dependencies: RegisterAssetRegist
 
     try {
       const result = await dependencies.assetRegistryRead.listDefinitionCards(query);
-      response.status(200).json(createApiAssetDefinitionsListSuccessResponse(sanitizeAssetViewValue(result), context));
+      response.status(200).json(createApiAssetDefinitionsListSuccessResponse(sanitizeAssetDefinitionList(result), context));
     } catch (error) {
       writeApiReadError(response, createApiAssetDefinitionsListFailureResponse, error, context, "Unable to read asset definitions.");
     }
@@ -173,7 +174,7 @@ export function registerAssetRegistryApiRoutes(dependencies: RegisterAssetRegist
         response.status(404).json(createApiAssetDefinitionReadFailureResponse("not-found", "Asset definition was not found.", context));
         return;
       }
-      response.status(200).json(createApiAssetDefinitionReadSuccessResponse(sanitizeAssetViewValue(detail), context));
+      response.status(200).json(createApiAssetDefinitionReadSuccessResponse(sanitizeAssetDefinitionView(detail), context));
     } catch (error) {
       writeApiReadError(response, createApiAssetDefinitionReadFailureResponse, error, context, "Unable to read asset definition.");
     }
@@ -203,7 +204,7 @@ export function registerAssetRegistryApiRoutes(dependencies: RegisterAssetRegist
         response.status(404).json(createApiAssetDefinitionVersionReadFailureResponse("not-found", "Asset definition version was not found.", context));
         return;
       }
-      response.status(200).json(createApiAssetDefinitionVersionReadSuccessResponse(sanitizeAssetViewValue(detail), context));
+      response.status(200).json(createApiAssetDefinitionVersionReadSuccessResponse(sanitizeAssetDefinitionView(detail), context));
     } catch (error) {
       writeApiReadError(response, createApiAssetDefinitionVersionReadFailureResponse, error, context, "Unable to read asset definition version.");
     }

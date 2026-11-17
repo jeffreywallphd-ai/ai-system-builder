@@ -1,6 +1,7 @@
 import {
   useDeferredValue,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -29,7 +30,9 @@ import { ModalDialog } from "../components/ModalDialog";
 import { FoundationAssetPreview } from "../foundation-assets";
 import {
   buildSystemComposerTree,
+  createSystemComposerFormPlacementPolicy,
   flattenSystemComposerTree,
+  systemComposerDescendantIds,
   type SystemComposerDraft,
   type SystemComposerTreeNode,
 } from "./systemComposerDraft";
@@ -46,6 +49,7 @@ export interface SystemComposerTargetSlot {
 }
 
 export type SystemComposerSidebarTab = "properties" | "styling" | "layers";
+const composerDetailsTabs = ["properties", "styling", "layers"] as const;
 
 export interface SystemComposerAssetBrowseRequest {
   readonly searchText?: string;
@@ -57,6 +61,12 @@ interface SystemComposerCanvasSlot {
   readonly slot: SystemBuilderComposerAsset["slots"][number];
   readonly editable: boolean;
 }
+
+type OpenRegionPicker = (
+  node: SystemComposerTreeNode,
+  slotId: string,
+  trigger: HTMLButtonElement,
+) => void;
 
 interface AssetPickerState {
   readonly parentInstanceId: string;
@@ -133,6 +143,7 @@ const COMPOSER_ASSET_BROWSE_CATEGORIES: readonly ComposerAssetBrowseCategory[] =
   ];
 
 export interface SystemComposerStructureEditorProps {
+  readonly browseScopeKey?: string;
   readonly draft: SystemComposerDraft;
   readonly rootInstanceRefs: readonly AssetReference[];
   readonly catalog: readonly SystemBuilderComposerAsset[];
@@ -168,12 +179,16 @@ export interface SystemComposerStructureEditorProps {
     instanceId: string,
     target: SystemComposerTargetSlot,
   ) => void;
-  readonly onRemove: () => void;
+  readonly onRemove: (instanceId: string) => void;
+  readonly editableFormIds?: ReadonlySet<string>;
+  readonly onEditForm?: (instanceId: string) => void;
+  readonly revealInstanceId?: string;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
 }
 
 export function SystemComposerStructureEditor({
+  browseScopeKey,
   draft,
   rootInstanceRefs,
   catalog,
@@ -198,6 +213,9 @@ export function SystemComposerStructureEditor({
   onAdd,
   onPlace,
   onRemove,
+  editableFormIds,
+  onEditForm,
+  revealInstanceId,
   onUndo,
   onRedo,
 }: SystemComposerStructureEditorProps) {
@@ -225,6 +243,13 @@ export function SystemComposerStructureEditor({
   const [assetNextCursor, setAssetNextCursor] = useState<string>();
   const [assetLoading, setAssetLoading] = useState(false);
   const [assetError, setAssetError] = useState<string>();
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    draft: SystemComposerDraft;
+    instanceId: string;
+    name: string;
+    descendants: number;
+  }>();
+  const removalDescriptionId = useId();
   const [moveTargetKey, setMoveTargetKey] = useState("");
   const [collapsedInstanceIds, setCollapsedInstanceIds] = useState<
     ReadonlySet<string>
@@ -234,11 +259,17 @@ export function SystemComposerStructureEditor({
   const detailsToggleRefs = useRef(
     new Map<SystemComposerSidebarTab, HTMLButtonElement>(),
   );
+  const detailsTabRefs = useRef(new Map<SystemComposerSidebarTab, HTMLButtonElement>());
   const canvasRef = useRef<HTMLDivElement>(null);
-  const loadLayoutsRef = useRef(loadLayouts);
+  const canvasHeadingRef = useRef<HTMLHeadingElement>(null);
+  const removedInstanceId = useRef<string | undefined>(undefined);
+  const pickerTrigger = useRef<HTMLButtonElement | undefined>(undefined);
+  const insertedFrom = useRef<HTMLButtonElement | undefined>(undefined);
+  const assetGeneration = useRef(0);
+  const assetCursors = useRef(new Set<string>());
+  const layoutRequest = useRef<object | undefined>(undefined);
   const loadCompatibleAssetsRef = useRef(loadCompatibleAssets);
   const sidebarChangeRef = useRef(onSidebarTabChange);
-  loadLayoutsRef.current = loadLayouts;
   loadCompatibleAssetsRef.current = loadCompatibleAssets;
   sidebarChangeRef.current = onSidebarTabChange;
 
@@ -246,6 +277,7 @@ export function SystemComposerStructureEditor({
     () => buildSystemComposerTree(draft, rootInstanceRefs),
     [draft, rootInstanceRefs],
   );
+  const formPlacement = useMemo(() => createSystemComposerFormPlacementPolicy(draft), [draft]);
   const flatTree = useMemo(() => flattenSystemComposerTree(tree), [tree]);
   const {
     unplacedInstances,
@@ -275,6 +307,29 @@ export function SystemComposerStructureEditor({
         (instance) =>
           ({ instance, depth: 1, children: [] }) as SystemComposerTreeNode,
       )[0];
+  const removal = pendingRemoval?.draft === draft ? pendingRemoval : undefined;
+  useEffect(() => {
+    if (!removedInstanceId.current) return;
+    const instanceId = removedInstanceId.current;
+    removedInstanceId.current = undefined;
+    if (draft.instances.some((instance) => String(instance.instanceId) === instanceId)) return;
+    const selected = canvasRef.current?.querySelector<HTMLButtonElement>(
+      '.system-composer__canvas-node[data-selected="true"] > .system-composer__canvas-node-heading > .system-composer__canvas-node-select',
+    );
+    (selected ?? canvasHeadingRef.current)?.focus();
+  }, [draft, removal]);
+
+  function requestAssetRemoval(instanceId: string) {
+    if (protectedInstanceIds.has(instanceId)) return;
+    const instance = draft.instances.find((item) => String(item.instanceId) === instanceId);
+    if (!instance) return;
+    setPendingRemoval({
+      draft,
+      instanceId,
+      name: instance.displayName ?? String(instance.definitionRef.id),
+      descendants: systemComposerDescendantIds(draft.placements, instanceId).size,
+    });
+  }
   const breadcrumb = selectedNode
     ? breadcrumbFor(selectedNode, draft.instances, draft.placements)
     : [];
@@ -305,9 +360,11 @@ export function SystemComposerStructureEditor({
     pickerParentNode?.instance,
     catalog,
   );
+  const pickerDestination = pickerParentNode?.instance.displayName ??
+    pickerParentDefinition?.displayName ?? "container";
   const pickerSlots = pickerParentNode
     ? canvasSlotsForNode(pickerParentNode, pickerParentDefinition).filter(
-        ({ editable }) => editable,
+        ({ slot, editable }) => editable && hasRegionCapacity(pickerParentNode, slot),
       )
     : [];
   const activePickerSlot = pickerSlots.find(
@@ -320,21 +377,25 @@ export function SystemComposerStructureEditor({
           slotId: String(activePickerSlot.slotId),
         }
       : undefined;
+  const pickerAssets = useMemo(() => activePickerTarget ? assetResults.filter((asset) =>
+    formPlacement.permits(asset.definitionRef, activePickerTarget.parentInstanceId, activePickerTarget.slotId)) : [],
+  [activePickerTarget?.parentInstanceId, activePickerTarget?.slotId, assetResults, formPlacement]);
   const compatibleDefinitionKeys = useMemo(
     () =>
       new Set(
-        assetResults.map((asset) => `${asset.definitionId}@${asset.version}`),
+        pickerAssets.map((asset) => `${asset.definitionId}@${asset.version}`),
       ),
-    [assetResults],
+    [pickerAssets],
   );
   const compatibleUnassigned = unassignedVisualInstances.filter((instance) =>
     compatibleDefinitionKeys.has(
       `${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`,
-    ),
+    ) && activePickerTarget && formPlacement.permits(instance.definitionRef, activePickerTarget.parentInstanceId,
+      activePickerTarget.slotId, String(instance.instanceId)),
   );
   const assetResultGroups = useMemo(
-    () => groupComposerAssetsForBrowse(assetResults),
-    [assetResults],
+    () => groupComposerAssetsForBrowse(pickerAssets),
+    [pickerAssets],
   );
   const visibleAssetResultGroups =
     assetCategoryId === "all"
@@ -359,9 +420,9 @@ export function SystemComposerStructureEditor({
   const moveTargets = useMemo(
     () =>
       selectedNode
-        ? buildMoveTargets(selectedNode, flatTree, catalog, draft.placements)
+        ? buildMoveTargets(selectedNode, flatTree, catalog, draft.placements, formPlacement)
         : [],
-    [catalog, draft.placements, flatTree, selectedNode],
+    [catalog, draft.placements, flatTree, formPlacement, selectedNode],
   );
   const selectedMoveTarget =
     moveTargets.find((entry) => entry.key === moveTargetKey) ?? moveTargets[0];
@@ -402,38 +463,23 @@ export function SystemComposerStructureEditor({
     };
   }, [draft.instances.length, draft.placements, selectedInstanceId]);
 
-  useEffect(() => {
-    if (!layoutsExpanded || layoutsLoaded || layoutsLoading) return;
-    let active = true;
-    setLayoutsLoading(true);
-    setLayoutError(undefined);
-    const loader = loadLayoutsRef.current;
-    if (!loader) {
-      setLoadedLayouts(layoutOptions);
-      setLayoutsLoaded(true);
-      setLayoutsLoading(false);
-      return;
-    }
-    void loader().then((result) => {
-      if (!active) return;
-      if (result.ok) {
-        setLoadedLayouts(
-          result.value.items.filter(
-            (asset) => asset.layoutRole === "application-shell",
-          ),
-        );
-        setLayoutsLoaded(true);
-      } else {
-        setLayoutError(result.error.message);
-      }
-      setLayoutsLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [layoutOptions, layoutsExpanded, layoutsLoaded]);
+  useEffect(() => () => {
+    layoutRequest.current = undefined;
+  }, []);
 
   useEffect(() => {
+    if (assetPicker) return;
+    const trigger = insertedFrom.current;
+    insertedFrom.current = undefined;
+    if (!trigger || (trigger.isConnected && !trigger.disabled)) return;
+    canvasRef.current?.querySelector<HTMLButtonElement>(
+      '.system-composer__canvas-node[data-selected="true"] > .system-composer__canvas-node-heading > .system-composer__canvas-node-select',
+    )?.focus();
+  }, [assetPicker]);
+
+  useEffect(() => {
+    const generation = ++assetGeneration.current;
+    assetCursors.current.clear();
     if (!activePickerTarget) {
       setAssetResults([]);
       setAssetNextCursor(undefined);
@@ -469,7 +515,7 @@ export function SystemComposerStructureEditor({
         : {}),
       limit: 48,
     }).then((result) => {
-      if (!active) return;
+      if (!active || generation !== assetGeneration.current) return;
       if (result.ok) {
         setAssetResults(result.value.items.filter(isSystemComposerVisualAsset));
         setAssetNextCursor(result.value.nextCursor);
@@ -484,6 +530,7 @@ export function SystemComposerStructureEditor({
       active = false;
     };
   }, [
+    browseScopeKey,
     activePickerTarget?.parentInstanceId,
     activePickerTarget?.slotId,
     compatibleAssets,
@@ -497,6 +544,10 @@ export function SystemComposerStructureEditor({
     if (!loader) return;
     setAssetLoading(true);
     setAssetError(undefined);
+    const generation = assetGeneration.current;
+    const requestedCursor = assetNextCursor;
+    if (assetCursors.current.has(requestedCursor)) { setAssetNextCursor(undefined); setAssetLoading(false); setAssetError("Unable to continue browsing assets. Search again."); return; }
+    assetCursors.current.add(requestedCursor);
     const result = await loader(activePickerTarget, {
       ...(deferredAssetSearch.trim()
         ? { searchText: deferredAssetSearch.trim() }
@@ -504,7 +555,9 @@ export function SystemComposerStructureEditor({
       cursor: assetNextCursor,
       limit: 48,
     });
+    if (generation !== assetGeneration.current) return;
     if (result.ok) {
+      if (result.value.nextCursor && assetCursors.current.has(result.value.nextCursor)) { setAssetNextCursor(undefined); setAssetLoading(false); setAssetError("Unable to continue browsing assets. Search again."); return; }
       const merged = new Map(
         assetResults.map((asset) => [
           `${asset.definitionId}@${asset.version}`,
@@ -519,21 +572,20 @@ export function SystemComposerStructureEditor({
       setAssetResults([...merged.values()]);
       setAssetNextCursor(result.value.nextCursor);
     } else {
+      assetCursors.current.delete(requestedCursor);
       setAssetError(result.error.message);
     }
     setAssetLoading(false);
   };
 
-  const openAssetPicker = (node: SystemComposerTreeNode) => {
+  const openAssetPicker: OpenRegionPicker = (node, slotId, trigger) => {
     const definition = definitionForInstance(node.instance, catalog);
-    const firstAvailable = canvasSlotsForNode(node, definition).find(
+    const available = canvasSlotsForNode(node, definition).some(
       ({ slot, editable }) =>
-        editable &&
-        node.children.filter(
-          (child) => String(child.placement?.slotId) === String(slot.slotId),
-        ).length < slot.cardinality.maxItems,
+        editable && String(slot.slotId) === slotId && hasRegionCapacity(node, slot),
     );
-    if (!firstAvailable) return;
+    if (!available) return;
+    pickerTrigger.current = trigger;
     setAssetSearch("");
     setAssetCategoryId("all");
     setAssetResults([]);
@@ -541,11 +593,13 @@ export function SystemComposerStructureEditor({
     setAssetError(undefined);
     setAssetPicker({
       parentInstanceId: String(node.instance.instanceId),
-      slotId: String(firstAvailable.slot.slotId),
+      slotId,
     });
   };
 
   const closeAssetPicker = () => {
+    assetGeneration.current++;
+    pickerTrigger.current = undefined;
     setAssetPicker(undefined);
     setAssetSearch("");
     setAssetCategoryId("all");
@@ -553,6 +607,11 @@ export function SystemComposerStructureEditor({
     setAssetNextCursor(undefined);
     setAssetError(undefined);
   };
+
+  function finishAssetSelection() {
+    insertedFrom.current = pickerTrigger.current;
+    closeAssetPicker();
+  }
 
   const moveTreeFocus = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -615,6 +674,73 @@ export function SystemComposerStructureEditor({
     globalThis.setTimeout(() => detailsPanelRef.current?.focus(), 0);
   };
 
+  function handleDetailsTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    tab: SystemComposerSidebarTab,
+  ) {
+    const current = composerDetailsTabs.indexOf(tab);
+    let next: number;
+    switch (event.key) {
+      case "ArrowLeft":
+        next = (current - 1 + composerDetailsTabs.length) % composerDetailsTabs.length;
+        break;
+      case "ArrowRight":
+        next = (current + 1) % composerDetailsTabs.length;
+        break;
+      case "Home":
+        next = 0;
+        break;
+      case "End":
+        next = composerDetailsTabs.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const target = composerDetailsTabs[next]!;
+    setSidebarTab(target);
+    detailsTabRefs.current.get(target)?.focus();
+  }
+
+  function toggleLayouts() {
+    const expanded = !layoutsExpanded;
+    setLayoutsExpanded(expanded);
+    if (!expanded || layoutsLoaded || layoutRequest.current) return;
+    setLayoutError(undefined);
+    if (!loadLayouts) {
+      setLoadedLayouts(layoutOptions);
+      setLayoutsLoaded(true);
+      return;
+    }
+    const request = {};
+    layoutRequest.current = request;
+    setLayoutsLoading(true);
+    void Promise.resolve()
+      .then(loadLayouts)
+      .then((result) => {
+        if (layoutRequest.current !== request) return;
+        if (result.ok) {
+          setLoadedLayouts(
+            result.value.items.filter((asset) => asset.layoutRole === "application-shell"),
+          );
+          setLayoutsLoaded(true);
+        } else {
+          setLayoutError(result.error.message);
+        }
+      })
+      .catch(() => {
+        if (layoutRequest.current === request) {
+          setLayoutError("Unable to load predefined layouts. Reopen Layouts to retry.");
+        }
+      })
+      .finally(() => {
+        if (layoutRequest.current === request) {
+          layoutRequest.current = undefined;
+          setLayoutsLoading(false);
+        }
+      });
+  }
+
   const availableLayouts = layoutsLoaded ? loadedLayouts : [];
 
   return (
@@ -659,7 +785,7 @@ export function SystemComposerStructureEditor({
           role="group"
           aria-label="Responsive composer panels"
         >
-          {(["properties", "styling", "layers"] as const).map((tab) => (
+          {composerDetailsTabs.map((tab) => (
             <button
               key={tab}
               ref={(element) => {
@@ -715,7 +841,7 @@ export function SystemComposerStructureEditor({
               aria-label={layoutsExpanded ? "Hide layouts" : "Show layouts"}
               aria-expanded={layoutsExpanded}
               aria-controls="system-composer-layout-bar-content"
-              onClick={() => setLayoutsExpanded((current) => !current)}
+              onClick={toggleLayouts}
             >
               <ApplicationIcon name="chevron" />
               <span>Layouts</span>
@@ -755,13 +881,12 @@ export function SystemComposerStructureEditor({
         >
           <div className="system-composer__panel-heading">
             <div>
-              <h3 id="composer-canvas-title">Canvas</h3>
+              <h3 ref={canvasHeadingRef} id="composer-canvas-title" tabIndex={-1}>Canvas</h3>
               <p className="ui-text-muted">
                 {activeCanvasLayout?.layoutGeometry
                   ? `${activeCanvasLayout.displayName} exposes ${activeCanvasLayout.slots.length} fixed named ${activeCanvasLayout.slots.length === 1 ? "region" : "regions"}. `
                   : ""}
-                Select a container and use Add element. Canonical semantic order
-                is preserved.
+                Use Add element in the region where the new element belongs.
               </p>
             </div>
           </div>
@@ -776,6 +901,10 @@ export function SystemComposerStructureEditor({
                   protectedInstanceIds={protectedInstanceIds}
                   onSelect={onSelect}
                   onAddElement={openAssetPicker}
+                  onRequestRemove={requestAssetRemoval}
+                  editableFormIds={editableFormIds}
+                  onEditForm={onEditForm}
+                  revealInstanceId={revealInstanceId}
                 />
               ))}
             </div>
@@ -805,9 +934,13 @@ export function SystemComposerStructureEditor({
             aria-label="Composer details"
             aria-orientation="horizontal"
           >
-            {(["properties", "styling", "layers"] as const).map((tab) => (
+            {composerDetailsTabs.map((tab) => (
               <button
                 key={tab}
+                ref={(element) => {
+                  if (element) detailsTabRefs.current.set(tab, element);
+                  else detailsTabRefs.current.delete(tab);
+                }}
                 id={`system-composer-sidebar-tab-${tab}`}
                 type="button"
                 role="tab"
@@ -816,6 +949,7 @@ export function SystemComposerStructureEditor({
                 aria-controls={`system-composer-${tab}-panel`}
                 tabIndex={sidebarTab === tab ? 0 : -1}
                 onClick={() => setSidebarTab(tab)}
+                onKeyDown={(event) => handleDetailsTabKeyDown(event, tab)}
               >
                 {tab === "layers"
                   ? "Layers"
@@ -1066,13 +1200,14 @@ export function SystemComposerStructureEditor({
                     <button
                       type="button"
                       className="system-composer__flat-control system-composer__flat-control--danger"
-                      onClick={onRemove}
+                      aria-haspopup="dialog"
+                      onClick={() => requestAssetRemoval(String(selectedNode.instance.instanceId))}
                       disabled={protectedInstanceIds.has(
                         String(selectedNode.instance.instanceId),
                       )}
                     >
                       <ApplicationIcon name="delete" />
-                      <span>Remove selected subtree</span>
+                      <span>Remove asset</span>
                     </button>
                   </div>
                 ) : null}
@@ -1083,24 +1218,63 @@ export function SystemComposerStructureEditor({
       </div>
 
       <ModalDialog
+        open={Boolean(removal)}
+        title="Remove asset?"
+        descriptionId={removalDescriptionId}
+        onClose={() => setPendingRemoval(undefined)}
+      >
+        {removal ? (
+          <>
+            <div id={removalDescriptionId}>
+              <p>Remove <strong>{removal.name}</strong> from the Canvas draft?</p>
+              {removal.descendants > 0 ? (
+                <p>All child assets will also be removed, including nested children ({removal.descendants} total).</p>
+              ) : null}
+              <p>You can undo this change before saving.</p>
+            </div>
+            <div className="ui-workflow__actions">
+              <button
+                type="button"
+                className="ui-button ui-button--outline"
+                data-modal-initial-focus
+                onClick={() => setPendingRemoval(undefined)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ui-button ui-button--destructive"
+                onClick={() => {
+                  removedInstanceId.current = removal.instanceId;
+                  onRemove(removal.instanceId);
+                  setPendingRemoval(undefined);
+                }}
+              >
+                Remove asset
+              </button>
+            </div>
+          </>
+        ) : null}
+      </ModalDialog>
+
+      <ModalDialog
         open={Boolean(assetPicker && pickerParentNode)}
-        title={`Add an element to ${
-          pickerParentNode?.instance.displayName ??
-          pickerParentDefinition?.displayName ??
-          "container"
-        }`}
+        title={<>Add an element<span className="ui-visually-hidden"> to {pickerDestination}</span></>}
         onClose={closeAssetPicker}
         closeLabel="Close asset selection"
         descriptionId="system-composer-asset-picker-description"
         dialogClassName="system-composer__asset-picker-dialog"
         bodyClassName="system-composer__asset-picker"
       >
+        <p className="system-composer__asset-picker-destination" aria-hidden="true">
+          Destination: <strong>{pickerDestination}</strong>
+        </p>
         <p
           id="system-composer-asset-picker-description"
           className="ui-text-muted"
         >
-          Choose a destination region, then select a compatible element. The
-          element will be inserted, selected, and revealed on the Canvas.
+          Select a compatible element to add it to the chosen region. The
+          Canvas selects and reveals the new element.
         </p>
         {pickerSlots.length > 1 ? (
           <label>
@@ -1180,7 +1354,7 @@ export function SystemComposerStructureEditor({
                     onClick={() => {
                       if (!activePickerTarget) return;
                       onPlace(String(instance.instanceId), activePickerTarget);
-                      closeAssetPicker();
+                      finishAssetSelection();
                     }}
                   >
                     <ApplicationIcon name="assets" />
@@ -1232,8 +1406,11 @@ export function SystemComposerStructureEditor({
                   <h4 id={`system-composer-category-${category.id}`}>
                     {category.label}
                   </h4>
-                  <span aria-label={`${items.length} compatible elements`}>
+                  <span>
                     {items.length}
+                    <span className="ui-visually-hidden">
+                      {items.length === 1 ? " compatible element" : " compatible elements"}
+                    </span>
                   </span>
                 </div>
                 <p className="ui-text-muted">{category.description}</p>
@@ -1246,14 +1423,12 @@ export function SystemComposerStructureEditor({
                         onClick={() => {
                           if (!activePickerTarget) return;
                           onAdd(asset, activePickerTarget);
-                          closeAssetPicker();
+                          finishAssetSelection();
                         }}
                       >
                         <ApplicationIcon name={iconForComposerAsset(asset)} />
                         <strong>{asset.displayName}</strong>
-                        <span>
-                          {asset.assetType} / v{asset.version}
-                        </span>
+                        <span>{`${asset.assetType} / v${asset.version}`}</span>
                       </button>
                     </li>
                   ))}
@@ -1393,6 +1568,7 @@ function TreeNode({
   readonly onToggle: (instanceId: string) => void;
 }) {
   const instanceId = String(node.instance.instanceId);
+  const childrenId = useId();
   const selected = instanceId === selectedInstanceId;
   const expanded = node.children.length
     ? !collapsedInstanceIds.has(instanceId)
@@ -1407,7 +1583,13 @@ function TreeNode({
             aria-label={`${expanded ? "Collapse" : "Expand"} ${node.instance.displayName ?? instanceId}`}
             data-expanded={expanded}
             tabIndex={-1}
-            onClick={() => onToggle(instanceId)}
+            aria-hidden="true"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              onToggle(instanceId);
+              onSelect(instanceId);
+              itemRefs.get(instanceId)?.focus();
+            }}
           >
             <ApplicationIcon name="chevron" />
           </button>
@@ -1424,30 +1606,33 @@ function TreeNode({
           aria-level={node.depth}
           aria-selected={selected}
           aria-expanded={expanded}
+          aria-owns={expanded ? childrenId : undefined}
+          aria-labelledby={`${childrenId}-label`}
+          aria-describedby={`${childrenId}-description${protectedInstanceIds.has(instanceId) ? ` ${childrenId}-required` : ""}`}
           tabIndex={
             selected || (!selectedInstanceId && node.depth === 1) ? 0 : -1
           }
           onClick={() => onSelect(instanceId)}
           onKeyDown={(event) => onKeyDown(event, node)}
         >
-          <span>
+          <span id={`${childrenId}-label`}>
             {node.instance.displayName ??
               String(node.instance.definitionRef.id)}
           </span>
           {node.placement ? (
-            <small>
+            <small id={`${childrenId}-description`}>
               Region {node.placement.slotId} / layer {node.placement.order + 1}
             </small>
           ) : (
-            <small>System root</small>
+            <small id={`${childrenId}-description`}>System root</small>
           )}
           {protectedInstanceIds.has(instanceId) ? (
-            <span className="ui-badge ui-badge--info">Required</span>
+            <span className="ui-badge ui-badge--info" id={`${childrenId}-required`}>Required</span>
           ) : null}
         </button>
       </div>
       {node.children.length && expanded ? (
-        <ul role="group">
+        <ul role="group" id={childrenId}>
           {node.children.map((child) => (
             <TreeNode
               key={String(child.instance.instanceId)}
@@ -1467,6 +1652,15 @@ function TreeNode({
   );
 }
 
+function hasRegionCapacity(
+  node: SystemComposerTreeNode,
+  slot: SystemComposerCanvasSlot["slot"],
+) {
+  return node.children.filter(
+    (child) => String(child.placement?.slotId) === String(slot.slotId),
+  ).length < slot.cardinality.maxItems;
+}
+
 function CanvasNode({
   node,
   catalog,
@@ -1474,29 +1668,31 @@ function CanvasNode({
   protectedInstanceIds,
   onSelect,
   onAddElement,
+  onRequestRemove,
+  editableFormIds,
+  onEditForm,
+  revealInstanceId,
 }: {
   readonly node: SystemComposerTreeNode;
   readonly catalog: readonly SystemBuilderComposerAsset[];
   readonly selectedInstanceId?: string;
   readonly protectedInstanceIds: ReadonlySet<string>;
   readonly onSelect: (instanceId: string) => void;
-  readonly onAddElement: (node: SystemComposerTreeNode) => void;
+  readonly onAddElement: OpenRegionPicker;
+  readonly onRequestRemove: (instanceId: string) => void;
+  readonly editableFormIds?: ReadonlySet<string>;
+  readonly onEditForm?: (instanceId: string) => void;
+  readonly revealInstanceId?: string;
 }) {
   const instanceId = String(node.instance.instanceId);
   const definition = definitionForInstance(node.instance, catalog);
+  const parentName = node.instance.displayName ?? definition?.displayName ?? String(node.instance.definitionRef.id);
   const protectedInstance = protectedInstanceIds.has(instanceId);
   const fixedLayout = Boolean(definition?.layoutRole);
   const layoutStyle = definition?.layoutGeometry
     ? layoutGridStyle(definition.layoutGeometry, fixedLayout)
     : undefined;
   const canvasSlots = canvasSlotsForNode(node, definition);
-  const hasAvailableSlot = canvasSlots.some(
-    ({ slot, editable }) =>
-      editable &&
-      node.children.filter(
-        (child) => String(child.placement?.slotId) === String(slot.slotId),
-      ).length < slot.cardinality.maxItems,
-  );
   return (
     <article
       className="system-composer__canvas-node"
@@ -1526,24 +1722,27 @@ function CanvasNode({
             <span className="ui-badge ui-badge--info">Required</span>
           ) : null}
         </button>
-        {definition?.slots.length ? (
+        {editableFormIds?.has(instanceId) && onEditForm ? (
           <button
             type="button"
-            className="system-composer__flat-control system-composer__add-element"
-            aria-label={`Add an element inside ${
-              node.instance.displayName ?? definition.displayName
-            }`}
-            aria-haspopup="dialog"
-            disabled={!hasAvailableSlot}
-            title={
-              hasAvailableSlot
-                ? "Add an internal element"
-                : "All declared regions are full"
-            }
-            onClick={() => onAddElement(node)}
+            className="system-composer__flat-control"
+            aria-label={`Edit Form: ${parentName}`}
+            data-edit-form-id={instanceId}
+            onClick={() => onEditForm(instanceId)}
           >
-            <ApplicationIcon name="add" />
-            <span>Add element</span>
+            Edit Form
+          </button>
+        ) : null}
+        {!protectedInstance && instanceId === selectedInstanceId ? (
+          <button
+            type="button"
+            className="system-composer__flat-control system-composer__flat-control--danger"
+            aria-label={`Remove ${parentName}`}
+            aria-haspopup="dialog"
+            onClick={() => onRequestRemove(instanceId)}
+          >
+            <ApplicationIcon name="delete" />
+            <span>Remove</span>
           </button>
         ) : null}
       </div>
@@ -1552,6 +1751,7 @@ function CanvasNode({
       definition.slots.length === 0 ? (
         <div
           className="system-composer__editable-preview"
+          role="group"
           aria-label={`${node.instance.displayName ?? definition.displayName} safe visual preview`}
         >
           <FoundationAssetPreview
@@ -1569,6 +1769,7 @@ function CanvasNode({
             <CanvasSlot
               key={String(slot.slotId)}
               parentInstanceId={instanceId}
+              parentName={parentName}
               slot={slot}
               childrenNodes={node.children.filter(
                 (child) =>
@@ -1579,7 +1780,12 @@ function CanvasNode({
               selectedInstanceId={selectedInstanceId}
               protectedInstanceIds={protectedInstanceIds}
               onSelect={onSelect}
+              onAddToRegion={(trigger) => onAddElement(node, String(slot.slotId), trigger)}
               onAddElement={onAddElement}
+              onRequestRemove={onRequestRemove}
+              editableFormIds={editableFormIds}
+              onEditForm={onEditForm}
+              revealInstanceId={revealInstanceId}
             />
           ))}
         </div>
@@ -1590,6 +1796,7 @@ function CanvasNode({
 
 function CanvasSlot({
   parentInstanceId,
+  parentName,
   slot,
   childrenNodes,
   editable,
@@ -1597,9 +1804,15 @@ function CanvasSlot({
   selectedInstanceId,
   protectedInstanceIds,
   onSelect,
+  onAddToRegion,
   onAddElement,
+  onRequestRemove,
+  editableFormIds,
+  onEditForm,
+  revealInstanceId,
 }: {
   readonly parentInstanceId: string;
+  readonly parentName: string;
   readonly slot: SystemBuilderComposerAsset["slots"][number];
   readonly childrenNodes: readonly SystemComposerTreeNode[];
   readonly editable: boolean;
@@ -1607,10 +1820,16 @@ function CanvasSlot({
   readonly selectedInstanceId?: string;
   readonly protectedInstanceIds: ReadonlySet<string>;
   readonly onSelect: (instanceId: string) => void;
-  readonly onAddElement: (node: SystemComposerTreeNode) => void;
+  readonly onAddToRegion: (trigger: HTMLButtonElement) => void;
+  readonly onAddElement: OpenRegionPicker;
+  readonly onRequestRemove: (instanceId: string) => void;
+  readonly editableFormIds?: ReadonlySet<string>;
+  readonly onEditForm?: (instanceId: string) => void;
+  readonly revealInstanceId?: string;
 }) {
   const collapsible = String(slot.slotId) === "states";
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(() => !collapsible || !revealInstanceId ||
+    !flattenSystemComposerTree(childrenNodes).some(({instance}) => instance.instanceId === revealInstanceId));
   const contentId = `system-composer-slot-${parentInstanceId}-${String(slot.slotId)}-content`;
   return (
     <section
@@ -1643,6 +1862,23 @@ function CanvasSlot({
           ) : null}
         </span>
       </header>
+      {editable ? (
+        <button
+          type="button"
+          className="system-composer__flat-control system-composer__add-element"
+          aria-label={`Add element to ${slot.displayName} in ${parentName}`}
+          aria-haspopup="dialog"
+          disabled={childrenNodes.length >= slot.cardinality.maxItems}
+          title={childrenNodes.length >= slot.cardinality.maxItems ? "This region is full" : undefined}
+          onClick={(event) => {
+            if (collapsible) setCollapsed(false);
+            onAddToRegion(event.currentTarget);
+          }}
+        >
+          <ApplicationIcon name="add" />
+          <span>Add element</span>
+        </button>
+      ) : null}
       <div
         id={contentId}
         className="system-composer__slot-content"
@@ -1663,6 +1899,10 @@ function CanvasSlot({
                 protectedInstanceIds={protectedInstanceIds}
                 onSelect={onSelect}
                 onAddElement={onAddElement}
+                onRequestRemove={onRequestRemove}
+                editableFormIds={editableFormIds}
+                onEditForm={onEditForm}
+                revealInstanceId={revealInstanceId}
               />
             ))}
             {childrenNodes.length === 0 ? (
@@ -1750,6 +1990,7 @@ function buildMoveTargets(
   nodes: readonly SystemComposerTreeNode[],
   catalog: readonly SystemBuilderComposerAsset[],
   placements: readonly AssetPlacement[],
+  formPlacement: ReturnType<typeof createSystemComposerFormPlacementPolicy>,
 ): readonly MoveTarget[] {
   const selectedId = String(selectedNode.instance.instanceId);
   const excluded = new Set(
@@ -1757,26 +1998,27 @@ function buildMoveTargets(
       String(node.instance.instanceId),
     ),
   );
+  const definitions = new Map(catalog.map(asset => [`${asset.definitionId}@${asset.version}`, asset]));
+  const childCounts = new Map<string, number>();
+  for (const placement of placements) {
+    const key = `${String(placement.parentInstanceRef.id)}|${String(placement.slotId)}`;
+    childCounts.set(key, (childCounts.get(key) ?? 0) + 1);
+  }
   return nodes.flatMap((node) => {
     const parentId = String(node.instance.instanceId);
     if (excluded.has(parentId)) return [];
-    const definition = definitionForInstance(node.instance, catalog);
+    const definition = definitions.get(`${String(node.instance.definitionRef.id)}@${node.instance.definitionRef.version ?? ""}`);
     return (definition?.slots ?? []).flatMap((slot) => {
-      const currentChildren = placements.filter(
-        (placement) =>
-          String(placement.parentInstanceRef.id) === parentId &&
-          String(placement.slotId) === String(slot.slotId),
-      );
-      const selectedAlreadyHere = currentChildren.some(
-        (placement) => String(placement.childInstanceRef.id) === selectedId,
-      );
+      if (!formPlacement.permits(selectedNode.instance.definitionRef, parentId, String(slot.slotId), selectedId)) return [];
+      const key = `${parentId}|${String(slot.slotId)}`;
+      const currentCount = childCounts.get(key) ?? 0;
+      const selectedAlreadyHere = selectedNode.placement?.parentInstanceRef.id === parentId && String(selectedNode.placement.slotId) === String(slot.slotId);
       if (
         !selectedAlreadyHere &&
-        currentChildren.length >= slot.cardinality.maxItems
+        currentCount >= slot.cardinality.maxItems
       ) {
         return [];
       }
-      const key = `${parentId}|${String(slot.slotId)}`;
       return [
         {
           key,
@@ -1929,7 +2171,9 @@ function categoryForComposerAsset(
   const identity =
     `${asset.definitionId} ${asset.displayName} ${asset.assetType} ${asset.assetFamily}`.toLowerCase();
   let id: ComposerAssetBrowseCategoryId;
-  if (/\b(navigation|menu|breadcrumb|tabs?|link)\b/.test(identity)) {
+  if (asset.layoutRole === "page-layout") {
+    id = "containers";
+  } else if (/\b(navigation|menu|breadcrumb|tabs?|link)\b/.test(identity)) {
     id = "navigation";
   } else if (/\b(button|action|submit|trigger|toolbar)\b/.test(identity)) {
     id = "actions";

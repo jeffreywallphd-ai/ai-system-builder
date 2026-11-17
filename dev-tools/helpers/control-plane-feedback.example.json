@@ -1,0 +1,11 @@
+{
+  "schema_version": "outcome-feedback-v1",
+  "id": "denial-regression",
+  "work_id": "example-work",
+  "criterion_id": "outcome-works",
+  "summary": "An unapproved administrator must be denied.",
+  "kind": "defect",
+  "trial_id": "denial-one",
+  "regression_path": "dev-tools/scripts/example/denial.test.mjs",
+  "quality_evidence": []
+}

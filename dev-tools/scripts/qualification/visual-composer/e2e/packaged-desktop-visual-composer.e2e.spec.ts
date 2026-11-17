@@ -1,31 +1,47 @@
+import { readCriticalAccessibilityMode, type CriticalAccessibilityMode } from "../technical-accessibility-observation";
+import { runOwnedRestartPhase } from "../asset-authoring-oracles";
+import { applyOwnedDesktopNativeZoom } from "./native-desktop-zoom";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { prepareCriticalAccessibilityViewport, qualifyCriticalSurfaceAccessibility } from "./critical-surface-accessibility";
 import { _electron as electron } from "playwright";
+import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import {
   assertGuidedLifecycleReflow,
-  completeGuidedSystemLifecycle,
+  prepareGuidedSystemLifecycle,
+  type GuidedSystemRuntimeHandle,
 } from "./guided-system-lifecycle";
 
-test.setTimeout(240_000);
+// A second bounded build/turn adds 120 seconds; existing action/launch limits stay.
+test.setTimeout(360_000);
+import { createOwnedRuntimePageObserver, readRuntimeReleasePair, runObservedRuntimeLifecycle, RUNTIME_QUALIFICATION_MESSAGES, type RuntimeReleaseContext } from "../runtime-lifecycle-oracles";
+import { SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS } from "../../../../../modules/contracts/system-deployment";
+
 const QUALIFICATION_MODEL_NAME = "Controlled qualification model";
-const FIRST_QUALIFICATION_MESSAGE = "Button qualification turn";
-const SECOND_QUALIFICATION_MESSAGE = "Keyboard qualification turn";
+const FIRST_QUALIFICATION_MESSAGE = RUNTIME_QUALIFICATION_MESSAGES[0][0];
+const SECOND_QUALIFICATION_MESSAGE = RUNTIME_QUALIFICATION_MESSAGES[0][1];
+const ISOLATED_QUALIFICATION_MESSAGE = RUNTIME_QUALIFICATION_MESSAGES[1][0];
 const axeSource = readFileSync(
   path.resolve(process.cwd(), "node_modules", "axe-core", "axe.min.js"),
   "utf8",
 );
 
-test("packaged desktop completes the guided build and publication lifecycle", async () => {
+test.use({trace: "off", screenshot: "off", video: "off"});
+
+async function runDesktopLifecycle(mode: CriticalAccessibilityMode = "standard") {
+  readCriticalAccessibilityMode(mode);
+  if (mode === "native400" && test.info().project.name !== "packaged-desktop") throw new Error("Unsupported native lifecycle host.");
   const executablePath = requiredEnvironment(
     "VISUAL_COMPOSER_DESKTOP_EXECUTABLE",
   );
-  const dataRoot = requiredEnvironment("VISUAL_COMPOSER_DESKTOP_DATA_ROOT");
+  const isolated = prepareIsolatedDesktopCase(mode === "native400" ? "lifecycle-native400" : "lifecycle");
+  const dataRoot = isolated.dataRoot;
   const electronApp = await electron.launch({
     executablePath,
     args: [`--user-data-dir=${dataRoot}`, "--disable-gpu"],
-    env: { ...process.env, VISUAL_COMPOSER_DESKTOP_DATA_ROOT: dataRoot },
+    env: isolated.env,
     timeout: 60_000,
   });
   const featureLoadDiagnostics: Array<Record<string, string>> = [];
@@ -65,9 +81,12 @@ test("packaged desktop completes the guided build and publication lifecycle", as
   electronApp.process().stdout?.on("data", captureFeatureLoadDiagnostics);
   electronApp.process().stderr?.on("data", captureFeatureLoadDiagnostics);
   let qualificationWorkspaceId = "";
+  let qualificationContexts: readonly RuntimeReleaseContext[] = [];
 
-  try {
+  await runOwnedRestartPhase(async () => {
     const page = await electronApp.firstWindow({ timeout: 60_000 });
+    await prepareCriticalAccessibilityViewport(page, mode);
+    if (mode === "native400") await applyOwnedDesktopNativeZoom(electronApp, page);
     const rendererErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") rendererErrors.push(message.text());
@@ -78,6 +97,8 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       page.getByRole("heading", { name: "Create a Workspace", level: 1 }),
     ).toBeVisible({ timeout: 60_000 });
     await page.getByRole("button", { name: "Create new workspace" }).click();
+    await expect(page.locator('input[name="workspaceName"]')).toBeVisible();
+    await qualifyCriticalSurfaceAccessibility(page, test.info(), "workspace-create", mode);
     await page
       .locator('input[name="workspaceName"]')
       .fill("Desktop lifecycle qualification");
@@ -97,10 +118,19 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       page.getByRole("heading", { name: "Systems", level: 1 }),
     ).toBeVisible();
 
-    await completeGuidedSystemLifecycle(page, "Packaged portal", {
-      modelDisplayName: QUALIFICATION_MODEL_NAME,
-      restartRuntime: true,
-      exerciseStartedRuntime: async (attempt) => {
+    const primary = await prepareGuidedSystemLifecycle(page, "Packaged portal", { modelDisplayName: QUALIFICATION_MODEL_NAME, accessibility: { mode: "initial", info: test.info() }, zoomMode: mode });
+    const runtimePages = () => electronApp.windows().filter(candidate => candidate !== page);
+    const observer = createOwnedRuntimePageObserver(runtimePages);
+    let secondary: GuidedSystemRuntimeHandle | undefined;
+    async function observeStop(context: RuntimeReleaseContext): Promise<void> {
+      const captured = observer.current(context);
+      await expect.poll(() => captured.isClosed() && !electronApp.windows().includes(captured), { timeout: 30_000 }).toBe(true);
+      observer.stopped(context);
+      expect(runtimePages()).toHaveLength(0);
+    }
+    await runObservedRuntimeLifecycle({
+      start: () => primary.start(), stop: () => primary.stop(), uninstall: () => primary.uninstall(),
+      exercise: async (attempt) => {
         await expect
           .poll(
             () =>
@@ -114,6 +144,9 @@ test("packaged desktop completes the guided build and publication lifecycle", as
           .find((candidate) => candidate !== page);
         if (!runtimePage)
           throw new Error("Published runtime window is unavailable.");
+        await prepareCriticalAccessibilityViewport(runtimePage, mode);
+        if (mode === "native400") await applyOwnedDesktopNativeZoom(electronApp, runtimePage);
+        observer.opened(primary.context, runtimePage);
         runtimePage.on("console", (message) => {
           if (message.type() === "error") rendererErrors.push(message.text());
         });
@@ -134,6 +167,16 @@ test("packaged desktop completes the guided build and publication lifecycle", as
             runtimePage.getByText("Start a conversation"),
           ).toBeVisible();
           await expect(transcript.locator("li")).toHaveCount(0);
+          await qualifyCriticalSurfaceAccessibility(runtimePage, test.info(), "runtime-conversation", mode);
+          const input = runtimePage.getByLabel("Message");
+          await expect(input).toHaveAttribute("maxlength", String(SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS));
+          const fullInput = "x".repeat(SYSTEM_RUNTIME_CONVERSATION_MAX_INPUT_CHARACTERS);
+          await input.fill(fullInput);
+          await input.press("End");
+          await input.press("y");
+          await expect(input).toHaveValue(fullInput);
+          await expect(transcript.locator("li")).toHaveCount(0);
+
           await runtimePage.evaluate(axeSource);
           const runtimeViolations = await runtimePage.evaluate(async () => {
             const result = await (
@@ -171,6 +214,7 @@ test("packaged desktop completes the guided build and publication lifecycle", as
               { exact: true },
             ),
           ).toBeVisible({ timeout: 30_000 });
+          await expect(transcript.locator("li")).toHaveCount(2);
           return;
         }
         await expect(
@@ -182,6 +226,11 @@ test("packaged desktop completes the guided build and publication lifecycle", as
             { exact: true },
           ),
         ).toBeVisible();
+        await expect(transcript.getByText(ISOLATED_QUALIFICATION_MESSAGE, { exact: true })).toHaveCount(0);
+        await expect(transcript.getByText(`Controlled response to: ${ISOLATED_QUALIFICATION_MESSAGE}`, { exact: true })).toHaveCount(0);
+        await runtimePage.getByLabel("Message").fill("Keyboard qualification");
+        await runtimePage.getByLabel("Message").press("Shift+Enter");
+        await expect(runtimePage.getByLabel("Message")).toHaveValue("Keyboard qualification\n");
         await runtimePage
           .getByLabel("Message")
           .fill(SECOND_QUALIFICATION_MESSAGE);
@@ -196,8 +245,44 @@ test("packaged desktop completes the guided build and publication lifecycle", as
           ),
         ).toBeVisible({ timeout: 30_000 });
         expect(electronApp.windows()).toHaveLength(2);
+        await expect(transcript.locator("li")).toHaveCount(4);
       },
-    });
+      afterStop: async attempt => {
+        await observeStop(primary.context);
+        if (attempt !== 1) return;
+        secondary = await prepareGuidedSystemLifecycle(page, "Isolated portal", { modelDisplayName: QUALIFICATION_MODEL_NAME, accessibility: { mode: "repeat", info: test.info() }, zoomMode: mode });
+        qualificationContexts = readRuntimeReleasePair([primary.context, secondary.context]);
+        const isolatedRuntime = secondary;
+        await runObservedRuntimeLifecycle({
+          start: () => isolatedRuntime.start(), stop: () => isolatedRuntime.stop(),
+          exercise: async () => {
+            await expect.poll(() => runtimePages().length, { timeout: 30_000 }).toBe(1);
+            const runtimePage = runtimePages()[0];
+            if (!runtimePage) throw new Error("Isolated runtime window is unavailable.");
+            await prepareCriticalAccessibilityViewport(runtimePage, mode);
+            if (mode === "native400") await applyOwnedDesktopNativeZoom(electronApp, runtimePage);
+        observer.opened(isolatedRuntime.context, runtimePage);
+            runtimePage.on("console", message => { if (message.type() === "error") rendererErrors.push(message.text()); });
+            runtimePage.on("pageerror", error => rendererErrors.push(error.message));
+            await expect(runtimePage.getByRole("heading", { name: "Isolated portal", level: 1 })).toBeVisible({ timeout: 30_000 });
+            const transcript = runtimePage.getByRole("log", { name: "Conversation history" });
+            await expect(runtimePage.getByText("Start a conversation")).toBeVisible();
+            await expect(transcript.locator("li")).toHaveCount(0);
+            for (const message of RUNTIME_QUALIFICATION_MESSAGES[0]) {
+              await expect(transcript.getByText(message, { exact: true })).toHaveCount(0);
+            }
+            await runtimePage.getByLabel("Message").fill(ISOLATED_QUALIFICATION_MESSAGE);
+            await runtimePage.getByRole("button", { name: "Send", exact: true }).click();
+            await expect(transcript.getByText(ISOLATED_QUALIFICATION_MESSAGE, { exact: true })).toBeVisible({ timeout: 30_000 });
+            await expect(transcript.getByText(`Controlled response to: ${ISOLATED_QUALIFICATION_MESSAGE}`, { exact: true })).toBeVisible({ timeout: 30_000 });
+            await expect(transcript.locator("li")).toHaveCount(2);
+          },
+          afterStop: () => observeStop(isolatedRuntime.context),
+        });
+      },
+    }, true);
+    if (!secondary) throw new Error("The second published system was not exercised.");
+    await secondary.uninstall();
     await page.evaluate(axeSource);
     const axeViolations = await page.evaluate(async () => {
       const result = await (
@@ -225,13 +310,14 @@ test("packaged desktop completes the guided build and publication lifecycle", as
       reducedMotion: "reduce",
       forcedColors: "active",
     });
-    await assertGuidedLifecycleReflow(page);
+    await assertGuidedLifecycleReflow(page, mode);
     expect(rendererErrors).toEqual([]);
-  } finally {
-    await electronApp.close();
-  }
-  verifyIsolatedRuntimeData(dataRoot, qualificationWorkspaceId);
-});
+  }, () => electronApp.close());
+  verifyIsolatedRuntimeData(dataRoot, qualificationWorkspaceId, readRuntimeReleasePair(qualificationContexts));
+}
+
+test("packaged desktop completes the guided build and publication lifecycle", async () => { await runDesktopLifecycle(); });
+test("packaged desktop completes build, publication and runtime windows at native 400 percent zoom", async () => { await runDesktopLifecycle("native400"); });
 
 async function seedDesktopQualificationModel(
   page: import("@playwright/test").Page,
@@ -252,10 +338,11 @@ async function seedDesktopQualificationModel(
             updateModelRecord?: (
               input: Record<string, unknown>,
             ) => Promise<any>;
+            downloadModel?: (input: Record<string, unknown>) => Promise<any>;
           };
         }
       ).desktopApi;
-      if (!api?.listModels || !api.saveModelReference || !api.updateModelRecord)
+      if (!api?.listModels || !api.saveModelReference || !api.updateModelRecord || !api.downloadModel)
         return { ok: false as const, stage: "bridge" };
       const listed = await api.listModels({
         workspaceId: currentWorkspaceId,
@@ -291,13 +378,20 @@ async function seedDesktopQualificationModel(
             saved?.error?.message ??
             "The qualification model reference was not saved.",
         };
-      const updated = await api?.updateModelRecord?.({
+      const deniedPatch = await api.updateModelRecord({
         workspaceId: currentWorkspaceId,
         modelRecordId,
         patch: {
           lifecycleStatus: "downloaded",
           validationStatus: "valid",
         },
+      });
+      if (deniedPatch?.ok) return { ok: false as const, stage: "lifecycle-edit-not-denied" };
+      const updated = await api.downloadModel({
+        workspaceId: currentWorkspaceId, modelRecordId,
+        provider: "huggingface", modelId: "qualification/controlled-chat",
+        displayName: modelName, inferenceMode: "chat",
+        taskTags: ["text-generation"], artifactForm: "full-model",
       });
       return updated?.ok
         ? { ok: true as const }
@@ -321,6 +415,7 @@ async function seedDesktopQualificationModel(
 function verifyIsolatedRuntimeData(
   dataRoot: string,
   workspaceId: string,
+  contexts: readonly RuntimeReleaseContext[],
 ): void {
   const executable = requiredEnvironment(
     "VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE",
@@ -343,6 +438,7 @@ function verifyIsolatedRuntimeData(
         ELECTRON_RUN_AS_NODE: "1",
         VISUAL_COMPOSER_DESKTOP_DATA_ROOT: dataRoot,
         VISUAL_COMPOSER_QUALIFICATION_WORKSPACE_ID: workspaceId,
+        VISUAL_COMPOSER_QUALIFICATION_RELEASE_CONTEXTS: JSON.stringify(readRuntimeReleasePair(contexts)),
       },
       windowsHide: true,
       encoding: "utf8",

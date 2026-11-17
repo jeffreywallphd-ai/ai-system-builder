@@ -1,0 +1,59 @@
+# Settings UI
+
+> AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
+
+The renderer uses `desktopApplicationSettingsClient`. The host and application
+still authorize settings and store secrets. The UI does not read stored secret
+values. It displays the masked settings response.
+
+Each committed client, category and key list owns its reads and actions. A late
+response from an old view cannot replace current values or publish a result.
+Equal key lists reuse that owner. Uncommitted renders grant no action authority.
+Each view admits one save or clear at a time, before React disables the controls.
+The UI does not cancel a write that the host has already accepted.
+
+Save and Clear return a local success flag. A secret draft clears only after the
+current write and settings read both succeed. A failed write keeps the draft for
+an explicit retry. A newer draft edit survives an older Save or Clear result.
+Malformed returned rows are checked before React receives the read result.
+If readback fails after a change, the panel disables the settings fields until
+**Refresh settings** succeeds. Refresh remains available and the secret draft
+stays in the field. Refresh also lets the user recover from an initial read
+failure.
+Ordinary and model-default fields adopt the current returned values. A successful
+folder selection changes a draft; it does not save the setting.
+
+Failures and success notices use the notification center. Public failures use
+fixed messages. Unknown exception text, credentials and native paths must not
+enter notifications or status text. Loading and saving retain their status
+announcements. Folder and model-default responses also retire with their view.
+
+In **Local chat clients**, **Recent chat tasks** shows saved status for up to ten
+turns started by a paired client in the selected workspace. The list refreshes
+while Settings is visible. You can also select **Refresh tasks**. Changing
+workspaces clears the old list. The panel shows the run ID and status without
+opening a conversation or moving focus.
+
+The fixed `settings-ui` contributor profile runs the panel, page, view-ownership
+and API tests with synthetic values. It starts no app or model and uses no real
+credential store or provider. Actual packaged restart and final cross-roadmap
+qualification remain separate. Keep those checks pending until executed.
+
+
+The three field components now live in `modules/ui/shared/settings`; these
+Desktop component paths remain compatible reexports. Labels target their actual
+controls, with interactive help outside the label. Clear is retained across
+configured field kinds. Secret draft revision and callback success rules remain.
+Host clients, request ownership, folder selection and model resolution stay in
+this Desktop feature. See the shared field README and thin-client Settings README
+for their separate boundaries.
+
+Python Runtime offers **Copy diagnostics** for its cached, normalized startup report.
+If the failed startup identifies an unsupported Python version, the panel shows
+how to install a supported interpreter, update a custom command if needed, and retry
+after reopening Desktop.
+Copy performs no status/control call, interpreter probe, setup, installation or
+provider request. It exports only closed startup/version/stage facts, excluding
+legacy logs, model inventory, paths and credentials. Fixed notification outcomes
+remain owned by the current view; obsolete clipboard completions publish no notice.
+The report describes an observed attempt, not model compatibility or current readiness.

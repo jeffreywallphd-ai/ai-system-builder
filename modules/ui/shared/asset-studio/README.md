@@ -17,6 +17,8 @@ resource-backed Studio draft with seeded frontend structure, styling, and
 backend logic while preserving the legacy record. Legacy provenance makes this
 upgrade idempotent and prevents duplicate Saved rows.
 
+Saved settles Studio and legacy listing failures separately. A rejected adapter call produces a static retry message, releases the busy state, and preserves any available authorized listing. The legacy desktop request retains its public `targetWorkspaceId`; IPC maps that exact target to the repository `workspaceId`, never an extra renderer-supplied workspace.
+
 ## Persistence and safety
 
 Semantic records contain safe structured data and artifact descriptors. Actual backing-resource paths and content remain in the authorized immutable artifact boundary. Saving never publishes or executes content. Review materializes a verified immutable snapshot. Publication creates definition and implementation lineage but does not install, activate, deploy, or execute it.
@@ -26,7 +28,7 @@ A changed reviewed draft must be saved before it can be reviewed again. Optimist
 ## Qualification
 
 Desktop and thin-client hosts share this surface and its ordered workflow,
-backing-resource validation, busy/error semantics, and responsive rules. Repository
+backing-resource validation, busy/error semantics, and responsive rules. Editable JSON, definition, type/family, and source fields have explicit accessible names independent of option text and current source contents. Repository
 tests prove these automated contracts and non-execution boundaries. They do not
 replace the controlled accessibility and security procedure in
 `docs/operations/asset-experience-controlled-review.md`.
@@ -41,3 +43,63 @@ Use focused tests while iterating:
 - Asset Studio transport parity and workflow tests for actor, workspace, revision, artifact, review, and publication boundaries.
 
 Run the applicable repository gates after the complete increment, as required by `AGENTS.md`.
+
+The opt-in packaged-desktop and managed-reference Assets journeys exercise real package admission, exact Foundation/imported copies, resource-backed Studio save/reopen and process restart persistence. Their finite readiness waits are functional observation bounds, not latency targets. Failed runs and slow cold initialization remain findings; authored resources are never activated by these journeys. Managed qualification requires the existing authorized OIDC/PostgreSQL/TLS host.
+
+## Draft session and retry behavior
+
+Studio owns one editor session per workspace, client and selected saved draft.
+Changing that context retires old interface updates; it does not claim to cancel
+a server write. Save, review, publish and abandon admit one request before React
+renders busy state. Successful replies must name the expected workspace, draft,
+definition, lifecycle state and next revision before the editor accepts them.
+Thrown adapter failures use safe notifications, release current controls and
+permit explicit retry. A failed saved read exposes Retry opening saved asset;
+opening does not save or publish. Newer text/resource edits made while saving
+remain dirty and need another save before review/publication. Identity fields
+are locked while saving.
+
+Focused Node DOM tests initialize the browser renderer after DOM setup and use
+native input events for meaningful semantic/resource editing, save/reopen/review/
+publish, invalidated reviews, duplicates, foreign replies, rejection/retry and
+workspace/client/draft/unmount races. They use fixed clients and do not qualify
+actual transports, storage, apps, providers, native retirement or execution.
+
+A saved editor stays disabled until its initial read or explicit retry succeeds.
+The retry button stays available after failure. A retired session is checked
+before dispatch as well as before accepting a reply. These controls prevent
+editing a placeholder that would be replaced by a later saved-draft read.
+
+## Saved view ownership and recovery
+
+Saved owns a view per workspace, Studio client and legacy client. Replacing any
+of them retires its old reads, conversion results and navigation callbacks.
+One read or legacy open is admitted before React renders busy state. Search
+cannot release or overlap an in-flight conversion. Search text stays fixed
+while reading and resets when the view changes. No server write is cancelled.
+
+Studio and legacy lists settle separately. Valid data from one source remains
+available if the other fails. Rendering fields and duplicate row identities are
+checked; legacy rows must name the requested workspace. A failed source does
+not prove an empty workspace. Failures use the notification center and explicit
+Search or Open retry. Thrown details are never displayed.
+
+An accepted legacy open must return a canonical Studio record for this workspace
+with the same legacy provenance. The existing application may return an already
+converted record with a later revision, another exact definition or any canonical
+lifecycle state. The UI does not force a new seed or revision 1. Conversion
+preserves the legacy record and grants no publication or execution authority.
+
+Focused UI cases cover meaningful open/retry behavior, one in-flight action,
+malformed and foreign replies, partial lists, retired results and dispatch, and
+idempotent record reuse. They use fixed clients. Actual application, transport,
+storage, host and native qualification remain separate and pending.
+
+## Stable editor field names
+
+Asset type, asset family, definition, JSON and resource-content controls expose
+explicit accessible names as well as their visible labels. Their names stay
+fixed when values change. Both app hosts reuse this shared editor. These names
+support assistive tools and exact UI automation; they do not change editing,
+validation, saving, review or publication. Local editor tests are separate from
+actual-host and final accessibility qualification.

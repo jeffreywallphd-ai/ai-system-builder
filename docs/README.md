@@ -4,6 +4,10 @@
 
 This directory separates canonical system guidance from downstream task context and operational support material.
 
+The [managed reference qualification guide](operations/managed-reference-qualification.md)
+documents the bounded local database operator and the distinction between
+published-asset rediscovery, reviewed source persistence and implementation release.
+
 ## Canonical Areas
 
 - `docs/adr/`
@@ -25,6 +29,25 @@ This directory separates canonical system guidance from downstream task context 
 
 ## Supporting Areas
 
+- `docs/optional-low-memory-inference-implementation-roadmap.md` tracks the
+  reviewed, approved optional Accelerate profile, its default compatibility,
+  private resource lifecycle and actual model qualification. It preserves the
+  separate functionality and security roadmap requirements.
+- `docs/operations/optional-low-memory-inference.md` defines initial supported
+  models/tokenizers, explicit placement and process-memory semantics, ownership,
+  failure recovery and the prospective installed-model qualification protocol.
+
+- `docs/diagnostics/system-builder-canvas-testing.md` describes meaningful
+  scratch-built multi-component UI journeys, failure reproductions and the
+  distinction between preview controls and qualified runtime outcomes.
+
+- `docs/operations/functionality-qualification-crosswalk.json` maps current and
+  legacy controlled criteria to owners, procedures, harnesses and required
+  environments. `docs/operations/functionality-outcome-qualification.md` explains
+  the bounded source-bound JSON assessment and pending release decision.
+
+- `docs/security/security-local-controls-qualification.json` links available local
+  security component work and its remaining native/environment boundaries.
 - `docs/security/`
   - Canonical threat models plus security-oriented operational checks and manual verification guidance.
 - `docs/diagnostics/`
@@ -33,6 +56,8 @@ This directory separates canonical system guidance from downstream task context 
     loops under `dev-tools/helpers/`.
   - `implementation-roadmap-skill.md` documents the cross-agent repository
     skill, durable roadmap/report artifacts, installation, and maintenance.
+  - [Headless client skill](diagnostics/headless-client-skill.md) explains how to
+    connect a local agent and inspect or edit saved systems.
 - `docs/tmp/`
   - Ignored local-only implementation report summaries. Roadmap state keeps the
     complete evidence history; generated reports are removed after explicit
@@ -66,11 +91,19 @@ This directory separates canonical system guidance from downstream task context 
 
 ## Start by Task
 
+- AI-assisted contributor workflow: start at `AGENTS.md` and
+  `docs/diagnostics/ai-development-control-plane.md`. Start or safely reuse the
+  local review server and share its returned URL. The dynamic site uses
+  versioned JSON; scoped work, verification, review and recovery use one CLI.
+
 - Any repository task: read the root `AGENTS.md`, then `docs/context/packs/index.pack.md`, and record the mandatory security impact disposition from `docs/standards/security-by-design-standards.md`.
 - Implementation roadmap preparation, review, execution, continuation, or
   resumption: use `skills/manage-implementation-roadmaps/SKILL.md`. Invoke it
   from intent even without the exact skill name; a request such as "use a skill
   if available to create an implementation roadmap" is sufficient.
+  Commit completed, tested and reviewed chunks through its scoped checkpoint
+  procedure while retaining any pending parent qualification. Publish and verify
+  the complete unapproved draft on the review site before asking for approval.
 - Narrow implementation task: use `docs/context/prompt-routing.md` to add only materially relevant packs.
 - Architecture or dependency change: read `docs/architecture/system-overview.md`, `docs/architecture/module-dependency-rules.md`, and related ADRs.
 - Persistence or deployment work: read `docs/architecture/persistence-and-storage.md`, `docs/architecture/host-model.md`, ADR-0003, and ADR-0004.
@@ -106,6 +139,12 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 ## Current Architecture Pointers
 
 - Data ingestion and training-dataset preparation: docs/architecture/data-management.md, docs/architecture/runtime-model.md, and docs/security/data-management-threat-model.md.
+- Context generation and browsing: `docs/architecture/context-management.md`,
+  `docs/security/context-management-threat-model.md`, and ADR-0041. Context
+  sources originate from the workspace Artifact Browser, and textual datasets
+  can enter RAG generation as exact, already-chunked inputs. Manual and
+  source-derived packs share safe formatted Markdown review; source packs use
+  Standard/Strict cleaning and No Summarization or a selected local model.
 - Workspace model: `docs/architecture/workspace-model.md`, including reference-only `system.foundation@1.0.0` activation and the no-hidden-workspace/no-auto-migration rule.
 - Organization tenancy and identity: `docs/architecture/organization-tenancy-and-identity.md`; pooled placement is the managed default and dedicated one-organization placement is the premium profile.
 - User Library reuse: `docs/architecture/user-library-and-cross-workspace-reuse.md` and ADR-0017.
@@ -150,3 +189,15 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 - Run `npm run test:all` for combined standard, end-to-end, and AI coverage
   only when the work is AI-related or the user explicitly requests it.
 - Continuous integration enforces both gates for pull requests and changes to the default branch.
+
+- `docs/operations/roadmap-supporting-work.json` maps scoped reviewed local work
+  to roadmap criteria for the JSON review site. It distinguishes implementation
+  progress from pending parent/current-candidate qualification.
+
+## Operational browser test evidence
+
+[Operational UI host evidence](operations/operational-ui-host-qualification.json)
+preserves both isolated attempts and their safe shutdown. The corrected filter
+selected one case, which failed in the first navigation-menu step. Operational
+and accessibility checks remain pending. The agent will align the test with the
+current responsive navigation, workspace heading and notification behavior.

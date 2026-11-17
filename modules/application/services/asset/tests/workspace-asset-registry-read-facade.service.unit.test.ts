@@ -24,11 +24,13 @@ import { SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST } from "../../asset-packs/syste
 import {
   WorkspaceAssetRegistryReadFacade,
   WorkspaceAssetRegistryReadFacadeError,
+  type WorkspaceAssetRegistryReadFacadeDependencies,
 } from "../workspace-asset-registry-read-facade.service";
 import type {
   AssetDefinitionCard,
   AssetDefinitionDetail,
   AssetRegistryListQuery,
+  AssetRegistryReadOptions,
   AssetRegistryResourceBackedViewCard,
   AssetRegistryResourceBackedViewDetail,
 } from "../asset-registry-read-facade.types";
@@ -72,10 +74,10 @@ class FakeReadPort implements AssetRegistryDefinitionReadPort {
         definitionId: foundationRef.id,
         version: "1.0.0",
         assetType: "ui-component",
-        assetFamily: "primitive",
+        assetFamily: "structural",
         displayName: "Foundation Button",
         description: "A system foundation button.",
-        lifecycleStatus: "stable",
+        lifecycleStatus: "published",
         provenance: { sourceKind: "system-generated" },
         metadata: {
           sourcePackId: SYSTEM_FOUNDATION_PACK_ID,
@@ -234,7 +236,7 @@ class FakeOverrideRepo {
 test("Workspace A with active system.foundation@1.0.0 sees strict foundation cards", async () => {
   const { facade, activations } = setup();
   activations.activations.set(workspaceA, [activation(workspaceA, "active")]);
-  const result = await facade.listDefinitionCards({ workspaceId: workspaceA });
+  const result = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceA });
   assert.equal(
     result.items.some((item) => item.definitionId === foundationRef.id),
     true,
@@ -262,7 +264,7 @@ test("current Foundation activation exposes only exact 3.0.0 cards and details",
   readPort.cards = [];
   readPort.detailEnabled = false;
 
-  const result = await facade.listDefinitionCards({ workspaceId: workspaceA });
+  const result = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceA });
   assert.equal(
     result.items.length,
     SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.length,
@@ -294,7 +296,7 @@ test("active workspaces see System Foundation from the manifest even when defini
   activations.activations.set(workspaceA, [activation(workspaceA, "active")]);
   readPort.cards = [];
   readPort.detailEnabled = false;
-  const list = await facade.listDefinitionCards({ workspaceId: workspaceA });
+  const list = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceA });
   assert.equal(
     list.items.length,
     SYSTEM_FOUNDATION_PACK_MANIFEST.assets.length,
@@ -312,7 +314,7 @@ test("active workspaces see System Foundation from the manifest even when defini
 
 test("Workspace B without activation does not see foundation cards", async () => {
   const { facade } = setup();
-  const result = await facade.listDefinitionCards({ workspaceId: workspaceB });
+  const result = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceB });
   assert.equal(result.items.length, 0);
 });
 
@@ -334,7 +336,7 @@ test("inactive, failed, and unknown activations exclude assets with safe diagnos
   activations.activations.set(workspaceA, [
     { ...activation(workspaceA, "active"), packId: "system.unknown" as never },
   ]);
-  const result = await facade.listDefinitionCards({ workspaceId: workspaceA });
+  const result = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceA });
   assert.equal(result.items.length, 0);
   assert.equal(
     result.diagnostics?.some(
@@ -348,7 +350,7 @@ test("inactive, failed, and unknown activations exclude assets with safe diagnos
 test("wrong source or trust metadata and bare sourcePackId do not prove system authority", async () => {
   const { facade, activations } = setup();
   activations.activations.set(workspaceA, [activation(workspaceA, "active")]);
-  const result = await facade.listDefinitionCards({ workspaceId: workspaceA });
+  const result = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceA });
   assert.equal(
     result.items.some((item) => item.definitionId === "bare.foundation"),
     false,
@@ -366,15 +368,15 @@ test("missing, invalid, unknown, and archived workspace fail safely without glob
     "workspace-required",
   );
   await assertWorkspaceError(
-    () => facade.listDefinitionCards({ workspaceId: "../unsafe" }),
+    () => facade.listDefinitionCards({ limit: 250, workspaceId: "../unsafe" }),
     "workspace-invalid",
   );
   await assertWorkspaceError(
-    () => facade.listDefinitionCards({ workspaceId: "missing-workspace" }),
+    () => facade.listDefinitionCards({ limit: 250, workspaceId: "missing-workspace" }),
     "workspace-not-found",
   );
   await assertWorkspaceError(
-    () => facade.listDefinitionCards({ workspaceId: archivedWorkspace }),
+    () => facade.listDefinitionCards({ limit: 250, workspaceId: archivedWorkspace }),
     "workspace-unavailable",
   );
   assert.equal(readPort.listCalls.length, 0);
@@ -460,8 +462,8 @@ test("resource-backed descriptors expose workspace-scoped model views without le
 test("results are deterministic and diagnostics are sanitized", async () => {
   const { facade, activations } = setup();
   activations.activations.set(workspaceA, [activation(workspaceA, "active")]);
-  const first = await facade.listDefinitionCards({ workspaceId: workspaceA });
-  const second = await facade.listDefinitionCards({ workspaceId: workspaceA });
+  const first = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceA });
+  const second = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceA });
   assert.deepEqual(first, second);
   assert.equal(JSON.stringify(first).includes("/tmp"), false);
 });
@@ -575,7 +577,7 @@ test("effective source summaries include linked, copied, and imported kinds with
       },
     },
   ];
-  const result = await facade.listDefinitionCards({ workspaceId: workspaceA });
+  const result = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceA });
   const kinds = Object.fromEntries(
     result.items.map((item) => [
       item.definitionId,
@@ -586,7 +588,7 @@ test("effective source summaries include linked, copied, and imported kinds with
   assert.equal(kinds["a.linked"], "user-library-linked");
   assert.equal(kinds["a.copy"], "user-library-copied");
   assert.equal(kinds["a.import"], "workspace-imported");
-  const bResult = await facade.listDefinitionCards({ workspaceId: workspaceB });
+  const bResult = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceB });
   assert.equal(
     bResult.items.some((item) => item.definitionId === "a.linked"),
     false,
@@ -658,7 +660,7 @@ test("phase8 authoring summaries classify authored and override sources", async 
       provenance: { kind: "customized-linked-user-library-asset" },
     },
   ];
-  const result = await facade.listDefinitionCards({ workspaceId: workspaceA });
+  const result = await facade.listDefinitionCards({ limit: 250, workspaceId: workspaceA });
   const authored = result.items.find((i) => i.definitionId === "a.authored");
   const linkedOverride = result.items.find(
     (i) => i.definitionId === "a.link-override",
@@ -682,7 +684,77 @@ async function assertWorkspaceError(
   });
 }
 
-function setup() {
+test("custom detail membership uses scoped sources and rejects metadata-only and foreign authority", async () => {
+  const { facade, readPort, authoredAssets, revisions } = setup();
+  const ref = customCard().definitionRef;
+  const detail = { definition: { definitionId: ref.id, version: ref.version ?? "1.0.0",
+    assetType: "ui-component", assetFamily: "structural", displayName: "Custom",
+    description: "Custom fixture", lifecycleStatus: "published", provenance: {sourceKind: "human-authored"},
+    metadata: { sourceKind: "workspace-authored", workspaceId: workspaceA } } } as AssetDefinitionDetail;
+  readPort.readDefinitionDetail = async () => detail;
+  await assertWorkspaceError(() => facade.readDefinitionDetail(ref, { workspaceId: workspaceA }), "workspace-asset-not-in-effective-view");
+  authoredAssets.byWorkspace[workspaceA] = [{ authoredAssetId: "auth.detail", workspaceId: workspaceA,
+    assetReference: ref, currentRevisionId: "rev.detail", provenance: { kind: "authored-from-scratch" } }];
+  revisions.revisions.set(`${workspaceA}:auth.detail:rev.detail`, { revision: "r1" });
+  const selected = await facade.readDefinitionDetails([ref], { workspaceId: workspaceA });
+  assert.equal(selected[0]?.definition.definitionId, ref.id);
+  assert.equal(selected[0]?.assetAuthoringEffectiveSourceSummary?.effectiveSourceKind, "workspace-authored");
+  await assertWorkspaceError(() => facade.readDefinitionDetails([ref], { workspaceId: workspaceB }), "workspace-asset-not-in-effective-view");
+});
+
+test("private published Studio and derived sources admit exact owner versions without global catalog fallback", async () => {
+  const studioRef = {kind: "asset-definition-version", id: "studio.published", version: "1.0.0"} as AssetReference;
+  const derivedRef = {...studioRef, id: "derived.published"} as AssetReference;
+  const calls: WorkspaceId[] = [];
+  const sources = [studioRef, derivedRef].map(reference => ({async readPublishedAssetReferences(workspaceId: WorkspaceId) {
+    calls.push(workspaceId);
+    return workspaceId === workspaceA ? [reference] : [];
+  }}));
+  const {facade, readPort} = setup(sources);
+  const published = (reference: AssetReference): AssetDefinitionCard => ({...customCard(), definitionRef: reference,
+    definitionId: reference.id, version: reference.version!, lifecycleStatus: "published"});
+  readPort.cards = [published(studioRef), published(derivedRef), published({...studioRef, version: "2.0.0"}),
+    published({...studioRef, id: "global.unowned"} as AssetReference), {...published(studioRef), lifecycleStatus: "draft"}];
+  readPort.readDefinitionDetail = async ref => ({definition: {definitionId: ref.id, version: ref.version ?? "1.0.0", lifecycleStatus: "published"}} as AssetDefinitionDetail);
+  const owned = await facade.listDefinitionCards({workspaceId: workspaceA});
+  assert.deepEqual(owned.items.map(card => card.definitionId), [studioRef.id, derivedRef.id]);
+  assert.equal((await facade.readDefinitionDetail(studioRef, {workspaceId: workspaceA}))?.definition.definitionId, studioRef.id);
+  assert.equal((await facade.readDefinitionDetail({kind: "asset-definition", id: studioRef.id}, {workspaceId: workspaceA}))?.definition.version, "1.0.0");
+  assert.equal((await facade.listDefinitionCards({workspaceId: workspaceB})).items.length, 0);
+  for (const [reference, workspaceId] of [[studioRef, workspaceB], [{...studioRef, version: "2.0.0"}, workspaceA],
+    [{...studioRef, kind: "asset-instance"}, workspaceA]] as const) {
+    await assert.rejects(facade.readDefinitionDetail(reference, {workspaceId}), /workspace effective asset view/);
+  }
+  const before = calls.length;
+  await assert.rejects(facade.listDefinitionCards({workspaceId: archivedWorkspace}));
+  assert.equal(calls.length, before);
+  assert.deepEqual(new Set(calls), new Set([workspaceA, workspaceB]));
+});
+
+test("publication readers fail closed with static bounded errors for invalid, oversized or unavailable ownership", async () => {
+  for (const source of [
+    {},
+    {async readPublishedAssetReferences() {throw new Error("private /host/path token-value");}},
+    {async readPublishedAssetReferences() {return [{kind: "asset-definition", id: "studio.published"}] as AssetReference[];}},
+    {async readPublishedAssetReferences() {return Array(25_001).fill({kind: "asset-definition-version", id: "a", version: "1"});}},
+  ]) {
+    const {facade, readPort} = setup([source]);
+    for (const execute of [() => facade.listDefinitionCards({workspaceId: workspaceA}),
+      () => facade.readDefinitionDetail(foundationRef, {workspaceId: workspaceA})]) {
+      await assert.rejects(execute(), error => {
+        assert.ok(error instanceof WorkspaceAssetRegistryReadFacadeError);
+        assert.equal(error.code, "workspace-effective-asset-view-unavailable");
+        assert.equal(error.message, "Workspace publication visibility is unavailable.");
+        assert.equal(error.stack, undefined);
+        return true;
+      });
+    }
+    assert.equal(readPort.listCalls.length, 0);
+    assert.equal(readPort.detailCalls.length, 0);
+  }
+});
+
+function setup(workspacePublishedAssetSources: WorkspaceAssetRegistryReadFacadeDependencies["workspacePublishedAssetSources"] = []) {
   const readPort = new FakeReadPort();
   const activations = new FakeActivationRepo();
   const links = new FakeLinkRepo();
@@ -706,6 +778,7 @@ function setup() {
     authoredAssetRepository: authoredAssets as any,
     assetRevisionRepository: revisions as any,
     assetOverrideRepository: overrides as any,
+    workspacePublishedAssetSources,
   });
   return {
     facade,
@@ -727,9 +800,9 @@ function foundationCard(): AssetDefinitionCard {
     definitionId: foundationRef.id,
     version: "1.0.0",
     assetType: "ui-component",
-    assetFamily: "primitive",
+    assetFamily: "structural",
     displayName: "Foundation Button",
-    lifecycleStatus: "stable",
+    lifecycleStatus: "published",
     builtIn: true,
     sourcePackId: SYSTEM_FOUNDATION_PACK_ID,
     sourcePackVersion: SYSTEM_FOUNDATION_PACK_VERSION,
@@ -781,7 +854,7 @@ function artifactResourceCard(): AssetRegistryResourceBackedViewCard {
     viewId: "global",
     viewKind: "artifact",
     displayName: "Global leak",
-    assetType: "artifact",
+    assetType: "data-source",
     assetFamily: "resource-backed",
   } as AssetRegistryResourceBackedViewCard;
 }
@@ -826,3 +899,38 @@ function workspaceRecord(
     updatedAt: "2026-01-01T00:00:00.000Z",
   };
 }
+
+
+test("bounded workspace pages traverse Foundation once and bind continuation to the workspace", async () => {
+  const {facade, activations, readPort} = setup();
+  activations.activations.set(workspaceA, [activation(workspaceA, "active")]);
+  readPort.cards = []; readPort.detailEnabled = false;
+  const ids: string[] = []; const cursors = new Set<string>(); let cursor: string | undefined;
+  do {
+    const page = await facade.listDefinitionCards({workspaceId: workspaceA, limit: 25, cursor});
+    assert.ok(page.items.length <= 25); ids.push(...page.items.map(item => `${item.definitionId}@${item.version}`));
+    cursor = page.nextCursor;
+    if (cursor) { assert.ok(!cursors.has(cursor)); cursors.add(cursor); }
+  } while (cursor);
+  assert.equal(ids.length, SYSTEM_FOUNDATION_PACK_MANIFEST.assets.length);
+  assert.equal(new Set(ids).size, ids.length);
+  await assert.rejects(facade.listDefinitionCards({workspaceId: workspaceB, limit: 25, cursor: [...cursors][0]}));
+});
+
+test("batched detail reads retain workspace membership denials", async () => {
+  const {facade, activations, readPort} = setup();
+  activations.activations.set(workspaceA, [activation(workspaceA, "active")]);
+  let calls = 0;
+  (readPort as any).readDefinitionDetails = async (refs: AssetReference[], options: AssetRegistryReadOptions) => {
+    calls++; assert.equal(options.workspaceId, workspaceA);
+    return Promise.all(refs.map(ref => readPort.readDefinitionDetail(ref)));
+  };
+  const details = await facade.readDefinitionDetails([foundationRef, foundationRef], {workspaceId: workspaceA});
+  assert.equal(calls, 1); assert.equal(details.length, 2);
+  assert.equal(details[0]?.definition.definitionId, foundationRef.id);
+  await assert.rejects(facade.readDefinitionDetails([foundationRef], {}));
+  assert.equal(calls, 1, "Missing workspace denies before the backing batch.");
+  delete (readPort as any).readDefinitionDetails;
+  await assert.rejects(facade.readDefinitionDetails([foundationRef], {workspaceId: workspaceB}));
+  await assert.rejects(facade.readDefinitionDetails(Array(251).fill(foundationRef), {workspaceId: workspaceA}));
+});

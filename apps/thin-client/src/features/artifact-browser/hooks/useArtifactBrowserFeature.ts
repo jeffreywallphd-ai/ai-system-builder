@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   ARTIFACT_PREVIEW_MAX_BYTES,
@@ -60,6 +60,7 @@ export interface UseArtifactBrowserFeatureResult {
     showRegisterForm: boolean;
   };
   viewState: ArtifactBrowserViewState;
+  isDeleting: boolean;
   pendingDeleteStorageKey?: string;
   deleteConfirmationInput: string;
   selectedArtifactKeys: string[];
@@ -153,6 +154,15 @@ export function useArtifactBrowserFeature(
   };
 
   const artifactClient = useArtifactBrowserClient(client);
+  const session = useMemo(
+    () => ({ lease: undefined as object | undefined, browseSequence: 0, selectionSequence: 0 }),
+    [artifactClient, workspaceId],
+  );
+  const activeSession = useRef(session);
+  const deleteInFlight = useRef(false);
+  const deletingSession = useRef<typeof session | undefined>(undefined);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const isCurrentSession = (lease = session.lease) => Boolean(lease) && session.lease === lease && activeSession.current === session;
   const [items, setItems] = useState<ThinClientArtifactBrowseItem[]>([]);
   const [selectedStorageKey, setSelectedStorageKey] = useState<
     string | undefined
@@ -247,7 +257,11 @@ export function useArtifactBrowserFeature(
     },
   );
 
-  async function refreshArtifacts(): Promise<void> {
+  async function refreshArtifacts(afterDelete = false): Promise<void> {
+    const lease = session.lease;
+    if (!lease || !isCurrentSession(lease) || (deletingSession.current === session && !afterDelete)) return;
+    const sequence = ++session.browseSequence;
+    const isCurrentRead = () => isCurrentSession(lease) && sequence === session.browseSequence;
     setViewState({ status: "loading", message: "Loading data artifacts..." });
     try {
       if (!workspaceId) {
@@ -266,6 +280,7 @@ export function useArtifactBrowserFeature(
       const browseItems = (
         await artifactClient.browseArtifacts({ workspaceId })
       ).filter(isArtifactBrowserVisible);
+      if (!isCurrentRead()) return;
       setItems(browseItems);
       setSelectedStorageKey((current) =>
         browseItems.some((item) => item.storageKey === current)
@@ -279,6 +294,7 @@ export function useArtifactBrowserFeature(
           : { message: "No data artifacts found yet." }),
       });
     } catch (error) {
+      if (!isCurrentRead()) return;
       setViewState({
         status: "error",
         message:
@@ -289,11 +305,26 @@ export function useArtifactBrowserFeature(
     }
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const lease = {};
+    session.lease = lease;
+    activeSession.current = session;
+    setItems([]);
+    setSelectedStorageKey(undefined);
+    setDetail(undefined);
+    setContent(undefined);
+    setUnmanagedImagePreviewUrl(undefined);
+    setArtifactPreview(createIdleArtifactPreview());
+    setPendingDeleteStorageKey(undefined);
+    setDeleteConfirmationInput("");
+    setSelectedArtifactKeys([]);
+    setBulkDeleteConfirmationInput("");
+    publishLogic.setPublishedBackingFromDetail(undefined);
     void refreshArtifacts();
-  }, [artifactClient, workspaceId]);
+    return () => { if (session.lease === lease) session.lease = undefined; };
+  }, [session]);
 
-  useEffect(
+  useLayoutEffect(
     () => () => {
       revokeManagedImagePreviewUrl();
     },
@@ -301,6 +332,10 @@ export function useArtifactBrowserFeature(
   );
 
   async function selectArtifact(storageKey: string): Promise<void> {
+    const lease = session.lease;
+    if (!lease || !isCurrentSession(lease) || deletingSession.current === session) return;
+    const sequence = ++session.selectionSequence;
+    const isCurrentSelection = () => isCurrentSession(lease) && sequence === session.selectionSequence;
     setSelectedStorageKey(storageKey);
     setArtifactPreview(createLoadingArtifactPreview({ storageKey }));
     setViewState({ status: "loading", message: `Loading ${storageKey}...` });
@@ -310,6 +345,7 @@ export function useArtifactBrowserFeature(
       const artifactDetail = await artifactClient.readArtifactDetail(locator, {
         workspaceId,
       });
+      if (!isCurrentSelection()) return;
       setDetail(artifactDetail);
       publishLogic.setPublishedBackingFromDetail(artifactDetail);
 
@@ -318,6 +354,7 @@ export function useArtifactBrowserFeature(
           locator,
           { workspaceId },
         );
+        if (!isCurrentSelection()) return;
         setContent(contentDescriptor);
         const previewSource: ArtifactPreviewSource = {
           storageKey,
@@ -338,11 +375,13 @@ export function useArtifactBrowserFeature(
                   workspaceId,
                   maximumBytes: ARTIFACT_MEDIA_PREVIEW_MAX_BYTES,
                 });
+                if (!isCurrentSelection()) return;
                 const compressedUrl =
                   await createCompressedImagePreviewObjectUrl(
                     media.bytes,
                     media.mediaType ?? previewSource.mediaType,
                   );
+                if (!isCurrentSelection()) { URL.revokeObjectURL(compressedUrl); return; }
                 setManagedImagePreviewUrl(compressedUrl);
                 setArtifactPreview(
                   createMediaArtifactPreview(
@@ -354,6 +393,7 @@ export function useArtifactBrowserFeature(
                   ),
                 );
               } catch {
+                if (!isCurrentSelection()) return;
                 const fallbackUrl = artifactClient.createArtifactMediaViewUrl(
                   locator,
                   {
@@ -393,8 +433,10 @@ export function useArtifactBrowserFeature(
                 workspaceId,
                 maximumBytes: ARTIFACT_PDF_PREVIEW_MAX_BYTES,
               });
+              if (!isCurrentSelection()) return;
               const firstPageUrl =
                 await createPdfFirstPagePreviewObjectUrl(media.bytes);
+              if (!isCurrentSelection()) { URL.revokeObjectURL(firstPageUrl); return; }
               setManagedImagePreviewUrl(firstPageUrl);
               setArtifactPreview(
                 createMediaArtifactPreview(
@@ -424,6 +466,7 @@ export function useArtifactBrowserFeature(
                 workspaceId,
                 maximumBytes: ARTIFACT_PREVIEW_MAX_BYTES,
               });
+              if (!isCurrentSelection()) return;
               setArtifactPreview(
                 createTextArtifactPreview(
                   {
@@ -434,6 +477,7 @@ export function useArtifactBrowserFeature(
                 ),
               );
             } catch {
+              if (!isCurrentSelection()) return;
               setArtifactPreview(
                 createUnavailableArtifactPreview(
                   previewSource,
@@ -454,6 +498,7 @@ export function useArtifactBrowserFeature(
           setArtifactPreview(createUnsupportedArtifactPreview(previewSource));
         }
       } catch {
+        if (!isCurrentSelection()) return;
         setContent({
           locator,
           availability: "unavailable",
@@ -463,8 +508,9 @@ export function useArtifactBrowserFeature(
         setArtifactPreview(createUnavailableArtifactPreview({ storageKey }));
       }
 
-      setViewState({ status: "success" });
+      if (isCurrentSelection()) setViewState({ status: "success" });
     } catch (error) {
+      if (!isCurrentSelection()) return;
       setDetail(undefined);
       setContent(undefined);
       setUnmanagedImagePreviewUrl(undefined);
@@ -481,6 +527,7 @@ export function useArtifactBrowserFeature(
   }
 
   function requestDeleteRegisteredArtifact(storageKey: string): void {
+    if (!isCurrentSession() || deleteInFlight.current) return;
     setPendingDeleteStorageKey(storageKey);
     setDeleteConfirmationInput("");
   }
@@ -491,6 +538,9 @@ export function useArtifactBrowserFeature(
   }
 
   async function confirmPendingDelete(): Promise<void> {
+    const lease = session.lease;
+    const isCurrentDelete = () => isCurrentSession(lease);
+    if (!lease || !isCurrentDelete() || deleteInFlight.current) return;
     if (!pendingDeleteStorageKey) {
       return;
     }
@@ -510,15 +560,22 @@ export function useArtifactBrowserFeature(
     }
 
     const storageKey = pendingDeleteStorageKey;
+    deleteInFlight.current = true;
+    deletingSession.current = session;
+    session.browseSequence++;
+    session.selectionSequence++;
+    setIsDeleting(true);
     setViewState({ status: "loading", message: `Deleting ${storageKey}...` });
     try {
       await artifactClient.deleteRegisteredArtifact(
         { storageKey },
         { workspaceId },
       );
+      if (!isCurrentDelete()) return;
       setPendingDeleteStorageKey(undefined);
       setDeleteConfirmationInput("");
       if (selectedStorageKey === storageKey) {
+        session.selectionSequence++;
         setSelectedStorageKey(undefined);
         setDetail(undefined);
         setContent(undefined);
@@ -526,14 +583,19 @@ export function useArtifactBrowserFeature(
         setArtifactPreview(createIdleArtifactPreview());
         publishLogic.setPublishedBackingFromDetail(undefined);
       }
-      await refreshArtifacts();
-      setViewState({ status: "success", message: `Deleted ${storageKey}.` });
+      await refreshArtifacts(true);
+      if (isCurrentDelete()) setViewState({ status: "success", message: `Deleted ${storageKey}.` });
     } catch (error) {
+      if (!isCurrentDelete()) return;
       setViewState({
         status: "error",
         message:
           error instanceof Error ? error.message : "Failed to delete artifact.",
       });
+    } finally {
+      deleteInFlight.current = false;
+      deletingSession.current = undefined;
+      if (activeSession.current.lease) setIsDeleting(false);
     }
   }
   function toggleSelectedArtifactKey(storageKey: string): void {
@@ -565,6 +627,9 @@ export function useArtifactBrowserFeature(
   }
 
   async function deleteSelectedArtifacts(): Promise<void> {
+    const lease = session.lease;
+    const isCurrentDelete = () => isCurrentSession(lease);
+    if (!lease || !isCurrentDelete() || deleteInFlight.current) return;
     if (selectedArtifactKeys.length === 0) return;
     if (!workspaceId) {
       setViewState({
@@ -580,12 +645,17 @@ export function useArtifactBrowserFeature(
       });
       return;
     }
+    deleteInFlight.current = true;
+    deletingSession.current = session;
+    session.browseSequence++;
+    session.selectionSequence++;
+    setIsDeleting(true);
     setViewState({
       status: "loading",
       message: `Deleting ${selectedArtifactKeys.length} artifact(s)...`,
     });
     try {
-      await Promise.all(
+      const results = await Promise.allSettled(
         selectedArtifactKeys.map(async (storageKey) =>
           artifactClient.deleteRegisteredArtifact(
             { storageKey },
@@ -593,10 +663,27 @@ export function useArtifactBrowserFeature(
           ),
         ),
       );
+      const failed = results.find((result) => result.status === "rejected");
+      if (!isCurrentDelete()) return;
+      if (failed?.status === "rejected") {
+        const deletedKeys = selectedArtifactKeys.filter((_, index) => results[index]?.status === "fulfilled");
+        setSelectedArtifactKeys(selectedArtifactKeys.filter((_, index) => results[index]?.status === "rejected"));
+        if (selectedStorageKey && deletedKeys.includes(selectedStorageKey)) {
+          setSelectedStorageKey(undefined);
+          setDetail(undefined);
+          setContent(undefined);
+          setUnmanagedImagePreviewUrl(undefined);
+          setArtifactPreview(createIdleArtifactPreview());
+          publishLogic.setPublishedBackingFromDetail(undefined);
+        }
+        await refreshArtifacts(true);
+        throw failed.reason;
+      }
       if (
         selectedStorageKey &&
         selectedArtifactKeys.includes(selectedStorageKey)
       ) {
+        session.selectionSequence++;
         setSelectedStorageKey(undefined);
         setDetail(undefined);
         setContent(undefined);
@@ -606,12 +693,14 @@ export function useArtifactBrowserFeature(
       }
       const deletedCount = selectedArtifactKeys.length;
       clearSelectedArtifactKeys();
-      await refreshArtifacts();
+      await refreshArtifacts(true);
+      if (!isCurrentDelete()) return;
       setViewState({
         status: "success",
         message: `Deleted ${deletedCount} artifact(s).`,
       });
     } catch (error) {
+      if (!isCurrentDelete()) return;
       setViewState({
         status: "error",
         message:
@@ -619,6 +708,10 @@ export function useArtifactBrowserFeature(
             ? error.message
             : "Failed to delete selected artifacts.",
       });
+    } finally {
+      deleteInFlight.current = false;
+      deletingSession.current = undefined;
+      if (activeSession.current.lease) setIsDeleting(false);
     }
   }
 
@@ -920,6 +1013,7 @@ export function useArtifactBrowserFeature(
       showRegisterForm,
     },
     viewState,
+    isDeleting,
     pendingDeleteStorageKey,
     deleteConfirmationInput,
     selectedArtifactKeys,

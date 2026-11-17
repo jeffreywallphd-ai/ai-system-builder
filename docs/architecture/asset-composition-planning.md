@@ -276,3 +276,47 @@ Asset composition planning does not implement workflow execution, runtime execut
 - API/IPC/preload/client exposure is the boundary used by UI operations; unsupported operations must render as unavailable in UI.
 - Plans list/detail UI consumes safe read-model responses (`summaries`, `summary`, `nodes`, `relationships`, `diagnostics`, `blockers`).
 - User-facing UI does not present Effective Asset Projection terminology as a primary concept.
+
+
+## Transport qualification status
+
+Connection clients send `relationshipKind`, matching the owning command.
+Selection and connection handlers compare only identifiers actually present in
+the route; body-owned projection/node identifiers are normalized by the command.
+Static projection read routes precede the dynamic projection-ID route and contain
+adapter failures in sanitized unavailable envelopes.
+
+Composition use cases and read-model entries require workspace asset access.
+Both hosts inject the guard, which resolves the persisted active workspace and
+requires the existing organization/membership authorizer before any plan or
+projection repository access. Missing authority fails closed. Reads require
+`asset:read`; writes, including persisted validation, require `asset:write`.
+The server admits only the eight registered exact composition method/templates;
+unknown, encoded and case variants remain denied. These policies do not admit
+projection or User Library families. Personal library ownership is not established
+by organization partitioning. Uncomposed
+projection services remain unavailable. The workspace-wide authoring effective
+summary list is explicitly unavailable on both transports, rather than invoking
+a single-reference read with an absent reference. Individual source summaries
+and typed authored/draft/revision/override list envelopes remain supported.
+
+Readiness and composition diagnostic/blocker boundaries admit only their declared
+plain-record fields and reconstruct the public shape. Unknown fields and
+accessors deny without evaluation. Metadata uses a pure shared contracts helper:
+at most8 nesting levels,1024 visited values,64 keys per object,2048 characters
+per string,80 characters per key and64KiB aggregate encoded key/string bytes.
+Composition permits nested arrays of at most128 items; readiness retains its
+no-array metadata schema. Cycles, sparse arrays, nonJSON/prototype objects,
+non-finite numbers, dangerous structural keys and compound credential/raw-data
+keys deny. Safe false/zero/null and nested summaries retain their meanings.
+Actual filesystem/URL/credential/payload representations cannot enter these
+passive diagnostic details. Composition keeps generic outward redaction for
+unsafe message strings; readiness rejects them. Errors do not echo rejected
+content. Existing family restrictions remain in force. These metadata controls
+are not applied indiscriminately to typed DTO identities or declared graph
+summary fields, and do not establish native/runtime/release qualification.
+
+Diagnostic code, severity and identity inputs must be primitive strings before
+any schema string method runs; nested trim/toString getters cannot execute.
+Windows root-relative and drive-relative forms are rejected in metadata and
+redacted from composition messages alongside Unix, UNC and drive-absolute paths.

@@ -96,6 +96,20 @@ describe("acquisition task contracts", () => {
     }))).toThrow("robots decision");
   });
 
+  it("stores bounded license declarations only with a full provider commit", () => {
+    const revision = "a".repeat(40);
+    const locator = { kind: "hugging-face" as const, displayName: "Data", repository: "owner/data",
+      path: "data/train.parquet", revision };
+    const observed = snapshot({ locator, providerRevision: revision, providerLicenseIds: ["CC-BY-NC-4.0", "UNTRUSTED-LABEL"] });
+    expect(normalizeIngestionSourceSnapshot(observed).providerLicenseIds).toEqual(["cc-by-nc-4.0", "unknown"]);
+    expect(normalizeIngestionSourceSnapshot({ ...observed, providerLicenseIds: [] }).providerLicenseIds).toEqual([]);
+    expect(normalizeIngestionSourceSnapshot({ ...observed, providerLicenseIds: undefined }).providerLicenseIds).toBeUndefined();
+    expect(() => normalizeIngestionSourceSnapshot({ ...observed, locator: { ...locator, revision: "abc1234" },
+      providerRevision: "abc1234" })).toThrow("immutable provider revision");
+    expect(() => normalizeIngestionSourceSnapshot(snapshot({ providerLicenseIds: ["mit"] }))).toThrow("provider revision");
+    expect(() => normalizeIngestionSourceSnapshot({ ...observed, providerLicenseIds: Array(9).fill("mit") })).toThrow("bounded list");
+  });
+
   it("derives zero-byte provider progress from completed items", () => {
     const source = { provider: "huggingface" as const, repository: "owner/data", path: "data/train.parquet", revision: "a".repeat(40) };
     const pending = normalizeIngestionTaskRecord(task({
@@ -112,6 +126,13 @@ describe("acquisition task contracts", () => {
       completedAt: now,
     });
     expect(complete.progress).toMatchObject({ completedItems: 1, totalItems: 1, percent: 100 });
+    const finalized = complete.files[0]!;
+    const output = { ...finalized.output!, sourceSnapshotId: "snapshot-1", providerLicenseIds: ["cc-by-nc-4.0", "UNTRUSTED"] };
+    const withLicense = normalizeIngestionTaskRecord({ ...complete, files: [{ ...finalized, output }] });
+    expect(withLicense.files[0]!.output?.providerLicenseIds).toEqual(["cc-by-nc-4.0", "unknown"]);
+    expect(() => normalizeIngestionTaskRecord({ ...complete, files: [{
+      ...finalized, output: { ...output, providerRevision: "b".repeat(40) },
+    }] })).toThrow("exact finalized provider snapshot");
   });
 
   it("models unchanged, changed, unavailable, and removed refreshes honestly", () => {

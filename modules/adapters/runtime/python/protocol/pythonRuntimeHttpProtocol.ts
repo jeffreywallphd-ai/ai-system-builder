@@ -13,6 +13,7 @@ import type {
   PythonRuntimeStatus,
   PythonRuntimeUnloadModelsResult,
 } from "../../../../contracts/runtime";
+import { normalizePythonRuntimeAcceleratorMemoryBytes } from "../../../../contracts/runtime";
 
 const PYTHON_RUNTIME_STATUS_VALUES: ReadonlySet<PythonRuntimeStatus> = new Set([
   "starting",
@@ -182,12 +183,16 @@ function asPythonRuntimeTaskStatus(value: unknown, field: string): PythonRuntime
 
 function parseLoadedModel(value: unknown, field: string): PythonRuntimeLoadedModel {
   const payload = asObject(value, field);
+  if (payload.memoryMode !== undefined && payload.memoryMode !== "standard" && payload.memoryMode !== "offload-v1") {
+    throw new Error("Invalid python runtime payload: model memory mode is unsupported.");
+  }
   return {
     provider: "transformers",
     modelId: asString(payload.modelId, `${field}.modelId`),
     inferenceMode: asLoadedModelInferenceMode(payload.inferenceMode, `${field}.inferenceMode`),
     device: asOptionalLoadedModelDevice(payload.device, `${field}.device`),
     torchDtype: asOptionalLoadedModelTorchDtype(payload.torchDtype, `${field}.torchDtype`),
+    ...(payload.memoryMode === undefined ? {} : { memoryMode: payload.memoryMode }),
     localPath: asOptionalString(payload.localPath, `${field}.localPath`),
   };
 }
@@ -270,9 +275,11 @@ export function mapCapabilitiesResponseFromHttpPayload(
   payload: unknown,
 ): PythonRuntimeCapabilitiesResult {
   const response = asObject(payload, "capabilities response");
+  const totalAcceleratorMemoryBytes = normalizePythonRuntimeAcceleratorMemoryBytes(response.totalAcceleratorMemoryBytes);
   return {
     runtimeId: asString(response.runtimeId, "runtimeId"),
     capabilities: parseCapabilities(response.capabilities),
+    ...(totalAcceleratorMemoryBytes !== undefined ? { totalAcceleratorMemoryBytes } : {}),
   };
 }
 

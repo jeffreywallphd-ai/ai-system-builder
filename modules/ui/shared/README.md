@@ -1,5 +1,15 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+- Page summary UI lives in `modules/ui/shared/page-dashboard`. Keep metric
+  derivation host-neutral and use host adapters only to compose existing scoped
+  clients. Home and Systems count active systems with at least one published
+  release; unpublished builds do not count. Home also counts active dataset
+  groups, generated models, and active published/customized assets. Assets Used
+  sums resolved asset instances from the latest published release per system.
+  Artifacts Uploaded applies the same visibility and source grouping as the
+  Artifact Browser, excluding its hidden internal sidecars and system builds.
+  Loading and unavailable summaries show
+  bounded placeholders and never surface raw transport failures.
 - User-facing glossary hints live in `modules/ui/shared/glossary`; add or update entries when introducing novel form-field or detail-label terms. Expanded collapsible panels must allow hint bubbles to extend beyond the card boundary instead of clipping their definitions.
 - Dataset Preparation output fields live in
   `modules/ui/shared/data-management`. Keep the editor task-aware and usable
@@ -36,12 +46,21 @@
   `notifications/tests/notificationMigrationInventory.ts`; its guard permits
   necessary contextual feedback while preventing removed page-level patterns
   from returning.
+- Context Management UI lives in `modules/ui/shared/context-management`. Keep
+  RAG Databases, Context Packs, and Context Browser host-neutral. Manual and
+  source-derived packs share the same safe formatted Markdown review. Context
+  Browser follows Artifact Browser cards and View Details modal conventions.
+  The shell bridge owns authoritative generation/retrieval task progress;
+  save, discard, and delete publish terminal outcomes, while validation,
+  blocking diagnostics, loading, empty results, and routine reads stay inline.
 - Keep glossary hint buttons off broad page headings and descriptive home-area cards. Use them beside form labels, filters, and compact detail rows where users need help understanding what to enter or read.
 - Shared buttons use the centralized controls stylesheet. Keep primary and
   outline buttons flat and rounded. Outline actions must include both `ui-button`
   and `ui-button--outline`; the obsolete secondary modifier must not return. No
   button may use native appearance, grey fills, gradients, inset highlights,
   raised shadows, or hover translation.
+  Customization target cards also carry `ui-button`, retaining their grid layout
+  while receiving the shared visible keyboard focus ring in both hosts.
 - Artifact preview UI lives in `modules/ui/shared/artifact-preview`. Keep previews sampled and bounded: text-like previews should show only a small first-page-sized sample, image previews should prefer compressed/downscaled object URLs, video/PDF previews should be visually constrained, and full-fidelity viewing should remain a download action. Office document and spreadsheet previews should stay placeholder-only until a safe parser is added.
 - Modal headers should stay fixed at the top of the modal, use a darker header background than the body, place the clear modal title on the left, and place the red square close button on the right. Put scrollable content inside the modal body region so only the body scrolls when needed. When one modal opens from another, use the stacked modal overlay class so the newest modal is visually on top.
 - Import Assets UI lives in `modules/ui/shared/asset-package`. Keep the starter
@@ -67,11 +86,15 @@
   keeps the Compose panel
   mounted while sibling tabs are active so its canonical draft and loaded catalog
   survive Manage and Build handoffs; other tab content remains lazy by default.
+  Definition reads share only pending demands with live subscribers. Settled or
+  inactive generations cannot poison new navigation or explicit retries; each
+  physical request retains its budget slot through final cleanup.
   Every exact slot-bearing Canvas container exposes Add element. It opens the
   shared modal scoped to that container, lets the user choose an available
   region, and requests bounded searchable compatible definitions and compatible
   unassigned visual instances. Results are grouped into labeled UI categories
-  with a category filter directly below search. Selection maps to canonical add/place commands,
+  with a category filter directly below search. Compatible built-in page
+  layouts appear under Containers and layout. Selection maps to canonical add/place commands,
   closes the modal, selects the result, and reveals it on the Canvas. Layers
   retains explicit native move-destination and order controls. Do not restore a
   persistent Asset Palette, drag surfaces, or renderer drag state.
@@ -219,3 +242,152 @@
   forced-colors, reduced-motion, and runtime checks are automated regression
   evidence; they do not replace physical touch, assistive-technology, manual
   security, real-model quality, or other-platform qualification.
+
+
+Composer candidate continuations bind the normalized workspace/query and retain
+Foundation and registry positions. Sparse compatible pages remain traversable;
+late Load more responses and repeated cursors cannot populate a changed picker.
+Workspace changes pass an explicit browse scope. Subtree removal preserves the
+layout structure through undo/redo. A failed selection or clear keeps a confirmed
+workspace usable, while failed authoritative reloads continue to gate access.
+
+
+Workspace page dashboards consume one versioned scalar summary per page, preserve
+available values when another metric group fails, and mark unavailable counts
+explicitly. Settings retain their existing settings read. Shared artifact
+visibility policy lives in the artifact contract and is reused by counts and the
+browser; the presenter does not own an alternative visibility rule.
+
+- Canvas draft integrity uses an explicit saved checkpoint independent of the
+  bounded undo history. Creating or switching systems requires saving or
+  discarding edits first. Host transactions synchronously lock editor controls
+  and fence late responses by workspace, client and system. Current-revision
+  loading is independent of optional history; failed revision reads offer an
+  inline retry and retain only a generic diagnostic. Composition previews are
+  nonexecuting: useful form/dashboard controls do not establish business data
+  writes or model inference. See `docs/diagnostics/system-builder-canvas-testing.md`.
+
+- Canvas performance uses owned immutable snapshots with unchanged-data sharing,
+  indexed move targets and bounded exact in-use definition reads. Bootstrap
+  stops after finding the required Minimal layout; compatible browsing remains
+  paged. Record local algorithm and browser-paint observations separately from
+  pending reference/manual qualification; retain failures and source identity.
+
+
+Asset customization list, history and target-detail reads are fenced by request
+sequence, workspace and client identity. A newer search can supersede a pending
+list request; stale successes and rejections cannot replace current data or
+clear its loading indicator. Rejected current reads release controls with a
+static safe retry message. Mutation and publication authority remain unchanged.
+Page dashboard metric details belong inside their description (`dd`), preserving
+valid definition-list semantics on Assets and Systems.
+
+Notification bell controls reference the panel only while it is mounted.
+Escape, the Close button, and a workspace change that closes the panel return
+focus to the bell. When a mouse or touch action outside the panel closes it, an
+outside control keeps focus if it has focus. If focus returns to the page
+background, the bell receives it.
+
+A changed client also clears a preferred target's old details and draft. Save,
+review, publish and abandon settlements are fenced by current owner and operation;
+rejections release controls with safe retry feedback. Synchronous submission
+admission prevents duplicate same-turn writes; exact host commands and revisions
+are preserved. Earlier history reads cannot replace a confirmed mutation revision.
+The Browse-provided initial preference applies only during owner initialization;
+manual searches retain the user's current target and never reapply that preference.
+
+
+Dataset Preparation memory-admission errors are a notification-center outcome
+without an inline duplicate, including preflight rejection. Shared memory copy
+uses validated numeric RAM/VRAM shortfalls, subtracts permitted overflow and rounds
+upward. Missing facts never produce an invented amount or bypass a guard.
+Other contextual validation and security/readiness blockers remain unchanged.
+
+- Saved dataset setup validation lives in `dataset-version/datasetVersionReplay.ts`.
+  It produces one complete frozen value or a fixed denial before any form change.
+  Supply the exact workspace/version/dataset artifact and a ready, authorized
+  source-list projection; retain duplicate matches so ambiguity is rejected.
+  It validates configuration only. The page must separately check async freshness,
+  consume an explicit one-use handoff and acknowledge actual application. The
+  application remains responsible for authorization, bytes, runtime readiness
+  and publication. Do not restore provider destinations or historical approvals.
+  The pure component does not yet replace either host's existing reuse handler.
+
+- Artifact Browser details in both apps mount `DatasetVersionPanel` through the
+  existing version clients. The panel resolves one exact complete-dataset key,
+  exposes history/comparison retry and refresh, and binds explicit publication
+  to the current version and destination. Public confirmation resets on input
+  changes. Setup reuse is shown only when an applying consumer is supplied;
+  navigation alone cannot acknowledge application.
+
+The dataset-version `useDatasetVersionReplayHandoff` hook owns one ephemeral
+page request and a separate consumer-session claim. It captures bounded frozen
+JSON without getters, retires stale scope/navigation/edits and resolves success
+only after the consumer's applied-state commit. Desktop uses this with its
+complete validated settings hook. The coordinator grants no authorization,
+source-byte proof, runtime readiness, provider action or parent qualification.
+
+### Composed Context workflow checks
+
+The focused Context journeys connect the mounted shared Studio to real desktop
+preload/IPC or local HTTP, existing host composition, application lifecycle,
+runtime-adapter staging and new JSON catalog/binding files and stored bytes.
+They check private review, explicit Save/Discard, exact saved bytes and digest,
+reopen, manual rebuild refusal, source lineage, confirmed deletion and scoped
+recovery. Save failures keep reviewed output available for correction.
+
+Worker output and archive inspection are finite synthetic fixtures. Browser
+source selection uses the actual Artifact Browser client and capability rules;
+its test composition supplies no installed models. Actor/sender admission is a
+fixture. These tests do not qualify Python, real archive parsing, model accuracy,
+OCR, providers, installed app windows, process restart, native cleanup or final
+combined testing. See the comprehensive UI coverage ledger for exact cases.
+
+Registered HTTP and IPC failure envelopes are checked before client rendering.
+A missing owned staged file, thrown storage error or refused storage result must
+not disclose paths or private error text. Reviewed output remains retryable.
+
+### Context preparation failure checks
+
+The composed Context tests also check generation-start and source-staging
+failures through both registered app connections. A refused dependency must
+show fixed public text, keep source bytes or manual input available, and permit
+a corrected preparation. Exact public envelopes are checked before rendering.
+The faults occur before worker acceptance. They do not qualify running-worker
+shutdown, terminal runtime errors, installed hosts or final combined testing.
+
+### Saved-version comparison and reuse checks
+
+The composed Dataset qualification file also mounts the saved-version panel
+after two actual preparation approvals. Both app connections use real version
+comparison/reproduction, SQLite documents and recipe/object bytes. Eighteen
+added cases inspect exact settings-only change text and exact saved recipe/source
+lineage sent to the selected-version callback. Read failures or damaged bytes
+refuse reuse and allow correction. Late replies cannot call a retired panel
+after unmount or changed workspace, client or selected artifact. These are
+component-boundary prop changes, not full page navigation qualification.
+
+The callback is a finite test consumer. Acknowledging it does not qualify setup
+application by the receiving page. Worker/quality/access/readiness and declared
+fault/delay seams remain fixtures. Parquet row editing, actual workers, provider,
+installed-host, native/process and final checks remain separate. Accepted model
+accuracy and OCR checks stay closed; these fixtures supply no new qualification.
+
+Saved source-pack Rebuild restores the saved input mode after current-session
+acceptance, so a fresh renderer shows the explicit Markdown review/save controls.
+Legacy packs without a mode use the existing source-materials default. Manual
+packs retain the application rule that requires re-entry instead of rebuilding.
+Obsolete success/error replies cannot alter the current workspace task or mode.
+
+Manage systems owns pending reads and actions within the mounted workspace/client session. Query changes invalidate old page and newly requested preview results. Synchronous admission prevents duplicate actions, and fixed caught-error notifications retain explicit retry paths through the notification center. Exact revisions and existing archive/restore/clone authority remain in application services. Owners retire during layout cleanup at commit, before passive effects. An abandoned replacement render does not change the committed session. Confirmation changes are synchronously refused while an action owns them.
+
+Build & test and Publish use committed workspace/client/target sessions. Retry failed checks or reads through the named control; unexpected errors use fixed notification-center copy while typed readiness and policy denials stay contextual. Synchronous admission owns build, cancel and approval commands. A confirmation captures its named system, exact saved revision, build and lock. Validate the returned build/release target before showing success; failed post-publication refresh cannot negate a saved release. Retire owners during layout cleanup and preserve committed state across abandoned renders.
+
+Published lifecycle cards own committed workspace/client/build/revision/release sessions. Match status/action reply release identity before adopting controls or success. Keep one physical status-read slot until settlement; accepted actions invalidate an older poll result without claiming cancellation. A denied action waits for that slot, then performs one fresh authoritative reconciliation. Layout retirement prevents old replies, busy state or notices from affecting replacement controls. Eligible actions and expected revisions remain application-owned.
+
+
+- Host-neutral application-setting fields live in `modules/ui/shared/settings`.
+  They use public contracts and glossary UI only. Desktop field paths remain
+  compatible reexports; host clients and action ownership stay outside this module.
+  Labels target real controls and keep interactive help outside the label.
+  See `settings/README.md` for supported values and secret-draft rules.

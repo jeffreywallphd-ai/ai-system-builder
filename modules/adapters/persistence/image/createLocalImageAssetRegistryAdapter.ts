@@ -145,7 +145,7 @@ export function createLocalImageAssetRegistryAdapter(
       const next = sorted[startIndex + limit];
       return {
         items,
-        ...(next ? { nextCursor: next.assetId } : {}),
+        ...(next && items.length ? { nextCursor: items[items.length - 1]!.assetId } : {}),
       };
     },
     async readImageAssetDescriptor(workspaceId, assetId) {

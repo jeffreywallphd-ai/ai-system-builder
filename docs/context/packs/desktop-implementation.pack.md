@@ -19,7 +19,7 @@
 
 ## Core Guidance
 
-- Use Electron + Electron Forge webpack plugin as the canonical desktop path; avoid parallel desktop build pipelines.
+- Use Electron + the exactly pinned Electron Forge Vite plugin as the canonical desktop path (ADR-0044). Preserve independent CJS preloads and product/runtime renderer bundles, relative packaged assets, loopback-only source-confined development and actual installed-feature qualification.
 - Keep responsibilities split across `main`, preload, renderer, and `modules/hosts/desktop` composition.
 - `apps/desktop/src/main/` handles lifecycle/bootstrap/window creation only.
 - `apps/desktop/src/preload/` exposes a narrow secure bridge; keep it transport-oriented.
@@ -69,3 +69,10 @@
 - `401` in `lan-https-token` mode should guide pairing/re-pairing.
 - `403` should guide missing-permission remediation.
 - Never render or log bearer tokens or pairing codes.
+
+
+Host-neutral application-setting fields live in `modules/ui/shared/settings`.
+Desktop's previous field paths are compatible reexports. Host client/query,
+mutation ownership and runtime/folder APIs stay in each host feature. Follow
+`modules/ui/shared/settings/README.md` and the host Settings README for the exact
+field, secret-draft and accessible label/help contracts.

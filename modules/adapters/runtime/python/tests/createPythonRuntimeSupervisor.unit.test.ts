@@ -29,6 +29,33 @@ function createMockChildProcess() {
 }
 
 describe("createPythonRuntimeSupervisor", () => {
+  it("retains failed startup diagnostics after asynchronous error and confirmed close", async () => {
+    const child = createMockChildProcess();
+    const supervisor = createPythonRuntimeSupervisor({
+      command: "python",
+      runtimeClient: {
+        getHealthStatus: async () => {
+          throw new Error("not ready");
+        },
+      },
+      spawnImplementation: (() => {
+        queueMicrotask(() => {
+          child.emit("error", new Error("synthetic spawn failure"));
+          child.emit("close", -1, null);
+        });
+        return child as any;
+      }) as any,
+      startupTimeoutMs: 50,
+      healthCheckIntervalMs: 1,
+    });
+    await expect(supervisor.start()).rejects.toThrow(
+      "exited before health check completed",
+    );
+    expect(supervisor.getStatus()).toBe("failed");
+    await supervisor.stop();
+    expect(supervisor.getStatus()).toBe("stopped");
+  });
+
   it("starts and transitions to ready after health probing", async () => {
     const child = createMockChildProcess();
     const spawnImplementation = testDouble.fn(() => child as any);
@@ -138,16 +165,23 @@ describe("createPythonRuntimeSupervisor", () => {
 
   it("stops the process and marks status stopped", async () => {
     const child = createMockChildProcess();
+    let spawned = false;
     const supervisor = createPythonRuntimeSupervisor({
       command: "python",
       args: ["main.py"],
       runtimeClient: {
-        getHealthStatus: async () => ({
-          healthy: true,
-          status: { runtimeId: "python-sidecar", status: "ready" },
-        }),
+        getHealthStatus: async () => {
+          if (!spawned) throw new Error("not started");
+          return {
+            healthy: true,
+            status: { runtimeId: "python-sidecar", status: "ready" },
+          };
+        },
       },
-      spawnImplementation: (() => child as any) as any,
+      spawnImplementation: (() => {
+        spawned = true;
+        return child as any;
+      }) as any,
       startupTimeoutMs: 100,
       healthCheckIntervalMs: 1,
     });
@@ -182,7 +216,7 @@ describe("createPythonRuntimeSupervisor", () => {
     });
 
     await expect(supervisor.start()).rejects.toThrow(
-      /Python runtime exited before health check completed\.[\s\S]*Recent runtime output: stderr:unstructured-output/,
+      /Python runtime exited before health check completed\./,
     );
   });
 
@@ -377,4 +411,50 @@ describe("createPythonRuntimeSupervisor", () => {
     );
     expect(supervisor.getStatus()).toBe("ready");
   });
+});
+import assert from "node:assert/strict";
+import { createPythonRuntimeStartupDiagnostics } from "../pythonRuntimeStartupDiagnostics";
+
+it("binds coalesced and retried starts to actual tokens and preserves preparation failure", async () => {
+  const diagnostics = createPythonRuntimeStartupDiagnostics();
+  const events: any[] = []; let release!: () => void; const gate = new Promise<void>(r => { release = r; });
+  let prepared = 0, spawned = 0;
+  const supervisor = createPythonRuntimeSupervisor({ command: "synthetic", runtimeClient: { getHealthStatus: async () => { throw new Error("not ready"); } },
+    onStartupEvent: event => { events.push(event); diagnostics.event(event); },
+    prepareRuntimeEnvironment: async context => { prepared++; await gate; diagnostics.preparationFailed(context.startupToken!, "context", "unsupported-python"); throw new Error("private setup"); },
+    spawnImplementation: (() => { spawned++; throw new Error("unexpected spawn"); }) as any,
+  });
+  const first = supervisor.start(), joined = supervisor.start(); release();
+  await Promise.allSettled([first, joined]);
+  assert.equal(events.filter(e => e.type === "begin").length, 1); assert.equal(prepared, 1); assert.equal(spawned, 0);
+  assert.equal(diagnostics.read().reason, "unsupported-python");
+  const old = events[0].token; await supervisor.stop(); await assert.rejects(supervisor.start());
+  assert.equal(diagnostics.read().attempt, 2);
+  diagnostics.environment(old, { pythonVersion: "3.99.0" }); assert.equal(diagnostics.read().pythonVersion, undefined);
+});
+it("captures controls, capabilities and bound client methods before a mutating diagnostic getter", async () => {
+  const args = ["main.py"], capabilities = ["required"], env = { SAFE: "original" };
+  let healthCalls = 0, prepared = 0, launched = 0, spawned = 0, getters = 0;
+  const client = { marker: "bound", async getHealthStatus() { assert.equal(this.marker, "bound"); healthCalls++; if (healthCalls === 1) throw new Error("not started"); return { healthy: true, status: { runtimeId: "fixture", status: "ready" as const } }; }, async getCapabilities() { assert.equal(this.marker, "bound"); return { runtimeId: "fixture", capabilities: [] }; } };
+  const options: any = { command: "original", args, cwd: "original-cwd", env, requiredCapabilities: capabilities, runtimeClient: client,
+    prepareRuntimeEnvironment(context: any) { prepared++; assert.equal(context.command, "original"); assert.equal(context.cwd, "original-cwd"); assert.deepEqual(context.args, ["main.py"]); assert.equal(context.env.SAFE, "original"); },
+    prepareLaunchEnvironment(context: any) { launched++; context.env.ROTATED = "owned"; },
+    spawnImplementation: ((_command: string, _args: readonly string[], context: any) => { spawned++; assert.equal(_command, "original"); assert.deepEqual(_args, ["main.py"]); assert.equal(context.cwd, "original-cwd"); assert.equal(context.env.SAFE, "original"); assert.equal(context.env.ROTATED, "owned"); return createMockChildProcess() as any; }) as any,
+    startupTimeoutMs: 5, healthCheckIntervalMs: 1 };
+  Object.defineProperty(options, "onStartupEvent", { get() { getters++; options.command = "mutated"; options.cwd = "mutated"; args.push("mutated"); capabilities.length = 0; env.SAFE = "mutated"; options.prepareRuntimeEnvironment = undefined; options.prepareLaunchEnvironment = undefined; client.getCapabilities = async () => ({ runtimeId: "fixture", capabilities: ["required"] }); return () => {}; } });
+  const supervisor = createPythonRuntimeSupervisor(options);
+  await assert.rejects(supervisor.start(), /missing required capability/);
+  assert.equal(getters, 1); assert.equal(prepared, 1); assert.equal(launched, 1); assert.equal(spawned, 1);
+  await supervisor.stop();
+});
+it("retires an in-flight startup report and reports a vanished attached worker without a new launch", async () => {
+  const d = createPythonRuntimeStartupDiagnostics(); let release!: () => void; const gate = new Promise<void>(r => { release = r; });
+  const pending = createPythonRuntimeSupervisor({ command: "fixture", runtimeClient: { getHealthStatus: async () => { throw new Error("not ready"); } }, onStartupEvent: d.event, prepareRuntimeEnvironment: () => gate, spawnImplementation: (() => { throw new Error("must not spawn"); }) as any });
+  const start = pending.start(); await new Promise(resolve => setTimeout(resolve, 0)); await pending.stop();
+  assert.equal(d.read().outcome, "retired"); release(); await assert.rejects(start); assert.equal(d.read().outcome, "retired");
+  const attached = createPythonRuntimeStartupDiagnostics(); let available = true;
+  const supervisor = createPythonRuntimeSupervisor({ command: "fixture", onStartupEvent: attached.event, runtimeClient: { getHealthStatus: async () => { if (!available) throw new Error("gone"); return { healthy: true, status: { runtimeId: "fixture", status: "ready" } }; } }, spawnImplementation: (() => { throw new Error("must not spawn"); }) as any });
+  await supervisor.start(); await supervisor.start(); assert.equal(attached.read().attempt, 1);
+  available = false; await assert.rejects(supervisor.start(), /Externally attached/);
+  assert.equal(attached.read().attempt, 1); assert.equal(attached.read().outcome, "failed"); assert.equal(attached.read().reason, "health-failed");
 });

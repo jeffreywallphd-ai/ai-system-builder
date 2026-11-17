@@ -1,5 +1,6 @@
 import type {
   DatasetPreparationSummary,
+  DatasetPreparationMemoryShortfall,
   DatasetPreparationGenerationCapacitySnapshot,
   DatasetPreparationAdvancedReport,
   DatasetPreparationWarning,
@@ -122,6 +123,7 @@ export type ApiDatasetPreparationTaskReadValue =
       error: {
         code?: string;
         message: string;
+        memoryShortfall?: DatasetPreparationMemoryShortfall;
       };
     }
   | {

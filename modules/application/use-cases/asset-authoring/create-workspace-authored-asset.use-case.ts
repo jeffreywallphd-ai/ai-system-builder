@@ -1,3 +1,5 @@
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
+import { requireWorkspaceAssetAccess } from "../../services/asset/workspace-asset-access.service";
 import { normalizeAuthoredAssetId, normalizeCreateWorkspaceAuthoredAssetCommand, normalizeSafeAssetEditableFieldPatch, normalizeAuthoredAssetRecord, normalizeAuthoredAssetRevisionRecord, type CreateWorkspaceAuthoredAssetCommand, type CreateWorkspaceAuthoredAssetResult } from "../../../contracts/asset-authoring";
 import type { AssetRevisionRepositoryPort, AuthoredAssetRepositoryPort } from "../../ports/asset-authoring";
 import { fail } from "./asset-authoring-use-case-results";
@@ -5,11 +7,13 @@ import { createAuthoredFromScratchProvenance } from "./asset-authoring-provenanc
 import { normalizeGeneratedRevisionId } from "./asset-authoring-versioning.service";
 
 const nowIso = () => new Date().toISOString();
-export interface CreateWorkspaceAuthoredAssetUseCaseDependencies { authoredAssetRepository: AuthoredAssetRepositoryPort; assetRevisionRepository: AssetRevisionRepositoryPort; now?:()=>string; generateAuthoredAssetId:()=>string; generateAssetRevisionId:()=>string; }
+export interface CreateWorkspaceAuthoredAssetUseCaseDependencies { workspaceAccess: WorkspaceAssetAccessPort; authoredAssetRepository: AuthoredAssetRepositoryPort; assetRevisionRepository: AssetRevisionRepositoryPort; now?:()=>string; generateAuthoredAssetId:()=>string; generateAssetRevisionId:()=>string; }
 export class CreateWorkspaceAuthoredAssetUseCase {
   constructor(private readonly d:CreateWorkspaceAuthoredAssetUseCaseDependencies){}
   async execute(command:CreateWorkspaceAuthoredAssetCommand):Promise<CreateWorkspaceAuthoredAssetResult>{
     let c; try { c=normalizeCreateWorkspaceAuthoredAssetCommand(command);} catch { return fail("validation","Create workspace authored asset command is invalid."); }
+try {await requireWorkspaceAssetAccess(this.d.workspaceAccess, c.workspaceId, "asset-authoring.create-workspace-authored-asset", "asset:write");} catch {return fail("unavailable", "Workspace asset operation is not authorized.");}
+
     if (c.baseTarget) return fail("unsupported","Derived/base-target authored asset creation is deferred.");
     const at=(this.d.now??nowIso)();
     let authoredAssetId; try { authoredAssetId=normalizeAuthoredAssetId(this.d.generateAuthoredAssetId()); } catch { return fail("internal","Generated identifier is invalid."); }

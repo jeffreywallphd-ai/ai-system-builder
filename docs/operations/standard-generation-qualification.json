@@ -1,0 +1,2190 @@
+{
+  "schema_version": "standard-generation-qualification-summary-v1",
+  "status": "executed-not-qualified",
+  "qualification_complete": false,
+  "protocol": "standard-generation-protocol-v1",
+  "scope": "Fixed synthetic classification algorithm comparison over the same current guarded Standard runtime; no parent, historical-release, unseen-capability, offload or whole-host pass.",
+  "required": {
+    "cases_per_phase": 24,
+    "phases": [
+      "first",
+      "warm"
+    ],
+    "paired_replicates": 3,
+    "devices": [
+      "cpu",
+      "cuda"
+    ],
+    "modes": [
+      "unchecked",
+      "constrained"
+    ],
+    "candidate_correct_per_phase": 23,
+    "baseline_correct_lost": 0,
+    "median_positive_baseline_delivery_ratio": 1.2,
+    "deadline_seconds": 1200,
+    "sampled_rss_safety_ceiling_bytes": 4294967296
+  },
+  "profiles": [
+    {
+      "profile": "qwen15-bfloat16",
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+      "precision": "bfloat16",
+      "status": "not-qualified-see-cohorts",
+      "qualification_complete": false,
+      "run_id": "edca9dd46423440db1d0e0d4aa1d8f66",
+      "source_identity": "source.84e15febd2ed1f3f1dc6f56290bd78b81d038d0f5f4c48b267d24923ecd30109",
+      "bindings": {
+        "source": "source.84e15febd2ed1f3f1dc6f56290bd78b81d038d0f5f4c48b267d24923ecd30109",
+        "operator_sha256": "6a75a777ce0bced644645cc0be8289e652b0aefa7c09d4a25f8828a59a4298d1",
+        "corpus_sha256": "8c017723bd8d44bff52f4d5ad8a66cc76eacd5dcbdce7b0097a3d294a7d4039b",
+        "supervisor_sha256": "68b01b27dc434694fd0b537acf14134f9b52d961e33f773ca1ab98ee19ac992f",
+        "model_verifier_sha256": "82e7d2144b964b0bcd3700f6b51f0ee4aff3674b5b9981a52488b47555f49e3a",
+        "standard_operator_sha256": "121939608d062e631201e9307921796db121185c61ee6416c8f3b8e52742f482",
+        "current_runtime_sha256": "d699621984df9a2606ecc31b7474acde1c55587f78be66f2b6241fabcdd236a5",
+        "baseline_commit": "442518c46fa9c2caf755ce1dd83b2f490b635330",
+        "baseline_algorithms": {
+          "constrained_json_decoder.py": "c96e814b515b5d0d101b583266889c0b7d016c846ee1f7740f31b8d588a6aaa5",
+          "example_generation.py": "e99d3f4cc527fdd39693bbbcf247d406b472e8fd493beb24678a07b4d5bd9a29"
+        }
+      },
+      "plan_sha256": "fec9d53b7021bcbb28134e0669351dfc254885605cc88a05ebbbceda6fa70a2b",
+      "report_path": ".local-codex/standard-generation-qualification/edca9dd46423440db1d0e0d4aa1d8f66/report.json",
+      "report_sha256": "b78d1aa73c8689b431e01327b630e7ed1e95a42876c6a0f378bf9eb9c3a0bd93",
+      "evidence_index_sha256": "355cef6cfd5233275fd3be1296d2b596d6da7a8028349903bf453b55f6952c16",
+      "started_at": "2026-10-22T22:54:25.453241+00:00",
+      "finished_at": "2026-10-22T23:07:03.332571+00:00",
+      "attempt_counts": {
+        "measured": 12,
+        "denied-memory": 12
+      },
+      "environment": {
+        "python": "3.12.8",
+        "platform": "win32",
+        "packages": {
+          "torch": "2.6.0+cu126",
+          "transformers": "4.51.3",
+          "accelerate": "1.14.0",
+          "safetensors": "0.5.2",
+          "pydantic": "2.10.6"
+        },
+        "cuda_runtime": "12.6",
+        "accelerator": "NVIDIA GeForce RTX 4060"
+      },
+      "comparisons": [
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "status": "measured-quality-passed",
+          "measurement_complete": true,
+          "quality_passed": true,
+          "throughput_target_met": false,
+          "pairs": [
+            {
+              "replicate": 1,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 0.9760510433774248
+            },
+            {
+              "replicate": 2,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 0.9553676653724188
+            },
+            {
+              "replicate": 3,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 0.9627110149502585
+            }
+          ],
+          "median_delivery_ratio": 0.9627110149502585
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "status": "measured-quality-passed",
+          "measurement_complete": true,
+          "quality_passed": true,
+          "throughput_target_met": false,
+          "pairs": [
+            {
+              "replicate": 1,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 1.018119471422914
+            },
+            {
+              "replicate": 2,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 1.0653250777927723
+            },
+            {
+              "replicate": 3,
+              "phases": [
+                {
+                  "phase": "first",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                },
+                {
+                  "phase": "warm",
+                  "baseline_correct": 23,
+                  "candidate_correct": 23,
+                  "lost_correct": 0,
+                  "baseline_invalid_rate": 0.0,
+                  "candidate_invalid_rate": 0.0,
+                  "baseline_repairs": 0,
+                  "candidate_repairs": 0,
+                  "candidate_nominal_95_count_interval": [
+                    0.7887983165430268,
+                    0.9989456475545302
+                  ]
+                }
+              ],
+              "delivery_ratio": 0.97344517292497
+            }
+          ],
+          "median_delivery_ratio": 1.018119471422914
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "status": "incomplete-or-failed-evidence",
+          "measurement_complete": false,
+          "quality_passed": false,
+          "throughput_target_met": false,
+          "pairs": []
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "status": "incomplete-or-failed-evidence",
+          "measurement_complete": false,
+          "quality_passed": false,
+          "throughput_target_met": false,
+          "pairs": []
+        }
+      ],
+      "cohorts": [
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 1,
+          "variant": "baseline",
+          "status": "measured",
+          "name": "cuda-unchecked-1-baseline",
+          "measurement_sha256": "fd70f78c995331f756a6b60f0e11770fc8fe237d963c8d3f01475dac51dfe3f4",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3902898176,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 57.86058099998627,
+          "primary_delivery_seconds": 50.862662600004114,
+          "correct_accepted_per_minute": 54.26377344232421,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3157847552,
+          "peak_reserved_vram_bytes": 3351248896
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 1,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-unchecked-1-candidate",
+          "measurement_sha256": "e6d4b68085664ab7e0b2588b152c60bbe9ee6b5e90593ff7f2e24bf2e79cb2da",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3900985344,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 59.70085810008459,
+          "primary_delivery_seconds": 52.110658499994315,
+          "correct_accepted_per_minute": 52.96421268597673,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3161974784,
+          "peak_reserved_vram_bytes": 3368026112
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 2,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-unchecked-2-candidate",
+          "measurement_sha256": "7029e99722e37263a2bef76473c1faa53381e45d10a72f420a7eac2db68cf3e7",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3914874880,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 60.449140599928796,
+          "primary_delivery_seconds": 53.39280860009603,
+          "correct_accepted_per_minute": 51.692354689036456,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3161974784,
+          "peak_reserved_vram_bytes": 3368026112
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 2,
+          "variant": "baseline",
+          "status": "measured",
+          "name": "cuda-unchecked-2-baseline",
+          "measurement_sha256": "faec3cb634f5d41e2d021971d4b0a5a7f311030ff6c9ae08f518580b67ca592d",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3914764288,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 58.206476200022735,
+          "primary_delivery_seconds": 51.00976289995015,
+          "correct_accepted_per_minute": 54.10728933230735,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3157847552,
+          "peak_reserved_vram_bytes": 3351248896
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 3,
+          "variant": "baseline",
+          "status": "measured",
+          "name": "cuda-unchecked-3-baseline",
+          "measurement_sha256": "7716e89663bf00dc8bc57c6e6e24a58bee433e6090c80599627dda7706280081",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3901841408,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 58.36991309991572,
+          "primary_delivery_seconds": 51.40342650003731,
+          "correct_accepted_per_minute": 53.692918700623906,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3157847552,
+          "peak_reserved_vram_bytes": 3351248896
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 3,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-unchecked-3-candidate",
+          "measurement_sha256": "15a983f0bb322fe8421bdb98a13ef0ba56f0ac7385def9b1eda2ad0c08cbf7a4",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3904233472,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 60.40412269998342,
+          "primary_delivery_seconds": 53.39445140003227,
+          "correct_accepted_per_minute": 51.690764257919355,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3161974784,
+          "peak_reserved_vram_bytes": 3368026112
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 1,
+          "variant": "baseline",
+          "status": "measured",
+          "name": "cuda-constrained-1-baseline",
+          "measurement_sha256": "d77514135eb512a94835b659c88a92edd6df428c2ac7cd1eab391dc26ec94eab",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3910115328,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 50.80070269992575,
+          "primary_delivery_seconds": 43.74262150004506,
+          "correct_accepted_per_minute": 63.09635557615487,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3157847552,
+          "peak_reserved_vram_bytes": 3351248896
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 1,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-constrained-1-candidate",
+          "measurement_sha256": "cad6ae9c550e015f9da35d4507691e4187ea4f0bc7e54d5fcc21c74f949f756c",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3903459328,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 49.82398560002912,
+          "primary_delivery_seconds": 42.96413410000969,
+          "correct_accepted_per_minute": 64.23962818790703,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3161974784,
+          "peak_reserved_vram_bytes": 3363831808
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 2,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-constrained-2-candidate",
+          "measurement_sha256": "5285abd30633c550af2cebde3e1d59d6b74036cb7ce7fa4be3696382ffdd6381",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3906170880,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 49.11595600005239,
+          "primary_delivery_seconds": 42.23140780010726,
+          "correct_accepted_per_minute": 65.35420303921268,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3161974784,
+          "peak_reserved_vram_bytes": 3363831808
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 2,
+          "variant": "baseline",
+          "status": "measured",
+          "name": "cuda-constrained-2-baseline",
+          "measurement_sha256": "862c3224c348fa2bb7a8fe67d1771be2cf601e5603c8d594eb8d653c0a81c0e6",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3910299648,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 51.90075379994232,
+          "primary_delivery_seconds": 44.99017779994756,
+          "correct_accepted_per_minute": 61.34672355091731,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3157847552,
+          "peak_reserved_vram_bytes": 3351248896
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 3,
+          "variant": "baseline",
+          "status": "measured",
+          "name": "cuda-constrained-3-baseline",
+          "measurement_sha256": "a3759bb892051d4326b39729935a6eceb0ccaf66f47f64abc9aa495ee5df1534",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3910987776,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 50.787298100069165,
+          "primary_delivery_seconds": 43.59620650007855,
+          "correct_accepted_per_minute": 63.308260547738875,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3157847552,
+          "peak_reserved_vram_bytes": 3351248896
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 3,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-constrained-3-candidate",
+          "measurement_sha256": "f172e44e6b018e82f5d1f8eed10ed8f98451fe508ccb3cd4b890a3fa51a91caf",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 23,
+              "wrong_accepted": 1,
+              "rejected_or_skipped": 0,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3913289728,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 52.089741999981925,
+          "primary_delivery_seconds": 44.78547709994018,
+          "correct_accepted_per_minute": 61.627120636472725,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 3161974784,
+          "peak_reserved_vram_bytes": 3363831808
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 1,
+          "variant": "baseline",
+          "status": "denied-memory",
+          "name": "cpu-unchecked-1-baseline",
+          "measurement_sha256": "65c94712e2ba67af9e61dad603a39bde95baae1e1e04e49956efd6289e7b3e30",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 473120768,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.801587199908681,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4753408000,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 1,
+          "variant": "candidate",
+          "status": "denied-memory",
+          "name": "cpu-unchecked-1-candidate",
+          "measurement_sha256": "01db6ec9fa436e8173ca3bc77362bf808e0e1b23c166490cbd9f26fd2b9f8e3b",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 471752704,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.604831799981184,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4725719040,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 2,
+          "variant": "candidate",
+          "status": "denied-memory",
+          "name": "cpu-unchecked-2-candidate",
+          "measurement_sha256": "6733f4bd5df9f93ded7c4a4614a7576fce0191eccdd46be7cbfd321fd4cf6dde",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 471302144,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.80834099999629,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4675731456,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 2,
+          "variant": "baseline",
+          "status": "denied-memory",
+          "name": "cpu-unchecked-2-baseline",
+          "measurement_sha256": "d3b1e644f5e19048d16cde83dc5aa14fd68ee61dfc103d55bea5593d75e0cb10",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 472989696,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.792926600086503,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4636340224,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 3,
+          "variant": "baseline",
+          "status": "denied-memory",
+          "name": "cpu-unchecked-3-baseline",
+          "measurement_sha256": "c5666340408abe8356614d429b050683657a2e0dc42d88b679ecc84f72d5a141",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 471814144,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.646543700015172,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4614074368,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 3,
+          "variant": "candidate",
+          "status": "denied-memory",
+          "name": "cpu-unchecked-3-candidate",
+          "measurement_sha256": "e064cb8798e850bfd80e0243d0db936c061dbecef5f28aab4e15da64540f5efc",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 471867392,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.596485999994911,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4635938816,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 1,
+          "variant": "baseline",
+          "status": "denied-memory",
+          "name": "cpu-constrained-1-baseline",
+          "measurement_sha256": "2c4d62c4f2fab27f10cce086bfaab6e0078064b8edd3877bf1b378a4812a645a",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 473280512,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.7804590000305325,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4613656576,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 1,
+          "variant": "candidate",
+          "status": "denied-memory",
+          "name": "cpu-constrained-1-candidate",
+          "measurement_sha256": "dbac599c68ad5837f272dabff42907be6bafce4465d9df0c578217bc9615bb24",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 473341952,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.584968699957244,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4609748992,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 2,
+          "variant": "candidate",
+          "status": "denied-memory",
+          "name": "cpu-constrained-2-candidate",
+          "measurement_sha256": "5d921bd36cf9a32b639070ee0dbd490f2bbb34522d17304c0d4e8e511fd89626",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 472424448,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.590398700092919,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4592996352,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 2,
+          "variant": "baseline",
+          "status": "denied-memory",
+          "name": "cpu-constrained-2-baseline",
+          "measurement_sha256": "df8204a8fc8b0b8000221ce224e675933ea2e4679cfbe040e2c9c2fc8a66e5f6",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 473534464,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.602332500042394,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4590530560,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 3,
+          "variant": "baseline",
+          "status": "denied-memory",
+          "name": "cpu-constrained-3-baseline",
+          "measurement_sha256": "0100149bc584cbca97497cf3df52836cec6952e1dcefee68e9463b484fe38f81",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 472403968,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.6413665999425575,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4583456768,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 3,
+          "variant": "candidate",
+          "status": "denied-memory",
+          "name": "cpu-constrained-3-candidate",
+          "measurement_sha256": "53a44106e91dfc0f8d89b49d11b85196a49b5c8952385c39a19f7b744dec258b",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 474357760,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 5.656034599989653,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 4557778944,
+              "requiredMemoryBytes": 4933075754
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile": "qwen05-float32",
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "precision": "float32",
+      "status": "not-qualified-see-cohorts",
+      "qualification_complete": false,
+      "run_id": "940de003c941491fbc1980b18996b1d8",
+      "source_identity": "source.84e15febd2ed1f3f1dc6f56290bd78b81d038d0f5f4c48b267d24923ecd30109",
+      "bindings": {
+        "source": "source.84e15febd2ed1f3f1dc6f56290bd78b81d038d0f5f4c48b267d24923ecd30109",
+        "operator_sha256": "6a75a777ce0bced644645cc0be8289e652b0aefa7c09d4a25f8828a59a4298d1",
+        "corpus_sha256": "8c017723bd8d44bff52f4d5ad8a66cc76eacd5dcbdce7b0097a3d294a7d4039b",
+        "supervisor_sha256": "68b01b27dc434694fd0b537acf14134f9b52d961e33f773ca1ab98ee19ac992f",
+        "model_verifier_sha256": "82e7d2144b964b0bcd3700f6b51f0ee4aff3674b5b9981a52488b47555f49e3a",
+        "standard_operator_sha256": "121939608d062e631201e9307921796db121185c61ee6416c8f3b8e52742f482",
+        "current_runtime_sha256": "d699621984df9a2606ecc31b7474acde1c55587f78be66f2b6241fabcdd236a5",
+        "baseline_commit": "442518c46fa9c2caf755ce1dd83b2f490b635330",
+        "baseline_algorithms": {
+          "constrained_json_decoder.py": "c96e814b515b5d0d101b583266889c0b7d016c846ee1f7740f31b8d588a6aaa5",
+          "example_generation.py": "e99d3f4cc527fdd39693bbbcf247d406b472e8fd493beb24678a07b4d5bd9a29"
+        }
+      },
+      "plan_sha256": "9fdd6a8150c8bd26eefa28702f3ae33e07ba6778e5f64d8551f41290549e84b5",
+      "report_path": ".local-codex/standard-generation-qualification/940de003c941491fbc1980b18996b1d8/report.json",
+      "report_sha256": "c35024683df566f44d658584b4c7e980f9f8245576b06e35d632fe0c5636f712",
+      "evidence_index_sha256": "2142aad8cf611f97d886919191981f1cf33199794d32f393c263b9f45ef782fc",
+      "started_at": "2026-10-22T23:07:54.742054+00:00",
+      "finished_at": "2026-10-22T23:33:58.965298+00:00",
+      "attempt_counts": {
+        "failed": 10,
+        "measured": 11,
+        "denied-memory": 3
+      },
+      "environment": {
+        "python": "3.12.8",
+        "platform": "win32",
+        "packages": {
+          "torch": "2.6.0+cu126",
+          "transformers": "4.51.3",
+          "accelerate": "1.14.0",
+          "safetensors": "0.5.2",
+          "pydantic": "2.10.6"
+        },
+        "cuda_runtime": "12.6",
+        "accelerator": "NVIDIA GeForce RTX 4060"
+      },
+      "comparisons": [
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "status": "incomplete-or-failed-evidence",
+          "measurement_complete": false,
+          "quality_passed": false,
+          "throughput_target_met": false,
+          "pairs": []
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "status": "incomplete-or-failed-evidence",
+          "measurement_complete": false,
+          "quality_passed": false,
+          "throughput_target_met": false,
+          "pairs": []
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "status": "incomplete-or-failed-evidence",
+          "measurement_complete": false,
+          "quality_passed": false,
+          "throughput_target_met": false,
+          "pairs": []
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "status": "incomplete-or-failed-evidence",
+          "measurement_complete": false,
+          "quality_passed": false,
+          "throughput_target_met": false,
+          "pairs": []
+        }
+      ],
+      "cohorts": [
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 1,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cuda-unchecked-1-baseline",
+          "measurement_sha256": "b079487acfc13454c0757cb93e7558e2cb09be2fc5a4d0dbdac62a3e3cfc7d1f",
+          "phases": {
+            "first": {
+              "recorded_cases": 2,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3781398528,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 10.692130299983546,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 1,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-unchecked-1-candidate",
+          "measurement_sha256": "976ad2816cf1d3cc21b9543072a0b8de557daa4dbf6d1a5e53705b9eb2e21d30",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 9,
+              "wrong_accepted": 2,
+              "rejected_or_skipped": 13,
+              "attempts": 37,
+              "repairs": 13,
+              "invalid_attempts": 26
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 9,
+              "wrong_accepted": 2,
+              "rejected_or_skipped": 13,
+              "attempts": 37,
+              "repairs": 13,
+              "invalid_attempts": 26
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3785850880,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 56.836569800041616,
+          "primary_delivery_seconds": 52.439209899981506,
+          "correct_accepted_per_minute": 20.595275978793513,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 2058731008,
+          "peak_reserved_vram_bytes": 2218786816
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 2,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-unchecked-2-candidate",
+          "measurement_sha256": "4d034c75920d725adcfdb77f951e896a28dd504edfca7b6e075313be62f082d8",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 9,
+              "wrong_accepted": 2,
+              "rejected_or_skipped": 13,
+              "attempts": 37,
+              "repairs": 13,
+              "invalid_attempts": 26
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 9,
+              "wrong_accepted": 2,
+              "rejected_or_skipped": 13,
+              "attempts": 37,
+              "repairs": 13,
+              "invalid_attempts": 26
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3795165184,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 59.781806600047275,
+          "primary_delivery_seconds": 55.25049899995793,
+          "correct_accepted_per_minute": 19.547334767072826,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 2058731008,
+          "peak_reserved_vram_bytes": 2218786816
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 2,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cuda-unchecked-2-baseline",
+          "measurement_sha256": "46f6f9fe248fc4da848538154b826ca08e9df31727cf11fd86f8849fedbbc16f",
+          "phases": {
+            "first": {
+              "recorded_cases": 2,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3797417984,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 10.808435600018129,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 3,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cuda-unchecked-3-baseline",
+          "measurement_sha256": "8f0037257a3c409b29c2acbb9c8a4a8c22a7349965787b649a2bb54347ebfe36",
+          "phases": {
+            "first": {
+              "recorded_cases": 2,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3780923392,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 10.181114099919796,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cuda",
+          "mode": "unchecked",
+          "replicate": 3,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-unchecked-3-candidate",
+          "measurement_sha256": "036f0c774fe78997ff6d3857fd0d0324553ca2bae004fa6bd684490b18b7cf4f",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 9,
+              "wrong_accepted": 2,
+              "rejected_or_skipped": 13,
+              "attempts": 37,
+              "repairs": 13,
+              "invalid_attempts": 26
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 9,
+              "wrong_accepted": 2,
+              "rejected_or_skipped": 13,
+              "attempts": 37,
+              "repairs": 13,
+              "invalid_attempts": 26
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3791187968,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 58.498655000003055,
+          "primary_delivery_seconds": 53.83659349998925,
+          "correct_accepted_per_minute": 20.060704620923232,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 2058731008,
+          "peak_reserved_vram_bytes": 2218786816
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 1,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cuda-constrained-1-baseline",
+          "measurement_sha256": "67192dfeac6fb1933ed432aa10d60c5d46e0ec668a05e53acc1ce842f916d29f",
+          "phases": {
+            "first": {
+              "recorded_cases": 3,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3783106560,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 14.19490030000452,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 1,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-constrained-1-candidate",
+          "measurement_sha256": "e61dc5fe8772e4c7ec78f5fa98f157464e882944fd859ddea1a7a783bf74aabc",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 10,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 10,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3802624000,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 40.832528200000525,
+          "primary_delivery_seconds": 36.35659119999036,
+          "correct_accepted_per_minute": 39.607673669922654,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 2049689600,
+          "peak_reserved_vram_bytes": 2214592512
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 2,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-constrained-2-candidate",
+          "measurement_sha256": "a12b3619ca8ed35a864c78885d270bfe37e924efab54ad0174f76bbfb44be1aa",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 10,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 10,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3787444224,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 41.23868870001752,
+          "primary_delivery_seconds": 36.70471630000975,
+          "correct_accepted_per_minute": 39.232015532554804,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 2049689600,
+          "peak_reserved_vram_bytes": 2214592512
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 2,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cuda-constrained-2-baseline",
+          "measurement_sha256": "53a4c7d3f293cb9244f6cafbd2e95dab43344bfe3dd205293a0ac6ae8ae02fc9",
+          "phases": {
+            "first": {
+              "recorded_cases": 3,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3799928832,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 13.693480200017802,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 3,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cuda-constrained-3-baseline",
+          "measurement_sha256": "612710e687a70ff85a4499385e1042f0e2fe4d4f2e498e1c2cd2f507c28bf130",
+          "phases": {
+            "first": {
+              "recorded_cases": 3,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3801546752,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 13.73404200002551,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cuda",
+          "mode": "constrained",
+          "replicate": 3,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cuda-constrained-3-candidate",
+          "measurement_sha256": "1cb55d9c3c104704c24404777362d69134aa3325c0021df5dd52f80c0f6b2603",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 10,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 10,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3783417856,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 40.499869100051,
+          "primary_delivery_seconds": 35.9361809999682,
+          "correct_accepted_per_minute": 40.07103592897849,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 2049689600,
+          "peak_reserved_vram_bytes": 2214592512
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 1,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cpu-unchecked-1-baseline",
+          "measurement_sha256": "90835223b09058ea20008b65cb29990bf729b1645eee10af84b3d2e612ce2959",
+          "phases": {
+            "first": {
+              "recorded_cases": 2,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3538022400,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 14.527885099989362,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 1,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cpu-unchecked-1-candidate",
+          "measurement_sha256": "3b7cb5e590e0057a6888d9067fe7e325362f4b81a0e3000259b1ab0b906194f8",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 0,
+              "rejected_or_skipped": 12,
+              "attempts": 36,
+              "repairs": 12,
+              "invalid_attempts": 24
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 0,
+              "rejected_or_skipped": 12,
+              "attempts": 36,
+              "repairs": 12,
+              "invalid_attempts": 24
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3549573120,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 253.2357107999269,
+          "primary_delivery_seconds": 248.7919348999858,
+          "correct_accepted_per_minute": 5.787968973266272,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 0,
+          "peak_reserved_vram_bytes": 0
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 2,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cpu-unchecked-2-candidate",
+          "measurement_sha256": "b5820b17c2b2d7482e184274e566dda9406c7269d8367317741f1f1afc5c0028",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 0,
+              "rejected_or_skipped": 12,
+              "attempts": 36,
+              "repairs": 12,
+              "invalid_attempts": 24
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 0,
+              "rejected_or_skipped": 12,
+              "attempts": 36,
+              "repairs": 12,
+              "invalid_attempts": 24
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3560267776,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 253.91963639995083,
+          "primary_delivery_seconds": 249.36260670004413,
+          "correct_accepted_per_minute": 5.774723079199128,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 0,
+          "peak_reserved_vram_bytes": 0
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 2,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cpu-unchecked-2-baseline",
+          "measurement_sha256": "e8e72dd8b90ba6d1c65a3b1de8149c54eec2895acf6d94975f52fa8ef2c75bb5",
+          "phases": {
+            "first": {
+              "recorded_cases": 2,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3556864000,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 14.597034799982794,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 3,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cpu-unchecked-3-baseline",
+          "measurement_sha256": "7992d7ee03435422028fa0b32fac1ad0258a9ea2629f6407e9334b0b736f0511",
+          "phases": {
+            "first": {
+              "recorded_cases": 2,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3542835200,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 14.494990699924529,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cpu",
+          "mode": "unchecked",
+          "replicate": 3,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cpu-unchecked-3-candidate",
+          "measurement_sha256": "e1b2a61effe250414d53cb21ec2441569a0b10c51b066c41820477b252964492",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 0,
+              "rejected_or_skipped": 12,
+              "attempts": 36,
+              "repairs": 12,
+              "invalid_attempts": 24
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 12,
+              "wrong_accepted": 0,
+              "rejected_or_skipped": 12,
+              "attempts": 36,
+              "repairs": 12,
+              "invalid_attempts": 24
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3558957056,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 254.1165742999874,
+          "primary_delivery_seconds": 249.7512388000032,
+          "correct_accepted_per_minute": 5.765737166785903,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 0,
+          "peak_reserved_vram_bytes": 0
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 1,
+          "variant": "baseline",
+          "status": "failed",
+          "name": "cpu-constrained-1-baseline",
+          "measurement_sha256": "df8096b86675264f7f6aebf680adbd09b304f97a9cfdd49d87f8043d13d0dfb5",
+          "phases": {
+            "first": {
+              "recorded_cases": 3,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3543031808,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 21.395889800041914,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "ValueError",
+          "resource_events": []
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 1,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cpu-constrained-1-candidate",
+          "measurement_sha256": "71db94cbac044d294e571dc4433edf0bea9c142af5b4bfb5aa5c1ae1790f3842",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 10,
+              "wrong_accepted": 12,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 10,
+              "wrong_accepted": 12,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3559944192,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 162.70382080005948,
+          "primary_delivery_seconds": 157.45135520002805,
+          "correct_accepted_per_minute": 7.621401533670548,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 0,
+          "peak_reserved_vram_bytes": 0
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 2,
+          "variant": "candidate",
+          "status": "measured",
+          "name": "cpu-constrained-2-candidate",
+          "measurement_sha256": "35a0fcf9cdc1331fe404fce277fed6827b9f80910364ce156da361c3cf3b1ffa",
+          "phases": {
+            "first": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 10,
+              "wrong_accepted": 12,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            },
+            "warm": {
+              "recorded_cases": 24,
+              "complete": true,
+              "correct": 10,
+              "wrong_accepted": 12,
+              "rejected_or_skipped": 2,
+              "attempts": 24,
+              "repairs": 0,
+              "invalid_attempts": 0
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 3552169984,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 162.0110591999255,
+          "primary_delivery_seconds": 156.7824430000037,
+          "correct_accepted_per_minute": 7.653918238791391,
+          "error_type": null,
+          "resource_events": [],
+          "peak_allocated_vram_bytes": 0,
+          "peak_reserved_vram_bytes": 0
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 2,
+          "variant": "baseline",
+          "status": "denied-memory",
+          "name": "cpu-constrained-2-baseline",
+          "measurement_sha256": "d897dd017fafd4797d9f4163d1081137640291cfbac3e25f515f5d3426656081",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 472260608,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 4.61341619992163,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 3406635008,
+              "requiredMemoryBytes": 3543986384
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 3,
+          "variant": "baseline",
+          "status": "denied-memory",
+          "name": "cpu-constrained-3-baseline",
+          "measurement_sha256": "c59a29684b6b957f00c6908f569d77d2067b0dd6f34a6e3b7188d2a7f20a5280",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 472326144,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 4.177914500003681,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 3405099008,
+              "requiredMemoryBytes": 3543986384
+            }
+          ]
+        },
+        {
+          "device": "cpu",
+          "mode": "constrained",
+          "replicate": 3,
+          "variant": "candidate",
+          "status": "denied-memory",
+          "name": "cpu-constrained-3-candidate",
+          "measurement_sha256": "ce936c196d836c875634f6897d32b62f7214a0217fcb786ba9a0ece8d90ea175",
+          "phases": {
+            "first": {
+              "recorded_cases": 0,
+              "complete": false
+            },
+            "warm": {
+              "recorded_cases": 0,
+              "complete": false
+            }
+          },
+          "native_exit_code": 0,
+          "peak_rss_bytes": 471228416,
+          "cleanup_passed": true,
+          "source_stable": true,
+          "launcher_elapsed_seconds": 4.198596199974418,
+          "primary_delivery_seconds": null,
+          "correct_accepted_per_minute": null,
+          "error_type": "GenerationInsufficientResourcesError",
+          "resource_events": [
+            {
+              "event": "runtime.generation_model.resources_insufficient",
+              "availableMemoryBytes": 3366293504,
+              "requiredMemoryBytes": 3543986384
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "preserved_gaps": [
+    "Neither installed model profile meets the complete original quality/throughput/device matrix. Larger-model CPU admission and the final smaller-model CPU constrained repetition remain unavailable on this observed host.",
+    "Earlier failed, denied and partial trials, including supplied608a, remain unchanged. Fixed exposed cases are regression evidence, not fresh validation or population accuracy.",
+    "Native file/staging protection, offload recovery, whole-host model outcomes and optional adaptive/explicit-override visual-builder qualification remain separate and pending.",
+    "The4GiB sampled worker safety ceiling is not an approved generative resource-budget alternative. Retrieval-only budgets do not qualify generation. Human acceptance stays offline."
+  ],
+  "evaluated_at": "2026-10-22T23:35:12.230266+00:00",
+  "attempt_counts": {
+    "measured": 23,
+    "denied-memory": 15,
+    "failed": 10
+  },
+  "child_attempts": 48,
+  "all_native_exit_codes_observed_zero": true,
+  "all_model_cleanup_observed": true,
+  "author_replay_sha256": "eaf2d9faea37996b77dbdeed72a47337482ed185ab4cb921ee7b8cec102e16a9",
+  "conclusions": [
+    "1.5B BF16 GPU: both decoder cohorts completed all three pairs and scored23of24 in every phase, with zero lost baseline-correct cases. Median delivery ratios0.9627110149502585 unchecked and1.018119471422914 constrained both miss1.20. All12 CPU attempts were denied by the unchanged memory guard.",
+    "0.5B Float32: all6 GPU and5 CPU candidate runs completed. Unchecked GPU9of24 and CPU12of24; constrained GPU12of24 and CPU10of24 in each measured phase. Third constrained CPU candidate was denied. Ten historical baseline runs stopped at the fixed finite field/label-contract guard; last two constrained CPU baselines were denied. No matched throughput gain or complete profile qualifies.",
+    "All48 workers have confirmed native exit0 and observed empty model caches/retained in-process leases after cleanup. Process success does not turn failed, denied or incomplete model measurements into passes."
+  ]
+}

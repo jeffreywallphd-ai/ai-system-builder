@@ -1,3 +1,4 @@
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
 import { normalizeAssetCompositionPlan, normalizeAssetCompositionRelationshipId, normalizeConnectCompositionNodesCommand, type ConnectCompositionNodesCommand, type ConnectCompositionNodesResult } from "../../../contracts/asset-composition";
 import type { AssetCompositionPlanRepositoryPort } from "../../ports/asset-composition";
 import { createAssetCompositionRelationship } from "./asset-composition-relationship-factory.service";
@@ -7,9 +8,10 @@ import { recomputeAssetCompositionPlanningSummary } from "./asset-composition-pl
 import { guardSimpleCompositionRelationship } from "./asset-composition-simple-relationship-guard.service";
 
 export class ConnectCompositionNodesUseCase {
-  constructor(private readonly d: { repository: AssetCompositionPlanRepositoryPort; generateRelationshipId: () => string; now?: () => string }) {}
+  constructor(private readonly d: { repository: AssetCompositionPlanRepositoryPort; workspaceAccess: WorkspaceAssetAccessPort; generateRelationshipId: () => string; now?: () => string }) {}
   async execute(command: ConnectCompositionNodesCommand): Promise<ConnectCompositionNodesResult> {
     let c; try { c = normalizeConnectCompositionNodesCommand(command); } catch { return assetCompositionPlanFailure("validation", "asset-composition-relationship-unsupported"); }
+    try { await this.d.workspaceAccess.authorize(c.targetWorkspaceId, "asset-composition:connect-composition-nodes", "asset:write"); } catch { return assetCompositionPlanFailure("blocked", "asset-composition-workspace-invalid"); }
     const now = (this.d.now ?? (() => new Date().toISOString()))();
     try {
       const plan = await this.d.repository.readAssetCompositionPlanRecord(c.targetWorkspaceId, c.planId);

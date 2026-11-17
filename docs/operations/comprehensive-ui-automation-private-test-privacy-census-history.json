@@ -1,0 +1,234 @@
+{
+ "schema_version": "historical-ui-census-update-v1",
+ "scope": "historical-source-update-only-no-execution",
+ "roadmap_id": "comprehensive-ui-automation",
+ "prior_commit": "26000fe16c1eab3b1f071960493c40b30a264fc4",
+ "prior_census_path": "docs/operations/comprehensive-ui-automation-current-census.json",
+ "prior_census_git_sha256": "f0ef62a53f14ca2b4e9a0c04fbb8809cf12114f3dc5326107f5f79fa9b910dc6",
+ "prior_census_working_sha256": "f0ef62a53f14ca2b4e9a0c04fbb8809cf12114f3dc5326107f5f79fa9b910dc6",
+ "prior_source_baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+ "source_baseline": "608679a6095ef5617921e504bf208858df6a7c49",
+ "old_archive": {
+  "path": "docs/operations/comprehensive-ui-automation-census-source-history.json",
+  "sha256": "658a1ec6e35cb74385177abf1a751c306b34b6414456d178b7d7189cad74bf23",
+  "bytes": 13560
+ },
+ "prior_history": {
+  "path": "docs/operations/comprehensive-ui-automation-model-startup-report-census-history.json",
+  "sha256": "429435a3199107602b3f592623dbfd1c40586f84ed5bf2cc03b59f347af1a625",
+  "bytes": 13223
+ },
+ "reason": "Wire only the three existing private-provider bodies to recording-free test support. Preserve their literal titles, real phase functions, assertions and cleanup. Keep all180 authentic608 Git pins, all unrelated facts and earlier histories. This two-source definition update supplies no actual provider UI, native, system or parent qualification.",
+ "preserved_fields_sha256": "845bf0d2019604d92eb52a8642bacd53e143ae953da64c9ac039873ba3c22dc1",
+ "qualification_effect": {
+  "executed_tests": 0,
+  "actual_host_pass": false,
+  "parent_qualification_granted": false,
+  "full_testing_status": "deferred-by-user"
+ },
+ "sources": [
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-operational-ui.e2e.spec.ts",
+    "facts": {
+     "sha256": "677cbba4637b13dbb4e9cb5125e3d6277cf2e43323e458b9f2cc321411cd9560",
+     "bytes": 15319,
+     "cases": [
+      {
+       "name": "packaged desktop preserves operational runtime controls and shell recovery",
+       "line": 43
+      },
+      {
+       "name": "packaged desktop preserves operational controls at native 400 percent zoom",
+       "line": 48
+      },
+      {
+       "name": "packaged desktop trains one local adapter, reviews privately, saves and reopens it",
+       "line": 53
+      },
+      {
+       "name": "packaged desktop model reference searches, saves and survives reload and workspace changes",
+       "line": 123
+      },
+      {
+       "name": "packaged desktop artifact local lifecycle preserves actual bytes and scope",
+       "line": 136
+      },
+      {
+       "name": "packaged desktop provider source registers an exact reference and optional localized bytes",
+       "line": 163
+      },
+      {
+       "name": "packaged desktop private artifact publication records local branch and remote commit",
+       "line": 168
+      }
+     ],
+     "dynamicCases": 9,
+     "functions": [
+      {
+       "name": "runOperationalDesktop",
+       "line": 22
+      },
+      {
+       "name": "runProviderDesktopCase",
+       "line": 152
+      }
+     ],
+     "assertionCount": 4,
+     "assertionDigest": "fca721470a47ea0237d7b865250d4ab4ddfaca9d1971ec294ec0737e0deb8962",
+     "assertionExamples": [
+      {
+       "line": 30,
+       "kind": "expect",
+       "sha256": "1673def00c569ef42386fc6a651365d9287e2f34bb1e81cc09f441d4519d9ec3"
+      },
+      {
+       "line": 34,
+       "kind": "expect",
+       "sha256": "81eda617bbdfaca7f7604dc019f3fd67e5c7239d640c454fae4733ec46b21388"
+      },
+      {
+       "line": 165,
+       "kind": "expect",
+       "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
+      },
+      {
+       "line": 170,
+       "kind": "expect",
+       "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
+      }
+     ],
+     "modifiers": [
+      {
+       "line": 55,
+       "kind": "skip"
+      },
+      {
+       "line": 82,
+       "kind": "skip"
+      },
+      {
+       "line": 107,
+       "kind": "skip"
+      },
+      {
+       "line": 125,
+       "kind": "skip"
+      },
+      {
+       "line": 138,
+       "kind": "skip"
+      },
+      {
+       "line": 164,
+       "kind": "skip"
+      },
+      {
+       "line": 169,
+       "kind": "skip"
+      }
+     ]
+    },
+    "committed_sha256": "677cbba4637b13dbb4e9cb5125e3d6277cf2e43323e458b9f2cc321411cd9560"
+   },
+   "prior_row_sha256": "9ab2d6a22c50fb4e51b6423836cd07bbb822970993444e4a582acb40c3aa5e21",
+   "current_row_sha256": "0c73b6b726fb4110595ff4a9453ed81ec098847818d72ce135c089d6d0272827"
+  },
+  {
+   "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+   "prior_row": {
+    "path": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-operational-ui.e2e.spec.ts",
+    "facts": {
+     "sha256": "46f1d1db9960f951648a128f0b77b792a234f5d14bdb3f51969ee744ff6100b9",
+     "bytes": 9962,
+     "cases": [
+      {
+       "name": "thin client preserves Security refresh recovery and shell controls",
+       "line": 24
+      },
+      {
+       "name": "thin client preserves operational controls at native 400 percent zoom",
+       "line": 30
+      },
+      {
+       "name": "opens canonical details and linked work without changing qualification",
+       "line": 49
+      },
+      {
+       "name": "refreshes a controlled current copy and recovers from connection refusal",
+       "line": 53
+      },
+      {
+       "name": "keeps theme, keyboard and narrow review usable when storage refuses access",
+       "line": 57
+      },
+      {
+       "name": "thin client model reference searches, saves and survives reload and workspace changes",
+       "line": 98
+      },
+      {
+       "name": "thin client provider source registers an exact reference and optional localized bytes",
+       "line": 123
+      }
+     ],
+     "dynamicCases": 8,
+     "functions": [
+      {
+       "name": "operationalBrowserConfiguration",
+       "line": 12
+      },
+      {
+       "name": "prepareOperationalBrowser",
+       "line": 18
+      }
+     ],
+     "assertionCount": 3,
+     "assertionDigest": "568f9b35345cc296902495db8de0d9b59451f24c8c93135db3407b6a20031876",
+     "assertionExamples": [
+      {
+       "line": 75,
+       "kind": "expect",
+       "sha256": "3a1ae67649922b0db4d00006d56227124bea624840c633b78ca501790ef74c73"
+      },
+      {
+       "line": 76,
+       "kind": "expect",
+       "sha256": "b11eff56bb97648199edeafbb1b0d800f604be67d532bda2b70a0a0c33717400"
+      },
+      {
+       "line": 132,
+       "kind": "expect",
+       "sha256": "b253130e9c105252180a63a865abafeacff3bd3b0f7a45171dad5a2065c00338"
+      }
+     ],
+     "modifiers": [
+      {
+       "line": 65,
+       "kind": "skip"
+      },
+      {
+       "line": 86,
+       "kind": "skip"
+      },
+      {
+       "line": 100,
+       "kind": "skip"
+      },
+      {
+       "line": 113,
+       "kind": "skip"
+      },
+      {
+       "line": 124,
+       "kind": "skip"
+      }
+     ]
+    },
+    "committed_sha256": "46f1d1db9960f951648a128f0b77b792a234f5d14bdb3f51969ee744ff6100b9"
+   },
+   "prior_row_sha256": "566bb31eb8ce68b0374093d038fb55440a60d1c45b24af5c796654666bce268c",
+   "current_row_sha256": "e2259030dd176f6fecc27c95177a09b2465ed7b27324bdb59402409586ea4eaf"
+  }
+ ]
+}

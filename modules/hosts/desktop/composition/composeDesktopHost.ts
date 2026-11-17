@@ -1,4 +1,37 @@
-import { randomUUID } from "node:crypto";
+import { createPythonRuntimeStartupDiagnostics } from "../../../adapters/runtime/python";
+import { captureStudioStart, captureStudioPropose, captureStudioReview, captureStudioDraftCreate, captureStudioDraftUpdate, captureStudioDraftRead, captureStudioDraftList, captureStudioDraftTransition } from "../../../application/services/asset-studio/capture-studio-requests";
+import { capturePackageInspection, capturePackageAdmission, capturePackageActivation } from "../../../application/services/asset-package/capture-package-commands";
+import { requireWorkspaceAssetAccess } from "../../../application/services/asset/workspace-asset-access.service";
+import { createWorkspaceAssetAuthoringReaders } from "../../../application/services/asset/workspace-asset-authoring-readers";
+import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
+import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
+import { asyncLazyObject } from "./lazyProxy";
+import { composeDesktopHeadlessReads, type DesktopHeadlessReadHandler } from "./composeDesktopHeadlessReads";
+import { composeDesktopHeadlessAuthoring } from "./composeDesktopHeadlessAuthoring";
+import { composeDesktopHeadlessConversation } from "./composeDesktopHeadlessConversation";
+import { composeDesktopHeadlessPlanReview } from "./composeDesktopHeadlessPlanReview";
+import { composeDesktopHeadlessPlanApprovals } from "./composeDesktopHeadlessPlanApprovals";
+import { composeDesktopHeadlessLocalFileSelection } from "./composeDesktopHeadlessLocalFileSelection";
+import { registerDesktopSystemChangePoll } from "./registerDesktopSystemChangePoll";
+import { registerDesktopHeadlessTaskList } from "./registerDesktopHeadlessTaskList";
+import { composeDesktopUiControl, type DesktopUiControlOwner } from "./composeDesktopUiControl";
+import { normalizeExecutionRunId } from "../../../contracts/execution-runs";
+import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../contracts/system-builder";
+import { composeDesktopHeadlessConnection, type DesktopHeadlessConnection } from "./composeDesktopHeadlessConnection";
+import { createStoredDesktopHeadlessAudit, type DesktopHeadlessAudit } from "./desktopHeadlessAudit";
+import { isHeadlessHostIncarnationId } from "../../../contracts/headless";
+import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
+import { WorkspaceAssetAccessService } from "../../../application/services/asset/workspace-asset-access.service";
+import { composeWorkspaceSummary } from "../../shared/composition/composeWorkspaceSummary";
+import { CountDatasetReviewTargetsUseCase } from "../../../application/use-cases/dataset-review";
+import { createStructuredAssetDerivedCustomizationRepository } from "../../../adapters/persistence/asset-authoring/createStructuredAssetDerivedCustomizationRepository";
+import { createStructuredAssetStudioAssetDraftRepository } from "../../../adapters/persistence/asset-studio/createStructuredAssetStudioAssetDraftRepository";
+import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
+import { createHmac, randomBytes, randomUUID } from "node:crypto";
+import { createStructuredHeadlessOperationStore } from "../../../adapters/persistence/system-builder";
+import { HeadlessCommittedChangesUseCase } from "../../../application/use-cases/system-builder/headless-committed-changes.use-case";
+import { HeadlessConversationStatusUseCase } from "../../../application/use-cases/system-run-workflow/headless-conversation-status.use-case";
+import { HeadlessWorkflowMetadataUseCase } from "../../../application/use-cases/system-run-workflow/headless-workflow-metadata.use-case";
 import { cpus, freemem, totalmem } from "node:os";
 import path from "node:path";
 import type { LoggingPort } from "../../../application/ports/logging";
@@ -98,6 +131,8 @@ import {
 } from "../../../adapters/persistence/runtime-readiness";
 import { createLocalExecutionPlanRepositoryAdapter } from "../../../adapters/persistence/execution-plans";
 import { createLocalConversationRepositoryAdapters } from "../../../adapters/persistence/conversations";
+import { createLocalDelegatedConversationTurnAdmission } from "../../../adapters/persistence/conversations/createLocalDelegatedConversationTurnAdmission";
+import { normalizeExecutionPlanId } from "../../../contracts/execution-plans";
 import { createLocalExecutionRunRepositoryAdapters } from "../../../adapters/persistence/execution-runs";
 import { composeExecutionPlanServices } from "../../shared/composition/composeExecutionPlanServices";
 import { composeConversationExecutionServices } from "../../shared/composition/composeConversationExecutionServices";
@@ -130,6 +165,8 @@ import type {
 } from "../../../contracts/ipc";
 import {
   PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+  normalizePythonRuntimeAcceleratorMemoryBytes,
+  supportsDatasetPreparationOffload,
   type DatasetPreparationGenerationCapacitySnapshot,
 } from "../../../contracts/runtime";
 import type { HuggingFaceFetchImplementation } from "../../../adapters/storage/huggingface";
@@ -171,6 +208,8 @@ import {
 } from "../../../adapters/storage/system-build";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
 import { composeSystemData } from "../../shared/composition/composeSystemData";
+import { composePublishedSystemForms } from "../../shared/composition/composePublishedSystemForms";
+import { createStructuredOrganizationRepositories } from "../../../adapters/persistence/organization";
 import { composeSystemReview } from "../../shared/composition/composeSystemReview";
 import {
   composeSystemDeployment,
@@ -237,9 +276,10 @@ export const DESKTOP_FEATURE_LIFECYCLE_POLICIES = {
   "comfyui-image-runtime": "explicit-unload-only",
   "runtime-task-registry": "explicit-unload-only",
   "model-registry": "retained",
-  "image-generation": "disposable",
+  "image-generation": "retained",
   "website-ingestion": "disposable",
-  "dataset-preparation": "disposable",
+  "dataset-preparation": "retained",
+  "context-management": "retained",
 } as const satisfies Record<string, DesktopFeatureLifecyclePolicy>;
 
 export type DesktopFeatureLifecycleKey =
@@ -253,6 +293,7 @@ export interface ComposeDesktopHostLoggingOptions {
 }
 
 export interface ComposeDesktopHostOptions {
+  pythonRuntimeLaunch?: import("./desktopPythonRuntimeInstallation").DesktopPythonRuntimeLaunch;
   localIdentity?: LocalIdentityProfile;
   persistence?: {
     documents: StructuredDocumentStore;
@@ -298,6 +339,7 @@ export interface DesktopHostComposition {
   clearHuggingFaceToken: () => HuggingFaceTokenStatus;
   startPythonRuntime: () => Promise<void>;
   stopPythonRuntime: () => Promise<void>;
+  shutdownBackgroundTasks: () => Promise<void>;
   restartPythonRuntime: () => Promise<void>;
   unloadPythonRuntimeModel: () => Promise<void>;
   clearPythonRuntimeLogs: () => Promise<void>;
@@ -311,6 +353,14 @@ export interface DesktopHostComposition {
   registerDesktopIpc: (
     options: RegisterDesktopArtifactUploadIpcOptions,
   ) => void;
+  /** Main-process use only; the future connector must authenticate every request. */
+  getHeadlessReadHandler: () => DesktopHeadlessReadHandler | undefined;
+  /** Interactive main-process entry point. Never expose the object to a renderer. */
+  getHeadlessConnection: () => DesktopHeadlessConnection | undefined;
+  getHeadlessPlanApprovals: () => ReturnType<typeof composeDesktopHeadlessPlanApprovals> | undefined;
+  getHeadlessLocalFileSelection: () => ReturnType<typeof composeDesktopHeadlessLocalFileSelection> | undefined;
+  getUiControlOwner: () => DesktopUiControlOwner | undefined;
+  disableWindowTakeover: () => void;
   registerArtifactUploadIpc: (
     options: RegisterDesktopArtifactUploadIpcOptions,
   ) => void;
@@ -477,6 +527,7 @@ export function composeDesktopHost(
   const readSharedModelStorageDirectory = () =>
     readRuntimeSettingString(SHARED_MODEL_STORAGE_DIRECTORY_SETTING_KEY);
 
+  const pythonStartupDiagnostics = createPythonRuntimeStartupDiagnostics();
   let pythonRuntimeFoundation: DesktopPythonRuntimeFeature | undefined;
   let pythonRuntimeFoundationPromise:
     Promise<DesktopPythonRuntimeFeature> | undefined;
@@ -494,18 +545,22 @@ export function composeDesktopHost(
           "desktop.host.python-runtime-foundation.compose.before",
         );
         const feature = await module.composeDesktopPythonRuntimeFeature({
+          launch: options.pythonRuntimeLaunch,
           loggingPort,
           now,
           runtimeLogs,
           recordRuntimeLog,
+          startupDiagnostics: pythonStartupDiagnostics,
         });
+        const startOwnedPython = feature.supervisor.start.bind(feature.supervisor);
+        feature.supervisor.start = async () => { taskReconciler.assertAccepting(); await startOwnedPython(); };
         recordHostMemorySnapshot(
           "desktop.host.python-runtime-foundation.compose.after",
           { baseUrlConfigured: Boolean(resolvePythonRuntimeBaseUrl()) },
         );
         pythonRuntimeFoundation = feature;
         return feature;
-      })();
+      })().catch(error => { pythonStartupDiagnostics.compositionFailed(); throw error; });
     }
     return pythonRuntimeFoundationPromise;
   };
@@ -514,14 +569,18 @@ export function composeDesktopHost(
     async (): Promise<DesktopPythonRuntimeStatusPayload> => {
       const createGenerationCapacity = (
         decoderAvailable: boolean,
+        offloadAvailable = false,
+        totalAcceleratorMemoryBytes?: number,
       ): DatasetPreparationGenerationCapacitySnapshot => ({
         schemaVersion: "1",
         capturedAt: (now ?? (() => new Date().toISOString()))(),
         decoderAvailable,
+        offloadAvailable,
         schemaSupported: true,
         logicalProcessorCount: cpus().length,
         totalSystemMemoryBytes: totalmem(),
         availableSystemMemoryBytes: freemem(),
+        ...(totalAcceleratorMemoryBytes !== undefined ? { totalAcceleratorMemoryBytes } : {}),
       });
       if (!pythonRuntimeFoundationPromise) {
         const status = createUnavailablePythonRuntimeStatus({
@@ -541,18 +600,24 @@ export function composeDesktopHost(
             message:
               "Python runtime health changed: supervisor=stopped, status=unavailable, healthy=false.",
           });
-          return { ...status, logs: [...runtimeLogs] };
+          return { ...status, logs: [...runtimeLogs], startupDiagnostics: pythonStartupDiagnostics.read() };
         }
-        return status;
+        return { ...status, startupDiagnostics: pythonStartupDiagnostics.read() };
       }
-      const resolvedPythonRuntimeFoundation =
-        await pythonRuntimeFoundationPromise;
+      let resolvedPythonRuntimeFoundation: DesktopPythonRuntimeFeature;
+      try { resolvedPythonRuntimeFoundation = await pythonRuntimeFoundationPromise; }
+      catch {
+        return { ...createUnavailablePythonRuntimeStatus({ runtimeLogs,
+          memoryUsagePercent: readMemoryUsagePercent(), cpuUsagePercent: readCpuUsagePercent(),
+          generationCapacity: createGenerationCapacity(false) }), supervisorStatus: "failed", startupDiagnostics: pythonStartupDiagnostics.read() };
+      }
       const supervisorStatus =
         resolvedPythonRuntimeFoundation.supervisor.getStatus();
       let healthy = false;
       let runtimeStatus =
         supervisorStatus === "ready" ? "ready" : supervisorStatus;
       let capabilities: string[] = [];
+      let totalAcceleratorMemoryBytes: number | undefined;
       let loadedModels: DesktopPythonRuntimeStatusPayload["loadedModels"] = [];
       let activeTaskCount = 0;
       if (supervisorStatus === "starting" || supervisorStatus === "ready") {
@@ -565,6 +630,7 @@ export function composeDesktopHost(
           healthy = health.healthy;
           runtimeStatus = health.status.status;
           capabilities = runtimeCapabilities.capabilities;
+          totalAcceleratorMemoryBytes = normalizePythonRuntimeAcceleratorMemoryBytes(runtimeCapabilities.totalAcceleratorMemoryBytes);
           loadedModels = modelStatus.loadedModels;
           activeTaskCount = modelStatus.activeTaskCount;
         } catch (error) {
@@ -608,6 +674,9 @@ export function composeDesktopHost(
           capabilities.includes(
             PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
           ),
+          supervisorStatus === "ready" && healthy &&
+            supportsDatasetPreparationOffload(capabilities),
+          totalAcceleratorMemoryBytes,
         ),
         systemResources: {
           memoryUsagePercent: readMemoryUsagePercent(),
@@ -615,6 +684,7 @@ export function composeDesktopHost(
           gpuUsagePercent: 0,
         },
         logs: [...runtimeLogs],
+        startupDiagnostics: pythonStartupDiagnostics.read(),
       };
     };
 
@@ -640,6 +710,19 @@ export function composeDesktopHost(
       : undefined);
   recordHostMemorySnapshot("desktop.host.compose.return");
 
+  const taskReconciler = createOwnedTaskReconciler();
+  let headlessReadHandler: DesktopHeadlessReadHandler | undefined;
+  let headlessConnection: DesktopHeadlessConnection | undefined;
+  let headlessPlanApprovals: ReturnType<typeof composeDesktopHeadlessPlanApprovals> | undefined;
+  let headlessLocalFileSelection: ReturnType<typeof composeDesktopHeadlessLocalFileSelection> | undefined;
+  let headlessConversation: ReturnType<typeof composeDesktopHeadlessConversation> | undefined;
+  let uiControlOwner: DesktopUiControlOwner | undefined;
+  let headlessAudit: DesktopHeadlessAudit | undefined;
+  let headlessReadAdmissionClosed = false;
+  let closeImageAdmission: (() => void) | undefined;
+  let stopOwnedImageRuntime: (() => Promise<void>) | undefined;
+  let readComfyUiLifecycleState: Parameters<typeof createDesktopRuntimeReadinessService>[0]["readComfyUiLifecycleState"] = () => "uninitialized";
+  let readComfyUiInstallStatus: Parameters<typeof createDesktopRuntimeReadinessService>[0]["readComfyUiInstallStatus"] = async () => "unknown";
   return {
     loggingPort,
     loggingConfig,
@@ -654,6 +737,26 @@ export function composeDesktopHost(
     async startPythonRuntime() {
       recordRuntimeLog({ level: "info", message: "Starting Python runtime." });
       await (await getPythonRuntimeFoundation()).supervisor.start();
+    },
+    async shutdownBackgroundTasks() {
+      headlessReadAdmissionClosed = true;
+      headlessPlanApprovals = undefined;
+      uiControlOwner?.close();
+      uiControlOwner = undefined;
+      headlessReadHandler = undefined;
+      headlessConversation?.stopAdmission();
+      taskReconciler.stopAccepting();
+      closeImageAdmission?.();
+      await headlessConnection?.close();
+      headlessConnection = undefined;
+      await shutdownOwnedTasks({ reconciler: taskReconciler,
+        stopPython: async () => { if (pythonRuntimeFoundationPromise) await (await pythonRuntimeFoundationPromise).supervisor.stop(); },
+        stopImage: async () => { await stopOwnedImageRuntime?.(); },
+      });
+      await headlessConversation?.drain();
+      headlessConversation = undefined;
+      await headlessAudit?.close();
+      headlessAudit = undefined;
     },
     async stopPythonRuntime() {
       if (!pythonRuntimeFoundationPromise) return;
@@ -700,6 +803,16 @@ export function composeDesktopHost(
       return internalAssetRegistry;
     },
     getFeatureLifecycleState: featureLifecycle.getFeatureLifecycleState,
+    getHeadlessReadHandler: () => headlessReadHandler,
+    getHeadlessConnection: () => headlessConnection,
+    getHeadlessPlanApprovals: () => headlessPlanApprovals,
+    getHeadlessLocalFileSelection: () => headlessLocalFileSelection,
+    getUiControlOwner: () => uiControlOwner,
+    disableWindowTakeover() {
+      headlessConnection?.stopPresentationAdmission();
+      uiControlOwner?.close();
+      uiControlOwner = undefined;
+    },
     disposeFeature: featureLifecycle.disposeFeature,
     markFeatureIdle: featureLifecycle.markFeatureIdle,
     disposeIdleFeatures: featureLifecycle.disposeIdleFeatures,
@@ -755,6 +868,8 @@ export function composeDesktopHost(
               now: options.now,
             })
           : undefined;
+      const assetWorkspaceAccess = new WorkspaceAssetAccessService({ workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization });
+      const imageTaskAuthority = new ImageGenerationTaskAuthorityService({ workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization, organizationContextProvider: options.localIdentity ? { getCurrentOrganizationContext: () => ({ organizationId: options.localIdentity!.organizationId, principalId: options.localIdentity!.principalId }) } : undefined });
       const runtimeReadiness = createDesktopRuntimeReadinessService({
         readPythonSupervisorState: () => {
           const status = pythonRuntimeFoundation?.supervisor.getStatus();
@@ -764,10 +879,8 @@ export function composeDesktopHost(
             ? status
             : "stopped";
         },
-        readComfyUiLifecycleState: () => "uninitialized",
-        async readComfyUiInstallStatus() {
-          return "unknown";
-        },
+        readComfyUiLifecycleState: () => readComfyUiLifecycleState(),
+        readComfyUiInstallStatus: () => readComfyUiInstallStatus(),
         now,
       });
       const getArtifactFeatures = featureLifecycle.registerAsyncFeature({
@@ -814,6 +927,7 @@ export function composeDesktopHost(
           const module = await import("./composeDesktopAssetFeature");
           return async () =>
             module.composeDesktopAssetFeature({
+              workspaceAccess: assetWorkspaceAccess,
               storageRootDirectory: registerOptions.storageRootDirectory,
               now,
               readSharedModelStorageDirectory,
@@ -846,14 +960,23 @@ export function composeDesktopHost(
           importFeature: async () => {
             const module =
               await import("./composeDesktopComfyUiImageRuntimeFeature");
-            return () =>
-              module.composeDesktopComfyUiImageRuntimeFeature({
+            return async () => {
+              const feature = await module.composeDesktopComfyUiImageRuntimeFeature({
                 runtimeRootDirectory: registerOptions.runtimeRootDirectory,
                 loggingPort,
                 applicationSettings,
                 readRuntimeSettingString,
                 getArtifacts: getArtifactFeatures,
               });
+              readComfyUiLifecycleState = () => feature.supervisorPort.getLifecycleState();
+              const startOwnedImage = feature.supervisorPort.start.bind(feature.supervisorPort);
+              feature.supervisorPort.start = async () => { taskReconciler.assertAccepting(); await startOwnedImage(); };
+              taskReconciler.assertAccepting();
+              readComfyUiInstallStatus = async () => (await feature.installer.getInstallStatus({ targetId: "comfyui", installRoot: feature.installRoot })).status;
+              closeImageAdmission = () => feature.imageRuntimeTaskRegistry.closeAdmission();
+              stopOwnedImageRuntime = async () => { await feature.supervisorPort.stop(); await feature.imageRuntimeTaskRegistry.settleAfterRuntimeStop(); };
+              return feature;
+            };
           },
         });
       const getRuntimeTaskFeatures = featureLifecycle.registerAsyncFeature({
@@ -868,6 +991,7 @@ export function composeDesktopHost(
               imageRuntimeTaskRegistry: (await getComfyUiImageRuntimeFeatures())
                 .imageRuntimeTaskRegistry,
               runtimeReadiness,
+              taskReconciler,
               recordMilestone: recordHostMemorySnapshot,
             });
         },
@@ -880,6 +1004,7 @@ export function composeDesktopHost(
           const module = await import("./composeDesktopModelFeature");
           return () =>
             module.composeDesktopModelFeature({
+              taskReconciler,
               storageRootDirectory: registerOptions.storageRootDirectory,
               now,
               documents: organizationDocuments,
@@ -904,6 +1029,7 @@ export function composeDesktopHost(
               loggingPort,
               now,
               recordRuntimeLog,
+              taskAuthority: imageTaskAuthority,
               artifacts: await getArtifactFeatures(),
               assets: await getAssetFeatures(),
               runtime: await getRuntimeTaskFeatures(),
@@ -949,9 +1075,30 @@ export function composeDesktopHost(
               module.composeDesktopDatasetPreparationFeature({
                 artifacts: await getArtifactFeatures(),
                 runtime: await getRuntimeTaskFeatures(),
+                readWorkerCapabilities: async () =>
+                  (await getPythonRuntimeFoundation()).runtimePort.getCapabilities(),
                 getArtifactRemoteFeatures,
                 documents: organizationDocuments,
                 workspaceRepository: startupWorkspaceShell.workspaceRepository,
+                workspaceAuthorization,
+                now: options.now,
+              });
+          },
+        });
+      const getContextManagementFeatures =
+        featureLifecycle.registerAsyncFeature({
+          featureKey: "context-management",
+          policy: DESKTOP_FEATURE_LIFECYCLE_POLICIES["context-management"],
+          milestoneBase: "desktop.host.context-management-features",
+          importFeature: async () => {
+            const module =
+              await import("./composeDesktopContextManagementFeature");
+            return async () =>
+              module.composeDesktopContextManagementFeature({
+                artifacts: await getArtifactFeatures(),
+                runtime: await getRuntimeTaskFeatures(),
+                workspaceRepository:
+                  startupWorkspaceShell.workspaceRepository,
                 workspaceAuthorization,
                 now: options.now,
               });
@@ -965,6 +1112,7 @@ export function composeDesktopHost(
       const systemBuilder = organizationDocuments
         ? composeSystemBuilder({
             documents: organizationDocuments,
+            journalChanges: organizationDocuments.organizationId !== undefined,
             definitions: {
               async readExactDefinition(reference) {
                 await getAssetFeatures();
@@ -983,6 +1131,11 @@ export function composeDesktopHost(
                   await getAssetFeatures()
                 ).assetRegistryRead.readDefinitionDetail(
                   reference,
+                  readOptions,
+                ),
+              readDefinitionDetails: async (references, readOptions) =>
+                (await getAssetFeatures()).assetRegistryRead.readDefinitionDetails(
+                  references,
                   readOptions,
                 ),
             },
@@ -1065,6 +1218,20 @@ export function composeDesktopHost(
               now: options.now,
             })
           : undefined;
+      const formIdentity = options.localIdentity;
+      const formDocuments = options.persistence?.documents;
+      const publishedForms = systemBuilder && systemBuild && systemData && workspaceAuthorization && formIdentity && formDocuments
+        ? composePublishedSystemForms({
+            systems: systemBuilder.repository, builds: systemBuild.repository, artifacts: systemBuildArtifacts,
+            hasher: createSha256SystemBuildHasher(), systemData, workspaceAccess: assetWorkspaceAccess,
+            organizations: { getCurrentOrganizationContext: () => ({ organizationId: formIdentity.organizationId, principalId: formIdentity.principalId }) },
+            memberships: createStructuredOrganizationRepositories(formDocuments).memberships,
+            revocations: { async listRevokedImplementationReleaseIds(_workspaceId, releaseIds) {
+              const implementation = (await getAssetFeatures()).assetImplementation;
+              if (!implementation) throw new Error("Asset implementation revocation storage is unavailable.");
+              return (await implementation.repository.listRevocations(releaseIds)).map((entry) => entry.releaseId);
+            } },
+          }) : undefined;
       const systemDeploymentReleaseBindings =
         systemBuild && systemBuilder
           ? new SystemDeploymentReleaseBindingService({
@@ -1171,6 +1338,9 @@ export function composeDesktopHost(
         createLocalEffectiveAssetProjectionRepositoryAdapter(
           structuredRepositoryOptions,
         );
+      const assetCompositionWorkspaceAccess = new WorkspaceAssetAccessService({
+        workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization,
+      });
       const assetCompositionPlanRepository =
         createLocalAssetCompositionPlanRepositoryAdapter(
           structuredRepositoryOptions,
@@ -1184,23 +1354,23 @@ export function composeDesktopHost(
 
       const assetAuthoringUseCases = {
         createWorkspaceAuthoredAssetUseCase:
-          new CreateWorkspaceAuthoredAssetUseCase({
+          new CreateWorkspaceAuthoredAssetUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             authoredAssetRepository,
             assetRevisionRepository,
             generateAuthoredAssetId: () => `authored.${randomUUID()}`,
             generateAssetRevisionId: () => `revision.${randomUUID()}`,
             now: options.now,
           }),
-        createAssetDraftUseCase: new CreateAssetDraftUseCase({
+        createAssetDraftUseCase: new CreateAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetDraftRepository,
           generateAssetDraftId: () => `draft.${randomUUID()}`,
           now: options.now,
         }),
-        updateAssetDraftUseCase: new UpdateAssetDraftUseCase({
+        updateAssetDraftUseCase: new UpdateAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetDraftRepository,
           now: options.now,
         }),
-        publishAssetDraftUseCase: new PublishAssetDraftUseCase({
+        publishAssetDraftUseCase: new PublishAssetDraftUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetDraftRepository,
           authoredAssetRepository,
           assetRevisionRepository,
@@ -1208,7 +1378,7 @@ export function composeDesktopHost(
           generateAssetRevisionId: () => `revision.${randomUUID()}`,
           now: options.now,
         }),
-        createAssetOverrideUseCase: new CreateAssetOverrideUseCase({
+        createAssetOverrideUseCase: new CreateAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetOverrideRepository,
           targetReader: {
             async readCustomizationTargetByReference() {
@@ -1218,11 +1388,11 @@ export function composeDesktopHost(
           generateAssetOverrideId: () => `override.${randomUUID()}`,
           now: options.now,
         }),
-        updateAssetOverrideUseCase: new UpdateAssetOverrideUseCase({
+        updateAssetOverrideUseCase: new UpdateAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetOverrideRepository,
           now: options.now,
         }),
-        disableAssetOverrideUseCase: new DisableAssetOverrideUseCase({
+        disableAssetOverrideUseCase: new DisableAssetOverrideUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
           assetOverrideRepository,
           now: options.now,
         }),
@@ -1232,7 +1402,7 @@ export function composeDesktopHost(
           projectionRepository: effectiveAssetProjectionRepository,
         });
       const assetCompositionReadModel =
-        new WorkspaceAssetCompositionReadModelService({
+        new WorkspaceAssetCompositionReadModelService({ workspaceAccess: assetCompositionWorkspaceAccess,
           compositionPlanRepository: assetCompositionPlanRepository,
         });
       const workspaceUserLibraryLinkRepository =
@@ -1261,10 +1431,39 @@ export function composeDesktopHost(
         createLocalConversationRepositoryAdapters(structuredRepositoryOptions);
       const executionRunRepositories =
         createLocalExecutionRunRepositoryAdapters(structuredRepositoryOptions);
+      const conversationIdentity = options.localIdentity;
+      const platformDocuments = options.persistence?.documents;
+      const delegatedTurnAdmission = conversationIdentity && platformDocuments?.runInOwnedTransaction &&
+        organizationDocuments?.organizationId === conversationIdentity.organizationId
+        ? createLocalDelegatedConversationTurnAdmission({
+          ...structuredRepositoryOptions,
+          documents: organizationDocuments,
+          platform: {
+            documents: platformDocuments,
+            async authorize(owner, workspaceId, planId, planRevision) {
+              if (headlessReadAdmissionClosed) return false;
+              try {
+                const documents = owner.forOrganization(conversationIdentity.organizationId);
+                const workspaces = createLocalWorkspaceRepository({ rootDirectory: registerOptions.storageRootDirectory, documents });
+                const workspace = await workspaces.readWorkspace(workspaceId);
+                if (workspace?.workspaceId !== workspaceId || workspace.organizationId !== conversationIdentity.organizationId ||
+                    workspace.status !== "active") return false;
+                await composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: conversationIdentity }).authorizeWorkspaceOperation({
+                  workspace, operation: "headless.conversation.admit", requiredScopes: ["workspace:read", "asset:read", "asset:write", "runtime:read"],
+                });
+                const plan = await createLocalExecutionPlanRepositoryAdapter({ ...structuredRepositoryOptions, documents })
+                  .getExecutionPlanById(workspaceId, normalizeExecutionPlanId(planId));
+                return Boolean(plan?.id === planId && plan.workspaceId === workspaceId && plan.updatedAt === planRevision &&
+                  plan.status === "ready-for-review" && !plan.archivedAt && !headlessReadAdmissionClosed);
+              } catch { return false; }
+            },
+          },
+        }) : undefined;
       const conversationExecutionServices =
         composeConversationExecutionServices({
           ...conversationRepositories,
           ...executionRunRepositories,
+          delegatedTurnAdmission,
           executionPlanRepository,
           runtimeReadinessBindingRepository,
           assetCompositionPlanRepository,
@@ -1510,7 +1709,22 @@ export function composeDesktopHost(
             validate: executionPlanServices.validatePlan,
             readModel: executionPlanServices.readModel,
           },
-          workspaceServices: startupWorkspaceShell,
+          workspaceServices: {
+            ...startupWorkspaceShell,
+            summarySenderTrust: registerOptions.senderTrust,
+            readWorkspaceSummary: workspaceAuthorization && organizationDocuments ? composeWorkspaceSummary({
+              workspaceRepository: startupWorkspaceShell.workspaceRepository,
+              authorization: workspaceAuthorization,
+              systems: systemBuilder?.repository, builds: systemBuild?.repository,
+              models: asyncLazyObject(async () => {
+                const { createLocalModelRegistryAdapter } = await import("../../../adapters/persistence/model");
+                return createLocalModelRegistryAdapter({filePath: `${registerOptions.storageRootDirectory}/model-registry/models.json`, rootDirectory: registerOptions.storageRootDirectory, documents: organizationDocuments, discovery: {enabled: false}});
+              }),
+              artifacts: {async browseArtifactCatalogRecords(request, context) {return (await getArtifactFeatures()).artifactCatalog.browseArtifactCatalogRecords(request, context);}, async readArtifactCatalogRecord(request, context) {return (await getArtifactFeatures()).artifactCatalog.readArtifactCatalogRecord(request, context);}},
+              countDatasets: workspaceId => new CountDatasetReviewTargetsUseCase({repository: createStructuredDatasetVersionRepository(organizationDocuments), artifacts: {async hasArtifact(request, context) {return (await getArtifactFeatures()).storage.hasArtifact(request, context);}}, workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization}).execute({workspaceId}),
+              assetSources: [authoredAssetRepository, assetOverrideRepository, createStructuredAssetDerivedCustomizationRepository(organizationDocuments), createStructuredAssetStudioAssetDraftRepository(organizationDocuments)],
+            }) : undefined,
+          },
           settingsUseCases,
           selectFolder: options.folderPicker?.selectFolder,
           featureLifecycle: {
@@ -1580,15 +1794,31 @@ export function composeDesktopHost(
               })
             : undefined,
         },
+        contextManagement: {
+          ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
+          getContextManagementFeature: getContextManagementFeatures,
+          lifecycle: markDisposableFeatureReleased("context-management"),
+          getAuthoritativeRequestContext: options.localIdentity
+            ? () => ({
+                organizationId: options.localIdentity!.organizationId,
+                principalId: options.localIdentity!.principalId,
+              })
+            : undefined,
+        },
         assetAuthoring: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           ...assetAuthoringUseCases,
-          authoredAssetRepository,
-          assetDraftRepository,
-          assetRevisionRepository,
-          assetOverrideRepository,
-          getDerivedCustomizations: async () =>
-            (await getAssetFeatures()).derivedCustomizations?.service,
+          ...createWorkspaceAssetAuthoringReaders({workspaceAccess: assetCompositionWorkspaceAccess, authoredAssetRepository, assetDraftRepository, assetRevisionRepository, assetOverrideRepository}),
+          getDerivedCustomizations: async (context) => {
+            const {operation, workspaceId} = context;
+            const reads = ["listTargets", "readTarget", "list", "read"];
+            const writes = ["create", "update", "review", "publish", "abandon"];
+            if (!reads.includes(operation) && !writes.includes(operation)) throw new Error("Derived customization is unavailable.");
+            await requireWorkspaceAssetAccess(assetWorkspaceAccess, workspaceId, `asset-authoring.customization.${operation}`, reads.includes(operation) ? "asset:read" : "asset:write");
+            return (await getAssetFeatures()).derivedCustomizations?.service;
+          },
         },
         userLibrary: {
           ipcMain: registerOptions.ipcMain,
@@ -1611,6 +1841,11 @@ export function composeDesktopHost(
             readDefinitionDetail: async (reference, options) =>
               (await getAssetFeatures()).assetRegistryRead.readDefinitionDetail(
                 reference,
+                options,
+              ),
+            readDefinitionDetails: async (references, options) =>
+              (await getAssetFeatures()).assetRegistryRead.readDefinitionDetails(
+                references,
                 options,
               ),
           },
@@ -1656,45 +1891,45 @@ export function composeDesktopHost(
         },
         assetComposition: {
           ipcMain: registerOptions.ipcMain,
-          createPlan: new CreateAssetCompositionPlanUseCase({
+          createPlan: new CreateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             generatePlanId: () => `plan.${randomUUID()}`,
             now: options.now,
           }),
-          updatePlan: new UpdateAssetCompositionPlanUseCase({
+          updatePlan: new UpdateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             now: options.now,
           }),
-          readPlan: new ReadAssetCompositionPlanUseCase({
+          readPlan: new ReadAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
           }),
-          listPlans: new ListAssetCompositionPlansUseCase({
+          listPlans: new ListAssetCompositionPlansUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
           }),
-          archivePlan: new ArchiveAssetCompositionPlanUseCase({
+          archivePlan: new ArchiveAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             now: options.now,
           }),
-          addProjection: new AddProjectionToCompositionPlanUseCase({
+          addProjection: new AddProjectionToCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             projectionRepository: effectiveAssetProjectionRepository,
             generateNodeId: () => `node.${randomUUID()}`,
             now: options.now,
           }),
-          removeProjection: new RemoveProjectionFromCompositionPlanUseCase({
+          removeProjection: new RemoveProjectionFromCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             now: options.now,
           }),
-          connectNodes: new ConnectCompositionNodesUseCase({
+          connectNodes: new ConnectCompositionNodesUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             generateRelationshipId: () => `rel.${randomUUID()}`,
             now: options.now,
           }),
-          disconnectNodes: new DisconnectCompositionNodesUseCase({
+          disconnectNodes: new DisconnectCompositionNodesUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             now: options.now,
           }),
-          validatePlan: new ValidateAssetCompositionPlanUseCase({
+          validatePlan: new ValidateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             projectionRepository: effectiveAssetProjectionRepository,
             now: options.now,
@@ -1728,8 +1963,12 @@ export function composeDesktopHost(
         },
         assetPackages: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           inspect: {
             async execute(command) {
+              try { command = capturePackageInspection(command); }
+              catch { return {ok: false as const, error: {code: "package-inspection-rejected", message: "Package could not be safely quarantined."}}; }
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.inspect", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1738,6 +1977,8 @@ export function composeDesktopHost(
           },
           admit: {
             async execute(command) {
+              command = capturePackageAdmission(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.admit", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1746,6 +1987,7 @@ export function composeDesktopHost(
           },
           list: {
             async execute(workspaceId) {
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, workspaceId, "asset-package.list", "asset:read");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1754,6 +1996,8 @@ export function composeDesktopHost(
           },
           activate: {
             async execute(command) {
+              command = capturePackageActivation(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.activate", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1762,6 +2006,8 @@ export function composeDesktopHost(
           },
           disable: {
             async execute(command) {
+              command = capturePackageActivation(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.disable", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1770,6 +2016,8 @@ export function composeDesktopHost(
           },
           rollback: {
             async execute(command) {
+              command = capturePackageActivation(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-package.rollback", "asset:write");
               const feature = (await getAssetFeatures()).assetPackages;
               if (!feature)
                 throw new Error("Asset package storage is unavailable.");
@@ -1779,8 +2027,11 @@ export function composeDesktopHost(
         },
         assetStudio: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           start: {
             async execute(command) {
+              command = captureStudioStart(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.start", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1789,6 +2040,8 @@ export function composeDesktopHost(
           },
           propose: {
             async execute(command) {
+              command = captureStudioPropose(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.propose", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1797,6 +2050,8 @@ export function composeDesktopHost(
           },
           review: {
             async execute(command) {
+              command = captureStudioReview(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.review", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1805,6 +2060,7 @@ export function composeDesktopHost(
           },
           read: {
             async execute(workspaceId, workflowId) {
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, workspaceId, "asset-studio.read", "asset:read");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1813,6 +2069,7 @@ export function composeDesktopHost(
           },
           list: {
             async execute(workspaceId) {
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, workspaceId, "asset-studio.list", "asset:read");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1821,42 +2078,56 @@ export function composeDesktopHost(
           },
           assetDrafts: {
             create: async (command) => {
+              command = captureStudioDraftCreate(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.create", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.create(command);
             },
             update: async (command) => {
+              command = captureStudioDraftUpdate(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.update", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.update(command);
             },
             read: async (query) => {
+              query = captureStudioDraftRead(query);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, query.workspaceId, "asset-studio.asset-draft.read", "asset:read");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.read(query);
             },
             list: async (query) => {
+              query = captureStudioDraftList(query);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, query.workspaceId, "asset-studio.asset-draft.list", "asset:read");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.list(query);
             },
             review: async (command) => {
+              command = captureStudioDraftTransition(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.review", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.review(command);
             },
             publish: async (command) => {
+              command = captureStudioDraftTransition(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.publish", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.publish(command);
             },
             abandon: async (command) => {
+              command = captureStudioDraftTransition(command);
+              await requireWorkspaceAssetAccess(assetWorkspaceAccess, command.workspaceId, "asset-studio.asset-draft.abandon", "asset:write");
               const feature = (await getAssetFeatures()).assetStudio;
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
@@ -1869,6 +2140,7 @@ export function composeDesktopHost(
               systemBuilder: {
                 ipcMain: registerOptions.ipcMain,
                 ...systemBuilder.useCases,
+                ...(publishedForms ? { publishedForms } : {}),
               },
             }
           : {}),
@@ -1955,6 +2227,154 @@ export function composeDesktopHost(
       recordHostMemorySnapshot(
         "desktop.host.ipc-registration.lazy-handlers.after",
       );
+      const identity = options.localIdentity;
+      if (!headlessReadAdmissionClosed && !headlessReadHandler && identity && workspaceAuthorization && systemBuilder) {
+        const hostIncarnationId = randomUUID();
+        if (isHeadlessHostIncarnationId(hostIncarnationId)) {
+          const workflows = new HeadlessWorkflowMetadataUseCase(systemRunWorkflow.useCases);
+          const readWorkflowRole = async () => {
+            if (!platformDocuments) return undefined;
+            const { memberships } = createStructuredOrganizationRepositories(platformDocuments);
+            const membership = await memberships.readMembership({
+              organizationId: identity.organizationId, principalId: identity.principalId,
+            });
+            return membership?.status === "active" && membership.organizationId === identity.organizationId &&
+              membership.principalId === identity.principalId ? membership.role : undefined;
+          };
+          const committedChanges = organizationDocuments?.organizationId === identity.organizationId
+            ? (() => {
+              const cursorKey = randomBytes(32);
+              return new HeadlessCommittedChangesUseCase({
+                hostIncarnationId, organizationId: identity.organizationId, systems: systemBuilder.repository,
+                feed: createStructuredHeadlessOperationStore(organizationDocuments),
+                access: assetWorkspaceAccess,
+                digest: (value) => createHmac("sha256", cursorKey).update(value).digest("hex"),
+              });
+            })() : undefined;
+          headlessReadHandler = composeDesktopHeadlessReads({
+            hostIncarnationId,
+            identity,
+            authorization: workspaceAuthorization,
+            workspaceRepository: startupWorkspaceShell.workspaceRepository,
+            getUseCases: () => systemBuilder.useCases,
+            committedChanges,
+            workflows,
+            readWorkflowRole,
+            conversationStatus: new HeadlessConversationStatusUseCase({
+              sessions: conversationRepositories.conversationSessionRepository, turns: conversationRepositories.conversationTurnRepository,
+              runs: executionRunRepositories.executionRunRepository,
+            }),
+            isOpen: () => !headlessReadAdmissionClosed,
+          });
+          if (organizationDocuments?.organizationId === identity.organizationId) {
+            headlessAudit = createStoredDesktopHeadlessAudit(organizationDocuments, identity);
+            if (platformDocuments) uiControlOwner = composeDesktopUiControl({
+              hostIncarnationId, identity, documents: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
+              audit: headlessAudit,
+              isOpen: () => !headlessReadAdmissionClosed,
+              async canPresent(workspaceId, intent) {
+                if (intent.action === "show-run") {
+                  const run = await executionRunRepositories.executionRunRepository.getExecutionRunById(workspaceId, normalizeExecutionRunId(intent.runId));
+                  if (run?.workspaceId === workspaceId && run.id === intent.runId && run.status !== "archived")
+                    return { title: "Execution run", summary: `Run status: ${run.status}` };
+                  return;
+                }
+                if (intent.action === "show-artifact") {
+                  const catalog = (await getArtifactFeatures()).artifactCatalog;
+                  const result = await catalog.readArtifactCatalogRecord({ workspaceId, storageKey: intent.artifactId }, { workspaceId });
+                  if (result.ok && result.value.record.workspaceId === workspaceId &&
+                      result.value.record.storageKey === intent.artifactId) {
+                    const artifact = result.value.record;
+                    return { title: artifact.originalName || "Saved artifact", summary: `Artifact type: ${artifact.artifactFamily}` };
+                  }
+                  return;
+                }
+                const systemId = normalizeSystemBuilderSystemId(intent.systemId);
+                const revision = await systemBuilder.repository.readRevision(workspaceId, systemId, normalizeSystemBuilderRevisionId(intent.revisionId));
+                if (revision?.targetWorkspaceId !== workspaceId || revision.systemId !== systemId ||
+                    revision.revisionId !== intent.revisionId) return;
+                // The revision is immutable. Confirm the live record still names
+                // the same revision after reading it.
+                const system = await systemBuilder.repository.readRecord(workspaceId, systemId);
+                if (system?.targetWorkspaceId !== workspaceId || system.systemId !== systemId ||
+                    system.status === "archived" || system.currentRevisionId !== intent.revisionId) return;
+                if (intent.action === "select-component") {
+                  const instance = revision.instances.find(item => item.instanceId === intent.instanceId);
+                  if (instance) return { title: instance.displayName, summary: `Component in revision ${revision.revisionNumber}` };
+                  return;
+                }
+                if (intent.action === "show-validation") {
+                  const errors = revision.validationIssues.filter(item => item.severity === "error").length;
+                  return { title: revision.composition.displayName,
+                    summary: `Validation: ${errors} blocking, ${revision.validationIssues.length - errors} for review` };
+                }
+                return { title: revision.composition.displayName, summary: `Saved revision ${revision.revisionNumber} · ${revision.instances.length} components` };
+              },
+            });
+            if (platformDocuments && delegatedTurnAdmission) {
+              headlessConversation = composeDesktopHeadlessConversation({
+                hostIncarnationId, identity, platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
+                workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+                workflows, readRole: readWorkflowRole, sessions: conversationRepositories.conversationSessionRepository,
+                submit: conversationExecutionServices.submitTurn, isOpen: () => !headlessReadAdmissionClosed,
+                audit: headlessAudit,
+              });
+            }
+            if (platformDocuments) registerDesktopHeadlessTaskList({
+              ipcMain: registerOptions.ipcMain, senderTrust: registerOptions.senderTrust,
+              workspaces: startupWorkspaceShell.workspaceRepository, documents: platformDocuments, identity,
+              isOpen: () => !headlessReadAdmissionClosed,
+              sessions: conversationRepositories.conversationSessionRepository,
+              turns: conversationRepositories.conversationTurnRepository, runs: executionRunRepositories.executionRunRepository,
+            });
+            registerDesktopSystemChangePoll({
+              ipcMain: registerOptions.ipcMain, senderTrust: registerOptions.senderTrust,
+              workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+              documents: organizationDocuments, organizationId: identity.organizationId,
+              isOpen: () => !headlessReadAdmissionClosed,
+            });
+            const planReviewOwner = platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction
+              ? { hostIncarnationId, identity, platform: platformDocuments, rootDirectory: registerOptions.storageRootDirectory,
+                  isOpen: () => !headlessReadAdmissionClosed }
+              : undefined;
+            headlessConnection = composeDesktopHeadlessConnection({
+              documents: organizationDocuments,
+              identity,
+              workspaces: startupWorkspaceShell.workspaceRepository,
+              authorization: workspaceAuthorization,
+              read: headlessReadHandler,
+              conversation: headlessConversation,
+              presentation: uiControlOwner,
+              planReview: planReviewOwner ? composeDesktopHeadlessPlanReview({
+                ...planReviewOwner, workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+                getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
+                systems: systemBuilder, audit: headlessAudit,
+              }) : undefined,
+              dataPreview: planReviewOwner ? {
+                hostIncarnationId,
+                execute: async (request, grant) => headlessLocalFileSelection?.preview(request, grant) ??
+                  { result: { ok: false, code: "headless.unavailable" } },
+                executeProvider: async (request, grant) => headlessLocalFileSelection?.previewProvider(request, grant) ??
+                  { result: { ok: false, code: "headless.unavailable" } },
+              } : undefined,
+              authoring: options.persistence?.documents ? composeDesktopHeadlessAuthoring({
+                hostIncarnationId, identity, platformDocuments: options.persistence.documents, rootDirectory: registerOptions.storageRootDirectory,
+                workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
+                systems: systemBuilder, isOpen: () => !headlessReadAdmissionClosed, audit: headlessAudit,
+              }) : undefined,
+            });
+            if (planReviewOwner) headlessPlanApprovals = composeDesktopHeadlessPlanApprovals({
+              ...planReviewOwner, capturePlanReviewClients: headlessConnection.capturePlanReviewClients,
+            });
+            if (planReviewOwner) headlessLocalFileSelection = composeDesktopHeadlessLocalFileSelection({
+              ...planReviewOwner,
+              capturePlanReviewClients: headlessConnection.capturePlanReviewClients,
+              getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
+              now: () => options.now ? Date.parse(options.now()) : Date.now(),
+            });
+          }
+        }
+      }
       recordHostMemorySnapshot("desktop.host.ipc-registration.return");
     },
     registerArtifactUploadIpc(registerOptions) {

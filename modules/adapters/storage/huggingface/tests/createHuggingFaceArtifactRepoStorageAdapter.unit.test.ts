@@ -8,6 +8,7 @@ import {
 import {
   createHuggingFaceArtifactRepoStorageAdapter,
   type HuggingFaceFetchImplementation,
+  type HuggingFaceFetchResponse,
 } from "../createHuggingFaceArtifactRepoStorageAdapter";
 import { SecureEgressBroker } from "../../../security/egress";
 
@@ -31,6 +32,18 @@ function createHubClientDouble() {
   };
 }
 
+function visibilityResponse(value: unknown, status = 200): Response {
+  return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
+}
+
+function publicationRequest() {
+  return {
+    provider: "hugging-face" as const, repositoryId: "example/existing", branch: "main", visibility: "private" as const,
+    repositoryCreationApproved: false, versionDigest: `sha256:${"a".repeat(64)}` as const,
+    files: [{ path: "README.md", content: new Uint8Array([1]), mediaType: "text/markdown", digest: `sha256:${"b".repeat(64)}` as const }],
+  };
+}
+
 function createEgressBrokerDouble(
   implementation: (url: string, options?: { headers?: Readonly<Record<string, string>> }) => Promise<{
     url: string;
@@ -50,11 +63,43 @@ function createEgressBrokerDouble(
 }
 
 describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
+  it("accepts native Response without claiming that arbitrary provider JSON has a trusted shape", async () => {
+    for (const value of [null, 42, "SYNTHETIC_PRIVATE_PROVIDER_CANARY", { unexpected: "SYNTHETIC_PRIVATE_PROVIDER_CANARY" }]) {
+      const response: HuggingFaceFetchResponse = new Response(JSON.stringify(value), {
+        status: 200, headers: { "content-type": "application/json" },
+      });
+      const fetchImplementation: HuggingFaceFetchImplementation = async () => response;
+      const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+        hubClient: createHubClientDouble(), accessToken: "hf_synthetic_type_contract_only", fetchImplementation,
+      });
+      const result = await adapter.listNamespaceDatasets("synthetic-fixture");
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).not.toContain("SYNTHETIC_PRIVATE_PROVIDER_CANARY");
+      expect(JSON.stringify(result)).not.toContain("hf_synthetic_type_contract_only");
+    }
+  });
+
+  it("rejects Private publication to an existing Public repository before commit", async () => {
+    const hubClient = createHubClientDouble();
+    const fetchImplementation = testDouble.fn(async () => visibilityResponse({ private: false }));
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_synthetic", fetchImplementation });
+    const result = await adapter.publishDatasetVersion({
+      provider: "hugging-face", repositoryId: "example/existing", branch: "main", visibility: "private",
+      repositoryCreationApproved: false, versionDigest: `sha256:${"a".repeat(64)}`,
+      files: [{ path: "README.md", content: new Uint8Array([1]), mediaType: "text/markdown", digest: `sha256:${"b".repeat(64)}` }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain("visibility does not match");
+    expect(hubClient.commit).toHaveBeenCalledTimes(0);
+    expect(fetchImplementation).toHaveBeenCalledTimes(1);
+  });
+
   it("publishes a dataset version as one bounded multi-file commit and returns its immutable revision", async () => {
     const hubClient = createHubClientDouble();
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient,
       accessToken: "hf_test",
+      fetchImplementation: async () => visibilityResponse({ private: true }),
     });
     const result = await adapter.publishDatasetVersion({
       provider: "hugging-face",
@@ -88,13 +133,14 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
 
   it("requires explicit creation approval and applies public visibility when a dataset repository is missing", async () => {
     const hubClient = createHubClientDouble();
-    let attempts = 0;
     hubClient.commit = testDouble.fn(async () => {
-      attempts += 1;
-      if (attempts === 1) throw { statusCode: 404, message: "missing" };
       return { commit: { oid: "e".repeat(40), url: "https://huggingface.co/commit/fixture" } };
     });
-    const fetchImplementation = testDouble.fn(async () => new Response(null, { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    let created = false;
+    const fetchImplementation = testDouble.fn(async (_url: string, init?: { method?: string }) => {
+      if (init?.method === "POST") { created = true; return new Response(null, { status: 200 }); }
+      return created ? visibilityResponse({ private: false }) : new Response(null, { status: 404 });
+    }) as unknown as HuggingFaceFetchImplementation;
     const authorizeRepositoryCreate = testDouble.fn(async () => true);
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation, authorizeRepositoryCreate });
     const result = await adapter.publishDatasetVersion({
@@ -108,7 +154,120 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
       "https://huggingface.co/api/repos/create",
       expect.objectContaining({ body: JSON.stringify({ name: "new-data", organization: "example", type: "dataset", private: false }) }),
     );
-    expect(hubClient.commit).toHaveBeenCalledTimes(2);
+    expect(hubClient.commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("permits only matching explicit existing private/public destinations without changing visibility", async () => {
+    for (const visibility of ["private", "public"] as const) {
+      const hubClient = createHubClientDouble();
+      const fetchImplementation = testDouble.fn(async () => {
+        const response = visibilityResponse({ private: visibility === "private" });
+        Object.defineProperty(response, "url", { value: "https://huggingface.co/api/datasets/example/existing?expand=private" });
+        return response;
+      });
+      const result = await createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation }).publishDatasetVersion({ ...publicationRequest(), visibility });
+      expect(result.ok).toBe(true); expect(hubClient.commit).toHaveBeenCalledTimes(1);
+      expect(fetchImplementation).toHaveBeenCalledTimes(2);
+      expect(fetchImplementation).toHaveBeenCalledWith("https://huggingface.co/api/datasets/example/existing?expand=private", expect.objectContaining({ redirect: "error", headers: expect.objectContaining({ authorization: "Bearer hf_test" }) }));
+    }
+  });
+
+  it("denies unapproved missing repositories and denied creation without a commit", async () => {
+    for (const approved of [false, true]) {
+      const hubClient = createHubClientDouble();
+      const fetchImplementation = testDouble.fn(async () => new Response(null, { status: 404 }));
+      const authorizeRepositoryCreate = testDouble.fn(async () => false);
+      const result = await createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation, authorizeRepositoryCreate }).publishDatasetVersion({ ...publicationRequest(), repositoryCreationApproved: approved });
+      expect(result.ok).toBe(false); expect(hubClient.commit).toHaveBeenCalledTimes(0);
+      expect(fetchImplementation).toHaveBeenCalledTimes(1);
+      expect(authorizeRepositoryCreate).toHaveBeenCalledTimes(approved ? 1 : 0);
+    }
+  });
+
+  it("rejects redirected or wrong-target visibility before commit and after an uncertain commit", async () => {
+    const expectedUrl = "https://huggingface.co/api/datasets/example/existing?expand=private";
+    const variants = [
+      { url: "https://unrelated.invalid/api/datasets/example/existing?expand=private", redirected: false },
+      { url: "https://huggingface.co/api/datasets/other/repository?expand=private", redirected: false },
+      { url: `${expectedUrl}#different`, redirected: false },
+      { url: expectedUrl, redirected: true },
+    ];
+    for (const variant of variants) for (const postCommit of [false, true]) {
+      const hubClient = createHubClientDouble(); let reads = 0;
+      const fetchImplementation = testDouble.fn(async () => {
+        const response = visibilityResponse({ private: true });
+        if (!postCommit || ++reads > 1) Object.defineProperties(response, {
+          url: { value: variant.url }, redirected: { value: variant.redirected },
+        });
+        return response;
+      });
+      const result = await createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation }).publishDatasetVersion(publicationRequest());
+      expect(result.ok).toBe(false);
+      expect(hubClient.commit).toHaveBeenCalledTimes(postCommit ? 1 : 0);
+      if (!result.ok) expect(result.error.details?.reason).toBe(postCommit ? "publication-visibility-unconfirmed" : "repository-visibility-unverified");
+    }
+  });
+
+  it("rejects a public creation race after a private create request returns conflict", async () => {
+    const hubClient = createHubClientDouble(); let reads = 0;
+    const fetchImplementation = testDouble.fn(async (_url: string, init?: { method?: string }) => {
+      if (init?.method === "POST") return new Response(null, { status: 409 });
+      return ++reads === 1 ? new Response(null, { status: 404 }) : visibilityResponse({ private: false });
+    });
+    const result = await createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation, authorizeRepositoryCreate: async () => true }).publishDatasetVersion({ ...publicationRequest(), repositoryCreationApproved: true });
+    expect(result.ok).toBe(false); expect(hubClient.commit).toHaveBeenCalledTimes(0); expect(reads).toBe(2);
+  });
+
+  it("rejects missing, malformed, unavailable and nonboolean visibility without exposing provider content", async () => {
+    for (const response of [visibilityResponse({}), visibilityResponse({ private: "true" }), visibilityResponse(null), visibilityResponse({ private: true, raw: "x".repeat(4096) }), new Response("synthetic-private-provider-error", { status: 503 }), new Response("not-json", { headers: { "content-type": "application/json" } }), new Response(new Uint8Array([255]), { headers: { "content-type": "application/json" } })]) {
+      const hubClient = createHubClientDouble();
+      const result = await createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation: async () => response }).publishDatasetVersion(publicationRequest());
+      expect(result.ok).toBe(false); expect(hubClient.commit).toHaveBeenCalledTimes(0);
+      expect(JSON.stringify(result)).not.toContain("synthetic-private-provider-error");
+    }
+  });
+
+  it("cancels an oversized live metadata stream before any commit", async () => {
+    let cancelled = 0;
+    const body = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new Uint8Array(4097)); }, cancel() { cancelled++; } });
+    const hubClient = createHubClientDouble();
+    const result = await createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation: async () => new Response(body, { headers: { "content-type": "application/json" } }) }).publishDatasetVersion(publicationRequest());
+    expect(result.ok).toBe(false); expect(cancelled).toBe(1); expect(hubClient.commit).toHaveBeenCalledTimes(0);
+  });
+
+  it("never reports local success when visibility changes or is unavailable after the remote commit", async () => {
+    for (const throws of [false, true]) {
+      const hubClient = createHubClientDouble(); let reads = 0;
+      const fetchImplementation = async () => {
+        if (++reads === 1) return visibilityResponse({ private: true });
+        if (throws) throw new Error("synthetic-private-provider-error");
+        return visibilityResponse({ private: false });
+      };
+      const result = await createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation }).publishDatasetVersion(publicationRequest());
+      expect(result.ok).toBe(false); expect(hubClient.commit).toHaveBeenCalledTimes(1);
+      if (!result.ok) expect(result.error.details?.reason).toBe("publication-visibility-unconfirmed");
+      expect(JSON.stringify(result)).not.toContain("synthetic-private-provider-error");
+    }
+  });
+
+  it("rejects unknown publication visibility and model repository defaults before metadata access", async () => {
+    for (const variant of ["visibility", "model"] as const) {
+      const hubClient = createHubClientDouble(); const fetchImplementation = testDouble.fn(async () => visibilityResponse({ private: true }));
+      const adapter = createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation, ...(variant === "model" ? { defaultRepoType: "model" as const } : {}) });
+      const result = await adapter.publishDatasetVersion({ ...publicationRequest(), ...(variant === "visibility" ? { visibility: "unknown" as never } : {}) });
+      expect(result.ok).toBe(false); expect(fetchImplementation).toHaveBeenCalledTimes(0); expect(hubClient.commit).toHaveBeenCalledTimes(0);
+    }
+  });
+
+  it("aborts a stalled visibility request at its fixed deadline and never commits", async () => {
+    let aborted = false;
+    const hubClient = createHubClientDouble();
+    const fetchImplementation: HuggingFaceFetchImplementation = async (_url, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => { aborted = true; reject(new Error("synthetic-private-provider-error")); }, { once: true });
+    });
+    const result = await createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation }).publishDatasetVersion(publicationRequest());
+    expect(result.ok).toBe(false); expect(aborted).toBe(true); expect(hubClient.commit).toHaveBeenCalledTimes(0);
+    expect(JSON.stringify(result)).not.toContain("synthetic-private-provider-error");
   });
   it("requires official hub client availability when no hub client is provided", async () => {
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
@@ -645,10 +804,14 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
 
   it("lists namespace datasets through Hugging Face datasets API", async () => {
     const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify([
-      { id: "OpenFinAL/financial-news" },
+      { id: "OpenFinAL/financial-news", cardData: { license: " CC-BY-4.0 ", description: "PRIVATE_LISTING_CANARY" } },
       { id: "OpenFinAL/other-dataset" },
+      { id: "OpenFinAL/restricted", cardData: { license: ["cc-by-nc-4.0", "PRIVATE_LISTING_CANARY", "CC-BY-NC-4.0"] } },
+      { id: "OpenFinAL/duplicate", cardData: { license: "mit" } },
+      { id: "OpenFinAL/duplicate", cardData: { license: "cc-by-nc-4.0" } },
       { id: "OtherOrg/not-included" },
-    ]), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+      null,
+    ]), { status: 200, headers: { "content-type": "application/json" } })) as unknown as HuggingFaceFetchImplementation;
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient: createHubClientDouble(),
       fetchImplementation,
@@ -662,15 +825,92 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     }
 
     expect(result.value.datasets).toEqual([
-      { namespace: "OpenFinAL", repository: "OpenFinAL/financial-news" },
+      { namespace: "OpenFinAL", repository: "OpenFinAL/financial-news", licenseIds: ["cc-by-4.0"] },
       { namespace: "OpenFinAL", repository: "OpenFinAL/other-dataset" },
+      { namespace: "OpenFinAL", repository: "OpenFinAL/restricted", licenseIds: ["cc-by-nc-4.0", "unknown"] },
     ]);
-    expect(fetchImplementation).toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain("PRIVATE_LISTING_CANARY");
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      "https://huggingface.co/api/datasets?author=OpenFinAL&limit=100&expand=cardData",
+      expect.objectContaining({ redirect: "error", signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it("refuses oversized and non-JSON namespace metadata without returning provider content", async () => {
+    for (const response of [
+      new Response("PRIVATE_LISTING_CANARY", { headers: { "content-type": "text/html" } }),
+      new Response(JSON.stringify("PRIVATE_LISTING_CANARY".repeat(30_000)), {
+        headers: { "content-type": "application/json" },
+      }),
+      new Response(JSON.stringify(Array.from({ length: 101 }, () => ({ id: "OpenFinAL/demo" }))), {
+        headers: { "content-type": "application/json" },
+      }),
+    ]) {
+      const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+        hubClient: createHubClientDouble(), fetchImplementation: async () => response,
+      });
+      const result = await adapter.listNamespaceDatasets("OpenFinAL");
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).not.toContain("PRIVATE_LISTING_CANARY");
+    }
+  });
+
+  it("accepts a license declaration only at the exact dataset commit", async () => {
+    const repository = "example/synthetic";
+    const revision = "a".repeat(40);
+    const signal = new AbortController().signal;
+    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify({
+      id: repository, sha: revision, cardData: { license: ["cc-by-nd-4.0", "UNTRUSTED-DECLARATION"] },
+    }), { headers: { "content-type": "application/json" } })) as unknown as HuggingFaceFetchImplementation;
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({ fetchImplementation });
+    const stillAllowed = async () => true;
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision: "main" }, signal, stillAllowed)).toBeUndefined();
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision }, AbortSignal.abort(), stillAllowed)).toBeUndefined();
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision }, signal, async () => false)).toBeUndefined();
+    expect(fetchImplementation).not.toHaveBeenCalled();
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision }, signal, stillAllowed)).toEqual({
+      repository, revision, licenseIds: ["cc-by-nd-4.0", "unknown"],
+    });
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      `https://huggingface.co/api/datasets/${repository}/revision/${revision}?expand=sha&expand=cardData`,
+      expect.objectContaining({ signal, redirect: "error" }),
+    );
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision: "b".repeat(40) }, signal, stillAllowed)).toBeUndefined();
+    expect(await adapter.readDatasetRevisionLicense!({ repository: "other/synthetic", revision }, signal, stillAllowed)).toBeUndefined();
+  });
+
+  it("checks metadata authority again after waiting for provider credentials", { timeout: 5_000 }, async () => {
+    const credentialRead = Promise.withResolvers<void>();
+    const releaseCredential = Promise.withResolvers<void>();
+    const fetchImplementation = testDouble.fn(async () => new Response()) as unknown as HuggingFaceFetchImplementation;
+    let allowed = true;
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      fetchImplementation,
+      accessTokenProvider: async () => {
+        credentialRead.resolve();
+        await releaseCredential.promise;
+        return undefined;
+      },
+    });
+    const observation = adapter.readDatasetRevisionLicense!(
+      { repository: "example/synthetic", revision: "a".repeat(40) },
+      new AbortController().signal,
+      async () => allowed,
+    );
+    try {
+      await credentialRead.promise;
+      allowed = false;
+      releaseCredential.resolve();
+      expect(await observation).toBeUndefined();
+      expect(fetchImplementation).not.toHaveBeenCalled();
+    } finally {
+      releaseCredential.resolve();
+    }
   });
 
   it("lists only bounded dataset parquet files at an immutable converted revision", async () => {
     const immutableRevision = "a".repeat(40);
-    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify({ sha: immutableRevision }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const fetchImplementation = testDouble.fn(async () => visibilityResponse({ sha: immutableRevision })) as unknown as HuggingFaceFetchImplementation;
     const hubClient = createHubClientDouble();
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient,
@@ -700,14 +940,16 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     ]);
     expect(result.value.revision).toBe(immutableRevision);
     expect(fetchImplementation).toHaveBeenCalledWith(
-      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/revision/refs%2Fconvert%2Fparquet",
-      { headers: {} },
+      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/revision/refs%2Fconvert%2Fparquet?expand=sha",
+      { method: "GET", redirect: "error", signal: expect.any(AbortSignal), headers: { accept: "application/json" } },
     );
     expect(hubClient.listFiles).toHaveBeenCalledWith({
       repo: { type: "dataset", name: "OpenFinAL/financial-news" },
       recursive: true,
       revision: immutableRevision,
       accessToken: undefined,
+      fetch: expect.any(Function),
+      hubUrl: "https://huggingface.co",
     });
   });
 
@@ -734,7 +976,7 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
   });
 
   it("rejects unsafe file paths, oversized listings, and mutable revision responses", async () => {
-    const revisionFetch = testDouble.fn(async () => new Response(JSON.stringify({ sha: "a".repeat(40) }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const revisionFetch = testDouble.fn(async () => visibilityResponse({ sha: "a".repeat(40) })) as unknown as HuggingFaceFetchImplementation;
     const unsafeHubClient = createHubClientDouble();
     unsafeHubClient.listFiles = testDouble.fn(() => (async function* () { yield { type: "file" as const, size: 1, path: "../private.parquet" }; })());
     const externalAdapter = createHuggingFaceArtifactRepoStorageAdapter({
@@ -767,7 +1009,7 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
 
     const mutableAdapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient: createHubClientDouble(),
-      fetchImplementation: testDouble.fn(async () => new Response(JSON.stringify({ sha: "main" }), { status: 200 })) as unknown as HuggingFaceFetchImplementation,
+      fetchImplementation: testDouble.fn(async () => visibilityResponse({ sha: "main" })) as unknown as HuggingFaceFetchImplementation,
     });
     const mutable = await mutableAdapter.listDatasetParquetFiles({ repository: "OpenFinAL/financial-news" });
     expect(mutable.ok).toBe(false);

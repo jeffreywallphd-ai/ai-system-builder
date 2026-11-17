@@ -14,14 +14,22 @@ import type {
   StartRuntimeTaskResult,
   RuntimeTaskListRequest,
   RuntimeTaskListResult,
+  RuntimeTaskProgress,
+  StartPythonRuntimeTaskResult,
 } from "../../../contracts/runtime";
-import { isWorkspaceId } from "../../../contracts/workspace";
+import { isWorkspaceId, type WorkspaceId } from "../../../contracts/workspace";
 import { TaskType } from "../../../contracts/runtime";
 import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPolicy";
+
+const downloadIdentityError = "Model download status did not match its accepted task.";
+const downloadCancellationIdentityError = "Model download cancellation did not match its accepted task.";
+const trainingStartIdentityError = "Model training start did not match its requested task.";
 
 const genericToPythonTaskTypeMap: Partial<Record<TaskType, string>> = {
   [TaskType.DATASET_PREPARATION]: "prepare-training-dataset",
   [TaskType.DATASET_REVIEW]: "review-dataset",
+  [TaskType.CONTEXT_GENERATION]: "generate-context-artifact",
+  [TaskType.CONTEXT_RETRIEVAL]: "context-artifact-operation",
   [TaskType.MODEL_DOWNLOAD]: "ensure-model-download",
   [TaskType.MODEL_TRAINING]: "train-model",
   [TaskType.MODEL_VALIDATION]: "validate-model",
@@ -44,6 +52,12 @@ function toGenericTaskType(
   }
   if (taskType === "review-dataset") {
     return TaskType.DATASET_REVIEW;
+  }
+  if (taskType === "generate-context-artifact") {
+    return TaskType.CONTEXT_GENERATION;
+  }
+  if (taskType === "context-artifact-operation") {
+    return TaskType.CONTEXT_RETRIEVAL;
   }
   if (taskType === "ensure-model-download") {
     return TaskType.MODEL_DOWNLOAD;
@@ -155,7 +169,12 @@ function mapProgress(
 }
 
 export interface CreatePythonRuntimeTaskRegistryAdapterOptions {
-  ensureRuntimeReady?: (request: StartRuntimeTaskRequest) => Promise<void>;
+  ensureRuntimeReady?: (
+    request: StartRuntimeTaskRequest,
+    control: {
+      reportProgress(progress: RuntimeTaskProgress): void;
+    },
+  ) => Promise<void>;
 }
 
 export type PythonRuntimeTaskRegistryAdapter = RuntimeTaskRegistryPort &
@@ -166,15 +185,31 @@ export function createPythonRuntimeTaskRegistryAdapter(
   options: CreatePythonRuntimeTaskRegistryAdapterOptions = {},
 ): PythonRuntimeTaskRegistryAdapter {
   const trackedTasks = new Map<string, RuntimeTaskRecord>();
+  // Status records are replaceable. This owner identifies one accepted start.
+  const acceptedModelDownloads = new Map<string, { readonly workspaceId: WorkspaceId }>();
   const completedDownloads = new Map<string, CompletedModelDownload>();
+  const preparingTasks = new Set<string>();
+  const pendingStarts = new Map<string, { readonly taskType: RuntimeTaskRecord["taskType"] }>();
+  const isModelDownloadId = (requestId: string): boolean =>
+    acceptedModelDownloads.has(requestId) ||
+    trackedTasks.get(requestId)?.taskType === TaskType.MODEL_DOWNLOAD ||
+    pendingStarts.get(requestId)?.taskType === TaskType.MODEL_DOWNLOAD;
+  const isModelTrainingId = (requestId: string): boolean =>
+    trackedTasks.get(requestId)?.taskType === TaskType.MODEL_TRAINING ||
+    pendingStarts.get(requestId)?.taskType === TaskType.MODEL_TRAINING;
   const maximumTrackedTasks = 256;
   const rememberTask = (record: RuntimeTaskRecord): RuntimeTaskRecord => {
+    const owner = acceptedModelDownloads.get(record.requestId);
+    if (owner && (record.taskType !== TaskType.MODEL_DOWNLOAD || record.workspaceId !== owner.workspaceId)) {
+      throw new Error(downloadIdentityError);
+    }
     trackedTasks.delete(record.requestId);
     trackedTasks.set(record.requestId, record);
     while (trackedTasks.size > maximumTrackedTasks) {
       const oldest = trackedTasks.keys().next().value;
       if (typeof oldest !== "string") break;
       trackedTasks.delete(oldest);
+      acceptedModelDownloads.delete(oldest);
       completedDownloads.delete(oldest);
     }
     return record;
@@ -184,47 +219,179 @@ export function createPythonRuntimeTaskRegistryAdapter(
     async startTask(
       request: StartRuntimeTaskRequest,
     ): Promise<StartRuntimeTaskResult> {
-      if (!isWorkspaceId(request.workspaceId)) {
+      const { workspaceId, taskType } = request;
+      if (!isWorkspaceId(workspaceId)) {
         throw new Error("Workspace id is required for python runtime tasks.");
       }
-      if (request.taskType === TaskType.MODEL_PUBLISHING) {
+      if (taskType === TaskType.MODEL_PUBLISHING) {
         throw new Error("model publishing runtime task is not implemented");
       }
+      const requestId = request.requestId ?? randomUUID();
+      const modelTraining = taskType === TaskType.MODEL_TRAINING;
+      if (isModelTrainingId(requestId) || (modelTraining && (trackedTasks.has(requestId) || pendingStarts.has(requestId)))) {
+        throw new Error(trainingStartIdentityError);
+      }
+      if (acceptedModelDownloads.has(requestId) || pendingStarts.has(requestId)) throw new Error(downloadIdentityError);
+      if (pendingStarts.size >= maximumTrackedTasks) throw new Error("Python runtime task admission is at capacity.");
+      const pythonTaskType = toPythonTaskType(taskType);
+      const modelDownload = taskType === TaskType.MODEL_DOWNLOAD;
+      const isContextTask =
+        taskType === TaskType.CONTEXT_GENERATION || taskType === TaskType.CONTEXT_RETRIEVAL;
+      const admission = { taskType };
+      let preflightRecord: RuntimeTaskRecord | undefined;
+      const clearUnacceptedTraining = () => {
+        if (modelTraining && preflightRecord && trackedTasks.get(requestId) === preflightRecord) {
+          trackedTasks.delete(requestId);
+        }
+      };
+      pendingStarts.set(requestId, admission);
       try {
-        await options.ensureRuntimeReady?.(request);
+        await options.ensureRuntimeReady?.(
+          { ...request, requestId, workspaceId, taskType },
+          {
+            reportProgress(progress) {
+              if (pendingStarts.get(requestId) !== admission) return;
+              preparingTasks.add(requestId);
+              const previous = trackedTasks.get(requestId);
+              const now = new Date().toISOString();
+              preflightRecord = rememberTask({
+                requestId,
+                workspaceId,
+                taskType,
+                status: "running",
+                concurrencyClass: "io",
+                progress: {
+                  message: sanitizePublicText(progress.message),
+                  current: finiteNonNegative(progress.current),
+                  total: finiteNonNegative(progress.total),
+                  unit: sanitizePublicText(progress.unit, 32),
+                  percent:
+                    progress.percent === undefined
+                      ? undefined
+                      : Math.min(finiteNonNegative(progress.percent) ?? 0, 100),
+                },
+                metadata: request.metadata,
+                queuedAt: previous?.queuedAt ?? now,
+                startedAt: previous?.startedAt ?? now,
+                updatedAt: now,
+              });
+            },
+          },
+        );
       } catch (error) {
+        clearUnacceptedTraining();
+        pendingStarts.delete(requestId);
+        preparingTasks.delete(requestId);
+        if (isContextTask) {
+          const now = new Date().toISOString();
+          const previous = trackedTasks.get(requestId);
+          rememberTask({
+            requestId,
+            workspaceId,
+            taskType,
+            status: "failed",
+            concurrencyClass: previous?.concurrencyClass ?? "io",
+            progress: previous?.progress,
+            error: {
+              code: "python_runtime_context_setup_failed",
+              message:
+                "The local vector database could not be prepared. Check runtime setup and retry.",
+              retryable: true,
+            },
+            metadata: request.metadata,
+            queuedAt: previous?.queuedAt ?? now,
+            startedAt: previous?.startedAt,
+            updatedAt: now,
+            completedAt: now,
+          });
+          throw new Error(
+            "Python runtime failed to prepare Context dependencies before starting task.",
+          );
+        }
         const reason = error instanceof Error ? error.message : String(error);
         throw new Error(
           `Python runtime failed to start or become ready before starting task: ${reason}`,
         );
       }
-      const requestId = request.requestId ?? randomUUID();
-      const pythonTaskType = toPythonTaskType(request.taskType);
-      const result = await runtimePort.startTask({
-        requestId,
-        taskType: pythonTaskType,
-        payload: request.payload,
-        metadata: {
-          ...(request.metadata ?? {}),
-          workspaceId: request.workspaceId,
-        },
-        timeoutMs: resolvePythonRuntimeTaskTimeoutMs(pythonTaskType),
-      });
+      let result: StartPythonRuntimeTaskResult;
+      try {
+        result = await runtimePort.startTask({
+          requestId,
+          taskType: pythonTaskType,
+          payload: request.payload,
+          metadata: {
+            ...(request.metadata ?? {}),
+            workspaceId,
+          },
+          timeoutMs: resolvePythonRuntimeTaskTimeoutMs(pythonTaskType),
+        });
+      } catch {
+        clearUnacceptedTraining();
+        if (isContextTask) {
+          const now = new Date().toISOString();
+          const previous = trackedTasks.get(requestId);
+          rememberTask({
+            requestId,
+            workspaceId,
+            taskType,
+            status: "failed",
+            concurrencyClass: previous?.concurrencyClass ?? "io",
+            progress: previous?.progress,
+            error: {
+              code: "python_runtime_context_start_failed",
+              message:
+                "Context work could not be started after runtime setup. Retry the operation.",
+              retryable: true,
+            },
+            metadata: request.metadata,
+            queuedAt: previous?.queuedAt ?? now,
+            startedAt: previous?.startedAt,
+            updatedAt: now,
+            completedAt: now,
+          });
+          throw new Error("Python runtime could not start Context work.");
+        }
+        throw new Error("Python runtime task could not be started.");
+      } finally {
+        pendingStarts.delete(requestId);
+        preparingTasks.delete(requestId);
+      }
+      const reportedWorkspace = result?.metadata?.workspaceId;
+      const matchesModelStart = result?.requestId === requestId && result.taskType === pythonTaskType &&
+        result.accepted === true && (result.status === "queued" || result.status === "running") &&
+        (reportedWorkspace === undefined || reportedWorkspace === workspaceId);
+      if ((modelTraining && !matchesModelStart) ||
+          (result && result.requestId !== requestId && isModelTrainingId(result.requestId))) {
+        clearUnacceptedTraining();
+        throw new Error(trainingStartIdentityError);
+      }
+      if ((modelDownload && !matchesModelStart) || acceptedModelDownloads.has(result.requestId)) {
+        throw new Error(downloadIdentityError);
+      }
+      const preflight = trackedTasks.get(requestId);
       rememberTask({
         requestId: result.requestId,
-        workspaceId: request.workspaceId,
-        taskType: request.taskType,
+        workspaceId,
+        taskType,
         status: result.status ?? "queued",
         concurrencyClass:
-          request.concurrencyClass ??
-          (request.taskType === TaskType.MODEL_DOWNLOAD ? "io" : "unknown"),
+          request.concurrencyClass ?? (modelDownload ? "io" : "unknown"),
         metadata: result.metadata,
-        queuedAt: new Date().toISOString(),
+        progress: preflight?.progress,
+        queuedAt: preflight?.queuedAt ?? new Date().toISOString(),
       });
+      if (modelDownload) acceptedModelDownloads.set(requestId, { workspaceId });
       return result;
     },
     async getTaskStatus(requestId: string): Promise<RuntimeTaskStatusRecord> {
+      const preparing = trackedTasks.get(requestId);
+      if (preparingTasks.has(requestId) && preparing) return preparing;
+      const downloadOwner = acceptedModelDownloads.get(requestId);
       const status = await runtimePort.readTaskStatus(requestId);
+      const reportedDownload = status.taskType === genericToPythonTaskTypeMap[TaskType.MODEL_DOWNLOAD];
+      const reportedOwner = acceptedModelDownloads.get(status.requestId);
+      const involvesDownload = Boolean(downloadOwner || reportedOwner || reportedDownload);
+      if (involvesDownload && status.requestId !== requestId) throw new Error(downloadIdentityError);
       if (status.status === "unknown" && !status.taskType) {
         return {
           recordType: "not-found",
@@ -241,8 +408,16 @@ export function createPythonRuntimeTaskRegistryAdapter(
           updatedAt: status.updatedAt,
         };
       }
+      const reportedWorkspace = status.metadata?.workspaceId;
+      if (involvesDownload) {
+        // Worker metadata can confirm a workspace, but cannot assign one.
+        if (!downloadOwner || !reportedDownload || reportedOwner !== downloadOwner ||
+            (reportedWorkspace !== undefined && reportedWorkspace !== downloadOwner.workspaceId)) {
+          throw new Error(downloadIdentityError);
+        }
+      }
       const taskType = toGenericTaskType(status.taskType);
-      let data = status.data;
+      let data = reportedDownload ? undefined : status.data;
       if (
         taskType === TaskType.MODEL_DOWNLOAD &&
         status.status === "succeeded"
@@ -250,7 +425,10 @@ export function createPythonRuntimeTaskRegistryAdapter(
         const completion = await runtimePort.resolveModelDownloadTaskResult(
           status.data,
         );
-        completedDownloads.set(status.requestId, completion);
+        if (acceptedModelDownloads.get(requestId) !== downloadOwner) {
+          throw new Error(downloadIdentityError);
+        }
+        completedDownloads.set(requestId, completion);
         data = {
           provider: completion.provider,
           modelId: completion.modelId,
@@ -261,9 +439,8 @@ export function createPythonRuntimeTaskRegistryAdapter(
       const previous = trackedTasks.get(status.requestId);
       return rememberTask({
         requestId: status.requestId,
-        workspaceId: isWorkspaceId(status.metadata?.workspaceId)
-          ? status.metadata.workspaceId
-          : previous?.workspaceId,
+        workspaceId: reportedDownload ? downloadOwner?.workspaceId :
+          isWorkspaceId(reportedWorkspace) ? reportedWorkspace : previous?.workspaceId,
         taskType,
         status: status.status,
         concurrencyClass:
@@ -291,8 +468,18 @@ export function createPythonRuntimeTaskRegistryAdapter(
       });
     },
     async cancelTask(requestId: string): Promise<CancelRuntimeTaskResult> {
+      const downloadOwner = acceptedModelDownloads.get(requestId);
+      const wasDownload = isModelDownloadId(requestId);
+      if (wasDownload && !downloadOwner) throw new Error(downloadCancellationIdentityError);
       const result = await runtimePort.cancelTask(requestId);
       const previous = trackedTasks.get(requestId);
+      if ((wasDownload || isModelDownloadId(requestId) || isModelDownloadId(result.requestId)) && (
+        !downloadOwner || acceptedModelDownloads.get(requestId) !== downloadOwner ||
+        result.requestId !== requestId || previous?.taskType !== TaskType.MODEL_DOWNLOAD ||
+        previous.workspaceId !== downloadOwner.workspaceId
+      )) {
+        throw new Error(downloadCancellationIdentityError);
+      }
       if (previous) {
         rememberTask({
           ...previous,
@@ -326,6 +513,9 @@ export function createPythonRuntimeTaskRegistryAdapter(
         };
       const supported = new Set([
         TaskType.DATASET_PREPARATION,
+        TaskType.DATASET_REVIEW,
+        TaskType.CONTEXT_GENERATION,
+        TaskType.CONTEXT_RETRIEVAL,
         TaskType.MODEL_DOWNLOAD,
         TaskType.MODEL_TRAINING,
         TaskType.MODEL_VALIDATION,

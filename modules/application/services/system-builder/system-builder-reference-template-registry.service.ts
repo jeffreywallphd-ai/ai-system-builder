@@ -222,9 +222,9 @@ function createSecuredDataEntryTemplate(
       required: true,
       optionsSource: "static",
       staticOptions: [
-        { value: "draft", label: "Draft" },
-        { value: "submitted", label: "Submitted" },
-        { value: "approved", label: "Approved" },
+        { optionId: "draft", value: "draft", label: "Draft" },
+        { optionId: "submitted", value: "submitted", label: "Submitted" },
+        { optionId: "approved", value: "approved", label: "Approved" },
       ],
     }),
     instance(
@@ -839,10 +839,10 @@ function createSecuredDataReviewTemplate(
       required: false,
       optionsSource: "static",
       staticOptions: [
-        { value: "all", label: "All supported types" },
-        { value: "text", label: "Text and tables" },
-        { value: "image", label: "Raster images" },
-        { value: "pdf", label: "PDF documents" },
+        { optionId: "all", value: "all", label: "All supported types" },
+        { optionId: "text", value: "text", label: "Text and tables" },
+        { optionId: "image", value: "image", label: "Raster images" },
+        { optionId: "pdf", value: "pdf", label: "PDF documents" },
       ],
     }),
     instance("table", "builtin.display.table", "Artifact results", {

@@ -39,6 +39,14 @@ export interface ArtifactStorageBindingPort {
   ): Promise<ContractResult<{ deleted: boolean }>>;
 }
 
+/** One new artifact identity; never upserts or adopts an existing binding. */
+export interface ArtifactStorageBindingCreatePort {
+  createArtifactStorageBindingIfAbsent(
+    request: UpsertArtifactStorageBindingRequest,
+    context?: ApplicationRequestContext,
+  ): Promise<ContractResult<{ binding: ArtifactStorageBinding }>>;
+}
+
 export interface ArtifactStorageBindingBatchReadPort {
   readArtifactStorageBindingsBatch(
     request: ReadArtifactStorageBindingsBatchRequest,

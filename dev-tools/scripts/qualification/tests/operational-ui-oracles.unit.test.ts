@@ -1,0 +1,174 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import { failedOperationalObservation, operationalPhases, operationalStatusUrl, OPERATIONAL_HOST_TIMEOUT_MS, OPERATIONAL_PHASE_TIMEOUT_MS, qualifyOperationalObservation, type OperationalHost } from "../visual-composer/operational-ui-oracles";
+const input = (host: OperationalHost = "thin-chrome") => ({ schemaVersion: "operational-ui-observation-v1", host, runId: "operational-fixture-1234567890", sourceRevision: `source.${"a".repeat(64)}`, phases: [...operationalPhases(host)] });
+describe("operational UI observation boundaries", () => {
+  it.each(["thin-chrome", "packaged-desktop"] as const)("keeps %s standard and native responsive evidence distinct", host => {
+    const standard = operationalPhases(host), native = operationalPhases(host, "native400");
+    expect(native.slice(3, 6)).toEqual(["sidebar-responsive-hidden", "navigation-trigger-responsive-visible", "settings-opened"]);
+    expect(native.length).toBe(standard.length);
+    const value = { ...input(host), phases: [...native] };
+    const result = qualifyOperationalObservation(value, "native400");
+    value.phases.length = 0;
+    expect(result.phases).toEqual(native); expect(Object.isFrozen(result.phases)).toBe(true);
+    for (const [phases, mode] of [[standard, "native400"], [native, "standard"]] as const) {
+      expect(() => qualifyOperationalObservation({ ...input(host), phases }, mode)).toThrow("Invalid operational UI observation.");
+      expect(() => failedOperationalObservation({ ...input(host), phases }, mode)).toThrow("Invalid operational UI observation.");
+    }
+    for (let length = 0; length < native.length; length++) {
+      const partial = { ...input(host), phases: native.slice(0, length) };
+      expect(() => qualifyOperationalObservation(partial, "native400")).toThrow("Invalid operational UI observation.");
+      expect(failedOperationalObservation(partial, "native400").nextPhase).toBe(native[length]);
+    }
+    expect(Object.keys(result).sort()).toEqual(["host", "phases", "runId", "schemaVersion", "scope", "sourceRevision", "status"]);
+    expect(() => qualifyOperationalObservation({ ...input(host), mode: "native400" })).toThrow("Invalid operational UI observation.");
+  });
+  it.each([null, false, 400, "native", "", {}, new Proxy({}, { get() { throw new Error("synthetic-private-mode"); } })])("refuses unknown mode %# without coercion", mode => {
+    for (const read of [qualifyOperationalObservation, failedOperationalObservation]) {
+      expect(() => read(input(), mode as never)).toThrow("Invalid operational UI observation.");
+    }
+    expect(() => operationalPhases("thin-chrome", mode as never)).toThrow("Invalid operational UI observation.");
+  });
+  it.each(["sparse","reordered","duplicate","getter","proxy","extra"] as const)("preserves native phase data guards for %s",variant=>{
+    const phases=[...operationalPhases("thin-chrome","native400")];let calls=0;
+    if(variant === "sparse")delete phases[3];
+    if(variant === "reordered")[phases[3],phases[4]]=[phases[4]!,phases[3]!];
+    if(variant === "duplicate")phases[4]=phases[3]!;
+    if(variant === "getter")Object.defineProperty(phases,"3",{get(){calls++;return "sidebar-responsive-hidden";}});
+    if(variant === "extra")Object.defineProperty(phases,"private",{value:"synthetic-private"});
+    const observed=variant === "proxy" ? new Proxy(phases,{getPrototypeOf(){calls++;return Array.prototype;}}) : phases;
+    for(const read of [qualifyOperationalObservation,failedOperationalObservation])expect(()=>read({...input(),phases:observed},"native400")).toThrow("Invalid operational UI observation.");
+    expect(calls).toBe(0);
+  });
+  it.each(["thin-chrome", "packaged-desktop"] as const)("requires opened menu, real navigation and focus return before existing %s phases",host=>{
+    const prefix=["navigation-menu-opened","navigation-menu-navigated","navigation-menu-focus-returned"];
+    expect(operationalPhases(host).slice(0,3)).toEqual(prefix);
+    for(const missing of prefix)expect(()=>qualifyOperationalObservation({...input(host),phases:operationalPhases(host).filter(phase=>phase!==missing)})).toThrow("Invalid operational UI observation.");
+    expect(operationalPhases(host).slice(3,6)).toEqual(["sidebar-collapsed","sidebar-restored","settings-opened"]);
+  });
+  it.each(["thin-chrome", "packaged-desktop"] as const)("requires the supported Models and Image forms for %s without inventing thin training", host => {
+    const tail = ["notifications-empty", "notifications-focus-returned", "models-discovery-opened", "models-inventory-opened",
+      ...(host === "packaged-desktop" ? ["model-training-opened"] : []), "image-configuration-opened", "home-returned"];
+    expect(operationalPhases(host).slice(-tail.length)).toEqual(tail);
+    expect(operationalPhases(host).includes("model-training-opened")).toBe(host === "packaged-desktop");
+    for (const missing of ["models-discovery-opened", "models-inventory-opened", "image-configuration-opened"]) {
+      const value = { ...input(host), phases: operationalPhases(host).filter(phase => phase !== missing) };
+      expect(() => qualifyOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+      expect(() => failedOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+    }
+  });
+  it.each(["thin-chrome", "packaged-desktop"] as const)("requires every exact ordered %s phase and returns an immutable copy", host => {
+    const value = input(host), report = qualifyOperationalObservation(value);
+    value.phases.splice(0); expect(report.phases).toEqual(operationalPhases(host));
+    expect(report.status).toBe("passed"); expect(report.scope).toBe("ui-integration-only");
+    expect(Object.isFrozen(report.phases)).toBe(true); expect(Object.isFrozen(report)).toBe(true);
+    expect(Buffer.byteLength(JSON.stringify(report))).toBeLessThan(8192);
+  });
+  it.each(["thin-chrome", "packaged-desktop"] as const)("never qualifies a missing %s phase or a partial failure", host => {
+    const value = input(host);
+    for (let count = 0; count < value.phases.length; count++) {
+      const partial = { ...value, phases: value.phases.slice(0, count) };
+      expect(() => qualifyOperationalObservation(partial)).toThrow("Invalid operational UI observation.");
+      const report = failedOperationalObservation(partial);
+      expect(report.status).toBe("failed"); expect(report.nextPhase).toBe(value.phases[count]);
+    }
+  });
+  it.each([
+    { host: "unknown" }, { sourceRevision: "worktree" }, { runId: "short" },
+    { phases: ["private-synthetic-payload"] }, { phases: ["sidebar-restored", "sidebar-collapsed"] },
+    { phases: ["sidebar-collapsed", "sidebar-collapsed"] }, { phases: new Array(33).fill("sidebar-collapsed") },
+    { token: "synthetic-private-token" }, { screenshot: "private-synthetic-path" }, { nativeQualified: true },
+  ])("refuses malformed, extra or private observation fields %#", change => {
+    try { qualifyOperationalObservation({ ...input(), ...change }); throw new Error("Expected refusal"); }
+    catch (error) { expect((error as Error).message).toBe("Invalid operational UI observation."); }
+  });
+  it("keeps a reporting failure failed after all UI steps and invents no native qualification", () => {
+    const failed = failedOperationalObservation(input());
+    expect(failed.status).toBe("failed"); expect(failed.nextPhase).toBe("reporting");
+    expect(Object.keys(failed).sort()).toEqual(["host", "nextPhase", "phases", "runId", "schemaVersion", "scope", "sourceRevision", "status"]);
+    expect(OPERATIONAL_PHASE_TIMEOUT_MS).toBe(30_000); expect(OPERATIONAL_HOST_TIMEOUT_MS).toBe(360_000);
+  });
+  it.each(["thin-chrome", "packaged-desktop"] as const)("refuses sparse %s phase arrays rather than inventing observations", host => {
+    const value = { ...input(host), phases: new Array(operationalPhases(host).length) };
+    expect(() => qualifyOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+    expect(() => failedOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+  });
+  it.each(["every", "iterator", "element-accessor", "field-accessor", "symbol", "extra-array-field"] as const)("does not execute or retain caller-defined %s data", variant => {
+    const value = input(); let calls = 0;
+    if (variant === "every") Object.defineProperty(value.phases, "every", { value: () => { calls++; return true; } });
+    if (variant === "iterator") Object.defineProperty(value.phases, Symbol.iterator, { value: function* () { calls++; yield* new Array(value.phases.length).fill("synthetic-private-payload"); } });
+    if (variant === "element-accessor") Object.defineProperty(value.phases, "0", { get: () => { calls++; return "sidebar-collapsed"; } });
+    if (variant === "field-accessor") Object.defineProperty(value, "host", { get: () => { calls++; return "thin-chrome"; } });
+    if (variant === "symbol") Object.defineProperty(value, Symbol("synthetic-private-payload"), { value: "synthetic-private-payload" });
+    if (variant === "extra-array-field") Object.defineProperty(value.phases, "private", { value: "synthetic-private-payload" });
+    expect(() => qualifyOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+    expect(() => failedOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+    expect(calls).toBe(0);
+  });
+  it("normalizes descriptor inspection failure without reporting caller detail", () => {
+    const value = new Proxy(input(), { ownKeys: () => { throw new Error("synthetic-private-payload"); } });
+    for (const read of [qualifyOperationalObservation, failedOperationalObservation]) {
+      try { read(value); throw new Error("Expected refusal"); }
+      catch (error) { expect((error as Error).message).toBe("Invalid operational UI observation."); }
+    }
+  });
+  it.each(["record-prototype", "record-keys", "record-descriptor", "array-prototype", "array-keys", "revoked-record", "revoked-array"] as const)("refuses %s proxies without executing their traps", variant => {
+    let calls = 0;
+    const traps = {
+      getPrototypeOf(target: object) { calls++; return Reflect.getPrototypeOf(target); },
+      ownKeys(target: object) { calls++; return Reflect.ownKeys(target); },
+      getOwnPropertyDescriptor(target: object, key: string | symbol) { calls++; return Reflect.getOwnPropertyDescriptor(target, key); },
+    };
+    const base = input(); let value: unknown;
+    if (variant === "record-prototype") value = new Proxy(base, { getPrototypeOf: traps.getPrototypeOf });
+    if (variant === "record-keys") value = new Proxy(base, { ownKeys: traps.ownKeys });
+    if (variant === "record-descriptor") value = new Proxy(base, { getOwnPropertyDescriptor: traps.getOwnPropertyDescriptor });
+    if (variant === "array-prototype") value = { ...base, phases: new Proxy(base.phases, { getPrototypeOf: traps.getPrototypeOf }) };
+    if (variant === "array-keys") value = { ...base, phases: new Proxy(base.phases, { ownKeys: traps.ownKeys }) };
+    if (variant === "revoked-record") { const proxy = Proxy.revocable(base, traps); proxy.revoke(); value = proxy.proxy; }
+    if (variant === "revoked-array") { const proxy = Proxy.revocable(base.phases, traps); proxy.revoke(); value = { ...base, phases: proxy.proxy }; }
+    expect(() => qualifyOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+    expect(() => failedOperationalObservation(value)).toThrow("Invalid operational UI observation.");
+    expect(calls).toBe(0);
+  });
+  it.each(["http://127.0.0.1:3000/systems", "https://localhost:8443/security", "http://[::1]:3000/"])("keeps its fixed read-only status route on local origin %s", value => {
+    const result = new URL(operationalStatusUrl(value)); expect(result.pathname).toBe("/api/security/status"); expect(result.origin).toBe(new URL(value).origin);
+  });
+  it.each(["https://example.com/", "file:///private", "http://user:secret@localhost:3000/", "http://localhost:3000/?token=synthetic", "http://localhost:3000/#private", "not a URL"])("refuses an unknown or credential-bearing origin %#", value => {
+    expect(() => operationalStatusUrl(value)).toThrow("Operational UI requires an authorized local test origin.");
+  });
+});
+
+
+it("keeps unread badge text readable with the shared palette and fallback colors", () => {
+  const styleRoot = path.resolve(__dirname, "../../../../modules/ui/shared/styles");
+  const sheet = readFileSync(path.join(styleRoot, "components/notifications.css"), "utf8");
+  const tokens = readFileSync(path.join(styleRoot, "tokens.css"), "utf8");
+  const badge = [...sheet.matchAll(/^\.ui-notification__badge\s*\{([^}]+)\}/gm)];
+  expect(badge).toHaveLength(1);
+  const hex = "#[a-fA-F0-9]{6}|#[a-fA-F0-9]{3}";
+  const colors = (property: "background" | "color") => {
+    const values = [...badge[0]![1]!.matchAll(new RegExp(`^\\s*${property}:\\s*([^;]+);`, "gm"))];
+    expect(values).toHaveLength(1);
+    const value = values[0]![1]!.trim();
+    if (new RegExp(`^(?:${hex})$`).test(value)) return [value, value] as const;
+    const variable = new RegExp(`^var\\((--[a-z-]+),\\s*((?:${hex}))\\)$`).exec(value);
+    if (!variable) throw new Error("Expected an opaque badge color and fallback.");
+    const declared = [...tokens.matchAll(new RegExp(`^\\s*${variable[1]}:\\s*((?:${hex}));`, "gm"))];
+    expect(declared).toHaveLength(1);
+    return [declared[0]![1]!, variable[2]!] as const;
+  };
+  const luminance = (color: string) => {
+    const hex = color.length === 4 ? color.slice(1).replace(/./g, digit => digit + digit) : color.slice(1);
+    return [0.2126, 0.7152, 0.0722].reduce((sum, weight, index) => {
+      const channel = Number.parseInt(hex.slice(index * 2, index * 2 + 2), 16) / 255;
+      return sum + weight * (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+    }, 0);
+  };
+  const foreground = colors("color"), background = colors("background");
+  for (const index of [0, 1] as const) {
+    const a = luminance(foreground[index]), b = luminance(background[index]);
+    expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThanOrEqual(4.5);
+  }
+});

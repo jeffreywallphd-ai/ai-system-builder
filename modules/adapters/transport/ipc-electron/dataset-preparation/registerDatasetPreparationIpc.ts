@@ -1,3 +1,4 @@
+import { normalizeDatasetPreparationMemoryShortfall, type DatasetPreparationMemoryShortfall } from "../../../../contracts/runtime";
 import type { PrepareTrainingDatasetFromArtifactsCommand } from "../../../../application/use-cases";
 import type { ContractResult } from "../../../../contracts/shared";
 import type {
@@ -182,14 +183,20 @@ function mapTaskError(value: RuntimeTaskStatusReadResult): {
   code?: string;
   message: string;
   details?: Record<string, unknown>;
+  memoryShortfall?: DatasetPreparationMemoryShortfall;
 } {
   return {
+    ...(value.error?.code === "generation_insufficient_resources" ? {
+      memoryShortfall: normalizeDatasetPreparationMemoryShortfall(value.error.details?.memoryShortfall),
+    } : {}),
     code: value.error?.code,
     message:
       value.error?.message ??
       mapTaskMessage(value) ??
       "Dataset preparation task failed.",
-    details: value.error?.details,
+    details: value.error?.code === "generation_insufficient_resources"
+      ? undefined
+      : value.error?.details,
   };
 }
 

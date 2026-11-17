@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 import unittest
+from threading import Event
 from unittest.mock import patch
 
 from modules.adapters.runtime.python.worker import app as worker_app
@@ -86,9 +87,65 @@ class TaskLifecycleTests(unittest.TestCase):
         self.assertEqual(status.error.stage, "normalization")
         self.assertNotIn("private source detail", str(status.error.model_dump()))
 
+    def test_memory_failure_round_trips_numeric_facts_without_private_details(self) -> None:
+        memory = {"resource": "ram", "requiredBytes": 3758096384,
+                  "availableBytes": 3503902720, "allowedOverflowBytes": 0}
+        failure = DatasetPreparationStageError(
+            "generation", "private exception fixture", "generation_insufficient_resources",
+            details={"memoryShortfall": {**memory, "path": "private fixture"}, "modelId": "private fixture"},
+        )
+        with patch("modules.adapters.runtime.python.worker.app._run_task", side_effect=failure):
+            worker_app.start_task(StartPythonRuntimeTaskRequest(
+                requestId="memory-denial", taskType="prepare-training-dataset", payload={
+                    "sourceInputs": [], "recipe": {},
+                    "split": {"trainRatio": 0.8, "testRatio": 0.2}, "output": {"format": "jsonl"},
+                },
+            ))
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                status = worker_app.read_task_status("memory-denial")
+                if status.status == "failed":
+                    break
+                time.sleep(0.01)
+        self.assertEqual(status.status, "failed")
+        self.assertEqual(status.error.details["memoryShortfall"], memory)
+        self.assertNotIn("private", str(status.error.model_dump()))
+
+    def test_malformed_memory_diagnostics_still_record_a_terminal_failure(self) -> None:
+        for index, resource in enumerate(([], {})):
+            with self.subTest(resource=resource):
+                failure = DatasetPreparationStageError(
+                    "generation", "private fixture", "generation_insufficient_resources",
+                    details={"memoryShortfall": {"resource": resource,
+                        "requiredBytes": 100, "availableBytes": 0, "allowedOverflowBytes": 0}},
+                )
+                request_id = f"malformed-memory-{index}"
+                with patch("modules.adapters.runtime.python.worker.app._run_task", side_effect=failure):
+                    worker_app.start_task(StartPythonRuntimeTaskRequest(
+                        requestId=request_id, taskType="prepare-training-dataset", payload={
+                            "sourceInputs": [], "recipe": {},
+                            "split": {"trainRatio": 0.8, "testRatio": 0.2}, "output": {"format": "jsonl"},
+                        },
+                    ))
+                    deadline = time.monotonic() + 2
+                    while time.monotonic() < deadline:
+                        status = worker_app.read_task_status(request_id)
+                        if status.status == "failed":
+                            break
+                        time.sleep(0.01)
+                self.assertEqual(status.status, "failed")
+                self.assertEqual(status.error.code, "generation_insufficient_resources")
+                self.assertNotIn("memoryShortfall", status.error.details)
+                self.assertNotIn("private", str(status.error.model_dump()))
+
     def test_dataset_progress_updates_registry(self) -> None:
-        def fake_prepare(_payload, on_generation_progress, output_directory=None):
+        progress_ready = Event()
+        finish_preparation = Event()
+
+        def fake_prepare(_payload, on_generation_progress, output_directory=None, *, cancelled=None):
             del output_directory
+            self.assertTrue(callable(cancelled))
+            self.assertFalse(cancelled())
             on_generation_progress({
                 "phase": "memory-overflow",
                 "message": "The model is using system-managed disk/swap because available memory is low. Generation may run more slowly.",
@@ -99,7 +156,9 @@ class TaskLifecycleTests(unittest.TestCase):
                 "estimatedMemoryOverflowBytes": 512 * 1024 ** 2,
                 "memoryOverflowLimitBytes": 1024 ** 3,
             })
-            time.sleep(0.1)
+            progress_ready.set()
+            if not finish_preparation.wait(timeout=5):
+                raise TimeoutError("The synthetic preparation was not released.")
             return type("R", (), {"model_dump": lambda self, mode: {"summary": {"generatedExampleCount": 5}}})()
 
         with (
@@ -113,15 +172,22 @@ class TaskLifecycleTests(unittest.TestCase):
             ),
         ):
             worker_app.start_task(StartPythonRuntimeTaskRequest(requestId="r4", taskType="prepare-training-dataset", payload={"sourceInputs": [], "recipe": {"normalization": {"targetFormat": "markdown"}, "chunking": {"strategy": "character", "chunkSize": 1, "chunkOverlap": 0}, "generation": {"mode": "qa", "model": {"provider": "transformers", "modelId": "m"}}}, "split": {"trainRatio": 0.5, "testRatio": 0.5}, "output": {"format": "jsonl"}}))
-            time.sleep(0.05)
-            status = worker_app.read_task_status("r4")
-            self.assertIsNotNone(status.progress)
-            self.assertEqual(status.progress["processedChunkCount"], 1)
-            self.assertEqual(status.progress["phase"], "memory-overflow")
-            self.assertTrue(status.progress["memoryOverflowActive"])
-            self.assertEqual(status.progress["estimatedMemoryOverflowBytes"], 512 * 1024 ** 2)
-            self.assertEqual(status.progress["memoryOverflowLimitBytes"], 1024 ** 3)
-            self.assertIn("may run more slowly", status.progress["message"])
+            try:
+                self.assertTrue(progress_ready.wait(timeout=2), "The task did not publish progress.")
+                status = worker_app.read_task_status("r4")
+                self.assertIsNotNone(status.progress)
+                self.assertEqual(status.progress["processedChunkCount"], 1)
+                self.assertEqual(status.progress["phase"], "memory-overflow")
+                self.assertTrue(status.progress["memoryOverflowActive"])
+                self.assertEqual(status.progress["estimatedMemoryOverflowBytes"], 512 * 1024 ** 2)
+                self.assertEqual(status.progress["memoryOverflowLimitBytes"], 1024 ** 3)
+                self.assertIn("may run more slowly", status.progress["message"])
+            finally:
+                finish_preparation.set()
+                worker_app.TASK_REGISTRY["r4"]["future"].result(timeout=2)
+            done = worker_app.read_task_status("r4")
+            self.assertEqual(done.status, "succeeded")
+            self.assertEqual(done.data["summary"]["generatedExampleCount"], 5)
 
     def test_duplicate_request_id_is_rejected(self) -> None:
         def slow_train(_payload, on_progress=None):

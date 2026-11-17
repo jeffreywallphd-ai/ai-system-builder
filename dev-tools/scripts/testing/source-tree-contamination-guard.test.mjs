@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -44,4 +44,18 @@ test("source tree contamination message names intentional output locations", () 
   assert.match(message, /dist\//);
   assert.match(message, /artifacts\/test-runtime\//);
   assert.match(message, /modules\/contracts\/asset\/asset-id\.js/);
+});
+
+test("the authored forced-colors fixture does not exempt neighboring output", async (context) => {
+  const root = await createFixtureRoot();
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const directory = path.join(root, "modules", "ui", "shared", "styles", "tests");
+  await mkdir(directory, { recursive: true });
+  await writeFile(path.join(directory, "forced-colors-theme.unit.test.mjs"), "export {};\n");
+  assert.doesNotThrow(() => assertNoSourceTreeJavaScriptArtifacts(root));
+
+  await writeFile(path.join(directory, "forced-colors-theme.unit.test.js"), "export {};\n");
+  assert.deepEqual(findSourceTreeJavaScriptArtifacts(root), [
+    "modules/ui/shared/styles/tests/forced-colors-theme.unit.test.js",
+  ]);
 });

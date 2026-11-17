@@ -1,0 +1,1565 @@
+{
+  "acceptanceScopeRevisions": [
+    {
+      "authorityRef": "explicit-user-agent-only-acceptance",
+      "incrementId": "measured-canvas-responsiveness",
+      "originalPlan": {
+        "assumptions": [
+          "Local measured improvement is not reference-hardware or population usability qualification.",
+          "Unavailable manual AT, representative environments and real-model outcomes remain pending; final roadmap closure/main promotion require actual gates."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "measured-local-responsiveness",
+              "security-impact-reviewed"
+            ],
+            "id": "bounded-load-and-render",
+            "outcome": "Actual baseline/candidate benchmarks and demand-driven exact reads reduce demonstrated redundant work without weakening draft or ownership guarantees.",
+            "title": "Measured history and loading improvements"
+          },
+          {
+            "criteriaIds": [
+              "whole-host-journeys",
+              "reference-and-accessibility-qualification",
+              "security-impact-reviewed"
+            ],
+            "id": "measured-host-journeys",
+            "outcome": "Useful3system journeys, paint/action/long-task observations and prior-system revisit pass on bothhosts; aggregate checks run only after all implementation chunks.",
+            "title": "Whole-host measurement and qualification"
+          }
+        ],
+        "completionTests": [
+          "Focused functionality-browse, docs/architecture/agent-support and affected client build after bothchunks.",
+          "Final test:standardande2e once at all-implementation boundary; applicable dependency/security and source-bound overall review without waiver."
+        ],
+        "documentation": [
+          "System Builder architecture",
+          "Shared UI README and context pack",
+          "Canvas test/measurement guide"
+        ],
+        "fingerprint": "d7fb7cc7fc99c0ba080d551e9d764af6df11135e24fbd22c1486b300597acaa6",
+        "focusedTests": [
+          "50/200/500operation benchmark, immutable alias/no-op/history and catalog paging/failed-read tests.",
+          "Exact Canvas UI regressions, current-source meaningful real Chrome and packaged desktop journeys."
+        ],
+        "recordedAt": "2026-10-21T12:05:58Z",
+        "rollback": "Preserve completed draft/request integrity and authority denials; revert only an optimization that fails functional/ownership evidence.",
+        "steps": [
+          "Add a deterministic source-bound50/200/500component operation benchmark; capture baseline before changing production history.",
+          "Replace redundant full-draft cloning/serialization with privately owned immutable snapshots and bounded semantic equality; index repeated tree/catalog/placement lookups and demand-load exact required assets.",
+          "Measure browser input/add/move/undo to paint and long tasks with bounded JSON, revisit earlier composed systems, and rerun same benchmarks/candidate comparisons.",
+          "After every implementation chunk, run final source-bound combined standard/end-to-end and applicable gates once, obtain independent review, and retain manual/reference qualification pending."
+        ],
+        "summary": "Measure frozen baseline, optimize proven history/catalog/render work, then verify useful systems and measurements on bothhosts while retaining controlled pending evidence."
+      },
+      "previousApproval": {
+        "approvedAt": "2026-10-21T11:45:20Z",
+        "fingerprint": "9be45b9a2fbbc6f712a2aa269d4f92db562877c7d2e69f4e2267c47cd68fe2b0",
+        "note": "User explicitly approved the presented Canvas roadmap unchanged, then directed transition directly to completing it after the current diagnostic slice. Preserve existing dirty diagnostics and failures; unavailable qualification stays pending."
+      },
+      "recordedAt": "2026-10-21T18:15:10Z",
+      "removedCriteria": [],
+      "replacedCriteria": [
+        {
+          "humanScope": "Manual keyboard/screen-reader and participant usability acceptance is user-owned offline. Named-reference performance budgets and automated UI/accessibility qualification remain active.",
+          "original": {
+            "description": "Named reference performance environments and manual keyboard/screen-reader/usability evidence satisfy agreed product budgets; unavailable environments remain pending and block full closure.",
+            "id": "reference-and-accessibility-qualification",
+            "qualification": "controlled-environment"
+          },
+          "revised": {
+            "description": "Named reference performance environments and actual automated measurements satisfy agreed product budgets. Automated keyboard, focus, reflow and system-building journeys remain required on declared supported hosts; unavailable reference or automated technical qualification stays pending and blocks full closure.",
+            "id": "reference-and-accessibility-qualification",
+            "qualification": "controlled-environment"
+          }
+        }
+      ],
+      "status": "offline-user-owned",
+      "summary": "User explicitly assigned human acceptance offline and requested agent-executable technical acceptance. Human portions of original instructions are superseded; no pass or closure is asserted."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "canvas-final-dependency-gate",
+      "kind": "dependency",
+      "recordedAt": "2026-10-21T13:00:20Z",
+      "requiredAction": "Obtain reviewed original-supplier resolutions satisfying the dependency policy and rerun applicable current-source qualification. Retain unavailable controlled checks as pending and preserve the explicit cold desktop startup and custom authoring gaps.",
+      "resolution": "The approved scoped Undici7 patch and official Forge Vite replacement removed the vulnerable tooling chain. Executed dependency security gate reports zero runtime and toolchain advisories and validates the production SPDX SBOM. Actual dev startup, package build, isolated bundle/provider tests and the first both-host useful journeys pass; final current-source host and overall checks follow.",
+      "resolvedAt": "2026-10-21T13:29:58Z",
+      "status": "resolved",
+      "summary": "Final aggregate and all nondependency repository gates pass, but the retained original-supplier dependency policy still reports seven high-severity tooling entries. User direction retains the original supplier; no fork, advisory suppression or risk waiver was adopted. Manual/reference/participant qualification remains separately pending."
+    }
+  ],
+  "chunks": [
+    {
+      "areas": [
+        "Shared Workspace",
+        "Immutable draft operations",
+        "React interaction coverage"
+      ],
+      "chunkId": "draft-request-integrity",
+      "completedAt": "2026-10-21T12:04:31Z",
+      "criteriaIds": [
+        "draft-integrity-and-recovery",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Shared UI README",
+        "System Builder context pack",
+        "Canvas diagnostic guide"
+      ],
+      "feedbackAddressed": [],
+      "id": "reliable-editing-and-recovery-draft-request-integrity",
+      "incrementId": "reliable-editing-and-recovery",
+      "summary": "Guarded unsaved creation/switching, independent saved checkpoints, synchronous locked/fenced transactions, recoverable revision reads, optional history merge and same-slot final sibling ordering. Independent red/green probes cover late history and old/new operation lock races.",
+      "tests": [
+        "31exact UI interaction tests passed across reliability/Workspace/editor;10draft unit tests passed.",
+        "functionality-browse/docs/agent-support/architecture passed in receipt3fb57a8f278752ccef5308d53feb7f4bc87d646401593f6bfe924c5c6f87a434."
+      ],
+      "title": "Draft and request integrity"
+    },
+    {
+      "areas": [
+        "Isolated Chrome journeys",
+        "Packaged desktop journeys",
+        "Bounded JSON evidence"
+      ],
+      "chunkId": "meaningful-multi-system-journeys",
+      "completedAt": "2026-10-21T12:04:31Z",
+      "criteriaIds": [
+        "meaningful-scratch-systems",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Canvas diagnostic guide"
+      ],
+      "feedbackAddressed": [],
+      "id": "reliable-editing-and-recovery-meaningful-multi-system-journeys",
+      "incrementId": "reliable-editing-and-recovery",
+      "summary": "Three distinct useful mixed-component systems authored entirely through UI on both hosts; exact version/configuration/placement/order save/reopen, functional preview controls, movement/removal/undo and checked-build or specific policy/model denial assertions. Durable JSON retains measurement progress and failures.",
+      "tests": [
+        "4real tests passed:3Chrome cases and1packaged desktop case constructing all3systems; source identity51a14d03ade2597d7e06485d617967403bf0aed7f4b79d388ac02ed1b23709da.",
+        "Dashboard checked build passed. Intake mutation denied absent platform policy; conversation blocked absent required model. No runtime or template metadata bypass."
+      ],
+      "title": "Useful mixed-component systems through UI"
+    },
+    {
+      "areas": [
+        "Shared Canvas draft/history and equality",
+        "Bounded structural catalog/selected-detail reader",
+        "Source-before-import performance harness"
+      ],
+      "chunkId": "bounded-load-and-render",
+      "completedAt": "2026-10-21T12:40:20Z",
+      "criteriaIds": [
+        "measured-local-responsiveness",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "System Builder architecture",
+        "Shared UI README",
+        "Canvas diagnostic/measurement guide"
+      ],
+      "feedbackAddressed": [],
+      "id": "measured-canvas-responsiveness-bounded-load-and-render",
+      "incrementId": "measured-canvas-responsiveness",
+      "summary": "Implemented privately owned immutable snapshots and saved checkpoints, bounded shared definition reads across generations, structural summaries that preserve lazy editable details, early Minimal bootstrap and indexed move/tree lookups. Exact identity, long-ID prefix collisions, caller alias/accessor and eight-physical-read boundaries are covered. Matching corrected harness measures 50/200/500 instances with 210samples per operation; local500edit improves about94percent and Undo99percent.",
+      "tests": [
+        "20exact Node reader/draft tests passed, including a real-use-case long-ID regression reproduced red then corrected.",
+        "29exact Workspace/reliability UI tests passed; scoped functionality-browse/docs/architecture receipt84492147a5d9194dc52b5f07199c48d3766cef24010bf8fb23c28642320018e9 passes.",
+        "Independent mixed read-budget, Discard and source-change-during-import probes pass. Baseline is explicitly reconstructed from recorded HEAD plus I1move fix; matching-harness measurements preserve full candidate identity before/after byte-verified restoration."
+      ],
+      "title": "Measured history and loading improvements"
+    },
+    {
+      "areas": [
+        "Real Chrome and packaged desktop UI journeys",
+        "Persistent per-run measurement JSON",
+        "Pending qualification and residual startup diagnosis"
+      ],
+      "chunkId": "measured-host-journeys",
+      "completedAt": "2026-10-21T12:45:31Z",
+      "criteriaIds": [
+        "whole-host-journeys",
+        "reference-and-accessibility-qualification",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Canvas diagnostic/measurement guide",
+        "Generated roadmap and JSON review site"
+      ],
+      "feedbackAddressed": [],
+      "id": "measured-canvas-responsiveness-measured-host-journeys",
+      "incrementId": "measured-canvas-responsiveness",
+      "summary": "Source-bound five-test real Chrome/packaged desktop suite passes all three useful scratch-built systems plus final revisit. Per-run bounded JSON preserves exact structure/configuration, functional preview, specific build success/denials and timing progress. Cold desktop startup remains explicitly unresolved; representative/manual qualification is pending. All implementation chunks are now recorded; aggregate qualification follows.",
+      "tests": [
+        "5tests passed in run2026-10-21t12-39-36-565z-d9b372f1 with source6f1eb613bb0e09af154b046f2865998fba957e1b1e41fc02d1e9abf464aee906; all3systems built via UI and revisited on bothhosts.",
+        "Matching-harness50/200/500algorithm comparison:18operations,210samples each, no median/p95 regression;500edit93.8percent,Undo99.4percent median improvement. These are local algorithms, not whole-screen/reference claims.",
+        "Fresh isolated UI phase diagnostic confirms first desktop load remains slow; all measurements retained. Independent writer tests verify bounded path/size refusals and cross-run retention."
+      ],
+      "title": "Whole-host measurement and qualification"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-10-22T01:41:02Z",
+    "summary": "Both Canvas increments are fully implemented and technically qualified. Actual final eight-group host matrix, three useful mixed-component systems on desktop and thin client, fixed reference/operation budgets, automated accessibility, source-bound server/client builds, seven overall gates and exact-target independent review passed. Combined coverage has 3953 passed, four explicit separate optional/native skips, zero failed. Preserve cold maximum, the small Add p95 regression, unknown historical Foundation startup cause and all failed/interrupted observations. Separate functionality/model and security roadmap gaps remain open; human acceptance is user-owned offline. Temporary report is retained for final overall review."
+  },
+  "completionSuite": "standardande2e",
+  "createdAt": "2026-10-21T11:19:47Z",
+  "currentIncrementId": null,
+  "decisions": [],
+  "discovery": {
+    "constraints": [
+      "Preserve existing canonical placements, exact asset versions, workspace authorization and shared React editor; no replacement framework or drag architecture is selected.",
+      "User explicitly requests a meaningful test suite now. Diagnostic reproduction tests are authorized; roadmap implementation approval remains distinct.",
+      "Build multiple systems by UI actions from an empty workspace, not only predefined templates or populated fixtures. Exercise useful behavior, mixed component types, persistence and downstream build checks.",
+      "Keep controlled model/participant/accessibility/reference-environment qualification pending; retain original supplier and failed dependency gate."
+    ],
+    "decisionRequired": false,
+    "recordedAt": "2026-10-21T11:19:48Z",
+    "securityImpact": {
+      "abuseCases": [
+        "Late response replaces another workspace/system draft",
+        "Dirty history rollover allows unintended discard",
+        "Performance optimization skips authorization/version validation",
+        "Tests report static samples or denied functionality as successful runtime behavior"
+      ],
+      "assets": [
+        "Unsaved drafts and saved immutable revisions",
+        "Workspace and organization ownership",
+        "Safe UI diagnostics and synthetic test evidence"
+      ],
+      "controls": [
+        "Saved checkpoints and operation generations",
+        "Explicit unsaved-work guard and sanitized recoverable failures",
+        "Bounded demand-driven reads and immutable structural sharing",
+        "Real UI assertions with isolated synthetic data and source identity"
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Representative hardware, manual assistive technology and participants unavailable",
+        "Controlled runtime fixture behavior is not real-model quality qualification"
+      ],
+      "summary": "UI state and asynchronous host responses must preserve authorized workspace identity, immutable revisions, user edits and bounded untrusted previews.",
+      "trustBoundaries": [
+        "UI to typed application clients and authorized host operations",
+        "Asset configurations and placements to bounded declarative previews",
+        "Test harness to disposable local host/credential lifecycle"
+      ],
+      "verification": [
+        "Deferred-response and history-overflow UI regressions",
+        "Mixed-component systems built via actual UI, save/reopen and behavior checks",
+        "Measured cold load/input/add/move/undo with no assertion weakening",
+        "Focused denial and cross-workspace tests plus independent review"
+      ]
+    },
+    "sources": [
+      {
+        "title": "Current Canvas and draft history",
+        "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+      },
+      {
+        "title": "Recursive editor",
+        "url": "modules/ui/shared/system-builder/SystemComposerClickEditor.tsx"
+      },
+      {
+        "title": "Real host UI harness",
+        "url": "dev-tools/scripts/qualification/visual-composer/e2e/browse-authoring-journey.ts"
+      },
+      {
+        "note": "One small synthetic system passed; no representative performance, participant or real-model qualification.",
+        "title": "Actual local browser baseline",
+        "url": "artifacts/qualification/visual-composer/runs/2026-10-21t11-18-20-489z-a87402b6/evidence.json"
+      }
+    ],
+    "summary": "Current Composer is the accepted click-to-add/move editor; drag/drop was explicitly removed by an earlier completed roadmap. Existing16focused UI tests and a real isolated Chrome browse/save/reopen journey pass, but do not cover useful multi-system construction, edit races or responsiveness. Independent current-source review reproduced the bounded-history dirty-state defect and identified creation/save/layout data-loss paths, optional-history load blocking and eager catalog/full-draft work."
+  },
+  "evidence": [
+    {
+      "artifact": ".local-codex/approved-controls/canvas-increment1-verify-final.log",
+      "command": null,
+      "criterionId": "draft-integrity-and-recovery",
+      "id": "evidence-1",
+      "incrementId": "reliable-editing-and-recovery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T12:04:31Z",
+      "summary": "Source-bound focused profile and independent deferred-response probes confirm corrected preservation/recovery and immutable final sibling ordering."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-21t11-59-41-807z-20e3f69d/evidence.json",
+      "command": null,
+      "criterionId": "meaningful-scratch-systems",
+      "id": "evidence-2",
+      "incrementId": "reliable-editing-and-recovery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T12:04:32Z",
+      "summary": "Actual Chrome and packaged desktop construct3mixed systems via UI, verify useful controls and saved structure, and distinguish supported checked build from required-policy/model denials."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-increment1-verify-final.log",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-3",
+      "incrementId": "reliable-editing-and-recovery",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T12:04:32Z",
+      "summary": "Wrong-owner revision denial, cross-workspace/old-client/old-system fencing, synchronous mutation lock and sanitized rejection paths pass; runtime policy is retained. Manual/reference/native/model qualification remains unavailable."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-increment1-local-review.json",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-4",
+      "incrementId": "reliable-editing-and-recovery",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T12:05:54Z",
+      "summary": "Actual separate-invocation review accepts all3local criteria against passing receipt3fb57a8f278752ccef5308d53feb7f4bc87d646401593f6bfe924c5c6f87a434; prior independently reproduced late-history and obsolete-lock findings corrected and original probes pass. Both-host current-source evidence confirmed; runtime policy and controlled gaps preserved."
+    },
+    {
+      "artifact": "docs/diagnostics/system-builder-canvas-testing.md",
+      "command": null,
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-5",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T12:32:00Z",
+      "summary": "No participant group, named reference-device qualification environment or manual assistive-technology qualification is available. Local synthetic draft timings and automated Chrome/desktop UI checks cannot substitute for these checks. Final roadmap closure remains pending."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-final-performance-comparison.json",
+      "command": null,
+      "criterionId": "measured-local-responsiveness",
+      "id": "evidence-6",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T12:45:31Z",
+      "summary": "Matching corrected-harness and Node24local environment compare reconstructed pre-optimization draft with byte-verified restoration against current candidate:500edit2.1596to0.1340ms,Undo1.5842to0.0095ms;18median/p95 comparisons have no regressions. Both-host durable JSON records creation/reopen, action-to-two-frame and long-task observations. First desktop22sstartup remains an explicit unresolved target, not hidden or claimed fixed."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-increment2-verify-02.log",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-7",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T12:45:31Z",
+      "summary": "Current passing focused receipt84492147a5d9194dc52b5f07199c48d3766cef24010bf8fb23c28642320018e9 covers immutable ownership, exact version/full-reference denial, long IDs, bounded physical read lifecycle, sanitized failures and existing authority rules. Independent source-load drift/writer denial probes pass; controlled qualification, dependency gate and custom runtime-authoring gaps remain explicit."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-overall-verify-01.log",
+      "command": null,
+      "criterionId": "whole-host-journeys",
+      "id": "evidence-8",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T12:51:57Z",
+      "summary": "Both-host05five useful UI journeys pass, but first final aggregate receiptdeff7d907c5f2593e160874cf045451b80660f8cb69c21e2ca30b8883d1532e3 fails one staged reporter regression and the known dependency gate. The runner regression is corrected with source/staged8test passes; fresh full qualification follows. No failure is waived."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-final-reviewed-comparison.json",
+      "command": null,
+      "criterionId": "measured-local-responsiveness",
+      "id": "evidence-9",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T13:00:19Z",
+      "summary": "Final source e12c0efacf74 matches five passing host checks and the corrected benchmark harness. Matching reconstructed baseline/candidate at 50/200/500 instances records 210 samples per operation with no median/p95 regressions across 18 comparisons. At 500 instances edit median improves 93.79 percent and Undo 99.41 percent. Cold first desktop Canvas remains 22076ms; later creations 161-173ms. These are local observations, not reference-device or whole-screen improvement claims."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-final-local-review.json",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-10",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T13:00:19Z",
+      "summary": "Separate invocation accepts all four bounded implementation criteria against passing receipt151a3234d2a92dad7f920853ea733b9eea51ab614c4b96e2a28fa97c50642dcd and current host/benchmark evidence. Immutable ownership, full exact reference matching, bounded physical reads, source-before-import drift denial, per-run measurement bounds and source/staged real teardown denial are verified. This is not an overall/dependency/native/runtime qualification pass."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-overall-verify-final.log",
+      "command": null,
+      "criterionId": "whole-host-journeys",
+      "id": "evidence-11",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T13:00:19Z",
+      "summary": "Final source-bound real Chrome and packaged desktop five-test journeys pass: three useful scratch-built systems and revisit on both hosts, with exact save/reopen and explicit checked-build/denial outcomes. Final standard/end-to-end passes 3849 tests with four existing skips; docs, agent-support, architecture and thin-client build pass. Overall receipt957af7d9b961129b2a78fdd3381a8aa07eeeb80c4d75c5ab248c56f25a06ace2 remains unqualified because the original-supplier dependency gate fails seven high-severity tooling entries. Final closure is not claimed."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-staged-final-comparison.json",
+      "command": "node --import tsx dev-tools/scripts/qualification/visual-composer/canvas-draft-performance.mjs candidate",
+      "criterionId": "measured-local-responsiveness",
+      "id": "evidence-12",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T15:00:27Z",
+      "summary": "Final corrected source123d093d9aad matches10 passing browser/packaged host cases and matching-harness/environment50/200/500component benchmark with210samples per operation. All18median/p95 comparisons are nonregressing:500component edit median improves93.80percent,undo99.40percent,redo99.41percent,add45.99percent,move46.79percent. Actual cold first desktop Canvas-ready22.03seconds remains deferred; these local algorithm and host observations do not qualify named reference devices or claim whole-screen speedup."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-staged-final-controlled-qualification-pending.json",
+      "command": null,
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-13",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T15:00:28Z",
+      "summary": "No required participant group or qualification environments are available. Final-source automated UI/axe/keyboard/reflow and synthetic algorithm evidence do not substitute for named reference performance, manual screen-reader/keyboard or representative-user usability. Real-model CPU/accelerator and native controlled qualification are also not asserted. Final closure/main promotion remains unqualified."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-final-staged-harness-independent-note.json",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-14",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T15:00:29Z",
+      "summary": "Actual separate invocation accepts all four bounded criteria against current focused receipt8c9bc582b8edfbb6dbb458b5ccd123f6def925c67da23d8ba382b81cd321da43 and source123d093d9aad host/benchmark evidence; review5502f4f0b846ebb85e86d37a9101b0a62ae4302b50736e747e5a1c5a287524b9 retains immutable ownership, exact versions, bounded physical reads, source-before-import and real teardown failure denials. Controlled-runtime option guard separately reviewed against receiptd1af7386afd523b19c4c2d25f62ce70f330a5019089a36d9a3620b2c527790be. Staged-harness repair separately accepted against receipta98067d51655ef534c1adc083d94355caf56089b104c0928cefb1be9754c2f1e with direct/staged22cases: source deletions never excuse explicit missing artifacts or unsafe reads, actual Vite config retains private-file/origin denials. Official tooling/Home/packaged runtime/PDF compatibility preserved. Cold startup, nonmanaged summary/counts, unsupported advanced authoring and manual/reference/native/real-model/hardware gaps remain unqualified."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-reader-final-comparison.json",
+      "command": "node --import tsx dev-tools/scripts/qualification/visual-composer/canvas-draft-performance.mjs candidate",
+      "criterionId": "measured-local-responsiveness",
+      "id": "evidence-15",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T15:38:26Z",
+      "summary": "Current frozen source.f276630d passes ten real browser/packaged-host journeys. Matching harness and local environment compare210samples per operation at50/200/500instances: all18 median/p95 pairs nonregressing;500edit93.75percent,undo/redo99.41percent,add46.01percent,move47.10percent faster medians. Per-host paint/action/request/long-task records retained. These are local algorithm improvements, not whole-screen/reference qualification. Cold first packaged Canvas remains22.20seconds unresolved."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-reader-final-controlled-qualification-pending.json",
+      "command": null,
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-16",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T15:38:27Z",
+      "summary": "Named reference performance, manual keyboard/screen-reader and representative-user usability remain unavailable. Automated host/accessibility/reflow tests and synthetic runtime are not substitutes. Real-model/hardware/native checks and successful managed summary counts are unqualified. Preserve cold22.20second startup and earlier unknown-root-cause filesystem Foundation bootstrap failure."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-owned-final-overall-verify.json",
+      "command": "node dev-tools/scripts/testing/run-test-suite.mjs --suite=standardande2e; node node_modules/@playwright/test/cli.js test --config=dev-tools/config/playwright.visual-composer.config.ts",
+      "criterionId": "whole-host-journeys",
+      "id": "evidence-17",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T15:44:34Z",
+      "summary": "Current source.f276630d passes full10case actual thin-client/packaged-desktop matrix: three useful scratch-built mixed-component systems and later revisit per host, exact saved structure/configuration, supported checked build and prerequisite denials, real publication/runtime/restart/uninstall and packaged PDF raster. Fresh aggregate595c2da9 passes3873tests with0failures and4existing skips; documentation, agent-support, architecture and dependency gates pass. Prior failed attempts remain preserved; this does not resolve earlier Foundation bootstrap failure rootcause or qualify custom runtime authoring, model hardware or managed counts."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-reader-final-independent-note.json",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-18",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T15:44:35Z",
+      "summary": "Separate invocation accepted review0cb197f0 on current receipt7f2da1a5 and frozen source: immutable drafts/exact reference identity, eight physical read bound, settled/inactive-generation recovery, four red-to-green reader regressions, model binding through delayed layout/save, failed detail read draft preservation and explicit retry, bounded same-origin loopback protocol evidence with adversarial privacy tests. Original authority/version/production preparation denials remain intact. Official Forge/Vite migration plus original-supplier scoped patch retain packaging/preload/PDF/HuggingFace behavior and dependency gate passes without fork/waiver. Current aggregate595c2da9 passes all gates. Safe rollback and all controlled/reference/native/model/count limitations remain; cold22.20seconds and historical unknown-root-cause filesystem bootstrap failure are unresolved."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-19",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T19:00:17Z",
+      "summary": "Agent-executable technical qualification only: fresh10case packaged-desktop/thin-client useful-system matrix passes on source.a7f22aba and measured local startup improves88.85percent in the matched stage probe. Named reference performance profiles/agreed budgets and any unperformed automated accessibility assertions remain pending. Manual keyboard/screen-reader/usability acceptance is archived user-owned offline and is not a closure requirement. Reviewed bounded startup work71607080... /review2706d88e... supplies local support only."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-startup-final-comparison.json",
+      "command": null,
+      "criterionId": "measured-local-responsiveness",
+      "id": "evidence-20",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T19:37:44Z",
+      "summary": "The earlier 22.20-second packaged cold sample is historical. Implemented startup optimization has one matched local production-policy bootstrap probe reducing 27770.92 ms to 3095.24 ms (88.85 percent); Foundation 15948.79 ms to 753.79 ms and trusted implementation/files 11822.14 ms to 2341.45 ms. Same-store revalidation improves 93.83 percent. The subsequent exact Electron 42.11.3 candidate reaches packaged Canvas in 3463.35 ms; later creations 179.26/124.48 ms. The UI samples and original stage probe are separate observations, not an exact decomposition or reference/statistical guarantee. Earlier immutable edit/undo/add/move measurements remain historical support. Twelve startup regressions pass; Final overall receipt 0ed40fa50dcb0561cfd7f13363fffba78e4353bcc762782f586134e31610aa0c / review 7d3da435f4e7473f61327f2ae091a7adc6c66f76b45da9cb3ca82a90ea5fe88c passes configured combined standard/end-to-end and all seven gates. Complete I/O totals are not claimed from legacy single-call counters."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-21t19-21-50-372z-a83d1d37/evidence.json",
+      "command": null,
+      "criterionId": "whole-host-journeys",
+      "id": "evidence-21",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "summary": "The exact Electron 42.11.3 candidate source.938c99a2 passes all 10 thin-client/packaged-desktop journeys: three useful mixed-component scratch systems, later revisit and exact saved structure/configuration, checked build/prerequisite denial, publication/runtime lifecycle and real packaged PDF raster. A hash comparison confirms subsequent contributor-helper-only changes do not alter tested product app/module source or package manifests. Final overall receipt 0ed40fa50dcb0561cfd7f13363fffba78e4353bcc762782f586134e31610aa0c / review 7d3da435f4e7473f61327f2ae091a7adc6c66f76b45da9cb3ca82a90ea5fe88c passes the final unchanged-candidate combined suite and applicable gates. The 10-host matrix retains its actual source identity; it is not relabeled as a new whole-host run after the helper-only correction. Reference/native/model qualification and the original intermittent Foundation failure cause remain unresolved."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-startup-electron-final-overall-verification.log",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-22",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "summary": "Completed startup work is independently accepted on receipt 71607080158d919b14b33f278b4a0bd1813d9e26a4c13fed6a7d97876224a41f / review 2706d88ee789642d6f4b9746332a695b010786e3d5df04990895823fc5b50586. Full exact Foundation content/version/owner validation, requested-key CAS conflict denial, unrelated record preservation, captured ownership, injected-hook compatibility, settlement-cleared single-flight, later trust revalidation and bounded safe failures remain covered by 12 regressions. Viewer support admission has accepted independent review d47aa501; malformed/forged/incomplete/self-reviewed lineages deny reviewed status, and historical support never promotes parent qualification. CSS successor review 09c9a36a confirms safe rendering/navigation and corrected badge overlap. Final overall receipt 0ed40fa50dcb0561cfd7f13363fffba78e4353bcc762782f586134e31610aa0c / review 7d3da435f4e7473f61327f2ae091a7adc6c66f76b45da9cb3ca82a90ea5fe88c is current and all seven gates pass. Existing preview/draft/request controls remain intact. Native/reference/model qualification and original Foundation failure root cause remain pending; rollback preserves the trust controls."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-startup-electron-final-overall-verification.log",
+      "command": null,
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-23",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "summary": "Agent-executable technical qualification only. Local startup measurements, 12 regressions and 10 actual startup-candidate host journeys provide reviewed partial support; the final current combined suite and seven gates pass. Named reference performance profiles/agreed product budgets and any unperformed automated keyboard/focus/reflow/accessibility assertions remain pending and block full technical closure. Manual screen-reader/operator/participant acceptance is archived user-owned offline and is not a closure requirement. No unperformed technical assertion or current whole-host run is invented."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-desktop-reference-independent-note.json",
+      "command": null,
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-24",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "summary": "Human acceptance is offline and excluded from active technical criteria. Actual named-reference supporting runs passed: managed summary586ms/picker892ms; rebuilt packaged summary345ms/picker436ms; fresh-profile coldCanvas p955930ms (30measured after5warmups). Earlier failed/partial attempts remain retained. Final-source automated host/accessibility/performance verification and exact-target receipt/review are still required after the current model corrections; no participant or manual-test blocker remains."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-22t00-04-22-353z-0dbec7e2/cold-canvas/evidence.json",
+      "command": "Reviewed eight-cohort final-host-matrix-02 operator; packaged-desktop cold Canvas cohort",
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-25",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T00:08:50Z",
+      "summary": "Fresh final source.a506frozen desktop cold cohort completed all35profiles, fivewarmups/thirtymeasurements, p953925.2613ms within15542.8ms. Packaged authoring/accessibility and three meaningful mixed-component scratch-built system journeys also passed. This is partial current host evidence only: remaining desktop lifecycle, local browser and managed reference cohorts, exact-target checks/review and final aggregate remain required. Retain the prior failed managed navigation run and its diagnosed test-only correction. No model, provider, human or complete-roadmap pass is inferred."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-22t00-04-22-353z-0dbec7e2/cold-canvas/evidence.json",
+      "command": "Reviewed eight-cohort final-host-matrix-02 operator; packaged-desktop cold Canvas cohort",
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-26",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T00:09:00Z",
+      "summary": "Fresh final source.a506d0a0a365052c17f1460bbd582a5e59fd5401bb704955c07ad88ac235b6b5 frozen desktop cold cohort completed all35profiles, fivewarmups/thirtymeasurements, p953925.2613ms within15542.8ms. Packaged authoring/accessibility and three meaningful mixed-component scratch-built system journeys also passed. This is partial current host evidence only: remaining desktop lifecycle, local browser and managed reference cohorts, exact-target checks/review and final aggregate remain required. Retain the prior failed managed navigation run and its diagnosed test-only correction. No model, provider, human or complete-roadmap pass is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/final-host-matrix-03-report.json",
+      "command": "Reviewed final-host-matrix03 eight-cohort operator; source fences stable at every completed phase",
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-27",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T01:06:49Z",
+      "summary": "Frozen source.6b4990a4abba2c603460fb911e23c0c602c19be23ece09e5befb29bd39c9da1a final host matrix 03 completed with stable source: seven of eight groups passed, including all nine packaged desktop cases, all six thin-client cases and all managed browse, performance, thirty-task and owned-worker-failure groups. Cold Canvas p95 was 9341.9321 ms over five warmups and thirty measured fresh profiles, within 15542.8 ms; retain the earlier faster observations without attributing the variance or mixing cohorts. The six-operation group failed only catalog at 205.704 ms against 200 ms. A separately reviewed duplicate-admission correction subsequently passed the unchanged supporting six-operation probe at 172.582 ms catalog p95 on a new source, but a fresh complete final host matrix, exact-target qualification and overall gates are still required. No model, provider, human or complete-roadmap qualification is inferred."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-22t01-07-31-625z-dcc16e8a/evidence.json",
+      "command": "Reviewed final-host-matrix04 operator; all nine packaged desktop cases completed with stable source",
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-28",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T01:16:25Z",
+      "summary": "Final frozen source.e17e30d2c83ce4f62a0bda9f9d39f4bb3584a15f419b15ef1839a69dcd7f8ac7 has passed the draft probe, all six fixed operation budgets and all nine packaged desktop cases, including three useful mixed-component systems, publication, task cancellation, PDF preview and both actual owned worker faults. Cold Canvas p95 is 6209.8462 ms within 15542.8 ms across five warmups and thirty measured fresh profiles; retain the maximum 15949.4652 ms outlier and all earlier runs. Catalog p95 is 188.011 ms within 200 ms in this final run; retain the earlier supporting 172.582 ms and failed 205.704 ms observations. Remaining final thin-client/managed groups, exact-target qualification and overall completion gates are still required. No model, provider, human or complete-roadmap pass is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, source-bound builds, seven-gate completion and separate independent review",
+      "criterionId": "measured-local-responsiveness",
+      "id": "evidence-29",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:38:11Z",
+      "summary": "Matched reconstructed pre-optimization/current draft harnesses demonstrate the 500-edit bottleneck improved 93.814 percent in median and 90.605 percent in p95 with exact functional assertions retained. All eighteen comparison rows are preserved, including the 50-instance Add p95 regression of 0.11265 ms; no universal thirty-percent or tail improvement is claimed. Current native desktop/thin-client useful-system journeys measure input/add/move/undo/redo/remove paint, cold/warm readiness and editing/reopen/revisit long-task windows. Final cold p95 is 6209.8462 ms for five warmups and thirty measured fresh profiles within the fixed 15542.8 ms budget; maximum 15949.4652 ms is retained. The old single 22.2-second observation is not a matched p95 baseline."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, source-bound builds, seven-gate completion and separate independent review",
+      "criterionId": "whole-host-journeys",
+      "id": "evidence-30",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:38:12Z",
+      "summary": "Frozen final matrix04 passed all eight groups: draft, six operations, packaged desktop nine cases, thin-client six cases and four managed cohorts. Each desktop/thin host builds request-intake, operations-dashboard and conversation-interface systems with mixed components from scratch, checks exact saved properties/structure, edits/reopens/revisits and verifies declared preview/build controls. Dashboard build succeeds; intake correctly denies missing policy and conversation denies missing model, without an inference claim. Current source-bound overall receipt and separate review passed all seven gates, both host builds and combined standard/end-to-end coverage: 3953 passed, four skipped, zero failed. Captured immutable reports retain the four genuine optional/native skips; separate managed qualification does not silently pass those exact cases."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, source-bound builds, seven-gate completion and separate independent review",
+      "criterionId": "reference-and-accessibility-qualification",
+      "id": "evidence-31",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:38:12Z",
+      "summary": "Actual frozen-source reference host reports passed the declared budgets: desktop summary/picker p95 347.612/395.110 ms and managed summary/picker 578.854/867.266 ms within 1000 ms, each thirty measured samples. All six fixed production operation budgets passed, catalog p95 188.011 ms within 200 ms. Useful-system and actual automated eight-check accessibility/keyboard/focus/reflow journeys passed on declared packaged desktop, thin-client and managed profiles. Editing/reopen/revisit long-task measured windows report zero observed/dropped; this is not an every-frame or launch-wide claim. Cold-load p95 passes and its above-budget maximum remains disclosed. Scope is the named local reference hardware/workloads; human acceptance is offline and no manual screen-reader or population claim is made."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, source-bound builds, seven-gate completion and separate independent review",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-32",
+      "incrementId": "measured-canvas-responsiveness",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:38:12Z",
+      "summary": "Independent actual raw host/security and final overall reviews found no blocking issue for this Canvas scope. Native desktop cleanup observed physical workers then zero alive, main exit zero and fresh graceful shutdown acknowledgments; controlled worker failure and listener refusal exercise authoritative failure/recovery without token or payload disclosure. Managed HTTP denial probes retain missing/invalid identity 401, foreign/nonmember/unsupported 403 and foreign workspace fail-closed behavior; runtime DB reports preserve least privilege, RLS plus FORCE and unbound zero rows. Issuer/API use trusted-CA HTTPS; loopback frontend and isolated DB legs remain explicitly scoped. Catalog admission retains full passive-data bounds, exact code-owned body matching, safe static failures and independently copied results. Workspace/system/task fences, bounded safe diagnostics, preview controls, secure rollback and pending native model/file/persistent-sink gaps remain unchanged. Synthetic workers and runtime fixtures do not qualify real models/providers or close the security roadmap."
+    }
+  ],
+  "evidencePolicy": "control-plane-v1",
+  "feedback": [
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "meaningful-canvas-diagnostics",
+      "impact": "within-increment",
+      "nextAction": "Correct the test-evidence defects, retain required-model negative evidence, add controlled positive conversation/checked-build journeys and await explicit new-roadmap approval before product corrections. Continue the explicitly authorized diagnostic suite.",
+      "recordedAt": "2026-10-21T11:30:54Z",
+      "summary": "Existing16focused cases and one real Chrome baseline pass. Five new focused draft/history/save regressions reproduce unresolved failures. Real scratch-built request-intake and operations-dashboard UI journeys pass their composed-control/save/reopen assertions; conversation composition saves blocked because a required model is not selected. Browser run2026-10-21t11-28-19-426z-fc0ff855 is2passed/1failed, not a full pass. Fixture mistakes in earlier browser runs are retained separately. Independent review also reproduces global-teardown false-pass reporting and missing visual-asset identity; those evidence defects require correction before final qualification.",
+      "targetIncrementId": "reliable-editing-and-recovery"
+    },
+    {
+      "category": "clarification",
+      "disposition": "deferred",
+      "id": "unsupported-custom-runtime-authoring",
+      "impact": "later-increment",
+      "nextAction": "Preserve negative tests and clear documentation. Bounded advanced authoring/runtime support needs its own approved design; finish in-scope integrity and performance improvements without policy/template metadata injection.",
+      "recordedAt": "2026-10-21T12:04:32Z",
+      "summary": "RealUI diagnosis proves custom request intake cannot build without a platform policy and custom conversations cannot author their persisted-history binding/profile through the present UI. Existing policy intentionally keeps data/review runtime surfaces unavailable. Dashboard checked build works. These are explicit authoring/runtime capability gaps, not inferred successful applications or unavailable hardware passes.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "deferred",
+      "id": "cold-desktop-foundation-bootstrap",
+      "impact": "within-increment",
+      "nextAction": "Use a separately bounded host-initialization optimization to measure installation/release/backing-resource stages and preserve every trust/integrity/installation check. Do not skip trusted bootstrap or weaken persistence controls to shorten first use.",
+      "recordedAt": "2026-10-21T12:45:30Z",
+      "summary": "Retained actual first desktop Canvas-ready22130ms versus184/163ms subsequent creations and1016ms fresh reopen; Chrome creation518-721ms. Renderer long-task observations are zero, not a proof of no main-process blocking. Independent code inspection identifies first asset-feature use awaiting installation of343Foundation definitions and343trusted implementation seeds. UI phase probe retains12436ms Create-click and9399ms Canvas wait; this remains an unresolved startup bottleneck, not an editing speedup claim.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "staged-reporter-regression-root",
+      "impact": "within-increment",
+      "nextAction": "Fresh final candidate verification and whole-host source evidence, then repeat aggregate because source correction invalidates its first attempt; dependency advisories remain failed without waiver.",
+      "recordedAt": "2026-10-21T12:51:57Z",
+      "summary": "First aggregate standard run exposed a staged-test path assumption in the actual Playwright teardown regression.3302standard Node cases passed, onefailed;451standard UI and92Node/3UI end-to-end cases passed. Corrected module resolution and adjacent reporter location; all8reporter cases pass in source and actual staged runner. Initial failure retained.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "staged-reporter-repair-verified",
+      "impact": "within-increment",
+      "nextAction": "No further runner correction is needed. Preserve dependency failures, unresolved cold startup/custom authoring targets and pending controlled qualification rather than closing the roadmap or promoting main.",
+      "recordedAt": "2026-10-21T13:00:20Z",
+      "summary": "The aggregate-discovered reporter module-root regression is corrected. All eight reporter tests pass independently in source and staged runners; fresh final aggregate standard/end-to-end now passes. Prior failure, corrected checks and both review rounds are retained. All four planned Canvas chunks are recorded and current bounded implementation work is complete.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "compatible-original-desktop-tooling",
+      "impact": "within-increment",
+      "nextAction": "Execute bounded dependency-gate remediation with preserved dev/package/runtime behavior and fresh host evidence. Resume the Canvas dependency blocker only after the dependency gate actually clears; keep unavailable controlled qualification pending.",
+      "recordedAt": "2026-10-21T13:13:19Z",
+      "summary": "User approved the recommended compatible Undici7 patch and qualified official Forge Vite migration, requiring feature fixes before accepting any breaking dependency change.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "desktop-tooling-compatibility-progress",
+      "impact": "within-increment",
+      "nextAction": "Complete actual both-host compatibility runs, current-source measurement, independent review and final combined qualification before updating the whole-host criterion.",
+      "recordedAt": "2026-10-21T13:59:27Z",
+      "summary": "Scoped original Undici7 patch and official Forge Vite migration remove all seven high tooling entries; runtime/toolchain audits report zero advisories. Focused packaging, provider bundle, sandbox preload, loopback file serving and protected fixture-download denial checks pass. Actual Forge dev smoke passes. Expanded both-host useful-system, publication/runtime and packaged PDF compatibility checks are in progress; failures remain evidence until corrected. Manual/reference/model/hardware qualification remains pending.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "home-workspace-control-overlap",
+      "impact": "within-increment",
+      "nextAction": "Verify Home pointer creation and responsive layout, rerun the current-source whole-host matrix and final combined qualification; keep controlled evidence pending.",
+      "recordedAt": "2026-10-21T14:19:49Z",
+      "summary": "Expanded combined host qualification found a real Home entry defect with a selected workspace: max-content workspace-control columns overflowed beneath summary cards and prevented pointer creation. Retained the actual failing Playwright attempt; constrain and wrap the shared controls within their copy column, preserving summary visibility and real pointer regression. Separate fixture repairs preserve protected model-edit denial, real download dispatch and explicit nonmanaged summary unavailability.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "runtime-preparation-defined-option-guard",
+      "impact": "within-increment",
+      "nextAction": "Refresh current-source host, performance and focused receipts, obtain independent review and execute the final combined qualification with controlled checks still pending.",
+      "recordedAt": "2026-10-21T14:36:00Z",
+      "summary": "Final review found a trusted composition configuration defect in the new test seam: false, zero or empty-string values bypassed truthy admission and could omit preparation. Both entries now capture once, reject all defined production overrides and reject malformed nonproduction values before initialization; undefined retains the original default. Retained two failing malformed regressions followed by five focused passes. This is not an external API/environment vulnerability or authority change.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "staged-migration-qualification-repair",
+      "impact": "within-increment",
+      "nextAction": "Complete independent correction review, refresh strict source-bound host/benchmark and increment receipt, then rerun final aggregate once on frozen corrected source. All controlled checks remain pending.",
+      "recordedAt": "2026-10-21T14:53:57Z",
+      "summary": "Final compatible-tooling aggregate found two harness regressions: functionality source identity still opened a tracked deleted webpack config, and Vite exposure test used a staged config without renderer HTML.3312standard Node cases passed, two failed;451UI and Node/UI end-to-end plus docs, architecture, agent-support and dependency gates passed. Failed report/receipt retained. Guarded current-tree enumeration and actual-config loading preserve explicit artifact/unsafe-file and HTTP private-file/origin denials. Direct22 and actual-staging22regressions now pass.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "deferred",
+      "id": "final-cold-desktop-bootstrap-residual",
+      "impact": "within-increment",
+      "nextAction": "Use separately bounded host-initialization stage instrumentation and advanced authoring follow-up; preserve trusted Foundation install, integrity, authorization and persistence rules. Keep manual/reference/user/native/real-model/hardware qualification pending.",
+      "recordedAt": "2026-10-21T15:00:30Z",
+      "summary": "Final corrected source retains22.03second first desktop Canvas-ready. Local algorithm edits/history are improved, but cold host/bootstrap latency is unresolved; historical22.08/22.19second observations are retained. Unsupported custom intake/conversation runtime authoring and nonmanaged summary counts remain explicit capability/authority gaps rather than successful applications or fabricated qualification.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "deferred",
+      "id": "file-backed-foundation-bootstrap-unresolved",
+      "impact": "within-increment",
+      "nextAction": "Preserve aggregatebd462972... and unchanged repro. Track unresolved filesystem-backed Foundation bootstrap failure with cold host-init investigation; do not close this finding through fixture isolation. Continue fresh current-source automated qualification and retain controlled/manual/reference/native/model/hardware gaps.",
+      "recordedAt": "2026-10-21T15:09:23Z",
+      "summary": "Second aggregate has3316standard Node and451UI passes;94NodeE2E and3UIE2E pass, one new preparation-failure test fails during file-backed Foundation initialization before target assertions. Other gates pass. Original unmodified isolated test then passes bothbranches in29seconds. This establishes an intermittent pretarget failure, not an environment cause or a fix. Root cause is unknown. The narrow runtime-denial regression now uses fresh real structured persistence and strengthens actual failure-layer/class/redaction proof; actual filesystem host tests remain unchanged.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "browser-revisit-and-save-failures",
+      "impact": "within-increment",
+      "nextAction": "Keep whole-host criterion unqualified. Add bounded allowlisted protocol outcome evidence without credentials/URLs/payloads; reproduce deterministic cancellation/settled-reader and deferred property/layout races before correcting actual cause. Retain exact-version, authority, physical concurrency and all assertions; no retries, timeout inflation or failure suppression. Refresh focused/host/overall evidence only after repair.",
+      "recordedAt": "2026-10-21T15:19:24Z",
+      "summary": "Fresh source978fc96... actual UI matrix retains8passes/all4desktop cases and2browser failures. After three successful scratch builds, second-system revisit shows missing required component metadata and disabled editor. Later template model selection/layout/save does not show successful revision and still has missing modelBinding. Screenshots/errors preserved under run2026-10-21t15-13-30-560z-8aff2fe9/failed-ui. No assumption that timing, environment or test fixture caused either failure.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "reader-cancellation-recovery-proven",
+      "impact": "within-increment",
+      "nextAction": "Independently review complete repair and safe observations; run fresh final both-host matrix, matching benchmark, focused receipt and final aggregate. Do not attribute the prior host failures conclusively without matching failure protocol evidence. Keep file-backed Foundation bootstrap root cause unknown, cold first-load and controlled qualification explicit.",
+      "recordedAt": "2026-10-21T15:29:46Z",
+      "summary": "Four deterministic regressions reproduce two metadata-reader races: an immediate retry joined a settled failure, and new detail/summary generations joined an inactive request already choosing cancellation. Both are corrected without releasing physical budget slots early;11reader cases pass. Real browser diagnostic run2026-10-21t15-22-05-597z-bce53ecb passes6cases after the first repair, with preserved protocol showing modelBinding present in both layout-preview and save POSTs. Earlier missing-binding messages belonged to saved revision1, not proof of dirty-draft data loss. Two additional interaction cases preserve selected model through delayed layout/immutable Save and preserve draft/notification history across failed configured-definition verification. Private/foreign-origin/bounds negative protocol tests pass.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "deferred",
+      "id": "current-canvas-local-results-and-residuals",
+      "impact": "within-increment",
+      "nextAction": "Retain these findings and pending controlled/manual/reference checks in review site. Diagnose cold bootstrap with stage-specific production measurements and independently reproduce the filesystem failure before claiming either resolved.",
+      "recordedAt": "2026-10-21T15:38:27Z",
+      "summary": "Current source passes all10 real host journeys after four deterministically reproduced reader retry/cancellation races were corrected. Earlier intermittent host failures are retained and their causation remains unproven. Local edit/history/add/move improvements exceed demonstrated target. First cold packaged Canvas still22.20seconds; filesystem Foundation bootstrap failure rootcause unknown; no broad claims for custom runtime authoring, real inference or managed counts.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "deferred",
+      "id": "startup-diagnosis-report-only",
+      "impact": "within-increment",
+      "nextAction": "Report suggests bounded batch/indexed exact definition reconciliation and trusted seed/artifact lookups, preserving content/trust/CAS/isolation; first add sanitized per-release failure/stage diagnostics to reproduce the original file-backed failure. This is a report only; do not implement load-time changes without further direction. Retain actual reference qualification and current target-specific/overall review.",
+      "recordedAt": "2026-10-21T18:25:32Z",
+      "summary": "User-authorized agent-only scope amendment is independently reviewed; named reference budgets and automated UI checks remain pending where unavailable. Read-only startup diagnosis distinguishes the historical22.204second first Create-to-Canvas sample from current production-policy SQLite/filesystem stage probes:343Foundation definitions16.53seconds plus343trusted seeds/backing files12.50seconds; unchanged-store revalidation10.11seconds. Repeated whole-collection reads/clones/rewrites and serial seeding are demonstrated likely costs. Exact historical stage attribution and original server filesystem Foundation failure cause remain unknown. No load-time product fix made.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "bounded-startup-optimization-reviewed",
+      "impact": "within-increment",
+      "nextAction": "Preserve local measurement limitations, historical unknown Foundation failure cause and real technical/native/reference/model gaps. Run fresh final Canvas overall qualification after the site change; do not infer controlled passes or human acceptance requirements.",
+      "recordedAt": "2026-10-21T19:00:17Z",
+      "summary": "Completed reviewed startup improvements: matched local cold stages27.77to3.10seconds, unchanged-store9.97to0.62seconds; fresh packaged firstCanvas3.62seconds versus historical22.20sample.12focused regression cases and10actual both-host journeys pass; server build/package and all5fixedgates pass. Receipt71607080158d919b14b33f278b4a0bd1813d9e26a4c13fed6a7d97876224a41f, accepted review2706d88ee789642d6f4b9746332a695b010786e3d5df04990895823fc5b50586. Both review defects corrected with durable failed/passing evidence.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "startup-and-review-site-locally-qualified",
+      "impact": "within-increment",
+      "nextAction": "Keep named-reference and unperformed automated technical qualification pending. Human acceptance is offline. No full roadmap completion or main promotion is authorized by partial qualification.",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "summary": "Requested startup implementation, regression evidence and truthful dynamic review-site corrections are complete as bounded reviewed local work. Actual local matched startup improves 88.85 percent; the subsequent fixed Electron 42.11.3 candidate reaches packaged Canvas in 3.46 seconds. Final combined and seven gates pass with actual separate review. The newly detected moderate Electron advisory is corrected through the exact original supplier release, explicit CI/helper installer compatibility, actual embedded SQLite and host tests, without waiver. The historical 22.2-second observation and prior failures remain preserved. The original intermittent Foundation failure root cause is still unknown.",
+      "targetIncrementId": "measured-canvas-responsiveness"
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "76521962b1c327e2205544a3c777307f42c6dd65280d6f2f59a140fff9bc58a1",
+      "recordedAt": "2026-10-21T11:19:48Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "fd332a8bc33e0a0de591ae5036c75b0b3774ef3b6450d99f24a71ad51c4114a5",
+      "recordedAt": "2026-10-21T11:19:48Z",
+      "sequence": 2,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "2406d0b715bd7f0a1a691aa7aeb0c34741b6538f0fd145fc85079bc1e9270543",
+      "recordedAt": "2026-10-21T11:30:54Z",
+      "sequence": 3,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "95fc9fd49941256ac596c313c9cda59607a823ac18b8e5b196d6bf8108879f1a",
+      "recordedAt": "2026-10-21T11:45:20Z",
+      "sequence": 4,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "dd11fde90ebdf27468403203a70ea819980c8345a17e13900093b6da3facbc36",
+      "recordedAt": "2026-10-21T11:45:20Z",
+      "sequence": 5,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "970451473c11d391e69d467b9237b6507d496e47a8b724757cee9a034ac6a6e3",
+      "recordedAt": "2026-10-21T11:45:20Z",
+      "sequence": 6,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "59351074d23136182d80f93b84c6e5386e190feac5794b02503cbdcef839ded9",
+      "recordedAt": "2026-10-21T11:45:21Z",
+      "sequence": 7,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "e3fee29001f9ce506e58e675248df6f6230d9d9476a2c173374523cfd83164c4",
+      "recordedAt": "2026-10-21T12:04:31Z",
+      "sequence": 8,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "aa24297008686b0d086e07075268824929194146f09158f26afad7af0b68ef54",
+      "recordedAt": "2026-10-21T12:04:31Z",
+      "sequence": 9,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b2db313906ff138a9e08895ba9d30bb64e6684afd9abfe6601635d6def54c94d",
+      "recordedAt": "2026-10-21T12:04:31Z",
+      "sequence": 10,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "8ee85ef9feeadcf8e2eba891bcf450a9175d744fecdd4134de501fe09e1aa629",
+      "recordedAt": "2026-10-21T12:04:32Z",
+      "sequence": 11,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "236305eb2fa55412abdac0f622a76250eab034d986f64242b89bc20aa00bdbfc",
+      "recordedAt": "2026-10-21T12:04:32Z",
+      "sequence": 12,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b8ca037983e91015589bdd2c096bb2332dd4c75786572b113ba87a9ca510cdba",
+      "recordedAt": "2026-10-21T12:04:32Z",
+      "sequence": 13,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "47e99d353c765dc3148894b3ac3f124eb66e617154359e24800f29376c1ab93b",
+      "recordedAt": "2026-10-21T12:05:54Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7fb0f8f5fade789953bf4cafa17c7041199c105384d2a53c0fad7f25f88b8e35",
+      "recordedAt": "2026-10-21T12:05:57Z",
+      "sequence": 15,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "4793b35817c601b2b09bf6c6e18f8778982d3311f672199c8eb7fe2b1f17fe2c",
+      "recordedAt": "2026-10-21T12:05:57Z",
+      "sequence": 16,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "1eccae142bac6456459651001e92af28710a595ff6fcd6d626042a6a6c9eed4d",
+      "recordedAt": "2026-10-21T12:05:58Z",
+      "sequence": 17,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "40876e0d296471046be004edccf0d9bc23d10e7ced1dc24a519b418318f040e9",
+      "recordedAt": "2026-10-21T12:05:58Z",
+      "sequence": 18,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "1619ce5a88e312c5e3084bb22616e54505d165ec9000c47915477c0f1d04b99a",
+      "recordedAt": "2026-10-21T12:32:00Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3aacded5aa764442786f27e82a2b9c7dd5fae7c8e0bf21ca0a8bd4101c985fcd",
+      "recordedAt": "2026-10-21T12:40:20Z",
+      "sequence": 20,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "c81d6150c3e84486026de8b1ecc9bacf7a4c9547ee72823eb998f9000e717436",
+      "recordedAt": "2026-10-21T12:45:30Z",
+      "sequence": 21,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "bdaa3266e07d786cfb2aa21ed72865857ddf6ebbbd8bf54559a96a6100918e99",
+      "recordedAt": "2026-10-21T12:45:31Z",
+      "sequence": 22,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "2f8caa861389c559b5ef6acc5f4dd5168385b24e191500767164b94d60bb8602",
+      "recordedAt": "2026-10-21T12:45:31Z",
+      "sequence": 23,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f8d5d04075a917e64a28cc6bdd98d8e8c056511b5522ae3362184ce25ba329bd",
+      "recordedAt": "2026-10-21T12:45:31Z",
+      "sequence": 24,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a3938572cfe0b783c4311819227be32435294bd4b742bc7d99e74c52cb9fab14",
+      "recordedAt": "2026-10-21T12:51:57Z",
+      "sequence": 25,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "a6e05380232d8f4a9c6ec7c2d39564e0a283817691b179a544056af6e2d98779",
+      "recordedAt": "2026-10-21T12:51:57Z",
+      "sequence": 26,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6be08e93ab91f5dba4cbacb0adfcab3e59c8427940c222b8105feb5f3cf8bb6f",
+      "recordedAt": "2026-10-21T13:00:19Z",
+      "sequence": 27,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "41a2315e1f10e47968563eec17fb9cac42bc12f4e21333b64bbe001d2f746de7",
+      "recordedAt": "2026-10-21T13:00:19Z",
+      "sequence": 28,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1416160f3957e5fe5fcdece3a28f2561bae19c0287def21e5a73aee41ebcc25e",
+      "recordedAt": "2026-10-21T13:00:19Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7603dc9018d2bba931bd785f4dab25685f7bf6aa9b36bcaaa5451ae5dc8946bb",
+      "recordedAt": "2026-10-21T13:00:20Z",
+      "sequence": 30,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "8f772ddd08de000adf1499aa06dd841a92d2bdc9bc05fcee42be01a5fd643b81",
+      "recordedAt": "2026-10-21T13:00:20Z",
+      "sequence": 31,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "1cd4aa487628b275306ce525c24e2a1010bcc13d985600dc01ae50e1fb846b93",
+      "recordedAt": "2026-10-21T13:13:19Z",
+      "sequence": 32,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "3c69953eee5cd38a21e736f240e263de9c2297c5ae41e3ccaeefedd3e599b588",
+      "recordedAt": "2026-10-21T13:29:58Z",
+      "sequence": 33,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "be8299a9ea18ed226af29a05e3650d48f3976351c4562f4913bdee14c85a1f75",
+      "recordedAt": "2026-10-21T13:59:27Z",
+      "sequence": 34,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "43572d144257708e478f13bbd77e2778bf479971bc9eaece07760a80dc1de5a0",
+      "recordedAt": "2026-10-21T14:19:49Z",
+      "sequence": 35,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "5444cec05d831e54c783efdef0db83bb471c94e702ec529af42d7ca00226ba90",
+      "recordedAt": "2026-10-21T14:36:00Z",
+      "sequence": 36,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "97cef035b5771ce50ce3e917e1750812cbc9d10de74a0e7652255f2fe62d6068",
+      "recordedAt": "2026-10-21T14:53:57Z",
+      "sequence": 37,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "9de7342daa23783c6154ebed569a18e593059216bbd83dde4fd3b871765e3211",
+      "recordedAt": "2026-10-21T15:00:27Z",
+      "sequence": 38,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "08dbf051fac70d97f6b23e01807a1d69e937bbc2a445e8c37abf78872d5ab05c",
+      "recordedAt": "2026-10-21T15:00:28Z",
+      "sequence": 39,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "04cd848c74bd0b133c6c1d10186110914813095c6f59f37461f4525687116936",
+      "recordedAt": "2026-10-21T15:00:29Z",
+      "sequence": 40,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7fa42f35746953b27ea001d7e2e9f456e5de4aa06358a0dc582db78d9f3c27cd",
+      "recordedAt": "2026-10-21T15:00:30Z",
+      "sequence": 41,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "35d2076578b63195609ba9e74936c79b602f7a7153e06a2aae5e292f01817bd6",
+      "recordedAt": "2026-10-21T15:09:23Z",
+      "sequence": 42,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "4ae4877b391674eb24f6b5feeac6f9bb15fb252f5733a4892b37c376dbb8fed7",
+      "recordedAt": "2026-10-21T15:19:24Z",
+      "sequence": 43,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "0f7e506555fd342a249aed701516ecb40b52bad52438d2c90e255b119981cbdf",
+      "recordedAt": "2026-10-21T15:29:46Z",
+      "sequence": 44,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "bb76139379ea205f335c3be1353ad8099ceec8967c8505d7a0665c303cc0e66f",
+      "recordedAt": "2026-10-21T15:38:26Z",
+      "sequence": 45,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2b0b212375eecb4e0f24fe929f7f40a44b0cb4a1ba2e82408e54181866e62cc9",
+      "recordedAt": "2026-10-21T15:38:27Z",
+      "sequence": 46,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1675376bb7fdb5c5b982892472950f414ccfd5a5e500ec22410a5d2ed1c07b68",
+      "recordedAt": "2026-10-21T15:38:27Z",
+      "sequence": 47,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "0cd78624d33bcbaa58ecaf1ac1a0ac9b6e0d5031cb63298e070ab26b36202a4d",
+      "recordedAt": "2026-10-21T15:44:34Z",
+      "sequence": 48,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d3bec775caf796e6b83d8ec6b3bcb8a6171ef060d4965422d8e7ee607dac0d79",
+      "recordedAt": "2026-10-21T15:44:35Z",
+      "sequence": 49,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0118f9972d7074fc0fed8924c4934653b69a5ceaf9d5b611dfda1d6573832ed3",
+      "recordedAt": "2026-10-21T15:46:02Z",
+      "sequence": 50,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "351a7b0a8eb7685af178fa6ab322cef6a074ebaa95ab130f5c4af7c9b7f8f37b",
+      "recordedAt": "2026-10-21T18:15:10Z",
+      "sequence": 51,
+      "type": "acceptance-scope-revised"
+    },
+    {
+      "eventFingerprint": "ac1fe19f504ae12fbedfbf793fb4d3ebfebd0a8c60bbe096a50f8b9a5dbf4a6c",
+      "recordedAt": "2026-10-21T18:15:10Z",
+      "sequence": 52,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "89646f691251b435953cbc5580c0946b89f73a626bf8bdb70d45ae0df1d8fb1f",
+      "recordedAt": "2026-10-21T18:25:32Z",
+      "sequence": 53,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "bef9694c39f3ff041c4d40f947ae06080539f4ce46ab4b313b746100ed9ea53a",
+      "recordedAt": "2026-10-21T19:00:17Z",
+      "sequence": 54,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6d4b322310aa41eb0edf317e4c1f269fff720eec114263cf134146dd01e4a538",
+      "recordedAt": "2026-10-21T19:00:17Z",
+      "sequence": 55,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "47e8a2578809e6827d51ef21f621ab5507d68c5a397a1c31e5dbec422e423a22",
+      "recordedAt": "2026-10-21T19:37:44Z",
+      "sequence": 56,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2dfeb2dae727ee8b131ea5bd7197ccb3ddd9704f7f32e4e48c5d21ee14332022",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "sequence": 57,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4c3a26eb6f20237dea5737e37b382e217be49204f87a761894a4fdd035c4470e",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "sequence": 58,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4a641bbb24ba92dba415951a9fa4047a781ebb7c2fcdd4361d3a2b01e405be67",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "sequence": 59,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0932c60d2880afb46dacf5b2882b188163dc91d96cff23e3c4076cd3c43043c0",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "sequence": 60,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b80c8f2960ec706f5d3e3377cece3c35be118ba1e077878d77412341be176208",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "sequence": 61,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "360fca374234f25c24a82545d4563bc8a75fcd6218b4fd987449cef64bcd10af",
+      "recordedAt": "2026-10-22T00:08:50Z",
+      "sequence": 62,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "50e19101edf882d21ae0d8712d32164c6f829160b99d2f8dd4bc169be9482d26",
+      "recordedAt": "2026-10-22T00:09:00Z",
+      "sequence": 63,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c7efc4ad7a0d2d47916016727d26a44c3270b5f3833ced291fd7640fb26937d5",
+      "recordedAt": "2026-10-22T01:06:49Z",
+      "sequence": 64,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3d8f42f196044b037ca9aa0896d6f61b73c97916706273f15808a45a78cd924a",
+      "recordedAt": "2026-10-22T01:16:25Z",
+      "sequence": 65,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ea96e0345589392cae1a500a51a9f15d76dfad4cc92f2d6ef981470915e117f8",
+      "recordedAt": "2026-10-22T01:38:11Z",
+      "sequence": 66,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5fdd0aa507c863908f8bc1aa6dbc2a074f069fd23524abb3b2e17928e8356607",
+      "recordedAt": "2026-10-22T01:38:12Z",
+      "sequence": 67,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b4a1036f318fd1156a35268518a6e892ca54f59bc570263bac967cc6327be6de",
+      "recordedAt": "2026-10-22T01:38:12Z",
+      "sequence": 68,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4cedffb165357197d28922fcd91a0cac7de723f0285104ef58c7577c1dea2141",
+      "recordedAt": "2026-10-22T01:38:12Z",
+      "sequence": 69,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0fe151e85818896e45ef81a9cd8bbdb73ae0675b7c98eff5b605279b6ba38242",
+      "recordedAt": "2026-10-22T01:40:54Z",
+      "sequence": 70,
+      "type": "increment-qualified"
+    },
+    {
+      "eventFingerprint": "0fab0451caf1c5bdf5068a7a08a41db2c16b2acef896037c4041df0b9ca79b36",
+      "recordedAt": "2026-10-22T01:41:02Z",
+      "sequence": 71,
+      "type": "roadmap-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Build at least three distinct useful systems through the UI, each combining at least four component kinds: data entry/review, operations dashboard and conversation interface. Assert declared supported behavior, exact references, placements, configuration, save/reopen and checked builds where supported; static fixture rendering alone never proves application behavior.",
+          "id": "meaningful-scratch-systems",
+          "qualification": "local"
+        },
+        {
+          "description": "History beyond50edits, create/switch while dirty, delayed save/layout, rejected requests and cross-workspace late responses preserve edits and offer an actionable recovery path without stuck loading or duplicate mutations.",
+          "id": "draft-integrity-and-recovery",
+          "qualification": "local"
+        },
+        {
+          "description": "Review workspace/system request identity, safe diagnostic and preview bounds, failure behavior and rollback; retain existing authority and controlled pending gaps.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-10-21T12:05:57Z",
+      "completedChunks": [
+        "draft-request-integrity",
+        "meaningful-multi-system-journeys"
+      ],
+      "completionSummary": "Both reliability chunks implemented, current focused checks pass, real3system construction/save/reopen/edit/build-or-denial journeys pass bothhosts, and all3local criteria independently reviewed. Custom runtime authoring gaps remain explicit, without claiming executable applications.",
+      "deliverables": [
+        "Source-identified mixed-component UI test matrix",
+        "No-data-loss dirty/save/layout/switch regression coverage",
+        "Independent current-revision and optional history loading with retry",
+        "Shared desktop/thin-client behavior and updated owning documentation"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "New drag framework or replacing the approved click-based editor",
+        "Real provider/model quality and production mutation"
+      ],
+      "id": "reliable-editing-and-recovery",
+      "number": 1,
+      "objective": "Reproduce and fix state-loss and stuck-load defects, with useful multi-component UI journeys.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "No new drag framework or arbitrary custom runtime authority.",
+          "Manual/reference/model environments stay pending; absent advanced authoring is a documented capability limit rather than fixture bypass."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "draft-integrity-and-recovery",
+              "security-impact-reviewed"
+            ],
+            "id": "draft-request-integrity",
+            "outcome": "Saved checkpoint, guarded creation/switching, locked/fenced mutations and retryable isolated loads prevent loss.",
+            "title": "Draft and request integrity"
+          },
+          {
+            "criteriaIds": [
+              "meaningful-scratch-systems",
+              "security-impact-reviewed"
+            ],
+            "id": "meaningful-multi-system-journeys",
+            "outcome": "Three UI-authored systems exercise controls, edits, persistence and honest supported build/denial boundaries on both hosts.",
+            "title": "Useful mixed-component systems through UI"
+          }
+        ],
+        "completionTests": [
+          "functionality-browse focused profile, documentation and architecture gates after both chunks.",
+          "Separate criterion review bound to current source; no aggregate command until all implementation increments accounted for."
+        ],
+        "documentation": [
+          "Shared UI README",
+          "Canvas diagnostic guide",
+          "Owning system-builder architecture and context as affected"
+        ],
+        "fingerprint": "6aaea11a4c0f2a062681ee0b230a647571ebd97b37cc76f1cefddb901503cb90",
+        "focusedTests": [
+          "Exact Workspace/reliability/editor/history tests, deferred cross-workspace/save/layout/rejection failures.",
+          "Actual isolated Chrome and packaged desktop system-building cases with source identity and runner failures preserved."
+        ],
+        "recordedAt": "2026-10-21T11:45:21Z",
+        "rollback": "Preserve unsaved guards, operation fencing and workspace authorization; disable failed actions rather than restoring silent loss.",
+        "steps": [
+          "Fix saved checkpoints, creation guards and synchronous transaction fencing with narrow race/rejection tests.",
+          "Decouple current revision from optional history, provide retry and catch sanitized host rejections.",
+          "Strengthen real mixed-system UI journeys: exact versions/configuration/placements, edit actions, durable metrics and truthful checked-build or denial outcomes.",
+          "Run change-relevant host and source-owned tests and obtain separate criterion review."
+        ],
+        "summary": "Preserve drafts and recover from failures; validate three actual UI-authored mixed systems and explicit unsupported runtime boundaries."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-21T11:45:20Z",
+          "risks": [
+            "Security-relevant: late response must not replace a different authorized workspace/system draft.",
+            "Guard dirty drafts independently of bounded history and synchronously lock/fence transactions.",
+            "Reject arbitrary runtime metadata/policy injection; disclose unsupported custom execution instead of claiming preview proves application behavior.",
+            "Retain actual failures, source freshness and unavailable controlled qualification."
+          ],
+          "sources": [
+            {
+              "title": "Shared Workspace and immutable draft helpers",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "title": "Diagnostic red UI suite",
+              "url": "modules/ui/shared/system-builder/tests/SystemBuilderCanvasReliability.interaction.ui.test.tsx"
+            },
+            {
+              "title": "Current run surface scope",
+              "url": "docs/architecture/system-run-workflows.md"
+            },
+            {
+              "title": "Real mixed-system driver",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts"
+            }
+          ],
+          "summary": "Actual5red React cases reproduce create-discard, history rollover, optional-history blocking and pending-save editing. Real browser builds request intake and dashboard through UI and preserves controls; conversation save is blocked by required model and absent persisted-history interaction authoring. No supported empty-to-runtime path currently exists for custom apps; previews are explicitly nonexecuting. Preserve denial, test supported save/build outcomes and record that capability boundary rather than inject template metadata."
+        }
+      ],
+      "rollback": "Retain unsaved-work guards, generation fencing and authority denial; disable an unavailable action rather than restoring silent discard.",
+      "startedAt": "2026-10-21T11:45:20Z",
+      "status": "completed",
+      "title": "Reliable multi-system editing and recovery",
+      "verification": [
+        "Run focused Workspace/editor/history regressions and negative cases per chunk.",
+        "Run real isolated Chrome and packaged desktop meaningful-system journeys when available; retain every failed attempt.",
+        "Run applicable documentation/architecture checks and independent criterion review."
+      ],
+      "workPackages": [
+        {
+          "id": "journeys-and-races",
+          "outcome": "Three scratch-built systems plus deferred-response, rejection and history-overflow tests prove preservation of actual work.",
+          "title": "Meaningful journey and race regression coverage"
+        },
+        {
+          "id": "state-recovery",
+          "outcome": "Saved checkpoints, creation/switch guards, transaction fencing and recoverable loads protect edits.",
+          "title": "Draft and request ownership"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Record baseline/candidate on the same named local environment with production-path assertions, sample counts, cold/warm Canvas-ready and input/add/move/undo timings and long tasks. Target at least30percent improvement in the demonstrated bottleneck with no functional regression; report unmet targets instead of relaxing them.",
+          "id": "measured-local-responsiveness",
+          "qualification": "local"
+        },
+        {
+          "description": "Three useful scratch-built systems preserve behavior and exact saved structure in fresh packaged desktop and thin-client runs; final source-bound combined standard/end-to-end and applicable repository gates pass before closure.",
+          "id": "whole-host-journeys",
+          "qualification": "local"
+        },
+        {
+          "description": "Named reference performance environments and actual automated measurements satisfy agreed product budgets. Automated keyboard, focus, reflow and system-building journeys remain required on declared supported hosts; unavailable reference or automated technical qualification stays pending and blocks full closure.",
+          "id": "reference-and-accessibility-qualification",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Review workspace/system request identity, safe diagnostic and preview bounds, failure behavior and rollback; retain existing authority and controlled pending gaps.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-10-22T01:40:54Z",
+      "completedChunks": [
+        "bounded-load-and-render",
+        "measured-host-journeys"
+      ],
+      "completionSummary": "All four exact Canvas technical criteria passed with immutable current source-bound host, performance, automated accessibility and safe-failure evidence, focused qualification and separate review. All implementation chunks and both host builds are complete. Retain measurement limits, four genuine combined-suite skips and separate pending security/model obligations; offline human acceptance is not a passing test.",
+      "deliverables": [
+        "Cold/warm Canvas-ready and input-to-paint measurements",
+        "Request count and50/200/500instance workload comparisons",
+        "Optimized demonstrated bottlenecks and clear loading/empty/error feedback",
+        "Updated review site, tests and documentation with pending qualification retained"
+      ],
+      "dependsOn": [
+        "reliable-editing-and-recovery"
+      ],
+      "excluded": [
+        "Approximate model behavior, unqualified native effects, audit waiver",
+        "Population-level usability claims from synthetic UI automation"
+      ],
+      "id": "measured-canvas-responsiveness",
+      "number": 2,
+      "objective": "Remove measured load/render bottlenecks while retaining functional outcomes and accessibility.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Local measured improvement is not reference-hardware or population usability qualification.",
+          "Unavailable manual AT, representative environments and real-model outcomes remain pending; final roadmap closure/main promotion require actual gates."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "measured-local-responsiveness",
+              "security-impact-reviewed"
+            ],
+            "id": "bounded-load-and-render",
+            "outcome": "Actual baseline/candidate benchmarks and demand-driven exact reads reduce demonstrated redundant work without weakening draft or ownership guarantees.",
+            "title": "Measured history and loading improvements"
+          },
+          {
+            "criteriaIds": [
+              "whole-host-journeys",
+              "reference-and-accessibility-qualification",
+              "security-impact-reviewed"
+            ],
+            "id": "measured-host-journeys",
+            "outcome": "Useful3system journeys, paint/action/long-task observations and prior-system revisit pass on bothhosts; aggregate checks run only after all implementation chunks.",
+            "title": "Whole-host measurement and qualification"
+          }
+        ],
+        "completionTests": [
+          "Focused functionality-browse, docs/architecture/agent-support and affected client build after bothchunks.",
+          "Final test:standardande2e once at all-implementation boundary; applicable dependency/security and source-bound overall review without waiver."
+        ],
+        "documentation": [
+          "System Builder architecture",
+          "Shared UI README and context pack",
+          "Canvas test/measurement guide"
+        ],
+        "fingerprint": "d7fb7cc7fc99c0ba080d551e9d764af6df11135e24fbd22c1486b300597acaa6",
+        "focusedTests": [
+          "50/200/500operation benchmark, immutable alias/no-op/history and catalog paging/failed-read tests.",
+          "Exact Canvas UI regressions, current-source meaningful real Chrome and packaged desktop journeys."
+        ],
+        "recordedAt": "2026-10-21T12:05:58Z",
+        "rollback": "Preserve completed draft/request integrity and authority denials; revert only an optimization that fails functional/ownership evidence.",
+        "steps": [
+          "Add a deterministic source-bound50/200/500component operation benchmark; capture baseline before changing production history.",
+          "Replace redundant full-draft cloning/serialization with privately owned immutable snapshots and bounded semantic equality; index repeated tree/catalog/placement lookups and demand-load exact required assets.",
+          "Measure browser input/add/move/undo to paint and long tasks with bounded JSON, revisit earlier composed systems, and rerun same benchmarks/candidate comparisons.",
+          "After every implementation chunk, run final source-bound combined standard/end-to-end and applicable gates once, obtain independent review, and retain manual/reference qualification pending."
+        ],
+        "summary": "Measure frozen baseline, optimize proven history/catalog/render work, then verify useful systems and measurements on bothhosts while retaining controlled pending evidence."
+      },
+      "qualificationCompletion": {
+        "qualifiedAt": "2026-10-22T01:40:54Z",
+        "receiptDigest": "525ef44396f62e58fd0999d10f4c4ee2b7d31c3dc5e27a2695127f9e6585c5f6",
+        "reviewDigest": "e2203ebc9437b4777345f9b95918c965ec9e5ecd4f1d1e0c32b11921866e7f07",
+        "workId": "canvas-final-reference-target"
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-21T12:05:58Z",
+          "risks": [
+            "Security-relevant: immutable sharing must not introduce mutable aliases into saved/history snapshots or skip authorization/exact-version checks.",
+            "Demand-driven catalog loading must retain every exact definition used by the draft and preserve compatible paged browsing.",
+            "Measurement collection must be bounded, synthetic and source-identified; missing API/environment evidence remains unknown/pending.",
+            "No arbitrary runtime policy authoring or dependency-supplier waiver."
+          ],
+          "sources": [
+            {
+              "title": "Draft history and shared editor",
+              "url": "modules/ui/shared/system-builder/systemComposerDraft.ts"
+            },
+            {
+              "title": "React immutable state updates",
+              "url": "https://react.dev/learn/updating-objects-in-state"
+            },
+            {
+              "title": "React memo: stable props and pure rendering",
+              "url": "https://react.dev/reference/react/memo"
+            },
+            {
+              "title": "Long task measurement availability and semantics",
+              "url": "https://developer.mozilla.org/en-US/docs/Web/API/PerformanceLongTaskTiming"
+            }
+          ],
+          "summary": "The corrected editor still serializes and clones whole drafts for each commit/undo/redo, serializes full saved checkpoints and builds trees/move targets repeatedly. Cold creation enumerates the unrelated catalog before resolving required Minimal layout. Measure existing50/200/500component paths first, then remove demonstrated redundant work through owned immutable snapshots, indexed lookups and exact demand-driven bootstrap. Extend whole-host tests with input-to-paint, action and long-task observations plus revisit of prior systems; measurements remain local rather than reference SLO qualification."
+        }
+      ],
+      "rollback": "Keep the corrected integrity/recovery controls and bounded safe read behavior; revert only the measured optimization if it regresses useful outcomes.",
+      "startedAt": "2026-10-21T12:05:57Z",
+      "status": "completed",
+      "title": "Measured Canvas responsiveness and usability",
+      "verification": [
+        "Focused tests and measurements for each demonstrated bottleneck.",
+        "Current-source real browser/packaged host journeys, no arbitrary sleeps or skipped failures.",
+        "After all implementation chunks, run test:standardande2e once plus relevant repository gates, source-bound overall review and both owner-state validations."
+      ],
+      "workPackages": [
+        {
+          "id": "bounded-load-and-render",
+          "outcome": "Canvas does not await unrelated catalog/history work; immutable local edits avoid full-tree clone/rebuild where safely possible.",
+          "title": "Demand-driven bootstrap and indexed rendering"
+        },
+        {
+          "id": "measured-host-journeys",
+          "outcome": "Repeatable source-bound measurements and real host journeys distinguish local improvements from unavailable reference qualification.",
+          "title": "Before/after meaningful system measurements"
+        }
+      ]
+    }
+  ],
+  "name": "Reliable and Responsive System Builder Canvas",
+  "objective": "Build useful multi-component systems from an empty workspace without lost edits or stalled Canvas loads, and measure and improve actual editor responsiveness on both hosts.",
+  "paths": {
+    "report": "docs/tmp/system-builder-canvas-reliability-implementation-report.md",
+    "roadmap": "docs/system-builder-canvas-reliability-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/system-builder-canvas-reliability/state.json"
+  },
+  "resumeAudits": [
+    {
+      "blockerId": "canvas-final-dependency-gate",
+      "reconciliation": "Re-inspected rebuild dirty work and preserved all prior roadmap history. No third-party braces fork, advisory suppression or risk waiver was used. Independent review prompted bundler-visible official provider imports and source-confined dev file serving; focused regression evidence passes. Cold desktop startup and custom authoring constraints remain explicit, and unavailable manual/reference/participant checks remain pending.",
+      "recordedAt": "2026-10-21T13:29:58Z"
+    }
+  ],
+  "roadmapApproval": {
+    "approvedAt": "2026-10-21T18:15:10Z",
+    "fingerprint": "0d036754b068dc57d5e38402de13b328992b1963d0e8cb206c8a89decd1d9d41",
+    "note": "User explicitly directed these three named technical roadmaps to use AI-agent acceptance, with human studies/manual acceptance handled offline. This narrow scope reapproval preserves technical qualification and does not assert passing tests."
+  },
+  "schemaVersion": 1,
+  "slug": "system-builder-canvas-reliability",
+  "status": "completed",
+  "updatedAt": "2026-10-22T01:41:02Z"
+}

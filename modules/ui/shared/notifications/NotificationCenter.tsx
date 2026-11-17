@@ -16,7 +16,7 @@ export function NotificationBell() {
       type="button"
       aria-label={notifications.unreadCount > 0 ? `Notifications, ${notifications.unreadCount} unread` : "Notifications"}
       aria-haspopup="dialog"
-      aria-controls={NOTIFICATION_PANEL_ID}
+      aria-controls={notifications.state.panelOpen ? NOTIFICATION_PANEL_ID : undefined}
       aria-expanded={notifications.state.panelOpen}
       title="Notifications"
       onClick={() => notifications.setPanelOpen(!notifications.state.panelOpen)}
@@ -30,24 +30,42 @@ export function NotificationBell() {
 
 export function NotificationViewport() {
   const notifications = useNotificationCenter();
+  const { panelOpen, panelDismissedFromOutside } = notifications.state;
   const panelRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(false);
 
+  function dismissRecord(id: string, button: HTMLButtonElement) {
+    const ownerDocument = button.ownerDocument;
+    if (ownerDocument.activeElement === button) {
+      const panel = panelRef.current;
+      const close = panel?.contains(button)
+        ? panel.querySelector<HTMLButtonElement>("[data-notification-initial-focus]")
+        : undefined;
+      (close ?? ownerDocument.getElementById(NOTIFICATION_BELL_ID))?.focus();
+    }
+    notifications.dismiss(id);
+  }
+
   useEffect(() => {
-    if (notifications.state.panelOpen) {
+    if (panelOpen) {
       panelRef.current?.querySelector<HTMLButtonElement>("[data-notification-initial-focus]")?.focus();
     } else if (wasOpenRef.current) {
-      document.getElementById(NOTIFICATION_BELL_ID)?.focus();
+      const active = document.activeElement;
+      if (!panelDismissedFromOutside || !active || active === document.body || active === document.documentElement) {
+        document.getElementById(NOTIFICATION_BELL_ID)?.focus();
+      }
     }
-    wasOpenRef.current = notifications.state.panelOpen;
-  }, [notifications.state.panelOpen]);
+    wasOpenRef.current = panelOpen;
+  }, [panelOpen, panelDismissedFromOutside]);
 
   useEffect(() => {
     const onPointer = (event: MouseEvent | TouchEvent) => {
       if (!notifications.state.panelOpen) return;
       const target = event.target;
       const bell = document.getElementById(NOTIFICATION_BELL_ID);
-      if (target instanceof Node && !panelRef.current?.contains(target) && !bell?.contains(target)) notifications.setPanelOpen(false);
+      if (target instanceof Node && !panelRef.current?.contains(target) && !bell?.contains(target)) {
+        notifications.dismissPanelFromOutside();
+      }
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && notifications.state.panelOpen) {
@@ -84,7 +102,7 @@ export function NotificationViewport() {
           </div>
           {notifications.records.length === 0 ? <p className="ui-notification__empty">No notifications yet.</p> : (
             <ol className="ui-notification__list">
-              {notifications.records.map((record) => <NotificationListItem key={record.id} record={record} onDismiss={() => notifications.dismiss(record.id)} />)}
+              {notifications.records.map((record) => <NotificationListItem key={record.id} record={record} onDismiss={(button) => dismissRecord(record.id, button)} />)}
             </ol>
           )}
         </div>
@@ -93,7 +111,7 @@ export function NotificationViewport() {
         {notifications.toasts.map(({ record, phase }) => (
           <article key={record.id} className={`ui-notification__toast ui-notification__toast--${record.tone}${phase === "fading" ? " ui-notification__toast--fading" : ""}`} role={record.tone === "error" ? "alert" : "status"}>
             <div>{record.title ? <strong>{record.title}</strong> : null}<p>{record.message}</p></div>
-            <button type="button" className="ui-notification__icon-button" aria-label="Dismiss notification" onClick={() => notifications.dismiss(record.id)}><ApplicationIcon name="close" /></button>
+            <button type="button" className="ui-notification__icon-button" aria-label="Dismiss notification" onClick={(event) => dismissRecord(record.id, event.currentTarget)}><ApplicationIcon name="close" /></button>
           </article>
         ))}
       </div>
@@ -101,7 +119,7 @@ export function NotificationViewport() {
   );
 }
 
-function NotificationListItem({ record, onDismiss }: { readonly record: NotificationRecord; readonly onDismiss: () => void }) {
+function NotificationListItem({ record, onDismiss }: { readonly record: NotificationRecord; readonly onDismiss: (button: HTMLButtonElement) => void }) {
   const canDismiss = record.kind === "message" || isTerminalNotificationActivity(record.status);
   return (
     <li className={`ui-notification__item ui-notification__item--${record.tone}${record.unread ? " ui-notification__item--unread" : ""}`}>
@@ -116,7 +134,7 @@ function NotificationListItem({ record, onDismiss }: { readonly record: Notifica
         ) : null}
         {record.source && record.title ? <small>{record.source}</small> : null}
       </div>
-      {canDismiss ? <button type="button" className="ui-notification__icon-button" aria-label="Dismiss notification" onClick={onDismiss}><ApplicationIcon name="close" /></button> : null}
+      {canDismiss ? <button type="button" className="ui-notification__icon-button" aria-label="Dismiss notification" onClick={(event) => onDismiss(event.currentTarget)}><ApplicationIcon name="close" /></button> : null}
     </li>
   );
 }

@@ -63,6 +63,12 @@ a new build; a host never substitutes a default model.
 
 Partial outputs remain quarantined and are deleted or retained as failed-build evidence according to policy. They never become active release content.
 
+The managed host prepares its trusted implementation catalog once for each
+saved-version check and again for each build execution. This avoids repeating
+catalog setup for every asset or facet. Each resolution still checks the
+current workspace, exact version, and permitted implementation. A locked
+authority recheck remains live, and failed setup prevents output writes.
+
 ## Security and workflow compilation
 
 Composed policy is the intersection of platform, organization, system, and asset permissions. A composition can narrow but not widen the upstream authority. Missing required authorization, isolation, masking, audit, or approval declarations block the build.
@@ -235,3 +241,27 @@ Imported or authored UI/logic, independently qualified rebuilds, arbitrary
 provider execution, and a qualified container/WASI sandbox are not implied and
 remain unavailable until their explicit adapters and environment evidence
 exist.
+
+## Guided build and publication request ownership
+
+The shared Build & test modal owns one open workspace/client/system/revision session. Publish owns one workspace/build-client session. Conditional local state keys replacements; layout cleanup retires responses at commit without changing ownership during an abandoned render. Preparation, list and action tokens admit one request before React renders busy state and only the accepting owner releases it. Retired queued reads never dispatch.
+
+Caught transport exceptions use fixed actionable notification-center messages. Readiness and application denials retain their typed diagnostics and never grant build or publication. Failed checks have Retry checks; Publish always offers Refresh, including after an initial read failure. A requested build acknowledges its exact caller-issued build ID and saved target; cancellation acknowledges the current build and target. Retry creates another explicitly requested build attempt under the existing application contract.
+
+Publication confirmation captures the exact system name, saved revision, build version, build ID and expected lock. Selection, refresh and close controls remain synchronously locked while approval owns them. A returned release must match that workspace, system, revision, source build and lock before the UI reports saved success. The backend remains authoritative for authorization, lock verification, artifacts, immutable release creation and runtime eligibility. A failed list refresh after saved publication reports the separate read failure, clears stale choices and permits a read retry; it does not report publication failure or repeat approval. Local rendered fixtures and exact types do not qualify physical apps, native storage, runtime or final roadmap checks.
+
+### Published lifecycle view ownership
+
+Each published lifecycle card owns one committed workspace/client/build/revision/release session. Layout cleanup retires that owner before passive effects; an uncommitted replacement never changes the current session. Status and action acknowledgements must match its exact release before controls or success are adopted. Application projections still own eligible actions and expected revisions; the renderer adds no lifecycle transition or runtime policy.
+
+One physical status read may remain in flight per session. Background ticks do not add another read. An accepted action invalidates an older background result without releasing that physical slot or claiming transport cancellation. Only actual read settlement releases it. If the action is denied, its owner waits for that settlement, requests one fresh authoritative status and retains the typed denial. Retiring the action owner prevents that queued reconciliation from dispatching. Synchronous action/read admission and exact cleanup keep previous operations from unlocking newer controls.
+
+Old sessions may have already dispatched client calls. Retirement ignores their results; it does not prove global cancellation, worker exit, process cleanup or a global request cap across replacement sessions. Unexpected read/action errors use fixed safe copy; typed policy denials stay contextual. Local component and timer tests do not qualify actual install/start/stop/uninstall, runtime windows, storage/native ownership or final roadmap checks.
+
+### Published conversation request ownership
+
+The existing desktop conversation window owns a private session for its committed dedicated preload API. Conditional local state keys API replacements and real layout cleanup retires request tokens. Deferred initial reads do not dispatch after retirement; obsolete reads or accepted-turn replies cannot change another session. No renderer-supplied release, workspace or runtime-instance identity is added: the dedicated host-bound preload and application retain those associations and all runtime eligibility checks.
+
+Retry connection is an explicit read-only recovery action after a connection or turn failure. It never replays a turn, launches a runtime or changes approval. One read or user turn owns the controls synchronously; queued input is refused while that owner exists, preserving the accepted draft before disabled rendering. A successful accepted turn updates its current transcript and clears only its session draft. Failure retains the draft; unexpected API/UUID exceptions have fixed safe copy and exact finally cleanup, while typed application diagnostics remain. Returned unavailable status is visible with submission disabled by the authoritative projection.
+
+Source-bound rendered tests use native events and actual React layout/StrictMode/Suspense with an explicit passive timing seam. One case composes the actual dedicated preload with finite IPC replies. Original preload validation/refusal tests remain separate. None proves actual sender trust, model inference, runtime-window/process cleanup, durable data-plane restart or parent/final qualification.

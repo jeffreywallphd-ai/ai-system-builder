@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -7,33 +8,75 @@ import {
 } from "react";
 
 import type { SystemRuntimeConversationView } from "../../../../modules/contracts/system-deployment";
+import type { SystemRuntimePreloadApi } from "../system-runtime-preload/systemRuntimePreloadApi";
 
 export function SystemRuntimeApp({
   api = window.systemRuntime,
 }: {
-  readonly api?: typeof window.systemRuntime;
+  readonly api?: SystemRuntimePreloadApi;
 }) {
+  const [scope, setScope] = useState({ api, key: 0 });
+  if (scope.api !== api) {
+    setScope({ api, key: scope.key + 1 });
+    return null;
+  }
+  return <ConversationSession key={scope.key} api={api} />;
+}
+
+function ConversationSession({ api }: { readonly api?: SystemRuntimePreloadApi }) {
   const [view, setView] = useState<SystemRuntimeConversationView>();
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const logRef = useRef<HTMLOListElement>(null);
-  const mounted = useRef(true);
-  const submitInFlight = useRef(false);
+  const mounted = useRef(false);
+  const readOwner = useRef<object | undefined>(undefined);
+  const submitOwner = useRef<object | undefined>(undefined);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     mounted.current = true;
-    void api.read().then((result) => {
-      if (!mounted.current) return;
-      if (result.ok) setView(result.value);
-      else setError(result.error.message);
-      setLoading(false);
-    });
     return () => {
       mounted.current = false;
+      readOwner.current = undefined;
+      submitOwner.current = undefined;
     };
-  }, [api]);
+  }, []);
+
+  async function readConnection() {
+    if (!mounted.current || readOwner.current || submitOwner.current) return;
+    if (!api) {
+      setLoading(false);
+      setError("The published system connection is unavailable. Close this window and start the system from Publish again.");
+      return;
+    }
+    const owner = {};
+    readOwner.current = owner;
+    const current = () => mounted.current && readOwner.current === owner;
+    setLoading(true);
+    setError(undefined);
+    try {
+      const result = await Promise.resolve().then(() => current() ? api.read() : undefined);
+      if (!current() || !result) return;
+      if (result.ok) setView(result.value);
+      else {
+        setView(undefined);
+        setError(result.error.message);
+      }
+    } catch {
+      if (current()) {
+        setView(undefined);
+        setError("Unable to read the conversation. Select Retry connection.");
+      }
+    } finally {
+      if (current()) {
+        readOwner.current = undefined;
+        setLoading(false);
+      }
+    }
+  }
+
+  useEffect(() => { void readConnection(); }, [api]);
 
   useEffect(() => {
     const log = logRef.current;
@@ -43,33 +86,37 @@ export function SystemRuntimeApp({
   async function submit(event?: FormEvent) {
     event?.preventDefault();
     if (
-      submitInFlight.current ||
+      !mounted.current || !api || readOwner.current || submitOwner.current || loading ||
       !view?.canSubmit ||
       !draft.trim() ||
       draft.length > (view?.maxInputCharacters ?? 0)
     ) {
       return;
     }
-    submitInFlight.current = true;
+    const owner = {};
+    submitOwner.current = owner;
+    const current = () => mounted.current && submitOwner.current === owner;
     setSubmitting(true);
     setError(undefined);
     const text = draft;
-    const result = await api.submit({
-      text,
-      operationId: `runtime-turn.${crypto.randomUUID()}`,
-    });
-    if (!mounted.current) {
-      submitInFlight.current = false;
-      return;
+    try {
+      const result = await api.submit({
+        text,
+        operationId: `runtime-turn.${crypto.randomUUID()}`,
+      });
+      if (!current()) return;
+      if (result.ok) {
+        setView(result.value);
+        setDraft("");
+      } else setError(result.error.message);
+    } catch {
+      if (current()) setError("Unable to send the message. Select Retry connection to check the conversation before sending again.");
+    } finally {
+      if (current()) {
+        submitOwner.current = undefined;
+        setSubmitting(false);
+      }
     }
-    if (result.ok) {
-      setView(result.value);
-      setDraft("");
-    } else {
-      setError(result.error.message);
-    }
-    setSubmitting(false);
-    submitInFlight.current = false;
   }
 
   function onComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -127,14 +174,22 @@ export function SystemRuntimeApp({
           ))}
         </ol>
         {error ? (
-          <p className="system-runtime-error" role="alert">{error}</p>
+          <div>
+            <p className="system-runtime-error" role="alert">{error}</p>
+            {api ? <button type="button" onClick={() => void readConnection()} disabled={loading || submitting}>Retry connection</button> : null}
+          </div>
         ) : null}
+        {!error && view?.statusMessage ? <p role="status">{view.statusMessage}</p> : null}
         <form className="system-runtime-composer" onSubmit={(event) => void submit(event)}>
           <label htmlFor="system-runtime-message">Message</label>
           <textarea
             id="system-runtime-message"
             value={draft}
-            onChange={(event) => setDraft(event.currentTarget.value)}
+            onChange={(event) => {
+              if (mounted.current && !readOwner.current && !submitOwner.current) {
+                setDraft(event.currentTarget.value);
+              }
+            }}
             onKeyDown={onComposerKeyDown}
             maxLength={maximum || undefined}
             rows={3}

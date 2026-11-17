@@ -133,6 +133,7 @@ export class PrepareGuidedSystemBuildUseCase {
     > & {},
   ): Promise<boolean> {
     try {
+      if (revision.instances.length > 0) await this.resolver.ensureReady?.();
       for (const instance of revision.instances) {
         const result = await resolveFirstSystemBuildFacet(
           this.resolver,

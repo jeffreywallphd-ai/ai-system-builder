@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ArtifactBrowserFeature } from "../features/artifact-browser";
 import { ArtifactIngestionFeature } from "../features/artifact-upload/components/ArtifactIngestionFeature";
@@ -6,21 +6,34 @@ import { DatasetPreparationFeature } from "../features/dataset-preparation/compo
 import { PythonRuntimeFooter } from "../features/python-runtime/components/PythonRuntimeFooter";
 import { TabbedPanel } from "../components/ui/TabbedPanel";
 import { DatasetReviewWorkspace } from "../../../../../modules/ui/shared/dataset-review";
+import { PageDashboardHeader } from "../../../../../modules/ui/shared";
 import { createDesktopDatasetPreparationClient } from "../features/dataset-preparation/api/desktopDatasetPreparationClient";
+import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
+import { createDesktopContextManagementClient } from "../features/context-management/api/desktopContextManagementClient";
+
+import type { DatasetVersionPanelService } from "../../../../../modules/ui/shared/dataset-version";
+import { useDatasetVersionReplayHandoff } from "../../../../../modules/ui/shared/dataset-version/useDatasetVersionReplayHandoff";
 
 export interface ArtifactsPageProps {
   workspaceId: string;
   workspaceName: string;
   refreshToken: number;
   onUploaded: () => void;
+  initialSelectedStorageKey?: string;
+  onInitialSelectionHandled?: () => void;
+  onConvertToRag?: (artifactId: string) => void;
 }
 
 export function ArtifactsPage({
   workspaceId,
   refreshToken,
   onUploaded,
+  initialSelectedStorageKey,
+  onInitialSelectionHandled,
+  onConvertToRag,
 }: ArtifactsPageProps) {
   const [activeTabId, setActiveTabId] = useState("ingestion");
+  const replayHandoff = useDatasetVersionReplayHandoff(workspaceId, activeTabId === "dataset-preparation", () => setActiveTabId("dataset-preparation"));
   const [preparedArtifactStorageKey, setPreparedArtifactStorageKey] =
     useState<string>();
   const onDatasetPrepared = (artifactStorageKey: string) => {
@@ -28,6 +41,27 @@ export function ArtifactsPage({
     setActiveTabId("browser");
     onUploaded();
   };
+  const datasetVersionService = useMemo<DatasetVersionPanelService>(() => {
+    const client = createDesktopDatasetPreparationClient();
+    return {
+      list: async (workspaceId, datasetId) => {
+        if (!client.listVersions) throw new Error("Version history is unavailable.");
+        return client.listVersions(workspaceId, datasetId);
+      },
+      compare: async (workspaceId, fromVersionId, toVersionId) => {
+        if (!client.compareVersions) throw new Error("Version comparison is unavailable.");
+        return client.compareVersions(workspaceId, fromVersionId, toVersionId);
+      },
+      reproduce: async (workspaceId, versionId) => {
+        if (!client.readReproduction) throw new Error("Saved setup is unavailable.");
+        return client.readReproduction(workspaceId, versionId);
+      },
+      publish: async input => {
+        if (!client.publishVersion) throw new Error("Version publication is unavailable.");
+        return client.publishVersion(input);
+      },
+    };
+  }, []);
   const datasetReviewService = useMemo(() => {
     const client = createDesktopDatasetPreparationClient();
     return {
@@ -67,17 +101,49 @@ export function ArtifactsPage({
       return client.readReviewPage({ ...input, page: 0, pageSize: 10 });
     };
   }, []);
+  const contextClient = useMemo(
+    () => createDesktopContextManagementClient(),
+    [],
+  );
+  const readContextConversionReadiness = useMemo(
+    () => async (artifactId: string) => {
+      const result = await contextClient.execute({
+        workspaceId,
+        command: {
+          action: "source-inspect",
+          artifactId,
+          chunking: {
+            strategy: "structure-aware",
+            chunkCharacters: 1200,
+            overlapCharacters: 120,
+            maximumChunks: 10000,
+          },
+        },
+      });
+      if (result.action !== "source-inspect") {
+        throw new Error("Context readiness response was invalid.");
+      }
+      return result.readiness;
+    },
+    [contextClient, workspaceId],
+  );
+
+  useEffect(() => {
+    if (initialSelectedStorageKey) setActiveTabId("browser");
+  }, [initialSelectedStorageKey]);
 
   return (
     <section
       className="ui-stack ui-stack--sm"
       data-refresh-token={refreshToken}
     >
-      <h1>Data Management</h1>
-      <p>
-        Add source data, prepare and review training datasets, and manage
-        workspace artifacts.
-      </p>
+      <PageDashboardHeader
+        title="Data Management"
+        description="Add source data, prepare and review training datasets, and manage workspace artifacts."
+        dashboard={
+          <DesktopPageDashboard kind="artifacts" workspaceId={workspaceId} />
+        }
+      />
       <TabbedPanel
         tabListAriaLabel="Artifact workspace panels"
         activeTabId={activeTabId}
@@ -102,11 +168,21 @@ export function ArtifactsPage({
               <ArtifactBrowserFeature
                 key={`${workspaceId}-${refreshToken}`}
                 workspaceId={workspaceId}
+                datasetVersionService={datasetVersionService}
+                onReuseDatasetVersion={replayHandoff.enqueue}
                 readParquetPreview={parquetPreviewReader}
-                initialSelectedStorageKey={preparedArtifactStorageKey}
-                onInitialSelectionHandled={() =>
-                  setPreparedArtifactStorageKey(undefined)
+                initialSelectedStorageKey={
+                  preparedArtifactStorageKey ?? initialSelectedStorageKey
                 }
+                onInitialSelectionHandled={() => {
+                  if (preparedArtifactStorageKey) {
+                    setPreparedArtifactStorageKey(undefined);
+                  } else {
+                    onInitialSelectionHandled?.();
+                  }
+                }}
+                readContextConversionReadiness={readContextConversionReadiness}
+                onConvertToRag={onConvertToRag}
               />
             ),
           },
@@ -118,6 +194,7 @@ export function ArtifactsPage({
                 key={`dataset-${workspaceId}`}
                 workspaceId={workspaceId}
                 onPrepared={onDatasetPrepared}
+                replayHandoff={replayHandoff}
               />
             ),
           },

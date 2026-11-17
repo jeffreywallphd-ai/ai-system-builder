@@ -1,3 +1,5 @@
+import type { AssetDefinitionPublicationPort } from "../../../application/ports/asset-publication";
+import type { WorkspaceAssetAccessPort } from "../../../application/ports/asset/workspace-asset-access.port";
 import { createHash, randomUUID } from "node:crypto";
 
 import type { AssetDefinitionRepositoryPort } from "../../../application/ports/asset";
@@ -24,6 +26,8 @@ import {
 } from "../../../contracts/asset-implementation";
 
 export function composeAssetStudioWorkflow(options: {
+  readonly workspaceAccess: WorkspaceAssetAccessPort;
+  readonly publication: AssetDefinitionPublicationPort;
   readonly documents: StructuredDocumentStore;
   readonly implementations: AssetImplementationKernelComposition;
   readonly artifacts: AssetImplementationArtifactPort;
@@ -48,6 +52,8 @@ export function composeAssetStudioWorkflow(options: {
     assetDraftRepository: assetDrafts,
     useCases: {
       assetDrafts: new AssetStudioAssetDraftWorkflowUseCase({
+        publication: options.publication,
+        workspaceAccess: options.workspaceAccess,
         drafts: assetDrafts,
         definitions: options.definitions,
         implementations: options.implementations.repository,
@@ -56,6 +62,7 @@ export function composeAssetStudioWorkflow(options: {
         now: options.now,
       }),
       propose: new ProposeAssetStudioChangeUseCase({
+        workspaceAccess: options.workspaceAccess,
         workflows,
         implementations: options.implementations.repository,
         artifacts: options.artifacts,
@@ -73,8 +80,10 @@ export function composeAssetStudioWorkflow(options: {
           normalizeAssetImplementationDraftId(
             `implementation-draft.${randomUUID()}`,
           ),
+        options.workspaceAccess,
       ),
       review: new ReviewAssetStudioProposalUseCase({
+        workspaceAccess: options.workspaceAccess,
         workflows,
         artifacts: options.artifacts,
         snapshotSource,
@@ -82,8 +91,8 @@ export function composeAssetStudioWorkflow(options: {
           normalizeAssetSourceSnapshotId(`source-snapshot.${randomUUID()}`),
         now: options.now,
       }),
-      read: new ReadAssetStudioProposalUseCase(workflows, options.artifacts),
-      list: new ListAssetStudioWorkflowsUseCase(workflows),
+      read: new ReadAssetStudioProposalUseCase(workflows, options.artifacts, options.workspaceAccess),
+      list: new ListAssetStudioWorkflowsUseCase(workflows, options.workspaceAccess),
     },
   };
 }

@@ -7,7 +7,9 @@ describe("artifact family invariants", () => {
     expect(Object.keys(artifactContracts).sort()).toEqual([
       "ARTIFACT_KINDS",
       "createArtifactDescriptorFromStagedArtifactDescriptor",
+      "isArtifactBrowserVisible",
       "isArtifactKind",
+      "isUploadedBrowserArtifact",
       "normalizeArtifactDescriptor",
       "normalizeArtifactFormatMetadata",
       "normalizeArtifactKind",

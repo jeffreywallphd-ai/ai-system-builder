@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react";
+import { TaskObservationProvider } from "./TaskObservationProvider";
 
 import {
   INITIAL_NOTIFICATION_CENTER_STATE,
@@ -30,6 +31,7 @@ export interface NotificationCenterApi {
   markVisibleRead(): void;
   setActiveWorkspaceId(workspaceId?: string): void;
   setPanelOpen(open: boolean): void;
+  dismissPanelFromOutside(): void;
 }
 
 const NotificationCenterContext = createContext<NotificationCenterApi | undefined>(undefined);
@@ -121,6 +123,7 @@ export function NotificationProvider({ children }: { readonly children: ReactNod
     dispatch({ type: "set-panel-open", open });
     if (open) dispatch({ type: "mark-visible-read" });
   }, []);
+  const dismissPanelFromOutside = useCallback(() => dispatch({ type: "dismiss-panel-from-outside" }), []);
 
   const api = useMemo<NotificationCenterApi>(() => ({
     state,
@@ -134,9 +137,10 @@ export function NotificationProvider({ children }: { readonly children: ReactNod
     markVisibleRead,
     setActiveWorkspaceId,
     setPanelOpen,
-  }), [clearVisible, dismiss, markVisibleRead, publish, records, setActiveWorkspaceId, setPanelOpen, state, toasts, unreadCount, upsertActivity]);
+    dismissPanelFromOutside,
+  }), [clearVisible, dismiss, dismissPanelFromOutside, markVisibleRead, publish, records, setActiveWorkspaceId, setPanelOpen, state, toasts, unreadCount, upsertActivity]);
 
-  return <NotificationCenterContext.Provider value={api}>{children}</NotificationCenterContext.Provider>;
+  return <NotificationCenterContext.Provider value={api}><TaskObservationProvider>{children}</TaskObservationProvider></NotificationCenterContext.Provider>;
 }
 
 export function useNotificationCenter(): NotificationCenterApi {

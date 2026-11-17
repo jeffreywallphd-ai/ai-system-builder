@@ -1,0 +1,269 @@
+{
+  "schema_version": "headless-desktop-takeover-qualification-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "revocable-desktop-presentation",
+  "status": "technical-check-pending",
+  "windows_observations": [
+    {
+      "run_id": "2026-11-14t13-46-43-890z-f9952d6e",
+      "source_revision": "source.ae538b9a1f2255f185d5961a0e270225e91bdf30c782c3dcfc13a6520834f841",
+      "evidence_digest": "10cba3dc298dfc7e1797538b9a4be080287d19111b3ab0b1e3b523cc03d41511",
+      "status": "passed",
+      "scope": ["Stock app dialog over an existing preview", "Unchanged main page geometry", "Reload and restart", "Second client does not replace the active client", "Subsequent saved work"],
+      "warm_present_ms": {"samples": 100, "p50": 133.33, "p95": 150.91, "max": 161.61},
+      "revoke_ms": {"samples": 100, "p50": 1.9, "p95": 6.4, "max": 9.4},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 5.9, "p95": 9, "max": 9.4},
+      "environment": {"os": "Windows 10.0.26200", "electron": "42.11.18", "chromium": "148.0.7778.280", "ram_gib": 16, "logical_cpus": 20, "visible_document": true}
+    },
+    {
+      "run_id": "2026-11-14t13-53-26-537z-eca7199c",
+      "source_revision": "source.f65a5f21dc6a590d20fd0806776c33caf77dec850fa1af64752ed99eff6cea4d",
+      "evidence_digest": "5d29ca7befb764f2f7c4443eff3143ee513b156fb73fe767e7b74d8b3d9e0344",
+      "status": "passed",
+      "scope": ["A running approved conversation survives window revoke", "No fresh window context after revoke", "The user can navigate while the task runs", "Reconnect recovers the same completed task", "Both owned runtime workers confirmed exited"]
+    },
+    {
+      "run_id": "2026-11-14t13-59-08-968z-c95da7bc",
+      "source_revision": "source.4688a7814d6e29ce43c672ae390e327aae9c407f58f05437f6036453c524a054",
+      "evidence_digest": "6813400a456d651a9eaf25219d8b91e6192dc2a5f519c3e20a2f3d6ea0eb1ddd",
+      "status": "passed",
+      "scope": ["Three packaged scenarios passed on one candidate", "Read-only inspection confirmed the isolated SQLite audit stored only fixed lifecycle and backend fields", "Revoke from one foreground window during the fixture"],
+      "warm_present_ms": {"samples": 100, "p50": 129.99, "p95": 141.71, "max": 154.24},
+      "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 6.5, "max": 6.9},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 6.2, "p95": 6.8, "max": 6.9}
+    },
+    {
+      "run_id": "2026-11-14t14-12-46-843z-a27ac02e",
+      "source_revision": "source.3d0ca7077ed3397b46e39bf7317378aef63d9250f649b4034e6c8cc0810bc2af",
+      "evidence_digest": "58ae7b08c54e49eaa32af32065b48b7fce4c6820a6d208b283df520dd8784bdf",
+      "status": "passed",
+      "scope": ["Current reviewed single-window receipt", "Three packaged cases passed", "The presentation panel was absent before each new command and after each revoke", "The approved task finished through a separately authorized client"],
+      "warm_present_ms": {"samples": 100, "p50": 127.73, "p95": 142.9, "max": 149.96},
+      "revoke_ms": {"samples": 100, "p50": 1.7, "p95": 6.2, "max": 6.8},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 5.8, "p95": 6.6, "max": 6.8}
+    },
+    {
+      "run_id": "2026-11-14t14-20-26-885z-1b906713",
+      "source_revision": "source.b02e1191d92da33c567648f11372627c47412517cd8b2a50ed9fa8656d302c19",
+      "evidence_digest": "f604f0d626c775b7cf1da864b3378459beb79b1e531f556672541bed730a2cc5",
+      "status": "passed",
+      "scope": ["Two actual desktop windows with different accepted clients", "The native File action refuses a third main window", "Minimize and restore leave independent authority in the other window", "The second window returns local control when its revoke handler cannot reach host authority", "No new context after the local revoke", "Closing the second window leaves the first window working"]
+    },
+    {
+      "run_id": "2026-11-14t14-29-50-389z-f7c87393",
+      "source_revision": "source.f990e761712f4e74a5fd625ebe87d989d82d076d545818eb1121b1f646dcddda",
+      "evidence_digest": "9bf635d57be74b7ceb288eea0fcccc8d3c159ab6cf9b6aa19bc1e2c5200054dd",
+      "status": "passed",
+      "scope": ["75 normal, 20 dialog and five actual loading revokes", "The Models page loaded after the fixture released its packaged module", "The presentation distribution here includes five held loading samples"],
+      "warm_present_ms": {"samples": 100, "p50": 132.65, "p95": 158.75, "max": 192.84},
+      "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 11.3, "max": 13.7},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 9.2, "p95": 13.3, "max": 13.7},
+      "loading_revoke_ms": {"samples": 5, "p50": 0.9, "p95": 1, "max": 1}
+    },
+    {
+      "run_id": "2026-11-14t14-41-50-892z-894a4c97",
+      "source_revision": "source.3ed966e14922bba5b39115e9bcd3586ba750ee03206b3b76d54539b70f9a40b1",
+      "evidence_file_sha256": "22208d92c85dee520a7caa4f374e9503450dc73d877ef3c1172b88207d463865",
+      "status": "passed",
+      "scope": ["Four packaged Windows journeys including two separately controlled windows", "75 ordinary, 20 dialog, five loading revokes", "One held real presentation reply released after local revoke with no preview observed through manual navigation", "SQLite audit fields, count and entry sizes validated after app exit", "Both controlled worker phases reported zero remaining owned workers"],
+      "warm_present_ms": {"samples": 95, "p50": 131.78, "p95": 151.29, "max": 157.28},
+      "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 6.2, "max": 6.5},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 6, "p95": 6.4, "max": 6.5},
+      "loading_revoke_ms": {"samples": 5, "p50": 0.9, "p95": 1, "max": 1},
+      "environment": {"os": "Windows 10.0.26200", "electron": "42.11.18", "chromium": "148.0.7778.280", "ram_gib": 16, "logical_cpus": 20, "visible_document": true}
+    },
+    {
+      "run_id": "2026-11-14t15-06-45-762z-b5eb7e7e",
+      "source_revision": "source.7362b773737846decad634e34c986dc03aa3cc3c9c79c014c4a35af8b190b5d6",
+      "evidence_file_sha256": "577eeb4c8cdebd56d890ee37f0081ccccaae58b964dc883510937c607e910049",
+      "status": "passed",
+      "scope": ["All four packaged cases were recorded as passed", "Native minimize retired an active first window and refused its former target after restore", "A held context publication exceeded its challenge deadline and could not renew the grant", "Real host deadline ended the unresponsive lease", "Removing individual presentation clients retained a separate editor registration"]
+    },
+    {
+      "run_id": "2026-11-14t15-18-44-983z-b6efef9b",
+      "source_revision": "source.4b86e140855df3f7c3c02bbbfaf068ba93e6d0abe5a89688e54588b5b9640cd2",
+      "evidence_file_sha256": "4ae1b5e4ea91c7403ab47f5e75bce5b1a007f972847fdac7c7b182de9c897c74",
+      "status": "passed",
+      "scope": ["The packaged native menu disables session-wide takeover", "Manual controls return and old window context and fresh requests are denied", "A separate paired editor creates a system that appears in the app", "Settings offers editing access and removes the control pairing option"]
+    },
+    {
+      "run_id": "2026-11-14t15-38-46-598z-9359a051",
+      "source_revision": "source.ad405cee0ff7d1b5272f3715e1709440d97840315cf811fabb70112caefdcfaa",
+      "evidence_file_sha256": "99469e3a21c30a4e185ede7661abcf31c8c405e6d3acae6e0b1023a92dca1b7",
+      "timing_file_sha256": "42ddee20e8293c5b69196c3539dc9cfb3eaadb152635d68f405bb764e40875f0",
+      "receipt_digest": "b6e4201cd41bd455cf0b9870cb12e7dcca746531f757c7e4dfc016523e2acf29",
+      "review_digest": "4aab46f88222758a526c3317f52e9608aa67c4df47cbd459bf9271e3d51f528c",
+      "status": "passed",
+      "scope": ["Four packaged Windows journeys passed on one source", "75 ordinary, 20 dialog, and five loading revokes", "Held application presentation and context replies remained fenced in separate phases", "The native session rollback retired old window control, rejected future requests and preserved independent editing", "Withheld context replies exercised the real host expiry clock", "Both controlled worker phases ended with no live owned processes"],
+      "warm_present_ms": {"samples": 95, "p50": 132.35, "p95": 148.89, "max": 155.21},
+      "revoke_ms": {"samples": 100, "p50": 1.8, "p95": 6.3, "max": 8},
+      "preview_dialog_revoke_ms": {"samples": 20, "p50": 6, "p95": 7, "max": 8},
+      "loading_revoke_ms": {"samples": 5, "p50": 0.8, "p95": 1.7, "max": 1.7},
+      "environment": {"os": "Windows 10.0.26200", "electron": "42.11.18", "chromium": "148.0.7778.280", "ram_gib": 16, "logical_cpus": 20, "visible_document": true}
+    },
+    {
+      "run_id": "2026-11-14t21-20-53-566z-9ba59e8d",
+      "source_revision": "source.7c9171d6e5c569a2037e0fc2b8422e0d62c2b71c814f147a0d985f0309a64ccb",
+      "evidence_file_sha256": "79dada3aa3e3e7dc23e32696f884db5aa788494bcea5879d7363e11beba6fb74",
+      "timing_file_sha256": "77ffae4e9b1dacee65a2de26ab44c1d98f2ccf0e6e79a4b69db7bd2285fb8e25",
+      "queue_file_sha256": "4f3cd04a4136df3777524278606fa622426eab88a4bd0c7353161d4650337a31",
+      "background_file_sha256": "1fe677533010f43b88a3bef2782f38907837701eb91b4556a8fa13bce25a2155",
+      "receipt_digest": "3ee75b4cea9fb8fd5039bc5e0a0e249bdffc7053017ab6e53a101cc9a61e435c",
+      "review_digest": "d4217be92e39705f891f0f88c8603e8d65dfdb5beea503f6d639161ac549145a",
+      "status": "passed",
+      "scope": [
+        "Four packaged Windows journeys passed.",
+        "Ordinary, loading, and dialog revoke met the foreground target.",
+        "Native hide retired the exact lease, and visible restore required a new registration.",
+        "The audit matched delivery, conflict, 31 discarded commands and one unconfirmed command to exact admitted positions."
+      ],
+      "environment": {
+        "electron": "42.11.18",
+        "chrome": "148.0.7778.280",
+        "os_release": "10.0.26200",
+        "logical_cpus": 20,
+        "ram_gib": 16,
+        "visible_document": true
+      },
+      "warm_present_ms": {
+        "count": 100,
+        "p50Ms": 133.0298999999941,
+        "p95Ms": 153.03609999996843,
+        "maxMs": 159.9648000000161
+      },
+      "revoke_ms": {
+        "count": 105,
+        "p50Ms": 1.800000011920929,
+        "p95Ms": 6.699999988079071,
+        "maxMs": 15.5
+      },
+      "preview_dialog_revoke_ms": {
+        "count": 20,
+        "p50Ms": 6.300000011920929,
+        "p95Ms": 11.199999988079071,
+        "maxMs": 15.5
+      },
+      "loading_revoke_ms": {
+        "count": 5,
+        "p50Ms": 0.9000000357627869,
+        "p95Ms": 1.2000000476837158,
+        "maxMs": 1.2000000476837158
+      },
+      "background_timer": {
+        "foreground": {
+          "count": 7,
+          "p50Ms": 49.10000002384186,
+          "p95Ms": 61.80000001192093,
+          "maxMs": 61.80000001192093
+        },
+        "background": {
+          "count": 5,
+          "p50Ms": 1000,
+          "p95Ms": 1011.3000000119209,
+          "maxMs": 1011.3000000119209
+        },
+        "scope": "native hide",
+        "nativeThrottling": true,
+        "hideToLeaseRetiredMs": 16.475199999986216
+      },
+      "queue": {
+        "queuePeak": 32,
+        "capacityRejections": 1,
+        "duplicates": 1,
+        "conflicts": 1,
+        "staleEffects": 0,
+        "audit": {
+          "delivered": 1,
+          "applied": 0,
+          "discarded": 31,
+          "unconfirmed": 1,
+          "conflicts": 1
+        }
+      }
+    },
+    {
+      "run_id": "2026-11-14t21-47-34-488z-1e8de8b4",
+      "source_revision": "source.06a55597212044e1e31d3feb21c820bd11bb08abb54980c0ce1207c543846800",
+      "evidence_file_sha256": "0b4caff95b3f02ed8c7cb57af4de5ee34c2c0a63f68da129488f7dc937ffc18a",
+      "timing_file_sha256": "4fa314084bd29e86d8e6426accd65a05db4bc7ab8b5bc7de08703df2bc79610b",
+      "queue_file_sha256": "aca450ff9aa31d2cf912ce03e3e1a91a885f24e2c546a5643189644724c68f2a",
+      "background_file_sha256": "198bbfb2156f3455ca5f76bceb79eb24624cde156e1387d5a43ce04f83cc26c5",
+      "receipt_digest": "7421eb9ecbdea14f1df81fd46ffeadaece8cd9c2d2d9aad5149fe162d02400a4",
+      "review_digest": "1fc179738c62e9a4035d768cfd1013f6b48e3ce191f53bb47b053e2cef427b80",
+      "status": "passed",
+      "scope": [
+        "Four packaged Windows journeys passed during the census checkpoint.",
+        "The run measured warm presentation, ordinary and dialog revoke, native hide and the exact queue audit."
+      ],
+      "environment": {
+        "electron": "42.11.18",
+        "chrome": "148.0.7778.280",
+        "os_release": "10.0.26200",
+        "logical_cpus": 20,
+        "ram_gib": 16,
+        "visible_document": true
+      },
+      "warm_present_ms": {
+        "count": 100,
+        "p50Ms": 133.9806999999564,
+        "p95Ms": 145.40909999998985,
+        "maxMs": 153.8391999999876
+      },
+      "revoke_ms": {
+        "count": 105,
+        "p50Ms": 1.899999976158142,
+        "p95Ms": 7.600000023841858,
+        "maxMs": 11.5
+      },
+      "preview_dialog_revoke_ms": {
+        "count": 20,
+        "p50Ms": 6.399999976158142,
+        "p95Ms": 11,
+        "maxMs": 11.5
+      },
+      "loading_revoke_ms": {
+        "count": 5,
+        "p50Ms": 0.8999999761581421,
+        "p95Ms": 1,
+        "maxMs": 1
+      },
+      "background_timer": {
+        "foreground": {
+          "count": 7,
+          "p50Ms": 47.60000002384186,
+          "p95Ms": 61.69999998807907,
+          "maxMs": 61.69999998807907
+        },
+        "background": {
+          "count": 5,
+          "p50Ms": 999.6999999880791,
+          "p95Ms": 1010,
+          "maxMs": 1010
+        },
+        "scope": "native hide",
+        "nativeThrottling": true,
+        "hideToLeaseRetiredMs": 18.33149999997113
+      },
+      "queue": {
+        "queuePeak": 32,
+        "capacityRejections": 1,
+        "duplicates": 1,
+        "conflicts": 1,
+        "staleEffects": 0,
+        "audit": {
+          "delivered": 1,
+          "applied": 0,
+          "discarded": 31,
+          "unconfirmed": 1,
+          "conflicts": 1
+        }
+      }
+    }
+  ],
+  "previous_follow_up": [
+    "Measure expiry and liveness while the renderer is genuinely throttled. A minimized test window did not produce the expected renderer visibility transition. The separately attempted page lifecycle fixture still allowed renewal, so this requirement remains open.",
+    "Measure complete delivery-queue health, including peak depth and dropped and stale counts, in the live fixture.",
+    "Bind the remaining checks and complete increment requirements to the final candidate."
+  ],
+  "pending": ["Measure expiry and liveness under background throttling. Native hide already retires the lease, and the existing deadline test used the visible window.", "Run the current exact increment qualification after the rest of the roadmap is implemented."]
+}

@@ -12,6 +12,8 @@ import {
   type ValidateSystemBuilderRevisionService,
 } from "../../services/system-builder";
 import { canonicalizeSystemBuildValue } from "../../services/system-build";
+import { hasTrustedFormImplementations } from "../../services/system-builder/resolve-system-form-release.service";
+import { compileSystemFormAction, type CompiledSystemFormAction } from "../../services/system-builder/system-form-action.service";
 import type {
   AssetImplementationFacetKind,
   AssetImplementationResolutionResult,
@@ -20,6 +22,8 @@ import type { AssetReference } from "../../../contracts/asset";
 import {
   readSystemBuilderConversationInteraction,
   readSystemBuilderModelBinding,
+  SYSTEM_FORM_ACTION_METADATA_KEY,
+  SYSTEM_FORM_ACTION_SCHEMA,
   SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
 } from "../../../contracts/system-builder";
 import {
@@ -39,6 +43,7 @@ import {
   type SystemBuildRecord,
   type SystemBuildRuntimeResourceBinding,
   type SystemBuildRuntimeInteractionBinding,
+  type SystemBuildRuntimeFormAction,
   type SystemBuildResolvedImplementation,
   type SystemBuildResult,
   type SystemRelease,
@@ -147,6 +152,19 @@ export class RequestSystemBuildUseCase {
         }));
       if (validation.status === "invalid")
         return await this.fail(running, validationDiagnostics);
+      const runtimeFormActions: SystemBuildRuntimeFormAction[] = [];
+      const compiledFormActions: CompiledSystemFormAction[] = [];
+      const formsWithActions = new Set(systemRevision.bindings.filter((binding) =>
+        Object.prototype.hasOwnProperty.call(binding.metadata ?? {}, SYSTEM_FORM_ACTION_METADATA_KEY))
+        .map((binding) => String(binding.sourceRef.id)));
+      for (const formId of formsWithActions) {
+        const action = compileSystemFormAction(systemRevision, formId);
+        if (!action) return await this.fail(running, [...validationDiagnostics, {
+          severity: "error", code: "system.build.form-action-invalid", message: "A form action is invalid.",
+        }]);
+        runtimeFormActions.push({ schemaVersion: SYSTEM_FORM_ACTION_SCHEMA, formId, operationId: action.operationId });
+        compiledFormActions.push(action);
+      }
 
       const runtimeResourceBindings: SystemBuildRuntimeResourceBinding[] = [];
       for (const instance of systemRevision.instances) {
@@ -261,12 +279,24 @@ export class RequestSystemBuildUseCase {
 
       const resolved: SystemBuildResolvedImplementation[] = [];
       const resolutionDiagnostics: SystemBuildDiagnostic[] = [];
+      if (systemRevision.instances.length > 0) await this.dependencies.resolver.ensureReady?.();
+      // Only this immutable build request owns these selections. Mutable
+      // binding/package/revocation authority is checked again for reused entries.
+      const selections = new Map<string, {definitionRef: AssetReference; result: AssetImplementationResolutionResult; reused: boolean}>();
+      const policy = {
+        workspaceId: command.workspaceId, deploymentProfile: command.deploymentProfile,
+        availableCapabilities: command.availableCapabilities, permittedTrustLevels: command.permittedTrustLevels,
+        hostApiVersion: command.hostApiVersion, runtimeAbiVersion: command.runtimeAbiVersion,
+      };
       for (const instance of systemRevision.instances) {
-        const result = await resolveFirstSystemBuildFacet(
-          this.dependencies.resolver,
-          command,
-          instance.definitionRef,
-        );
+        const key = canonicalizeSystemBuildValue({...policy, definitionRef: {kind: instance.definitionRef.kind, id: instance.definitionRef.id, version: instance.definitionRef.version}, facetOrder: FACET_RESOLUTION_ORDER});
+        let selection = selections.get(key);
+        if (selection) selection.reused = true;
+        else {
+          selection = {definitionRef: instance.definitionRef, result: await resolveFirstSystemBuildFacet(this.dependencies.resolver, command, instance.definitionRef), reused: false};
+          selections.set(key, selection);
+        }
+        const result = selection.result;
         if (result.status !== "ready" || !result.selectedRelease) {
           resolutionDiagnostics.push(
             ...result.diagnostics.map((item) => ({
@@ -297,6 +327,11 @@ export class RequestSystemBuildUseCase {
           ...validationDiagnostics,
           ...resolutionDiagnostics,
         ]);
+      if (compiledFormActions.some((action) => !hasTrustedFormImplementations(action, systemRevision.instances, resolved))) {
+        return await this.fail(running, [...validationDiagnostics, {
+          severity: "error", code: "system.build.form-action-untrusted", message: "Form actions require trusted built-in implementations.",
+        }]);
+      }
       if (await this.cancelled(command.workspaceId, command.buildId))
         return (await this.dependencies.repository.readBuild(
           command.workspaceId,
@@ -309,6 +344,26 @@ export class RequestSystemBuildUseCase {
               ))!,
             )
           : systemBuildFailure("not-found", "Build was not found.");
+
+      for (const selection of selections.values()) {
+        const prior = selection.result;
+        if (!selection.reused || prior.status !== "ready" || !prior.selectedRelease) continue;
+        const fresh = await this.dependencies.resolver.resolve({
+          ...policy, definitionRef: selection.definitionRef,
+          lockedReleaseId: prior.selectedRelease.releaseId,
+          requiredFacets: prior.selectedFacets.map(facet => facet.kind),
+        });
+        if (fresh.status !== "ready" || !fresh.selectedRelease ||
+          canonicalizeSystemBuildValue({release: fresh.selectedRelease, facets: fresh.selectedFacets}) !== canonicalizeSystemBuildValue({release: prior.selectedRelease, facets: prior.selectedFacets})) {
+          return await this.fail(running, [...validationDiagnostics, {severity: "error", code: "system.build.implementation-authority-changed", message: "Implementation authority changed or became unavailable before materialization."}]);
+        }
+      }
+
+      // Locked authority checks await external work; cancellation can arrive there.
+      if (await this.cancelled(command.workspaceId, command.buildId))
+        return systemBuildSuccess(
+          (await this.dependencies.repository.readBuild(command.workspaceId, command.buildId))!,
+        );
 
       const revisionDigest = this.dependencies.hasher.digest(
         canonicalizeSystemBuildValue(systemRevision),
@@ -337,6 +392,7 @@ export class RequestSystemBuildUseCase {
           (left, right) =>
             left.composerInstanceId.localeCompare(right.composerInstanceId),
         ),
+        ...(runtimeFormActions.length ? { runtimeFormActions: runtimeFormActions.sort((left, right) => left.formId.localeCompare(right.formId)) } : {}),
       };
       const lockDigest = this.dependencies.hasher.digest(
         canonicalizeSystemBuildValue(lock),

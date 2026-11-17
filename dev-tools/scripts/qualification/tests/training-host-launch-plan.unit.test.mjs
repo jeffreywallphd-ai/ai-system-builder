@@ -1,0 +1,276 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import path from "node:path";
+import { readFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { register as registerCjs } from "tsx/cjs/api";
+import trainingHostSetup from "../visual-composer/training-host-global-setup.mjs";
+
+// This .mjs file also runs alone without the catalog's optional --import loader.
+// Use an owned CJS scope for fixed TS sources. The namespaced ESM API can
+// interpret query text as a Windows filename on older supported Node24 builds.
+let sourceImportId = 0;
+function importTrainingSource(name) {
+  const scoped = registerCjs({ namespace: `training-source-fixture-${++sourceImportId}` });
+  try { return scoped.require(name, import.meta.url); }
+  finally { scoped.unregister(); }
+}
+const fixtureModule = importTrainingSource("../visual-composer/training-host-fixture.ts");
+const { trainingDependencyProbe, trainingReadOnlyArguments, seedTrainingDatasets } = fixtureModule.default ?? fixtureModule;
+
+test("fixed dependency probe literals match JavaScript template newline semantics", () => {
+  for (const newline of ["\n", "\r\n", "\r"]) {
+    const source = `const PROBE = \`${newline}line1${newline}line2${newline}\`.trim();`;
+    assert.equal(trainingDependencyProbe(source, "PROBE"), "line1\nline2");
+  }
+  for (const source of ["", 'const PROBE = "unknown";', 'const PROBE = `a`.trim(); const PROBE = `b`.trim();'])
+    assert.throws(() => trainingDependencyProbe(source, "PROBE"));
+});
+
+test("the actual Context preparer passes its exact evaluated probe to the no-install delegate", async () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+  const location = path.join(root, "modules/adapters/runtime/python/ensurePythonRuntimeContextDependencies.ts");
+  const imported = importTrainingSource(location);
+  const context = imported.default ?? imported;
+  const probes = new Set([trainingDependencyProbe(readFileSync(location, "utf8"), "CONTEXT_DEPENDENCY_PROBE_SCRIPT")]);
+  let calls = 0;
+  const result = await context.ensurePythonRuntimeContextDependencies({
+    command: "synthetic-readonly-python", platform: "win32",
+    execFileImplementation: (command, args, _options, callback) => {
+      calls += 1;
+      assert.equal(command, "synthetic-readonly-python");
+      assert.equal(trainingReadOnlyArguments(args, probes), true);
+      callback(null, "ASB_CONTEXT_DEPENDENCY_READY\n", "");
+    },
+  });
+  assert.equal(calls, 1);
+  assert.deepEqual(result, { installed: false, version: "0.34.0" });
+  assert.equal(trainingReadOnlyArguments(["-m", "pip", "install", "lancedb"], probes), false);
+  assert.equal(trainingReadOnlyArguments(["-c", "unknown-probe"], probes), false);
+});
+
+test("missing declared inputs return a pending profile before package or app startup", async () => {
+  const previous = process.env.VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION, ready = process.env.VISUAL_COMPOSER_TRAINING_READY;
+  try {
+    delete process.env.VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION;
+    process.env.VISUAL_COMPOSER_TRAINING_READY = "stale";
+    const cleanup = await trainingHostSetup({ projects: [{ name: "packaged-desktop" }] });
+    assert.equal(process.env.VISUAL_COMPOSER_TRAINING_READY, undefined);
+    assert.equal(typeof cleanup, "function"); await cleanup();
+  } finally {
+    if (previous === undefined) delete process.env.VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION; else process.env.VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION = previous;
+    if (ready === undefined) delete process.env.VISUAL_COMPOSER_TRAINING_READY; else process.env.VISUAL_COMPOSER_TRAINING_READY = ready;
+  }
+});
+import { createVisualComposerHostLaunchPlan } from "../visual-composer/visual-composer-host-lifecycle.mjs";
+import { createTrainingHostLaunchPlan, createTrainingCaseEnvironment, trainingAcquisition, trainingInputIdentity, TRAINING_PYTHON_RELATIVE, TRAINING_WORKER_ARGS } from "../visual-composer/training-host-launch-plan.mjs";
+
+const repoRoot = path.resolve("synthetic training repository with spaces"), runId = "synthetic-training-host-run-0123456789";
+const acquisition = ".local-codex/model-qualification/qwen-01234567-89ab-cdef-0123-456789abcdef/acquisition.json";
+const environment = { PATH: "synthetic-path", TEMP: "inherited-temp", PYTHON_RUNTIME_COMMAND: "private-override", python_runtime_args: "private-args", hf_hub_offline: "0", HF_TOKEN: "synthetic-private-credential", openai_api_key: "synthetic-private-other", ELECTRON_RUN_AS_NODE: "1" };
+test("fixed Desktop training reuses the host plan and preserves ordinary server and browser launch", async () => {
+  const original = createVisualComposerHostLaunchPlan({ repoRoot, runId, environment });
+  const plan = await createTrainingHostLaunchPlan({ repoRoot, runId, environment, acquisition });
+  assert.deepEqual(plan.server, original.server); assert.deepEqual(plan.thinClient, original.thinClient);
+  assert.equal(plan.desktop.executablePath, original.desktop.executablePath);
+  for (const env of [plan.desktop.env, plan.desktop.seed.env]) {
+    assert.equal(env.PYTHON_RUNTIME_COMMAND, path.join(repoRoot, TRAINING_PYTHON_RELATIVE)); assert.equal(env.PYTHON_RUNTIME_ARGS, TRAINING_WORKER_ARGS);
+    assert.equal(env.PYTHON_RUNTIME_WORKER_DIR, path.join(repoRoot, "out/ai-system-builder-win32-x64/resources/worker"));
+    assert.equal(env.PYTHON_RUNTIME_QUALIFICATION_SCENARIO, "training-model-host"); assert.equal(env.VISUAL_COMPOSER_TRAINING_MODEL_ACQUISITION, acquisition);
+    for (const key of ["HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE", "PIP_NO_INDEX", "PIP_REQUIRE_HASHES"]) assert.equal(env[key], "1");
+    assert.equal(env.CUDA_VISIBLE_DEVICES, undefined); assert.equal(env.HIP_VISIBLE_DEVICES, undefined);
+    assert(!Object.keys(env).some(key => ["hf_token", "openai_api_key", "python_runtime_args", "hf_hub_offline"].includes(key)));
+  }
+  assert.equal(plan.desktop.seed.env.ELECTRON_RUN_AS_NODE, "1");
+  assert.equal(original.desktop.env.PYTHON_RUNTIME_COMMAND, process.execPath);
+});
+test("a literal training slot gets distinct private cache and temporary roots without touching files", () => {
+  const dataRoot = path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/training");
+  const env = createTrainingCaseEnvironment({ ...environment, hf_hub_cache: "private-old-cache", Temp: "private-old-temp" }, repoRoot, dataRoot, acquisition);
+  assert.equal(env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT, dataRoot); assert.equal(env.HF_HUB_CACHE, path.join(dataRoot, "controlled-model-cache"));
+  assert.equal(env.TEMP, path.join(dataRoot, "training-temp")); assert.equal(env.TMP, env.TEMP);
+  for (const key of ["HF_HOME", "HF_DATASETS_CACHE", "TRANSFORMERS_CACHE", "TORCH_HOME", "TORCHINDUCTOR_CACHE_DIR", "TRITON_CACHE_DIR", "XDG_CACHE_HOME"]) assert(env[key].startsWith(env.HF_HUB_CACHE + path.sep));
+  assert(!("hf_hub_cache" in env)); assert(!("Temp" in env)); assert.equal(env.PATH, environment.PATH);
+});
+test("caller paths and other model families cannot become a launch selector", () => {
+  for (const value of [undefined, "", "../private", acquisition.replace("qwen-", "qwen15-"), acquisition.replace("/acquisition.json", "/model.py"), `${acquisition}\n`, acquisition.replaceAll("/", "\\")]) {
+    assert.throws(() => trainingAcquisition(value), /fixed training launch plan is invalid/);
+    assert.throws(() => createTrainingHostLaunchPlan({ repoRoot, runId, acquisition: value }));
+  }
+  for (const value of [path.resolve(".local-codex/private/training"), path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/other"), "relative/training", `${repoRoot}\n`]) assert.throws(() => createTrainingCaseEnvironment(environment, repoRoot, value, acquisition));
+});
+
+const tinyAcquisition = ".local-codex/training-inputs/tiny-01234567-89ab-cdef-0123-456789abcdef/input.json", manifestHash = "a".repeat(64);
+test("generated inputs require an explicit frozen manifest hash and distinct local identity", () => {
+  const identity = trainingInputIdentity(tinyAcquisition, manifestHash);
+  assert.deepEqual(identity, { profile: "generated-tiny-qwen2-v1", modelId: "aisb-testing/tiny-qwen2-v1", provider: "unknown", displayName: "Generated tiny training input", manifestHash });
+  assert(Object.isFrozen(identity)); assert.equal(trainingAcquisition(tinyAcquisition), tinyAcquisition);
+  for (const value of [undefined, "", "0".repeat(63), "A".repeat(64), manifestHash + "\n", {}]) assert.throws(() => trainingInputIdentity(tinyAcquisition, value));
+  assert.throws(() => trainingInputIdentity(acquisition, manifestHash));
+  for (const value of [tinyAcquisition.replace("tiny-", "other-"), tinyAcquisition.replace("input.json", "acquisition.json"), tinyAcquisition.replace("01234567-89ab", "0123456789ab"), `${tinyAcquisition}\n`]) assert.throws(() => trainingAcquisition(value));
+});
+
+test("only the generated profile fixes device visibility and carries the declared hash into its isolated case", async () => {
+  const dirty = { ...environment, CUDA_VISIBLE_DEVICES: "9", hip_visible_devices: "untrusted", visual_composer_training_input_sha256: "untrusted" };
+  const plan = await createTrainingHostLaunchPlan({ repoRoot, runId, environment: dirty, acquisition: tinyAcquisition, manifestHash });
+  for (const env of [plan.desktop.env, plan.desktop.seed.env]) {
+    assert.equal(env.CUDA_VISIBLE_DEVICES, "0"); assert.equal(env.HIP_VISIBLE_DEVICES, "");
+    assert.equal(env.VISUAL_COMPOSER_TRAINING_INPUT_SHA256, manifestHash);
+    assert(!("hip_visible_devices" in env)); assert(!("visual_composer_training_input_sha256" in env)); assert(!("HF_TOKEN" in env));
+  }
+  const dataRoot = path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/training");
+  const child = createTrainingCaseEnvironment(plan.desktop.env, repoRoot, dataRoot, tinyAcquisition);
+  assert.equal(child.VISUAL_COMPOSER_TRAINING_INPUT_SHA256, manifestHash);
+  assert.equal(child.CUDA_VISIBLE_DEVICES, "0"); assert.equal(child.HIP_VISIBLE_DEVICES, "");
+  assert.equal(child.TEMP, path.join(dataRoot, "training-temp"));
+  assert.throws(() => createTrainingHostLaunchPlan({ repoRoot, runId, environment: dirty, acquisition: tinyAcquisition }));
+});
+
+const packagedRoot = path.join(repoRoot, ".local-codex/q/abc123ef/o/ai-system-builder-win32-x64");
+test("a declared tiny training package keeps the wrapper in the original source even with repository spaces", async () => {
+  const plan = await createTrainingHostLaunchPlan({ repoRoot, runId, environment, acquisition: tinyAcquisition, manifestHash, packagedRoot });
+  const worker = path.join(packagedRoot, "resources/worker");
+  for (const env of [plan.desktop.env, plan.desktop.seed.env]) {
+    assert.equal(env.PYTHON_RUNTIME_WORKER_DIR, worker);
+    assert.equal(env.VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT, packagedRoot);
+    const args = env.PYTHON_RUNTIME_ARGS.split(" ");
+    assert.deepEqual(args.slice(0, 2), ["-I", "-B"]); assert.equal(args.length, 3);
+    assert(!/[\s"'\x00-\x1f]/u.test(args[2])); assert(!path.isAbsolute(args[2]));
+    assert.equal(path.resolve(worker, args[2]), path.join(repoRoot, "dev-tools/scripts/qualification/visual-composer/training-qualification-worker.py"));
+  }
+  const dataRoot = path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/training");
+  const child = createTrainingCaseEnvironment(plan.desktop.env, repoRoot, dataRoot, tinyAcquisition);
+  assert.equal(child.PYTHON_RUNTIME_WORKER_DIR, worker);
+  assert.equal(child.PYTHON_RUNTIME_ARGS, plan.desktop.env.PYTHON_RUNTIME_ARGS);
+});
+test("fresh package context cannot select a foreign root or extend the original model profile", async () => {
+  for (const value of ["", "relative/package", path.join(repoRoot, "out/ai-system-builder-win32-x64"), packagedRoot.replace("abc123ef", "abc123ef0"), path.join(repoRoot, ".local-codex/q/abc123ef/c/ai-system-builder-win32-x64"), packagedRoot + "\n", path.join(repoRoot, ".local-codex/q/abc123ef/o/other")]) {
+    await assert.rejects(async () => createTrainingHostLaunchPlan({ repoRoot, runId, environment, acquisition: tinyAcquisition, manifestHash, packagedRoot: value }));
+  }
+  await assert.rejects(async () => createTrainingHostLaunchPlan({ repoRoot, runId, environment, acquisition, packagedRoot }));
+});
+test("ambient package hints do not change ordinary training and declared tiny context is checked again for the case", async () => {
+  const dirty = { ...environment, VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT: "/foreign/package", visual_composer_training_packaged_root: "/other/package" };
+  const ordinary = await createTrainingHostLaunchPlan({ repoRoot, runId, environment: dirty, acquisition });
+  assert.equal(ordinary.desktop.env.PYTHON_RUNTIME_ARGS, TRAINING_WORKER_ARGS);
+  assert.equal(ordinary.desktop.env.PYTHON_RUNTIME_WORKER_DIR, path.join(repoRoot, "out/ai-system-builder-win32-x64/resources/worker"));
+  assert(!Object.keys(ordinary.desktop.env).some(key => key.toUpperCase() === "VISUAL_COMPOSER_TRAINING_PACKAGED_ROOT"));
+  const dataRoot = path.join(repoRoot, "artifacts/qualification/visual-composer/d/test-run/desktop/training");
+  assert.throws(() => createTrainingCaseEnvironment({ ...dirty, VISUAL_COMPOSER_TRAINING_INPUT_SHA256: manifestHash }, repoRoot, dataRoot, tinyAcquisition));
+});
+
+test("the real training profile loads its helper in a worker after ESM setup preloading", async t => {
+  const actualRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+  const imported = importTrainingSource(path.join(actualRoot, "dev-tools/config/playwright.training-host.config.ts"));
+  const config = imported.default?.default ?? imported.default ?? imported;
+  assert.equal(config.globalSetup, path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/training-host-global-setup.mjs"));
+  const parent = path.join(actualRoot, ".local-codex/t");
+  mkdirSync(parent, { recursive: true });
+  assert.equal(realpathSync(parent), parent);
+  const fixture = mkdtempSync(path.join(parent, "training-loader-"));
+  t.after(() => {
+    assert.equal(path.resolve(fixture), fixture);
+    assert.equal(realpathSync(fixture), fixture);
+    assert.equal(path.dirname(fixture), parent);
+    assert(path.basename(fixture).startsWith("training-loader-"));
+    assert.equal(path.relative(actualRoot, fixture).startsWith(`.local-codex${path.sep}t${path.sep}`), true);
+    rmSync(fixture, { recursive: true, force: false });
+  });
+  for (const name of ["tmp", "home"]) mkdirSync(path.join(fixture, name));
+  const helper = path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/training-host-launch-plan.mjs");
+  const pureSetup = `export default async function setup() {
+    const training = await import(${JSON.stringify(pathToFileURL(helper).href)});
+    await training.createTrainingHostLaunchPlan(${JSON.stringify({ repoRoot: actualRoot, runId: "synthetic-training-loader-run-0123456789", environment: {}, acquisition: tinyAcquisition, manifestHash })});
+    await import(${JSON.stringify(pathToFileURL(path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/visual-composer-global-setup.mjs")).href)});
+    await import(${JSON.stringify(pathToFileURL(path.join(actualRoot, "dev-tools/scripts/qualification/visual-composer/visual-composer-qualification-environment.mjs")).href)});
+  }\n`;
+  // This setup only constructs a plan and imports modules. It never inspects
+  // dependencies, seeds an app, sets READY, starts a model or opens a window.
+  writeFileSync(path.join(fixture, "setup.mjs"), pureSetup, { flag: "wx" });
+  writeFileSync(path.join(fixture, "pure-import.spec.ts"), `
+    import { test, expect } from "@playwright/test";
+    import { trainingAcquisition } from ${JSON.stringify(helper.replaceAll("\\", "/"))};
+    test("training helper remains executable after setup preload", () => {
+      expect(trainingAcquisition(${JSON.stringify(tinyAcquisition)})).toBe(${JSON.stringify(tinyAcquisition)});
+    });\n`, { flag: "wx" });
+  const report = path.join(fixture, "result.json"), configPath = path.join(fixture, "playwright.config.mjs");
+  writeFileSync(configPath, `export default ${JSON.stringify({
+    build: config.build, testDir: fixture, testMatch: "pure-import.spec.ts", globalSetup: path.join(fixture, "setup.mjs"),
+    outputDir: path.join(fixture, "output"), workers: 1, retries: 0, timeout: 10_000,
+    use: { screenshot: "off", trace: "off", video: "off" }, reporter: [["json", { outputFile: report }]],
+  })};\n`, { flag: "wx" });
+  const env = Object.fromEntries(["SystemRoot", "WINDIR"].filter(key => typeof process.env[key] === "string").map(key => [key, process.env[key]]));
+  Object.assign(env, {
+    PATH: [path.dirname(process.execPath), ...(process.env.SystemRoot ? [path.join(process.env.SystemRoot, "System32")] : [])].join(path.delimiter),
+    TEMP: path.join(fixture, "tmp"), TMP: path.join(fixture, "tmp"), HOME: path.join(fixture, "home"), USERPROFILE: path.join(fixture, "home"),
+    NODE_OPTIONS: "", PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1", ELECTRON_SKIP_BINARY_DOWNLOAD: "1", HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1", PIP_NO_INDEX: "1",
+  });
+  const result = spawnSync(process.execPath, [path.join(actualRoot, "node_modules/@playwright/test/cli.js"), "test", "--config", configPath], {
+    cwd: actualRoot, env, windowsHide: true, encoding: "utf8", timeout: 30_000, maxBuffer: 8192,
+  });
+  const diagnostic = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.replaceAll(actualRoot, "<repo>");
+  assert.equal(result.error, undefined, diagnostic);
+  assert.equal(result.status, 0, diagnostic);
+  assert(statSync(report).size <= 128 * 1024);
+  const observed = JSON.parse(readFileSync(report, "utf8"));
+  assert.deepEqual(Object.fromEntries(["expected", "skipped", "unexpected", "flaky"].map(key => [key, observed.stats[key]])), { expected: 1, skipped: 0, unexpected: 0, flaky: 0 });
+  assert.deepEqual(observed.errors, []);
+});
+
+
+test("seeded training bytes and bindings are readable by the actual Desktop storage layout", async t => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+  const scoped = registerCjs({ namespace: "training-dataset-storage-regression" });
+  t.after(() => scoped.unregister());
+  const load = relative => scoped.require(path.join(root, relative), import.meta.url);
+  const storageAdapters = await load("modules/adapters/storage/filesystem/index.ts");
+  const { createInMemoryStructuredDocumentStore } = await load("modules/adapters/persistence/shared/index.ts");
+  const { createRetrieveArtifactRequest } = await load("modules/contracts/storage/index.ts");
+  const { trainingWorkspaceId, trainingDatasetIds } = await load("dev-tools/scripts/qualification/visual-composer/model-training-oracles.ts");
+  const parent = path.join(root, ".local-codex/t"); mkdirSync(parent, { recursive: true });
+  assert.equal(realpathSync(parent), parent);
+  const dataRoot = mkdtempSync(path.join(parent, "training-datasets-"));
+  const identity = statSync(dataRoot);
+  t.after(() => {
+    assert.equal(path.dirname(dataRoot), parent); assert.equal(realpathSync(dataRoot), dataRoot);
+    const now = statSync(dataRoot); assert.equal(now.dev, identity.dev); assert.equal(now.ino, identity.ino);
+    rmSync(dataRoot, { recursive: true, force: false });
+  });
+  const run = "synthetic-training-dataset-regression-0123456789";
+  const context = { workspaceId: trainingWorkspaceId(run) };
+  const documents = createInMemoryStructuredDocumentStore().forOrganization("organization.synthetic-training");
+  const datasets = await seedTrainingDatasets(dataRoot, documents, context, run);
+  assert.deepEqual(datasets, trainingDatasetIds(run));
+  // Keep this consumer convention independent of the fixture's implementation.
+  // The real Desktop main passes path.join(desktopDataRootDirectory, "artifacts").
+  const storage = storageAdapters.createFilesystemArtifactObjectStorageAdapter({ rootDirectory: path.join(dataRoot, "artifacts"), host: "desktop" });
+  const bindings = storageAdapters.createLocalArtifactStorageBindingAdapter({ rootDirectory: path.join(dataRoot, "artifacts"), documents });
+  const expected = Buffer.from('{"instruction":"What does the help panel show?","output":"The help panel shows guidance for the current feature."}\n{"instruction":"Where are task updates?","output":"Task updates are in the notification center."}\n');
+  assert.equal(expected.length, 213);
+  for (const key of datasets) {
+    const binding = await bindings.readArtifactStorageBindings({ workspaceId: context.workspaceId, artifactId: key });
+    assert.equal(binding.ok, true); assert.equal(binding.value.bindings.length, 1);
+    assert.deepEqual(binding.value.bindings[0].backing, { kind: "artifact-object", provider: "local-filesystem", locator: key, revision: undefined });
+    const result = await storage.retrieveArtifact(createRetrieveArtifactRequest(key, { maximumBytes: 213 }), context);
+    assert.equal(result.ok, true, "A visible seeded dataset must have physical bytes at the real Desktop artifact root.");
+    assert.deepEqual(Buffer.from(result.value.content), expected);
+    const otherBindings = await bindings.readArtifactStorageBindings({ workspaceId: "workspace.other-training", artifactId: key });
+    assert.equal(otherBindings.ok, true); assert.deepEqual(otherBindings.value.bindings, []);
+    const tooSmall = await storage.retrieveArtifact(createRetrieveArtifactRequest(key, { maximumBytes: 212 }), context);
+    assert.equal(tooSmall.ok, false);
+  }
+  const { TrainModelUseCase } = await load("modules/application/use-cases/model/train-model.use-case.ts");
+  let byteReads = 0, dispatches = 0;
+  const useCase = new TrainModelUseCase({ storageBindings: bindings,
+    storage: { retrieveArtifact(...args) { byteReads++; return storage.retrieveArtifact(...args); } },
+    runtimeTaskRegistry: { startTask() { dispatches++; throw Error("Unexpected task dispatch."); } },
+    modelRegistry: {}, taskPowerLifecycle: {},
+  });
+  await assert.rejects(useCase.execute({ workspaceId: "workspace.other-training", trainingTask: "llm-classification",
+    baseModel: { modelId: "synthetic" }, datasets: [{ artifactId: datasets[0], splitRole: "train", format: "jsonl" }],
+    method: "lora", commonParameters: {}, output: { outputModelName: "synthetic", destination: { local: { enabled: true } } },
+  }), error => error.code === "MODEL_TRAINING_START_DATASET_RESOLUTION");
+  assert.equal(byteReads, 0); assert.equal(dispatches, 0);
+  await assert.rejects(seedTrainingDatasets(dataRoot, documents, { workspaceId: "workspace.other-training" }, run));
+});

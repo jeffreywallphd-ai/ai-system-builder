@@ -1,0 +1,193 @@
+{
+  "schema_version": "ocr-native-lifetime-qualification-v1",
+  "status": "scoped-local-component-qualified",
+  "summary": "The12 fixed Windows OCR process and resource test groups passed. Expected refusals remain refusals. This is not a complete roadmap or application qualification.",
+  "scope": "Local Windows x64 process/resource/test-operator controls on the verified direct installed Python3.14.3 tool and committed source.",
+  "source_commit": "40ee5e547ed196e01c1285f28bc2739f8818a3af",
+  "source_digest": "b58fef5e7d6fbf6917a4794b956c6f0c1534bc0173ef894ff112c97d2c9c11f3",
+  "run_id": "b3c1ee2c960b4f508c55b08e50b6224d",
+  "test_groups": 12,
+  "duration_seconds": 3.288,
+  "operator_exit_code": 0,
+  "ordinary_exchanges": {
+    "observations": 16,
+    "launched": 15,
+    "cancelled_before_launch": 1,
+    "cleanup_confirmed": true,
+    "all_owned_handles_closed": true,
+    "meaning": "The15 launched observations include creation-time membership, native exit, zero active members and source-required pipe retirement. Prelaunch cancellation creates no process."
+  },
+  "limits": {
+    "process_bytes": 536870912,
+    "job_bytes": 536870912,
+    "active_members": 1,
+    "parent_deadline_seconds": 120
+  },
+  "positive_controls": [
+    "normal/successor private-pipe byte response and creation-time assignment",
+    "ambient synthetic credentials not inherited",
+    "real helper en-US readiness; zz-ZZ unavailable remains explicit, not recognized success"
+  ],
+  "expected_denials": [
+    "Nonzero23",
+    "Deadline and running cancellation with owned forced retirement; prelaunch cancellation with zero launch",
+    "stdout/stderr overflow, discarded nonempty diagnostic and broken input pipe",
+    "Memory limit notification9 and member limit3 both deny success, even member fixture root exits0 after catching child-creation failure",
+    "Malformed real helper frame exits2",
+    "Pinned known resource denies write/delete file access and directory delete, then resource close acknowledged"
+  ],
+  "owner_crash_control": {
+    "after_crash_wait": 0,
+    "before_crash_wait": 258,
+    "exact_pid_and_creation_identity_matched": true,
+    "guardian_exit": 91,
+    "helper_native_exit": 0,
+    "job_handle_duplicated": false,
+    "only_read_process_handle_duplicated": true
+  },
+  "injected_close_control": {
+    "facts": {
+      "cleanup_confirmed": false,
+      "exact_job_handle_retained": true,
+      "successor_denied": true
+    },
+    "guardian_exit_asserted_by_executed_test": 91,
+    "real_windows_close_failure_observed": false,
+    "independent_helper_exit_observed_in_this_case": false,
+    "meaning": "The test deliberately returns false for its held Job close. Cleanup stays unconfirmed, the exact Job remains held and a successor is denied before the controlled guardian exit. Case11 separately proves actual helper exit."
+  },
+  "source_files": {
+    "modules/adapters/runtime/python/worker/ocr/windows_api.py": "b92211264fa5b77bdf0ddd49816883c521b55d42c853825df8c6246a543f8b61",
+    "modules/adapters/runtime/python/worker/ocr/resource.py": "357927dcac3f6a3ffcfbe76fed605c6d3e73cd87a8e26a74220d6a1e44420345",
+    "modules/adapters/runtime/python/worker/ocr/windows_process.py": "f16df2e3d3823bc6379f3fea845da134ab1ec1db234d86f6863b3aa24d62f91c",
+    "modules/adapters/runtime/python/worker/ocr/protocol.py": "6523c9c1f0ba32c67021b8d44b1555f7b26527555a85a0f79180023d2709886a",
+    "modules/adapters/runtime/python/worker/ocr/wire.py": "93ee6b7f59064d8158eaee5ace74b9c7b9957355e192fb434577a7ce226b9f0d",
+    "modules/adapters/runtime/python/worker/ocr/native/WindowsOcrHelper.cs": "209d119f1ee2407cece55186970c6c1db7e93d47c4c2ed11bb5e026b3b3a7105",
+    "modules/adapters/runtime/python/worker/ocr/native/OcrLifetimeFixture.cs": "aab9a826f8c0ac7625112afeb2b23601348644d657821ea161d77c79910a54ee",
+    "modules/adapters/runtime/python/worker/tests/qualification_ocr_windows.py": "b9aa9663766098b6dc0849964af90a19ef892a181560aa974df0757813d21520"
+  },
+  "tools": {
+    "python_version": "3.14.3 AMD64",
+    "direct_current_os_image_verified": true,
+    "files": {
+      "python.exe": {
+        "bytes": 106328,
+        "sha256": "cce21c0e8710e304273e98ac4b2b0f5aceb639acbcd2343cbaa5c4e81619c45b"
+      },
+      "python314.dll": {
+        "bytes": 6753112,
+        "sha256": "1ac15e2224581fc678bbd17728b9aa538d47b891b72c76499ef07e54cd74f151"
+      },
+      "Lib/subprocess.py": {
+        "bytes": 93037,
+        "sha256": "d4db1dbd8de9762fba2ddfb05367d974df8bd6596bef78630896f67b89da519e"
+      }
+    },
+    "compiler": {
+      "name": ".NET Framework x64 csc",
+      "sha256": "46809206887326d2d24db1eff1f3064de972c3451abe766b49111450a5e08e00",
+      "sdk_version": "10.0.26100.0",
+      "reference_files": [
+        {
+          "name": "Windows.winmd",
+          "sha256": "e2dee80d011cb9fc1276a0bd9f244f7a58d5ca72fe906a56e90d61c68cf8601a"
+        },
+        {
+          "name": "System.Runtime.WindowsRuntime.dll",
+          "sha256": "4bcb3763ec42dcdb8b01a530b99c6e8de5700c1b50fa31ebb18a8378bf6fc8f7"
+        },
+        {
+          "name": "System.Runtime.dll",
+          "sha256": "cb4a18c5c5f4f11d24633ed0ffc4df8b2acd00b96d8b628c72846e61dee1a232"
+        },
+        {
+          "name": "System.Web.Extensions.dll",
+          "sha256": "5e6378edc06f5a61920aaadb2aba839dd3cf302d6192e08aacd4454ba4cff0b3"
+        },
+        {
+          "name": "System.dll",
+          "sha256": "2b3c17c6208a0b4b6beb94e1a066f99ba06cdb2ea919479e99d47e8c6d96dc71"
+        },
+        {
+          "name": "System.Core.dll",
+          "sha256": "8b898bed54ae8cc61f9c58cc3eb062724f8357d2bdda338b5d363654ecff333d"
+        }
+      ]
+    }
+  },
+  "compiled_controls": [
+    {
+      "binary_bytes": 4608,
+      "binary_sha256": "f9a7692ae77390a5bfb2faffac63c7decd88ef755b0f4197b5e034328cdbac17",
+      "compile_exit_code": 0,
+      "compiler_sha256": "46809206887326d2d24db1eff1f3064de972c3451abe766b49111450a5e08e00",
+      "compiler_stdout_stderr_empty": true,
+      "machine": "x64",
+      "role": "fixture",
+      "six_references_independently_rehashed": true,
+      "source_sha256": "aab9a826f8c0ac7625112afeb2b23601348644d657821ea161d77c79910a54ee"
+    },
+    {
+      "binary_bytes": 20480,
+      "binary_sha256": "179135b17ceeb8ee145dcebdf58fe677f0460cb5a3a6ecc2594c4f32057a0774",
+      "compile_exit_code": 0,
+      "compiler_sha256": "46809206887326d2d24db1eff1f3064de972c3451abe766b49111450a5e08e00",
+      "compiler_stdout_stderr_empty": true,
+      "machine": "x64",
+      "role": "helper",
+      "six_references_independently_rehashed": true,
+      "source_sha256": "209d119f1ee2407cece55186970c6c1db7e93d47c4c2ed11bb5e026b3b3a7105"
+    }
+  ],
+  "evidence": {
+    "native_run_record_sha256": "0890b152aa8916116e92e837f973aa78852bb107d78b9f10c519573998e10e75",
+    "native_observation_files": {
+      "cancel-before-launch.json": "9ffa705e616094932c02ce9e1db9167371b16939e63eeab60164a0102aaf4cf3",
+      "cancel-running.json": "9998e80fde806d6061db96d42818e1d638454580b18e33fad95d7b6b04da98e4",
+      "environment.json": "90138e62cbcb3bf615dc141030262b0bb730724595a369e481b4950f37106771",
+      "helper-language-unavailable.json": "52979dbff8bd01b5623bb36d47952597926d2381cba7b349f06c0728d6873413",
+      "helper-malformed.json": "28cb14ffc03dc4cb72618416f4b603e14e882bd985695c632f3e71eadf9f56bf",
+      "helper-readiness.json": "e37f5aed4ca9c4270e24b54aa46eb1bb217b53f443199a756bf5727d68c5efbb",
+      "input-broken.json": "ff351684547bef21d208ac9547b9ab3f70cf37ebb6758905f5643bfd24a2e214",
+      "member-limit.json": "e56e6d0c9e3bfb9ff52fd7f8018bad0866a35515bcfbde9f89339cd14c6d7837",
+      "memory-limit.json": "31a96d5ce2a59c2633744d61b52f3f211367e025be6cad94212516a83d89c8e5",
+      "nonzero.json": "8af24b4a30e884eacf49e37de1b1d27a761a5461c8af8c848a92bc130c7d2db8",
+      "normal.json": "15f892bc74e1b89797f24d5499749d50b9fd7c171b8da12b08c0ac6b80144c70",
+      "owner-crash.json": "6bbf3efb872dc1018384fec9180165fdad053f052887e01ecc9303e64d0ea963",
+      "resource-locks.json": "a2a07a79c9510a7fdceb9153e5ef45ea9818ae9efea01e60274df0262d8c5c6b",
+      "run.json": "0890b152aa8916116e92e837f973aa78852bb107d78b9f10c519573998e10e75",
+      "stderr-overflow.json": "7f2b22d4a4679466bd2c302c19ec225f2611b4ea81d941c4759a370395c67989",
+      "stderr-present.json": "83620da2ad5d70446eb7a52fc0293a4a9e2c6f150f267fd82b9e49ff355f21fc",
+      "stdout-overflow.json": "8386edfb2a72b58745caaf64660018b3c9dcbef3b0eda6c0d5e5ab36e655c785",
+      "successor.json": "90138e62cbcb3bf615dc141030262b0bb730724595a369e481b4950f37106771",
+      "timeout.json": "d60e2ad1a4105f721c57fec8470c9669159cc99a53a68e10bc55bc914827f6b5",
+      "uncertain-close.json": "4a7291d5a987f0a5aba1c02a22879b76a0fc7260fac272d40e6d16c9aaa30428"
+    },
+    "unittest_progress_stderr_sha256": "f915a63fcbd99c418ffecdb853bbde94386ea36a74ef2ef30329df151036b768",
+    "launch_summary_sha256": "53afc861f63512d8c460c4141c7e8db6db3ad625dfb1934a1437a247f85bce30",
+    "independent_audit_sha256": "6eab8cd47e90a178289c36d5fe437e1041cef017f070514b09917f6eafce23c0",
+    "independent_snapshot_hashes_sha256": "ba39fed7daa3fe55f2967db49a2c16315407a38772d0654d9bbd022ccdd98c80"
+  },
+  "launch_requirement": "Use an independently verified direct base interpreter for the fixed operator. A Windows virtual-environment launcher process may not own the helper handle used by the crash check. A path or PID alone is not an ownership proof.",
+  "history": {
+    "production_close_source_work": "ocr-handle-close-custody",
+    "test_operator_source_work": "ocr-operator-one-shot-retirement",
+    "prelaunch_import_failure": "Preserved as a failure before any native process or fixture. The corrected fixed import root was independently reviewed before Native05.",
+    "never_executed_proposals": "Original/02 venv and04 proposals stayed unexecuted; all histories remain.",
+    "artifact_checkpoint_recovery": "An edited ignored draft caused a final artifact check to fail. The source checkpoint proceeded; exact original hashes and edited bytes were later preserved and independently rechecked. Source, receipt and review did not change."
+  },
+  "models_used": false,
+  "accepted_accuracy_reopened": false,
+  "full_system_tests_run": false,
+  "production_capability_enabled": false,
+  "parent_qualification_granted": false,
+  "old_fixture_contents_read": false,
+  "not_qualified_by_this_record": [
+    "Real document recognition and geometry",
+    "Deployed package and supported worker runtime",
+    "Desktop and thin-client host journeys",
+    "Offload protection, accounting, worker lifetime and actual resources",
+    "Combined cross-roadmap system testing after implementation is complete"
+  ],
+  "prior_accepted_results_reopened": false
+}

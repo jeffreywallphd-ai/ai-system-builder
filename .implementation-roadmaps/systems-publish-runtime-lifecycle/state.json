@@ -784,6 +784,12 @@
       "recordedAt": "2026-07-29T11:51:52Z",
       "sequence": 37,
       "type": "final-approval-recorded"
+    },
+    {
+      "eventFingerprint": "5c2c942229ed894cbc9bb95a094381fa2a4cb5b2812da7ceb901e77c749b24ff",
+      "recordedAt": "2026-10-22T12:44:42Z",
+      "sequence": 38,
+      "type": "completion-status-normalized"
     }
   ],
   "increments": [
@@ -1271,6 +1277,6 @@
   },
   "schemaVersion": 1,
   "slug": "systems-publish-runtime-lifecycle",
-  "status": "final-approved",
-  "updatedAt": "2026-07-29T11:51:52Z"
+  "status": "completed",
+  "updatedAt": "2026-10-22T12:44:42Z"
 }

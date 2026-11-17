@@ -9,6 +9,8 @@ export interface ExecutionRunListQuery {
   readonly sourceRuntimeReadinessBindingId?: string;
   readonly sourceContextKind?: ExecutionRunSourceContextKind;
   readonly sourceContextId?: string;
+  /** Use the application-owned provenance on saved delegated conversation runs. */
+  readonly delegatedConversationOnly?: true;
   readonly approvalStatus?: string;
   readonly runtimeReferenceStatus?: string;
   readonly runtimeReferenceKind?: string;
