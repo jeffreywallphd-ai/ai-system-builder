@@ -30,6 +30,18 @@ dispatching the request. A missing or mismatched reply supplies no license
 metadata. A request already sent can finish after access changes. The final
 authority recheck and the atomic task compare-and-save govern publication.
 
+The internal approved-provider import requires current principal and organization,
+the exact prepared single-file task, its full commit and its selection deadline.
+Admission is checked before provider verification and again after its response.
+The queued task is not mutated before verification. The trusted plan owner
+supplies the publication callback and must enforce its approval and selection
+within the same transaction as the artifact, snapshot, task and plan receipt.
+Transport callers cannot supply this callback. Access loss suppresses new
+publication, while a read already admitted can finish. An uncertain publication
+does not qualify as a plan receipt and cannot trigger automatic adoption or retry.
+Focused application fixtures exercise this seam. Product provider-plan tools and
+both actual host paths still require their own wiring and qualification.
+
 Desktop retires source reads with an exact workspace/client scope and a monotonic
 request identity. Thin-client source effects capture their own lifetime rather
 than accepting the current value of a mutable mounted flag. Scope changes,

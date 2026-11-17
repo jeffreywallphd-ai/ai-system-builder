@@ -13,7 +13,10 @@ import type { WorkspaceRepository } from "../../ports/workspace";
 import type { WorkspaceOperationAuthorizationPort } from "../../ports/security";
 import type { OrganizationRequestContextProviderPort } from "../../ports/organization";
 import type { ApplicationRequestContext } from "../../ports";
-import { projectHeadlessLocalFileImport, type HeadlessLocalFileImportPreview } from "../../../contracts/headless";
+import {
+  projectHeadlessLocalFileImport, projectHeadlessProviderFileImport,
+  type HeadlessLocalFileImportPreview, type HeadlessProviderFileImportPreview,
+} from "../../../contracts/headless";
 import {
   INGESTION_TASK_MAXIMUM_CHUNK_BYTES,
   INGESTION_TASK_CHECKPOINT_RETENTION_MS,
@@ -79,6 +82,14 @@ interface ApprovedLocalFileImport {
   readonly stillAllowed: () => Promise<boolean>;
   readonly isCurrent: () => boolean;
   readonly issuePublication?: IngestionFilePublicationAdmission["issue"];
+}
+
+/** Supplied only by the host's approved plan owner, never by a transport descriptor. */
+interface ApprovedProviderFileImport {
+  readonly preview: HeadlessProviderFileImportPreview;
+  readonly stillAllowed: () => Promise<boolean>;
+  readonly isCurrent: () => boolean;
+  readonly publish: NonNullable<IngestionAcquisitionRepositoryPort["saveTaskWithProviderArtifact"]>;
 }
 
 type ApprovedLocalFileImportResult =
@@ -380,6 +391,7 @@ export class GovernedIngestionTaskUseCases {
   public async runHuggingFaceTask(
     taskIdValue: string,
     context: ApplicationRequestContext = {},
+    approval?: ApprovedProviderFileImport,
   ): Promise<IngestionTaskResult> {
     const scope = await this.authorize(
       context,
@@ -414,6 +426,18 @@ export class GovernedIngestionTaskUseCases {
       );
       if (task.kind !== "hugging-face")
         throw new Error("This is not a Hugging Face ingestion task.");
+      if (approval) {
+        if (task.organizationId !== context.organizationId)
+          return failure("forbidden", "The approved provider import is unavailable.", context);
+        const selected = projectHeadlessProviderFileImport(task, approval.preview, Date.parse(this.now()));
+        if (!selected.ok || selected.value.providerRevision !== approval.preview.providerRevision ||
+            selected.value.mediaType !== approval.preview.mediaType ||
+            selected.value.selectionExpiresAt !== approval.preview.selectionExpiresAt)
+          return failure("conflict", "The approved provider selection changed.", context);
+        if (!prepareProviderArtifact || !saveProviderArtifact || !approval.isCurrent() ||
+            !await approval.stillAllowed() || !approval.isCurrent())
+          return failure("forbidden", "The approved provider import is unavailable.", context);
+      }
       if (task.status === "succeeded" || task.status === "cancelled")
         return createSuccessResult(task, context);
       if (task.status === "failed") {
@@ -444,6 +468,8 @@ export class GovernedIngestionTaskUseCases {
       const licenseBudget = prepareProviderArtifact ? AbortSignal.timeout(5_000) : undefined;
       for (const candidate of task.files) {
         task = await this.requireTask(scope.value.workspaceId, task.taskId);
+        if (approval && (task.revision !== approval.preview.taskRevision || task.status !== "queued"))
+          return failure("conflict", "The approved provider selection changed.", context);
         if (task.status === "cancelled")
           return createSuccessResult(task, context);
         const file = requireFile(task, candidate.fileId);
@@ -451,7 +477,7 @@ export class GovernedIngestionTaskUseCases {
         const source = file.providerSource;
         if (!source)
           throw new Error("Provider task coordinates are unavailable.");
-        if (task.status === "queued") {
+        if (task.status === "queued" && !approval) {
           task = await this.dependencies.repository.saveTask(
             updateTask(task, {
               status: "transferring",
@@ -468,13 +494,16 @@ export class GovernedIngestionTaskUseCases {
         const licenseSignal = !licenseBudget?.aborted && !licenseIdsByRevision.has(licenseKey)
           ? licenseBudget : undefined;
         const expected = task;
+        if (approval && (!await approval.stillAllowed() || !approval.isCurrent()))
+          return failure("forbidden", "The approved provider import is unavailable.", context);
         const result = prepareProviderArtifact
           ? await prepareProviderArtifact(command, context, licenseSignal && {
             signal: licenseSignal,
             stillAllowed: async () => {
               const current = await repository.readTask(expected.workspaceId, expected.taskId);
               return matchesTaskScope(current, expected) &&
-                current.revision === expected.revision && current.status === "transferring" &&
+                current.revision === expected.revision && current.status === expected.status &&
+                (!approval || (await approval.stillAllowed() && approval.isCurrent())) &&
                 (await recheckProviderAuthority(expected)).ok;
             },
           })
@@ -483,7 +512,10 @@ export class GovernedIngestionTaskUseCases {
           const active = await recheckProviderAuthority(expected);
           if (!active.ok) return active;
         }
+        if (approval && (!await approval.stillAllowed() || !approval.isCurrent()))
+          return failure("forbidden", "The approved provider import is unavailable.", context);
         if (!result.ok) {
+          if (approval) return result;
           const completedAt = this.now();
           const retryable =
             result.error.code === "unavailable" ||
@@ -572,11 +604,16 @@ export class GovernedIngestionTaskUseCases {
         try {
           if (prepared) {
             if (!saveProviderArtifact) throw new Error("Owned provider publication is unavailable.");
-            task = (await saveProviderArtifact(nextTask, task.revision, snapshot, prepared.artifact)).task;
+            if (approval && !approval.isCurrent())
+              return failure("forbidden", "The approved provider import is unavailable.", context);
+            const publish = approval?.publish ?? saveProviderArtifact;
+            task = (await publish(nextTask, task.revision, snapshot, prepared.artifact)).task;
           } else {
             task = (await repository.saveTaskWithSourceSnapshot(nextTask, task.revision, snapshot)).task;
           }
         } catch {
+          if (approval)
+            return failure("conflict", "The approved provider import needs its saved plan receipt.", context);
           const current = await this.readFinalizationState(nextTask, requireFile(nextTask, file.fileId), snapshot);
           if (current.task.status === "cancelled") return createSuccessResult(current.task, context);
           if (!current.committed) throw new Error("The imported source has an uncertain commit. Its data was retained for recovery.");
@@ -591,6 +628,58 @@ export class GovernedIngestionTaskUseCases {
         context,
       );
     }
+  }
+
+  public async finalizeApprovedProviderFile(
+    approval: ApprovedProviderFileImport,
+    suppliedContext: ApplicationRequestContext,
+  ): Promise<ApprovedLocalFileImportResult> {
+    const context = { ...suppliedContext };
+    const preview = { ...approval.preview };
+    const forbidden = { ok: false, code: "headless.forbidden" } as const;
+    const unconfirmed = { ok: false, code: "headless.operation-unconfirmed" } as const;
+    if (!context.organizationId || !context.principalId || context.workspaceId !== preview.workspaceId ||
+        preview.provider !== "huggingface" || preview.approvalRequired !== true ||
+        preview.externalProviderCalls !== 0 || typeof approval.publish !== "function") return forbidden;
+    const isCurrent = () => {
+      try {
+        const observedAt = Date.parse(this.now());
+        const provider = this.dependencies.organizationContextProvider;
+        const current = provider?.getCurrentOrganizationContext();
+        return Number.isSafeInteger(observedAt) && observedAt > 0 && observedAt < preview.selectionExpiresAt &&
+          approval.isCurrent() === true && (!provider ||
+          (current?.organizationId === context.organizationId && current?.principalId === context.principalId));
+      } catch { return false; }
+    };
+    const stillAllowed = async () => {
+      try { return isCurrent() && await approval.stillAllowed() === true && isCurrent(); }
+      catch { return false; }
+    };
+    if (!await stillAllowed()) return forbidden;
+    try {
+      let publicationAcknowledged = false;
+      const result = await this.runHuggingFaceTask(preview.taskId, context, {
+        preview, isCurrent, stillAllowed,
+        publish: async (...args) => {
+          const committed = await approval.publish(...args);
+          publicationAcknowledged = true;
+          return committed;
+        },
+      });
+      if (!await stillAllowed() || !isCurrent()) return forbidden;
+      if (!result.ok) {
+        if (result.error.code === "forbidden" || result.error.code === "not-found") return forbidden;
+        return unconfirmed;
+      }
+      if (!publicationAcknowledged) return unconfirmed;
+      const task = result.value;
+      const file = task.files[0];
+      if (task.organizationId !== context.organizationId || task.workspaceId !== preview.workspaceId ||
+          task.taskId !== preview.taskId || task.revision !== preview.taskRevision + 1 ||
+          task.status !== "succeeded" || task.files.length !== 1 || file?.fileId !== preview.fileId ||
+          file.status !== "finalized" || file.output?.providerRevision !== preview.providerRevision) return unconfirmed;
+      return { ok: true, value: { taskId: task.taskId, fileId: file.fileId, taskRevision: task.revision } };
+    } catch { return isCurrent() ? unconfirmed : forbidden; }
   }
 
   public async appendChunk(

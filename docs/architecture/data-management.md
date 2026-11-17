@@ -207,6 +207,15 @@ authorization. A Hugging Face user or organization is provider provenance
 only; it is never used as the application's organization scope. Before any
 acquisition command is evaluated, the host adds its authoritative active
 organization and principal context and rejects missing or conflicting context.
+For a delegated provider save, the ingestion owner accepts one prepared
+immutable file and a private publication callback from the approved plan owner.
+The task stays at the selected queued revision while the provider is checked.
+After current authority is checked again, publication advances the task once
+and must include its source, artifact and plan receipt in one owner transaction.
+A failed or uncertain acknowledgement returns an unconfirmed result. The plan
+must inspect its own saved receipt before reporting a successful retry.
+This application seam is internal. Provider plan tooling and host wiring remain
+separate implementation and qualification work.
 A token-only card in Step 2 reads and writes the same
 host-owned Hugging Face credential setting as the main Settings area; token
 values stay in a password input and credential boundary and are not included in

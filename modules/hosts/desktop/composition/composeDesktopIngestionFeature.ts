@@ -36,6 +36,7 @@ export interface ComposeDesktopIngestionFeatureOptions {
 export interface DesktopIngestionTaskCommands {
   executeCommand(command: IngestionTaskTransportCommand, context?: ApplicationRequestContext): Promise<ContractResult<IngestionTaskTransportValue>>;
   readonly finalizeApprovedLocalFile?: GovernedIngestionTaskUseCases["finalizeApprovedLocalFile"];
+  readonly finalizeApprovedProviderFile?: GovernedIngestionTaskUseCases["finalizeApprovedProviderFile"];
 }
 
 export interface DesktopIngestionFeature {

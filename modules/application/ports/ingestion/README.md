@@ -28,6 +28,13 @@ task/snapshot transaction then commits the private receipt. Completed retries
 verify existing origin and receipt without creating either.
 Task state contains only opaque checkpoint identities, authoritative counters,
 bounded sanitized errors, and immutable artifact references.
+The internal approved-provider entry point accepts the exact prepared preview
+and a host-owned publication callback. It keeps the selected task queued during
+provider verification and rechecks admission before publication. The callback
+must commit the provider artifact, task, source snapshot and plan effect through
+the same owner transaction. Transport input cannot supply that callback.
+An uncertain publication returns an unconfirmed result for the owning plan to
+reconcile from its receipt. It never adopts an ordinary import as that receipt.
 New local-file tasks record a 24-hour checkpoint deadline. Host maintenance can
 cancel and deterministically clean expired unfinished tasks; immutable completed
 artifacts and source snapshots are never subject to this checkpoint cleanup.

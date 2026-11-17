@@ -10,6 +10,7 @@ import { createLocalArtifactCatalogPersistenceAdapter, createLocalArtifactStorag
 import { RegisterArtifactFromRepoUseCase } from "../../../../application/use-cases";
 import type { HuggingFaceRepoBrowserPort } from "../../../../application/ports/storage";
 import { normalizeIngestionSourceSnapshotId } from "../../../../contracts/ingestion";
+import { projectHeadlessProviderFileImport } from "../../../../contracts/headless";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createHasArtifactInRepoSuccessResult } from "../../../../contracts/storage";
 import { createWorkspaceId } from "../../../../contracts/workspace";
@@ -20,7 +21,8 @@ import { composeIngestionAcquisitionRepository } from "../../../shared/compositi
 const NOW = "2026-07-30T16:00:00.000Z";
 const IMMUTABLE_REVISION = "a".repeat(40);
 
-function createFixture(activeContext: boolean | (() => boolean) = true, registrar?: RegisterArtifactFromRepoUseCase) {
+function createFixture(activeContext: boolean | (() => boolean) = true, registrar?: RegisterArtifactFromRepoUseCase,
+  now: () => string = () => NOW) {
   const organizationId = createOrganizationId("organization.local");
   const principalId = "principal.local";
   const workspaceId = createWorkspaceId("workspace-a");
@@ -56,7 +58,7 @@ function createFixture(activeContext: boolean | (() => boolean) = true, registra
           ? { organizationId, principalId }
           : undefined,
     },
-    now: () => NOW,
+    now,
   });
   return { feature, organizationId, principalId, workspaceId, documents };
 }
@@ -80,6 +82,167 @@ function controlledRegistrar(verify: () => Promise<void | boolean>,
 }
 
 describe("composeDesktopIngestionFeature", () => {
+  it("publishes an approved provider source through its host owner without staging writes", async () => {
+    let providerChecks = 0;
+    let fileExists = true;
+    const registrar = controlledRegistrar(async () => { providerChecks++; return fileExists; });
+    const { feature, organizationId, principalId, workspaceId, documents } = createFixture(true, registrar);
+    const context = { organizationId, principalId, workspaceId };
+    const repository = composeIngestionAcquisitionRepository("artifacts/tmp/desktop-ingestion-context-tests", documents);
+    try {
+      const created = await feature.ingestionTasks.executeCommand({ action: "create-hugging-face", files: [
+        { repository: "example/synthetic", path: "data/train.parquet", revision: IMMUTABLE_REVISION },
+      ] }, context);
+      if (!created.ok || created.value.kind !== "task") throw new Error("Could not stage the provider fixture.");
+      const task = created.value.task;
+      const selected = projectHeadlessProviderFileImport(task, {
+        workspaceId, taskId: task.taskId, fileId: task.files[0]!.fileId, taskRevision: task.revision,
+      }, Date.parse(NOW));
+      if (!selected.ok) throw new Error("Could not prepare the provider fixture.");
+      const finalize = feature.ingestionTasks.finalizeApprovedProviderFile!.bind(feature.ingestionTasks);
+      const publish = testDouble.fn(async (...args: Parameters<NonNullable<typeof repository.saveTaskWithProviderArtifact>>) => {
+        expect(await repository.readTask(workspaceId, task.taskId)).toEqual(task);
+        return repository.saveTaskWithProviderArtifact!(...args);
+      });
+      const approval = { preview: selected.value, stillAllowed: async () => true, isCurrent: () => true, publish };
+      expect(await finalize(approval, { workspaceId })).toEqual({ ok: false, code: "headless.forbidden" });
+      expect(providerChecks).toBe(0);
+      expect(await finalize({ ...approval, preview: { ...selected.value, taskRevision: task.revision + 1 } }, context))
+        .toEqual({ ok: false, code: "headless.operation-unconfirmed" });
+      expect(providerChecks).toBe(0);
+      fileExists = false;
+      expect(await finalize(approval, context)).toEqual({ ok: false, code: "headless.forbidden" });
+      expect(publish).not.toHaveBeenCalled();
+      expect(await repository.readTask(workspaceId, task.taskId)).toEqual(task);
+      fileExists = true;
+      expect(await finalize(approval, context)).toMatchObject({
+        ok: true, value: { taskId: task.taskId, fileId: task.files[0]!.fileId, taskRevision: task.revision + 1 },
+      });
+      expect(publish).toHaveBeenCalledTimes(1);
+      expect(providerChecks).toBe(2);
+      const saved = await repository.readTask(workspaceId, task.taskId);
+      expect(saved?.status).toBe("succeeded");
+      expect(saved?.revision).toBe(task.revision + 1);
+      // The owning plan must read its own receipt before any replay.
+      expect(await finalize(approval, context)).toEqual({ ok: false, code: "headless.operation-unconfirmed" });
+      expect(providerChecks).toBe(2);
+      expect(publish).toHaveBeenCalledTimes(1);
+    } finally { feature.dispose(); }
+  });
+
+  for (const retiredBy of ["approval", "deadline", "context"] as const) it(
+    `keeps the provider selection unchanged when ${retiredBy} ends during verification`,
+    { timeout: 10_000 }, async () => {
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    let allowed = true;
+    let activeContext = true;
+    let clock = NOW;
+    const registrar = controlledRegistrar(async () => { entered.resolve(); await release.promise; return true; });
+    const { feature, organizationId, principalId, workspaceId, documents } =
+      createFixture(() => activeContext, registrar, () => clock);
+    const context = { organizationId, principalId, workspaceId };
+    const repository = composeIngestionAcquisitionRepository("artifacts/tmp/desktop-ingestion-context-tests", documents);
+    const publish = testDouble.fn(async (...args: Parameters<NonNullable<typeof repository.saveTaskWithProviderArtifact>>) =>
+      repository.saveTaskWithProviderArtifact!(...args));
+    try {
+      const created = await feature.ingestionTasks.executeCommand({ action: "create-hugging-face", files: [
+        { repository: "example/synthetic", path: "data/train.parquet", revision: IMMUTABLE_REVISION },
+      ] }, context);
+      if (!created.ok || created.value.kind !== "task") throw new Error("Could not stage the provider fixture.");
+      const task = created.value.task;
+      const selected = projectHeadlessProviderFileImport(task, {
+        workspaceId, taskId: task.taskId, fileId: task.files[0]!.fileId, taskRevision: task.revision,
+      }, Date.parse(NOW));
+      if (!selected.ok) throw new Error("Could not prepare the provider fixture.");
+      const approval = { preview: selected.value, stillAllowed: async () => allowed, isCurrent: () => true, publish };
+      const pending = feature.ingestionTasks.finalizeApprovedProviderFile!(approval, context);
+      await entered.promise;
+      if (retiredBy === "approval") allowed = false;
+      if (retiredBy === "context") activeContext = false;
+      if (retiredBy === "deadline") clock = new Date(Date.parse(NOW) + 24 * 60 * 60 * 1000).toISOString();
+      release.resolve();
+      expect(await pending).toEqual({ ok: false, code: "headless.forbidden" });
+      expect(publish).not.toHaveBeenCalled();
+      expect(await repository.readTask(workspaceId, task.taskId)).toEqual(task);
+      const catalog = createLocalArtifactCatalogPersistenceAdapter({ rootDirectory: "artifacts/tmp/desktop-ingestion-context-tests", documents });
+      expect(await catalog.browseArtifactCatalogRecords({ workspaceId })).toMatchObject({ ok: true, value: { records: [] } });
+    } finally { release.resolve(); feature.dispose(); }
+  });
+
+  it("requires the exact plan receipt after an uncertain provider publication", async () => {
+    const registrar = controlledRegistrar(async () => true);
+    const { feature, organizationId, principalId, workspaceId, documents } = createFixture(true, registrar);
+    const context = { organizationId, principalId, workspaceId };
+    const repository = composeIngestionAcquisitionRepository("artifacts/tmp/desktop-ingestion-context-tests", documents);
+    try {
+      const created = await feature.ingestionTasks.executeCommand({ action: "create-hugging-face", files: [
+        { repository: "example/synthetic", path: "data/train.parquet", revision: IMMUTABLE_REVISION },
+      ] }, context);
+      if (!created.ok || created.value.kind !== "task") throw new Error("Could not stage the provider fixture.");
+      const task = created.value.task;
+      const selected = projectHeadlessProviderFileImport(task, {
+        workspaceId, taskId: task.taskId, fileId: task.files[0]!.fileId, taskRevision: task.revision,
+      }, Date.parse(NOW));
+      if (!selected.ok) throw new Error("Could not prepare the provider fixture.");
+      const publish = testDouble.fn(async (...args: Parameters<NonNullable<typeof repository.saveTaskWithProviderArtifact>>) => {
+        await repository.saveTaskWithProviderArtifact!(...args);
+        throw new Error("Synthetic acknowledgement loss.");
+      });
+      const result = await feature.ingestionTasks.finalizeApprovedProviderFile!({
+        preview: selected.value, stillAllowed: async () => true, isCurrent: () => true, publish,
+      }, context);
+      expect(result).toEqual({ ok: false, code: "headless.operation-unconfirmed" });
+      expect(publish).toHaveBeenCalledTimes(1);
+      expect((await repository.readTask(workspaceId, task.taskId))?.status).toBe("succeeded");
+    } finally { feature.dispose(); }
+  });
+
+  it("does not adopt a concurrent owner's provider commit while admission is held", { timeout: 10_000 }, async () => {
+    const admitted = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    let checks = 0;
+    const registrar = controlledRegistrar(async () => { checks++; return true; });
+    const { feature, organizationId, principalId, workspaceId, documents } = createFixture(true, registrar);
+    const context = { organizationId, principalId, workspaceId };
+    const repository = composeIngestionAcquisitionRepository("artifacts/tmp/desktop-ingestion-context-tests", documents);
+    try {
+      const created = await feature.ingestionTasks.executeCommand({ action: "create-hugging-face", files: [
+        { repository: "example/synthetic", path: "data/train.parquet", revision: IMMUTABLE_REVISION },
+      ] }, context);
+      if (!created.ok || created.value.kind !== "task") throw new Error("Could not stage the provider fixture.");
+      const task = created.value.task;
+      const selected = projectHeadlessProviderFileImport(task, {
+        workspaceId, taskId: task.taskId, fileId: task.files[0]!.fileId, taskRevision: task.revision,
+      }, Date.parse(NOW));
+      if (!selected.ok) throw new Error("Could not prepare the provider fixture.");
+      const publish = testDouble.fn(repository.saveTaskWithProviderArtifact!.bind(repository));
+      const common = { preview: selected.value, isCurrent: () => true };
+      let admissionReads = 0;
+      const pending = feature.ingestionTasks.finalizeApprovedProviderFile!({
+        ...common, publish,
+        stillAllowed: async () => {
+          if (++admissionReads === 2) {
+            admitted.resolve();
+            await release.promise;
+          }
+          return true;
+        },
+      }, context);
+      await admitted.promise;
+      const other = await feature.ingestionTasks.finalizeApprovedProviderFile!({
+        ...common, stillAllowed: async () => true,
+        publish: repository.saveTaskWithProviderArtifact!.bind(repository),
+      }, context);
+      expect(other).toMatchObject({ ok: true });
+      release.resolve();
+      expect(await pending).toEqual({ ok: false, code: "headless.operation-unconfirmed" });
+      expect(publish).not.toHaveBeenCalled();
+      expect(checks).toBe(1);
+      expect((await repository.readTask(workspaceId, task.taskId))?.revision).toBe(task.revision + 1);
+    } finally { release.resolve(); feature.dispose(); }
+  });
+
   it("retains one exact license observation with every saved file at the same commit", async () => {
     const source = { repository: "example/synthetic", revision: IMMUTABLE_REVISION };
     const readDatasetRevisionLicense = testDouble.fn(async () => ({ ...source, licenseIds: ["cc-by-nc-4.0"] }));
