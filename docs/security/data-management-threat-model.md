@@ -21,7 +21,14 @@ an unknown marker and conflicting duplicate repository rows are omitted.
 License labels and filters do not grant repository access, extend acquisition
 authority, or verify reuse rights. Existing exact file revision and task admission
 checks remain authoritative. Repository-level labels do not bind terms to
-collected files.
+collected files. On import, an optional lookup uses the verified repository and
+full selected commit. The response must identify both exactly. The task reuses
+one result per repository and commit and gives its metadata reads a shared
+five-second budget. Each read accepts at most 64 KiB. After reading credentials,
+the host observes the task revision and rechecks workspace access before
+dispatching the request. A missing or mismatched reply supplies no license
+metadata. A request already sent can finish after access changes. The final
+authority recheck and the atomic task compare-and-save govern publication.
 
 Desktop retires source reads with an exact workspace/client scope and a monotonic
 request identity. Thin-client source effects capture their own lifetime rather

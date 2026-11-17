@@ -8,11 +8,14 @@ import {
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createLocalArtifactCatalogPersistenceAdapter, createLocalArtifactStorageBindingAdapter } from "../../../../adapters/storage/filesystem";
 import { RegisterArtifactFromRepoUseCase } from "../../../../application/use-cases";
+import type { HuggingFaceRepoBrowserPort } from "../../../../application/ports/storage";
+import { normalizeIngestionSourceSnapshotId } from "../../../../contracts/ingestion";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { createHasArtifactInRepoSuccessResult } from "../../../../contracts/storage";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { ArtifactId } from "../../../../domain/artifact";
 import { composeDesktopIngestionFeature } from "../composeDesktopIngestionFeature";
+import { composeIngestionAcquisitionRepository } from "../../../shared/composition/composeIngestionAcquisitionRepository";
 
 const NOW = "2026-07-30T16:00:00.000Z";
 const IMMUTABLE_REVISION = "a".repeat(40);
@@ -58,9 +61,11 @@ function createFixture(activeContext: boolean | (() => boolean) = true, registra
   return { feature, organizationId, principalId, workspaceId, documents };
 }
 
-function controlledRegistrar(verify: () => Promise<void | boolean>) {
+function controlledRegistrar(verify: () => Promise<void | boolean>,
+  readDatasetRevisionLicense?: HuggingFaceRepoBrowserPort["readDatasetRevisionLicense"]) {
   let nextId = 0;
   return new RegisterArtifactFromRepoUseCase({
+    readDatasetRevisionLicense,
     artifactRepoStorage: {
       async hasArtifactInRepo() {
         return createHasArtifactInRepoSuccessResult((await verify()) !== false);
@@ -75,6 +80,37 @@ function controlledRegistrar(verify: () => Promise<void | boolean>) {
 }
 
 describe("composeDesktopIngestionFeature", () => {
+  it("retains one exact license observation with every saved file at the same commit", async () => {
+    const source = { repository: "example/synthetic", revision: IMMUTABLE_REVISION };
+    const readDatasetRevisionLicense = testDouble.fn(async () => ({ ...source, licenseIds: ["cc-by-nc-4.0"] }));
+    const registrar = controlledRegistrar(async () => true, readDatasetRevisionLicense);
+    const { feature, documents, workspaceId } = createFixture(true, registrar);
+    try {
+      const execute = feature.ingestionTasks.executeCommand.bind(feature.ingestionTasks);
+      const created = await execute({ action: "create-hugging-face", files: [
+        { ...source, path: "data/train.parquet" }, { ...source, path: "data/test.parquet" },
+      ] }, { workspaceId });
+      if (!created.ok || created.value.kind !== "task") throw new Error("Could not create the provider task.");
+      const taskId = created.value.task.taskId;
+      const run = () => execute({ action: "run-hugging-face", taskId }, { workspaceId });
+      const result = await run();
+      if (!result.ok || result.value.kind !== "task") throw new Error("Could not save the provider task.");
+      expect(result.value.task.status).toBe("succeeded");
+      const repository = composeIngestionAcquisitionRepository("artifacts/tmp/desktop-ingestion-context-tests", documents);
+      for (const file of result.value.task.files) {
+        const snapshotId = normalizeIngestionSourceSnapshotId(file.output!.sourceSnapshotId!);
+        expect(await repository.readSourceSnapshot(workspaceId, snapshotId)).toMatchObject({
+          locator: { repository: source.repository, revision: source.revision },
+          providerRevision: source.revision, providerLicenseIds: ["cc-by-nc-4.0"],
+        });
+      }
+      expect(await run()).toEqual(result);
+      expect(readDatasetRevisionLicense).toHaveBeenCalledTimes(1);
+    } finally {
+      feature.dispose();
+    }
+  });
+
   it("concurrent selected provider imports complete one source and keep their artifact records together", { timeout: 10_000 }, async () => {
     const firstEntered = Promise.withResolvers<void>();
     const bothEntered = Promise.withResolvers<void>();
@@ -127,7 +163,11 @@ describe("composeDesktopIngestionFeature", () => {
     const release = Promise.withResolvers<void>();
     let active = true;
     let exists = providerFileExists;
-    const registrar = controlledRegistrar(async () => { entered.resolve(); await release.promise; return exists; });
+    const readDatasetRevisionLicense = testDouble.fn(async () => undefined);
+    const registrar = controlledRegistrar(
+      async () => { entered.resolve(); await release.promise; return exists; },
+      readDatasetRevisionLicense,
+    );
     const { feature, documents, workspaceId } = createFixture(() => active, registrar);
     try {
       const execute = feature.ingestionTasks.executeCommand.bind(feature.ingestionTasks);
@@ -141,6 +181,7 @@ describe("composeDesktopIngestionFeature", () => {
       active = false;
       release.resolve();
       expect(await outstanding).toMatchObject({ok:false,error:{code:"forbidden"}});
+      expect(readDatasetRevisionLicense).not.toHaveBeenCalled();
       const catalog = createLocalArtifactCatalogPersistenceAdapter({ rootDirectory:"artifacts/tmp/desktop-ingestion-context-tests", documents });
       expect(await catalog.browseArtifactCatalogRecords({workspaceId})).toMatchObject({ok:true,value:{records:[]}});
       active = true;
@@ -149,6 +190,7 @@ describe("composeDesktopIngestionFeature", () => {
       });
       exists = true;
       expect(await run()).toMatchObject({ok:true,value:{kind:"task",task:{status:"succeeded"}}});
+      expect(readDatasetRevisionLicense).toHaveBeenCalledTimes(1);
     } finally {
       release.resolve();
       feature.dispose();

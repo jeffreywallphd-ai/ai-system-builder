@@ -5,12 +5,15 @@ import type { LoggingPort } from "../ports/logging";
 import type {
   ArtifactRepoStoragePort,
   ArtifactStorageBindingPort,
+  HuggingFaceRepoBrowserPort,
 } from "../ports/storage";
 import { resolveArtifactFamily } from "../shared/artifact-family-classifier";
 import { createContractError, type ContractResult } from "../../contracts/shared";
 import {
   createHasArtifactInRepoRequest,
   encodeArtifactRepoBackingLocator,
+  isHuggingFaceDatasetCommit,
+  readHuggingFaceDatasetLicenseIds,
 } from "../../contracts/storage";
 import {
   Artifact,
@@ -53,6 +56,7 @@ export interface RegisterArtifactFromRepoSuccessValue {
 
 export interface RegisterArtifactFromRepoUseCaseDependencies {
   artifactRepoStorage: ArtifactRepoStoragePort;
+  readDatasetRevisionLicense?: HuggingFaceRepoBrowserPort["readDatasetRevisionLicense"];
   artifactBindingStorage: ArtifactStorageBindingPort;
   artifactCatalogAppend: ArtifactCatalogAppendPort;
   logging: LoggingPort;
@@ -63,6 +67,7 @@ export interface RegisterArtifactFromRepoUseCaseDependencies {
 
 export class RegisterArtifactFromRepoUseCase {
   private readonly artifactRepoStorage: ArtifactRepoStoragePort;
+  private readonly readDatasetRevisionLicense?: HuggingFaceRepoBrowserPort["readDatasetRevisionLicense"];
   private readonly artifactBindingStorage: ArtifactStorageBindingPort;
   private readonly artifactCatalogAppend: ArtifactCatalogAppendPort;
   private readonly logging: LoggingPort;
@@ -73,6 +78,7 @@ export class RegisterArtifactFromRepoUseCase {
     dependencies: RegisterArtifactFromRepoUseCaseDependencies,
   ) {
     this.artifactRepoStorage = dependencies.artifactRepoStorage;
+    this.readDatasetRevisionLicense = dependencies.readDatasetRevisionLicense;
     this.artifactBindingStorage = dependencies.artifactBindingStorage;
     this.artifactCatalogAppend = dependencies.artifactCatalogAppend;
     this.logging = dependencies.logging;
@@ -88,9 +94,14 @@ export class RegisterArtifactFromRepoUseCase {
   public async prepare(
     command: RegisterArtifactFromRepoCommand,
     context: ApplicationRequestContext = {},
+    licenseAdmission?: {
+      readonly signal: AbortSignal;
+      readonly stillAllowed: () => Promise<boolean>;
+    },
   ): Promise<ContractResult<{
     readonly artifact: VerifiedIngestionProviderArtifact;
     readonly registration: RegisterArtifactFromRepoSuccessValue;
+    readonly providerLicenseIds?: readonly string[];
   }>> {
     const startedAt = Date.now();
     const provider = command.target.provider?.trim();
@@ -247,6 +258,34 @@ export class RegisterArtifactFromRepoUseCase {
       return notFoundResult;
     }
 
+    let providerLicenseIds: readonly string[] | undefined;
+    const readLicense = this.readDatasetRevisionLicense;
+    if (readLicense && licenseAdmission && !licenseAdmission.signal.aborted &&
+        provider === "huggingface" && isHuggingFaceDatasetCommit(revision)) {
+      const { signal, stillAllowed } = licenseAdmission;
+      let removeAbortListener: (() => void) | undefined;
+      const deadline = new Promise<undefined>((resolve) => {
+        const onAbort = () => resolve(undefined);
+        signal.addEventListener("abort", onAbort, { once: true });
+        removeAbortListener = () => signal.removeEventListener("abort", onAbort);
+      });
+      try {
+        const observation = async () => {
+          if (!(await stillAllowed()) || signal.aborted) return undefined;
+          return readLicense({ repository, revision }, signal, stillAllowed);
+        };
+        const license = await Promise.race([observation(), deadline]);
+        if (!signal.aborted && license?.repository === repository && license.revision === revision &&
+            Array.isArray(license.licenseIds)) {
+          providerLicenseIds = readHuggingFaceDatasetLicenseIds(license.licenseIds);
+        }
+      } catch {
+        // Unavailable optional metadata leaves the license unknown.
+      } finally {
+        removeAbortListener?.();
+      }
+    }
+
     // Internal artifact identity is system-owned; repo coordinates remain backing metadata.
     const artifactId = this.createArtifactId();
     const verifiedAt = this.now();
@@ -320,7 +359,8 @@ export class RegisterArtifactFromRepoUseCase {
         verification: { exists: true, verifiedAt },
       },
     };
-    return { ok: true, value: { registration, artifact: {
+    return { ok: true, value: { registration,
+      ...(providerLicenseIds === undefined ? {} : { providerLicenseIds }), artifact: {
       catalog: {
         workspaceId, storageKey: artifactId.toString(), artifactFamily: resolvedArtifactFamily,
         mediaType: command.mediaType?.trim() || undefined, sourceKind: "upload", originalName: path, createdAt: verifiedAt,

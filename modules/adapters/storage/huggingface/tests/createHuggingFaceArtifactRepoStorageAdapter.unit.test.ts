@@ -855,6 +855,59 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     }
   });
 
+  it("accepts a license declaration only at the exact dataset commit", async () => {
+    const repository = "example/synthetic";
+    const revision = "a".repeat(40);
+    const signal = new AbortController().signal;
+    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify({
+      id: repository, sha: revision, cardData: { license: ["cc-by-nd-4.0", "UNTRUSTED-DECLARATION"] },
+    }), { headers: { "content-type": "application/json" } })) as unknown as HuggingFaceFetchImplementation;
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({ fetchImplementation });
+    const stillAllowed = async () => true;
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision: "main" }, signal, stillAllowed)).toBeUndefined();
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision }, AbortSignal.abort(), stillAllowed)).toBeUndefined();
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision }, signal, async () => false)).toBeUndefined();
+    expect(fetchImplementation).not.toHaveBeenCalled();
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision }, signal, stillAllowed)).toEqual({
+      repository, revision, licenseIds: ["cc-by-nd-4.0", "unknown"],
+    });
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      `https://huggingface.co/api/datasets/${repository}/revision/${revision}?expand=sha&expand=cardData`,
+      expect.objectContaining({ signal, redirect: "error" }),
+    );
+    expect(await adapter.readDatasetRevisionLicense!({ repository, revision: "b".repeat(40) }, signal, stillAllowed)).toBeUndefined();
+    expect(await adapter.readDatasetRevisionLicense!({ repository: "other/synthetic", revision }, signal, stillAllowed)).toBeUndefined();
+  });
+
+  it("checks metadata authority again after waiting for provider credentials", { timeout: 5_000 }, async () => {
+    const credentialRead = Promise.withResolvers<void>();
+    const releaseCredential = Promise.withResolvers<void>();
+    const fetchImplementation = testDouble.fn(async () => new Response()) as unknown as HuggingFaceFetchImplementation;
+    let allowed = true;
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      fetchImplementation,
+      accessTokenProvider: async () => {
+        credentialRead.resolve();
+        await releaseCredential.promise;
+        return undefined;
+      },
+    });
+    const observation = adapter.readDatasetRevisionLicense!(
+      { repository: "example/synthetic", revision: "a".repeat(40) },
+      new AbortController().signal,
+      async () => allowed,
+    );
+    try {
+      await credentialRead.promise;
+      allowed = false;
+      releaseCredential.resolve();
+      expect(await observation).toBeUndefined();
+      expect(fetchImplementation).not.toHaveBeenCalled();
+    } finally {
+      releaseCredential.resolve();
+    }
+  });
+
   it("lists only bounded dataset parquet files at an immutable converted revision", async () => {
     const immutableRevision = "a".repeat(40);
     const fetchImplementation = testDouble.fn(async () => visibilityResponse({ sha: immutableRevision })) as unknown as HuggingFaceFetchImplementation;

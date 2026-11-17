@@ -6,6 +6,16 @@ export interface HuggingFaceDatasetSummary {
 
 export type DatasetLicenseCategory = "creative-commons" | "other-open" | "non-open" | "unknown";
 
+export interface HuggingFaceDatasetRevisionLicense {
+  readonly repository: string;
+  readonly revision: string;
+  readonly licenseIds: readonly string[];
+}
+
+export function isHuggingFaceDatasetCommit(value: unknown): value is string {
+  return typeof value === "string" && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value);
+}
+
 const openCreativeCommons = new Set([
   "cc0-1.0", "cc-by-2.0", "cc-by-2.5", "cc-by-3.0", "cc-by-4.0",
   "cc-by-sa-3.0", "cc-by-sa-4.0",
@@ -22,12 +32,12 @@ const nonOpen = new Set([
   "cc-by-nc-sa-2.0", "cc-by-nc-sa-3.0", "cc-by-nc-sa-4.0",
   "fair-noncommercial-research-license", "proprietary", "all-rights-reserved",
 ]);
-const maximumLicenseIds = 8;
+export const MAX_HUGGING_FACE_DATASET_LICENSE_IDS = 8;
 
 /** Accept only known identifiers from an untrusted provider or transport. */
 export function readHuggingFaceDatasetLicenseIds(input: unknown): readonly string[] {
   const values = typeof input === "string" ? [input] : input;
-  if (!Array.isArray(values) || values.length > maximumLicenseIds) return [];
+  if (!Array.isArray(values) || values.length > MAX_HUGGING_FACE_DATASET_LICENSE_IDS) return [];
 
   const ids = new Set<string>();
   for (const value of values) {

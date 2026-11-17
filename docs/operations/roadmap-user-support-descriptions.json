@@ -158,6 +158,8 @@
           "Provider import after approval, dataset preparation and opening data from chat still need work."
         ]
       }
-    }
+    },
+    {"kind": "support-scope", "source_text_sha256": "e16077a4a4fcf241436d33fa1eb0775f0b9989e76cb6e278b4b6da31ee4fd726", "user_description": {"owner": "agent", "sentences": ["The Data picker shows the license declared in the provider listing.", "The open-license filters keep matching datasets and clear earlier file choices."]}},
+    {"kind": "support-limitation", "source_text_sha256": "1124ca7040258d36498f8a1494a7cb811f773e9141013f75363628f9451a534e", "user_description": {"owner": "agent", "sentences": ["This test used a simulated listing.", "Saved-revision license evidence and full Data journeys have separate checks."]}}
   ]
 }

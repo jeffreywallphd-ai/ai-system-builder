@@ -12,6 +12,78 @@ import { RegisterArtifactFromRepoUseCase } from "../register-artifact-from-repo.
 import { ArtifactId, type ArtifactIdFactory } from "../../../domain/artifact";
 
 describe("RegisterArtifactFromRepoUseCase", () => {
+  it("observes a provider license only after the exact file is accessible", async () => {
+    let fileAvailable = false;
+    let licenseRevision = "b".repeat(40);
+    const revision = "a".repeat(40);
+    const repository = "example/synthetic";
+    const readDatasetRevisionLicense = testDouble.fn(async () => ({
+      repository, revision: licenseRevision, licenseIds: ["cc-by-nc-4.0"],
+    }));
+    const useCase = new RegisterArtifactFromRepoUseCase({
+      artifactRepoStorage: { hasArtifactInRepo: async () => createHasArtifactInRepoSuccessResult(fileAvailable) } as never,
+      artifactBindingStorage: {} as never,
+      artifactCatalogAppend: {} as never,
+      readDatasetRevisionLicense, logging: { log() {} },
+      createArtifactId: () => ArtifactId.from("artifacts/20260417000000-import001"),
+    });
+    const command = { target: { provider: "huggingface", repository, path: "data/train.parquet", revision } };
+    const context = { workspaceId: "workspace-a" };
+    const signal = new AbortController().signal;
+    const admission = { signal, stillAllowed: async () => true };
+    expect(await useCase.prepare(command, context, admission)).toMatchObject({ ok: false, error: { code: "not-found" } });
+    fileAvailable = true;
+    expect(await useCase.prepare(command, context, { ...admission, stillAllowed: async () => false }))
+      .toMatchObject({ ok: true });
+    expect(readDatasetRevisionLicense).not.toHaveBeenCalled();
+    const mismatched = await useCase.prepare(command, context, admission);
+    if (!mismatched.ok) throw new Error("Expected a prepared artifact.");
+    expect(mismatched.value.providerLicenseIds).toBeUndefined();
+    licenseRevision = revision;
+    expect(await useCase.prepare(command, context, admission)).toMatchObject({
+      ok: true, value: { providerLicenseIds: ["cc-by-nc-4.0"] },
+    });
+    await useCase.prepare(command, context);
+    await useCase.prepare(command, context, { ...admission, signal: AbortSignal.abort() });
+    expect(readDatasetRevisionLicense.mock.calls).toEqual([
+      [{ repository, revision }, signal, admission.stillAllowed],
+      [{ repository, revision }, signal, admission.stillAllowed],
+    ]);
+  });
+
+  it("keeps preparing the artifact when the optional license request stalls", { timeout: 5_000 }, async () => {
+    const pendingLicense = Promise.withResolvers<void>();
+    const licenseStarted = Promise.withResolvers<void>();
+    const source = { repository: "example/synthetic", revision: "a".repeat(40) };
+    const useCase = new RegisterArtifactFromRepoUseCase({
+      artifactRepoStorage: { hasArtifactInRepo: async () => createHasArtifactInRepoSuccessResult(true) } as never,
+      artifactBindingStorage: {} as never,
+      artifactCatalogAppend: {} as never,
+      readDatasetRevisionLicense: async () => {
+        licenseStarted.resolve();
+        await pendingLicense.promise;
+        return { ...source, licenseIds: ["cc0-1.0"] };
+      },
+      logging: { log() {} },
+      createArtifactId: () => ArtifactId.from("artifacts/20260417000000-import001"),
+    });
+    const deadline = new AbortController();
+    const prepared = useCase.prepare(
+      { target: { ...source, provider: "huggingface", path: "data/train.parquet" } },
+      { workspaceId: "workspace-a" },
+      { signal: deadline.signal, stillAllowed: async () => true },
+    );
+    try {
+      await licenseStarted.promise;
+      deadline.abort();
+      const result = await prepared;
+      if (!result.ok) throw new Error("Expected a prepared artifact.");
+      expect(result.value.providerLicenseIds).toBeUndefined();
+    } finally {
+      pendingLicense.resolve();
+    }
+  });
+
   it("verifies remote target and writes imported-source binding + catalog record", async () => {
     const log = testDouble.fn();
     const logging: LoggingPort = { log };

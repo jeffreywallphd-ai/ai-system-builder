@@ -1,5 +1,5 @@
 import type { ApplicationRequestContext } from "../application-request-context";
-import type { HuggingFaceDatasetSummary } from "../../../contracts/storage";
+import type { HuggingFaceDatasetRevisionLicense, HuggingFaceDatasetSummary } from "../../../contracts/storage";
 
 export interface HuggingFaceDatasetParquetFileDescriptor {
   repository: string;
@@ -9,6 +9,12 @@ export interface HuggingFaceDatasetParquetFileDescriptor {
 }
 
 export interface HuggingFaceRepoBrowserPort {
+  readDatasetRevisionLicense?(
+    source: { repository: string; revision: string },
+    signal: AbortSignal,
+    stillAllowed: () => Promise<boolean>,
+  ): Promise<HuggingFaceDatasetRevisionLicense | undefined>;
+
   listNamespaceDatasets(
     namespace: string,
     context?: ApplicationRequestContext,

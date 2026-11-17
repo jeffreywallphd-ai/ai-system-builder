@@ -1,5 +1,6 @@
 import { createOrganizationId, type OrganizationId } from "../organization";
 import { createWorkspaceId, type WorkspaceId } from "../workspace";
+import { isHuggingFaceDatasetCommit, MAX_HUGGING_FACE_DATASET_LICENSE_IDS, readHuggingFaceDatasetLicenseIds } from "../storage";
 import { normalizeIngestionSha256Digest, type IngestionSha256Digest } from "./acquisition-task";
 
 export type IngestionSourceId = string & { readonly __ingestionSourceId: unique symbol };
@@ -33,6 +34,8 @@ export interface IngestionSourceSnapshot {
   readonly capturedAt: string;
   readonly previousSnapshotId?: IngestionSourceSnapshotId;
   readonly providerRevision?: string;
+  /** Omitted for older snapshots and when exact-revision metadata could not be observed. */
+  readonly providerLicenseIds?: readonly string[];
   readonly etag?: string;
   readonly lastModified?: string;
   readonly httpStatus?: number;
@@ -68,6 +71,11 @@ export function normalizeIngestionSourceSnapshot(value: IngestionSourceSnapshot)
   const derivedArtifactKeys = value.derivedArtifactKeys?.map(storageKey);
   if (derivedArtifactKeys && (derivedArtifactKeys.length > 8 || new Set(derivedArtifactKeys).size !== derivedArtifactKeys.length)) throw new Error("Derived ingestion artifacts must be unique and bounded.");
   if (locator.kind === "hugging-face" && value.providerRevision !== locator.revision) throw new Error("Provider snapshots require the exact selected revision.");
+  if (value.providerLicenseIds !== undefined &&
+      (locator.kind !== "hugging-face" || !isHuggingFaceDatasetCommit(locator.revision) ||
+        !Array.isArray(value.providerLicenseIds) || value.providerLicenseIds.length > MAX_HUGGING_FACE_DATASET_LICENSE_IDS)) {
+    throw new Error("Dataset license evidence requires a bounded list and an immutable provider revision.");
+  }
   if (locator.kind !== "hugging-face" && !value.contentDigest) throw new Error("Local and website snapshots require a content digest.");
   if (locator.kind === "website" && !value.robots) throw new Error("Website snapshots require an allowed robots decision.");
   if (locator.kind !== "website" && (value.robots || value.httpStatus !== undefined || value.etag || value.lastModified)) throw new Error("HTTP evidence is only valid for website snapshots.");
@@ -86,6 +94,9 @@ export function normalizeIngestionSourceSnapshot(value: IngestionSourceSnapshot)
     capturedAt: timestamp(value.capturedAt, "Source snapshot capturedAt"),
     ...(value.previousSnapshotId ? { previousSnapshotId: normalizeIngestionSourceSnapshotId(value.previousSnapshotId) } : {}),
     ...(value.providerRevision ? { providerRevision: text(value.providerRevision, "Provider revision", 160) } : {}),
+    ...(value.providerLicenseIds === undefined ? {} : {
+      providerLicenseIds: readHuggingFaceDatasetLicenseIds(value.providerLicenseIds),
+    }),
     ...(value.etag ? { etag: safeValidator(value.etag, "ETag") } : {}),
     ...(value.lastModified ? { lastModified: safeValidator(value.lastModified, "Last-Modified") } : {}),
     ...(value.httpStatus !== undefined ? { httpStatus: integer(value.httpStatus, 100, 599, "HTTP status") } : {}),

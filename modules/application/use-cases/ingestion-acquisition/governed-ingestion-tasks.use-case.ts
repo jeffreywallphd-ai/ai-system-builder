@@ -397,6 +397,16 @@ export class GovernedIngestionTaskUseCases {
     const repository = this.dependencies.repository;
     const saveProviderArtifact = repository.saveTaskWithProviderArtifact?.bind(repository);
     const prepareProviderArtifact = saveProviderArtifact && registerArtifact.prepare?.bind(registerArtifact);
+    const recheckProviderAuthority = async (expected: IngestionTaskRecord) => {
+      const active = await this.authorize(context, "ingestion.hugging-face.run", "artifact:write");
+      if (!active.ok) return active;
+      const contexts = this.dependencies.organizationContextProvider;
+      const latest = contexts?.getCurrentOrganizationContext();
+      if (active.value.workspaceId !== expected.workspaceId || context.organizationId !== expected.organizationId ||
+          (contexts && (!latest || latest.organizationId !== expected.organizationId || latest.principalId !== context.principalId)))
+        return failure("forbidden", "The workspace access for this provider import changed.", context);
+      return active;
+    };
     try {
       let task = await this.requireTask(
         scope.value.workspaceId,
@@ -430,6 +440,8 @@ export class GovernedIngestionTaskUseCases {
         );
       }
 
+      const licenseIdsByRevision = new Map<string, readonly string[] | undefined>();
+      const licenseBudget = prepareProviderArtifact ? AbortSignal.timeout(5_000) : undefined;
       for (const candidate of task.files) {
         task = await this.requireTask(scope.value.workspaceId, task.taskId);
         if (task.status === "cancelled")
@@ -452,17 +464,24 @@ export class GovernedIngestionTaskUseCases {
           );
         }
         const command = { target: source, mediaType: file.mediaType };
+        const licenseKey = `${source.repository}@${source.revision}`;
+        const licenseSignal = !licenseBudget?.aborted && !licenseIdsByRevision.has(licenseKey)
+          ? licenseBudget : undefined;
+        const expected = task;
         const result = prepareProviderArtifact
-          ? await prepareProviderArtifact(command, context)
+          ? await prepareProviderArtifact(command, context, licenseSignal && {
+            signal: licenseSignal,
+            stillAllowed: async () => {
+              const current = await repository.readTask(expected.workspaceId, expected.taskId);
+              return matchesTaskScope(current, expected) &&
+                current.revision === expected.revision && current.status === "transferring" &&
+                (await recheckProviderAuthority(expected)).ok;
+            },
+          })
           : await registerArtifact.execute(command, context);
         if (prepareProviderArtifact) {
-          const active = await this.authorize(context, "ingestion.hugging-face.run", "artifact:write");
+          const active = await recheckProviderAuthority(expected);
           if (!active.ok) return active;
-          const contexts = this.dependencies.organizationContextProvider;
-          const latest = contexts?.getCurrentOrganizationContext();
-          if (active.value.workspaceId !== task.workspaceId || context.organizationId !== task.organizationId ||
-              (contexts && (!latest || latest.organizationId !== task.organizationId || latest.principalId !== context.principalId)))
-            return failure("forbidden", "The workspace access for this provider import changed.", context);
         }
         if (!result.ok) {
           const completedAt = this.now();
@@ -496,6 +515,8 @@ export class GovernedIngestionTaskUseCases {
           );
         }
         const prepared = "artifact" in result.value ? result.value : undefined;
+        if (prepared && licenseSignal) licenseIdsByRevision.set(licenseKey, prepared.providerLicenseIds);
+        const providerLicenseIds = licenseIdsByRevision.get(licenseKey);
         const storedArtifactId = "registration" in result.value ? result.value.registration.artifactId : result.value.artifactId;
         const capturedAt = this.now();
         const sourceId = `source.${task.taskId}.${file.fileId}`;
@@ -520,6 +541,7 @@ export class GovernedIngestionTaskUseCases {
           rawArtifactKey: storedArtifactId,
           capturedAt,
           providerRevision: source.revision,
+          ...(providerLicenseIds === undefined ? {} : { providerLicenseIds }),
         } as const;
         const finalizedFiles = replaceFile(task, file.fileId, {
           ...file,

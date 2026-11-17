@@ -1136,6 +1136,7 @@ export function composeServerHost(
         });
       const registerArtifactFromRepo = new RegisterArtifactFromRepoUseCase({
         artifactRepoStorage,
+        readDatasetRevisionLicense: huggingFaceArtifactRepoStorage.readDatasetRevisionLicense,
         artifactBindingStorage: artifactBindings,
         artifactCatalogAppend: artifactCatalog,
         logging: loggingPort,

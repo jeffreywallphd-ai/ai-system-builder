@@ -9,6 +9,7 @@ import {
   createRetrieveArtifactFromRepoSuccessResult,
   createStoreArtifactInRepoFailureResult,
   createStoreArtifactInRepoSuccessResult,
+  isHuggingFaceDatasetCommit,
   readHuggingFaceDatasetLicenseIds,
   type ArtifactRepoTarget,
   type HasArtifactInRepoRequest,
@@ -84,6 +85,7 @@ type HuggingFaceOperation =
   | "publishDatasetVersion"
   | "retrieveArtifactFromRepo"
   | "listNamespaceDatasets"
+  | "readDatasetRevisionLicense"
   | "listDatasetParquetFiles";
 
 interface HuggingFaceHubClient {
@@ -663,22 +665,22 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     return normalized;
   }
 
-  async function fetchNamespaceDatasetCards(
-    namespace: string,
-    accessToken: string | undefined,
-  ): Promise<unknown> {
+  async function fetchDatasetMetadata(input: {
+    path: string; operation: "listNamespaceDatasets" | "readDatasetRevisionLicense";
+    accessToken: string | undefined; signal: AbortSignal; maximumBytes: number;
+  }): Promise<unknown> {
     const headers: Record<string, string> = { accept: "application/json" };
-    const token = accessToken?.trim();
+    const token = input.accessToken?.trim();
     if (token) {
       headers.authorization = `Bearer ${token}`;
     }
 
-    const endpoint = `${hubBaseUrl}/api/datasets?author=${encodeURIComponent(namespace)}&limit=${maximumNamespaceDatasets}&expand=cardData`;
+    const endpoint = `${hubBaseUrl}${input.path}`;
     const response = await resolvedFetchImplementation(endpoint, {
-      headers, redirect: "error", signal: AbortSignal.timeout(15_000),
+      headers, redirect: "error", signal: input.signal,
     });
     if (!response.ok) {
-      throw mapProviderStatusError("listNamespaceDatasets", response.status, token, undefined);
+      throw mapProviderStatusError(input.operation, response.status, token, undefined);
     }
 
     try {
@@ -692,9 +694,10 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
       }
       const bytes = await readBoundedWebResponse({
         response: new Response(response.body ?? null, { headers: metadataHeaders }),
-        maximumBytes: maximumNamespaceMetadataBytes,
+        maximumBytes: input.maximumBytes,
         allowedMediaTypes: ["application/json"],
       });
+      input.signal.throwIfAborted();
       return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
     } catch {
       void response.body?.cancel().catch(() => {});
@@ -1120,7 +1123,11 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     try {
       accessToken = await getAccessToken();
       const normalizedNamespace = normalizeNamespace(namespace);
-      const payload = await fetchNamespaceDatasetCards(normalizedNamespace, accessToken);
+      const payload = await fetchDatasetMetadata({
+        path: `/api/datasets?author=${encodeURIComponent(normalizedNamespace)}&limit=${maximumNamespaceDatasets}&expand=cardData`,
+        operation: "listNamespaceDatasets", accessToken,
+        signal: AbortSignal.timeout(15_000), maximumBytes: maximumNamespaceMetadataBytes,
+      });
       if (!Array.isArray(payload) || payload.length > maximumNamespaceDatasets) {
         return {
           ok: false as const,
@@ -1164,6 +1171,28 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
       };
     }
   };
+
+  const readDatasetRevisionLicense: NonNullable<HuggingFaceRepoBrowserPort["readDatasetRevisionLicense"]> =
+    async ({ repository, revision }, signal, stillAllowed) => {
+      if (signal.aborted || !isHuggingFaceDatasetCommit(revision)) return undefined;
+      try {
+        if (normalizeDatasetBrowseRepository(repository) !== repository) return undefined;
+        const accessToken = await getAccessToken();
+        if (signal.aborted) return undefined;
+        if (!(await stillAllowed()) || signal.aborted) return undefined;
+        const repoPath = repository.split("/").map(encodeURIComponent).join("/");
+        const payload = await fetchDatasetMetadata({
+          path: `/api/datasets/${repoPath}/revision/${revision}?expand=sha&expand=cardData`,
+          operation: "readDatasetRevisionLicense", accessToken, signal, maximumBytes: 64 * 1024,
+        });
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
+        const value = payload as { id?: unknown; sha?: unknown; cardData?: { license?: unknown } };
+        if (value.id !== repository || value.sha !== revision) return undefined;
+        return { repository, revision, licenseIds: readHuggingFaceDatasetLicenseIds(value.cardData?.license) };
+      } catch {
+        return undefined;
+      }
+    };
 
   const listDatasetParquetFiles: HuggingFaceRepoBrowserPort["listDatasetParquetFiles"] = async (
     input: { repository: string; revision?: string },
@@ -1250,6 +1279,7 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     publishDatasetVersion,
     retrieveArtifactFromRepo,
     listNamespaceDatasets,
+    readDatasetRevisionLicense,
     listDatasetParquetFiles,
   };
 }

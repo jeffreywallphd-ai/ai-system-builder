@@ -196,8 +196,12 @@ Declared restrictions, unknown terms and ambiguous mixtures remain visible
 under All data. Changing the filter clears dataset and file selections.
 The listing reads [Hugging Face dataset card metadata](https://huggingface.co/docs/hub/en/datasets-cards)
 and uses the [Creative Commons distinction between open and restricted terms](https://creativecommons.org/public-domain/freeworks/).
-These repository listing labels do not bind a license to a saved file revision.
-The renderer sends only those returned coordinates
+These labels describe repository discovery. During import, the host checks
+access to each selected file and looks up license metadata at its exact commit.
+The source snapshot retains the bounded provider identifiers, including
+non-open ones. A reply without a usable declaration records an empty list.
+If the host cannot confirm the metadata for that commit, the list is absent.
+Older snapshots also omit it. The renderer sends only the returned coordinates
 to the governed acquisition task and does not treat the visible selection as
 authorization. A Hugging Face user or organization is provider provenance
 only; it is never used as the application's organization scope. Before any
