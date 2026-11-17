@@ -8,6 +8,10 @@ import test from "node:test";
 import express from "express";
 
 import { createStructuredIngestionAcquisitionRepository } from "../../../../adapters/persistence/ingestion";
+import { GovernedIngestionTaskUseCases } from "../../../../application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case";
+import { RegisterArtifactFromRepoUseCase } from "../../../../application/use-cases/register-artifact-from-repo.use-case";
+import { createHasArtifactInRepoSuccessResult } from "../../../../contracts/storage";
+import { composeIngestionAcquisitionRepository } from "../../../shared/composition/composeIngestionAcquisitionRepository";
 import { createStructuredOrganizationRepositories } from "../../../../adapters/persistence/organization";
 import type { StructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../../../../adapters/persistence/sqlite";
@@ -358,6 +362,84 @@ test("managed edits and retry receipts require current workspace permission with
       assert.equal(await pending.publishIfCurrent(publish),false);
       assert.equal(await prepared.publishIfCurrent(publish),false);
       assert.equal(sent,0);
+    });
+
+    for (const channel of ["app-popup", "authenticated-chat"] as const) await t.test(
+      `Managed provider saves use their exact ${channel} decision and replay with current authority`, async () => {
+      let providerChecks = 0;
+      const providerRevision = "b".repeat(40);
+      const ingestion = new GovernedIngestionTaskUseCases({
+        repository: composeIngestionAcquisitionRepository(fixture, documents),
+        checkpoints: {} as never, streamStorage: {} as never, artifactCleanup: {} as never,
+        workspaceRepository: workspaces, workspaceAuthorization: authorization, organizationContextProvider: contexts,
+        registerArtifactFromRepo: new RegisterArtifactFromRepoUseCase({
+          artifactRepoStorage: { async hasArtifactInRepo() {
+            providerChecks++;
+            return createHasArtifactInRepoSuccessResult(true);
+          } } as never,
+          readDatasetRevisionLicense: async () => ({ repository: "example/synthetic", revision: providerRevision, licenseIds: ["mit"] }),
+          artifactBindingStorage: {} as never, artifactCatalogAppend: {} as never, logging: { log() {} },
+        }),
+      });
+      const stable: StructuredDocumentStore = { ...platform, async publishWithStableReads(check, publish) {
+        return platform.runInOwnedTransaction!(async owner => await check(owner) && publish(), () => {});
+      } };
+      const client = { ...registration, purpose: "plan-review" as const, isCurrent: () => true };
+      const review = composeManagedHeadlessPlanReview({ hostIncarnationId, platform: stable, rootDirectory: fixture,
+        contexts, workspaces, authorization, placement, systems, enableFilePreview: true,
+        finalizeApprovedProviderFile: ingestion.finalizeApprovedProviderFile.bind(ingestion) });
+      const approval = composeManagedHeadlessPlanApprovals({ hostIncarnationId, planClientId: client.registeredClientId,
+        platform: stable, rootDirectory: fixture, contexts, placement, localIngestion: ingestion, allowProviderFileSave: true });
+      const created = await ingestion.executeCommand({ action: "create-hugging-face",
+        files: [{ repository: "example/synthetic", path: "data/train.parquet", revision: providerRevision }] },
+      { organizationId, principalId, workspaceId });
+      assert.ok(created.ok && created.value.kind === "task");
+      const task = created.value.task;
+      const selected = { workspaceId, taskId: task.taskId, fileId: task.files[0]!.fileId, taskRevision: task.revision };
+      const document = { hostIncarnationId, workspaceId, windowId: randomUUID(), uiIncarnationId: randomUUID() };
+      const chosen = await approval({ operation: "select-provider-file", document,
+        file: { ...selected, registeredClientId: client.registeredClientId, expectedSelectionRevision: 0 } },
+      { organizationId, principalId }, () => true, () => true);
+      assert.ok(chosen.ok);
+      const input = { hostIncarnationId, workspaceId, steps: [{
+        operation: "data.save-provider-source", taskId: selected.taskId, fileId: selected.fileId,
+        taskRevision: selected.taskRevision, idempotencyKey: randomUUID(),
+      }] };
+      const parsed = parseHeadlessBuildPlanProposal(input, hostIncarnationId, { allowLocalFileSave: false, allowProviderFileSave: true });
+      assert.ok(parsed.ok);
+      const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+      const submit = readHeadlessPlanReviewAgentRequest({ version: HEADLESS_CONTRACT_VERSION, operation: "plan.submit",
+        input: { ...input, fingerprint } }, hostIncarnationId, { allowLocalFileSave: false, allowProviderFileSave: true });
+      assert.ok(submit.ok);
+      assert.ok((await review(submit.request, client, () => true)).ok);
+      const execute = () => review.runStep!({ version: HEADLESS_CONTRACT_VERSION, operation: "plan.run-step",
+        input: { hostIncarnationId, workspaceId, fingerprint, approvalRevision: 2, step: 1 } }, client, () => true);
+      assert.deepEqual((await execute()).result, denied);
+      assert.equal(providerChecks, 0);
+      const selection = { workspaceId, fingerprint, registeredClientId: client.registeredClientId };
+      const opened = await approval({ operation: "open", document, selection },
+        { organizationId, principalId }, () => true, () => true, channel);
+      assert.ok(opened.ok && typeof opened.value === "object" && "viewId" in opened.value);
+      const choice = await approval({ operation: "decide", document,
+        decision: { selection, viewId: opened.value.viewId, expectedRevision: 1,
+          decision: { kind: "approve", mode: "whole-plan" } } },
+      { organizationId, principalId }, () => true, () => true, channel);
+      assert.ok(choice.ok);
+      const saved = await execute();
+      assert.ok(saved.result.ok && saved.result.value.kind === "committed");
+      assert.equal(await saved.publishIfCurrent?.(() => true), true);
+      const retried = await execute();
+      assert.deepEqual(retried.result, { ok: true, value: { ...saved.result.value, kind: "replayed" } });
+      assert.equal(providerChecks, 1);
+      const snapshot = await ingestion.readTask(task.taskId, { organizationId, principalId, workspaceId });
+      assert.ok(snapshot.ok && snapshot.value.status === "succeeded");
+      assert.deepEqual(snapshot.value.files[0]!.output?.providerLicenseIds, ["mit"]);
+      try {
+        await repositories.memberships.saveMembership({ ...membership, status: "removed" });
+        assert.deepEqual((await execute()).result, denied);
+        assert.equal(await saved.publishIfCurrent?.(() => true), false);
+        assert.equal(providerChecks, 1);
+      } finally { await repositories.memberships.saveMembership(membership); }
     });
 
     await t.test("mixed-file approval views and committed decisions require permission at publication", async () => {

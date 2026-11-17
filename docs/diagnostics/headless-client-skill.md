@@ -119,7 +119,14 @@ and browse a Hugging Face dataset. Select one Parquet file, select the
 plan-review client and choose **Prepare for chat**.
 Copy the file reference to that client. The tool
 `aisb_preview_selected_provider_file` reads the file type and exact saved
-revision. It leaves the import waiting. For a direct import, choose
+revision. It leaves the import waiting. To request a plan save, include one
+`data.save-provider-source` step with the copied task, file and revision, plus
+a new idempotency key. The version 3 preview lists required provider reads.
+The user approves the plan or that individual change through the app popup
+or signed-in approval chat. The client then runs that exact approved step.
+An exact retry reads the same saved source receipt with current permissions.
+The effect registers the remote source and records its declared license.
+For a direct import, choose
 **Cancel** on the prepared selection, then **Add data**.
 
 On Desktop or a configured Managed host, review the exact file in the

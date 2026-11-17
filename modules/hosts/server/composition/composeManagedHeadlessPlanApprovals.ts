@@ -54,6 +54,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   readonly placement: TenantPlacementConfig;
   readonly localIngestion?: ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0];
   readonly allowLocalFileSave?: boolean;
+  readonly allowProviderFileSave?: boolean;
   readonly now?: () => number;
 }) {
   const {hostIncarnationId, planClientId, platform, rootDirectory, contexts, placement, now = Date.now} = options;
@@ -62,6 +63,7 @@ export function composeManagedHeadlessPlanApprovals(options: {
   const transaction = platform.runInOwnedTransaction.bind(platform);
   const stableReads = platform.publishWithStableReads?.bind(platform);
   const allowLocalFileSave = options.allowLocalFileSave === true && stableReads !== undefined;
+  const allowProviderFileSave = options.allowProviderFileSave === true && stableReads !== undefined;
   const views = new Map<string, View>();
 
   async function authorize(owner: StructuredDocumentStore, identity: Identity, workspaceId: WorkspaceId, current: () => boolean,
@@ -209,10 +211,10 @@ export function composeManagedHeadlessPlanApprovals(options: {
         if (!summary.ok || summary.value.expiresAt <= now() ||
             (summary.value.status !== "pending" && summary.value.status !== "approved")) return forbidden;
         const ready = readDesktopPlanApprovalView({selection, viewId:view.viewId, preview:outcome.snapshot.preview, state:summary.value},
-          selection, { allowLocalFileSave });
+          selection, { allowLocalFileSave, allowProviderFileSave });
         if (!ready || createHash("sha256").update(JSON.stringify(ready.preview), "utf8").digest("hex") !== selection.fingerprint)
           return unconfirmed;
-        const fileSave = ready.preview.steps.some(step => step.operation === "data.save-local-source");
+        const fileSave = ready.preview.steps.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source");
         if (!await verifyAccess(identity, workspaceId, active, fileSave ? filePlanScopes : planScopes)) return forbidden;
         view.revision = ready.state.revision;
         view.expiresAt = ready.state.expiresAt;

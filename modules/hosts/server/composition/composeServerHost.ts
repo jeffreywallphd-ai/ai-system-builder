@@ -1689,6 +1689,9 @@ export function composeServerHost(
         const localFileSave = options.managedHeadlessAgent.browserObservationAuthorizer &&
           "finalizeApprovedLocalFile" in ingestionTasks && typeof ingestionTasks.finalizeApprovedLocalFile === "function"
           ? ingestionTasks.finalizeApprovedLocalFile.bind(ingestionTasks) : undefined;
+        const providerFileSave = options.managedHeadlessAgent.browserObservationAuthorizer &&
+          "finalizeApprovedProviderFile" in ingestionTasks && typeof ingestionTasks.finalizeApprovedProviderFile === "function"
+          ? ingestionTasks.finalizeApprovedProviderFile.bind(ingestionTasks) : undefined;
         managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases}),
           ...(options.managedHeadlessAgent.planReviewClientId ? { planReview: composeManagedHeadlessPlanReview({
@@ -1696,6 +1699,7 @@ export function composeServerHost(
             placement: options.managedHeadlessAgent.placement, systems: systemBuilder,
             enableFilePreview: Boolean(ingestionTasks && options.managedHeadlessAgent.browserObservationAuthorizer),
             finalizeApprovedLocalFile: localFileSave,
+            finalizeApprovedProviderFile: providerFileSave,
           }) } : {}),
         };
         if (options.managedHeadlessAgent.browserObservationAuthorizer) {
@@ -1721,7 +1725,8 @@ export function composeServerHost(
           const planApprovals = planReviewClientId ? composeManagedHeadlessPlanApprovals({hostIncarnationId,
             planClientId:planReviewClientId, platform:managedDocuments, rootDirectory:registerOptions.storageRootDirectory,
             contexts, placement:options.managedHeadlessAgent.placement, localIngestion: ingestionTasks,
-            allowLocalFileSave: Boolean(localFileSave && managedDocuments.publishWithStableReads)}) : undefined;
+            allowLocalFileSave: Boolean(localFileSave && managedDocuments.publishWithStableReads),
+            allowProviderFileSave: Boolean(providerFileSave && managedDocuments.publishWithStableReads)}) : undefined;
           const browserConsent = composeManagedBrowserConsent({hostIncarnationId, planApprovals,
             authorize: authorize(workspaceAuthorization),
             authorizeObservation: authorize(observation),

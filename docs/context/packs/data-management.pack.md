@@ -51,7 +51,7 @@
   needed for private or gated datasets. Keep the token out of task commands,
   errors, logs, and roadmap evidence. The guided workflow is the sole mounted
   ingestion path; do not restore the retired Other import tools beside it.
-- Saved host state reports progress. Verified provider catalog and backing records commit with the task and source snapshot. Task/source and changed-refresh/snapshot pairs commit atomically.
+- Saved host state reports progress. Verified provider catalog and backing records commit with the task and source snapshot. Task/source and changed-refresh/snapshot pairs commit atomically. Delegated provider saves require the exact stored selection, current plan approval and permission, a declared provider-read preview and an owner transaction for source and receipt publication. Source expiry fences commit. Replay requires that plan's own receipt and current permission. See ADR-0047. Full Data journeys retain separate qualification.
   A website file conflict leaves the task unchanged. Keep bytes after an uncertain save; clean up only after confirmed cancellation without a snapshot. Local-file recovery keeps uncertain effects without adoption or cleanup.
 - The baseline worker emits aggregate plus physical train, validation, and test
   outputs. Fixed-seed results are deterministic; source groups and exact

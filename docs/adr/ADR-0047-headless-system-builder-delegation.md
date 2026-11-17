@@ -155,3 +155,11 @@ to disconnect independently of the UI. It requires durable retry and replay
 state and a separate window-control lifecycle. Roll back by disabling the new
 admission paths and revoking grants and leases; keep saved systems, drafts,
 audit and durable evidence.
+
+Provider file saves use the same exact plan and decision channels. A version 3
+preview declares provider reads and the approval view lists use of saved
+provider access. The host verifies the selected immutable source and commits
+its local source records with a distinct plan effect receipt. Current
+authorization protects both commit and replay. Source expiry is checked at
+the commit boundary. The effect registers the remote origin. Downstream
+localization and dataset preparation remain their own application actions.

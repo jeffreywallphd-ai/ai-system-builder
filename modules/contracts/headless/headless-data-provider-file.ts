@@ -6,6 +6,7 @@ import {
 import { copyBoundedPassiveData, readStrictPassiveRecord } from "../shared";
 import {
   readHeadlessLocalFileImportRequest,
+  readHeadlessLocalFileSavePlanRequest,
   type HeadlessLocalFileImportRequest,
   type HeadlessLocalFileImportResult,
 } from "./headless-data-local-file";
@@ -20,6 +21,23 @@ export interface HeadlessProviderFileImportRequest {
   readonly version: typeof HEADLESS_CONTRACT_VERSION;
   readonly operation: "data.prepare-provider-file";
   readonly input: FileTarget;
+}
+
+export interface HeadlessProviderFileSavePlanRequest {
+  readonly version: typeof HEADLESS_CONTRACT_VERSION;
+  readonly operation: "data.save-provider-source";
+  readonly input: FileTarget & { readonly idempotencyKey: string };
+}
+
+export function readHeadlessProviderFileSavePlanRequest(value: unknown, currentHost: HeadlessHostIncarnationId) {
+  try {
+    const { version, operation, input } = readStrictPassiveRecord(copyBoundedPassiveData(value), ["version", "operation", "input"]);
+    if (operation !== "data.save-provider-source") return invalid;
+    const local = readHeadlessLocalFileSavePlanRequest({ version, operation: "data.save-local-source", input }, currentHost);
+    if (!local.ok) return local;
+    const request: HeadlessProviderFileSavePlanRequest = { version: local.request.version, operation, input: local.request.input };
+    return { ok: true, request } as const;
+  } catch { return invalid; }
 }
 
 export type HeadlessProviderFileImportPreview = Omit<FileTarget, "hostIncarnationId"> & {

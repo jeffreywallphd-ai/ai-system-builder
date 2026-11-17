@@ -214,8 +214,14 @@ After current authority is checked again, publication advances the task once
 and must include its source, artifact and plan receipt in one owner transaction.
 A failed or uncertain acknowledgement returns an unconfirmed result. The plan
 must inspect its own saved receipt before reporting a successful retry.
-This application seam is internal. Provider plan tooling and host wiring remain
-separate implementation and qualification work.
+Desktop and configured Managed hosts expose this effect through their existing
+plan-review routes. The version 3 preview declares required provider reads and
+the interactive approval lists use of the saved provider access. The host
+commits the source and its own plan receipt under current approval and app
+selection. Exact replay reads that receipt with current workspace permission.
+The saved origin remains remote. Localization uses the existing separate
+application action. Dataset preparation and full Data takeover qualification
+remain separate work.
 A token-only card in Step 2 reads and writes the same
 host-owned Hugging Face credential setting as the main Settings area; token
 values stay in a password input and credential boundary and are not included in

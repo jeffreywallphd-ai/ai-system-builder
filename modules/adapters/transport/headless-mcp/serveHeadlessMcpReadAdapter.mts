@@ -168,6 +168,7 @@ function addSystemBuilderTools(server: McpServer) {
     }, (input, context) => author("systems.apply-edits", input, context.mcpReq.signal));
   }
   const allowLocalFileSave = enablePlanReview;
+  const allowProviderFileSave = enablePlanReview;
   const ingestionId = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
@@ -176,6 +177,7 @@ function addSystemBuilderTools(server: McpServer) {
     z.strictObject({ operation: z.literal("systems.rename"), ...rename }),
     z.strictObject({ operation: z.literal("systems.clone"), ...savedChange }),
     z.strictObject({ operation: z.literal("data.save-local-source"), ...localFileTarget, idempotencyKey }),
+    z.strictObject({ operation: z.literal("data.save-provider-source"), ...localFileTarget, idempotencyKey }),
   ]);
   server.registerTool("aisb_plan_capabilities", {
     description: "Check which saved-system operations can be proposed in one current workspace. Use the corresponding template or saved revision as input. Plan execution requires approval.",
@@ -189,13 +191,13 @@ function addSystemBuilderTools(server: McpServer) {
   });
   server.registerTool("aisb_preview_build_plan", {
     description: allowLocalFileSave
-      ? "Check proposed saved-system changes and selected local-file saves in order against the current workspace. Preview requires separate approval before execution."
+      ? "Check proposed saved-system changes and selected local or provider file saves in order. The preview identifies provider reads. Execution requires separate approval."
       : "Check proposed create, rename, and clone steps in order against current workspace data. Preview requires separate approval before execution.",
     inputSchema: z.strictObject({ ...workspaceTarget, steps: z.array(step).min(1).max(headless.HEADLESS_MAX_BUILD_PLAN_STEPS) }),
     annotations: queryHints,
   }, async (input, context) => {
     if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
-    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave });
+    const proposal = headless.parseHeadlessBuildPlanProposal(input, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave });
     if (!proposal.ok) return invalidAuthoring();
     const { scope, requests, preview } = proposal;
 
@@ -205,6 +207,13 @@ function addSystemBuilderTools(server: McpServer) {
     let templates: ReadonlySet<string> | undefined;
     const records = new Map<SystemBuilderSystemId, HeadlessSystemSummary>();
     for (const request of requests) {
+      if (request.operation === "data.save-provider-source") {
+        const { idempotencyKey: _key, ...selected } = request.input;
+        const preview = await forward?.({ version, operation: "data.prepare-provider-file", input: selected }, signal);
+        if (!preview?.ok) return toolResult(preview ?? unavailable);
+        if (!headless.readHeadlessProviderFileImportResult(preview, selected).ok) return toolResult(unavailable);
+        continue;
+      }
       if (request.operation === "data.save-local-source") {
         const { idempotencyKey: _key, ...selected } = request.input;
         const preview = await forward?.({ version, operation: "data.prepare-local-file", input: selected }, signal);
@@ -269,7 +278,7 @@ function addSystemBuilderTools(server: McpServer) {
     async function reviewPlan(operation: "plan.submit" | "plan.status", input: { hostIncarnationId: string }, signal?: AbortSignal) {
       if (!headless.isHeadlessHostIncarnationId(input.hostIncarnationId)) return invalidAuthoring();
       const raw = { version, operation, input };
-      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave });
+      const decoded = headless.readHeadlessPlanReviewAgentRequest(raw, input.hostIncarnationId, { allowLocalFileSave, allowProviderFileSave });
       return decoded.ok ? invoke({ ...decoded.request, version }, signal) : invalidAuthoring();
     }
     server.registerTool("aisb_request_build_plan_approval", {

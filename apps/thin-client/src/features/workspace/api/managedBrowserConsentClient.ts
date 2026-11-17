@@ -81,7 +81,7 @@ export function createManagedBrowserConsentClient(organizationId: string, fetch 
   async function approval(request: ManagedBrowserPlanApprovalRequest, tab: Registration, signal: AbortSignal, chat: boolean) {
     const response = await send(request, {proof:tab.proof, signal,
       approvalPath:chat ? MANAGED_BROWSER_PLAN_CHAT_PATH : MANAGED_BROWSER_PLAN_APPROVAL_PATH});
-    return readManagedBrowserPlanApprovalValue(request, response.body, {allowLocalFileSave:true});
+    return readManagedBrowserPlanApprovalValue(request, response.body, {allowLocalFileSave:true, allowProviderFileSave:true});
   }
   return {
     async register(workspaceId: string, signal: AbortSignal) {

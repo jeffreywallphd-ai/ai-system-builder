@@ -4,7 +4,7 @@ import { isDesktopHeadlessClientId, isDesktopHeadlessFingerprint } from "./deskt
 import { isHeadlessHostIncarnationId } from "./headless-read-request";
 import { readHeadlessPlanReviewAgentResult, readHeadlessPlanReviewDecisionChoice,
   type HeadlessPlanReviewAgentResult, type HeadlessPlanReviewDecisionChoice } from "./headless-plan-review-wire";
-import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal } from "./headless-system-management";
+import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
 
 export const DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS = Object.freeze({
   list: "desktop.headless.plan-approvals.list",
@@ -88,7 +88,7 @@ export function readDesktopPlanApprovalList(value: unknown, workspaceId: Workspa
 }
 
 export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPlanApprovalSelection,
-  options: { readonly allowLocalFileSave: boolean } = { allowLocalFileSave: true }): DesktopPlanApprovalView | undefined {
+  options: HeadlessBuildPlanCapabilities = { allowLocalFileSave: true, allowProviderFileSave: true }): DesktopPlanApprovalView | undefined {
   try {
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["selection", "viewId", "preview", "state"]);
     const actual = readDesktopPlanApprovalSelection(raw.selection);
@@ -101,8 +101,10 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
     const decoded = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, steps: steps.map(step => {
       const { operation, input, effect, externalProviderCalls } = readStrictPassiveRecord(step,
         ["operation", "input", "effect", "externalProviderCalls"]);
-      const savingFile = operation === "data.save-local-source";
-      if (effect !== (savingFile ? "save-local-source" : "saved-system-write") || externalProviderCalls !== 0)
+      const providerFile = operation === "data.save-provider-source";
+      const savingFile = operation === "data.save-local-source" || providerFile;
+      if (effect !== (providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
+          externalProviderCalls !== (providerFile ? "required" : 0))
         throw new Error("Invalid approval effects.");
       const fields = readStrictPassiveRecord(input, savingFile ? ["idempotencyKey", "taskId", "fileId", "taskRevision"] :
         ["idempotencyKey", "name", "templateId", "systemId", "baseRecordRevision", "baseRevisionId", "description"]);

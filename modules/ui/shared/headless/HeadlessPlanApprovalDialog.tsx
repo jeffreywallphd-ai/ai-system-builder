@@ -192,25 +192,29 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const [mode, setMode] = useState<"whole-plan" | "each-change">(state.mode ?? "each-change");
   const methodName = useId();
   const isPending = state.status === "pending";
+  const providerReads = view.preview.steps.some(step => step.operation === "data.save-provider-source");
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
   return <>
     <p>Requested by Client {view.selection.registeredClientId.slice(0, 8)}</p>
     <ul aria-label="Permissions and limits">
       <li>Save only the changes shown below in this workspace.</li>
-      {view.preview.steps.some(step => step.operation === "data.save-local-source") ? (
+      {view.preview.steps.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source") ? (
         <li>Save the listed files in this workspace’s Data area.</li>
       ) : null}
       <li>Limit of {state.stepCount} {state.stepCount === 1 ? "saved change" : "saved changes"} for this plan.</li>
-      <li>No outside service calls or provider charges.</li>
+      {providerReads
+        ? <li>Check the selected Hugging Face file and its license using your saved provider access.</li>
+        : <li>No outside service calls or provider charges.</li>}
     </ul>
     <p>Request expires at <time dateTime={new Date(state.expiresAt).toISOString()}>
       {new Date(state.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}
     </time>.</p>
     <ol aria-label="Requested changes">
       {view.preview.steps.map((step, index) => <li key={step.input.idempotencyKey}>
-        {step.operation === "data.save-local-source" ? <>
-          <strong>Save the selected file in Data</strong>
+        {step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ? <>
+          <strong>{step.operation === "data.save-provider-source"
+            ? "Save the selected Hugging Face source in Data" : "Save the selected file in Data"}</strong>
           <div>File reference {step.input.fileId}</div>
           <div>Upload {step.input.taskId}, version {step.input.taskRevision}</div>
         </> : <>

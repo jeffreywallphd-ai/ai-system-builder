@@ -69,6 +69,7 @@ export async function startDesktopHeadlessLoopback(dependencies: {
   };
   readonly planReview?: {
     readonly allowLocalFileSave?: true;
+    readonly allowProviderFileSave?: true;
     readonly hostIncarnationId: HeadlessHostIncarnationId;
     readonly execute: (request: HeadlessPlanReviewAgentRequest, grant: DesktopHeadlessAuthoringWireGrant,
       currentGrant: () => Promise<DesktopHeadlessAuthoringWireGrant | undefined>) => Promise<HeadlessPlanReviewAgentResult>;
@@ -313,7 +314,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
         return;
       }
       const plan = readHeadlessPlanReviewAgentRequest(body, dependencies.planReview.hostIncarnationId,
-        { allowLocalFileSave: dependencies.planReview.allowLocalFileSave === true });
+        { allowLocalFileSave: dependencies.planReview.allowLocalFileSave === true,
+          allowProviderFileSave: dependencies.planReview.allowProviderFileSave === true });
       if (!plan.ok) { fail(response, errorStatus(plan.code), plan.code); return; }
       const grant = await currentGrant();
       if (grant?.planReview !== true || !grantIsCurrent(grant, true) || !admitting() || response.destroyed ||
@@ -397,7 +399,8 @@ export async function startDesktopHeadlessLoopback(dependencies: {
       }
       const outcome = await dependencies.planReview.runStep(decoded.request, grant, currentGrant);
       const result = readHeadlessPlanStepResult(outcome.result, target,
-        { allowLocalFileSave: dependencies.planReview.allowLocalFileSave === true });
+        { allowLocalFileSave: dependencies.planReview.allowLocalFileSave === true,
+          allowProviderFileSave: dependencies.planReview.allowProviderFileSave === true });
       const finalGrant = await currentGrant();
       if (!admitting() || response.destroyed) return;
       if (finalGrant?.planReview !== true || !grantIsCurrent(finalGrant, true)) {

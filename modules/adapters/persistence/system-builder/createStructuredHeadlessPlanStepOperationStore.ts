@@ -4,15 +4,19 @@ import type {
   HeadlessPlanReviewQuery, HeadlessPlanReviewTarget,
 } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import type { HeadlessOperationScope, HeadlessOperationStorePort } from "../../../application/ports/system-builder";
-import type { IngestionFilePublicationAdmission } from "../../../application/ports/ingestion";
+import type { IngestionAcquisitionRepositoryPort, IngestionFilePublicationAdmission } from "../../../application/ports/ingestion";
 import { normalizeIngestionFilePublication, publicationUnavailable } from "../../../application/shared/ingestion-file-publication";
-import { serializeHeadlessMutationInput, type HeadlessBuildPlanRequest, type HeadlessLocalFileSavePlanRequest } from "../../../contracts/headless";
+import { serializeHeadlessMutationInput, type HeadlessBuildPlanRequest, type HeadlessLocalFileSavePlanRequest,
+  type HeadlessProviderFileSavePlanRequest } from "../../../contracts/headless";
 import {
   issueStructuredLocalFilePlanEffect, readCommittedStructuredLocalFilePlanEffect, type LocalFilePlanEffect,
 } from "../ingestion/createStructuredHeadlessLocalFilePlanStepStore";
 import {
   matchesStructuredHeadlessLocalFileSelection, readStructuredHeadlessLocalFileSelection,
+  matchesStructuredHeadlessProviderFileSelection, readStructuredHeadlessProviderFileSelection,
 } from "../ingestion/createStructuredHeadlessLocalFileSelectionRepository";
+import { publishStructuredProviderFilePlanEffect, readCommittedStructuredProviderFilePlanEffect,
+  type OwnedProviderPublication, type ProviderFilePlanEffect } from "../ingestion/createStructuredHeadlessProviderFilePlanStepStore";
 import type { StructuredDocumentStore } from "../shared";
 import { createStructuredHeadlessOperationStore, hasStructuredHeadlessOperationReceipt } from "./createStructuredHeadlessOperationStore";
 import { fenceStructuredApprovedPlan, readStructuredApprovedPlan } from "./createStructuredHeadlessPlanReviewRepository";
@@ -31,6 +35,7 @@ export async function prepareStructuredHeadlessPlanStep(
   documents: StructuredDocumentStore, query: StepQuery, authorize: Authorize, now: () => number = Date.now,
   publication: "serialized-owner" | "stable-reads" = "serialized-owner",
   allowLocalFileSave = false,
+  publishProvider?: OwnedProviderPublication,
 ) {
   const { approvalRevision, step, isCurrent } = query;
   const target: HeadlessPlanReviewTarget = { ...query.target, scope: { ...query.target.scope } };
@@ -52,13 +57,17 @@ export async function prepareStructuredHeadlessPlanStep(
     if (!approved || !isCurrent() || !timestampBefore(approved.expiresAt)) return;
     const request = approved.requests[step - 1];
     if (!request || (!allowLocalFileSave && approved.requests.some(candidate => candidate.operation === "data.save-local-source")) ||
-        (request.operation === "data.save-local-source" && !await authorize(owner, target.scope, request))) return;
+        (!publishProvider && approved.requests.some(candidate => candidate.operation === "data.save-provider-source")) ||
+        ((request.operation === "data.save-local-source" || request.operation === "data.save-provider-source") &&
+          !await authorize(owner, target.scope, request))) return;
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
       if (!previous) return;
       const received = previous.operation === "data.save-local-source"
         ? await readCommittedStructuredLocalFilePlanEffect(partition, localFileEffect(target, previous, index + 1))
-        : await hasStructuredHeadlessOperationReceipt(partition, target.scope, previous.operation,
+        : previous.operation === "data.save-provider-source"
+          ? await readCommittedStructuredProviderFilePlanEffect(partition, providerFileEffect(target, previous, index + 1))
+          : await hasStructuredHeadlessOperationReceipt(partition, target.scope, previous.operation,
           stepKey(target, previous, index + 1), sum(serializeHeadlessMutationInput(previous)));
       if (!received) return;
       if (!isCurrent() || !timestampBefore(approved.expiresAt)) return;
@@ -148,6 +157,59 @@ export async function prepareStructuredHeadlessPlanStep(
     };
   }
 
+  if (request.operation === "data.save-provider-source") {
+    if (!publishProvider) return;
+    const effect = providerFileEffect(target, request, step);
+    let selectionDeadline: number | undefined;
+    const protect = () => {
+      if (!current()) throw new Error("The approved provider file step is no longer current.");
+    };
+    const protectPublication = () => {
+      protect();
+      if (selectionDeadline === undefined || !timestampBefore(selectionDeadline))
+        throw new Error("The approved provider selection expired.");
+    };
+    return { kind: "provider-file" as const, request: structuredClone(request),
+      isCurrent: current, expiresAt: prepared.expiresAt,
+      async inspect() {
+        return ownedTransaction(async owner => {
+          if (!await select(owner) || !current()) return;
+          const partition = owner.forOrganization(target.scope.organizationId);
+          const receipt = await readCommittedStructuredProviderFilePlanEffect(partition, effect);
+          if (receipt) return { kind: "replayed" as const, receipt: receipt.reference };
+          const projected = await readStructuredHeadlessProviderFileSelection(partition, effect.selection, now);
+          if (projected?.ok) {
+            selectionDeadline = projected.value.selectionExpiresAt;
+            return { kind: "staged" as const, preview: projected.value };
+          }
+        }, protect);
+      },
+      async stillAllowed() {
+        return ownedTransaction(async owner => Boolean(await select(owner)) && current() &&
+          await matchesStructuredHeadlessProviderFileSelection(owner.forOrganization(target.scope.organizationId), effect.selection), protect);
+      },
+      async publish(...input: Parameters<NonNullable<IngestionAcquisitionRepositoryPort["saveTaskWithProviderArtifact"]>>) {
+        protectPublication();
+        return ownedTransaction(async owner => {
+          if (!await select(owner) || !current()) throw new Error("The approved provider import ended.");
+          const partition = owner.forOrganization(target.scope.organizationId);
+          if (!await fenceStructuredApprovedPlan(partition, target, approvalRevision))
+            throw new Error("The approved provider import ended.");
+          return publishStructuredProviderFilePlanEffect(partition, effect, publishProvider, input, now);
+        }, protectPublication);
+      },
+      async readReceipt() {
+        return ownedTransaction(async owner => {
+          if (!await select(owner) || !current()) return;
+          return (await readCommittedStructuredProviderFilePlanEffect(owner.forOrganization(target.scope.organizationId), effect))?.reference;
+        }, protect);
+      },
+      publishIfCurrent(publish: () => boolean) {
+        return publishIfCurrent(publish, async partition => Boolean(await readCommittedStructuredProviderFilePlanEffect(partition, effect)));
+      },
+    };
+  }
+
   const normalOperations = createStructuredHeadlessOperationStore(documents, now, {
     async authorize(owner, scope, operation) {
       if (!current() || !sameScope(scope, target.scope) || operation !== request.operation) return false;
@@ -182,7 +244,8 @@ function sameScope(left: HeadlessOperationScope, right: HeadlessOperationScope) 
 function sum(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
 function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanRequest, step: number) {
-  const family = request.operation === "data.save-local-source" ? "aisb-approved-local-file-step-v1" : "aisb-approved-system-step-v1";
+  const family = request.operation === "data.save-provider-source" ? "aisb-approved-provider-file-step-v1" :
+    request.operation === "data.save-local-source" ? "aisb-approved-local-file-step-v1" : "aisb-approved-system-step-v1";
   const hex = sum(JSON.stringify([family, target.hostIncarnationId,
     target.fingerprint, step, request.input.idempotencyKey]));
   // Keep the existing validated internal UUID shape. The plan and ordinal
@@ -192,6 +255,12 @@ function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanReq
 }
 
 function localFileEffect(target: HeadlessPlanReviewTarget, request: HeadlessLocalFileSavePlanRequest, step: number): LocalFilePlanEffect {
+  const { idempotencyKey: _key, ...selected } = request.input;
+  const { organizationId, principalId, registeredClientId } = target.scope;
+  return { key: stepKey(target, request, step), selection: { organizationId, principalId, registeredClientId, target: selected } };
+}
+
+function providerFileEffect(target: HeadlessPlanReviewTarget, request: HeadlessProviderFileSavePlanRequest, step: number): ProviderFilePlanEffect {
   const { idempotencyKey: _key, ...selected } = request.input;
   const { organizationId, principalId, registeredClientId } = target.scope;
   return { key: stepKey(target, request, step), selection: { organizationId, principalId, registeredClientId, target: selected } };

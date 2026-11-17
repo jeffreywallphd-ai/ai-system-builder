@@ -167,7 +167,7 @@ async function respondPlanApproval<Identity>(raw: unknown, request: Request, res
   const result = await handlers.planApproval?.({identity, target:input.document, proof}, input, current, channel);
   if (!current() || result === undefined) return error(response, 403);
   const value = readManagedBrowserPlanApprovalValue(input, result.value,
-    {allowLocalFileSave: result.publishIfCurrent !== undefined});
+    {allowLocalFileSave: result.publishIfCurrent !== undefined, allowProviderFileSave: result.publishIfCurrent !== undefined});
   if (value === undefined || Buffer.byteLength(JSON.stringify(value)) > MANAGED_BROWSER_PLAN_APPROVAL_MAX_RESULT_BYTES) return error(response, 503);
   if (fileSelection || result.publishIfCurrent) {
     const sent = await result.publishIfCurrent?.(() => {

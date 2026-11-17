@@ -4,7 +4,7 @@ import { isDesktopHeadlessFingerprint } from "./desktop-headless-pairing";
 import { readHeadlessAuthoringWireResult, type HeadlessAuthoringWireResult } from "./headless-authoring-result";
 import { readHeadlessLocalFileImportRequest, type HeadlessLocalFileImportRequest } from "./headless-data-local-file";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId } from "./headless-read-request";
-import { HEADLESS_MAX_BUILD_PLAN_STEPS } from "./headless-system-management";
+import { HEADLESS_MAX_BUILD_PLAN_STEPS, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
 
 export const HEADLESS_PLAN_STEP_PATH = "/aisb-headless/v1/plan-step";
 export const MANAGED_HEADLESS_PLAN_STEP_PATH = "/api/headless/agent/plan-step";
@@ -22,7 +22,7 @@ export type HeadlessPlanStepRequest = {
 };
 type SavedEffect = Extract<Extract<HeadlessAuthoringWireResult, { ok: true }>["value"], { kind: "committed" | "replayed" }>;
 type LocalFileReference = Pick<HeadlessLocalFileImportRequest["input"], "workspaceId" | "taskId" | "fileId" | "taskRevision">;
-type SavedLocalFileEffect = { readonly kind: "committed" | "replayed"; readonly operation: "data.save-local-source";
+type SavedLocalFileEffect = { readonly kind: "committed" | "replayed"; readonly operation: "data.save-local-source" | "data.save-provider-source";
   readonly reference: LocalFileReference };
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
   { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
@@ -48,7 +48,7 @@ export function readHeadlessPlanStepRequest(value: unknown, expectedHost: Headle
 }
 
 export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanStepTarget,
-  options?: { readonly allowLocalFileSave: boolean }): HeadlessPlanStepResult {
+  options?: HeadlessBuildPlanCapabilities): HeadlessPlanStepResult {
   try {
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["ok", "code", "value"]);
     if (raw.ok === false && !("value" in raw)) {
@@ -62,14 +62,17 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
     if (fingerprint !== exact.fingerprint || step !== exact.step || approvalRevision !== exact.approvalRevision ||
         !strictPositiveInteger(expiresAt) || (kind !== "committed" && kind !== "replayed")) return unavailable;
     if ("operation" in operationField) {
-      if (!options?.allowLocalFileSave || operationField.operation !== "data.save-local-source") return unavailable;
+      const operation = operationField.operation;
+      if (operation !== "data.save-local-source" && operation !== "data.save-provider-source") return unavailable;
+      if ((operation === "data.save-local-source" && !options?.allowLocalFileSave) ||
+          (operation === "data.save-provider-source" && !options?.allowProviderFileSave)) return unavailable;
       const fields = readStrictPassiveRecord(reference, ["workspaceId", "taskId", "fileId", "taskRevision"]);
       const parsed = readHeadlessLocalFileImportRequest({ version: HEADLESS_CONTRACT_VERSION,
         operation: "data.prepare-local-file", input: { ...fields, hostIncarnationId: exact.hostIncarnationId },
       }, exact.hostIncarnationId);
       if (!parsed.ok || parsed.request.input.workspaceId !== exact.workspaceId) return unavailable;
       const { workspaceId, taskId, fileId, taskRevision } = parsed.request.input;
-      return { ok: true, value: { kind, operation: "data.save-local-source", fingerprint, step, approvalRevision, expiresAt,
+      return { ok: true, value: { kind, operation, fingerprint, step, approvalRevision, expiresAt,
         reference: { workspaceId, taskId, fileId, taskRevision } } };
     }
     const receipt = readHeadlessAuthoringWireResult({ ok: true, value: { kind, reference } });

@@ -5,6 +5,31 @@ Scope: the approved desktop connector, shared authoring and receipt boundaries,
 revocable window presentation, managed parity, and passive plan discovery. This is a design
 review; the first contract alone does not qualify any live host.
 
+## Approved provider source registration
+
+Plan-review clients can propose one immutable Hugging Face source selected for
+that client in the app. The version 3 preview declares required provider reads.
+Both human decision channels display use of the saved provider access. The
+proposal carries opaque task and file references, with no credential or private
+provider path. The host reads the stored selection to resolve the source.
+
+The plan owner checks current workspace permission, principal, organization,
+client registration, approval revision, step order, selection and deadline.
+Provider verification runs before publication. The commit transaction includes
+the artifact catalog and backing, source snapshot, finalized task and this
+plan step's private effect receipt. The synchronous commit fence also checks
+source expiry and connection authority. The provider effect has a separate
+namespace and key family. Replays verify this exact stored effect and source
+with current permission and approval. An ordinary app import supplies no plan
+receipt. Interrupted commits roll back all rows. An uncertain reply requires
+an exact retry under current authority. No recovery adopts another plan's save.
+
+The existing read, frame, queue, route and context bounds still apply. The effect
+registers a remote source and its license declaration. Dataset localization,
+preparation, publication and full native/browser Data journeys retain their
+separate authority and qualification requirements.
+
+
 The build-plan capability request uses the existing authenticated read
 transport for one exact workspace. The desktop checks the current paired
 editing grant and the application policy. The managed host checks the same

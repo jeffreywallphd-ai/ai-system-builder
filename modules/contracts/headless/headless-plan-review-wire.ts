@@ -1,7 +1,7 @@
 import { copyBoundedPassiveData, readStrictPassiveRecord } from "../shared";
 import { isWorkspaceId, type WorkspaceId } from "../workspace";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId } from "./headless-read-request";
-import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal } from "./headless-system-management";
+import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
 
 export const HEADLESS_PLAN_REVIEW_PATH = "/aisb-headless/v1/plan-review";
 export const MANAGED_HEADLESS_PLAN_REVIEW_PATH = "/api/headless/agent/plan-review";
@@ -43,7 +43,7 @@ export function readHeadlessPlanReviewDecisionChoice(value: unknown): HeadlessPl
 }
 
 export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost: HeadlessHostIncarnationId,
-  options?: { readonly allowLocalFileSave: boolean }):
+  options?: HeadlessBuildPlanCapabilities):
   { readonly ok: true; readonly request: HeadlessPlanReviewAgentRequest } |
   { readonly ok: false; readonly code: "headless.invalid-request" | "headless.host-changed" } {
   try {
@@ -58,7 +58,7 @@ export function readHeadlessPlanReviewAgentRequest(value: unknown, expectedHost:
     const target = { hostIncarnationId, workspaceId, fingerprint };
     if (operation === "plan.status") return { ok: true, request: { operation, target } };
     const proposal = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, ...proposalFields }, expectedHost,
-      { allowLocalFileSave: options?.allowLocalFileSave === true });
+      { allowLocalFileSave: options?.allowLocalFileSave === true, allowProviderFileSave: options?.allowProviderFileSave === true });
     return proposal.ok ? { ok: true, request: { operation, target, proposal } } : invalid;
   } catch { return invalid; }
 }

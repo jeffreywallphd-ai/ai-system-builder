@@ -22,7 +22,9 @@ import type { WorkspaceId } from "../../../contracts/workspace";
 import type { SecurityScope } from "../../../contracts/security";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
 import type { GovernedIngestionTaskUseCases } from "../../../application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case";
-import { projectHeadlessPlanReview, runPreparedHeadlessLocalFile, validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
+import { projectHeadlessPlanReview, runPreparedHeadlessLocalFile, runPreparedHeadlessProviderFile,
+  validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
+import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 import type { ManagedPlanReviewRegistration } from "../security/resolveManagedHeadlessClientPolicy";
 
 const forbidden = { ok: false, code: "headless.forbidden" } as const;
@@ -42,11 +44,13 @@ export function composeManagedHeadlessPlanReview(options: {
   readonly systems?: Pick<SystemBuilderCompositionRoot, "composeHeadlessAuthoring">;
   readonly enableFilePreview?: boolean;
   readonly finalizeApprovedLocalFile?: GovernedIngestionTaskUseCases["finalizeApprovedLocalFile"];
+  readonly finalizeApprovedProviderFile?: GovernedIngestionTaskUseCases["finalizeApprovedProviderFile"];
 }) {
   const { hostIncarnationId, platform, rootDirectory, workspaces, contexts, authorization, placement, systems } = options;
   if (platform.organizationId !== undefined || !platform.runInOwnedTransaction)
     throw new Error("Managed plan review requires the platform transaction owner.");
   const finalize = options.enableFilePreview && platform.publishWithStableReads ? options.finalizeApprovedLocalFile : undefined;
+  const finalizeProvider = options.enableFilePreview && platform.publishWithStableReads ? options.finalizeApprovedProviderFile : undefined;
 
   function admitWorkspace(requested: Pick<HeadlessPlanReviewAgentRequest["target"], "workspaceId" | "hostIncarnationId">,
     operation: string, registration: ManagedPlanReviewRegistration, isOpen: () => boolean,
@@ -135,8 +139,10 @@ export function composeManagedHeadlessPlanReview(options: {
     async execute(request: HeadlessPlanReviewAgentRequest, registration: ManagedPlanReviewRegistration,
       isOpen: () => boolean): Promise<HeadlessPlanReviewAgentResult> {
       const savesFile = request.operation === "plan.submit" &&
-        request.proposal.requests.some(step => step.operation === "data.save-local-source");
-      if (savesFile && !finalize) return forbidden;
+        request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source");
+      if (request.operation === "plan.submit" && request.proposal.requests.some(step =>
+        step.operation === "data.save-local-source" ? !finalize : step.operation === "data.save-provider-source" && !finalizeProvider))
+        return forbidden;
       const access = admit(request.target, request.operation, registration, isOpen, savesFile ? filePlanScopes : planScopes);
       if (!access) return forbidden;
       const { target, scope, current, authorizeOwned } = access;
@@ -159,7 +165,15 @@ export function composeManagedHeadlessPlanReview(options: {
             });
             if (!observed || !current()) return false;
             return observed.ok ? true : observed.code === "headless.stale" ? "stale" : false;
-          }), Boolean(finalize));
+          }, async step => {
+            if (!finalizeProvider || !current()) return false;
+            const { idempotencyKey: _key, ...selected } = step.input;
+            const observed = await readStructuredHeadlessProviderFileSelection(documents, {
+              organizationId, principalId, registeredClientId, target: selected,
+            });
+            if (!observed || !current()) return false;
+            return observed.ok ? true : observed.code === "headless.stale" ? "stale" : false;
+          }), Boolean(finalize), Boolean(finalizeProvider));
         const outcome = request.operation === "plan.submit"
           ? await reviews.propose({ target, isCurrent: current, proposal: {
               ...request.proposal.scope,
@@ -179,20 +193,29 @@ export function composeManagedHeadlessPlanReview(options: {
       if (!access || !systems || !platform.publishWithStableReads) return { result: forbidden };
       const { target, scope, current, authorizeOwned } = access;
       const { fingerprint, approvalRevision, step } = request.input;
-      const fileAccess = finalize ? admitWorkspace(request.input, request.operation, registration, isOpen, filePlanScopes) : undefined;
+      const fileAccess = finalize || finalizeProvider
+        ? admitWorkspace(request.input, request.operation, registration, isOpen, filePlanScopes) : undefined;
       try {
         if (!await access.authorizeCurrent()) return { result: forbidden };
         const prepared = await prepareStructuredHeadlessPlanStep(platform, {
           target, approvalRevision, step, isCurrent: current,
-        }, async (owner, _scope, operation) => operation?.operation === "data.save-local-source"
+        }, async (owner, _scope, operation) => operation?.operation === "data.save-local-source" || operation?.operation === "data.save-provider-source"
           ? Boolean(await fileAccess?.authorizeOwned(owner)) : authorizeOwned(owner),
-        Date.now, "stable-reads", Boolean(fileAccess));
+        Date.now, "stable-reads", Boolean(finalize && fileAccess), finalizeProvider && fileAccess
+          ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
+          : undefined);
         if (!prepared || !prepared.isCurrent()) return { result: forbidden };
         if (prepared.kind === "local-file") {
           if (!fileAccess || !finalize) return { result: forbidden };
           const { organizationId, principalId, workspaceId } = scope;
           return await runPreparedHeadlessLocalFile({ prepared, request, context:{ organizationId, principalId, workspaceId },
             canUse: fileAccess.authorizeCurrent, resolveFinalize: async () => finalize });
+        }
+        if (prepared.kind === "provider-file") {
+          if (!fileAccess || !finalizeProvider) return { result: forbidden };
+          const { organizationId, principalId, workspaceId } = scope;
+          return await runPreparedHeadlessProviderFile({ prepared, request, context: { organizationId, principalId, workspaceId },
+            canUse: fileAccess.authorizeCurrent, resolveFinalize: async () => finalizeProvider });
         }
         const active = (workspace: WorkspaceId, operation: string) =>
           workspace === scope.workspaceId && operation === prepared.request.operation && prepared.isCurrent();
@@ -221,6 +244,7 @@ export function composeManagedHeadlessPlanReview(options: {
   };
   return Object.assign(handlers.execute, {
     allowLocalFileSave: Boolean(finalize),
+    allowProviderFileSave: Boolean(finalizeProvider),
     runStep: systems && platform.publishWithStableReads ? handlers.runStep : undefined,
     previewSelectedFile: options.enableFilePreview && platform.publishWithStableReads
       ? (request: HeadlessLocalFileImportRequest, registration: ManagedPlanReviewRegistration, isOpen: () => boolean) =>

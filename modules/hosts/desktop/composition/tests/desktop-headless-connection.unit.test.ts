@@ -16,7 +16,9 @@ import { createLocalWorkspaceRepository } from "../../../../adapters/persistence
 import { createStructuredHeadlessOperationStore, createStructuredSystemBuilderRepository } from "../../../../adapters/persistence/system-builder";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { createDesktopHeadlessClientAuthority } from "../../../../adapters/security/headless";
-import { createStructuredHeadlessLocalFileSelectionRepository } from "../../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
+import { createStructuredHeadlessLocalFileSelectionRepository, createStructuredHeadlessProviderFileSelectionRepository } from "../../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
+import { RegisterArtifactFromRepoUseCase } from "../../../../application/use-cases/register-artifact-from-repo.use-case";
+import { createHasArtifactInRepoSuccessResult } from "../../../../contracts/storage";
 import { normalizeAssetId } from "../../../../contracts/asset";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { normalizeSystemBuilderSystemId, normalizeSystemBuilderRevisionId,
@@ -343,6 +345,97 @@ test("the paired Desktop plan saves one selected local file through real ingesti
     assert.ok(path.basename(rootDirectory).startsWith("headless-data-plan-"));
     await rm(rootDirectory, { recursive: true, force: true });
   }
+});
+
+test("the paired Desktop plan saves its selected provider source and replays only its own receipt", { timeout: 20_000 }, async () => {
+  const rootDirectory = "artifacts/tmp/headless-provider-plan";
+  const platform = createInMemoryStructuredDocumentStore();
+  const documents = platform.forOrganization(organizationId);
+  const scope = { organizationId, workspaceId, principalId: "provider-file-fixture-owner" };
+  const identity = { ...scope, principalDisplayName: "Fixture", createdAt: at, updatedAt: at };
+  const repos = createStructuredOrganizationRepositories(platform);
+  const workspaces = createLocalWorkspaceRepository({ documents, rootDirectory });
+  const authorization = composeDesktopWorkspaceAuthorization({ documents: platform, localIdentity: identity });
+  let providerChecks = 0;
+  const revision = "a".repeat(40);
+  const registrar = new RegisterArtifactFromRepoUseCase({
+    artifactRepoStorage: { async hasArtifactInRepo() {
+      providerChecks++;
+      return createHasArtifactInRepoSuccessResult(true);
+    } } as never,
+    readDatasetRevisionLicense: async () => ({ repository: "example/synthetic", revision, licenseIds: ["cc-by-nc-4.0"] }),
+    artifactCatalogAppend: { async appendArtifactCatalogRecord() { throw new Error("Publication must use its transaction owner."); } },
+    artifactBindingStorage: {} as never, logging: { log() {} },
+  });
+  const ingestion = composeDesktopIngestionFeature({
+    documents, storageRootDirectory: rootDirectory, workspaceAuthorization: authorization, workspaceRepository: workspaces,
+    artifacts: { storage: {} as never }, remoteArtifacts: { registerArtifactFromRepoUseCase: registrar },
+    organizationContextProvider: { getCurrentOrganizationContext: () => scope },
+  });
+  const planReview = composeDesktopHeadlessPlanReview({
+    platform, hostIncarnationId, identity, workspaces, authorization, rootDirectory, isOpen: () => true,
+    getIngestionTasks: async () => ingestion.ingestionTasks,
+    systems: composeSystemBuilder({ documents, definitions: { async readExactDefinition() { return undefined; } },
+      assetRegistryRead: { async listDefinitionCards() { return { items: [] }; }, async readDefinitionDetail() { return undefined; } } }),
+  });
+  const connector = composeDesktopHeadlessConnection({ documents, identity, workspaces, authorization, planReview,
+    async read() { return { ok: false, code: "headless.forbidden" }; } });
+  const approvals = composeDesktopHeadlessPlanApprovals({ platform, hostIncarnationId, identity,
+    rootDirectory, isOpen: () => true, capturePlanReviewClients: connector.capturePlanReviewClients });
+  try {
+    await repos.organizations.saveOrganization({ organizationId, displayName: "Provider fixture", status: "active", createdAt: at, updatedAt: at });
+    await repos.memberships.saveMembership({ organizationId, principalId: scope.principalId, role: "owner", status: "active",
+      createdAt: at, updatedAt: at });
+    await workspaces.saveWorkspace({ organizationId, workspaceId, displayName: "Provider fixture", status: "active", createdAt: at, updatedAt: at });
+    const pairing = await connector.beginPairing(workspaceId, () => true, "plan-review");
+    assert.equal(pairing.status, "ready");
+    const paired = await call(pairing, "pair", { pairingCode: pairing.pairingCode });
+    const { credential, registeredClientId } = paired.result.value ?? {};
+    assert.ok(credential && registeredClientId);
+    const created = await ingestion.ingestionTasks.executeCommand({ action: "create-hugging-face", files: [
+      { repository: "example/synthetic", path: "data/train.parquet", revision },
+    ] }, scope);
+    assert.ok(created.ok && created.value.kind === "task");
+    const { taskId, files } = created.value.task;
+    const selected = { hostIncarnationId, workspaceId, taskId, fileId: files[0]!.fileId, taskRevision: created.value.task.revision };
+    const input = { hostIncarnationId, workspaceId, steps: [{
+      operation: "data.save-provider-source", taskId, fileId: selected.fileId, taskRevision: selected.taskRevision, idempotencyKey: randomUUID(),
+    }] };
+    const options = { allowLocalFileSave: true, allowProviderFileSave: true };
+    const parsed = parseHeadlessBuildPlanProposal(input, hostIncarnationId, options);
+    assert.ok(parsed.ok);
+    const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
+    const wire = (name: "plan-review" | "plan-step", operation: "plan.submit" | "plan.run-step", payload: object) =>
+      call(pairing, name, { version: HEADLESS_CONTRACT_VERSION, operation, input: payload }, credential);
+    assert.equal((await wire("plan-review", "plan.submit", { ...input, fingerprint })).status, 403);
+    const choices = createStructuredHeadlessProviderFileSelectionRepository(documents);
+    assert.equal(await choices.record({ organizationId, principalId: scope.principalId, registeredClientId, target: selected }, 0, () => true), 1);
+    assert.equal((await wire("plan-review", "plan.submit", { ...input, fingerprint })).status, 200);
+    const exact = { hostIncarnationId, workspaceId, fingerprint, approvalRevision: 2, step: 1 };
+    assert.equal((await wire("plan-step", "plan.run-step", exact)).status, 403);
+    assert.equal(providerChecks, 0);
+    const user = { channel: "authenticated-chat" as const, isCurrent: () => true };
+    const selection = { workspaceId, registeredClientId, fingerprint };
+    const shown = await approvals.open(selection, user);
+    assert.ok(shown.ok && shown.snapshot.preview.steps[0]?.operation === "data.save-provider-source");
+    assert.ok((await approvals.decide(selection, { expectedRevision: 1, fingerprint,
+      decision: { kind: "approve", mode: "whole-plan" } }, user)).ok);
+    const result = await wire("plan-step", "plan.run-step", exact);
+    assert.equal(result.status, 200);
+    const receipt = readHeadlessPlanStepResult(result.result, exact, options);
+    assert.ok(receipt.ok);
+    assert.deepEqual(receipt.value.reference, { workspaceId, taskId, fileId: selected.fileId, taskRevision: selected.taskRevision + 1 });
+    assert.equal(providerChecks, 1);
+    assert.deepEqual((await wire("plan-step", "plan.run-step", exact)).result,
+      { ok: true, value: { ...receipt.value, kind: "replayed" } });
+    assert.equal(providerChecks, 1);
+    const saved = await ingestion.ingestionTasks.executeCommand({ action: "read", taskId }, scope);
+    assert.ok(saved.ok && saved.value.kind === "task" && saved.value.task.status === "succeeded");
+    assert.deepEqual(saved.value.task.files[0]!.output?.providerLicenseIds, ["cc-by-nc-4.0"]);
+    assert.ok((await approvals.decide(selection, { expectedRevision: 2, fingerprint, decision: { kind: "revoke" } }, user)).ok);
+    assert.equal((await wire("plan-step", "plan.run-step", exact)).status, 403);
+    assert.equal(providerChecks, 1);
+  } finally { await connector.close(); ingestion.dispose(); }
 });
 
 test("desktop approval commit and replies obey the same requester's lifetime", async t => {

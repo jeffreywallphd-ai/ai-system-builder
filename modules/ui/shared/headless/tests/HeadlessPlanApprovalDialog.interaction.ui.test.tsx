@@ -13,14 +13,16 @@ import { readManagedBrowserPlanApprovalRequest, readManagedBrowserPlanApprovalVa
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { HeadlessPlanApprovalDialog, type HeadlessPlanApprovalClient } from "../HeadlessPlanApprovalDialog";
 
-test("both app channels identify the exact file save and approve through the same scoped view", async () => {
+for (const provider of [false, true]) test(provider
+  ? "both app channels disclose provider reads and approve the exact provider save"
+  : "both app channels identify the exact file save and approve through the same scoped view", async () => {
   const hostIncarnationId = "d52c0a60-3384-48ce-80e4-6102898ad428";
   assert.ok(isHeadlessHostIncarnationId(hostIncarnationId));
   const workspaceId = createWorkspaceId("workspace.synthetic");
   const parsed = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, steps: [{
-    operation: "data.save-local-source", taskId: "ingestion.synthetic", fileId: "file.synthetic",
+    operation: provider ? "data.save-provider-source" : "data.save-local-source", taskId: "ingestion.synthetic", fileId: "file.synthetic",
     taskRevision: 4, idempotencyKey: "e6b5f077-1a85-4ca3-8067-34f8aa6086da",
-  }] }, hostIncarnationId, { allowLocalFileSave: true });
+  }] }, hostIncarnationId, { allowLocalFileSave: true, allowProviderFileSave: provider });
   assert.ok(parsed.ok);
   const fingerprint = createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex");
   const selection = { workspaceId, fingerprint, registeredClientId: "83739bf2-c08e-4d9d-ad84-da05ae2d17f3" };
@@ -66,7 +68,12 @@ test("both app channels identify the exact file save and approve through the sam
         const changes = dom.window.document.querySelector('[aria-label="Requested changes"]');
         const permissions = dom.window.document.querySelector('[aria-label="Permissions and limits"]');
         assert.match(permissions?.textContent ?? "", /Save the listed files in this workspace/);
-        assert.match(changes?.textContent ?? "", /Save the selected file in Data/);
+        assert.match(changes?.textContent ?? "", provider
+          ? /Save the selected Hugging Face source in Data/ : /Save the selected file in Data/);
+        if (provider) {
+          assert.match(permissions?.textContent ?? "", /using your saved provider access/);
+          assert.doesNotMatch(permissions?.textContent ?? "", /No outside service calls/);
+        }
         assert.match(changes?.textContent ?? "", /File reference file\.synthetic/);
         assert.match(changes?.textContent ?? "", /Upload ingestion\.synthetic, version 4/);
         await act(async () => button("Approve change 1").click());

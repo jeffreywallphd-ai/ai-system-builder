@@ -39,8 +39,15 @@ within the same transaction as the artifact, snapshot, task and plan receipt.
 Transport callers cannot supply this callback. Access loss suppresses new
 publication, while a read already admitted can finish. An uncertain publication
 does not qualify as a plan receipt and cannot trigger automatic adoption or retry.
-Focused application fixtures exercise this seam. Product provider-plan tools and
-both actual host paths still require their own wiring and qualification.
+The version 3 plan preview declares provider reads. Both host compositions
+validate the stored app selection and current approval again in the transaction
+that commits the artifact, source, task and plan receipt. A distinct provider
+effect namespace binds the principal, client, process, workspace, selected task,
+file and revision. Ordinary imports cannot supply this receipt. Source expiry
+and registration retirement are checked synchronously before commit.
+Current permission and approval fence returned receipts. Focused application,
+paired HTTPS, Managed persistence and official MCP fixtures cover these paths.
+The full dataset preparation and two-host Data takeover journeys remain pending.
 
 Desktop retires source reads with an exact workspace/client scope and a monotonic
 request identity. Thin-client source effects capture their own lifetime rather

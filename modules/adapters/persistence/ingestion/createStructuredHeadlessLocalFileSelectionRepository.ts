@@ -123,6 +123,12 @@ export function matchesStructuredHeadlessLocalFileSelection(
   return readMatch(transaction, localNamespace, validate(value));
 }
 
+export function matchesStructuredHeadlessProviderFileSelection(
+  transaction: StructuredDocumentStore, value: HeadlessLocalFileSelection,
+): Promise<boolean> {
+  return readMatch(transaction, providerNamespace, validate(value));
+}
+
 async function readSelectedPreview<Preview>(
   transaction: StructuredDocumentStore,
   namespace: string,

@@ -154,7 +154,7 @@ export function createManagedHeadlessMcpReadForwarder(configuration: {
   };
   const forward = createForwarder({address, authoringAddress, conversationAddress: address, presentationAddress,
     planReviewAddress, planStepAddress, localFilePreviewAddress, providerFilePreviewAddress, agent, authorization: `Bearer ${credential}`,
-    allowLocalFileSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: false, enablePresentation: !enablePlanReview && enableConsent,
     headers, presentationHeaders, managedSemanticApply: true});
   return async (input: ForwardRequest, signal?: AbortSignal): Promise<ForwardResult> => {
@@ -198,7 +198,7 @@ export function createHeadlessMcpReadForwarder(endpoint: unknown, fingerprint: u
   const authorization = `Bearer ${credential}`;
   return createForwarder({address, authoringAddress, conversationAddress, presentationAddress, planReviewAddress, planStepAddress,
     localFilePreviewAddress, providerFilePreviewAddress,
-    agent, authorization, allowLocalFileSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
+    agent, authorization, allowLocalFileSave: enablePlanReview, allowProviderFileSave: enablePlanReview, enableAuthoring: !enablePlanReview && enableAuthoring,
     enableConversation: !enablePlanReview && enableConversation, enablePresentation: !enablePlanReview && enablePresentation});
 }
 
@@ -209,6 +209,7 @@ function createForwarder(options: {
   localFilePreviewAddress?: URL;
   providerFilePreviewAddress?: URL;
   allowLocalFileSave?: boolean;
+  allowProviderFileSave?: boolean;
   agent: Agent | undefined; authorization: string; headers?: Readonly<Record<string, string>>;
   presentationHeaders?: Readonly<Record<string, string>>;
   enableAuthoring: boolean; enableConversation: boolean; enablePresentation: boolean;
@@ -253,7 +254,7 @@ function createForwarder(options: {
       try {
         const { status, raw } = await sendRead(options.planStepAddress, agent, authorization, accepted.request, signal, headers);
         const result = headless.readHeadlessPlanStepResult(raw, accepted.request.input,
-          { allowLocalFileSave: options.allowLocalFileSave === true });
+          { allowLocalFileSave: options.allowLocalFileSave === true, allowProviderFileSave: options.allowProviderFileSave === true });
         if (status === 200 && result.ok)
           return result.value.expiresAt > Date.now() ? result : unknownWrite;
         // The host can withhold a reply after it has saved the step. Only
@@ -268,6 +269,9 @@ function createForwarder(options: {
       if (!options.planReviewAddress) return { ok: false, code: "headless.forbidden" };
       if (!options.allowLocalFileSave && input.operation === "plan.submit" &&
           input.proposal.requests.some(step => step.operation === "data.save-local-source"))
+        return { ok: false, code: "headless.forbidden" };
+      if (!options.allowProviderFileSave && input.operation === "plan.submit" &&
+          input.proposal.requests.some(step => step.operation === "data.save-provider-source"))
         return { ok: false, code: "headless.forbidden" };
       if (active >= MAX_ACTIVE || signal?.aborted) return unavailable;
       active++;

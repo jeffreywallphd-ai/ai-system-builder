@@ -148,3 +148,24 @@ test("accepts an exact local file save only for an enabled host and keeps system
     [staged, { ...staged, fileId: "file.sibling", idempotencyKey: savedStep.idempotencyKey }],
   ]) assert.deepEqual(parseHeadlessBuildPlanProposal({ ...proposalScope, steps }, host, opts), invalid);
 });
+
+test("provider-file plans require explicit host support and declare service reads", () => {
+  const step = { operation: "data.save-provider-source", taskId: "ingestion.selected", fileId: "file.selected",
+    taskRevision: 1, idempotencyKey: "2810d2a4-726e-44d2-9553-db28a43d767c" };
+  const proposal = { ...proposalScope, steps: [step, createStep] };
+  assert.deepEqual(parseHeadlessBuildPlanProposal(proposal, host), invalid);
+  assert.deepEqual(parseHeadlessBuildPlanProposal(proposal, host, { allowLocalFileSave: true }), invalid);
+  const options = { allowLocalFileSave: true, allowProviderFileSave: true };
+  const parsed = parseHeadlessBuildPlanProposal(proposal, host, options);
+  assert.ok(parsed.ok);
+  assert.equal(parsed.preview.version, "aisb-build-plan-preview-v3");
+  assert.deepEqual(parsed.preview.steps[0], { operation: step.operation,
+    input: { taskId: step.taskId, fileId: step.fileId, taskRevision: step.taskRevision, idempotencyKey: step.idempotencyKey },
+    effect: "save-provider-source", externalProviderCalls: "required" });
+  for (const steps of [
+    [{ ...step, repository: "unselected/private" }],
+    [{ ...step, taskRevision: 0 }],
+    [{ ...step, externalProviderCalls: 0 }],
+    [step, { ...step, operation: "data.save-local-source", idempotencyKey: savedStep.idempotencyKey }],
+  ]) assert.deepEqual(parseHeadlessBuildPlanProposal({ ...proposalScope, steps }, host, options), invalid);
+});

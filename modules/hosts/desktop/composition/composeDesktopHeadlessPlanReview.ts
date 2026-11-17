@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { createStructuredHeadlessPlanReviewRepository } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanReviewRepository";
 import { prepareStructuredHeadlessPlanStep } from "../../../adapters/persistence/system-builder/createStructuredHeadlessPlanStepOperationStore";
-import { readStructuredHeadlessLocalFileSelection } from "../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
+import { readStructuredHeadlessLocalFileSelection, readStructuredHeadlessProviderFileSelection } from "../../../adapters/persistence/ingestion/createStructuredHeadlessLocalFileSelectionRepository";
 import { createLocalWorkspaceRepository } from "../../../adapters/persistence/workspace";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import type { DesktopHeadlessAuthoringWireGrant, startDesktopHeadlessLoopback } from "../../../adapters/transport/headless-loopback";
@@ -12,7 +12,9 @@ import { isDesktopHeadlessClientId, readHeadlessPlanStepResult, type HeadlessHos
 import type { LocalIdentityProfile } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
-import { projectHeadlessPlanReview, runPreparedHeadlessLocalFile, validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
+import { projectHeadlessPlanReview, runPreparedHeadlessLocalFile, runPreparedHeadlessProviderFile,
+  validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
+import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
 import type { DesktopHeadlessAudit } from "./desktopHeadlessAudit";
 import type { DesktopIngestionTaskCommands } from "./composeDesktopIngestionFeature";
@@ -72,9 +74,9 @@ export function composeDesktopHeadlessPlanReview(options: {
     const isCurrent = () => admits(initial, registeredClientId, workspaceId);
     const canUse = async (savesFile = false) => isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
       await authorize(workspaces, authorization, workspaceId, request.operation, savesFile) && isCurrent();
-    let savingFile = false;
+    let savingFile: "local-data-save" | "provider-data-save" | undefined;
     function localFailure(result: typeof forbidden | typeof unconfirmed) {
-      options.audit?.backend("local-data-save", workspaceId, result.code === "headless.forbidden" ? "denied" : "unconfirmed");
+      options.audit?.backend(savingFile ?? "local-data-save", workspaceId, result.code === "headless.forbidden" ? "denied" : "unconfirmed");
       return { result };
     }
     try {
@@ -84,11 +86,14 @@ export function composeDesktopHeadlessPlanReview(options: {
       }, async (owner, _scope, approvedRequest) => {
         const repository = createLocalWorkspaceRepository({ rootDirectory, documents: owner.forOrganization(organizationId) });
         return authorize(repository, composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }),
-          workspaceId, request.operation, approvedRequest?.operation === "data.save-local-source");
-      }, Date.now, "serialized-owner", Boolean(getIngestionTasks));
+          workspaceId, request.operation, approvedRequest?.operation === "data.save-local-source" ||
+            approvedRequest?.operation === "data.save-provider-source");
+      }, Date.now, "serialized-owner", Boolean(getIngestionTasks), getIngestionTasks
+        ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
+        : undefined);
       if (!prepared || !await canUse() || !prepared.isCurrent()) return { result: forbidden };
       if (prepared.kind === "local-file") {
-        savingFile = true;
+        savingFile = "local-data-save";
         if (!getIngestionTasks) return localFailure(forbidden);
         const outcome = await runPreparedHeadlessLocalFile({ prepared, request, context: { organizationId, principalId, workspaceId },
           canUse: () => canUse(true), resolveFinalize: async () => {
@@ -97,6 +102,19 @@ export function composeDesktopHeadlessPlanReview(options: {
           } });
         if (!outcome.result.ok) return localFailure(outcome.result.code === "headless.forbidden" ? forbidden : unconfirmed);
         options.audit?.backend("local-data-save", workspaceId, outcome.result.value.kind);
+        return outcome;
+      }
+      if (prepared.kind === "provider-file") {
+        savingFile = "provider-data-save";
+        if (!getIngestionTasks) return localFailure(forbidden);
+        const outcome = await runPreparedHeadlessProviderFile({ prepared, request,
+          context: { organizationId, principalId, workspaceId }, canUse: () => canUse(true),
+          resolveFinalize: async () => {
+            const ingestion = await getIngestionTasks();
+            return ingestion.finalizeApprovedProviderFile?.bind(ingestion);
+          } });
+        if (!outcome.result.ok) return localFailure(outcome.result.code === "headless.forbidden" ? forbidden : unconfirmed);
+        options.audit?.backend("provider-data-save", workspaceId, outcome.result.value.kind);
         return outcome;
       }
       const { operation } = prepared.request;
@@ -135,13 +153,14 @@ export function composeDesktopHeadlessPlanReview(options: {
   return {
     hostIncarnationId,
     ...(getIngestionTasks ? { allowLocalFileSave: true as const } : {}),
+    ...(getIngestionTasks ? { allowProviderFileSave: true as const } : {}),
     ...(systems ? { runStep } : {}),
     async execute(request, initialGrant, getCurrentGrant) {
       const { workspaceId, fingerprint } = request.target;
       const { registeredClientId } = initialGrant;
       const isCurrent = () => admits(initialGrant, registeredClientId, workspaceId);
       const savesFile = request.operation === "plan.submit" &&
-        request.proposal.requests.some(step => step.operation === "data.save-local-source");
+        request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source");
       const canUse = async () => isCurrent() && admits(await getCurrentGrant(), registeredClientId, workspaceId) &&
         await authorize(workspaces, authorization, workspaceId, request.operation, savesFile) && isCurrent();
       if (request.target.hostIncarnationId !== hostIncarnationId || !isDesktopHeadlessClientId(registeredClientId)) return forbidden;
@@ -167,7 +186,15 @@ export function composeDesktopHeadlessPlanReview(options: {
             });
             if (!observed || !isCurrent()) return false;
             return observed.ok ? true : observed.code === "headless.stale" ? "stale" : false;
-          }), Boolean(getIngestionTasks));
+          }, async step => {
+            if (!getIngestionTasks) return false;
+            const { idempotencyKey: _key, ...selected } = step.input;
+            const observed = await readStructuredHeadlessProviderFileSelection(documents, {
+              organizationId: identity.organizationId, principalId: identity.principalId, registeredClientId, target: selected,
+            });
+            if (!observed || !isCurrent()) return false;
+            return observed.ok ? true : observed.code === "headless.stale" ? "stale" : false;
+          }), Boolean(getIngestionTasks), Boolean(getIngestionTasks));
         const result = request.operation === "plan.submit" ?
           await reviews.propose({ target, isCurrent, proposal: {
             ...request.proposal.scope,

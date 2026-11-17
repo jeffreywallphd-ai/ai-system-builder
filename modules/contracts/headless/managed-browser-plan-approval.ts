@@ -4,6 +4,7 @@ import {
   type DesktopPlanApprovalDecision, type DesktopPlanApprovalSelection,
 } from "./desktop-headless-plan-approval";
 import { readHeadlessPlanReviewAgentResult } from "./headless-plan-review-wire";
+import type { HeadlessBuildPlanCapabilities } from "./headless-system-management";
 import { isUiControlId, readUiControlWindow, type UiControlWindowTarget } from "./ui-control-authority";
 import { isDesktopHeadlessClientId } from "./desktop-headless-pairing";
 import { readAppHeadlessLocalFileSelectionValue, readDesktopLocalFileSelectionRequest, readDesktopProviderFileSelectionRequest,
@@ -64,7 +65,7 @@ export function readManagedBrowserPlanApprovalRequest(value: unknown): ManagedBr
 }
 
 export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanApprovalRequest, value: unknown,
-  options?: { readonly allowLocalFileSave: boolean }) {
+  options?: HeadlessBuildPlanCapabilities) {
   switch (request.operation) {
     case "list": return readDesktopPlanApprovalList(value, request.document.workspaceId);
     case "list-file-clients": {
@@ -78,7 +79,9 @@ export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanA
     case "select-file":
     case "select-provider-file": return readAppHeadlessLocalFileSelectionValue(value, request.file);
     case "open": {
-      const view = readDesktopPlanApprovalView(value, request.selection, { allowLocalFileSave: options?.allowLocalFileSave === true });
+      const view = readDesktopPlanApprovalView(value, request.selection, {
+        allowLocalFileSave: options?.allowLocalFileSave === true, allowProviderFileSave: options?.allowProviderFileSave === true,
+      });
       return view?.preview.hostIncarnationId === request.document.hostIncarnationId ? view : undefined;
     }
     case "decide": {

@@ -1084,6 +1084,43 @@
                     "idempotencyKey"
                   ],
                   "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "data.save-provider-source"
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                    },
+                    "fileId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                    },
+                    "taskRevision": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "taskId",
+                    "fileId",
+                    "taskRevision",
+                    "idempotencyKey"
+                  ],
+                  "additionalProperties": false
                 }
               ]
             }
@@ -1814,6 +1851,43 @@
                     "operation": {
                       "type": "string",
                       "const": "data.save-local-source"
+                    },
+                    "taskId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                    },
+                    "fileId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                    },
+                    "taskRevision": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "taskId",
+                    "fileId",
+                    "taskRevision",
+                    "idempotencyKey"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "data.save-provider-source"
                     },
                     "taskId": {
                       "type": "string",

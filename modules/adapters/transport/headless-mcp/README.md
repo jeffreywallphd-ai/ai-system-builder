@@ -170,3 +170,12 @@ lease. Enabling the tools does not grant window consent.
 Requests use standard TLS verification and a fixed path for each operation
 family. URLs with embedded credentials, paths, query strings or fragments
 are rejected. The adapter does not follow redirects.
+
+Plan-review mode also supports `data.save-provider-source` for one Parquet
+file selected for that client in Add Data. Use its exact prepared reference.
+Preview version 3 identifies required Hugging Face reads. The app popup or
+signed-in approval chat lists the provider access being granted. Run the
+approved step by fingerprint and approval revision. Retry the same step after
+an uncertain reply so the host can read its own saved source receipt.
+The effect registers the remote origin and its license declaration. Dataset
+localization and preparation are separate application actions.
