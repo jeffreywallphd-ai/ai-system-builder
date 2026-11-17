@@ -11,6 +11,13 @@ history. Exact tenant/workspace/dataset/version checks precede the bounded
 projection; raw recipes, documents, storage keys and source contents stay inside
 the application. It starts no preparation, runtime or publication task.
 
+`PrepareHeadlessDatasetInputsUseCase` privately maps exact completed local
+source references into the existing provided-row preparation command. It checks
+current authority and source lineage, bounds files, bytes and mapping fields,
+and preserves workspace quality policy and review. Its preview contains no
+source content or storage key. This metadata-only compiler grants no public
+transport, runtime admission or dataset save authority.
+
 Training start failures can carry a fixed `MODEL_TRAINING_START_*` diagnostic code
 for request validation, runtime readiness, base-model lookup, dataset resolution,
 task dispatch or task registration. The original error object, message and cause

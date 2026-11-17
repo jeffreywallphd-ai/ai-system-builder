@@ -30,6 +30,18 @@ before transport egress. Shared passive decoders reject extra fields, incorrect
 targets, invalid ordering and inconsistent known split subtotals. These reads authorize
 neither data generation, content export nor dataset publication.
 
+The preliminary dataset input compiler accepts only passive local source
+references and a provided-row recipe. Current trusted host, principal,
+organization, workspace and artifact authority surround the exact point reads.
+Completed task outputs must match their immutable snapshot identity, digest,
+media type, size and private storage key. Duplicate sources, stale revisions,
+unsupported formats and oversized inputs deny before a command is returned.
+The preview exposes no filename, path, storage key or content, and describes
+local file licensing as unknown. The private command preserves workspace
+quality policy and requires output review. No model, runtime, provider,
+publication or public transport is admitted by this helper. It performs metadata
+admission only; execution must still verify current source bytes and approval.
+
 Plan-review clients can propose one immutable Hugging Face source selected for
 that client in the app. The version 3 preview declares required provider reads.
 Both human decision channels display use of the saved provider access. The

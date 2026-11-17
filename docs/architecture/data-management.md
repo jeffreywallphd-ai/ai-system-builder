@@ -21,6 +21,20 @@ quality fingerprints. Private recipes, documentation, field names, paths and
 source contents remain internal. Desktop metadata reads do not initialize the
 dataset preparation or model runtime feature. Normal app history is unchanged.
 
+The internal Headless preparation input compiler validates up to four completed
+local file references against exact task revisions and immutable source
+snapshots. Each file is limited to 4 MiB and the total to 16 MiB. The initial
+provided-instruction-row profile admits canonical structured formats, a bounded
+input/output column mapping, explicit split ratios and seed, and the recommended
+or strict workspace quality preset. It maps privately to the existing preparation
+command with review required, a 1,000-row-per-source cap and local JSONL output.
+Its preview contains reference, digest, format and count metadata. It reads no
+source bytes and proves no schema or runtime readiness. The command's storage
+keys stay internal. This compiler is not registered as a host, API or MCP
+operation. Dispatch, retry receipts, cancellation, result review and saving
+remain separate owner integration and qualification work. Execution must
+revalidate the current source, byte integrity and approval at its own boundary.
+
 The private [provided-data version qualification](../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md)
 composes the real packaged processor and local SQLite adapter for two-host
 save, compare, setup reuse and restart journeys. The browser test closes and

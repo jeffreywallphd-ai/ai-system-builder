@@ -47,6 +47,7 @@ export * from "./headless-plan-review-wire";
 export * from "./headless-plan-step-wire";
 export * from "./headless-data-task-status";
 export * from "./headless-dataset-metadata";
+export * from "./headless-dataset-preparation";
 export * from "./headless-data-local-file";
 export * from "./headless-data-provider-file";
 export * from "./headless-data-app-selection";

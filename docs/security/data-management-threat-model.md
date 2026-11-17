@@ -1,5 +1,14 @@
 # Data Management Threat Model
 
+The Headless preparation input compiler is an internal metadata admission seam.
+It verifies exact completed local task/file references against their immutable
+source snapshots under current tenant and artifact authority. Its initial cap
+is four files, 4 MiB each, with provided-row mapping and review-required local
+output. Private storage keys are used only in the internal existing preparation
+command. The preview reads no source bytes and conveys no execution permission.
+Public dispatch, source-byte verification at execution, retry ownership and
+dataset saving require their own integration and qualification.
+
 The private provided-data version fixture accepts only its small synthetic
 provided-row classification source and production review path. It denies
 generation, OCR, downloads, other tasks and linked or external source paths.
