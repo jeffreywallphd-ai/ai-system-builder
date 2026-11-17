@@ -1696,6 +1696,11 @@ export function composeServerHost(
           ? ingestionTasks.finalizeApprovedProviderFile.bind(ingestionTasks) : undefined;
         managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases, ingestionTasks,
+            getDatasetInputs: organizationDocuments ? async () => {
+              const {createStructuredIngestionAcquisitionRepository} = await import("../../../adapters/persistence/ingestion");
+              const {PrepareHeadlessDatasetInputsUseCase} = await import("../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case");
+              return new PrepareHeadlessDatasetInputsUseCase(createStructuredIngestionAcquisitionRepository(organizationDocuments));
+            } : undefined,
             getDatasetQueries: organizationDocuments ? async () => {
               const dependencies = {repository: createStructuredDatasetVersionRepository(organizationDocuments),
                 workspaceRepository: workspaces, workspaceAuthorization};

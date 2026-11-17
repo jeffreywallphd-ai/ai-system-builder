@@ -362,7 +362,7 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     expect(names).toEqual([
       "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
       "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
-      "aisb_preview_build_plan", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
+      "aisb_preview_build_plan", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
       "aisb_read_conversation_task", "aisb_read_system",
       "aisb_request_build_plan_approval",
       "aisb_run_approved_build_step", "aisb_saved_system_changes", "aisb_saved_system_snapshot",
@@ -597,6 +597,16 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     expect(fileCommit).toMatchObject({ ok: true, value: { kind: "committed", operation: "data.save-local-source",
       reference: { ...savedInput, taskRevision: savedInput.taskRevision + 2 } } });
     expect(await invokeDataStep(1)).toEqual({ ...fileCommit, value: { ...(fileCommit.value as object), kind: "replayed" } });
+    const sourceStatus = await call(client, "aisb_ingestion_status", {...workspace, taskId: savedInput.taskId});
+    expect(sourceStatus).toMatchObject({ok: true, value: {state: "succeeded", revision: expect.any(Number)}});
+    const preparation = await call(client, "aisb_preview_dataset_preparation", {...workspace,
+      sources: [{taskId: savedInput.taskId, fileId: savedInput.fileId, taskRevision: (sourceStatus.value as {revision: number}).revision}],
+      recipe: {kind: "provided-instruction-rows-v1", inputColumn: "team", outputColumn: "priority"},
+      split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"});
+    expect(preparation).toMatchObject({ok: true, operation: "data.preview-dataset-preparation", value: {
+      workspaceId, totalBytes: contents.byteLength, maximumRowsPerSource: 1000, externalProviderCalls: 0, modelCalls: 0, reviewRequired: true}});
+    expect(JSON.stringify(preparation)).not.toContain(savedFilename);
+    expect(preparation).not.toHaveProperty("value.command");
     await verifySavedStep(await invokeDataStep(2), "Fixture data intake");
     await page.getByRole("button", { name: "Data", exact: true }).click();
     await page.getByRole("tab", { name: "Artifact Browser", exact: true }).click();

@@ -39,8 +39,14 @@ unsupported formats and oversized inputs deny before a command is returned.
 The preview exposes no filename, path, storage key or content, and describes
 local file licensing as unknown. The private command preserves workspace
 quality policy and requires output review. No model, runtime, provider,
-publication or public transport is admitted by this helper. It performs metadata
-admission only; execution must still verify current source bytes and approval.
+publication is admitted by this helper. The plan-review-only
+`data.preview-dataset-preparation` read exposes only the strictly reconstructed
+matching preview. Both hosts check current artifact authority around the compiler
+and before reply. Transport decoders reject private commands and extra fields,
+changed source order, recipe, split, quality and effect limits. Discovery does not
+initialize the compiler or runtime. A source-not-ready failure carries no private
+diagnostics. This is metadata admission only; execution must still verify current
+source bytes and approval.
 
 Plan-review clients can propose one immutable Hugging Face source selected for
 that client in the app. The version 3 preview declares required provider reads.

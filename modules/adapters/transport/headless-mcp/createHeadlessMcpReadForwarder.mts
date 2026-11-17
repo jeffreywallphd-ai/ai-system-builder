@@ -33,6 +33,7 @@ const resultError = z.strictObject({ ok: z.literal(false), code: z.enum([
   "headless.invalid-request", "headless.unsupported-version", "headless.unsupported-operation",
   "headless.host-changed", "headless.forbidden", "headless.not-found", "headless.unavailable",
   "headless.result-too-large", "headless.stale",
+  "headless.source-not-ready",
 ]) });
 const system = z.strictObject({
   systemId, name: text, status: z.string().refine(isSystemBuilderStatus),
@@ -58,6 +59,7 @@ const resultValue = {
   // These two finite shapes use the shared exact-target passive decoders below.
   "data.dataset-versions": z.unknown(),
   "data.compare-dataset-versions": z.unknown(),
+  "data.preview-dataset-preparation": z.unknown(),
   "data.ingestion-status": z.strictObject({
     taskId: z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
     state: z.enum(["queued", "transferring", "finalizing", "succeeded", "failed", "cancelled"]),
@@ -365,6 +367,10 @@ function createForwarder(options: {
       const expected = z.strictObject({ ok: z.literal(true), operation: z.literal(input.operation), value: resultValue[input.operation] });
       const parsed = expected.safeParse(raw);
       if (!parsed.success) return unavailable;
+      if (input.operation === "data.preview-dataset-preparation") {
+        const value = headless.readHeadlessDatasetPreparationPreview(parsed.data.value, input.input);
+        return value ? {ok: true, operation: input.operation, value} : unavailable;
+      }
       if (input.operation === "data.dataset-versions") {
         const value = headless.readHeadlessDatasetVersionBatch(parsed.data.value, input.input);
         return value ? {ok: true, operation: input.operation, value} : unavailable;

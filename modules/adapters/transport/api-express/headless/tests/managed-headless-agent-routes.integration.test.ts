@@ -51,6 +51,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let statusExtra = false;
   let withdrawStatus = false;
   let statusCalls = 0;
+  let preparationReady = true;
   let savedFile: {workspaceId:typeof workspaceId; taskId:ReturnType<typeof normalizeIngestionTaskId>;
     fileId:ReturnType<typeof normalizeIngestionTaskFileId>; taskRevision:number} | undefined;
   const expiresAt = Date.now() + 30_000;
@@ -73,8 +74,20 @@ test("managed plan routes admit only exact proposals, status and an approved ste
     isCurrent: identity => identity === planIdentity && current,
     async read(request) {
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
-        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions"],
+        version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
       }};
+      if (request.operation === "data.preview-dataset-preparation") {
+        if (withdrawStatus) current = false;
+        if (!preparationReady) return {ok: false, code: "headless.source-not-ready"};
+        return {ok: true, operation: request.operation, value: {workspaceId: request.input.workspaceId,
+          sources: request.input.sources.map((source, index) => ({...source,
+            fileId: statusMismatch ? "foreign" as never : source.fileId, sourceSnapshotId: "snapshot.preview." + index,
+            format: "csv", sizeBytes: 32, digest: "sha256:" + "a".repeat(64), licenseStatus: "unknown" as const})),
+          recipe: request.input.recipe, split: request.input.split, qualityPreset: request.input.qualityPreset,
+          totalBytes: 32 * request.input.sources.length, maximumRowsPerSource: 1000, outputFormat: "jsonl", reviewRequired: true,
+          externalProviderCalls: 0, modelCalls: 0, ...(statusExtra ? {command: {sourceArtifactIds: ["private"]}} : {}),
+        }};
+      }
       if (request.operation === "data.dataset-versions") {
         if (withdrawStatus) current = false;
         return {ok: true, operation: request.operation, value: {
@@ -179,6 +192,25 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       return {status:response.status, cache:response.headers.get("cache-control"), body:await response.json()};
     }
     const readRoute = MANAGED_HEADLESS_AGENT_PATHS.read;
+    const preparationRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "data.preview-dataset-preparation", input: {...scope,
+      sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],
+      recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
+      split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"}};
+    const validPreparation = await request(preparationRequest, "fixture-plan", readRoute);
+    assert.equal(validPreparation.status, 200);
+    assert.equal("command" in validPreparation.body.value, false);
+    statusExtra = true;
+    assert.equal((await request(preparationRequest, "fixture-plan", readRoute)).status, 503);
+    statusExtra = false; statusMismatch = true;
+    assert.equal((await request(preparationRequest, "fixture-plan", readRoute)).status, 503);
+    statusMismatch = false; withdrawStatus = true;
+    assert.equal((await request(preparationRequest, "fixture-plan", readRoute)).status, 403);
+    withdrawStatus = false; current = true; preparationReady = false;
+    const unavailablePreparation = await request(preparationRequest, "fixture-plan", readRoute);
+    assert.equal(unavailablePreparation.status, 409);
+    assert.deepEqual(unavailablePreparation.body, {ok: false, code: "headless.source-not-ready"});
+    preparationReady = true;
+    assert.equal((await request(preparationRequest, "fixture-agent", readRoute)).status, 403);
     for (const [operation, target] of [["data.dataset-versions", {datasetId: "dataset.synthetic", versionIds: ["version.001"]}],
       ["data.compare-dataset-versions", {fromVersionId: "version.001", toVersionId: "version.002"}]]) {
       const query = {version: HEADLESS_CONTRACT_VERSION, operation, input: {...scope, ...target}};

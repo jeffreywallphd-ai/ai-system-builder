@@ -25,6 +25,34 @@ const readPath = "/aisb-headless/v1/read";
 const pairPath = "/aisb-headless/v1/pair";
 const authorPath = "/aisb-headless/v1/author";
 
+test("a changed dataset preparation source returns a conflict through the pinned read route", async () => {
+  const registry = createDesktopHeadlessClientAuthority({
+    documents: createInMemoryStructuredDocumentStore().forOrganization(organizationId), identity,
+    canReadWorkspace: async target => target === workspaceId,
+    canReviewPlans: async target => target === workspaceId,
+  });
+  const connector = await startDesktopHeadlessLoopback({registrations: registry,
+    planReview: {hostIncarnationId: incarnation, async execute() {return {ok: false, code: "headless.forbidden"};}},
+    async read(_raw, getGrant) {
+      return (await getGrant())?.planReview ? {ok: false, code: "headless.stale"} : {ok: false, code: "headless.forbidden"};
+    },
+  });
+  try {
+    const pending = await registry.beginPairing(workspaceId, () => true, "plan-review");
+    assert.equal(pending.status, "ready");
+    const paired = await post(connector, pairPath, JSON.stringify({pairingCode: pending.pairingCode}));
+    assert.ok(paired.json.value?.credential);
+    const result = await post(connector, readPath, JSON.stringify({version: HEADLESS_CONTRACT_VERSION,
+      operation: "data.preview-dataset-preparation", input: {hostIncarnationId: incarnation, workspaceId,
+        sources: [{taskId: "source-task", fileId: "source-file", taskRevision: 1}],
+        recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
+        split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"},
+    }), {Authorization: "Bearer " + paired.json.value.credential});
+    assert.equal(result.status, 409);
+    assert.deepEqual(result.json, {ok: false, code: "headless.stale"});
+  } finally {await connector.close();}
+});
+
 function post(connector: { endpoint: string; fingerprint: string }, path: string, body: string, headers: Record<string, string> = {}) {
   return new Promise<{
     status: number;

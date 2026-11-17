@@ -30,10 +30,17 @@ or strict workspace quality preset. It maps privately to the existing preparatio
 command with review required, a 1,000-row-per-source cap and local JSONL output.
 Its preview contains reference, digest, format and count metadata. It reads no
 source bytes and proves no schema or runtime readiness. The command's storage
-keys stay internal. This compiler is not registered as a host, API or MCP
-operation. Dispatch, retry receipts, cancellation, result review and saving
+keys stay internal. `data.preview-dataset-preparation` exposes only this matching
+preview to current plan-review clients with artifact read permission. Both hosts
+compose the point readers lazily without initializing a preparation runtime.
+Shared transport decoders reject private command fields, changed source order,
+recipe, split, quality or effect limits. A source that is no longer ready returns
+the fixed `headless.source-not-ready` failure. Dispatch, retry receipts, cancellation, result review and saving
 remain separate owner integration and qualification work. Execution must
 revalidate the current source, byte integrity and approval at its own boundary.
+Clients obtain the current task revision from `data.ingestion-status` before
+preview. An immutable save receipt can contain an earlier effect revision;
+successful transfer-checkpoint cleanup can advance the mutable task separately.
 
 The private [provided-data version qualification](../../dev-tools/scripts/qualification/visual-composer/provided-dataset-qualification.md)
 composes the real packaged processor and local SQLite adapter for two-host

@@ -144,6 +144,7 @@
         "aisb_plan_capabilities",
         "aisb_prepare_workflow",
         "aisb_preview_build_plan",
+        "aisb_preview_dataset_preparation",
         "aisb_preview_selected_local_file",
         "aisb_preview_selected_provider_file",
         "aisb_read_conversation_task",
@@ -165,6 +166,7 @@
         "aisb_list_templates",
         "aisb_plan_capabilities",
         "aisb_preview_build_plan",
+        "aisb_preview_dataset_preparation",
         "aisb_preview_selected_local_file",
         "aisb_preview_selected_provider_file",
         "aisb_read_system",
@@ -1236,6 +1238,129 @@
           "hostIncarnationId",
           "workspaceId",
           "steps"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_preview_dataset_preparation",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "sources": {
+            "minItems": 1,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "taskId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                },
+                "fileId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                },
+                "taskRevision": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "taskId",
+                "fileId",
+                "taskRevision"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "recipe": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "provided-instruction-rows-v1"
+              },
+              "inputColumn": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z_][A-Za-z0-9_. -]*$"
+              },
+              "outputColumn": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z_][A-Za-z0-9_. -]*$"
+              }
+            },
+            "required": [
+              "kind",
+              "inputColumn",
+              "outputColumn"
+            ],
+            "additionalProperties": false
+          },
+          "split": {
+            "type": "object",
+            "properties": {
+              "trainRatio": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "validationRatio": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "testRatio": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "seed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              }
+            },
+            "required": [
+              "trainRatio",
+              "validationRatio",
+              "testRatio",
+              "seed"
+            ],
+            "additionalProperties": false
+          },
+          "qualityPreset": {
+            "type": "string",
+            "enum": [
+              "recommended",
+              "strict"
+            ]
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "sources",
+          "recipe",
+          "split",
+          "qualityPreset"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false

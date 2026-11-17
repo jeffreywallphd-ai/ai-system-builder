@@ -14,6 +14,23 @@ two known versions from the same dataset. Both tools return counts and digests,
 without private recipes or source contents. They start no model or preparation
 task. They require a plan-review client and current Data read permission.
 
+Use `aisb_preview_dataset_preparation` to preview a dataset from up to four
+completed local file imports. Supply each exact task, file and revision, the
+input and output columns, split ratios, split seed and quality preset. Each
+structured file can be at most 4 MiB; the total limit is 16 MiB. The preview
+requires a held-out validation or test split. It describes local JSONL output,
+required result review and a limit of 1,000 rows per source. Local source
+licenses show as unknown. The preview reads no source contents and starts no
+processing, model or provider request. It does not prove that the columns exist
+in the files. A `headless.source-not-ready` reply means the agent must check
+the exact source status and revision before trying again. The tool needs a
+current plan-review client with Data read permission.
+
+Before this preview, read `aisb_ingestion_status` and use its current task
+revision. A save receipt keeps the revision of its saved effect. Transfer
+checkpoint cleanup can advance the task revision after that effect was saved.
+An exact receipt replay does not supply the later task revision.
+
 Use [Control AI System Builder](../../skills/control-ai-system-builder/SKILL.md)
 to inspect or edit saved systems, check task status, or send one requested turn
 to an approved conversation through a paired desktop app. Copy the entire skill

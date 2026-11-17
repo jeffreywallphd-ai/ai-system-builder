@@ -173,6 +173,19 @@ function addSystemBuilderTools(server: McpServer) {
   const localFileTarget = { taskId: ingestionId, fileId: ingestionId,
     taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER) };
   if (enablePlanReview) {
+    const source = z.strictObject({taskId: ingestionId, fileId: ingestionId, taskRevision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER)});
+    const column = z.string().min(1).max(64).regex(/^[A-Za-z_][A-Za-z0-9_. -]*$/);
+    server.registerTool("aisb_preview_dataset_preparation", {
+      description: "Preview exact completed local sources, provided-row mapping, split and quality settings. Reports metadata and fixed limits without reading source contents, starting processing or granting approval. At most four files of 4 MiB each; unknown local file licensing stays unknown.",
+      inputSchema: z.strictObject({...workspaceTarget, sources: z.array(source).min(1).max(headless.HEADLESS_DATASET_MAX_SOURCES),
+        recipe: z.strictObject({kind: z.literal("provided-instruction-rows-v1"), inputColumn: column, outputColumn: column}),
+        split: z.strictObject({trainRatio: z.number().positive().max(1), validationRatio: z.number().min(0).max(1), testRatio: z.number().min(0).max(1),
+          seed: z.number().int().min(0).max(2_147_483_647)}), qualityPreset: z.enum(["recommended", "strict"])}),
+      annotations: queryHints,
+    }, (input, context) => {
+      const parsed = headless.readHeadlessDatasetPreparationRequest({version, operation: "data.preview-dataset-preparation", input}, input.hostIncarnationId as HeadlessHostIncarnationId);
+      return parsed.ok ? invoke(parsed.request, context.mcpReq.signal) : invalidAuthoring();
+    });
     const datasetId = z.string().min(1).max(160).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
     const query = (operation: "data.dataset-versions" | "data.compare-dataset-versions", input: {hostIncarnationId: string}, signal?: AbortSignal) => {
       const parsed = headless.parseHeadlessReadRequest({version, operation, input}, input.hostIncarnationId as HeadlessHostIncarnationId);

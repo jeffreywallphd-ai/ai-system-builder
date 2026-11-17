@@ -211,7 +211,7 @@ async function main() {
     const toolList = await client.listTools();
     assert.deepEqual(toolList.tools.map(tool => tool.name).sort(), [
       "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
-      "aisb_preview_build_plan", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file", "aisb_read_system",
+      "aisb_preview_build_plan", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file", "aisb_read_system",
       "aisb_request_build_plan_approval", "aisb_run_approved_build_step",
     ]);
     async function call(name:string, input:Record<string, unknown> = {}) {
@@ -607,6 +607,21 @@ async function main() {
     assert.deepEqual(committed.value.reference,{workspaceId,taskId,fileId,taskRevision:taskRevision+2});
     const replay = await run(saveFingerprint,approvedSave.revision,1);
     assert.deepEqual(replay,{ok:true,value:{...committed.value,kind:"replayed"}});
+    stage = "preview-managed-dataset-preparation";
+    const sourceStatus = await call("aisb_ingestion_status", {...scope, taskId});
+    assert.equal(sourceStatus.ok,true);
+    assert.equal(sourceStatus.value.state,"succeeded");
+    const preparation = await call("aisb_preview_dataset_preparation", {...scope,
+      sources: [{taskId, fileId, taskRevision: sourceStatus.value.revision}],
+      recipe: {kind: "provided-instruction-rows-v1", inputColumn: "name", outputColumn: "amount"},
+      split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"});
+    assert.equal(preparation.ok,true);
+    assert.equal(preparation.operation,"data.preview-dataset-preparation");
+    assert.equal(preparation.value.reviewRequired,true);
+    assert.equal(preparation.value.externalProviderCalls,0);
+    assert.equal(preparation.value.modelCalls,0);
+    assert.equal("command" in preparation.value,false);
+    checks.managed_dataset_preparation_preview_is_metadata_only = true;
     const followUp = await run(saveFingerprint,approvedSave.revision,2);
     assert.equal(followUp.ok,true);
     assert.equal(followUp.value.kind,"committed");

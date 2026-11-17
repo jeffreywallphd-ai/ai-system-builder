@@ -801,6 +801,39 @@ PUBLISHED_FORM_CHECKS = {
             "modules/adapters/transport/api-express/headless/tests/managed-browser-consent-route.integration.test.ts",
         ),
     },
+    "headless-dataset-preview-contract": {
+        "automatic_sources": (
+            "modules/contracts/headless/headless-dataset-preparation.ts",
+            "modules/contracts/headless/headless-protocol.ts",
+            "modules/contracts/headless/tests/headless-dataset-preparation.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case.ts",
+        ),
+        "sources": (
+            "modules/contracts/headless/headless-dataset-preparation.ts",
+            "modules/contracts/headless/headless-protocol.ts",
+            "modules/contracts/headless/tests/headless-dataset-preparation.unit.test.ts",
+            "modules/contracts/headless/headless-read-request.ts",
+            "modules/contracts/headless/tests/headless-read-request.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/headless-dataset-preparation.unit.test.ts",
+        ),
+        "command": (
+            "--import", "tsx", "--test", "--",
+            "modules/contracts/headless/tests/headless-dataset-preparation.unit.test.ts",
+            "modules/contracts/headless/tests/headless-read-request.unit.test.ts",
+            "modules/application/use-cases/ingestion-acquisition/tests/headless-dataset-preparation.unit.test.ts",
+        ),
+    },
+    "headless-data-definition-witnesses": {
+        "automatic_sources": ("dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts",),
+        "sources": (
+            "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts",
+            "docs/operations/comprehensive-ui-automation-current-census.json",
+            "docs/operations/headless-dataset-preparation-preview-census-history.json",
+        ),
+        "command": ("dev-tools/helpers/run_vitest_checks.mjs", "--",
+                    "dev-tools/scripts/qualification/tests/meaningful-journey-reporting.unit.test.ts"),
+    },
     "headless-data-desktop-plan-qualification": {
         "companion_to": "headless-data-task-status",
         "sources": ("dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",),

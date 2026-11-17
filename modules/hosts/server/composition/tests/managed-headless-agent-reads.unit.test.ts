@@ -6,11 +6,58 @@ import {HEADLESS_CONTRACT_VERSION, type HeadlessHostIncarnationId} from "../../.
 import {createOrganizationId} from "../../../../contracts/organization";
 import {systemBuilderSuccess, normalizeSystemBuilderSystemId, normalizeSystemBuilderTemplateId} from "../../../../contracts/system-builder";
 import {createWorkspaceId} from "../../../../contracts/workspace";
-import {normalizeIngestionTaskId, normalizeIngestionTaskFileId, type IngestionTaskRecord} from "../../../../contracts/ingestion";
+import {normalizeIngestionTaskId, normalizeIngestionTaskFileId, normalizeIngestionSourceSnapshotId, normalizeIngestionSha256Digest, type IngestionTaskRecord} from "../../../../contracts/ingestion";
 import {composeManagedAgentReads} from "../composeManagedAgentReads";
 import {fixture as datasetFixture, workspaceId as dataWorkspaceId, organizationId as dataOrganizationId,
   principalId as dataPrincipalId, createdAt as dataAt} from "../../../../application/use-cases/dataset-version/tests/headless-dataset-metadata.fixture";
 import {normalizeDatasetId, normalizeDatasetVersionId} from "../../../../contracts/dataset";
+
+test("Managed preparation preview releases only matching public metadata for current planning clients", async () => {
+  const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;
+  const organizationId = createOrganizationId("preview-fixture-org"), workspaceId = createWorkspaceId("preview-fixture-workspace");
+  const identity = {organizationId, principalId: "preview-fixture-principal"};
+  const planner = {...identity, purpose: "plan-review" as const};
+  const source = {taskId: normalizeIngestionTaskId("task.preview"), fileId: normalizeIngestionTaskFileId("file.preview"), taskRevision: 3};
+  const target = {hostIncarnationId, workspaceId, sources: [source],
+    recipe: {kind: "provided-instruction-rows-v1" as const, inputColumn: "question", outputColumn: "answer"},
+    split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended" as const};
+  const preview = {workspaceId, sources: [{...source, sourceSnapshotId: normalizeIngestionSourceSnapshotId("snapshot.preview"),
+    format: "csv" as const, sizeBytes: 32, digest: normalizeIngestionSha256Digest("sha256:" + "a".repeat(64)), licenseStatus: "unknown" as const}],
+    recipe: target.recipe, split: target.split, qualityPreset: target.qualityPreset, totalBytes: 32,
+    maximumRowsPerSource: 1000 as const, outputFormat: "jsonl" as const, reviewRequired: true as const, externalProviderCalls: 0 as const, modelCalls: 0 as const};
+  let live = true, allowed = true, altered = false, opens = 0;
+  let afterRead: (() => void) | undefined;
+  const at = "2026-11-17T00:00:00.000Z";
+  const read = composeManagedAgentReads({hostIncarnationId, contexts: {getCurrentOrganizationContext: () => identity},
+    workspaces: {async readWorkspace(id) {return {workspaceId: id, organizationId, displayName: "Fixture", status: "active", createdAt: at, updatedAt: at};}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      assert.deepEqual(requiredScopes, ["workspace:read", "artifact:read"]);
+      if (!allowed) throw new Error("Synthetic denied");
+    }},
+    systems: {read: {async execute() {assert.fail();}}, listTemplates: {async execute() {assert.fail();}}},
+    async getDatasetInputs() {opens++; return {async execute(input, authority) {
+      assert.deepEqual(input, {version: HEADLESS_CONTRACT_VERSION, operation: "data.preview-dataset-preparation", input: target});
+      assert.deepEqual(authority.context, {...identity, workspaceId});
+      assert.equal(authority.hostIncarnationId, hostIncarnationId);
+      if (!await authority.stillAllowed()) return {ok: false, code: "headless.forbidden" as const};
+      afterRead?.();
+      return {ok: true, prepared: {command: {sourceArtifactIds: ["private-source"]} as never,
+        preview: {...preview, ...(altered ? {privateCommand: "private-source"} : {})}}} as const;
+    }};},
+  });
+  const query = {version: HEADLESS_CONTRACT_VERSION, operation: "data.preview-dataset-preparation" as const, input: target};
+  await read({version: HEADLESS_CONTRACT_VERSION, operation: "host.describe", input: {}}, planner, () => live);
+  assert.equal(opens, 0);
+  const denied = {ok: false, code: "headless.forbidden"};
+  assert.deepEqual(await read(query, identity, () => live), denied);
+  allowed = false; assert.deepEqual(await read(query, planner, () => live), denied);
+  assert.equal(opens, 0); allowed = true;
+  assert.deepEqual(await read(query, planner, () => live), {ok: true, operation: query.operation, value: preview});
+  altered = true;
+  assert.deepEqual(await read(query, planner, () => live), {ok: false, code: "headless.unavailable"});
+  altered = false; afterRead = () => {live = false;};
+  assert.deepEqual(await read(query, planner, () => live), denied);
+});
 
 test("Managed dataset queries keep tenant context and planner artifact permission current through reply", async () => {
   const hostIncarnationId = randomUUID() as HeadlessHostIncarnationId;

@@ -17,7 +17,7 @@ import { createDesktopPinnedLoopbackAgent, startDesktopHeadlessLoopback } from "
 import { HEADLESS_CONTRACT_VERSION as version, HEADLESS_LOCAL_FILE_PREVIEW_PATH, HEADLESS_PLAN_REVIEW_PATH, HEADLESS_PLAN_STEP_PATH, HEADLESS_READ_OPERATIONS,
   isHeadlessHostIncarnationId, parseHeadlessReadRequest, readHeadlessPlanReviewAgentRequest,
   readHeadlessPlanReviewAgentResult, type HeadlessChangeCursor } from "../../../../contracts/headless";
-import type {HeadlessDatasetVersionSummary} from "../../../../contracts/headless";
+import type {HeadlessDatasetVersionSummary, HeadlessDatasetPreparationRequest} from "../../../../contracts/headless";
 import {normalizeDatasetVersionId} from "../../../../contracts/dataset";
 import { createOrganizationId } from "../../../../contracts/organization";
 import { normalizeIngestionTaskFileId, normalizeIngestionTaskId } from "../../../../contracts/ingestion";
@@ -35,7 +35,7 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
 const planReviewTools = ["aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
-  "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions"];
+  "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions", "aisb_preview_dataset_preparation"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
 const dataStatusTool = "aisb_ingestion_status";
@@ -47,6 +47,13 @@ const datasetSummary: HeadlessDatasetVersionSummary = {versionId: normalizeDatas
   artifactCount: 4, parentVersionId: null, splitSeed: 42, recipeDigest: `sha256:${"b".repeat(64)}`,
   quality: {policyFingerprint: `sha256:${"c".repeat(64)}`, reportFingerprint: `sha256:${"d".repeat(64)}`},
   splits: [{role: "train", rowCount: 6}, {role: "validation", rowCount: 2}, {role: "test", rowCount: 2}]};
+function preparationPreview(input: HeadlessDatasetPreparationRequest["input"]) {
+  return {workspaceId: input.workspaceId, sources: input.sources.map((source, index) => ({...source,
+    sourceSnapshotId: "snapshot.preview." + index, format: "csv", sizeBytes: 32,
+    digest: "sha256:" + "a".repeat(64), licenseStatus: "unknown"})),
+    recipe: input.recipe, split: input.split, qualityPreset: input.qualityPreset, totalBytes: input.sources.length * 32,
+    maximumRowsPerSource: 1000, outputFormat: "jsonl", reviewRequired: true, externalProviderCalls: 0, modelCalls: 0};
+}
 
 // This fixture opens several real CLI processes with empty tsx caches and
 // waits once for the managed request deadline. Bound the whole fixture separately.
@@ -70,6 +77,8 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
   let displacedCapabilities = false;
   let displacedProviderReply = false;
   let invalidStatusReply = false;
+  let changedPreparation = false;
+  let sourceReady = true;
   const listener = createServer({key: certificate.private, cert: certificate.cert}, (request, response) => {
     let body = "";
     request.on("data", (chunk: Buffer) => {body += chunk.toString();});
@@ -115,6 +124,15 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
           actions:["systems.rename"], approval:"required",
         }});
         response.writeHead(200, {"Content-Type":"application/json; charset=utf-8", "Content-Length":Buffer.byteLength(payload)}).end(payload);
+        return;
+      }
+      if (input.operation === "data.preview-dataset-preparation") {
+        const payload = JSON.stringify(sourceReady ? {ok: true, operation: input.operation, value: {
+          ...preparationPreview(input.input),
+          ...(invalidStatusReply ? {command: {sourceArtifactIds: ["private-source"]}} : {}),
+          ...(changedPreparation ? {recipe: {...input.input.recipe, outputColumn: "changed"}} : {}),
+        }} : {ok: false, code: "headless.source-not-ready"});
+        response.writeHead(sourceReady ? 200 : 409, {"Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(payload)}).end(payload);
         return;
       }
       if (input.operation === "data.ingestion-status") {
@@ -290,6 +308,22 @@ test("managed stdio binds one verified TLS origin and exact organization and wor
     displacedCapabilities = true;
     assert.deepEqual(await capabilities(), {ok:false, code:"headless.unavailable"});
     const planner = await connect({NODE_EXTRA_CA_CERTS:ca,AISB_HEADLESS_ENABLE_PLAN_REVIEW:"1"});
+    const preparation = {...planBase, sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],
+      recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
+      split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"};
+    const previewPreparation = async (input = preparation) => resultText(await planner.callTool({name: "aisb_preview_dataset_preparation", arguments: input}));
+    assert.deepEqual(await previewPreparation(), {ok: true, operation: "data.preview-dataset-preparation", value: preparationPreview(preparation as never)});
+    invalidStatusReply = true;
+    assert.deepEqual(await previewPreparation(), {ok: false, code: "headless.unavailable"});
+    invalidStatusReply = false; changedPreparation = true;
+    assert.deepEqual(await previewPreparation(), {ok: false, code: "headless.unavailable"});
+    changedPreparation = false; sourceReady = false;
+    assert.deepEqual(await previewPreparation(), {ok: false, code: "headless.source-not-ready"});
+    sourceReady = true;
+    const beforeBadPreparation = requests.length;
+    assert.deepEqual(await previewPreparation({...preparation, sources: [preparation.sources[0], preparation.sources[0]]}),
+      {ok: false, code: "headless.invalid-request"});
+    assert.equal(requests.length, beforeBadPreparation);
     for (const [name, target] of [["aisb_dataset_versions", {datasetId: "dataset.synthetic", versionIds: ["version.001"]}],
       ["aisb_compare_dataset_versions", {fromVersionId: "version.001", toVersionId: "version.002"}]] as const) {
       const query = {...planBase, ...target};
@@ -364,6 +398,7 @@ test("the plan-review stdio mode can run an exact approved step after the app re
   let discloseProviderPath = false;
   let statusExtra = false;
   let wrongStatusTask = false;
+  let staleDatasetSource = false;
   const sourceTarget = { hostIncarnationId, workspaceId, taskId: normalizeIngestionTaskId("ingestion.fixture"),
     fileId: normalizeIngestionTaskFileId("file.fixture"), taskRevision: 4 };
   const sourceValue = { workspaceId, taskId: sourceTarget.taskId, fileId: sourceTarget.fileId, taskRevision: 4,
@@ -393,6 +428,10 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       if (decoded.request.operation === "data.dataset-versions") return {ok: true, operation: decoded.request.operation,
         value: {workspaceId, datasetId: decoded.request.input.datasetId, versions: [datasetSummary],
           ...(statusExtra ? {path: "private"} : {})}};
+      if (decoded.request.operation === "data.preview-dataset-preparation") return staleDatasetSource
+        ? {ok: false, code: "headless.stale"}
+        : {ok: true, operation: decoded.request.operation,
+          value: {...preparationPreview(decoded.request.input), ...(statusExtra ? {command: {sourceArtifactIds: ["private-source"]}} : {})} as never};
       if (decoded.request.operation === "data.compare-dataset-versions") return {ok: true, operation: decoded.request.operation,
         value: {fromVersionId: decoded.request.input.fromVersionId, toVersionId: decoded.request.input.toVersionId,
           identical: false, rowDelta: 2, sources: {added: 0, removed: 0, changed: 0}, changedArtifactRoles: ["dataset"],
@@ -490,6 +529,18 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     statusExtra = false; wrongStatusTask = true;
     assert.deepEqual(await call(dataStatusTool, statusTarget), {ok: false, code: "headless.unavailable"});
     wrongStatusTask = false;
+    const datasetPreparation = {hostIncarnationId, workspaceId,
+      sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],
+      recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
+      split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"};
+    assert.deepEqual(await call("aisb_preview_dataset_preparation", datasetPreparation),
+      {ok: true, operation: "data.preview-dataset-preparation", value: preparationPreview(datasetPreparation as never)});
+    statusExtra = true;
+    assert.deepEqual(await call("aisb_preview_dataset_preparation", datasetPreparation), {ok: false, code: "headless.unavailable"});
+    statusExtra = false;
+    staleDatasetSource = true;
+    assert.deepEqual(await call("aisb_preview_dataset_preparation", datasetPreparation), {ok: false, code: "headless.stale"});
+    staleDatasetSource = false;
     for (const [name, target] of [["aisb_dataset_versions", {datasetId: "dataset.synthetic", versionIds: ["version.001"]}],
       ["aisb_compare_dataset_versions", {fromVersionId: "version.001", toVersionId: "version.002"}]] as const) {
       const query = {hostIncarnationId, workspaceId, ...target};

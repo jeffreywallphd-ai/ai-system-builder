@@ -4,6 +4,7 @@ import {
   HEADLESS_CONTRACT_VERSION, parseHeadlessReadRequest, parseHeadlessSemanticBatchRequest, parseHeadlessSystemManagementRequest,
   readHeadlessIngestionStatusValue,
   isHeadlessDataReadOperation, readHeadlessDatasetVersionBatch, readHeadlessDatasetComparison,
+  readHeadlessDatasetPreparationPreview,
   readHeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadOperation,
   isUiControlId, readHeadlessWindowRequest, type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
@@ -32,6 +33,7 @@ const availableReads: readonly HeadlessReadOperation[] = ["host.describe", "temp
 const readFailures: ReadonlySet<string> = new Set([
   "headless.invalid-request", "headless.unsupported-version", "headless.unsupported-operation", "headless.host-changed",
   "headless.forbidden", "headless.unavailable", "headless.not-found", "headless.result-too-large", "headless.stale",
+  "headless.source-not-ready",
 ]);
 type Authoring = HeadlessSemanticBatchRequest | HeadlessSystemManagementRequest;
 type AuthAdmission = {
@@ -230,6 +232,11 @@ async function respond<Agent>(
       const value = readHeadlessDatasetVersionBatch(result.value, parsed.request.input);
       return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
     }
+    if (result.operation === "data.preview-dataset-preparation") {
+      if (parsed.request.operation !== "data.preview-dataset-preparation") return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessDatasetPreparationPreview(result.value, parsed.request.input);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
+    }
     if (result.operation === "data.compare-dataset-versions") {
       if (parsed.request.operation !== "data.compare-dataset-versions") return failure(response, 503, "headless.unavailable");
       const value = readHeadlessDatasetComparison(result.value, parsed.request.input);
@@ -304,6 +311,7 @@ function requestErrorStatus(code: string) {
     case "headless.idempotency-conflict":
     case "headless.idempotency-expired":
     case "headless.stale":
+    case "headless.source-not-ready":
     case "headless.stale-revision":
     case "headless.host-changed": return 409;
     case "headless.invalid-request":

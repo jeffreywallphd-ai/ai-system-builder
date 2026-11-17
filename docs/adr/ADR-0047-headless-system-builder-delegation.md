@@ -169,3 +169,10 @@ The fixed tools expose at most 16 selected versions and exact same-dataset compa
 only to plan-review registrations with current artifact read access. These
 metadata-only queries do not initialize model or preparation runtimes and grant
 no content export, dataset mutation or publication authority.
+
+The finite dataset-preparation preview uses the same plan-review and current
+artifact read boundary. It validates exact completed local source revisions,
+provided-row mapping, reproducible split and quality preset through the existing
+ingestion point readers. Hosts return only the matching bounded public preview;
+compiled commands and storage keys stay private. Preview starts no runtime,
+model, provider request or mutation and grants no execution approval.

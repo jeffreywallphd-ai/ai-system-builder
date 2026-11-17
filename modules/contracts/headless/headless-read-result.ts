@@ -6,6 +6,7 @@ import type { HeadlessSystemManagementRequest } from "./headless-system-manageme
 import type { HeadlessIngestionStatus } from "./headless-data-task-status";
 import type { HeadlessDatasetVersionBatch } from "./headless-dataset-metadata";
 import type { DatasetVersionComparison } from "../dataset";
+import type {HeadlessDatasetPreparationPreview} from "./headless-dataset-preparation";
 import {
   HEADLESS_CONTRACT_VERSION,
   type HeadlessChangeCursor,
@@ -55,6 +56,7 @@ export type HeadlessReadResult =
   | { readonly ok: true; readonly operation: "data.ingestion-status"; readonly value: HeadlessIngestionStatus }
   | { readonly ok: true; readonly operation: "data.dataset-versions"; readonly value: HeadlessDatasetVersionBatch }
   | { readonly ok: true; readonly operation: "data.compare-dataset-versions"; readonly value: DatasetVersionComparison }
+  | { readonly ok: true; readonly operation: "data.preview-dataset-preparation"; readonly value: HeadlessDatasetPreparationPreview }
   | {
       readonly ok: true;
       readonly operation: "host.describe";
@@ -97,5 +99,5 @@ export type HeadlessReadResult =
   | {
       readonly ok: false;
       readonly code: Extract<HeadlessReadRequestParseResult, { ok: false }>["code"] |
-        "headless.forbidden" | "headless.unavailable" | "headless.not-found" | "headless.result-too-large" | "headless.stale";
+        "headless.forbidden" | "headless.unavailable" | "headless.not-found" | "headless.result-too-large" | "headless.stale" | "headless.source-not-ready";
     };

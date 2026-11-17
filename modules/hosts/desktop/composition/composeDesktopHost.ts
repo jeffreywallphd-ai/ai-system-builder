@@ -2258,6 +2258,11 @@ export function composeDesktopHost(
             workspaceRepository: startupWorkspaceShell.workspaceRepository,
             getUseCases: () => systemBuilder.useCases,
             getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
+            getDatasetInputs: organizationDocuments ? async () => {
+              const {createStructuredIngestionAcquisitionRepository} = await import("../../../adapters/persistence/ingestion");
+              const {PrepareHeadlessDatasetInputsUseCase} = await import("../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case");
+              return new PrepareHeadlessDatasetInputsUseCase(createStructuredIngestionAcquisitionRepository(organizationDocuments));
+            } : undefined,
             getDatasetQueries: organizationDocuments ? async () => {
               const {ReadDatasetVersionUseCase, CompareDatasetVersionsUseCase} =
                 await import("../../../application/use-cases/dataset-version/dataset-version-read.use-cases");

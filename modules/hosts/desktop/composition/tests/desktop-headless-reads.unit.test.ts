@@ -13,7 +13,7 @@ import { createDesktopSystemBuilderRequest, DESKTOP_SYSTEM_BUILDER_CHANNELS } fr
 import { createOrganizationId } from "../../../../contracts/organization";
 import type { OrganizationRole } from "../../../../contracts/organization";
 import { createWorkspaceId } from "../../../../contracts/workspace";
-import { normalizeIngestionTaskId, normalizeIngestionTaskFileId, type IngestionTaskRecord } from "../../../../contracts/ingestion";
+import { normalizeIngestionTaskId, normalizeIngestionTaskFileId, normalizeIngestionSourceSnapshotId, normalizeIngestionSha256Digest, type IngestionTaskRecord } from "../../../../contracts/ingestion";
 import { composeDesktopHeadlessReads, type DesktopHeadlessReadGrant } from "../composeDesktopHeadlessReads";
 import { composeDesktopHost } from "../composeDesktopHost";
 import {fixture as datasetFixture, workspaceId as dataWorkspaceId, organizationId as dataOrganizationId,
@@ -32,6 +32,48 @@ const grant: DesktopHeadlessReadGrant = {
   organizationId, principalId, registeredClientId: "fixture-client",
   workspaceIds: [workspaceId], operations: HEADLESS_READ_OPERATIONS,
 };
+
+test("Desktop preparation previews keep the compiled command private and require a current planning grant", async () => {
+  const source = {taskId: normalizeIngestionTaskId("task.preview"), fileId: normalizeIngestionTaskFileId("file.preview"), taskRevision: 3};
+  const target = {hostIncarnationId, workspaceId, sources: [source],
+    recipe: {kind: "provided-instruction-rows-v1" as const, inputColumn: "question", outputColumn: "answer"},
+    split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended" as const};
+  const preview = {workspaceId, sources: [{...source, sourceSnapshotId: normalizeIngestionSourceSnapshotId("snapshot.preview"),
+    format: "csv" as const, sizeBytes: 32, digest: normalizeIngestionSha256Digest("sha256:" + "a".repeat(64)), licenseStatus: "unknown" as const}],
+    recipe: target.recipe, split: target.split, qualityPreset: target.qualityPreset, totalBytes: 32,
+    maximumRowsPerSource: 1000 as const, outputFormat: "jsonl" as const, reviewRequired: true as const, externalProviderCalls: 0 as const, modelCalls: 0 as const};
+  let current: DesktopHeadlessReadGrant = {...grant, planReview: true};
+  let opens = 0, allowed = true, extra = false;
+  let afterRead: (() => void) | undefined;
+  const handler = composeDesktopHeadlessReads({hostIncarnationId, identity: grant,
+    workspaceRepository: {async readWorkspace(id) {return {workspaceId: id, organizationId, displayName: "Fixture", status: "active", createdAt: at, updatedAt: at};}},
+    authorization: {async authorizeWorkspaceOperation({requiredScopes}) {
+      if (requiredScopes.includes("artifact:read") && !allowed) throw new Error("Synthetic denied");
+    }},
+    getUseCases() {assert.fail("No system or runtime provider is needed.");}, isOpen: () => true,
+    async getDatasetInputs() {opens++; return {async execute(input, authority) {
+      assert.deepEqual(input, request("data.preview-dataset-preparation", target));
+      assert.deepEqual(authority.context, {workspaceId, organizationId, principalId});
+      assert.equal(authority.hostIncarnationId, hostIncarnationId);
+      if (!await authority.stillAllowed()) return {ok: false, code: "headless.forbidden" as const};
+      afterRead?.();
+      return {ok: true, prepared: {command: {sourceArtifactIds: ["private-source"]} as never,
+        preview: {...preview, ...(extra ? {privateCommand: "private-source"} : {})}}} as const;
+    }};},
+  });
+  const query = request("data.preview-dataset-preparation", target);
+  await handler(request("host.describe", {}), async () => current);
+  assert.equal(opens, 0);
+  assert.deepEqual(await handler(query, async () => grant), forbidden);
+  allowed = false;
+  assert.deepEqual(await handler(query, async () => current), forbidden);
+  assert.equal(opens, 0); allowed = true;
+  assert.deepEqual(await handler(query, async () => current), {ok: true, operation: "data.preview-dataset-preparation", value: preview});
+  extra = true;
+  assert.deepEqual(await handler(query, async () => current), {ok: false, code: "headless.unavailable"});
+  extra = false; afterRead = () => {current = grant;};
+  assert.deepEqual(await handler(query, async () => current), forbidden);
+});
 
 test("Desktop dataset queries stay lazy and use current plan-review, artifact and tenant authority", async () => {
   const {queries} = await datasetFixture(2);

@@ -36,6 +36,10 @@ test("accepts only the declared finite read inputs and returns a detached reques
     "data.ingestion-status": { ...scope, taskId: "intake.fixture" },
     "data.dataset-versions": {...scope, datasetId: "dataset.fixture", versionIds: ["version.001"]},
     "data.compare-dataset-versions": {...scope, fromVersionId: "version.first", toVersionId: "version.second"},
+    "data.preview-dataset-preparation": {...scope,
+      sources: [{taskId: "task.synthetic", fileId: "file.synthetic", taskRevision: 1}],
+      recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
+      split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"},
   };
   assert.deepEqual([...HEADLESS_READ_OPERATIONS].sort(), Object.keys(inputs).sort());
   for (const operation of HEADLESS_READ_OPERATIONS) {

@@ -1,5 +1,13 @@
 # Contributor Control Plane
 
+Headless dataset previews have an exact `headless-dataset-preview-contract`
+check for passive requests, minimized replies and current source admission.
+`headless-data-definition-witnesses` runs the actual Vitest reporting guard for
+the refreshed UI definition. Neither check asserts host execution or parent
+qualification. The catalog removes generic ownership fallback only for declared
+sources covered by selected checks; unknown neighbors and an explicitly requested
+generic check keep that fallback. The packaged Desktop journey remains separate.
+
 For clear user wording, update the versioned
 `docs/operations/roadmap-user-descriptions.json` with the technical source in the
 same change. Independently compare every clause before publication. The production

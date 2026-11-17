@@ -6,10 +6,12 @@ import type { HeadlessIngestionStatusRequest } from "./headless-data-task-status
 import { normalizeDatasetId, normalizeDatasetVersionId } from "../dataset";
 import type { HeadlessDatasetMetadataRequest } from "./headless-dataset-metadata";
 import { HEADLESS_DATASET_VERSION_READ_LIMIT } from "./headless-dataset-metadata";
+import {readHeadlessDatasetPreparationRequest, type HeadlessDatasetPreparationRequest} from "./headless-dataset-preparation";
+import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
+export {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
 
-export const HEADLESS_CONTRACT_VERSION = "aisb-headless-v1";
 export const HEADLESS_DATA_READ_OPERATIONS = Object.freeze([
-  "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions",
+  "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation",
 ] as const);
 export function isHeadlessDataReadOperation(value: unknown): value is typeof HEADLESS_DATA_READ_OPERATIONS[number] {
   return HEADLESS_DATA_READ_OPERATIONS.some(operation => operation === value);
@@ -31,10 +33,6 @@ export const HEADLESS_READ_OPERATIONS = Object.freeze([
 ] as const);
 
 export type HeadlessReadOperation = (typeof HEADLESS_READ_OPERATIONS)[number];
-
-export type HeadlessHostIncarnationId = string & {
-  readonly __headlessHostIncarnationIdBrand: unique symbol;
-};
 
 type HostTarget = {
   readonly hostIncarnationId: HeadlessHostIncarnationId;
@@ -64,6 +62,7 @@ type ReadRequest<Operation extends HeadlessReadOperation, Input> = {
 export type HeadlessReadRequest =
   | HeadlessIngestionStatusRequest
   | HeadlessDatasetMetadataRequest
+  | HeadlessDatasetPreparationRequest
   | ReadRequest<"host.describe", Record<string, never>>
   | ReadRequest<"workspaces.list", HostTarget>
   | ReadRequest<"systems.list", WorkspaceTarget>
@@ -86,12 +85,6 @@ export type HeadlessReadRequestParseResult =
         | "headless.unsupported-operation"
         | "headless.host-changed";
     };
-
-export function isHeadlessHostIncarnationId(value: unknown): value is HeadlessHostIncarnationId {
-  // Canonical random UUID v4, minted by the host for this process lifetime.
-  return typeof value === "string" && value.length === 36 &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value);
-}
 
 function exactDataRecord(value: unknown, names: readonly string[]): Record<string, unknown> | undefined {
   if (typeof value !== "object" || value === null) return undefined;
@@ -164,6 +157,7 @@ export function parseHeadlessReadRequest(
   if (!isHeadlessReadOperation(operation)) return { ok: false, code: "headless.unsupported-operation" };
 
   const version = HEADLESS_CONTRACT_VERSION;
+  if (operation === "data.preview-dataset-preparation") return readHeadlessDatasetPreparationRequest(value, currentHost);
   if (operation === "host.describe") {
     if (!exactDataRecord(record.input, [])) return invalid();
     return { ok: true, request: { version, operation, input: {} } };
