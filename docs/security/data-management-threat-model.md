@@ -13,6 +13,16 @@ separate from portable source checks.
 
 ## Current preparation source-list admission
 
+The Hugging Face namespace request reads one JSON listing from its configured
+provider endpoint. It refuses redirects, uses a 15-second fetch deadline, and
+limits the response to 512 KiB and 100 rows. It returns safe repository identities
+and at most eight recognized license codes. Unrecognized provider strings become
+an unknown marker and conflicting duplicate repository rows are omitted.
+License labels and filters do not grant repository access, extend acquisition
+authority, or verify reuse rights. Existing exact file revision and task admission
+checks remain authoritative. Repository-level labels do not bind terms to
+collected files.
+
 Desktop retires source reads with an exact workspace/client scope and a monotonic
 request identity. Thin-client source effects capture their own lifetime rather
 than accepting the current value of a mutable mounted flag. Scope changes,

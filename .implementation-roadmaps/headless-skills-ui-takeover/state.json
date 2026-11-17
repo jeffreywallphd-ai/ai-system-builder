@@ -1187,6 +1187,16 @@
       "recordedAt": "2026-11-14T11:23:28Z",
       "summary": "The user requested one Headless roadmap for the existing delegated host and takeover work plus the complete AI System Builder product workflow from a written request. The requested approval design supports one bounded plan or each change individually, with equivalent authorized chat and in-app approval and clear permission disclosure.",
       "targetIncrementId": "revocable-desktop-presentation"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "licensed-data-collection-clarification",
+      "impact": "within-increment",
+      "nextAction": "Surface bounded provider declarations and filters in the existing picker. Then bind the exact source revision and retain the declaration as provenance on successful collection. Preserve authorization, limits, and explicit approvals.",
+      "recordedAt": "2026-11-17T04:02:54Z",
+      "summary": "Let users select open Creative Commons, other open licenses, or all sources during collection. Make non-open licenses and missing or unclear terms visible and keep the provider declaration with the exact saved source.",
+      "targetIncrementId": "data-acquisition-and-datasets"
     }
   ],
   "finalApproval": null,
@@ -1730,6 +1740,12 @@
       "recordedAt": "2026-11-15T08:37:21Z",
       "sequence": 90,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "34bfdf7ef6716fd2e1e5efc33acb0bbc0aade03b43f8c132acc8d5e6acfdcff2",
+      "recordedAt": "2026-11-17T04:02:54Z",
+      "sequence": 91,
+      "type": "feedback-recorded"
     }
   ],
   "increments": [
@@ -3072,5 +3088,5 @@
   "schemaVersion": 1,
   "slug": "headless-skills-ui-takeover",
   "status": "executing",
-  "updatedAt": "2026-11-15T08:37:21Z"
+  "updatedAt": "2026-11-17T04:02:54Z"
 }

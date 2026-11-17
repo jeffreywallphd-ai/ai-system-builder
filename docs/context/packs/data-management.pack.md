@@ -33,14 +33,13 @@
   accepts user-bounded explicit pages or one sitemap, and has no recursive crawl or permissive robots override.
   Compensate only known new capture keys. Both hosts delete each catalog entry after its byte cleanup succeeds.
   Byte denial preserves metadata. Old snapshots, unknown data and native/uncertain recovery stay separate.
-- The shared Hugging Face selector browses a bounded namespace and bounded
-  importable file list through host clients, lets users check exact files, and
-  passes only adapter-returned immutable revisions to the governed task. Do not
-  reintroduce free-form provider paths or mutable revision entry in the primary
-  workflow. Provider users and organizations are source coordinates, never
-  application organization scope; the host must add authoritative organization
-  and principal context and reject missing or conflicting context before task
-  creation.
+- The shared Hugging Face selector browses bounded datasets and files and filters
+  provider-declared licenses. All data retains non-open and unknown declarations.
+  Pass only checked files at adapter-returned revisions to the governed task.
+  Keep free-form provider paths and mutable revision entry outside the primary
+  workflow. A provider namespace identifies a source. The host supplies the
+  authorized application organization and principal, and rejects missing or
+  conflicting context before task creation.
 - Staging recovers omitted byte-descriptor names and media types from the
   workspace-authorized catalog; it never guesses JSON. Provider registration
   persists task workspace on catalog and imported-source records. Parquet

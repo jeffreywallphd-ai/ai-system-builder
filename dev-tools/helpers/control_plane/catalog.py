@@ -1021,6 +1021,7 @@ QUALIFICATION_PROFILES = (
     "model-download-ownership",
     "notification-dismiss-focus",
     "desktop-prerequisite-bootstrap",
+    "headless-data-license-discovery",
     "security-authority", "security-runtime", "security-records", "security-tooling",
     "functionality-browse", "functionality-tasks", "functionality-context", "functionality-outcomes",
     "functional-host-ui", "review-site", "settings-ui", "security-status-ui", "operational-ui", "asset-authoring-ui", "system-management-ui", "system-build-publication-ui", "system-runtime-conversation-ui", "system-canvas-authoring-ui", "desktop-startup-ui", "host-memory-fixture", "ingestion-publication", "ocr-provider-contract", "dataset-version-replay", "dataset-version-browser", "dataset-semantic-curation", "native-host-policy", "host-setup-policy", "comfyui-host-policy",
@@ -1028,6 +1029,9 @@ QUALIFICATION_PROFILES = (
 
 
 QUALIFICATION_PROFILE_PATTERNS = {
+    "headless-data-license-discovery": [
+        "modules/contracts/storage/huggingface-dataset-license.ts",
+    ],
     "desktop-prerequisite-bootstrap": [
         "dev-tools/scripts/bootstrap/desktop-dev.mjs",
         "dev-tools/scripts/bootstrap/desktop-python.mjs",

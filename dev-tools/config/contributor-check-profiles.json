@@ -1,6 +1,36 @@
 {
   "schema_version": "contributor-check-profiles-v1",
   "profiles": {
+    "headless-data-license-discovery": {
+      "test_paths": [
+        "modules/adapters/storage/huggingface/tests/createHuggingFaceArtifactRepoStorageAdapter.unit.test.ts",
+        "modules/adapters/storage/huggingface/tests/datasetParquetBrowseSession.unit.test.ts",
+        "modules/application/use-cases/tests/browse-huggingface-repo-browse.use-cases.unit.test.ts",
+        "modules/adapters/transport/ipc-electron/tests/register-artifact-browser-ipc.unit.test.ts",
+        "modules/adapters/transport/api-express/tests/register-artifact-repo-api-routes.unit.test.ts",
+        "modules/ui/shared/data-management/tests/GuidedIngestionLicenseDiscovery.ui.test.tsx",
+        "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx"
+      ],
+      "source_paths": [
+        "modules/contracts/storage/huggingface-dataset-license.ts",
+        "modules/contracts/storage/index.ts",
+        "modules/contracts/api/huggingface-namespace-datasets-api-contract.ts",
+        "modules/contracts/ipc/desktop-huggingface-namespace-datasets-contract.ts",
+        "modules/application/ports/storage/huggingface-repo-browser.port.ts",
+        "modules/adapters/storage/huggingface/createHuggingFaceArtifactRepoStorageAdapter.ts",
+        "modules/adapters/storage/huggingface/tests/createHuggingFaceArtifactRepoStorageAdapter.unit.test.ts",
+        "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+        "modules/ui/shared/data-management/README.md",
+        "modules/ui/shared/data-management/tests/GuidedIngestionLicenseDiscovery.ui.test.tsx",
+        "modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
+        "modules/adapters/storage/huggingface/tests/datasetParquetBrowseSession.unit.test.ts",
+        "modules/application/use-cases/tests/browse-huggingface-repo-browse.use-cases.unit.test.ts",
+        "modules/adapters/transport/ipc-electron/tests/register-artifact-browser-ipc.unit.test.ts",
+        "modules/adapters/transport/api-express/tests/register-artifact-repo-api-routes.unit.test.ts",
+        "dev-tools/config/contributor-check-profiles.json",
+        "dev-tools/helpers/control_plane/catalog.py"
+      ]
+    },
     "desktop-prerequisite-bootstrap": {
       "test_paths": [
         "dev-tools/scripts/bootstrap/desktop-prerequisites.unit.test.mjs",

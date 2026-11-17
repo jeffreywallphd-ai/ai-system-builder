@@ -9,18 +9,22 @@ import {
   createRetrieveArtifactFromRepoSuccessResult,
   createStoreArtifactInRepoFailureResult,
   createStoreArtifactInRepoSuccessResult,
+  readHuggingFaceDatasetLicenseIds,
   type ArtifactRepoTarget,
   type HasArtifactInRepoRequest,
+  type HuggingFaceDatasetSummary,
   type RetrieveArtifactFromRepoRequest,
   type StoreArtifactInRepoRequest,
 } from "../../../contracts/storage";
-import { SecureEgressBroker } from "../../security/egress";
+import { readBoundedWebResponse, SecureEgressBroker } from "../../security/egress";
 import { createDatasetParquetBrowseSession, DatasetBrowseFailure, normalizeDatasetBrowseRepository } from "./datasetParquetBrowseSession";
 
 const HUGGING_FACE_PROVIDER = "huggingface" as const;
 const DEFAULT_REVISION = "main" as const;
 const CONVERTED_PARQUET_REVISION = "refs/convert/parquet" as const;
 const DEFAULT_HUB_BASE_URL = "https://huggingface.co" as const;
+const maximumNamespaceDatasets = 100;
+const maximumNamespaceMetadataBytes = 512 * 1024;
 
 type HuggingFaceRepoType = "dataset" | "model";
 
@@ -653,39 +657,48 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
 
   function normalizeNamespace(namespace: string): string {
     const normalized = namespace.trim();
-    if (!normalized) {
-      throw new HuggingFaceAdapterValidationError("namespace must be a non-empty string.");
+    if (!normalized || normalized.length > 96) {
+      throw new HuggingFaceAdapterValidationError("namespace length is invalid.");
     }
     return normalized;
   }
 
-  async function fetchJsonFromHub<T>(
-    path: string,
-    operation: HuggingFaceOperation,
-    context: ApplicationRequestContext,
+  async function fetchNamespaceDatasetCards(
+    namespace: string,
     accessToken: string | undefined,
-  ): Promise<T> {
-    const headers: Record<string, string> = {};
+  ): Promise<unknown> {
+    const headers: Record<string, string> = { accept: "application/json" };
     const token = accessToken?.trim();
     if (token) {
       headers.authorization = `Bearer ${token}`;
     }
 
-    const response = await resolvedFetchImplementation(`${hubBaseUrl}${path}`, { headers });
+    const endpoint = `${hubBaseUrl}/api/datasets?author=${encodeURIComponent(namespace)}&limit=${maximumNamespaceDatasets}&expand=cardData`;
+    const response = await resolvedFetchImplementation(endpoint, {
+      headers, redirect: "error", signal: AbortSignal.timeout(15_000),
+    });
     if (!response.ok) {
-      throw mapProviderStatusError(operation, response.status, token, response.statusText);
+      throw mapProviderStatusError("listNamespaceDatasets", response.status, token, undefined);
     }
 
     try {
-      return await response.json() as T;
-    } catch (error) {
-      throw createContractError("internal", `Hugging Face ${operation} returned invalid JSON.`, {
-        details: {
-          requestId: context.requestId,
-          correlationId: context.correlationId,
-          reason: error instanceof Error ? error.message : String(error),
-        },
+      if (response.redirected || (response.url && response.url !== endpoint)) {
+        throw new Error("Unexpected provider endpoint.");
+      }
+      const metadataHeaders = new Headers();
+      for (const field of ["content-type", "content-length"]) {
+        const value = response.headers.get(field);
+        if (value !== null) metadataHeaders.set(field, value);
+      }
+      const bytes = await readBoundedWebResponse({
+        response: new Response(response.body ?? null, { headers: metadataHeaders }),
+        maximumBytes: maximumNamespaceMetadataBytes,
+        allowedMediaTypes: ["application/json"],
       });
+      return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    } catch {
+      void response.body?.cancel().catch(() => {});
+      throw createContractError("internal", "Hugging Face dataset metadata could not be read safely.");
     }
   }
 
@@ -1107,13 +1120,8 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     try {
       accessToken = await getAccessToken();
       const normalizedNamespace = normalizeNamespace(namespace);
-      const payload = await fetchJsonFromHub<Array<{ id?: unknown }>>(
-        `/api/datasets?author=${encodeURIComponent(normalizedNamespace)}&limit=100`,
-        "listNamespaceDatasets",
-        requestContext,
-        accessToken,
-      );
-      if (!Array.isArray(payload)) {
+      const payload = await fetchNamespaceDatasetCards(normalizedNamespace, accessToken);
+      if (!Array.isArray(payload) || payload.length > maximumNamespaceDatasets) {
         return {
           ok: false as const,
           error: toRepoBrowserError(
@@ -1123,16 +1131,28 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
         };
       }
 
-      const datasets = payload
-        .map((entry) => (typeof entry.id === "string" ? entry.id.trim() : ""))
-        .filter((repository) => repository.length > 0 && repository.startsWith(`${normalizedNamespace}/`))
-        .map((repository) => ({ namespace: normalizedNamespace, repository }));
+      const datasets: HuggingFaceDatasetSummary[] = [];
+      const seen = new Set<string>();
+      const ambiguous = new Set<string>();
+      for (const entry of payload) {
+        if (!entry || typeof entry !== "object" || typeof entry.id !== "string" || entry.id.length > 256) continue;
+        const repository = entry.id.trim();
+        if (!repository.startsWith(`${normalizedNamespace}/`)) continue;
+        try { normalizeDatasetBrowseRepository(repository); } catch { continue; }
+        if (seen.has(repository)) {
+          ambiguous.add(repository);
+          continue;
+        }
+        seen.add(repository);
+        const licenseIds = readHuggingFaceDatasetLicenseIds(entry.cardData?.license);
+        datasets.push({ namespace: normalizedNamespace, repository, ...(licenseIds.length ? { licenseIds } : {}) });
+      }
 
       return {
         ok: true as const,
         value: {
           namespace: normalizedNamespace,
-          datasets,
+          datasets: datasets.filter(({ repository }) => !ambiguous.has(repository)),
         },
         ...requestContext,
       };

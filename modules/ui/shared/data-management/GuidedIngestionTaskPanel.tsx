@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   INGESTION_TASK_RECOMMENDED_CHUNK_BYTES,
@@ -9,6 +9,8 @@ import {
 } from "../../../contracts/ingestion";
 import { readAppHeadlessLocalFileSelectionValue, type AppHeadlessLocalFileSelectionValue,
   type DesktopLocalFileSelectionInput } from "../../../contracts/headless";
+import { describeHuggingFaceDatasetLicense, type DatasetLicenseCategory,
+  type HuggingFaceDatasetSummary } from "../../../contracts/storage";
 import { useOptionalNotificationCenter } from "../notifications/NotificationProvider";
 import { WorkflowSequence, WorkflowStep } from "../components/WorkflowSequence";
 
@@ -51,12 +53,7 @@ export interface GuidedHuggingFaceBrowserClient {
   }>;
   browseHuggingFaceNamespaceDatasets?: (input: {
     namespace: string;
-  }) => Promise<
-    readonly {
-      readonly namespace: string;
-      readonly repository: string;
-    }[]
-  >;
+  }) => Promise<readonly HuggingFaceDatasetSummary[]>;
   browseHuggingFaceDatasetParquetFiles?: (input: {
     repository: string;
     revision?: string;
@@ -80,13 +77,13 @@ export interface GuidedIngestionTaskPanelProps {
 
 type SourceKind = "files" | "website" | "hugging-face";
 type WebsiteScope = "pages" | "sitemap";
-type HuggingFaceDataset = Awaited<
-  ReturnType<
-    NonNullable<
-      GuidedHuggingFaceBrowserClient["browseHuggingFaceNamespaceDatasets"]
-    >
-  >
->[number];
+type ProviderLicenseFilter = "all" | "creative-commons" | "other-open";
+const providerLicenseLabel: Record<DatasetLicenseCategory, string> = {
+  "creative-commons": "Open Creative Commons",
+  "other-open": "Other open license",
+  "non-open": "Non-open license",
+  unknown: "License unknown",
+};
 type HuggingFaceDatasetFile = Awaited<
   ReturnType<
     NonNullable<
@@ -133,9 +130,9 @@ function ScopedIngestionTaskPanel({
   const [websiteInput, setWebsiteInput] = useState("");
   const [maximumPages, setMaximumPages] = useState(10);
   const [providerNamespace, setProviderNamespace] = useState("");
-  const [providerDatasets, setProviderDatasets] = useState<
-    readonly HuggingFaceDataset[]
-  >([]);
+  const [providerDatasets, setProviderDatasets] = useState<readonly HuggingFaceDatasetSummary[]>([]);
+  const [providerLicenseFilter, setProviderLicenseFilter] = useState<ProviderLicenseFilter>("all");
+  const providerLicenseDescriptionId = useId();
   const [selectedProviderRepositories, setSelectedProviderRepositories] =
     useState<ReadonlySet<string>>(() => new Set());
   const [providerFilesByRepository, setProviderFilesByRepository] =
@@ -240,12 +237,18 @@ function ScopedIngestionTaskPanel({
     }
   }
   const websiteUrls = useMemo(() => lines(websiteInput), [websiteInput]);
+  const visibleProviderDatasets = useMemo(
+    () => providerDatasets
+      .map((dataset) => ({ ...dataset, license: describeHuggingFaceDatasetLicense(dataset.licenseIds) }))
+      .filter(({ license }) => providerLicenseFilter === "all" || license.category === providerLicenseFilter),
+    [providerDatasets, providerLicenseFilter],
+  );
   const selectedProviderDatasets = useMemo(
     () =>
-      providerDatasets.filter((dataset) =>
+      visibleProviderDatasets.filter((dataset) =>
         selectedProviderRepositories.has(dataset.repository),
       ),
-    [providerDatasets, selectedProviderRepositories],
+    [visibleProviderDatasets, selectedProviderRepositories],
   );
   const loadedProviderFiles = useMemo(
     () => Object.values(providerFilesByRepository).flat(),
@@ -259,8 +262,8 @@ function ScopedIngestionTaskPanel({
     [loadedProviderFiles, selectedProviderFileKeys],
   );
   const allProviderDatasetsSelected =
-    providerDatasets.length > 0 &&
-    providerDatasets.every((dataset) =>
+    visibleProviderDatasets.length > 0 &&
+    visibleProviderDatasets.every((dataset) =>
       selectedProviderRepositories.has(dataset.repository),
     );
   const allProviderFilesSelected =
@@ -376,11 +379,19 @@ function ScopedIngestionTaskPanel({
     changeProviderDatasets(new Set());
   }
 
+  function changeProviderLicenseFilter(value: string): void {
+    if (providerBrowseRef.current !== undefined || activeOperationRef.current !== undefined ||
+        preparedLocalFile || value === providerLicenseFilter ||
+        (value !== "all" && value !== "creative-commons" && value !== "other-open")) return;
+    setProviderLicenseFilter(value);
+    changeProviderDatasets(new Set());
+  }
+
   function toggleAllProviderDatasets(): void {
     changeProviderDatasets(
       allProviderDatasetsSelected
         ? new Set()
-        : new Set(providerDatasets.map((dataset) => dataset.repository)),
+        : new Set(visibleProviderDatasets.map((dataset) => dataset.repository)),
     );
   }
 
@@ -1056,7 +1067,8 @@ function ScopedIngestionTaskPanel({
                     type="button"
                     aria-pressed={allProviderDatasetsSelected}
                     disabled={
-                      working || providerBrowseState.status === "loading"
+                      working || providerBrowseState.status === "loading" ||
+                      !visibleProviderDatasets.length
                     }
                     onClick={toggleAllProviderDatasets}
                   >
@@ -1065,13 +1077,29 @@ function ScopedIngestionTaskPanel({
                       : "Select all"}
                   </button>
                 </div>
+                <label className="ui-field">
+                  Dataset license
+                  <select
+                    value={providerLicenseFilter}
+                    disabled={working || providerBrowseState.status === "loading" || Boolean(preparedLocalFile)}
+                    onChange={(event) => changeProviderLicenseFilter(event.currentTarget.value)}
+                  >
+                    <option value="all">All data</option>
+                    <option value="creative-commons">Open Creative Commons</option>
+                    <option value="other-open">Other open licenses</option>
+                  </select>
+                </label>
+                <p>License labels come from the Hugging Face listing.</p>
+                {!visibleProviderDatasets.length && <p role="status">No datasets match this license filter.</p>}
                 <fieldset className="ui-choice-group">
                   <legend className="ui-sr-only">Select datasets</legend>
                   <div className="ui-choice-list">
-                    {providerDatasets.map((dataset) => (
+                    {visibleProviderDatasets.map((dataset, index) => (
                       <label className="ui-choice" key={dataset.repository}>
                         <input
                           type="checkbox"
+                          aria-label={dataset.repository}
+                          aria-describedby={`${providerLicenseDescriptionId}-${index}`}
                           checked={selectedProviderRepositories.has(
                             dataset.repository,
                           )}
@@ -1088,7 +1116,14 @@ function ScopedIngestionTaskPanel({
                             )
                           }
                         />
-                        <span>{dataset.repository}</span>
+                        <span>
+                          {dataset.repository}{" "}
+                          <small id={`${providerLicenseDescriptionId}-${index}`}>
+                            {providerLicenseLabel[dataset.license.category]}
+                            {dataset.license.ids.some((id) => id !== "unknown")
+                              ? ` (${dataset.license.ids.filter((id) => id !== "unknown").join(", ")})` : ""}
+                          </small>
+                        </span>
                       </label>
                     ))}
                   </div>

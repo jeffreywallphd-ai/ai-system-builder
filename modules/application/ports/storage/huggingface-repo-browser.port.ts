@@ -1,9 +1,5 @@
 import type { ApplicationRequestContext } from "../application-request-context";
-
-export interface HuggingFaceDatasetDescriptor {
-  namespace: string;
-  repository: string;
-}
+import type { HuggingFaceDatasetSummary } from "../../../contracts/storage";
 
 export interface HuggingFaceDatasetParquetFileDescriptor {
   repository: string;
@@ -21,7 +17,7 @@ export interface HuggingFaceRepoBrowserPort {
       ok: true;
       value: {
         namespace: string;
-        datasets: HuggingFaceDatasetDescriptor[];
+        datasets: HuggingFaceDatasetSummary[];
       };
       requestId?: string;
       correlationId?: string;

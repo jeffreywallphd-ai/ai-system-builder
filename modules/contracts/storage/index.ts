@@ -27,3 +27,4 @@ export * from "./retrieve-artifact-from-repo-request";
 export * from "./retrieve-artifact-from-repo-result";
 export * from "./has-artifact-in-repo-request";
 export * from "./has-artifact-in-repo-result";
+export * from "./huggingface-dataset-license";

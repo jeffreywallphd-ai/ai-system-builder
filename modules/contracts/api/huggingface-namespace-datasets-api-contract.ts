@@ -1,6 +1,7 @@
 import { createApiError } from "./api-error";
 import { createApiRequest, type ApiRequest } from "./api-request";
 import { createApiFailureResponse, createApiSuccessResponse, type ApiResponse } from "./api-response";
+import type { HuggingFaceDatasetSummary } from "../storage";
 
 export const API_HUGGING_FACE_NAMESPACE_DATASETS_BROWSE_OPERATION = "huggingface.namespace.datasets.browse" as const;
 
@@ -11,10 +12,7 @@ export interface ApiHuggingFaceNamespaceDatasetsBrowseRequestPayload {
 
 export interface ApiHuggingFaceNamespaceDatasetsBrowseResponseValue {
   namespace: string;
-  datasets: Array<{
-    namespace: string;
-    repository: string;
-  }>;
+  datasets: HuggingFaceDatasetSummary[];
 }
 
 export type ApiHuggingFaceNamespaceDatasetsBrowseRequest = ApiRequest<

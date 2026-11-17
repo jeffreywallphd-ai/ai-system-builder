@@ -189,7 +189,15 @@ run can confirm that same selected source without creating another artifact.
 The shared desktop/thin-client UI
 uses the existing bounded provider browser: users find a namespace, select
 datasets, and check exact files, while the browser resolves and returns each
-file's immutable revision. The renderer sends only those returned coordinates
+file's immutable revision. The dataset results show provider-declared license
+identifiers and default to All data. Open Creative Commons and Other open
+licenses filters admit only recognized declarations in the selected group.
+Declared restrictions, unknown terms and ambiguous mixtures remain visible
+under All data. Changing the filter clears dataset and file selections.
+The listing reads [Hugging Face dataset card metadata](https://huggingface.co/docs/hub/en/datasets-cards)
+and uses the [Creative Commons distinction between open and restricted terms](https://creativecommons.org/public-domain/freeworks/).
+These repository listing labels do not bind a license to a saved file revision.
+The renderer sends only those returned coordinates
 to the governed acquisition task and does not treat the visible selection as
 authorization. A Hugging Face user or organization is provider provenance
 only; it is never used as the application's organization scope. Before any

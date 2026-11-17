@@ -4,6 +4,7 @@ import {
 import { createIpcChannel } from "./ipc-channel";
 import { createIpcRequest, type IpcRequest } from "./ipc-request";
 import { createIpcSuccessResponse, type IpcResponse } from "./ipc-response";
+import type { HuggingFaceDatasetSummary } from "../storage";
 
 export const DESKTOP_HUGGING_FACE_NAMESPACE_DATASETS_BROWSE_OPERATION = API_HUGGING_FACE_NAMESPACE_DATASETS_BROWSE_OPERATION;
 export const DESKTOP_HUGGING_FACE_NAMESPACE_DATASETS_BROWSE_REQUEST_CHANNEL = createIpcChannel(
@@ -25,10 +26,7 @@ export interface DesktopHuggingFaceNamespaceDatasetsBrowseRequestPayload {
 
 export interface DesktopHuggingFaceNamespaceDatasetsBrowseResponseValue {
   namespace: string;
-  datasets: Array<{
-    namespace: string;
-    repository: string;
-  }>;
+  datasets: HuggingFaceDatasetSummary[];
 }
 
 export type DesktopHuggingFaceNamespaceDatasetsBrowseRequest = IpcRequest<
