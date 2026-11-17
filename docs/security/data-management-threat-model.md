@@ -2997,3 +2997,7 @@ categories and copy, including token, SDK-loader and iterator failures. They omi
 raw errors, provider payloads, tokens, headers and URLs. Local synthetic tests
 exercise the installed client; actual provider, hostile-network and host/native
 qualification remain separate. Rollback must retain the metadata protections.
+
+## Delegated provided-row task admission
+
+The approved Headless profile uses exact saved local source metadata plus bounded verified local bytes. It cannot broaden to provider localization, document conversion, generation or external destinations. The existing quality policy and mandatory result review remain in force. A separate durable platform-owned issue fence admits one task; uncertainty retains the existing lifecycle protection rather than admitting a retry. Passive status first proves the accepted client/actor/host association and reports only finite state. Application failure or review cancellation remains visible after worker success. These status markers do not prove OS process exit or authorize staging retirement.

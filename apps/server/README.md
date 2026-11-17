@@ -303,3 +303,5 @@ endpoint can list, open, approve, deny, cancel or withdraw the signed-in
 user's requests. The endpoint requires the current browser registration
 and the proof for that document. Approval applies to the exact request and
 revision the user opened. It supports the whole plan and one change at a time.
+
+When configured Headless plan review supplies the dataset owner, the API forwards the explicit local-dataset capability into strict v4 plan and task-receipt decoding. Passive dataset status remains restricted to the plan-review client and exact accepted task association. Missing host capability fails closed; it does not fall back to general runtime commands.

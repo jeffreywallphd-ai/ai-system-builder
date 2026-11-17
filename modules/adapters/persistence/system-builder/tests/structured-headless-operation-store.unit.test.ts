@@ -20,6 +20,7 @@ import { openLocalSqliteDatabase, resolveLocalSqliteDatabasePolicy } from "../..
 import { createStructuredSystemBuilderRepository } from "../createStructuredSystemBuilderRepository";
 import { createStructuredHeadlessPlanReviewRepository, listStructuredHeadlessPlanReviews } from "../createStructuredHeadlessPlanReviewRepository";
 import { prepareStructuredHeadlessPlanStep } from "../createStructuredHeadlessPlanStepOperationStore";
+import type {CompileApprovedDataset} from "../createStructuredHeadlessPlanStepOperationStore";
 import {
   createStructuredHeadlessOperationStore, HEADLESS_RECEIPT_TTL_MS, HEADLESS_RETAINED_SYSTEM_CHANGES, HEADLESS_SYSTEM_CHANGE_PAGE_SIZE,
 } from "../createStructuredHeadlessOperationStore";
@@ -401,6 +402,121 @@ if (!reviewPlan.ok) throw new Error("Invalid fixture plan.");
 const reviewFingerprint = createHash("sha256").update(JSON.stringify(reviewPlan.preview), "utf8").digest("hex");
 const reviewTarget = { hostIncarnationId: reviewHost, scope, fingerprint: reviewFingerprint };
 const reviewQuery = { target: reviewTarget, isCurrent: () => true };
+
+async function datasetPlanFixture(documents: StructuredDocumentStore = createInMemoryStructuredDocumentStore()) {
+  let current = true, allowed = true, sourceCurrent = true, now = 1_000;
+  const isCurrent = () => current;
+  const proposal = {...reviewProposal, steps: [1, 2].map(ordinal => ({operation: "data.prepare-local-dataset",
+    idempotencyKey: key(40 + ordinal), sources: [{taskId: "source.task", fileId: "source.file", taskRevision: 3}],
+    recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},
+    split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"}))};
+  const plan = parseHeadlessBuildPlanProposal(proposal, reviewHost, {allowLocalFileSave: false, allowLocalDatasetPreparation: true});
+  assert.ok(plan.ok);
+  const target = {...reviewTarget, fingerprint: createHash("sha256").update(JSON.stringify(plan.preview)).digest("hex")};
+  const query = {target, isCurrent};
+  const authorize = async () => allowed && current;
+  const clock = () => now;
+  const reviews = createStructuredHeadlessPlanReviewRepository(documents, authorize, clock, async () => sourceCurrent,
+    false, false, true);
+  const app = new HeadlessBuildPlanReviewUseCase(reviews, clock);
+  const actor = {...scope, channel: "app-popup" as const, isCurrent, canDecide: authorize};
+  const staged = await reviews.propose({...query, proposal}); assert.ok(staged.ok);
+  const decide = (revision: number, decision: unknown) => app.decide({fingerprint: target.fingerprint,
+    expectedRevision: revision, decision}, reviewHost, scope, actor);
+  const compile: CompileApprovedDataset = async (owner, request) => {
+    assert.equal(owner.organizationId, undefined); assert.equal(owner.runInOwnedTransaction, undefined);
+    if (!sourceCurrent || !allowed || !current) return;
+    return {command: {sourceArtifactIds: ["source.artifact"], recipe: {task: {taskType: "llm-instruction",
+      textInputMode: "provided", promptStyle: "instruction-response", inputField: "question", outputField: "answer", sourceContextPolicy: "omit"}},
+      split: {...request.input.split, shuffle: true}, output: {format: "jsonl", destinations: {local: {enabled: true}}},
+      quality: {policy: {preset: "recommended", maxRowsPerSource: 1000}, reviewRequired: true}},
+      admissionSources: [{artifactId: "source.artifact", storageKey: "source.artifact", mediaType: "text/csv", format: "csv",
+        sizeBytes: 42, digest: `sha256:${"a".repeat(64)}`}],
+      preview: {...request.input, totalBytes: 42, maximumRowsPerSource: 1000, outputFormat: "jsonl", reviewRequired: true,
+        modelCalls: 0, externalProviderCalls: 0, sources: [{...request.input.sources[0], sourceSnapshotId: "snapshot.one",
+          digest: `sha256:${"a".repeat(64)}`, format: "csv", sizeBytes: 42, licenseStatus: "unknown"}]} as any};
+  };
+  const prepare = (step = 1, revision = 2) => prepareStructuredHeadlessPlanStep(documents,
+    {...query, approvalRevision: revision, step}, authorize, clock, "serialized-owner", false, undefined, compile);
+  return {documents, query, decide, prepare, actor, setCurrent(value: boolean) {current = value;},
+    setAllowed(value: boolean) {allowed = value;}, setSource(value: boolean) {sourceCurrent = value;}, expire() {now += 15 * 60 * 1000;}};
+}
+
+test("dataset plan dispatch requires an approved ordered source-bound one-use issuance", async () => {
+  const f = await datasetPlanFixture();
+  assert.equal(await f.prepare(1, 1), undefined);
+  assert.ok((await f.decide(1, {kind: "approve", mode: "whole-plan"})).ok);
+  assert.equal(await f.prepare(2), undefined);
+  const first = await f.prepare(); assert.ok(first?.kind === "local-dataset");
+  const reserved = await first.reserve(); assert.ok(reserved?.kind === "new");
+  assert.deepEqual(await first.inspect(), {kind: "unconfirmed"});
+  assert.equal(await first.accept(reserved.taskId), false);
+  f.setSource(false);
+  assert.equal(await first.issue(reserved.taskId, reserved.sourceDigest), "denied");
+  f.setSource(true);
+  assert.equal(await first.issue(reserved.taskId, "b".repeat(64)), "denied");
+  assert.equal(await first.issue(reserved.taskId, reserved.sourceDigest), "issued");
+  assert.equal(await first.issue(reserved.taskId, reserved.sourceDigest), "denied");
+  assert.equal(await first.accept(reserved.taskId), true);
+  assert.deepEqual(await first.readReceipt(), {workspaceId: scope.workspaceId, taskId: reserved.taskId});
+  assert.ok((await f.prepare(2))?.kind === "local-dataset");
+  assert.deepEqual(await first.reserve(), {kind: "accepted", reference: {workspaceId: scope.workspaceId, taskId: reserved.taskId}});
+  let published = 0;
+  assert.equal(await first.publishIfCurrent(() => {published++; return true;}), true);
+  f.setAllowed(false);
+  assert.equal(await first.publishIfCurrent(() => {published++; return true;}), false);
+  assert.equal(published, 1);
+});
+
+test("dataset outcome recording survives withdrawal while outward replay and later dispatch do not", async () => {
+  const f = await datasetPlanFixture();
+  assert.ok((await f.decide(1, {kind: "approve", mode: "whole-plan"})).ok);
+  const first = await f.prepare(); assert.ok(first?.kind === "local-dataset");
+  const reserved = await first.reserve(); assert.ok(reserved?.kind === "new");
+  assert.equal(await first.issue(reserved.taskId, reserved.sourceDigest), "issued");
+  assert.ok((await f.decide(2, {kind: "revoke"})).ok);
+  f.setAllowed(false); f.setCurrent(false);
+  assert.equal(await first.accept(reserved.taskId), true);
+  assert.equal(await first.readReceipt(), undefined);
+  assert.equal(await first.publishIfCurrent(() => {throw new Error("Unexpected egress.");}), false);
+  assert.equal(await f.prepare(2, 3), undefined);
+});
+
+test("dataset reservation races mint one private task and uncertain effects cannot start again", async () => {
+  const f = await datasetPlanFixture();
+  assert.ok((await f.decide(1, {kind: "approve", mode: "whole-plan"})).ok);
+  const left = await f.prepare(), right = await f.prepare();
+  assert.ok(left?.kind === "local-dataset" && right?.kind === "local-dataset");
+  const results = await Promise.all([left.reserve(), right.reserve()]);
+  assert.equal(results.filter(value => value?.kind === "new").length, 1);
+  assert.equal(results.filter(value => value?.kind === "unconfirmed").length, 1);
+  const reservation = results.find(value => value?.kind === "new")!;
+  assert.ok(reservation.kind === "new");
+  assert.equal(await left.issue(reservation.taskId, reservation.sourceDigest), "issued");
+  const reconnected = await f.prepare(); assert.ok(reconnected?.kind === "local-dataset");
+  assert.deepEqual(await reconnected.reserve(), {kind: "unconfirmed"});
+  assert.equal(await f.prepare(2), undefined);
+  f.expire();
+  assert.equal(await left.issue(reservation.taskId, reservation.sourceDigest), "unconfirmed");
+});
+
+test("accepted dataset plan receipts persist across SQLite reopen without granting a second start", async () => {
+  const directory = await realpath(await mkdtemp(path.join(await realpath(tmpdir()), "headless-dataset-step-")));
+  const policy = resolveLocalSqliteDatabasePolicy({dataRootDirectory: directory});
+  let db = await openLocalSqliteDatabase({policy});
+  try {
+    const f = await datasetPlanFixture(db.documents);
+    assert.ok((await f.decide(1, {kind: "approve", mode: "whole-plan"})).ok);
+    const first = await f.prepare(); assert.ok(first?.kind === "local-dataset");
+    const reserved = await first.reserve(); assert.ok(reserved?.kind === "new");
+    assert.equal(await first.issue(reserved.taskId, reserved.sourceDigest), "issued");
+    assert.equal(await first.accept(reserved.taskId), true);
+    await db.close(); db = await openLocalSqliteDatabase({policy});
+    const reopened = await datasetPlanFixture(db.documents);
+    const replay = await reopened.prepare(); assert.ok(replay?.kind === "local-dataset");
+    assert.deepEqual(await replay.reserve(), {kind: "accepted", reference: {workspaceId: scope.workspaceId, taskId: reserved.taskId}});
+  } finally {await db.close(); await rm(directory, {recursive: true, force: true});}
+});
 const approval = (revision: number, step: number) => ({
   fingerprint: reviewFingerprint, expectedRevision: revision,
   decision: { kind: "approve", mode: "each-change", step },

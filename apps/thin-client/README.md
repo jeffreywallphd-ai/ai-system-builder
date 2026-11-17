@@ -302,3 +302,5 @@ as a conversation. Use the controls to send a decision. The app displays
 your choice and whether it recorded the decision. A decision made here
 also applies in the popup. Refresh the request if another view has already
 changed it.
+
+Automation plan review also shows bounded processing of saved local training rows when offered by the server. Both the popup and approval chat list the files, mapping, split, limits and result-review requirement. Browser decoding verifies the v4 limits. Approval to start processing does not save or publish a dataset.

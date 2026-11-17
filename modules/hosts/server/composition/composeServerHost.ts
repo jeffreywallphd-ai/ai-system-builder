@@ -1696,6 +1696,10 @@ export function composeServerHost(
           ? ingestionTasks.finalizeApprovedProviderFile.bind(ingestionTasks) : undefined;
         managedHeadlessAgent = {hostIncarnationId, author: authoring.execute,
           read: composeManagedAgentReads({...scoped, systems: systemBuilder.useCases, ingestionTasks,
+            getDatasetTaskStatus: async () => {
+              const {composeHeadlessDatasetTaskStatus} = await import("../../shared/composition/headlessPlanReview");
+              return composeHeadlessDatasetTaskStatus(managedDocuments, async () => prepareTrainingDatasetUseCase);
+            },
             getDatasetInputs: organizationDocuments ? async () => {
               const {createStructuredIngestionAcquisitionRepository} = await import("../../../adapters/persistence/ingestion");
               const {PrepareHeadlessDatasetInputsUseCase} = await import("../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case");
@@ -1714,6 +1718,7 @@ export function composeServerHost(
             enableFilePreview: Boolean(ingestionTasks && options.managedHeadlessAgent.browserObservationAuthorizer),
             finalizeApprovedLocalFile: localFileSave,
             finalizeApprovedProviderFile: providerFileSave,
+            getDatasetStart: async () => prepareTrainingDatasetUseCase.startAdmittedLocalProvidedDataset.bind(prepareTrainingDatasetUseCase),
           }) } : {}),
         };
         if (options.managedHeadlessAgent.browserObservationAuthorizer) {
@@ -1740,7 +1745,8 @@ export function composeServerHost(
             planClientId:planReviewClientId, platform:managedDocuments, rootDirectory:registerOptions.storageRootDirectory,
             contexts, placement:options.managedHeadlessAgent.placement, localIngestion: ingestionTasks,
             allowLocalFileSave: Boolean(localFileSave && managedDocuments.publishWithStableReads),
-            allowProviderFileSave: Boolean(providerFileSave && managedDocuments.publishWithStableReads)}) : undefined;
+            allowProviderFileSave: Boolean(providerFileSave && managedDocuments.publishWithStableReads),
+            allowLocalDatasetPreparation: Boolean(managedDocuments.publishWithStableReads)}) : undefined;
           const browserConsent = composeManagedBrowserConsent({hostIncarnationId, planApprovals,
             authorize: authorize(workspaceAuthorization),
             authorizeObservation: authorize(observation),

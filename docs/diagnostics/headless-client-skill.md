@@ -177,3 +177,5 @@ saved record and collects the elapsed time, number of calls, and sanitized
 synthetic replies. Keep the numbered choice files local and use synthetic
 input only. The report records message validation results without copying the
 agent's prose. Model token counts need a separately measured source.
+
+For saved local training rows, first read the completed ingestion task's current revision. Preview the files, columns, data split and quality settings with `aisb_preview_dataset_preparation`. Include the exact inputs as a `data.prepare-local-dataset` step in a plan. The approval dialog lists the processing limits and the requirement to review results before saving. A `started` receipt means a background task was accepted. Check `aisb_dataset_task_status` with its task ID or the original plan fingerprint and step. This tool cannot approve, save or publish a dataset. Keep the same request on retry; an unconfirmed attempt must not be restarted with a new key. This local provided-row profile does not run a model.

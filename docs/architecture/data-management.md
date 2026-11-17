@@ -1457,3 +1457,11 @@ no partial file list, aborts work and prevents late replies from issuing request
 These cooperative metadata limits do not claim a hard process-memory or OS I/O
 guarantee. Existing workspace authorization and brokered explicit localization
 remain independent. Real provider/UI qualification stays separate.
+
+## Approved Headless local dataset tasks
+
+Concrete plan v4 binds exact completed local upload/file revisions, provided instruction columns, reproducible split/seed and quality preset. Preparation uses the existing dataset owner, local byte/hash checks and required quality review. It is limited to four structured local sources, 4 MiB per source, 16 MiB total and 1,000 requested rows per source; generation and provider localization remain unavailable on this route.
+
+The platform-owned transaction reserves an opaque random task ID, then separately issues that attempt under the current approval, source and policy fences. Runtime calls stay outside database retries. Only a confirmed queued/running acknowledgement for that ID creates an accepted receipt. Uncertain reserve, issue or dispatch never grants another start. Recording an already-issued business outcome remains independent of the caller's later permission to see it.
+
+The passive status route requires the accepted actor/client/host/workspace association before resolving the same processor. It reports finite task state, including application review, failure and cancellation. It never calls the materializing read, saves outputs or treats status as native worker-exit proof. The background owner still reconciles results. Saving a reviewed immutable dataset version and presenting it in Data require their own capabilities and qualification.

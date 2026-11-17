@@ -726,3 +726,9 @@ provider preview route accepts only the issuer-verified plan registration
 for the tenant and workspace. The PostgreSQL owner checks current
 workspace access and the exact task and selection through reply release.
 The Managed reply has the same bounded fields as the Desktop reply.
+
+## Approved local dataset task boundary
+
+Plan v4 is an explicit host capability. Strict DTOs reject source paths, raw rows, chosen runtime IDs, generation settings and extra destinations. A source-save step cannot be combined with preparation of the same upload at an invented future revision. The UI reconstructs and verifies the fixed processing limits for both approval channels; it distinguishes starting work from approving or saving results.
+
+Durable reserved/issued/accepted records bind the exact organization partition, actor, registered client, host incarnation, plan fingerprint, approval revision, step and source/command digests. Random task IDs remain private until accepted. Current plan/source authorization and the approval execution fence compose in the owning issue transaction. Dispatch is outside transaction retries. Acknowledgement loss, incomplete records and races cannot provide a second issuance. Accepted business receipts survive later outward revocation; final publication still requires current authority. Status uses exact accepted indexes and current artifact-read permission, with no enumeration, unknown-task adoption, result materialization or output payloads. Host-exit recovery is not claimed.

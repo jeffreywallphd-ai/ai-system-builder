@@ -58,6 +58,9 @@ test("exact immutable local sources map privately to the existing review-require
   assert.equal(preview.modelCalls, 0);
   assert.ok(!/private|ArtifactKey|fileName|principalId|organizationId/.test(JSON.stringify(preview)));
   assert.deepEqual(command.sourceArtifactIds, [source(1).snapshot.rawArtifactKey, source(2).snapshot.rawArtifactKey]);
+  assert.deepEqual(result.prepared.admissionSources, [1, 2].map(index => ({artifactId: source(index).snapshot.rawArtifactKey,
+    storageKey: source(index).snapshot.rawArtifactKey, format: "csv", mediaType: "text/csv", sizeBytes: bytes.length,
+    digest: source(index).snapshot.contentDigest})));
   assert.deepEqual(command.quality, {policy: {preset: "recommended", maxRowsPerSource: 1_000}, reviewRequired: true});
   assert.deepEqual(command.output, {format: "jsonl", destinations: {local: {enabled: true}}});
   let readiness = 0;
@@ -91,6 +94,8 @@ test("stale, foreign, unfinished, oversized, unsupported or mismatched source ev
     {...row.task, revision: 4}, {...row.task, workspaceId: createWorkspaceId("foreign")},
     {...row.task, status: "transferring" as const, completedAt: undefined},
     {...row.task, files: [{...row.task.files[0], fileName: "source.pdf", mediaType: "application/pdf"}]},
+    {...row.task, files: [{...row.task.files[0], mediaType: "application/octet-stream",
+      output: {...row.task.files[0].output!, mediaType: "application/octet-stream"}}]},
     {...row.task, files: [{...row.task.files[0], totalBytes: HEADLESS_DATASET_MAX_SOURCE_BYTES + 1,
       acceptedBytes: HEADLESS_DATASET_MAX_SOURCE_BYTES + 1, output: {...row.task.files[0].output!, sizeBytes: HEADLESS_DATASET_MAX_SOURCE_BYTES + 1}}]},
   ];

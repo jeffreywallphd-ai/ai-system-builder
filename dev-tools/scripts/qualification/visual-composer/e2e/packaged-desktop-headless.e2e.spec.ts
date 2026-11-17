@@ -30,8 +30,11 @@ async function connectorSettings(app: ElectronApplication, page: Page) {
     await expect.poll(() => owner.evaluate(window => window.isFocused()), { timeout: 5_000 }).toBe(true);
   } finally { await owner.dispose(); }
   await page.getByRole("button", { name: "Settings", exact: true, description: "Settings" }).click();
-  await page.getByRole("button", { name: "Local chat clients", exact: true }).click();
-  return page.getByRole("region", { name: "Local chat clients", exact: true });
+  const clientsPanel = page.getByRole("button", { name: "Local chat clients", exact: true });
+  if (await clientsPanel.getAttribute("aria-expanded") !== "true") await clientsPanel.click();
+  const region = page.getByRole("region", { name: "Local chat clients", exact: true });
+  await expect(region).toBeVisible();
+  return region;
 }
 
 async function runningAddress(region: Awaited<ReturnType<typeof connectorSettings>>) {
@@ -335,10 +338,15 @@ test("packaged Desktop pairs a real MCP client, observes its saved edit, and rep
 test("packaged Desktop reviews an MCP plan in the app popup and reports the exact decision", async () => {
   test.setTimeout(120_000);
   const profile = prepareHeadlessDesktopProfile("plan-review");
+  const python = process.env.PYTHON?.trim();
+  expect(python && path.isAbsolute(python), "Data qualification requires an existing supported Python environment").toBe(true);
+  const env = {...profile.env, PYTHON_RUNTIME_COMMAND: python!, PYTHON_RUNTIME_ARGS: "-u main.py",
+    PYTHON_RUNTIME_WORKER_DIR: path.join(process.cwd(), "out", "ai-system-builder-win32-x64", "resources", "worker"),
+    HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1", HF_DATASETS_OFFLINE: "1", PIP_NO_INDEX: "1"};
   const lifetime = assetApplicationLifetime<ElectronApplication>();
   let mcp: Client | undefined;
   try {
-    const app = await lifetime.launch(() => electron.launch({ executablePath: profile.executablePath, env: profile.env,
+    const app = await lifetime.launch(() => electron.launch({ executablePath: profile.executablePath, env,
       args: ["--user-data-dir=" + profile.dataRoot, "--disable-gpu"], timeout: 60_000 }));
     const page = await app.firstWindow({ timeout: 60_000 });
     await expect(page.getByRole("heading", { name: "Create a Workspace", exact: true })).toBeVisible({ timeout: 60_000 });
@@ -360,7 +368,7 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     const workspace = { hostIncarnationId: await hostId(client), workspaceId };
     const names = (await client.listTools()).tools.map(tool => tool.name).sort();
     expect(names).toEqual([
-      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
+      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_systems", "aisb_list_templates",
       "aisb_list_workflows", "aisb_list_workspaces", "aisb_plan_capabilities", "aisb_prepare_workflow",
       "aisb_preview_build_plan", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file",
       "aisb_read_conversation_task", "aisb_read_system",
@@ -445,6 +453,9 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
     const chatButton = region.getByRole("button", { name: "Open plan approval chat" });
     const chat = page.getByRole("region", { name: "Plan approval chat", exact: true });
     async function verifySavedStep(result: Awaited<ReturnType<typeof call>>, expectedName: string) {
+      const safeFailure = ["headless.forbidden", "headless.unavailable", "headless.operation-unconfirmed", "headless.stale",
+        "headless.invalid-request"].includes(result.code ?? "") ? result.code : "other-result";
+      expect(result.ok, `The approved system step must commit; response category: ${safeFailure}`).toBe(true);
       expect(result).toMatchObject({ ok: true, value: { kind: "committed" } });
       const value = result.value as { reference?: { systemId: string; revisionId: string; recordRevision: number } } | undefined;
       const reference = value?.reference;
@@ -607,6 +618,43 @@ test("packaged Desktop reviews an MCP plan in the app popup and reports the exac
       workspaceId, totalBytes: contents.byteLength, maximumRowsPerSource: 1000, externalProviderCalls: 0, modelCalls: 0, reviewRequired: true}});
     expect(JSON.stringify(preparation)).not.toContain(savedFilename);
     expect(preparation).not.toHaveProperty("value.command");
+    const datasetSteps = [{operation: "data.prepare-local-dataset", idempotencyKey: randomUUID(),
+      sources: [{taskId: savedInput.taskId, fileId: savedInput.fileId, taskRevision: (sourceStatus.value as {revision: number}).revision}],
+      recipe: {kind: "provided-instruction-rows-v1", inputColumn: "team", outputColumn: "priority"},
+      split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"}];
+    const datasetPreview = await call(client, "aisb_preview_build_plan", {...workspace, steps: datasetSteps});
+    expect(datasetPreview).toMatchObject({ok: true, value: {version: "aisb-build-plan-preview-v4"}});
+    const datasetFingerprint = (datasetPreview.value as {fingerprint: string}).fingerprint;
+    expect(await call(client, "aisb_request_build_plan_approval", {...workspace, fingerprint: datasetFingerprint, steps: datasetSteps}))
+      .toMatchObject({ok: true, value: {status: "pending"}});
+    await connectorSettings(app, page); await trigger.click();
+    await dialog.getByRole("button", {name: new RegExp("^Review request " + datasetFingerprint.slice(0, 8))}).click();
+    await expect(dialog.getByRole("list", {name: "Permissions and limits"})).toContainText("Stop for result review before saving");
+    await expect(dialog.getByRole("list", {name: "Requested changes"})).toContainText("Input column: team. Output column: priority.");
+    await dialog.getByRole("radio", {name: "Approve all listed changes"}).check();
+    await dialog.getByRole("button", {name: "Approve all changes", exact: true}).click();
+    await expect(dialog.getByText("Plan approved.", {exact: true})).toBeVisible();
+    await dialog.getByRole("button", {name: "Close plan review"}).click();
+    const datasetTarget = {...workspace, fingerprint: datasetFingerprint, approvalRevision: 2, step: 1};
+    const datasetStart = await call(client, "aisb_run_approved_build_step", datasetTarget);
+    if (datasetStart.ok) expect(datasetStart).toMatchObject({value: {kind: "started", operation: "data.prepare-local-dataset",
+      reference: {workspaceId, taskId: expect.any(String)}}});
+    else expect(datasetStart.code).toBe("headless.operation-unconfirmed");
+    const selection = {kind: "plan-step", fingerprint: datasetFingerprint, step: 1};
+    let acceptedTaskId: string | undefined;
+    await expect.poll(async () => {
+      const status = await call(client, "aisb_dataset_task_status", {...workspace, selection});
+      // An interrupted reply cannot disclose an unaccepted task or authorize
+      // another dispatch. Poll only the exact causal receipt, never start again.
+      if (!status.ok) {expect(status.code).toBe("headless.forbidden"); return "awaiting-accepted-receipt";}
+      expect(status.value).not.toHaveProperty("data");
+      const value = status.value as {state: string; taskId: string};
+      if (acceptedTaskId) expect(value.taskId).toBe(acceptedTaskId);
+      acceptedTaskId = value.taskId;
+      return value.state;
+    }, {timeout: 90_000, message: "the existing dataset worker produces a required review without saving output"}).toBe("review-required");
+    expect(await call(client, "aisb_run_approved_build_step", datasetTarget)).toMatchObject({ok: true, value: {
+      kind: "replayed", operation: "data.prepare-local-dataset", reference: {workspaceId, taskId: acceptedTaskId}}});
     await verifySavedStep(await invokeDataStep(2), "Fixture data intake");
     await page.getByRole("button", { name: "Data", exact: true }).click();
     await page.getByRole("tab", { name: "Artifact Browser", exact: true }).click();

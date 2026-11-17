@@ -9,6 +9,32 @@ from control_plane import catalog
 
 
 class DatasetPreviewRoutingTests(unittest.TestCase):
+    def test_production_worker_wrapper_runs_its_actual_guard_tests(self):
+        source = "dev-tools/scripts/qualification/visual-composer/headless-dataset-runtime-worker.py"
+        selected = self.selected([source])
+        self.assertNotIn("focused-tests", selected)
+        self.assertIn("dev-tools/scripts/qualification/tests/managed-reference-lifecycle.unit.test.mjs",
+                      selected["managed-headless-browser-live-fixture"]["argv"])
+        self.assertIn("focused-tests", self.selected([source, "dev-tools/scripts/qualification/visual-composer/unmapped.py"]))
+        self.assertIn("focused-tests", self.selected([source], ["focused-tests"]))
+
+    def test_approved_tasks_have_exact_authority_and_real_store_checks(self):
+        sources = ["modules/contracts/headless/headless-dataset-plan.ts",
+                   "modules/adapters/persistence/ingestion/createStructuredHeadlessDatasetPlanTaskStore.ts",
+                   "modules/hosts/shared/composition/headlessPlanReview.ts"]
+        selected = self.selected(sources)
+        self.assertNotIn("focused-tests", selected)
+        command = selected["headless-approved-dataset-task-wiring"]["argv"]
+        for name in ["modules/contracts/headless/tests/headless-dataset-plan.unit.test.ts",
+                     "modules/adapters/persistence/ingestion/tests/headless-approved-dataset-hosts.integration.test.ts",
+                     "modules/adapters/persistence/system-builder/tests/structured-headless-operation-store.unit.test.ts",
+                     "modules/ui/shared/headless/tests/HeadlessPlanApprovalDialog.interaction.ui.test.tsx"]:
+            self.assertIn(name, command)
+        self.assertIn("focused-tests", self.selected(sources + ["modules/adapters/persistence/ingestion/unknown-owner.ts"]))
+        self.assertIn("focused-tests", self.selected(sources, ["focused-tests"]))
+        self.assertIn("headless-approved-dataset-task-wiring", self.selected(
+            ["dev-tools/scripts/qualification/visual-composer/managed-reference-host.ts"]))
+
     def selected(self, paths, required=None):
         return {row["id"]: row for row in catalog.plan(
             HELPERS.parents[1], paths, required or ["architecture"], "a" * 64)["selected"]}

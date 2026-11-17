@@ -3,15 +3,96 @@ import type { prepareStructuredHeadlessPlanStep } from "../../../adapters/persis
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import type { HeadlessPlanReviewSnapshotResult } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import type { GovernedIngestionTaskUseCases } from "../../../application/use-cases/ingestion-acquisition/governed-ingestion-tasks.use-case";
+import { PrepareHeadlessDatasetInputsUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case";
+import type { PrepareTrainingDatasetFromArtifactsUseCase } from "../../../application/use-cases/prepare-training-dataset-from-artifacts.use-case";
+import type { ApplicationRequestContext } from "../../../application/ports";
+import {ReadHeadlessDatasetTaskStatusUseCase} from "../../../application/use-cases/ingestion-acquisition/headless-dataset-task-status.use-case";
+import {readStructuredOwnedDatasetPlanTask, readStructuredOwnedDatasetPlanTaskByPlan} from "../../../adapters/persistence/ingestion/createStructuredHeadlessDatasetPlanTaskStore";
 import { readHeadlessPlanStepResult, type HeadlessBuildPlanRequest, type HeadlessLocalFileSavePlanRequest,
-  type HeadlessProviderFileSavePlanRequest,
+  type HeadlessProviderFileSavePlanRequest, type HeadlessLocalDatasetPlanRequest,
   type HeadlessPlanReviewAgentResult, type HeadlessPlanStepRequest } from "../../../contracts/headless";
 import type { WorkspaceId } from "../../../contracts/workspace";
+import { composeIngestionAcquisitionRepository } from "./composeIngestionAcquisitionRepository";
 
 type PreparedLocalFileStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStep>>>, { kind: "local-file" }>;
 type FinalizeApprovedLocalFile = GovernedIngestionTaskUseCases["finalizeApprovedLocalFile"];
 type PreparedProviderFileStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStep>>>, { kind: "provider-file" }>;
 type FinalizeApprovedProviderFile = GovernedIngestionTaskUseCases["finalizeApprovedProviderFile"];
+type PreparedDatasetStep = Extract<NonNullable<Awaited<ReturnType<typeof prepareStructuredHeadlessPlanStep>>>, { kind: "local-dataset" }>;
+export type StartHeadlessDataset = PrepareTrainingDatasetFromArtifactsUseCase["startAdmittedLocalProvidedDataset"];
+
+export function composeHeadlessDatasetTaskStatus(documents: StructuredDocumentStore,
+  getProcessor: () => Promise<Pick<PrepareTrainingDatasetFromArtifactsUseCase, "readAdmittedLocalDatasetStatus">>) {
+  if (documents.organizationId !== undefined || !documents.runInOwnedTransaction)
+    throw new Error("Dataset task status requires the platform owner.");
+  return new ReadHeadlessDatasetTaskStatusUseCase(async (request, context, registeredClientId) => {
+    if (!context.organizationId || !context.principalId || context.workspaceId !== request.input.workspaceId) return;
+    const scope = {organizationId: context.organizationId, principalId: context.principalId, registeredClientId,
+      workspaceId: request.input.workspaceId};
+    const {hostIncarnationId, selection} = request.input;
+    const receipt = await documents.runInOwnedTransaction!(async owner => {
+      const partition = owner.forOrganization(scope.organizationId);
+      return selection.kind === "task"
+        ? readStructuredOwnedDatasetPlanTask(partition, scope, hostIncarnationId, selection.taskId)
+        : readStructuredOwnedDatasetPlanTaskByPlan(partition, scope, hostIncarnationId, selection.fingerprint, selection.step);
+    }, () => {});
+    return receipt?.taskId;
+  }, async (taskId, context) => (await getProcessor()).readAdmittedLocalDatasetStatus(taskId, context));
+}
+
+/** Read metadata through the transaction's existing organization partition. No runtime or file IO. */
+export async function compileHeadlessDatasetPlanInputs(rootDirectory: string, documents: StructuredDocumentStore,
+  request: HeadlessLocalDatasetPlanRequest, context: ApplicationRequestContext, stillAllowed: () => Promise<boolean>) {
+  const {idempotencyKey: _key, ...input} = request.input;
+  return new PrepareHeadlessDatasetInputsUseCase(composeIngestionAcquisitionRepository(rootDirectory, documents)).execute({
+    version: request.version, operation: "data.preview-dataset-preparation", input,
+  }, {hostIncarnationId: input.hostIncarnationId, context, stillAllowed});
+}
+
+/** Only a new durable reservation can call the existing processing owner. */
+export async function runPreparedHeadlessLocalDataset(options: {
+  readonly prepared: PreparedDatasetStep;
+  readonly request: HeadlessPlanStepRequest;
+  readonly context: ApplicationRequestContext;
+  readonly canUse: () => Promise<boolean>;
+  readonly resolveStart: () => Promise<StartHeadlessDataset | undefined>;
+}) {
+  const {prepared, request, context, canUse, resolveStart} = options;
+  const forbidden = {result: {ok: false, code: "headless.forbidden"}} as const;
+  const unconfirmed = {result: {ok: false, code: "headless.operation-unconfirmed"}} as const;
+  if (!prepared.isCurrent() || !await canUse()) return forbidden;
+  const observed = await prepared.inspect();
+  if (!observed) return unconfirmed;
+  let kind: "started" | "replayed" = "replayed";
+  let reference = observed.kind === "accepted" ? observed.reference : undefined;
+  if (observed.kind === "absent") {
+    const start = await resolveStart();
+    if (!start || !prepared.isCurrent() || !await canUse() || !await prepared.stillAllowed()) return forbidden;
+    const reserved = await prepared.reserve();
+    if (!reserved) return unconfirmed;
+    if (reserved.kind === "accepted") reference = reserved.reference;
+    else if (reserved.kind === "new") {
+      const taskId = reserved.taskId;
+      const result = await start(reserved.compiled.command, context, {
+        taskId, sources: reserved.compiled.admissionSources, isCurrent: prepared.isCurrent,
+        stillAllowed: async () => prepared.isCurrent() && await canUse() && await prepared.stillAllowed(),
+        issue: () => prepared.issue(taskId, reserved.sourceDigest),
+      });
+      if (!result.ok || result.value.requestId !== taskId || result.value.accepted !== true ||
+          (result.value.status !== "queued" && result.value.status !== "running")) return unconfirmed;
+      // Persist the issued business outcome even if the caller has since lost access.
+      if (!await prepared.accept(taskId)) return unconfirmed;
+      kind = "started";
+      reference = await prepared.readReceipt();
+    }
+  }
+  if (!prepared.isCurrent() || !await canUse() || !await prepared.stillAllowed()) return forbidden;
+  if (!reference) return unconfirmed;
+  const {fingerprint, approvalRevision, step} = request.input;
+  return {result: readHeadlessPlanStepResult({ok: true, value: {kind, operation: "data.prepare-local-dataset",
+    reference, fingerprint, approvalRevision, step, expiresAt: prepared.expiresAt}}, request.input,
+    {allowLocalFileSave: false, allowLocalDatasetPreparation: true}), publishIfCurrent: prepared.publishIfCurrent};
+}
 
 /** Run the exact stored selection through the owning ingestion service and confirm its durable receipt. */
 export async function runPreparedHeadlessLocalFile(options: {
@@ -92,6 +173,7 @@ export async function validateHeadlessPlanSavedSources(
   requests: readonly HeadlessBuildPlanRequest[], isCurrent: () => boolean,
   validateLocalFile?: (request: HeadlessLocalFileSavePlanRequest) => Promise<true | false | "stale">,
   validateProviderFile?: (request: HeadlessProviderFileSavePlanRequest) => Promise<true | false | "stale">,
+  validateDataset?: (request: HeadlessLocalDatasetPlanRequest) => Promise<true | false | "stale">,
 ): Promise<true | false | "stale"> {
   const systems = createStructuredSystemBuilderRepository(documents);
   for (const request of requests) {
@@ -106,6 +188,12 @@ export async function validateHeadlessPlanSavedSources(
     if (operation === "data.save-provider-source") {
       if (!validateProviderFile) return false;
       const eligible = await validateProviderFile(request);
+      if (eligible !== true) return eligible;
+      continue;
+    }
+    if (operation === "data.prepare-local-dataset") {
+      if (!validateDataset) return false;
+      const eligible = await validateDataset(request);
       if (eligible !== true) return eligible;
       continue;
     }

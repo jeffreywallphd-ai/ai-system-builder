@@ -5,6 +5,7 @@ import {
   readHeadlessIngestionStatusValue,
   isHeadlessDataReadOperation, readHeadlessDatasetVersionBatch, readHeadlessDatasetComparison,
   readHeadlessDatasetPreparationPreview,
+  readHeadlessDatasetTaskStatusValue,
   readHeadlessAuthoringWireResult, type HeadlessHostIncarnationId, type HeadlessReadOperation,
   isUiControlId, readHeadlessWindowRequest, type HeadlessWindowRequest, type HeadlessWindowResult,
   type HeadlessReadRequest, type HeadlessReadResult, type HeadlessSemanticBatchRequest, type HeadlessSystemManagementRequest,
@@ -52,6 +53,7 @@ export type ManagedAgentRouteHandlers<Agent> = {
   readonly planReview?: (input: HeadlessPlanReviewAgentRequest, agent: Agent, current: () => boolean) => Promise<HeadlessPlanReviewAgentResult>;
   readonly allowLocalFileSave?: boolean;
   readonly allowProviderFileSave?: boolean;
+  readonly allowLocalDatasetPreparation?: boolean;
   readonly planStep?: (input: HeadlessPlanStepRequest, agent: Agent, current: () => boolean) => Promise<{
     readonly result: HeadlessPlanStepResult;
     readonly publishIfCurrent?: (publish: () => boolean) => Promise<boolean>;
@@ -135,7 +137,8 @@ async function respond<Agent>(
   if (!value) return failure(response, 400, "headless.invalid-request");
   if (kind === "plan-review") {
     const parsed = readHeadlessPlanReviewAgentRequest(value, handlers.hostIncarnationId,
-      { allowLocalFileSave: handlers.allowLocalFileSave === true, allowProviderFileSave: handlers.allowProviderFileSave === true });
+      { allowLocalFileSave: handlers.allowLocalFileSave === true, allowProviderFileSave: handlers.allowProviderFileSave === true,
+        allowLocalDatasetPreparation: handlers.allowLocalDatasetPreparation === true });
     if (!parsed.ok) return failure(response, requestErrorStatus(parsed.code), parsed.code);
     if (!handlers.planReview) return failure(response, 404, "headless.unavailable");
     const input = parsed.request;
@@ -154,7 +157,8 @@ async function respond<Agent>(
     const outcome = await handlers.planStep(parsed.request, agent, current);
     if (!current()) return failure(response, 403, "headless.forbidden");
     const result = readHeadlessPlanStepResult(outcome.result, parsed.request.input,
-      { allowLocalFileSave: handlers.allowLocalFileSave === true, allowProviderFileSave: handlers.allowProviderFileSave === true });
+      { allowLocalFileSave: handlers.allowLocalFileSave === true, allowProviderFileSave: handlers.allowProviderFileSave === true,
+        allowLocalDatasetPreparation: handlers.allowLocalDatasetPreparation === true });
     if (!result.ok) return failure(response, requestErrorStatus(result.code), result.code);
     const sent = await outcome.publishIfCurrent?.(() => {
       if (!current() || response.headersSent || result.value.expiresAt <= Date.now()) return false;
@@ -226,6 +230,11 @@ async function respond<Agent>(
       return send(response, {ok: true, operation: result.operation,
         value: {version, hostIncarnationId, workspaces, operations: [...availableReads,
           ...(handlers.planReview ? result.value.operations.filter(isHeadlessDataReadOperation) : [])]}});
+    }
+    if (result.operation === "data.dataset-task-status") {
+      if (parsed.request.operation !== "data.dataset-task-status") return failure(response, 503, "headless.unavailable");
+      const value = readHeadlessDatasetTaskStatusValue(result.value, parsed.request.input.selection);
+      return value ? send(response, {ok: true, operation: result.operation, value}) : failure(response, 503, "headless.unavailable");
     }
     if (result.operation === "data.dataset-versions") {
       if (parsed.request.operation !== "data.dataset-versions") return failure(response, 503, "headless.unavailable");

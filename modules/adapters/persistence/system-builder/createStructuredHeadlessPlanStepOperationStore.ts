@@ -5,9 +5,12 @@ import type {
 } from "../../../application/ports/system-builder/headless-build-plan-review.port";
 import type { HeadlessOperationScope, HeadlessOperationStorePort } from "../../../application/ports/system-builder";
 import type { IngestionAcquisitionRepositoryPort, IngestionFilePublicationAdmission } from "../../../application/ports/ingestion";
+import type {PrepareHeadlessDatasetInputsUseCase} from "../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case";
 import { normalizeIngestionFilePublication, publicationUnavailable } from "../../../application/shared/ingestion-file-publication";
 import { serializeHeadlessMutationInput, type HeadlessBuildPlanRequest, type HeadlessLocalFileSavePlanRequest,
-  type HeadlessProviderFileSavePlanRequest } from "../../../contracts/headless";
+  type HeadlessProviderFileSavePlanRequest, type HeadlessLocalDatasetPlanRequest } from "../../../contracts/headless";
+import {inspectStructuredDatasetPlanTask, reserveStructuredDatasetPlanTask, issueStructuredDatasetPlanTask,
+  acceptStructuredDatasetPlanTask, type DatasetPlanTaskEffect} from "../ingestion/createStructuredHeadlessDatasetPlanTaskStore";
 import {
   issueStructuredLocalFilePlanEffect, readCommittedStructuredLocalFilePlanEffect, type LocalFilePlanEffect,
 } from "../ingestion/createStructuredHeadlessLocalFilePlanStepStore";
@@ -29,6 +32,9 @@ type StepQuery = HeadlessPlanReviewQuery & {
   readonly approvalRevision: number;
   readonly step: number;
 };
+type CompiledDataset = Extract<Awaited<ReturnType<PrepareHeadlessDatasetInputsUseCase["execute"]>>, {ok: true}>["prepared"];
+export type CompileApprovedDataset = (owner: StructuredDocumentStore, request: HeadlessLocalDatasetPlanRequest,
+  scope: HeadlessOperationScope) => Promise<CompiledDataset | undefined>;
 
 /** Prepare the stored request, then independently enforce the same exact plan inside the mutation transaction. */
 export async function prepareStructuredHeadlessPlanStep(
@@ -36,6 +42,7 @@ export async function prepareStructuredHeadlessPlanStep(
   publication: "serialized-owner" | "stable-reads" = "serialized-owner",
   allowLocalFileSave = false,
   publishProvider?: OwnedProviderPublication,
+  compileDataset?: CompileApprovedDataset,
 ) {
   const { approvalRevision, step, isCurrent } = query;
   const target: HeadlessPlanReviewTarget = { ...query.target, scope: { ...query.target.scope } };
@@ -58,7 +65,9 @@ export async function prepareStructuredHeadlessPlanStep(
     const request = approved.requests[step - 1];
     if (!request || (!allowLocalFileSave && approved.requests.some(candidate => candidate.operation === "data.save-local-source")) ||
         (!publishProvider && approved.requests.some(candidate => candidate.operation === "data.save-provider-source")) ||
-        ((request.operation === "data.save-local-source" || request.operation === "data.save-provider-source") &&
+        (!compileDataset && approved.requests.some(candidate => candidate.operation === "data.prepare-local-dataset")) ||
+        ((request.operation === "data.save-local-source" || request.operation === "data.save-provider-source" ||
+          request.operation === "data.prepare-local-dataset") &&
           !await authorize(owner, target.scope, request))) return;
     for (let index = 0; index < step - 1; index++) {
       const previous = approved.requests[index];
@@ -67,6 +76,8 @@ export async function prepareStructuredHeadlessPlanStep(
         ? await readCommittedStructuredLocalFilePlanEffect(partition, localFileEffect(target, previous, index + 1))
         : previous.operation === "data.save-provider-source"
           ? await readCommittedStructuredProviderFilePlanEffect(partition, providerFileEffect(target, previous, index + 1))
+          : previous.operation === "data.prepare-local-dataset"
+            ? (await inspectStructuredDatasetPlanTask(partition, datasetTaskEffect(target, previous, index + 1, approvalRevision))).kind === "accepted"
           : await hasStructuredHeadlessOperationReceipt(partition, target.scope, previous.operation,
           stepKey(target, previous, index + 1), sum(serializeHeadlessMutationInput(previous)));
       if (!received) return;
@@ -210,6 +221,76 @@ export async function prepareStructuredHeadlessPlanStep(
     };
   }
 
+  if (request.operation === "data.prepare-local-dataset") {
+    const effect = datasetTaskEffect(target, request, step, approvalRevision);
+    const protect = () => {if (!current()) throw new Error("The approved dataset step ended.");};
+    const sourceDigest = (compiled: CompiledDataset) => sum(JSON.stringify([compiled.command, compiled.admissionSources]));
+    async function authorizedRecord(owner: StructuredDocumentStore) {
+      const selected = await select(owner);
+      if (!selected || selected.expiresAt !== deadline || !current()) return;
+      return owner.forOrganization(target.scope.organizationId);
+    }
+    return {
+      kind: "local-dataset" as const, request: structuredClone(request), expiresAt: prepared.expiresAt,
+      isCurrent: current,
+      async stillAllowed() {
+        try {return await ownedTransaction(async owner => Boolean(await authorizedRecord(owner)), protect);}
+        catch {return false;}
+      },
+      async inspect() {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner);
+          return partition ? inspectStructuredDatasetPlanTask(partition, effect) : undefined;
+        }, protect);} catch {return undefined;}
+      },
+      async reserve() {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner);
+          if (!partition) return;
+          const previous = await inspectStructuredDatasetPlanTask(partition, effect);
+          if (previous.kind !== "absent") return previous;
+          const compiled = await compileDataset!(owner, request, target.scope);
+          if (!compiled || !current()) return;
+          if (!await fenceStructuredApprovedPlan(partition, target, approvalRevision)) return;
+          const digest = sourceDigest(compiled);
+          const reserved = await reserveStructuredDatasetPlanTask(partition, effect, digest, now());
+          return reserved.kind === "new" ? {...reserved, compiled, sourceDigest: digest} : reserved;
+        }, protect);} catch {return undefined;}
+      },
+      async issue(taskId: string, expectedSourceDigest: string): Promise<"issued" | "denied" | "unconfirmed"> {
+        try {
+          const issued = await ownedTransaction(async owner => {
+            const partition = await authorizedRecord(owner);
+            if (!partition) return false;
+            const compiled = await compileDataset!(owner, request, target.scope);
+            if (!compiled || sourceDigest(compiled) !== expectedSourceDigest || !current() ||
+                !await fenceStructuredApprovedPlan(partition, target, approvalRevision)) return false;
+            return issueStructuredDatasetPlanTask(partition, effect, taskId, expectedSourceDigest, now());
+          }, protect);
+          return issued ? "issued" : "denied";
+        } catch {return "unconfirmed";}
+      },
+      async accept(taskId: string) {
+        // Already admitted outcome recording does not depend on the caller's
+        // continuing authority to see the result or approve another step.
+        try {return await ownedTransaction(owner => acceptStructuredDatasetPlanTask(
+          owner.forOrganization(target.scope.organizationId), effect, taskId, now()), () => {});}
+        catch {return false;}
+      },
+      async readReceipt() {
+        try {return await ownedTransaction(async owner => {
+          const partition = await authorizedRecord(owner);
+          if (!partition) return;
+          const result = await inspectStructuredDatasetPlanTask(partition, effect);
+          return result.kind === "accepted" ? result.reference : undefined;
+        }, protect);} catch {return undefined;}
+      },
+      publishIfCurrent(publish: () => boolean) {
+        return publishIfCurrent(publish, async partition => (await inspectStructuredDatasetPlanTask(partition, effect)).kind === "accepted");
+      },
+    };
+  }
+
   const normalOperations = createStructuredHeadlessOperationStore(documents, now, {
     async authorize(owner, scope, operation) {
       if (!current() || !sameScope(scope, target.scope) || operation !== request.operation) return false;
@@ -244,14 +325,21 @@ function sameScope(left: HeadlessOperationScope, right: HeadlessOperationScope) 
 function sum(value: string) { return createHash("sha256").update(value, "utf8").digest("hex"); }
 
 function stepKey(target: HeadlessPlanReviewTarget, request: HeadlessBuildPlanRequest, step: number) {
-  const family = request.operation === "data.save-provider-source" ? "aisb-approved-provider-file-step-v1" :
+  const family = request.operation === "data.prepare-local-dataset" ? "aisb-approved-local-dataset-step-v1" :
+    request.operation === "data.save-provider-source" ? "aisb-approved-provider-file-step-v1" :
     request.operation === "data.save-local-source" ? "aisb-approved-local-file-step-v1" : "aisb-approved-system-step-v1";
-  const hex = sum(JSON.stringify([family, target.hostIncarnationId,
-    target.fingerprint, step, request.input.idempotencyKey]));
+  const parts = [family, target.hostIncarnationId, target.fingerprint, step, request.input.idempotencyKey];
+  const hex = sum(JSON.stringify(request.operation === "data.prepare-local-dataset" ?
+    [...parts, target.scope.organizationId, target.scope.workspaceId, target.scope.principalId, target.scope.registeredClientId] : parts));
   // Keep the existing validated internal UUID shape. The plan and ordinal
   // reserve a different key even when two proposals reuse a supplied key.
   return [hex.slice(0, 8), hex.slice(8, 12), "4" + hex.slice(13, 16),
     "8" + hex.slice(17, 20), hex.slice(20, 32)].join("-");
+}
+
+function datasetTaskEffect(target: HeadlessPlanReviewTarget, request: HeadlessLocalDatasetPlanRequest,
+  step: number, approvalRevision: number): DatasetPlanTaskEffect {
+  return {key: stepKey(target, request, step), target, request, step, approvalRevision};
 }
 
 function localFileEffect(target: HeadlessPlanReviewTarget, request: HeadlessLocalFileSavePlanRequest, step: number): LocalFilePlanEffect {

@@ -13,6 +13,7 @@ import type { LocalIdentityProfile } from "../../../contracts/organization";
 import type { WorkspaceId } from "../../../contracts/workspace";
 import type { SystemBuilderCompositionRoot } from "../../shared/composition/composeSystemBuilder";
 import { projectHeadlessPlanReview, runPreparedHeadlessLocalFile, runPreparedHeadlessProviderFile,
+  compileHeadlessDatasetPlanInputs, runPreparedHeadlessLocalDataset, type StartHeadlessDataset,
   validateHeadlessPlanSavedSources } from "../../shared/composition/headlessPlanReview";
 import { composeIngestionAcquisitionRepository } from "../../shared/composition/composeIngestionAcquisitionRepository";
 import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
@@ -36,6 +37,7 @@ export function composeDesktopHeadlessPlanReview(options: {
   readonly isOpen: () => boolean;
   readonly systems?: Pick<SystemBuilderCompositionRoot, "composeHeadlessAuthoring">;
   readonly getIngestionTasks?: () => Promise<DesktopIngestionTaskCommands>;
+  readonly getDatasetStart?: () => Promise<StartHeadlessDataset>;
   readonly audit?: DesktopHeadlessAudit;
 }): LoopbackPlanReview {
   const { hostIncarnationId, identity, platform, rootDirectory, workspaces, authorization, isOpen, systems, getIngestionTasks } = options;
@@ -74,7 +76,7 @@ export function composeDesktopHeadlessPlanReview(options: {
     const isCurrent = () => admits(initial, registeredClientId, workspaceId);
     const canUse = async (savesFile = false) => isCurrent() && admits(await currentGrant(), registeredClientId, workspaceId) &&
       await authorize(workspaces, authorization, workspaceId, request.operation, savesFile) && isCurrent();
-    let savingFile: "local-data-save" | "provider-data-save" | undefined;
+    let savingFile: "local-data-save" | "provider-data-save" | "local-dataset-start" | undefined;
     function localFailure(result: typeof forbidden | typeof unconfirmed) {
       options.audit?.backend(savingFile ?? "local-data-save", workspaceId, result.code === "headless.forbidden" ? "denied" : "unconfirmed");
       return { result };
@@ -87,10 +89,16 @@ export function composeDesktopHeadlessPlanReview(options: {
         const repository = createLocalWorkspaceRepository({ rootDirectory, documents: owner.forOrganization(organizationId) });
         return authorize(repository, composeDesktopWorkspaceAuthorization({ documents: owner, localIdentity: identity }),
           workspaceId, request.operation, approvedRequest?.operation === "data.save-local-source" ||
-            approvedRequest?.operation === "data.save-provider-source");
+            approvedRequest?.operation === "data.save-provider-source" || approvedRequest?.operation === "data.prepare-local-dataset");
       }, Date.now, "serialized-owner", Boolean(getIngestionTasks), getIngestionTasks
         ? (owner, ...input) => composeIngestionAcquisitionRepository(rootDirectory, owner).saveTaskWithProviderArtifact!(...input)
-        : undefined);
+        : undefined, options.getDatasetStart ? async (owner, selected, taskScope) => {
+          const repository = createLocalWorkspaceRepository({rootDirectory, documents: owner.forOrganization(organizationId)});
+          const policy = composeDesktopWorkspaceAuthorization({documents: owner, localIdentity: identity});
+          const compiled = await compileHeadlessDatasetPlanInputs(rootDirectory, owner.forOrganization(organizationId), selected,
+            taskScope, async () => isCurrent() && await authorize(repository, policy, workspaceId, request.operation, true));
+          return compiled.ok ? compiled.prepared : undefined;
+        } : undefined);
       if (!prepared || !await canUse() || !prepared.isCurrent()) return { result: forbidden };
       if (prepared.kind === "local-file") {
         savingFile = "local-data-save";
@@ -115,6 +123,14 @@ export function composeDesktopHeadlessPlanReview(options: {
           } });
         if (!outcome.result.ok) return localFailure(outcome.result.code === "headless.forbidden" ? forbidden : unconfirmed);
         options.audit?.backend("provider-data-save", workspaceId, outcome.result.value.kind);
+        return outcome;
+      }
+      if (prepared.kind === "local-dataset") {
+        savingFile = "local-dataset-start";
+        const outcome = await runPreparedHeadlessLocalDataset({prepared, request, context: {organizationId, principalId, workspaceId},
+          canUse: () => canUse(true), resolveStart: async () => options.getDatasetStart?.()});
+        if (!outcome.result.ok) return localFailure(outcome.result.code === "headless.forbidden" ? forbidden : unconfirmed);
+        options.audit?.backend("local-dataset-start", workspaceId, outcome.result.value.kind);
         return outcome;
       }
       const { operation } = prepared.request;
@@ -154,18 +170,23 @@ export function composeDesktopHeadlessPlanReview(options: {
     hostIncarnationId,
     ...(getIngestionTasks ? { allowLocalFileSave: true as const } : {}),
     ...(getIngestionTasks ? { allowProviderFileSave: true as const } : {}),
+    ...(options.getDatasetStart ? {allowLocalDatasetPreparation: true as const} : {}),
     ...(systems ? { runStep } : {}),
     async execute(request, initialGrant, getCurrentGrant) {
       const { workspaceId, fingerprint } = request.target;
       const { registeredClientId } = initialGrant;
       const isCurrent = () => admits(initialGrant, registeredClientId, workspaceId);
       const savesFile = request.operation === "plan.submit" &&
-        request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source");
+        request.proposal.requests.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source" ||
+          step.operation === "data.prepare-local-dataset");
       const canUse = async () => isCurrent() && admits(await getCurrentGrant(), registeredClientId, workspaceId) &&
         await authorize(workspaces, authorization, workspaceId, request.operation, savesFile) && isCurrent();
       if (request.target.hostIncarnationId !== hostIncarnationId || !isDesktopHeadlessClientId(registeredClientId)) return forbidden;
       try {
-        if ((savesFile && !getIngestionTasks) || !await canUse()) return forbidden;
+        if ((request.operation === "plan.submit" && request.proposal.requests.some(step =>
+          step.operation === "data.prepare-local-dataset" ? !options.getDatasetStart :
+            (step.operation === "data.save-local-source" || step.operation === "data.save-provider-source") && !getIngestionTasks)) ||
+            !await canUse()) return forbidden;
         const target = { hostIncarnationId, fingerprint, scope: {
           organizationId: identity.organizationId, principalId: identity.principalId, workspaceId, registeredClientId,
         } };
@@ -194,7 +215,12 @@ export function composeDesktopHeadlessPlanReview(options: {
             });
             if (!observed || !isCurrent()) return false;
             return observed.ok ? true : observed.code === "headless.stale" ? "stale" : false;
-          }), Boolean(getIngestionTasks), Boolean(getIngestionTasks));
+          }, async selected => {
+            if (!options.getDatasetStart) return false;
+            const compiled = await compileHeadlessDatasetPlanInputs(rootDirectory, documents, selected,
+              target.scope, async () => isCurrent());
+            return compiled.ok ? true : compiled.code === "headless.stale" ? "stale" : false;
+          }), Boolean(getIngestionTasks), Boolean(getIngestionTasks), Boolean(options.getDatasetStart));
         const result = request.operation === "plan.submit" ?
           await reviews.propose({ target, isCurrent, proposal: {
             ...request.proposal.scope,

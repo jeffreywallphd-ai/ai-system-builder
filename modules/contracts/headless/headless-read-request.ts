@@ -7,11 +7,12 @@ import { normalizeDatasetId, normalizeDatasetVersionId } from "../dataset";
 import type { HeadlessDatasetMetadataRequest } from "./headless-dataset-metadata";
 import { HEADLESS_DATASET_VERSION_READ_LIMIT } from "./headless-dataset-metadata";
 import {readHeadlessDatasetPreparationRequest, type HeadlessDatasetPreparationRequest} from "./headless-dataset-preparation";
+import {readHeadlessDatasetTaskStatusRequest, type HeadlessDatasetTaskStatusRequest} from "./headless-dataset-task-status";
 import {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
 export {HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId} from "./headless-protocol";
 
 export const HEADLESS_DATA_READ_OPERATIONS = Object.freeze([
-  "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation",
+  "data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation", "data.dataset-task-status",
 ] as const);
 export function isHeadlessDataReadOperation(value: unknown): value is typeof HEADLESS_DATA_READ_OPERATIONS[number] {
   return HEADLESS_DATA_READ_OPERATIONS.some(operation => operation === value);
@@ -63,6 +64,7 @@ export type HeadlessReadRequest =
   | HeadlessIngestionStatusRequest
   | HeadlessDatasetMetadataRequest
   | HeadlessDatasetPreparationRequest
+  | HeadlessDatasetTaskStatusRequest
   | ReadRequest<"host.describe", Record<string, never>>
   | ReadRequest<"workspaces.list", HostTarget>
   | ReadRequest<"systems.list", WorkspaceTarget>
@@ -157,6 +159,7 @@ export function parseHeadlessReadRequest(
   if (!isHeadlessReadOperation(operation)) return { ok: false, code: "headless.unsupported-operation" };
 
   const version = HEADLESS_CONTRACT_VERSION;
+  if (operation === "data.dataset-task-status") return readHeadlessDatasetTaskStatusRequest(value, currentHost);
   if (operation === "data.preview-dataset-preparation") return readHeadlessDatasetPreparationRequest(value, currentHost);
   if (operation === "host.describe") {
     if (!exactDataRecord(record.input, [])) return invalid();

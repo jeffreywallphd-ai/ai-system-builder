@@ -1,5 +1,6 @@
 import type {ApplicationRequestContext} from "../../ports";
 import type {IngestionAcquisitionRepositoryPort} from "../../ports/ingestion";
+import type {LocalDatasetPreparationAdmission} from "../../ports/runtime";
 import {normalizeIngestionTaskRecord, normalizeIngestionSourceSnapshot, normalizeIngestionSourceSnapshotId} from "../../../contracts/ingestion";
 import {resolveDatasetPreparationSourceCapability} from "../../../contracts/runtime";
 import {HEADLESS_DATASET_MAX_SOURCE_BYTES, HEADLESS_DATASET_MAX_TOTAL_BYTES, HEADLESS_DATASET_MAX_ROWS_PER_SOURCE,
@@ -26,6 +27,7 @@ export class PrepareHeadlessDatasetInputsUseCase {
     const {input} = parsed.request;
     if (!context.organizationId || !context.principalId || context.workspaceId !== input.workspaceId) return forbidden;
     const artifactIds: string[] = [];
+    const admissionSources: Array<LocalDatasetPreparationAdmission["sources"][number]> = [];
     const previewSources = [];
     let totalBytes = 0;
     try {
@@ -46,7 +48,8 @@ export class PrepareHeadlessDatasetInputsUseCase {
         totalBytes += output.sizeBytes;
         if (totalBytes > HEADLESS_DATASET_MAX_TOTAL_BYTES || artifactIds.includes(output.key)) return notReady;
         const capability = resolveDatasetPreparationSourceCapability({fileName: file.fileName, mediaType: file.mediaType});
-        if (!capability || capability.kind !== "structured" || !capability.taskTypes.includes("llm-instruction")) return notReady;
+        if (!capability || capability.kind !== "structured" || !capability.taskTypes.includes("llm-instruction") ||
+            !capability.mediaTypes.some(media => media === file.mediaType.split(";", 1)[0].trim().toLowerCase())) return notReady;
         if (!await stillAllowed()) return forbidden;
         const saved = await this.sources.readSourceSnapshot(input.workspaceId, normalizeIngestionSourceSnapshotId(output.sourceSnapshotId));
         if (!await stillAllowed()) return forbidden;
@@ -57,6 +60,8 @@ export class PrepareHeadlessDatasetInputsUseCase {
         if (snapshot.locator.kind !== "file" || snapshot.rawArtifactKey !== output.key || snapshot.contentDigest !== output.digest ||
             snapshot.sizeBytes !== output.sizeBytes || snapshot.mediaType !== output.mediaType || file.mediaType !== output.mediaType) return unavailable;
         artifactIds.push(output.key);
+        admissionSources.push({artifactId: output.key, storageKey: output.key, format: capability.format,
+          mediaType: snapshot.mediaType, sizeBytes: snapshot.sizeBytes, digest: snapshot.contentDigest});
         previewSources.push({...selected, sourceSnapshotId: snapshot.snapshotId, format: capability.format,
           sizeBytes: output.sizeBytes, digest: output.digest, licenseStatus: "unknown" as const});
       }
@@ -69,7 +74,7 @@ export class PrepareHeadlessDatasetInputsUseCase {
         output: {format: "jsonl", destinations: {local: {enabled: true}}},
         quality: {policy: {preset: input.qualityPreset, maxRowsPerSource: HEADLESS_DATASET_MAX_ROWS_PER_SOURCE}, reviewRequired: true},
       };
-      return {ok: true, prepared: {command, preview: {workspaceId: input.workspaceId, sources: previewSources,
+      return {ok: true, prepared: {command, admissionSources, preview: {workspaceId: input.workspaceId, sources: previewSources,
         recipe: input.recipe, split: input.split, qualityPreset: input.qualityPreset, totalBytes,
         maximumRowsPerSource: HEADLESS_DATASET_MAX_ROWS_PER_SOURCE, outputFormat: "jsonl" as const,
         reviewRequired: true as const, externalProviderCalls: 0 as const, modelCalls: 0 as const}}} as const;

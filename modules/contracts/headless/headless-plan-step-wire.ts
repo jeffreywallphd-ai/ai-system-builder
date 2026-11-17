@@ -24,8 +24,10 @@ type SavedEffect = Extract<Extract<HeadlessAuthoringWireResult, { ok: true }>["v
 type LocalFileReference = Pick<HeadlessLocalFileImportRequest["input"], "workspaceId" | "taskId" | "fileId" | "taskRevision">;
 type SavedLocalFileEffect = { readonly kind: "committed" | "replayed"; readonly operation: "data.save-local-source" | "data.save-provider-source";
   readonly reference: LocalFileReference };
+type StartedLocalDatasetEffect = {readonly kind: "started" | "replayed"; readonly operation: "data.prepare-local-dataset";
+  readonly reference: {readonly workspaceId: WorkspaceId; readonly taskId: string}};
 export type HeadlessPlanStepResult = Extract<HeadlessAuthoringWireResult, { ok: false }> |
-  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
+  { readonly ok: true; readonly value: (SavedEffect | SavedLocalFileEffect | StartedLocalDatasetEffect) & Pick<HeadlessPlanStepTarget, "fingerprint" | "step" | "approvalRevision"> &
     { readonly expiresAt: number } };
 
 const invalid = { ok: false, code: "headless.invalid-request" } as const;
@@ -60,9 +62,17 @@ export function readHeadlessPlanStepResult(value: unknown, exact: HeadlessPlanSt
       raw.value, ["fingerprint", "step", "approvalRevision", "expiresAt", "kind", "reference", "operation"],
     );
     if (fingerprint !== exact.fingerprint || step !== exact.step || approvalRevision !== exact.approvalRevision ||
-        !strictPositiveInteger(expiresAt) || (kind !== "committed" && kind !== "replayed")) return unavailable;
+        !strictPositiveInteger(expiresAt) || (kind !== "committed" && kind !== "replayed" && kind !== "started")) return unavailable;
     if ("operation" in operationField) {
       const operation = operationField.operation;
+      if (operation === "data.prepare-local-dataset") {
+        if (!options?.allowLocalDatasetPreparation || (kind !== "started" && kind !== "replayed")) return unavailable;
+        const fields = readStrictPassiveRecord(reference, ["workspaceId", "taskId"]);
+        if (fields.workspaceId !== exact.workspaceId || !isHeadlessHostIncarnationId(fields.taskId)) return unavailable;
+        return {ok: true, value: {kind, operation, fingerprint, step, approvalRevision, expiresAt,
+          reference: {workspaceId: exact.workspaceId, taskId: fields.taskId}}};
+      }
+      if (kind === "started") return unavailable;
       if (operation !== "data.save-local-source" && operation !== "data.save-provider-source") return unavailable;
       if ((operation === "data.save-local-source" && !options?.allowLocalFileSave) ||
           (operation === "data.save-provider-source" && !options?.allowProviderFileSave)) return unavailable;

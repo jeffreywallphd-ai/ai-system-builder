@@ -7,6 +7,7 @@ import type { HeadlessIngestionStatus } from "./headless-data-task-status";
 import type { HeadlessDatasetVersionBatch } from "./headless-dataset-metadata";
 import type { DatasetVersionComparison } from "../dataset";
 import type {HeadlessDatasetPreparationPreview} from "./headless-dataset-preparation";
+import type {HeadlessDatasetTaskStatus} from "./headless-dataset-task-status";
 import {
   HEADLESS_CONTRACT_VERSION,
   type HeadlessChangeCursor,
@@ -57,6 +58,7 @@ export type HeadlessReadResult =
   | { readonly ok: true; readonly operation: "data.dataset-versions"; readonly value: HeadlessDatasetVersionBatch }
   | { readonly ok: true; readonly operation: "data.compare-dataset-versions"; readonly value: DatasetVersionComparison }
   | { readonly ok: true; readonly operation: "data.preview-dataset-preparation"; readonly value: HeadlessDatasetPreparationPreview }
+  | { readonly ok: true; readonly operation: "data.dataset-task-status"; readonly value: HeadlessDatasetTaskStatus }
   | {
       readonly ok: true;
       readonly operation: "host.describe";

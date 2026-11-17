@@ -18,7 +18,7 @@ import { stopVisualComposerOwnedProcess } from "./visual-composer-owned-process.
 import { seedReferenceBrowseFixture } from "./reference-browse-fixture";
 import { createWorkspaceId } from "../../../../modules/contracts/workspace";
 import { createLocalWorkspaceRepository } from "../../../../modules/adapters/persistence/workspace";
-import { assertIsolatedPostgresInspection, assertOwnedWorkerObservation, closeOwnedManagedServer } from "./managed-reference-lifecycle.mjs";
+import { assertIsolatedPostgresInspection, assertOwnedWorkerObservation, assertOwnedDatasetWorkerIdentity, closeOwnedManagedServer } from "./managed-reference-lifecycle.mjs";
 
 const IMAGE = "postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15";
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -72,9 +72,11 @@ async function interruptOwnedDeliveryProcess(child: ChildProcess, allowExited = 
 export async function startManagedReferenceHost(databaseReference: string,
   options: { readonly headlessDelivery?: boolean; readonly headlessAgent?: boolean; readonly headlessBrowser?: boolean;
     readonly headlessPlanReview?: boolean;
+    readonly headlessProvidedDatasets?: boolean;
     readonly headlessBrowserPresentation?: boolean; readonly headlessMembershipLoss?: boolean; readonly headlessRollback?: boolean } = {}) {
   assert.ok(!options.headlessBrowser || options.headlessAgent && !options.headlessDelivery);
   assert.ok(!options.headlessPlanReview || options.headlessAgent && !options.headlessDelivery);
+  assert.ok(!options.headlessProvidedDatasets || options.headlessPlanReview && options.headlessBrowser);
   assert.ok(!options.headlessBrowserPresentation || options.headlessBrowser);
   assert.ok(!options.headlessMembershipLoss || options.headlessBrowserPresentation);
   assert.ok(!options.headlessRollback || options.headlessBrowserPresentation &&
@@ -143,14 +145,20 @@ export async function startManagedReferenceHost(databaseReference: string,
         const cache=path.join(runRoot,"runtime/controlled-model-cache");
         const files=await readdir(cache).catch(error=>{if(error.code==="ENOENT")return [];throw error;});
         const identities=files.filter(name=>/^qualification-worker-identity-[0-9]+\.json$/.test(name));
-        assertOwnedWorkerObservation(workerScenario,identities.length);
+        assertOwnedWorkerObservation(options.headlessProvidedDatasets ? "headless-provided-data" : workerScenario,identities.length);
         for(const name of identities) {
           const target=path.join(cache,name);const stat=await lstat(target);
           assert.ok(stat.isFile()&&!stat.isSymbolicLink()&&stat.size<=1024);assert.equal(await realpath(target),target);
           const identity=JSON.parse(await readFile(target,"utf8"));
-          assert.equal(identity.parentPid,children[0]?.pid);assert.equal(name,`qualification-worker-identity-${identity.pid}.json`);
+          checks.dataset_worker_parent_matches_server = identity.parentPid === children[0]?.pid;
+          if (options.headlessProvidedDatasets) {
+            assertOwnedDatasetWorkerIdentity(identity, children[0]?.pid);
+            checks.dataset_worker_verified_host_chain = true;
+          } else assert.equal(identity.parentPid,children[0]?.pid);
+          assert.equal(name,`qualification-worker-identity-${identity.pid}.json`);
           assert.ok(Number.isInteger(identity.pid)&&identity.pid>0);
           let alive=true;try {process.kill(identity.pid,0);} catch(error) {if((error as NodeJS.ErrnoException).code!=="ESRCH")throw error;alive=false;}
+          checks.dataset_worker_exists_after_shutdown = alive;
           assert.equal(alive,false,"Owned worker must physically exit after host shutdown.");
         }
         checks.physical_workers_observed=identities.length;checks.physical_workers_alive_after_shutdown=0;
@@ -234,6 +242,19 @@ export async function startManagedReferenceHost(databaseReference: string,
     const environment = {...base, NODE_ENV: "test", DEPLOYMENT_SHAPE: "campus-server", DATABASE_URL: runtimeUrl, POSTGRES_SSL_MODE: "disable", PORT: String(serverPort), SERVER_STORAGE_ROOT: path.join(runRoot, "storage"), SERVER_RUNTIME_ROOT: runtimeRoot,
       AI_SYSTEM_BUILDER_SECURITY_MODE: "oidc-bearer", AI_SYSTEM_BUILDER_HTTPS_ENABLED: "true", AI_SYSTEM_BUILDER_TLS_CERT_MODE: "manual", AI_SYSTEM_BUILDER_TLS_CERT_PATH: material.certificatePath!, AI_SYSTEM_BUILDER_TLS_KEY_PATH: material.keyPath!, AI_SYSTEM_BUILDER_OIDC_ISSUER: issuerOrigin, AI_SYSTEM_BUILDER_OIDC_AUDIENCE: "aisb-controlled-qualification", AI_SYSTEM_BUILDER_OIDC_JWKS_URI: `${issuerOrigin}/jwks`, AI_SYSTEM_BUILDER_OIDC_ALGORITHMS: "RS256", AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE: "dedicated", AI_SYSTEM_BUILDER_DEDICATED_ORGANIZATION_ID: organizationId,
       PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: String(workerPort), PYTHON_RUNTIME_BASE_URL: `http://127.0.0.1:${workerPort}`, PYTHON_RUNTIME_COMMAND: process.execPath, PYTHON_RUNTIME_ARGS: "dev-tools/scripts/qualification/visual-composer/controlled-conversation-runtime-worker.mjs", PYTHON_RUNTIME_WORKER_DIR: root, PYTHON_RUNTIME_STARTUP_TIMEOUT_MS: "15000", HF_HUB_CACHE: path.join(runtimeRoot, "controlled-model-cache")};
+    if (options.headlessProvidedDatasets) {
+      const python = process.env.PYTHON?.trim();
+      assert.ok(python && path.isAbsolute(python) && /[\\/]python(?:\.exe)?$/i.test(python));
+      const worker = path.join(root, "out/ai-system-builder-win32-x64/resources/worker");
+      assert.equal(await realpath(worker), worker);
+      await mkdir(runtimeRoot, {recursive: false});
+      await mkdir(environment.HF_HUB_CACHE, {recursive: false});
+      Object.assign(environment, {PYTHON_RUNTIME_COMMAND: python,
+        PYTHON_RUNTIME_ARGS: "-u ../../../../dev-tools/scripts/qualification/visual-composer/headless-dataset-runtime-worker.py",
+        PYTHON_RUNTIME_WORKER_DIR: worker, MANAGED_REFERENCE_PROVIDED_DATASETS: "1", AISB_HEADLESS_DATASET_QUALIFICATION: "1",
+        HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1", HF_DATASETS_OFFLINE: "1", PIP_NO_INDEX: "1"});
+      checks.production_dataset_worker_with_normal_dependency_preparation = true;
+    }
     if (options.headlessDelivery || options.headlessAgent) Object.assign(environment, {AI_SYSTEM_BUILDER_MANAGED_SAVED_STATE: "1"});
     if (options.headlessAgent) Object.assign(environment, {
       AI_SYSTEM_BUILDER_MANAGED_HEADLESS_AGENT_CLIENT_ID: agentClient,
@@ -253,6 +274,15 @@ export async function startManagedReferenceHost(databaseReference: string,
       const child = fork(path.join(root, "dev-tools/scripts/qualification/visual-composer/managed-reference-server-entry.ts"), [], {execArgv: ["--import", "tsx"], env, silent: true, windowsHide: true});
       if (delivery) deliveryServer = child;
       else children[0] = child;
+      const datasetObservations = new Set(["readiness-ready", "readiness-denied", "owner-accepted", "owner-unconfirmed", "owner-threw"]);
+      let observationCount = 0;
+      child.on("message", message => {
+        if (!options.headlessProvidedDatasets || observationCount >= 8 || !message || typeof message !== "object") return;
+        const value = message as {type?: unknown; stage?: unknown};
+        if (value.type === "headless-dataset-observation" && typeof value.stage === "string" && datasetObservations.has(value.stage)) {
+          observationCount++; checks["dataset_observed_" + value.stage.replaceAll("-", "_")] = true;
+        }
+      });
       let log = "";
       for (const output of [child.stdout, child.stderr]) output?.on("data", bytes => {if (log.length < 64000) log += String(bytes).slice(0, 64000-log.length);});
       await new Promise<void>((resolve, reject) => {

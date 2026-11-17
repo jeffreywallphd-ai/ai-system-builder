@@ -35,7 +35,7 @@ const expectedTools = ["aisb_host_describe", "aisb_list_systems", "aisb_list_tem
 const authoringTools = ["aisb_apply_edits", "aisb_clone_system", "aisb_create_system", "aisb_plan_capabilities",
   "aisb_preview_build_plan", "aisb_preview_edits", "aisb_rename_system"];
 const planReviewTools = ["aisb_build_plan_approval_status", "aisb_plan_capabilities", "aisb_preview_build_plan",
-  "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions", "aisb_preview_dataset_preparation"];
+  "aisb_request_build_plan_approval", "aisb_run_approved_build_step", "aisb_ingestion_status", "aisb_dataset_versions", "aisb_compare_dataset_versions", "aisb_preview_dataset_preparation", "aisb_dataset_task_status"];
 const desktopDataPreviewTool = "aisb_preview_selected_local_file";
 const desktopProviderPreviewTool = "aisb_preview_selected_provider_file";
 const dataStatusTool = "aisb_ingestion_status";
@@ -387,10 +387,12 @@ test("the plan-review stdio mode can run an exact approved step after the app re
   });
   const store = createStructuredHeadlessPlanReviewRepository(platform, async (_owner, target) =>
     target.scope.organizationId === organizationId && target.scope.principalId === identity.principalId &&
-    target.scope.workspaceId === workspaceId, Date.now, async () => true, true, true);
+    target.scope.workspaceId === workspaceId, Date.now, async () => true, true, true, true);
   let effectCount = 0;
   let fileEffectCount = 0;
   let providerEffectCount = 0;
+  let datasetEffectCount = 0;
+  const datasetTaskId = randomUUID();
   let requestCount = 0;
   let sourceReads = 0;
   let providerReads = 0;
@@ -425,6 +427,9 @@ test("the plan-review stdio mode can run an exact approved step after the app re
           progress: {completedItems: 0, totalItems: 1, acceptedBytes: 0, totalBytes: 16},
           ...(statusExtra ? {path: "private-synthetic.parquet"} : {}),
         }};
+      if (decoded.request.operation === "data.dataset-task-status") return datasetEffectCount ? {ok: true, operation: decoded.request.operation,
+        value: {taskId: wrongStatusTask ? randomUUID() : datasetTaskId, state: "review-required",
+          ...(statusExtra ? {data: "Synthetic private data"} : {})}} : {ok: false, code: "headless.forbidden"};
       if (decoded.request.operation === "data.dataset-versions") return {ok: true, operation: decoded.request.operation,
         value: {workspaceId, datasetId: decoded.request.input.datasetId, versions: [datasetSummary],
           ...(statusExtra ? {path: "private"} : {})}};
@@ -453,7 +458,7 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       return { result: { ok: true, value: { ...providerValue, ...(discloseProviderPath ? { path: "synthetic/hidden.parquet" } : {}) } },
         publishIfCurrent: async publish => grant.isCurrent?.() === true && publish() };
     } },
-    planReview: { hostIncarnationId, allowLocalFileSave: true, allowProviderFileSave: true, async execute(input, grant) {
+    planReview: { hostIncarnationId, allowLocalFileSave: true, allowProviderFileSave: true, allowLocalDatasetPreparation: true, async execute(input, grant) {
       const { fingerprint, workspaceId } = input.target;
       const target = { hostIncarnationId, fingerprint, scope: { workspaceId, organizationId: grant.organizationId,
         principalId: grant.principalId, registeredClientId: grant.registeredClientId } };
@@ -473,6 +478,13 @@ test("the plan-review stdio mode can run an exact approved step after the app re
       const review = await store.read({ target: { hostIncarnationId, fingerprint, scope }, isCurrent });
       if (!review.ok || review.snapshot.state.status !== "approved" || review.snapshot.state.revision !== approvalRevision || step !== 1)
         return { result: { ok: false, code: "headless.forbidden" } };
+      if (review.snapshot.preview.steps[0]?.operation === "data.prepare-local-dataset") {
+        const kind = datasetEffectCount ? "replayed" as const : "started" as const;
+        if (!datasetEffectCount) datasetEffectCount++;
+        return {result: {ok: true, value: {kind, operation: "data.prepare-local-dataset", fingerprint, approvalRevision, step,
+          expiresAt: review.snapshot.state.expiresAt, reference: {workspaceId, taskId: datasetTaskId}}},
+          publishIfCurrent: async publish => isCurrent() && publish()};
+      }
       if (review.snapshot.preview.steps[0]?.operation === "data.save-local-source") {
         const kind = fileEffectCount ? "replayed" as const : "committed" as const;
         if (!fileEffectCount) fileEffectCount++;
@@ -655,6 +667,31 @@ test("the plan-review stdio mode can run an exact approved step after the app re
     assert.deepEqual(await call("aisb_run_approved_build_step", exactProvider),
       { ok: true, value: { kind: "replayed", ...providerReceipt } });
     assert.equal(providerEffectCount, 1);
+    const datasetSteps = [{operation: "data.prepare-local-dataset", idempotencyKey: randomUUID(),
+      sources: datasetPreparation.sources, recipe: datasetPreparation.recipe, split: datasetPreparation.split,
+      qualityPreset: datasetPreparation.qualityPreset}];
+    const dataset = checkedPlan(await call("aisb_preview_build_plan", {...scope, steps: datasetSteps}));
+    assert.equal(dataset.plan.version, "aisb-build-plan-preview-v4");
+    assert.equal((await call("aisb_request_build_plan_approval", {...scope, fingerprint: dataset.fingerprint, steps: datasetSteps})).ok, true);
+    const datasetApproval = await new HeadlessBuildPlanReviewUseCase(store, Date.now).decide({fingerprint: dataset.fingerprint, expectedRevision: 1,
+      decision: {kind: "approve", mode: "whole-plan"}}, hostIncarnationId,
+    {workspaceId, organizationId, principalId: identity.principalId, registeredClientId: registered.registeredClientId},
+    {organizationId, principalId: identity.principalId, channel: "app-popup", isCurrent, canDecide: async () => isCurrent()});
+    assert.ok(datasetApproval.ok);
+    const datasetTarget = {...scope, fingerprint: dataset.fingerprint, approvalRevision: 2, step: 1};
+    const started = await call("aisb_run_approved_build_step", datasetTarget);
+    assert.ok(started.ok); assert.equal(started.value.kind, "started");
+    assert.equal(started.value.operation, "data.prepare-local-dataset");
+    assert.equal(started.value.reference.taskId, datasetTaskId);
+    assert.deepEqual(await call("aisb_run_approved_build_step", datasetTarget), {ok: true, value: {...started.value, kind: "replayed"}});
+    const selection = {kind: "task", taskId: datasetTaskId};
+    assert.deepEqual(await call("aisb_dataset_task_status", {...scope, selection}), {ok: true, operation: "data.dataset-task-status",
+      value: {taskId: datasetTaskId, state: "review-required"}});
+    statusExtra = true;
+    assert.deepEqual(await call("aisb_dataset_task_status", {...scope, selection}), {ok: false, code: "headless.unavailable"});
+    statusExtra = false; wrongStatusTask = true;
+    assert.deepEqual(await call("aisb_dataset_task_status", {...scope, selection}), {ok: false, code: "headless.unavailable"});
+    assert.equal(datasetEffectCount, 1);
   } finally {
     await client.close();
     await connector.close();

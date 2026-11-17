@@ -201,3 +201,5 @@ is lost, exact task or refresh records and the matching snapshot confirm success
 Keep files when the outcome is uncertain. Initial capture may clean its files
 after confirmed terminal cancellation with no saved snapshot. Registered user
 deletion, old source snapshots, and native recovery policy are unchanged.
+
+Headless local dataset preparation compiles exact saved local references and uses the existing `PrepareTrainingDatasetFromArtifactsUseCase` through a trusted one-use admission. `ReadHeadlessDatasetTaskStatusUseCase` requires a durable accepted association before requesting the owning processor's passive status. Passive reads do not materialize, approve, save or clean up outputs. Worker success remains distinct from application result review, failure and cancellation.

@@ -81,6 +81,7 @@ export function readManagedBrowserPlanApprovalValue(request: ManagedBrowserPlanA
     case "open": {
       const view = readDesktopPlanApprovalView(value, request.selection, {
         allowLocalFileSave: options?.allowLocalFileSave === true, allowProviderFileSave: options?.allowProviderFileSave === true,
+        allowLocalDatasetPreparation: options?.allowLocalDatasetPreparation === true,
       });
       return view?.preview.hostIncarnationId === request.document.hostIncarnationId ? view : undefined;
     }

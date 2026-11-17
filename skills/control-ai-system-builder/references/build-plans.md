@@ -25,8 +25,9 @@ unavailable. State where data will be saved or sent and who must approve each
 effect.
 
 This plan mode supports up to eight changes. Use create, rename and copy for
-saved systems. A Desktop plan-review connection can also save an app-selected
-local file. If more changes are needed, agree on a smaller batch with the user
+saved systems. A plan-review connection can also save an app-selected local or
+supported provider file when the host offers that capability. It can prepare
+provided instruction rows from exact saved local files. If more changes are needed, agree on a smaller batch with the user
 and request approval for each remaining plan. Preview reads metadata and makes
 zero provider calls or saved changes. For requests that need other operations, report which
 capabilities are missing before proposing a smaller deliverable. Ask before
@@ -98,12 +99,42 @@ reference and report only the details the host confirms. A local file save
 can stay unconfirmed if it was interrupted while finalizing. Check the
 existing Data task before starting a new transfer or changing the plan.
 
+### Prepare a dataset from saved local files
+
+Read `aisb_ingestion_status` after saving each source. Use its current completed
+upload revision, which can be later than the immutable save receipt. Preview the
+exact files with `aisb_preview_dataset_preparation`. Choose the provided input
+and output columns, train/validation/test ratios, seed and quality preset.
+Unknown source licensing remains unknown. Preparation does not grant new rights
+to use or publish the data.
+
+Propose `data.prepare-local-dataset` with those same inputs and a fresh
+idempotency key. Version 4 of the concrete plan lists local processing, required
+result review, zero model/provider calls, at most four files of 4 MiB each,
+16 MiB total and 1,000 rows per file. These sources must already be saved. A plan
+cannot save and prepare the same upload at a guessed future revision.
+
+After approval, a `started` receipt identifies a background task. It does not
+mean the dataset passed quality checks or was saved. Use `aisb_dataset_task_status`
+with that exact task, or the original fingerprint and step to recover an accepted
+receipt. This read returns only identity and state. It cannot process or approve
+results. `processing-result` means the worker returned and the app still has
+result work. `review-required` means the app requires result review. A failed
+or cancelled result stays distinct from either state.
+
+Keep the same plan and step on retry. A reserved or issued attempt with an
+uncertain acknowledgement stays unconfirmed; do not change keys to start it
+again. Current access is required for receipts and status even when the owned
+task continues after withdrawal. Host-exit recovery, provider-file preparation,
+generated training rows, result approval/save and Data presentation are separate
+capabilities. Report them as unavailable until the host actually offers them.
+
 ## Supported connections
 
 | Setup | Available plan workflow | Decision surface |
 | --- | --- | --- |
-| Desktop connector with the dedicated plan-review pairing and official stdio client | Approve and run saved-system operations and selected local-file saves | Desktop Settings popup or approval chat |
-| Managed HTTPS host with the dedicated issuer-verified plan client and official stdio client | Approve and run saved-system operations in the configured workspace. Preview and save selected local files when browser preparation is available. | Signed-in browser Settings popup or approval chat |
+| Desktop connector with the dedicated plan-review pairing and official stdio client | Approved system changes, selected local/provider source saves and bounded provided-row processing from saved local files; check host availability | Desktop Settings popup or approval chat |
+| Managed HTTPS host with the dedicated issuer-verified plan client and official stdio client | The same finite operations in the configured workspace when the host supplies the owning services and stable publication | Signed-in browser Settings popup or approval chat |
 | Other compatible clients | Check their listed tools and the host's current access before proceeding. Setup and client integration need their own verification. | Use the matching app popup when a client cannot prove the user's exact decision |
 
 For setup use the installed skill's generated MCP tool reference and the

@@ -52,6 +52,7 @@ test("managed plan routes admit only exact proposals, status and an approved ste
   let withdrawStatus = false;
   let statusCalls = 0;
   let preparationReady = true;
+  const acceptedDatasetTaskId = randomUUID();
   let savedFile: {workspaceId:typeof workspaceId; taskId:ReturnType<typeof normalizeIngestionTaskId>;
     fileId:ReturnType<typeof normalizeIngestionTaskFileId>; taskRevision:number} | undefined;
   const expiresAt = Date.now() + 30_000;
@@ -76,6 +77,13 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       if (request.operation === "host.describe") return {ok: true, operation: request.operation, value: {
         version: HEADLESS_CONTRACT_VERSION, hostIncarnationId, workspaces: [], operations: ["data.ingestion-status", "data.dataset-versions", "data.compare-dataset-versions", "data.preview-dataset-preparation"],
       }};
+      if (request.operation === "data.dataset-task-status") {
+        if (withdrawStatus) current = false;
+        return {ok: true, operation: request.operation, value: {
+          taskId: statusMismatch ? randomUUID() : acceptedDatasetTaskId, state: "review-required",
+          ...(statusExtra ? {outputPath: "private"} : {}),
+        }};
+      }
       if (request.operation === "data.preview-dataset-preparation") {
         if (withdrawStatus) current = false;
         if (!preparationReady) return {ok: false, code: "headless.source-not-ready"};
@@ -192,6 +200,23 @@ test("managed plan routes admit only exact proposals, status and an approved ste
       return {status:response.status, cache:response.headers.get("cache-control"), body:await response.json()};
     }
     const readRoute = MANAGED_HEADLESS_AGENT_PATHS.read;
+    const datasetTaskRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "data.dataset-task-status",
+      input: {...scope, selection: {kind: "task", taskId: acceptedDatasetTaskId}}};
+    assert.deepEqual(await request(datasetTaskRequest, "fixture-plan", readRoute), {status: 200, cache: "no-store",
+      body: {ok: true, operation: "data.dataset-task-status", value: {taskId: acceptedDatasetTaskId, state: "review-required"}}});
+    assert.equal((await request({...datasetTaskRequest, input: {...scope, selection: {kind: "plan-step", fingerprint, step: 1}}},
+      "fixture-plan", readRoute)).status, 200);
+    statusMismatch = true;
+    assert.equal((await request(datasetTaskRequest, "fixture-plan", readRoute)).status, 503);
+    statusMismatch = false; statusExtra = true;
+    assert.equal((await request(datasetTaskRequest, "fixture-plan", readRoute)).status, 503);
+    statusExtra = false; withdrawStatus = true;
+    assert.equal((await request(datasetTaskRequest, "fixture-plan", readRoute)).status, 403);
+    withdrawStatus = false; current = true;
+    assert.equal((await request(datasetTaskRequest, "fixture-agent", readRoute)).status, 403);
+    enabled = false;
+    assert.equal((await request(datasetTaskRequest, "fixture-plan", readRoute)).status, 400);
+    enabled = true;
     const preparationRequest = {version: HEADLESS_CONTRACT_VERSION, operation: "data.preview-dataset-preparation", input: {...scope,
       sources: [{taskId: "task.preview", fileId: "file.preview", taskRevision: 3}],
       recipe: {kind: "provided-instruction-rows-v1", inputColumn: "question", outputColumn: "answer"},

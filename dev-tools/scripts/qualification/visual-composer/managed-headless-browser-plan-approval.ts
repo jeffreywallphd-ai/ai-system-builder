@@ -182,7 +182,7 @@ async function runFrontierCase(options: {
 async function main() {
   const frontier = process.env.AISB_QUALIFY_FRONTIER_PLAN === "1";
   const fixture = await startManagedReferenceHost(process.env.MANAGED_REFERENCE_DATABASE ?? "",
-    {headlessAgent:true, headlessBrowser:true, headlessPlanReview:true});
+    {headlessAgent:true, headlessBrowser:true, headlessPlanReview:true, headlessProvidedDatasets:true});
   const checks: Record<string, boolean | number> = {};
   const client = new Client({name:"managed-approved-step-qualification",version:"1.0.0"});
   let browser: Browser | undefined;
@@ -210,7 +210,7 @@ async function main() {
       }}), {timeout:10_000});
     const toolList = await client.listTools();
     assert.deepEqual(toolList.tools.map(tool => tool.name).sort(), [
-      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
+      "aisb_build_plan_approval_status", "aisb_compare_dataset_versions", "aisb_dataset_task_status", "aisb_dataset_versions", "aisb_host_describe", "aisb_ingestion_status", "aisb_list_templates", "aisb_plan_capabilities",
       "aisb_preview_build_plan", "aisb_preview_dataset_preparation", "aisb_preview_selected_local_file", "aisb_preview_selected_provider_file", "aisb_read_system",
       "aisb_request_build_plan_approval", "aisb_run_approved_build_step",
     ]);
@@ -238,6 +238,10 @@ async function main() {
       if (location.origin === origin) localStorage.setItem("ai-system-builder.paired-device-token",bearer);
     },{origin:serverOrigin,bearer:agent.browser});
     const page = await context.newPage();
+    page.on("response", response => {
+      if (stage.includes("managed-dataset") && response.url().endsWith("/api/headless/browser/plan-approvals"))
+        checks.managed_dataset_approval_http_status = response.status();
+    });
     page.setDefaultTimeout(15_000);
     stage = "load-systems";
     await page.goto(serverOrigin + "/systems",{waitUntil:"domcontentloaded"});
@@ -622,6 +626,59 @@ async function main() {
     assert.equal(preparation.value.modelCalls,0);
     assert.equal("command" in preparation.value,false);
     checks.managed_dataset_preparation_preview_is_metadata_only = true;
+    stage = "preview-managed-dataset-task";
+    const datasetSteps = [{operation: "data.prepare-local-dataset", idempotencyKey: randomUUID(),
+      sources: [{taskId, fileId, taskRevision: sourceStatus.value.revision}],
+      recipe: {kind: "provided-instruction-rows-v1", inputColumn: "name", outputColumn: "amount"},
+      split: {trainRatio: 0.8, validationRatio: 0.1, testRatio: 0.1, seed: 42}, qualityPreset: "recommended"}];
+    const datasetPreview = await call("aisb_preview_build_plan", {...scope, steps: datasetSteps});
+    assert.equal(datasetPreview.ok, true); assert.equal(datasetPreview.value.version, "aisb-build-plan-preview-v4");
+    const datasetFingerprint = datasetPreview.value.fingerprint;
+    stage = "submit-managed-dataset-task";
+    assert.equal((await call("aisb_request_build_plan_approval", {...scope, fingerprint: datasetFingerprint, steps: datasetSteps})).ok, true);
+    stage = "approve-managed-dataset-task";
+    await dialog.getByRole("button", {name: "Close plan review", exact: true}).click();
+    await trigger.click();
+    stage = "select-managed-dataset-request";
+    await dialog.getByRole("button", {name: new RegExp("^Review request " + datasetFingerprint.slice(0, 8) + " from Client ")}).click();
+    stage = "read-managed-dataset-permissions";
+    await dialog.getByRole("list", {name: "Requested changes"}).waitFor();
+    await dialog.getByRole("list", {name: "Permissions and limits"}).getByText("Limit of 1 change for this plan.").waitFor();
+    await dialog.getByRole("list", {name: "Permissions and limits"}).getByText(/Stop for result review before saving/).waitFor();
+    stage = "choose-managed-dataset-approval";
+    await dialog.getByRole("radio", {name: "Approve all listed changes"}).check();
+    stage = "commit-managed-dataset-approval";
+    await dialog.getByRole("button", {name: "Approve all changes", exact: true}).click();
+    stage = "confirm-managed-dataset-approval";
+    await dialog.getByText("Plan approved.", {exact: true}).waitFor();
+    await dialog.getByRole("button", {name: "Close plan review"}).click();
+    stage = "start-managed-dataset-task";
+    const datasetStart = await run(datasetFingerprint, 2, 1);
+    if (datasetStart.ok) {
+      assert.equal(datasetStart.value.kind, "started"); assert.equal(datasetStart.value.operation, "data.prepare-local-dataset");
+    } else assert.equal(datasetStart.code, "headless.operation-unconfirmed");
+    const selection = {kind: "plan-step", fingerprint: datasetFingerprint, step: 1};
+    stage = "observe-managed-dataset-review";
+    const deadline = Date.now() + 90_000;
+    let datasetState: string | undefined;
+    let acceptedDatasetTask: string | undefined;
+    while (Date.now() < deadline) {
+      const status = await call("aisb_dataset_task_status", {...scope, selection});
+      if (!status.ok) {assert.equal(status.code, "headless.forbidden");}
+      else {
+        assert.equal("data" in status.value, false);
+        if (acceptedDatasetTask) assert.equal(status.value.taskId, acceptedDatasetTask);
+        acceptedDatasetTask = status.value.taskId; datasetState = status.value.state;
+      }
+      if (datasetState === "review-required" || datasetState === "failed" || datasetState === "cancelled") break;
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    assert.equal(datasetState, "review-required");
+    stage = "recover-managed-dataset-receipt";
+    const recoveredDataset = await run(datasetFingerprint, 2, 1);
+    assert.equal(recoveredDataset.ok, true); assert.equal(recoveredDataset.value.kind, "replayed");
+    assert.equal(recoveredDataset.value.reference.taskId, acceptedDatasetTask);
+    checks.managed_dataset_task_is_owned_once_and_review_required = true;
     const followUp = await run(saveFingerprint,approvedSave.revision,2);
     assert.equal(followUp.ok,true);
     assert.equal(followUp.value.kind,"committed");

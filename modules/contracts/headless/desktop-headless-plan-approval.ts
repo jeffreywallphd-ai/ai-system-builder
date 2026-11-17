@@ -5,6 +5,7 @@ import { isHeadlessHostIncarnationId } from "./headless-read-request";
 import { readHeadlessPlanReviewAgentResult, readHeadlessPlanReviewDecisionChoice,
   type HeadlessPlanReviewAgentResult, type HeadlessPlanReviewDecisionChoice } from "./headless-plan-review-wire";
 import { HEADLESS_MAX_BUILD_PLAN_STEPS, parseHeadlessBuildPlanProposal, type HeadlessBuildPlanCapabilities } from "./headless-system-management";
+import {HEADLESS_DATASET_MAX_SOURCE_BYTES, HEADLESS_DATASET_MAX_TOTAL_BYTES, HEADLESS_DATASET_MAX_ROWS_PER_SOURCE} from "./headless-dataset-preparation";
 
 export const DESKTOP_HEADLESS_PLAN_APPROVAL_CHANNELS = Object.freeze({
   list: "desktop.headless.plan-approvals.list",
@@ -88,7 +89,7 @@ export function readDesktopPlanApprovalList(value: unknown, workspaceId: Workspa
 }
 
 export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPlanApprovalSelection,
-  options: HeadlessBuildPlanCapabilities = { allowLocalFileSave: true, allowProviderFileSave: true }): DesktopPlanApprovalView | undefined {
+  options: HeadlessBuildPlanCapabilities = { allowLocalFileSave: true, allowProviderFileSave: true, allowLocalDatasetPreparation: true }): DesktopPlanApprovalView | undefined {
   try {
     const raw = readStrictPassiveRecord(copyBoundedPassiveData(value), ["selection", "viewId", "preview", "state"]);
     const actual = readDesktopPlanApprovalSelection(raw.selection);
@@ -99,14 +100,21 @@ export function readDesktopPlanApprovalView(value: unknown, selection: DesktopPl
         !isHeadlessHostIncarnationId(hostIncarnationId) || !Array.isArray(steps) ||
         steps.length < 1 || steps.length > HEADLESS_MAX_BUILD_PLAN_STEPS) return;
     const decoded = parseHeadlessBuildPlanProposal({ hostIncarnationId, workspaceId, steps: steps.map(step => {
-      const { operation, input, effect, externalProviderCalls } = readStrictPassiveRecord(step,
-        ["operation", "input", "effect", "externalProviderCalls"]);
+      const { operation, input, effect, externalProviderCalls, ...limits } = readStrictPassiveRecord(step,
+        ["operation", "input", "effect", "externalProviderCalls", "modelCalls", "maximumSourceBytes", "maximumTotalBytes",
+          "maximumRowsPerSource", "outputFormat", "reviewRequired"]);
+      const dataset = operation === "data.prepare-local-dataset";
+      if (dataset ? limits.modelCalls !== 0 || limits.maximumSourceBytes !== HEADLESS_DATASET_MAX_SOURCE_BYTES ||
+          limits.maximumTotalBytes !== HEADLESS_DATASET_MAX_TOTAL_BYTES || limits.maximumRowsPerSource !== HEADLESS_DATASET_MAX_ROWS_PER_SOURCE ||
+          limits.outputFormat !== "jsonl" || limits.reviewRequired !== true : Object.keys(limits).length !== 0)
+        throw new Error("Invalid processing limits.");
       const providerFile = operation === "data.save-provider-source";
       const savingFile = operation === "data.save-local-source" || providerFile;
-      if (effect !== (providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
+      if (effect !== (dataset ? "prepare-local-dataset" : providerFile ? "save-provider-source" : savingFile ? "save-local-source" : "saved-system-write") ||
           externalProviderCalls !== (providerFile ? "required" : 0))
         throw new Error("Invalid approval effects.");
-      const fields = readStrictPassiveRecord(input, savingFile ? ["idempotencyKey", "taskId", "fileId", "taskRevision"] :
+      const fields = readStrictPassiveRecord(input, dataset ? ["idempotencyKey", "sources", "recipe", "split", "qualityPreset"] :
+        savingFile ? ["idempotencyKey", "taskId", "fileId", "taskRevision"] :
         ["idempotencyKey", "name", "templateId", "systemId", "baseRecordRevision", "baseRevisionId", "description"]);
       return { operation, ...fields };
     }) }, hostIncarnationId, options);

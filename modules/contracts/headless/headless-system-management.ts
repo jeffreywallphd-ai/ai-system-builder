@@ -7,6 +7,8 @@ import { isWorkspaceId, type WorkspaceId } from "../workspace";
 import { HEADLESS_CONTRACT_VERSION, isHeadlessHostIncarnationId, type HeadlessHostIncarnationId } from "./headless-read-request";
 import { readHeadlessLocalFileSavePlanRequest, type HeadlessLocalFileSavePlanRequest } from "./headless-data-local-file";
 import { readHeadlessProviderFileSavePlanRequest, type HeadlessProviderFileSavePlanRequest } from "./headless-data-provider-file";
+import {readHeadlessLocalDatasetPlanRequest, type HeadlessLocalDatasetPlanRequest} from "./headless-dataset-plan";
+import {HEADLESS_DATASET_MAX_SOURCE_BYTES, HEADLESS_DATASET_MAX_TOTAL_BYTES, HEADLESS_DATASET_MAX_ROWS_PER_SOURCE} from "./headless-dataset-preparation";
 import type { HeadlessSemanticBatchRequest } from "./headless-semantic-batch";
 
 interface ManagementTarget {
@@ -29,10 +31,11 @@ export type HeadlessSystemManagementRequest =
     | { readonly operation: "systems.clone"; readonly input: SavedTarget }
   );
 
-export type HeadlessBuildPlanRequest = HeadlessSystemManagementRequest | HeadlessLocalFileSavePlanRequest | HeadlessProviderFileSavePlanRequest;
+export type HeadlessBuildPlanRequest = HeadlessSystemManagementRequest | HeadlessLocalFileSavePlanRequest | HeadlessProviderFileSavePlanRequest | HeadlessLocalDatasetPlanRequest;
 export interface HeadlessBuildPlanCapabilities {
   readonly allowLocalFileSave: boolean;
   readonly allowProviderFileSave?: boolean;
+  readonly allowLocalDatasetPreparation?: boolean;
 }
 
 /** Serialize the saved effect without the connection identity or its receipt key. */
@@ -54,8 +57,9 @@ export const HEADLESS_MAX_BUILD_PLAN_STEPS = 8;
 const PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v1";
 const PROVIDER_FILE_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v3";
 const LOCAL_FILE_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v2";
+const LOCAL_DATASET_PLAN_PREVIEW_VERSION = "aisb-build-plan-preview-v4";
 const proposalFields = ["operation", "idempotencyKey", "name", "templateId", "systemId",
-  "baseRecordRevision", "baseRevisionId", "description", "taskId", "fileId", "taskRevision"];
+  "baseRecordRevision", "baseRevisionId", "description", "taskId", "fileId", "taskRevision", "sources", "recipe", "split", "qualityPreset"];
 
 /** A decoded request carries data only. The running host supplies and checks identity. */
 export function parseHeadlessSystemManagementRequest(value: unknown, host: HeadlessHostIncarnationId):
@@ -120,6 +124,13 @@ function projectProviderFilePlanStep({ operation, input: { hostIncarnationId: _h
   return { operation, input, effect: "save-provider-source" as const, externalProviderCalls: "required" as const };
 }
 
+function projectLocalDatasetPlanStep({operation, input: {hostIncarnationId: _host, workspaceId: _workspace, ...input}}:
+  HeadlessLocalDatasetPlanRequest) {
+  return {operation, input, effect: "prepare-local-dataset" as const, externalProviderCalls: 0 as const, modelCalls: 0 as const,
+    maximumSourceBytes: HEADLESS_DATASET_MAX_SOURCE_BYTES, maximumTotalBytes: HEADLESS_DATASET_MAX_TOTAL_BYTES,
+    maximumRowsPerSource: HEADLESS_DATASET_MAX_ROWS_PER_SOURCE, outputFormat: "jsonl" as const, reviewRequired: true as const};
+}
+
 type PlanScope = { readonly hostIncarnationId: HeadlessHostIncarnationId; readonly workspaceId: WorkspaceId };
 type PlanPreview<V, Step> = PlanScope & {
   readonly version: V;
@@ -129,9 +140,11 @@ type PlanPreview<V, Step> = PlanScope & {
 type SystemStep = ReturnType<typeof projectSystemPlanStep>;
 type LocalFileStep = ReturnType<typeof projectLocalFilePlanStep>;
 type ProviderFileStep = ReturnType<typeof projectProviderFilePlanStep>;
+type LocalDatasetStep = ReturnType<typeof projectLocalDatasetPlanStep>;
 type SystemPreview = PlanPreview<typeof PLAN_PREVIEW_VERSION, SystemStep>;
 type MixedPreview = PlanPreview<typeof LOCAL_FILE_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep> |
-  PlanPreview<typeof PROVIDER_FILE_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep>;
+  PlanPreview<typeof PROVIDER_FILE_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep> |
+  PlanPreview<typeof LOCAL_DATASET_PLAN_PREVIEW_VERSION, SystemStep | LocalFileStep | ProviderFileStep | LocalDatasetStep>;
 type PlanSuccess<Request, Preview> = { readonly ok: true; readonly scope: PlanScope; readonly requests: readonly Request[];
   readonly preview: Preview };
 type PlanFailure = typeof invalid | { readonly ok: false; readonly code: "headless.host-changed" };
@@ -157,6 +170,7 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
     const keys = new Set<string>();
     const renamedSystems = new Set<SystemBuilderSystemId>();
     const selectedUploads = new Set<string>();
+    const datasetSources = new Set<string>();
     for (const step of steps) {
       const { operation, ...fields } = readStrictPassiveRecord(step, proposalFields);
       const input = { version: HEADLESS_CONTRACT_VERSION, operation, input: { ...scope, ...fields } };
@@ -164,7 +178,9 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
         ? readHeadlessLocalFileSavePlanRequest(input, host)
         : operation === "data.save-provider-source" && options?.allowProviderFileSave
           ? readHeadlessProviderFileSavePlanRequest(input, host)
-          : parseHeadlessSystemManagementRequest(input, host);
+          : operation === "data.prepare-local-dataset" && options?.allowLocalDatasetPreparation
+            ? readHeadlessLocalDatasetPlanRequest(input, host)
+            : parseHeadlessSystemManagementRequest(input, host);
       if (!decoded.ok) return invalid;
       const request = decoded.request;
       if (keys.has(request.input.idempotencyKey)) return invalid;
@@ -172,8 +188,15 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
       if (request.operation === "data.save-local-source" || request.operation === "data.save-provider-source") {
         // Saving an item advances the shared upload revision. A later step
         // must start from the new revision and a new app selection.
-        if (selectedUploads.has(request.input.taskId)) return invalid;
+        if (selectedUploads.has(request.input.taskId) || datasetSources.has(request.input.taskId)) return invalid;
         selectedUploads.add(request.input.taskId);
+      } else if (request.operation === "data.prepare-local-dataset") {
+        // Concrete source revisions must already exist. This plan does not
+        // guess a mutable revision produced by an earlier source-save step.
+        for (const source of request.input.sources) {
+          if (selectedUploads.has(source.taskId)) return invalid;
+          datasetSources.add(source.taskId);
+        }
       } else if (request.operation !== "systems.create") {
         // A saved revision cannot be reused after a previous change to that system.
         if (renamedSystems.has(request.input.systemId)) return invalid;
@@ -182,19 +205,27 @@ export function parseHeadlessBuildPlanProposal(value: unknown, host: HeadlessHos
       requests.push(request);
     }
     const previewScope = { ...scope, approval: "required" as const };
-    if (requests.some(request => request.operation === "data.save-provider-source")) return { ok: true, scope, requests, preview: {
+    if (requests.some(request => request.operation === "data.prepare-local-dataset")) return {ok: true, scope, requests, preview: {
+      version: LOCAL_DATASET_PLAN_PREVIEW_VERSION, ...previewScope,
+      steps: requests.map(request => request.operation === "data.prepare-local-dataset" ? projectLocalDatasetPlanStep(request)
+        : request.operation === "data.save-provider-source" ? projectProviderFilePlanStep(request)
+          : request.operation === "data.save-local-source" ? projectLocalFilePlanStep(request) : projectSystemPlanStep(request)),
+    }};
+    const priorRequests = requests.filter((request): request is Exclude<HeadlessBuildPlanRequest, HeadlessLocalDatasetPlanRequest> =>
+      request.operation !== "data.prepare-local-dataset");
+    if (priorRequests.some(request => request.operation === "data.save-provider-source")) return { ok: true, scope, requests: priorRequests, preview: {
       version: PROVIDER_FILE_PLAN_PREVIEW_VERSION, ...previewScope,
-      steps: requests.map(request => request.operation === "data.save-provider-source" ? projectProviderFilePlanStep(request)
+      steps: priorRequests.map(request => request.operation === "data.save-provider-source" ? projectProviderFilePlanStep(request)
         : request.operation === "data.save-local-source" ? projectLocalFilePlanStep(request) : projectSystemPlanStep(request)),
     } };
-    const localRequests = requests.filter((request): request is HeadlessSystemManagementRequest | HeadlessLocalFileSavePlanRequest =>
+    const localRequests = priorRequests.filter((request): request is HeadlessSystemManagementRequest | HeadlessLocalFileSavePlanRequest =>
       request.operation !== "data.save-provider-source");
     if (selectedUploads.size) return { ok: true, scope, requests: localRequests, preview: {
       version: LOCAL_FILE_PLAN_PREVIEW_VERSION, ...previewScope,
       steps: localRequests.map(request => request.operation === "data.save-local-source"
         ? projectLocalFilePlanStep(request) : projectSystemPlanStep(request)),
     } };
-    const systems = requests.filter((request): request is HeadlessSystemManagementRequest =>
+    const systems = priorRequests.filter((request): request is HeadlessSystemManagementRequest =>
       request.operation !== "data.save-local-source" && request.operation !== "data.save-provider-source");
     return { ok: true, scope, requests: systems, preview: {
       version: PLAN_PREVIEW_VERSION, ...previewScope, steps: systems.map(projectSystemPlanStep),

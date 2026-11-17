@@ -2258,6 +2258,11 @@ export function composeDesktopHost(
             workspaceRepository: startupWorkspaceShell.workspaceRepository,
             getUseCases: () => systemBuilder.useCases,
             getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
+            getDatasetTaskStatus: platformDocuments?.organizationId === undefined && platformDocuments?.runInOwnedTransaction ? async () => {
+              const {composeHeadlessDatasetTaskStatus} = await import("../../shared/composition/headlessPlanReview");
+              return composeHeadlessDatasetTaskStatus(platformDocuments,
+                async () => (await getDatasetPreparationFeatures()).prepareTrainingDatasetUseCase);
+            } : undefined,
             getDatasetInputs: organizationDocuments ? async () => {
               const {createStructuredIngestionAcquisitionRepository} = await import("../../../adapters/persistence/ingestion");
               const {PrepareHeadlessDatasetInputsUseCase} = await import("../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case");
@@ -2364,6 +2369,10 @@ export function composeDesktopHost(
               planReview: planReviewOwner ? composeDesktopHeadlessPlanReview({
                 ...planReviewOwner, workspaces: startupWorkspaceShell.workspaceRepository, authorization: workspaceAuthorization,
                 getIngestionTasks: async () => (await getIngestionFeatures()).ingestionTasks,
+                getDatasetStart: async () => {
+                  const dataset = (await getDatasetPreparationFeatures()).prepareTrainingDatasetUseCase;
+                  return dataset.startAdmittedLocalProvidedDataset.bind(dataset);
+                },
                 systems: systemBuilder, audit: headlessAudit,
               }) : undefined,
               dataPreview: planReviewOwner ? {

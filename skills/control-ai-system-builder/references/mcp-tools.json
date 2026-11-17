@@ -134,6 +134,7 @@
       "tools": [
         "aisb_build_plan_approval_status",
         "aisb_compare_dataset_versions",
+        "aisb_dataset_task_status",
         "aisb_dataset_versions",
         "aisb_host_describe",
         "aisb_ingestion_status",
@@ -160,6 +161,7 @@
       "tools": [
         "aisb_build_plan_approval_status",
         "aisb_compare_dataset_versions",
+        "aisb_dataset_task_status",
         "aisb_dataset_versions",
         "aisb_host_describe",
         "aisb_ingestion_status",
@@ -569,6 +571,74 @@
           "templateId",
           "name",
           "idempotencyKey"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "aisb_dataset_task_status",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hostIncarnationId": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "selection": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "task"
+                  },
+                  "taskId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "taskId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "plan-step"
+                  },
+                  "fingerprint": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "step": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8
+                  }
+                },
+                "required": [
+                  "kind",
+                  "fingerprint",
+                  "step"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "hostIncarnationId",
+          "workspaceId",
+          "selection"
         ],
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false
@@ -1226,6 +1296,126 @@
                     "taskId",
                     "fileId",
                     "taskRevision",
+                    "idempotencyKey"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "data.prepare-local-dataset"
+                    },
+                    "sources": {
+                      "minItems": 1,
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "taskId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                          },
+                          "fileId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                          },
+                          "taskRevision": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "taskId",
+                          "fileId",
+                          "taskRevision"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "provided-instruction-rows-v1"
+                        },
+                        "inputColumn": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_. -]*$"
+                        },
+                        "outputColumn": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_. -]*$"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "inputColumn",
+                        "outputColumn"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "split": {
+                      "type": "object",
+                      "properties": {
+                        "trainRatio": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 1
+                        },
+                        "validationRatio": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "testRatio": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "seed": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "trainRatio",
+                        "validationRatio",
+                        "testRatio",
+                        "seed"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "qualityPreset": {
+                      "type": "string",
+                      "enum": [
+                        "recommended",
+                        "strict"
+                      ]
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "sources",
+                    "recipe",
+                    "split",
+                    "qualityPreset",
                     "idempotencyKey"
                   ],
                   "additionalProperties": false
@@ -2146,6 +2336,126 @@
                     "taskId",
                     "fileId",
                     "taskRevision",
+                    "idempotencyKey"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "type": "string",
+                      "const": "data.prepare-local-dataset"
+                    },
+                    "sources": {
+                      "minItems": 1,
+                      "maxItems": 4,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "taskId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                          },
+                          "fileId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                          },
+                          "taskRevision": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "taskId",
+                          "fileId",
+                          "taskRevision"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "provided-instruction-rows-v1"
+                        },
+                        "inputColumn": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_. -]*$"
+                        },
+                        "outputColumn": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_. -]*$"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "inputColumn",
+                        "outputColumn"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "split": {
+                      "type": "object",
+                      "properties": {
+                        "trainRatio": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 1
+                        },
+                        "validationRatio": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "testRatio": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "seed": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      },
+                      "required": [
+                        "trainRatio",
+                        "validationRatio",
+                        "testRatio",
+                        "seed"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "qualityPreset": {
+                      "type": "string",
+                      "enum": [
+                        "recommended",
+                        "strict"
+                      ]
+                    },
+                    "idempotencyKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "operation",
+                    "sources",
+                    "recipe",
+                    "split",
+                    "qualityPreset",
                     "idempotencyKey"
                   ],
                   "additionalProperties": false

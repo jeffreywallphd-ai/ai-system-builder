@@ -1,5 +1,32 @@
 # Provided-data and manual Context journeys
 
+The Headless dataset-plan journey additionally uses the existing `PYTHON`
+environment and the unchanged packaged production worker for provided instruction
+rows. Its Managed reference enables `headlessProvidedDatasets` explicitly; other
+reference journeys retain their existing controlled worker. The server uses
+ordinary dependency preparation, verified HTTPS, OIDC and restricted PostgreSQL.
+Offline flags prohibit package/model downloads. A private, argument-free identity
+wrapper admits only the current packaged entry and a fresh Headless test cache.
+It writes an exclusive PID/parent record before running the production entry;
+the existing managed shutdown checks require an observed worker and physical
+exit. On Windows, a virtual-environment Python executable can launch the actual
+interpreter as its child. The wrapper observes only that immediate parent. It
+records one further parent only when the launcher's executable matches the exact
+configured Python path. The collector requires that parent to be its owned host,
+then confirms the observed interpreter has exited. It never kills, adopts or
+searches for another process. The record is not a native filesystem fence or a
+task-readiness pass.
+Cold startup may exceed the MCP reply deadline. The journey waits for the exact
+accepted plan-step receipt and required result review without issuing another
+task, then verifies replay. It does not run a model accuracy benchmark.
+
+The private Managed composition can observe dataset readiness and the existing
+owner's start result through fixed IPC labels. It delegates unchanged arguments,
+results and exceptions; reporting failures cannot change the task. The collector
+accepts five known labels and at most eight observations. It records no payloads,
+private errors, paths or credentials. These observations diagnose a failed run;
+they cannot establish an accepted receipt, result quality or a cleanup pass.
+
 Data and Context transitions use the mounted navigation layout. At ordinary
 widths they select the visible sidebar. At narrow widths, including native 400%
 zoom, they open the existing Application navigation menu and activate its exact

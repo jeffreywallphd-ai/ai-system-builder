@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {createHash, randomUUID} from "node:crypto";
-import {mkdtemp, readFile, readdir, rm} from "node:fs/promises";
+import {mkdtemp, readFile, readdir, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import fs from "node:fs";
@@ -23,6 +23,8 @@ const command = {sourceArtifactIds: ["source.one"],
   quality: {policy: {preset: "recommended" as const, maxRowsPerSource: 1000}, reviewRequired: true}};
 
 async function fixture(options: {
+  evidence?: boolean;
+  omittedDescriptorMedia?: boolean; conflictingDescriptorMedia?: boolean;
   remote?: boolean; corrupt?: boolean; mutateDuringCatalog?: boolean; revokeAfterRead?: boolean;
   mutateDescriptorDuringCatalog?: boolean; activationFailure?: boolean; stopDuringActivation?: boolean;
   stopOnIssue?: boolean; revokeOnIssue?: boolean;
@@ -35,8 +37,11 @@ async function fixture(options: {
   const reconciler = new OwnedTaskReconcilerService();
   let current = true, starts = 0, issues = 0, providerReads = 0, statusReads = 0, cancellations = 0, activations = 0, verifications = 0;
   const reads: unknown[] = [], input = Buffer.from(source);
-  const descriptor = {key: "source.one", mediaType: "text/csv", metadata: {originalName: "source.csv", privateNote: "Synthetic private metadata."}};
+  const descriptor = {key: "source.one", mediaType: options.omittedDescriptorMedia ? undefined : options.conflictingDescriptorMedia ? "application/pdf" : "text/csv",
+    metadata: {originalName: "source.csv", privateNote: "Synthetic private metadata."}};
   let runtimeRequest: any;
+  let statusOverride: any;
+  const saved = new Map<string, any>();
   const admission: LocalDatasetPreparationAdmission = {taskId: randomUUID(), sources: [{artifactId: "source.one", storageKey: "source.one",
     mediaType: "text/csv", format: "csv", sizeBytes: source.byteLength, digest: digest(source)}],
     isCurrent: () => current, stillAllowed: async () => current,
@@ -67,7 +72,7 @@ async function fixture(options: {
         return {requestId: options.start === "wrong-id" ? randomUUID() : admission.taskId,
           ...(options.start === "missing-status" ? {} : {status: "queued" as const})};
       },
-      async getTaskStatus() {statusReads++; return {requestId: admission.taskId, status: "running", taskType: "dataset-preparation",
+      async getTaskStatus() {statusReads++; return statusOverride ?? {requestId: admission.taskId, status: "running", taskType: "dataset-preparation",
         workspaceId: context.workspaceId} as any;},
       async cancelTask() {cancellations++; return {} as any;}, async listTasks() {return {tasks: []};},
     },
@@ -76,9 +81,17 @@ async function fixture(options: {
         {kind: "artifact-object", provider: "local-filesystem", locator: "source.one"}}]}} as any;},
       async upsertArtifactStorageBinding() {throw new Error("Unexpected localization.");}, async deleteArtifactStorageBindings() {throw new Error("Unexpected binding deletion.");}},
     storage: {async retrieveArtifact(request) {reads.push(request); if (options.revokeAfterRead) current = false;
+      if (saved.has(request.key)) return {ok: true, value: saved.get(request.key)} as any;
       return {ok: true, value: {descriptor,
         content: options.corrupt ? Buffer.from("changed") : input}} as any;},
-      async storeArtifact() {throw new Error("Unexpected output save.");}, async deleteArtifact() {throw new Error("Unexpected source deletion.");},
+      async storeArtifact(request) {
+        if (!options.evidence) throw new Error("Unexpected output save.");
+        saved.set(request.descriptor.key, {descriptor: request.descriptor, content: new Uint8Array(request.content)});
+        return {ok: true, value: request.descriptor} as any;
+      }, async deleteArtifact(request) {
+        if (!options.evidence || !saved.has(request.key)) throw new Error("Unexpected source deletion.");
+        saved.delete(request.key); return {ok: true, value: {deleted: true}} as any;
+      },
       async hasArtifact() {return {} as any;}},
     artifactRepoStorage: {async retrieveArtifactFromRepo() {providerReads++; throw new Error("Unexpected provider access.");}} as any,
     artifactCatalog: {async readArtifactCatalogRecord() {
@@ -96,6 +109,30 @@ async function fixture(options: {
     }},
   });
   return {useCase, admission, reconciler, parent, reads,
+    setStatus(value: any) {statusOverride = value;},
+    async finishForReview() {
+      reconciler.stopObservation();
+      const fingerprint = "a".repeat(64);
+      const qualityReport = {schemaVersion: "1", status: "needs-attention", reportFingerprint: fingerprint,
+        policy: runtimeRequest.payload.quality.effectivePolicy, mapping: {taskType: "llm-instruction", status: "complete",
+          mappedFields: ["instruction", "output"], missingRequiredFields: []}, fields: [],
+        distributions: {sources: [{label: "source.one", count: 2}]},
+        counts: {inputRows: 2, acceptedRows: 1, quarantinedRows: 1}, reasonCounts: {"schema-invalid": 1}, samples: [],
+        reviewRequired: true, approvalAllowed: true};
+      const outputs = ["dataset", "train", "report", "review", "quarantine"].map(role => ({name: "synthetic-" + role, role,
+        outputHandle: role + (role === "report" ? ".json" : ".jsonl"),
+        mediaType: role === "report" ? "application/json" : "application/x-ndjson",
+        ...(role === "review" ? {metadata: {rowCount: 1, reportFingerprint: fingerprint}} : {})}));
+      for (const output of outputs) await writeFile(join(runtimeRequest.payload.runtime.runtimeWorkingDirectory, output.outputHandle),
+        output.role === "report" ? JSON.stringify(qualityReport) : output.role === "quarantine"
+          ? JSON.stringify({sourceArtifactId: "source.one", sourceRowIndex: 1, reasonCodes: ["schema-invalid"],
+            row: {instruction: "Synthetic rejected row"}}) + "\n"
+          : '{"instruction":"Synthetic question","output":"Synthetic answer","sourceArtifactId":"source.one"}\n');
+      statusOverride = {requestId: admission.taskId, taskType: "dataset-preparation", workspaceId: context.workspaceId,
+        status: "succeeded", data: {outputs, qualityReport, summary: {sourceDocumentCount: 1, normalizedDocumentCount: 1,
+          skippedDocumentCount: 0, chunkCount: 2, generatedExampleCount: 2, datasetRowCount: 1, trainRowCount: 1,
+          validationRowCount: 0, testRowCount: 0, acceptedRowCount: 1, quarantinedRowCount: 1}}};
+    },
     counts: () => ({starts, issues, providerReads, statusReads, cancellations, activations}),
     start: (a = admission, c = command) => useCase.startAdmittedLocalProvidedDataset(c, {...context, requestId: "caller-correlation"}, a),
     async directories() {return readdir(parent);},
@@ -121,6 +158,52 @@ test("an admitted provided-data task uses bounded copied bytes, the owned ID and
     assert.equal(f.counts().starts, 1); assert.equal(f.counts().issues, 1);
     assert.equal((await f.start()).ok, false);
     assert.equal(f.counts().starts, 1);
+  } finally {await f.close();}
+});
+
+test("passive admitted status rejects foreign and unknown tasks and never materializes worker output", async () => {
+  const f = await fixture();
+  try {
+    assert.equal((await f.start()).ok, true); f.reconciler.stopObservation();
+    const id = f.admission.taskId;
+    assert.deepEqual(await f.useCase.readAdmittedLocalDatasetStatus(id, context), {taskId: id, state: "running"});
+    for (const other of [{...context, principalId: "foreign"}, {...context, workspaceId: "other.workspace"},
+      {...context, organizationId: createOrganizationId("other.org")}])
+      assert.equal(await f.useCase.readAdmittedLocalDatasetStatus(id, other), undefined);
+    assert.equal(await f.useCase.readAdmittedLocalDatasetStatus(randomUUID(), context), undefined);
+    f.setStatus({requestId: id, taskType: "dataset-preparation", status: "succeeded", data: {private: "Synthetic raw data"}});
+    assert.deepEqual(await f.useCase.readAdmittedLocalDatasetStatus(id, context), {taskId: id, state: "processing-result"});
+    assert.equal((await f.directories()).length, 1);
+    const materialized = await f.useCase.readPrepareTrainingDataset(id, context);
+    assert.equal(materialized.ok, false);
+    assert.deepEqual(await f.useCase.readAdmittedLocalDatasetStatus(id, context), {taskId: id, state: "failed"});
+    assert.equal((await f.directories()).length, 0);
+  } finally {await f.close();}
+});
+
+test("an absent optional storage media type preserves the pinned source format while a conflict is denied", async () => {
+  const accepted = await fixture({omittedDescriptorMedia: true});
+  try {assert.equal((await accepted.start()).ok, true); assert.equal(accepted.counts().starts, 1);}
+  finally {await accepted.close();}
+  const denied = await fixture({conflictingDescriptorMedia: true});
+  try {assert.equal((await denied.start()).ok, false); assert.equal(denied.counts().issues, 0); assert.equal(denied.counts().starts, 0);}
+  finally {await denied.close();}
+});
+
+test("cancelling an actual pending review remains cancelled after the successful worker and stage cleanup", async () => {
+  const f = await fixture({evidence: true});
+  try {
+    assert.equal((await f.start()).ok, true);
+    await f.finishForReview();
+    const id = f.admission.taskId;
+    const review = await f.useCase.readPrepareTrainingDataset(id, context);
+    assert.ok(review.ok, JSON.stringify(review));
+    assert.equal(review.value.status, "review-required");
+    assert.deepEqual(await f.useCase.readAdmittedLocalDatasetStatus(id, context), {taskId: id, state: "review-required"});
+    const cancelled = await f.useCase.cancelPrepareTrainingDataset(id, context);
+    assert.ok(cancelled.ok, JSON.stringify(cancelled)); assert.equal(cancelled.value.status, "cancelled");
+    assert.deepEqual(await f.useCase.readAdmittedLocalDatasetStatus(id, context), {taskId: id, state: "cancelled"});
+    assert.equal((await f.directories()).length, 0);
   } finally {await f.close();}
 });
 

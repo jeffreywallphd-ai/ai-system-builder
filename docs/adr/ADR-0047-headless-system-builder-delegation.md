@@ -176,3 +176,7 @@ provided-row mapping, reproducible split and quality preset through the existing
 ingestion point readers. Hosts return only the matching bounded public preview;
 compiled commands and storage keys stay private. Preview starts no runtime,
 model, provider request or mutation and grants no execution approval.
+
+### Increment 5: finite local dataset tasks
+
+The existing concrete-plan workflow gains an opt-in v4 provided-row dataset step. Both hosts compose the same saved-source compiler, durable once-issued effect and existing dataset processor. This extends the accepted typed application delegation and two-channel approval design; it adds no general runtime-command API. Accepted task receipts and passive status remain separate from result approval, immutable version publication and presentation. Runtime effects stay outside retriable persistence transactions. Uncertain issuance cannot be adopted or restarted. Fixed local input limits, current artifact authority and native lifecycle guards remain independent controls.

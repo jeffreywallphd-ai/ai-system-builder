@@ -2225,3 +2225,5 @@ Keep the separate real Playwright worker checks after ESM setup preloading.
 They verify the actual helper and configuration boundary with synthetic source
 fixtures. App, browser, model, native lifecycle and whole-system qualification
 remain separate.
+
+The exact `headless-approved-dataset-task-wiring` check covers the additive dataset plan/status contracts, causal phase store, SQLite reopen/race behavior, both host approval compositions and shared approval UI. `headless-dataset-owned-start` retains the existing processor denial and pipeline regressions. The packaged Desktop and Managed browser journeys exercise the actual entry points. Definition/census witnesses remain separate from execution evidence and never award a roadmap pass. Unknown neighboring source files and an explicit `focused-tests` requirement retain the generic fallback.

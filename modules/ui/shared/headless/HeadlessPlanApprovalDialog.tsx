@@ -193,16 +193,22 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
   const methodName = useId();
   const isPending = state.status === "pending";
   const providerReads = view.preview.steps.some(step => step.operation === "data.save-provider-source");
+  const datasetProcessing = view.preview.steps.some(step => step.operation === "data.prepare-local-dataset");
   const approval = mode === "whole-plan" ? { kind: "approve", mode } as const
     : { kind: "approve", mode, step: state.approvedSteps + 1 } as const;
   return <>
     <p>Requested by Client {view.selection.registeredClientId.slice(0, 8)}</p>
     <ul aria-label="Permissions and limits">
-      <li>Save only the changes shown below in this workspace.</li>
+      <li>{datasetProcessing ? "Perform" : "Save"} only the changes shown below in this workspace.</li>
       {view.preview.steps.some(step => step.operation === "data.save-local-source" || step.operation === "data.save-provider-source") ? (
         <li>Save the listed files in this workspace’s Data area.</li>
       ) : null}
-      <li>Limit of {state.stepCount} {state.stepCount === 1 ? "saved change" : "saved changes"} for this plan.</li>
+      {datasetProcessing ? <>
+        <li>Process the listed saved local files. Limit: 4 files, 4 MiB per file, 16 MiB total and 1,000 rows per file.</li>
+        <li>Use the selected columns, data split and quality checks. Stop for result review before saving a dataset version.</li>
+        <li>No model calls. Dataset saving and publication need separate permission.</li>
+      </> : null}
+      <li>Limit of {state.stepCount} {datasetProcessing ? "" : "saved "}{state.stepCount === 1 ? "change" : "changes"} for this plan.</li>
       {providerReads
         ? <li>Check the selected Hugging Face file and its license using your saved provider access.</li>
         : <li>No outside service calls or provider charges.</li>}
@@ -217,6 +223,15 @@ function PlanApprovalDetails({ view, busy, onBack, decide }: {
             ? "Save the selected Hugging Face source in Data" : "Save the selected file in Data"}</strong>
           <div>File reference {step.input.fileId}</div>
           <div>Upload {step.input.taskId}, version {step.input.taskRevision}</div>
+        </> : step.operation === "data.prepare-local-dataset" ? <>
+          <strong>Prepare a dataset from saved local files</strong>
+          <ul>{step.input.sources.map(source => <li key={source.taskId + source.fileId}>
+            File reference {source.fileId}. Upload {source.taskId}, version {source.taskRevision}.
+          </li>)}</ul>
+          <div>Input column: {step.input.recipe.inputColumn}. Output column: {step.input.recipe.outputColumn}.</div>
+          <div>Data split: {step.input.split.trainRatio * 100}% training, {step.input.split.validationRatio * 100}% validation,
+            {" "}{step.input.split.testRatio * 100}% test. Seed: {step.input.split.seed}.</div>
+          <div>Quality checks: {step.input.qualityPreset}. Review required.</div>
         </> : <>
           <strong>{step.operation === "systems.create" ? "Create " : step.operation === "systems.clone" ? "Copy as " : "Rename to "}
             {step.input.name}</strong>

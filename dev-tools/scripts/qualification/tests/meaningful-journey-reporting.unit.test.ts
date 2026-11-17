@@ -205,6 +205,8 @@ function originalCensusRows(bundle:CensusBundle,map:CensusMap) {
           !["4af822bfed55376be4f7f81dd3924dd1ecc848726842ac8ce1ef0aa8582f8c93",
             // Exact preparation-preview definition; no execution is inferred.
             "7fc3c83644ea4537356a3336dce7fba8e773a454cc6bb45c515b770787b12534",
+            // Exact approved dataset-task definition; execution remains independent.
+            "36737e427bfa67ae7caab2bde54d90113a080402254de7cced265015ff46d39d",
             "205d01b56f5e64bfecd6d77f0efb5b8a5d4cea232522a3e587dfdd43de7d4ae9",
             "e0bf28e6f84706bcf55d47457174fdc31946f415e5938ad852143556b38658de",
             "eff2c4bcec59a0555daeafe0edb50e49543a7587861f8e7995b546cee37dab16",

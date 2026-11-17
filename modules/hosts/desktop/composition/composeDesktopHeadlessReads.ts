@@ -3,6 +3,7 @@ import type { WorkspaceRepository } from "../../../application/ports/workspace";
 import { ReadHeadlessIngestionStatusUseCase } from "../../../application/use-cases/ingestion-acquisition/headless-ingestion-status.use-case";
 import type { ReadHeadlessDatasetMetadataUseCase } from "../../../application/use-cases/dataset-version/headless-dataset-metadata.use-case";
 import type {PrepareHeadlessDatasetInputsUseCase} from "../../../application/use-cases/ingestion-acquisition/headless-dataset-preparation.use-case";
+import type {ReadHeadlessDatasetTaskStatusUseCase} from "../../../application/use-cases/ingestion-acquisition/headless-dataset-task-status.use-case";
 import type { HeadlessCommittedChangesUseCase } from "../../../application/use-cases/system-builder/headless-committed-changes.use-case";
 import type { HeadlessConversationStatusUseCase } from "../../../application/use-cases/system-run-workflow/headless-conversation-status.use-case";
 import type { HeadlessWorkflowMetadataUseCase } from "../../../application/use-cases/system-run-workflow/headless-workflow-metadata.use-case";
@@ -65,6 +66,7 @@ export function composeDesktopHeadlessReads(dependencies: {
   readonly getIngestionTasks?: () => Promise<ConstructorParameters<typeof ReadHeadlessIngestionStatusUseCase>[0]>;
   readonly getDatasetQueries?: () => Promise<Pick<ReadHeadlessDatasetMetadataUseCase, "execute">>;
   readonly getDatasetInputs?: () => Promise<Pick<PrepareHeadlessDatasetInputsUseCase, "execute">>;
+  readonly getDatasetTaskStatus?: () => Promise<Pick<ReadHeadlessDatasetTaskStatusUseCase, "execute">>;
   readonly isOpen: () => boolean;
 }): DesktopHeadlessReadHandler {
   const { hostIncarnationId, identity, workspaceRepository, authorization, getUseCases, committedChanges,
@@ -74,6 +76,7 @@ export function composeDesktopHeadlessReads(dependencies: {
     if (operation === "data.ingestion-status") return Boolean(getIngestionTasks);
     if (operation === "data.dataset-versions" || operation === "data.compare-dataset-versions") return Boolean(getDatasetQueries);
     if (operation === "data.preview-dataset-preparation") return Boolean(getDatasetInputs);
+    if (operation === "data.dataset-task-status") return Boolean(dependencies.getDatasetTaskStatus);
     if (operation === "systems.snapshot" || operation === "systems.changes") return Boolean(committedChanges);
     if (operation === "workflows.list" || operation === "workflows.prepare") return Boolean(workflows && readWorkflowRole);
     if (operation === "conversation-tasks.read") return Boolean(conversationStatus);
@@ -158,6 +161,15 @@ export function composeDesktopHeadlessReads(dependencies: {
       let response: HeadlessReadResult;
       let capturedWorkflowRole: OrganizationRole | undefined;
       switch (operation) {
+        case "data.dataset-task-status": {
+          if (!dependencies.getDatasetTaskStatus) return unavailable;
+          const status = await dependencies.getDatasetTaskStatus();
+          const result = await status.execute({version: HEADLESS_CONTRACT_VERSION, operation, input}, {context: {
+            organizationId: identity.organizationId, principalId: identity.principalId, workspaceId}, clientId,
+            stillAllowed: async () => Boolean(await currentScopedGrant([workspaceId]) &&
+              await authorizedWorkspace(workspaceId, operation))});
+          return await currentScopedGrant([workspaceId]) && await authorizedWorkspace(workspaceId, operation) ? result : forbidden;
+        }
         case "data.preview-dataset-preparation": {
           if (!getDatasetInputs) return unavailable;
           const inputs = await getDatasetInputs();

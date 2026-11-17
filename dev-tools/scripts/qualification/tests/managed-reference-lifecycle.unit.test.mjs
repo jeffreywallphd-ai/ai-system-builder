@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import {EventEmitter} from "node:events";
+import {spawnSync} from "node:child_process";
 import {test} from "node:test";
-import {openManagedReferenceListener,assertIsolatedPostgresInspection,assertOwnedWorkerObservation,closeOwnedManagedServer} from "../visual-composer/managed-reference-lifecycle.mjs";
+import {openManagedReferenceListener,assertIsolatedPostgresInspection,assertOwnedWorkerObservation,assertOwnedDatasetWorkerIdentity,closeOwnedManagedServer,observeHeadlessDatasetQualification} from "../visual-composer/managed-reference-lifecycle.mjs";
 
 function resources(failure) {
   const calls=[];
@@ -16,9 +17,40 @@ function resources(failure) {
   }};
 }
 
+test("the production dataset observation wrapper admits only fixed offline paths and an exclusive identity",()=>{
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key])=>
+    ["path","systemroot","windir","temp","tmp"].includes(key.toLowerCase())));
+  const result=spawnSync(process.env.PYTHON||"python",["-I","-B","dev-tools/scripts/qualification/tests/test_headless_dataset_runtime_worker.py"],
+    {cwd:process.cwd(),env:{...env,PYTHONUTF8:"1"},windowsHide:true,encoding:"utf8",timeout:30000,maxBuffer:65536});
+  assert.equal(result.status,0,`Fixed worker-wrapper guard tests failed: ${result.error?.name??"nonzero-exit"}`);
+  assert.match(result.stderr,/Ran 4 tests/);
+});
+
+test("dataset worker observation admits only the owned host or the exact verified Python launcher",()=>{
+  const direct={pid:3,parentPid:2,scenario:"headless-provided-data"};
+  assert.doesNotThrow(()=>assertOwnedDatasetWorkerIdentity(direct,2));
+  const launcher={...direct,parentPid:4,configuredPythonLauncherParentPid:2};
+  assert.doesNotThrow(()=>assertOwnedDatasetWorkerIdentity(launcher,2));
+  for(const value of [{...direct,parentPid:9},{...launcher,configuredPythonLauncherParentPid:9},
+    {...launcher,configuredPythonLauncherParentPid:"2"},{...direct,pid:2},{...direct,extra:true},
+    {...direct,scenario:"other"},{...direct,configuredPythonLauncherParentPid:2}])
+    assert.throws(()=>assertOwnedDatasetWorkerIdentity(value,2));
+});
+
+test("dataset observations cannot replace method arguments, results or exceptions, even when reporting fails",async()=>{
+  const outcome={ok:true,value:{private:"Synthetic private value"}},receiver={marker:true},args=[{private:"Synthetic command"}];
+  const facts=[];
+  const operation=observeHeadlessDatasetQualification(async function(...actual){assert.equal(this,receiver);assert.deepEqual(actual,args);return outcome;},"owner",stage=>{facts.push(stage);throw new Error("Observer failed.");});
+  assert.equal(await operation.apply(receiver,args),outcome);assert.deepEqual(facts,["owner-accepted"]);
+  const failure=new Error("Synthetic private runtime diagnostic");
+  const denied=observeHeadlessDatasetQualification(async()=>{throw failure;},"readiness",stage=>facts.push(stage));
+  await assert.rejects(denied(),error=>error===failure);assert.equal(facts.at(-1),"readiness-denied");
+  assert.throws(()=>observeHeadlessDatasetQualification(()=>{},"arbitrary",()=>{}));
+});
+
 test("owned-task cleanup cannot pass vacuously without a physical worker observation",()=>{
   assert.doesNotThrow(()=>assertOwnedWorkerObservation("immediate",0),"browse-only startup need not launch a worker");
-  for(const scenario of ["observed-download","worker-failure-download","disconnect-download"]) {
+  for(const scenario of ["observed-download","worker-failure-download","disconnect-download","headless-provided-data"]) {
     assert.throws(()=>assertOwnedWorkerObservation(scenario,0),/actual bounded worker/);
     assert.doesNotThrow(()=>assertOwnedWorkerObservation(scenario,1));
   }

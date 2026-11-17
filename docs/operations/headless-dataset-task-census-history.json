@@ -1,0 +1,24 @@
+{
+  "schema_version": "working-ui-census-update-v1",
+  "scope": "working-source-facts-only-no-execution",
+  "roadmap_id": "comprehensive-ui-automation",
+  "prior_commit": "28bc8bd5bf59df6f6821ff178286f49768f8652f",
+  "prior_census_path": "docs/operations/comprehensive-ui-automation-current-census.json",
+  "prior_census_git_sha256": "5a13a53422c193e94cd9c2adc498358f8edd6e21f7853ca56b78367653e41251",
+  "prior_census_working_sha256": "5a13a53422c193e94cd9c2adc498358f8edd6e21f7853ca56b78367653e41251",
+  "source_baseline": "be0a48e241ca94d1ad18fda89ffa8f095d98e56c",
+  "preserved_fields_sha256": "3849230ab255d09a883e56bff9f6ccdd51f2dcdd249e97b2f0a74fff7b9ac0ae",
+  "qualification_effect": {
+    "executed_tests": 0,
+    "actual_host_pass": false,
+    "parent_qualification_granted": false,
+    "full_testing_status": "pending-roadmap-final-qualification"
+  },
+  "sources": [
+    {
+      "path": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-headless.e2e.spec.ts",
+      "prior_row_sha256": "722f65b7437e2136e03fd3b1e1fcf2fef95fdb4de3d1c29d0e3e7c4019f7df66",
+      "current_row_sha256": "2adaa890f5afa82d10f7130fb67816ece8eac1f7839332e7c2280eedc5725031"
+    }
+  ]
+}

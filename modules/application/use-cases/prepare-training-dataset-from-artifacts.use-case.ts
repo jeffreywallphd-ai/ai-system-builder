@@ -1797,6 +1797,8 @@ function validLocalProvidedAdmission(command: PrepareTrainingDatasetFromArtifact
 export class PrepareTrainingDatasetFromArtifactsUseCase {
   private readonly localDatasetStarts = new Set<LocalDatasetStart>();
   private readonly localDatasetStartsByTask = new Map<string, LocalDatasetStart>();
+  private readonly admittedLocalDatasetTaskIds = new Set<string>();
+  private readonly admittedLocalDatasetTerminal = new Map<string, "failed" | "cancelled">();
   private readonly approvals = new Map<string, { signature: string; operation: Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performApprovePreparedTrainingDataset"]>>> }>();
   private readonly approvedSignatures = new Map<string, string>();
   private readonly taskActions = new Map<string, Promise<unknown>>();
@@ -2215,7 +2217,10 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         started.requestId,
         staged.value.runtimeWorkingDir,
       );
-      if (localStart) this.localDatasetStartsByTask.set(started.requestId, localStart);
+      if (localStart) {
+        this.localDatasetStartsByTask.set(started.requestId, localStart);
+        this.admittedLocalDatasetTaskIds.add(started.requestId);
+      }
       if (staged.value.ocrOwner) {
         this.runtimeOcrStageOwnersByRequestId.set(started.requestId, staged.value.ocrOwner);
       }
@@ -2303,6 +2308,28 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         createContractError("internal", normalizedMessage),
         context,
       );
+    }
+  }
+
+  /** Passive projection for a host-proven accepted task. Does not materialize, save, approve or clean up results. */
+  public async readAdmittedLocalDatasetStatus(requestId: string, context: ApplicationRequestContext): Promise<{
+    readonly taskId: string;
+    readonly state: "queued" | "running" | "processing-result" | "review-required" | "succeeded" | "failed" | "cancelled";
+  } | undefined> {
+    const scope = this.taskScopeByRequestId.get(requestId);
+    if (!this.admittedLocalDatasetTaskIds.has(requestId) || !scope || !context.organizationId || !context.principalId ||
+        scope.workspaceId !== context.workspaceId || scope.organizationId !== context.organizationId ||
+        scope.principalId !== context.principalId) return;
+    const terminal = this.admittedLocalDatasetTerminal.get(requestId);
+    if (terminal) return {taskId: requestId, state: terminal};
+    if (this.pendingQualityReviewsByRequestId.has(requestId)) return {taskId: requestId, state: "review-required"};
+    if (this.materializedResultsByRequestId.has(requestId)) return {taskId: requestId, state: "succeeded"};
+    const status = await this.runtimeTaskRegistry.getTaskStatus(requestId);
+    if ("recordType" in status || status.requestId !== requestId || status.taskType !== TaskType.DATASET_PREPARATION) return;
+    switch (status.status) {
+      case "queued": case "running": case "failed": case "cancelled": return {taskId: requestId, state: status.status};
+      case "succeeded": return {taskId: requestId, state: "processing-result"};
+      default: return;
     }
   }
 
@@ -2480,6 +2507,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           );
         } catch (error) {
           terminalStatus = "failed";
+          if (this.admittedLocalDatasetTaskIds.has(requestId)) this.admittedLocalDatasetTerminal.set(requestId, "failed");
           throw error;
         } finally {
           await this.taskPowerLifecycle.completeTask(requestId, terminalStatus);
@@ -2493,6 +2521,8 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         statusRecord.status === "failed" ||
         statusRecord.status === "cancelled"
       ) {
+        if (this.admittedLocalDatasetTaskIds.has(requestId) && statusRecord.status === "succeeded")
+          this.admittedLocalDatasetTerminal.set(requestId, "failed");
         await this.taskPowerLifecycle.completeTask(
           requestId,
           statusRecord.status,
@@ -2559,6 +2589,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           context,
         );
         this.pendingQualityReviewsByRequestId.delete(requestId);
+        if (this.admittedLocalDatasetTaskIds.has(requestId)) this.admittedLocalDatasetTerminal.set(requestId, "cancelled");
         await this.taskPowerLifecycle.completeTask(requestId, "cancelled");
         await this.cleanupRuntimeWorkingDir(requestId);
         return createSuccessResult(
@@ -2593,6 +2624,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             ? "running"
             : "unknown";
       if (status === "cancelled") {
+        if (this.admittedLocalDatasetTaskIds.has(requestId)) this.admittedLocalDatasetTerminal.set(requestId, "cancelled");
         await this.taskPowerLifecycle.completeTask(requestId, "cancelled");
         await this.cleanupRuntimeWorkingDir(requestId);
       }
@@ -3908,7 +3940,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           const content = retrieveResult.value.content;
           if (!(content instanceof Uint8Array) || content.byteLength !== expected.sizeBytes ||
               retrieveResult.value.descriptor.key !== expected.storageKey ||
-              retrieveResult.value.descriptor.mediaType !== expected.mediaType)
+              (retrieveResult.value.descriptor.mediaType !== undefined && retrieveResult.value.descriptor.mediaType !== expected.mediaType))
             return failAndCleanup(createContractError("validation", "The selected local source changed."));
           admittedBytes = Buffer.from(content);
           if (this.sourceIntegrityHasher?.digest(admittedBytes) !== expected.digest)
